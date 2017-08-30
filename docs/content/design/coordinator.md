@@ -55,6 +55,13 @@ Returns the Druid version, loaded extensions, memory used, total memory and othe
 
 Returns the current leader coordinator of the cluster.
 
+* `/druid/coordinator/v1/isLeader`
+
+Returns a JSON object with field "leader", either true or false, indicating if this server is the current leader
+coordinator of the cluster. In addition, returns HTTP 200 if the server is the current leader and HTTP 404 if not.
+This is suitable for use as a load balancer status check if you only want the active leader to be considered in-service
+at the load balancer.
+
 * `/druid/coordinator/v1/loadstatus`
 
 Returns the percentage of segments actually loaded in the cluster versus segments that should be loaded in the cluster.
@@ -153,7 +160,7 @@ Returns a map of an interval to a map of segment metadata to a set of server nam
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/intervals/{interval}`
 
-Returns a set of segment ids for an ISO8601 interval. Note that the interval is delimited by a `_` instead of a `/`
+Returns a set of segment ids for an ISO8601 interval. Note that {interval} parameters are delimited by a `_` instead of a `/` (e.g., 2016-06-27_2016-06-28).
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/intervals/{interval}?simple`
 
@@ -216,6 +223,8 @@ Returns all rules for a specified datasource and includes default datasource.
 
 #### Intervals
 
+Note that {interval} parameters are delimited by a `_` instead of a `/` (e.g., 2016-06-27_2016-06-28).
+
 * `/druid/coordinator/v1/intervals`
 
 Returns all intervals for all datasources with total size and count.
@@ -270,6 +279,8 @@ Disables a datasource.
 * `@Deprecated. /druid/coordinator/v1/datasources/{dataSourceName}?kill=true&interval={myISO8601Interval}`
 
 Runs a [Kill task](../ingestion/tasks.html) for a given interval and datasource.
+
+Note that {interval} parameters are delimited by a `_` instead of a `/` (e.g., 2016-06-27_2016-06-28).
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
 

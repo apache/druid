@@ -29,12 +29,13 @@ import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
 import io.druid.client.DruidServer;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.StringUtils;
 import io.druid.server.audit.SQLAuditManager;
 import io.druid.server.audit.SQLAuditManagerConfig;
 import io.druid.server.coordinator.rules.IntervalLoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import io.druid.server.metrics.NoopServiceEmitter;
-import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -86,7 +87,7 @@ public class SQLMetadataRuleManagerTest
   {
     List<Rule> rules = Arrays.<Rule>asList(
         new IntervalLoadRule(
-            new Interval("2015-01-01/2015-02-01"), ImmutableMap.<String, Integer>of(
+            Intervals.of("2015-01-01/2015-02-01"), ImmutableMap.<String, Integer>of(
             DruidServer.DEFAULT_TIER,
             DruidServer.DEFAULT_NUM_REPLICANTS
         )
@@ -110,7 +111,7 @@ public class SQLMetadataRuleManagerTest
   {
     List<Rule> rules = Arrays.<Rule>asList(
         new IntervalLoadRule(
-            new Interval("2015-01-01/2015-02-01"), ImmutableMap.<String, Integer>of(
+            Intervals.of("2015-01-01/2015-02-01"), ImmutableMap.<String, Integer>of(
             DruidServer.DEFAULT_TIER,
             DruidServer.DEFAULT_NUM_REPLICANTS
         )
@@ -148,7 +149,7 @@ public class SQLMetadataRuleManagerTest
   {
     List<Rule> rules = Arrays.<Rule>asList(
         new IntervalLoadRule(
-            new Interval("2015-01-01/2015-02-01"), ImmutableMap.<String, Integer>of(
+            Intervals.of("2015-01-01/2015-02-01"), ImmutableMap.<String, Integer>of(
             DruidServer.DEFAULT_TIER,
             DruidServer.DEFAULT_NUM_REPLICANTS
         )
@@ -201,7 +202,7 @@ public class SQLMetadataRuleManagerTest
           @Override
           public Void withHandle(Handle handle) throws Exception
           {
-            handle.createStatement(String.format("DROP TABLE %s", tableName))
+            handle.createStatement(StringUtils.format("DROP TABLE %s", tableName))
                   .execute();
             return null;
           }

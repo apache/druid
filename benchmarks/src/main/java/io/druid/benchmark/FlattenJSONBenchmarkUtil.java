@@ -285,7 +285,7 @@ public class FlattenJSONBenchmarkUtil
     return mapper.writeValueAsString(wrapper);
   }
 
-  public class BenchmarkEvent
+  public static class BenchmarkEvent
   {
 
     public String ts;

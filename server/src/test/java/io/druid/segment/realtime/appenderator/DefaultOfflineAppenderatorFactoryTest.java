@@ -32,6 +32,7 @@ import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.guice.GuiceInjectors;
 import io.druid.initialization.Initialization;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -44,7 +45,6 @@ import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.plumber.Committers;
 import io.druid.timeline.partition.LinearShardSpec;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -70,6 +70,7 @@ public class DefaultOfflineAppenderatorFactoryTest
                                    {
                                      binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/tool");
                                      binder.bindConstant().annotatedWith(Names.named("servicePort")).to(9999);
+                                     binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
                                      binder.bind(DruidProcessingConfig.class).toInstance(
                                          new DruidProcessingConfig()
                                          {
@@ -156,7 +157,7 @@ public class DefaultOfflineAppenderatorFactoryTest
       Assert.assertEquals(null, appenderator.startJob());
       SegmentIdentifier identifier = new SegmentIdentifier(
           "dataSourceName",
-          new Interval("2000/2001"),
+          Intervals.of("2000/2001"),
           "A",
           new LinearShardSpec(0)
       );

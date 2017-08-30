@@ -30,17 +30,21 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-
 import io.druid.client.BatchServerInventoryView;
 import io.druid.client.DruidServer;
 import io.druid.client.ServerView;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.announcement.Announcer;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.server.coordination.BatchDataSegmentAnnouncer;
+import io.druid.server.coordination.CuratorDataSegmentServerAnnouncer;
+import io.druid.server.coordination.DataSegmentServerAnnouncer;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.coordination.ServerType;
 import io.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
@@ -77,7 +81,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class BatchServerInventoryViewTest
 {
   private static final String testBasePath = "/test";
-  public static final DateTime SEGMENT_INTERVAL_START = new DateTime("2013-01-01");
+  public static final DateTime SEGMENT_INTERVAL_START = DateTimes.of("2013-01-01");
   public static final int INITIAL_SEGMENTS = 100;
   private static final Timing timing = new Timing();
 
@@ -86,6 +90,7 @@ public class BatchServerInventoryViewTest
   private ObjectMapper jsonMapper;
   private Announcer announcer;
   private BatchDataSegmentAnnouncer segmentAnnouncer;
+  private DataSegmentServerAnnouncer serverAnnouncer;
   private Set<DataSegment> testSegments;
   private BatchServerInventoryView batchServerInventoryView;
   private BatchServerInventoryView filteredBatchServerInventoryView;
@@ -117,15 +122,35 @@ public class BatchServerInventoryViewTest
     );
     announcer.start();
 
+    DruidServerMetadata serverMetadata = new DruidServerMetadata(
+        "id",
+        "host",
+        null,
+        Long.MAX_VALUE,
+        ServerType.HISTORICAL,
+        "tier",
+        0
+    );
+
+    ZkPathsConfig zkPathsConfig = new ZkPathsConfig()
+    {
+      @Override
+      public String getBase()
+      {
+        return testBasePath;
+      }
+    };
+
+    serverAnnouncer = new CuratorDataSegmentServerAnnouncer(
+        serverMetadata,
+        zkPathsConfig,
+        announcer,
+        jsonMapper
+    );
+    serverAnnouncer.announce();
+
     segmentAnnouncer = new BatchDataSegmentAnnouncer(
-        new DruidServerMetadata(
-            "id",
-            "host",
-            Long.MAX_VALUE,
-            "type",
-            "tier",
-            0
-        ),
+        serverMetadata,
         new BatchDataSegmentAnnouncerConfig()
         {
           @Override
@@ -134,18 +159,10 @@ public class BatchServerInventoryViewTest
             return 50;
           }
         },
-        new ZkPathsConfig()
-        {
-          @Override
-          public String getBase()
-          {
-            return testBasePath;
-          }
-        },
+        zkPathsConfig,
         announcer,
         jsonMapper
     );
-    segmentAnnouncer.start();
 
     testSegments = Sets.newConcurrentHashSet();
     for (int i = 0; i < INITIAL_SEGMENTS; i++) {
@@ -187,7 +204,7 @@ public class BatchServerInventoryViewTest
             return input.rhs.getInterval().getStart().isBefore(SEGMENT_INTERVAL_START.plusDays(INITIAL_SEGMENTS));
           }
         }
-    ){
+    ) {
       @Override
       protected DruidServer addInnerInventory(
           DruidServer container, String inventoryKey, Set<DataSegment> inventory
@@ -206,7 +223,7 @@ public class BatchServerInventoryViewTest
   {
     batchServerInventoryView.stop();
     filteredBatchServerInventoryView.stop();
-    segmentAnnouncer.stop();
+    serverAnnouncer.unannounce();
     announcer.stop();
     cf.close();
     testingCluster.stop();
@@ -285,14 +302,8 @@ public class BatchServerInventoryViewTest
     Assert.assertEquals(testSegments, segments);
 
     ServerView.SegmentCallback callback = EasyMock.createStrictMock(ServerView.SegmentCallback.class);
-    Comparator<DataSegment> dataSegmentComparator = new Comparator<DataSegment>()
-    {
-      @Override
-      public int compare(DataSegment o1, DataSegment o2)
-      {
-        return o1.getInterval().equals(o2.getInterval()) ? 0 : -1;
-      }
-    };
+    Comparator<DataSegment> dataSegmentComparator =
+        Comparator.comparing(DataSegment::getInterval, Comparators.intervalsByStartThenEnd());
 
     EasyMock
         .expect(
@@ -372,7 +383,7 @@ public class BatchServerInventoryViewTest
                               SEGMENT_INTERVAL_START.plusDays(offset + 1)
                           )
                       )
-                      .version(new DateTime().toString())
+                      .version(DateTimes.nowUtc().toString())
                       .build();
   }
 
@@ -434,8 +445,9 @@ public class BatchServerInventoryViewTest
                       new DruidServerMetadata(
                           "id",
                           "host",
+                          null,
                           Long.MAX_VALUE,
-                          "type",
+                          ServerType.HISTORICAL,
                           "tier",
                           0
                       ),
@@ -458,11 +470,10 @@ public class BatchServerInventoryViewTest
                       announcer,
                       jsonMapper
                   );
-                  segmentAnnouncer.start();
                   List<DataSegment> segments = new ArrayList<DataSegment>();
                   try {
                     for (int j = 0; j < INITIAL_SEGMENTS / numThreads; ++j) {
-                      segments.add(makeSegment(INITIAL_SEGMENTS + ii  + numThreads * j));
+                      segments.add(makeSegment(INITIAL_SEGMENTS + ii + numThreads * j));
                     }
                     latch.countDown();
                     latch.await();

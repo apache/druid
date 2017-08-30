@@ -83,7 +83,7 @@ public class RegexFilteredDimensionSpec extends BaseFilteredDimensionSpec
     }
 
     int count = 0;
-    final Int2IntMap forwardMapping = new Int2IntOpenHashMap();
+    final Int2IntOpenHashMap forwardMapping = new Int2IntOpenHashMap();
     forwardMapping.defaultReturnValue(-1);
     for (int i = 0; i < selectorCardinality; i++) {
       if (compiledRegex.matcher(Strings.nullToEmpty(selector.lookupName(i))).matches()) {

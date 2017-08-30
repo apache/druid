@@ -22,7 +22,7 @@ package io.druid.guice;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.validation.constraints.NotNull;
-import java.util.List;
+import java.util.LinkedHashSet;
 
 /**
  */
@@ -41,8 +41,12 @@ public class ExtensionsConfig
   @JsonProperty
   private String hadoopContainerDruidClasspath = null;
 
+  //Only applicable when hadoopContainerDruidClasspath is explicitly specified.
   @JsonProperty
-  private List<String> loadList;
+  private boolean addExtensionsToHadoopContainer = false;
+
+  @JsonProperty
+  private LinkedHashSet<String> loadList;
 
   public boolean searchCurrentClassloader()
   {
@@ -64,7 +68,12 @@ public class ExtensionsConfig
     return hadoopContainerDruidClasspath;
   }
 
-  public List<String> getLoadList()
+  public boolean getAddExtensionsToHadoopContainer()
+  {
+    return addExtensionsToHadoopContainer;
+  }
+
+  public LinkedHashSet<String> getLoadList()
   {
     return loadList;
   }
@@ -77,6 +86,7 @@ public class ExtensionsConfig
            ", directory='" + directory + '\'' +
            ", hadoopDependenciesDir='" + hadoopDependenciesDir + '\'' +
            ", hadoopContainerDruidClasspath='" + hadoopContainerDruidClasspath + '\'' +
+           ", addExtensionsToHadoopContainer=" + addExtensionsToHadoopContainer +
            ", loadList=" + loadList +
            '}';
   }

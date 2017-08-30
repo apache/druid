@@ -55,6 +55,7 @@ import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.server.DruidNode;
 import io.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import io.druid.server.initialization.IndexerZkConfig;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.security.AuthConfig;
@@ -84,7 +85,7 @@ import java.util.concurrent.Executor;
 
 public class OverlordTest
 {
-  private static final TaskLocation TASK_LOCATION = new TaskLocation("dummy", 1000);
+  private static final TaskLocation TASK_LOCATION = new TaskLocation("dummy", 1000, -1);
 
   private TestingServer server;
   private Timing timing;
@@ -158,7 +159,7 @@ public class OverlordTest
     curator.start();
     curator.blockUntilConnected();
     curator.create().creatingParentsIfNeeded().forPath(indexerZkConfig.getLeaderLatchPath());
-    druidNode = new DruidNode("hey", "what", 1234);
+    druidNode = new DruidNode("hey", "what", 1234, null, new ServerConfig());
     ServiceEmitter serviceEmitter = new NoopServiceEmitter();
     taskMaster = new TaskMaster(
         new TaskQueueConfig(null, new Period(1), null, new Period(10)),
@@ -198,11 +199,11 @@ public class OverlordTest
     // basic task master lifecycle test
     taskMaster.start();
     announcementLatch.await();
-    while (!taskMaster.isLeading()) {
+    while (!taskMaster.isLeader()) {
       // I believe the control will never reach here and thread will never sleep but just to be on safe side
       Thread.sleep(10);
     }
-    Assert.assertEquals(taskMaster.getLeader(), druidNode.getHostAndPort());
+    Assert.assertEquals(taskMaster.getCurrentLeader(), druidNode.getHostAndPort());
     // Test Overlord resource stuff
     overlordResource = new OverlordResource(
         taskMaster,
@@ -271,7 +272,7 @@ public class OverlordTest
     response = overlordResource.getCompleteTasks(req);
     Assert.assertEquals(2, (((List) response.getEntity()).size()));
     taskMaster.stop();
-    Assert.assertFalse(taskMaster.isLeading());
+    Assert.assertFalse(taskMaster.isLeader());
     EasyMock.verify(taskLockbox, taskActionClientFactory);
   }
 

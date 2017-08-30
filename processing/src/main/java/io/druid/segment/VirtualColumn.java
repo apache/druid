@@ -26,7 +26,6 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
 
-import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -69,9 +68,8 @@ public interface VirtualColumn extends Cacheable
    * @param dimensionSpec the dimensionSpec this column was referenced with
    * @param factory       column selector factory
    *
-   * @return the selector, or null if we can't make a selector
+   * @return the selector, must not be null
    */
-  @Nullable
   DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec, ColumnSelectorFactory factory);
 
   /**
@@ -81,9 +79,8 @@ public interface VirtualColumn extends Cacheable
    * @param columnName the name this virtual column was referenced with
    * @param factory    column selector factory
    *
-   * @return the selector, or null if we can't make a selector
+   * @return the selector, must not be null
    */
-  @Nullable
   FloatColumnSelector makeFloatColumnSelector(String columnName, ColumnSelectorFactory factory);
 
   /**
@@ -93,10 +90,20 @@ public interface VirtualColumn extends Cacheable
    * @param columnName the name this virtual column was referenced with
    * @param factory    column selector factory
    *
-   * @return the selector, or null if we can't make a selector
+   * @return the selector, must not be null
    */
-  @Nullable
   LongColumnSelector makeLongColumnSelector(String columnName, ColumnSelectorFactory factory);
+
+  /**
+   * Build a selector corresponding to this virtual column. Also provides the name that the
+   * virtual column was referenced with, which is useful if this column uses dot notation.
+   *
+   * @param columnName the name this virtual column was referenced with
+   * @param factory    column selector factory
+   *
+   * @return the selector, must not be null
+   */
+  DoubleColumnSelector makeDoubleColumnSelector(String columnName, ColumnSelectorFactory factory);
 
   /**
    * Returns the capabilities of this virtual column, which includes a type that should match

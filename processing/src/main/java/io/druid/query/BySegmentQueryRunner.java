@@ -24,7 +24,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import org.joda.time.DateTime;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -49,24 +49,24 @@ public class BySegmentQueryRunner<T> implements QueryRunner<T>
 
   @Override
   @SuppressWarnings("unchecked")
-  public Sequence<T> run(final Query<T> query, Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, Map<String, Object> responseContext)
   {
-    if (BaseQuery.getContextBySegment(query, false)) {
-      final Sequence<T> baseSequence = base.run(query, responseContext);
+    if (QueryContexts.isBySegment(queryPlus.getQuery())) {
+      final Sequence<T> baseSequence = base.run(queryPlus, responseContext);
       final List<T> results = Sequences.toList(baseSequence, Lists.<T>newArrayList());
       return Sequences.simple(
-          Arrays.asList(
+          Collections.singletonList(
               (T) new Result<BySegmentResultValueClass<T>>(
                   timestamp,
                   new BySegmentResultValueClass<T>(
                       results,
                       segmentIdentifier,
-                      query.getIntervals().get(0)
+                      queryPlus.getQuery().getIntervals().get(0)
                   )
               )
           )
       );
     }
-    return base.run(query, responseContext);
+    return base.run(queryPlus, responseContext);
   }
 }

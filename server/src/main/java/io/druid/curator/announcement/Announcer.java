@@ -23,8 +23,8 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
-import com.google.common.io.Closer;
 import io.druid.curator.cache.PathChildrenCacheFactory;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.CloseQuietly;
@@ -259,6 +259,11 @@ public class Announcer
                         }
                       }
                       break;
+                    case INITIALIZED:
+                    case CHILD_ADDED:
+                    case CHILD_UPDATED:
+                    case CONNECTION_SUSPENDED:
+                      // do nothing
                   }
                 }
               }

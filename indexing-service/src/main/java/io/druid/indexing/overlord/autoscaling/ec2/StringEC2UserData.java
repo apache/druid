@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.druid.java.util.common.StringUtils;
-
 import org.apache.commons.codec.binary.Base64;
 
 public class StringEC2UserData implements EC2UserData<StringEC2UserData>

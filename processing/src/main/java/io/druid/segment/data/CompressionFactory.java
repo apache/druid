@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 
 import java.io.IOException;
@@ -33,7 +34,7 @@ import java.nio.ByteOrder;
 import java.util.Map;
 
 /**
- * Compression of metrics is done by using a combination of {@link io.druid.segment.data.CompressedObjectStrategy.CompressionStrategy}
+ * Compression of metrics is done by using a combination of {@link CompressedObjectStrategy.CompressionStrategy}
  * and Encoding(such as {@link LongEncodingStrategy} for type Long). CompressionStrategy is unaware of the data type
  * and is based on byte operations. It must compress and decompress in block of bytes. Encoding refers to compression
  * method relies on data format, so a different set of Encodings exist for each data type.
@@ -63,7 +64,7 @@ public class CompressionFactory
   // encoding format for segments created prior to the introduction of encoding formats
   public static final LongEncodingFormat LEGACY_LONG_ENCODING_FORMAT = LongEncodingFormat.LONGS;
 
-  /*
+  /**
    * Delta Encoding Header v1:
    * Byte 1 : version
    * Byte 2 - 9 : base value
@@ -71,7 +72,7 @@ public class CompressionFactory
    */
   public static final byte DELTA_ENCODING_VERSION = 0x1;
 
-  /*
+  /**
    * Table Encoding Header v1 :
    * Byte 1 : version
    * Byte 2 - 5 : table size
@@ -112,7 +113,7 @@ public class CompressionFactory
     return hasEncodingFlag(strategyId) ? (byte) (strategyId + FLAG_VALUE) : strategyId;
   }
 
-  /*
+  /**
    * The compression of decompression of encodings are separated into different enums. EncodingStrategy refers to the
    * strategy used to encode the data, and EncodingFormat refers to the format the data is encoded in. Note there is not
    * necessarily an one-to-one mapping between to two. For instance, the AUTO LongEncodingStrategy scans the data once
@@ -120,7 +121,6 @@ public class CompressionFactory
    * write in any of the LongEncodingFormat. On the other hand, there are no LongEncodingStrategy that always write in
    * TABLE LongEncodingFormat since it only works for data with low cardinality.
    */
-
   public enum LongEncodingStrategy
   {
     /**
@@ -138,13 +138,13 @@ public class CompressionFactory
     @Override
     public String toString()
     {
-      return this.name().toLowerCase();
+      return StringUtils.toLowerCase(this.name());
     }
 
     @JsonCreator
     public static LongEncodingStrategy fromString(String name)
     {
-      return valueOf(name.toUpperCase());
+      return valueOf(StringUtils.toUpperCase(name));
     }
   }
 
@@ -296,12 +296,12 @@ public class CompressionFactory
   {
     if (encodingStrategy == LongEncodingStrategy.AUTO) {
       return new IntermediateLongSupplierSerializer(ioPeon, filenameBase, order, compressionStrategy);
-    } else if (encodingStrategy == LongEncodingStrategy.LONGS){
+    } else if (encodingStrategy == LongEncodingStrategy.LONGS) {
       if (compressionStrategy == CompressedObjectStrategy.CompressionStrategy.NONE) {
         return new EntireLayoutLongSupplierSerializer(
             ioPeon, filenameBase, order, new LongsLongEncodingWriter(order)
         );
-      } else{
+      } else {
         return new BlockLayoutLongSupplierSerializer(
             ioPeon, filenameBase, order, new LongsLongEncodingWriter(order), compressionStrategy
         );
@@ -338,11 +338,41 @@ public class CompressionFactory
       return new EntireLayoutFloatSupplierSerializer(
           ioPeon, filenameBase, order
       );
-    } else{
+    } else {
       return new BlockLayoutFloatSupplierSerializer(
           ioPeon, filenameBase, order, compressionStrategy
       );
     }
   }
 
+  public static Supplier<IndexedDoubles> getDoubleSupplier(
+      int totalSize,
+      int sizePer,
+      ByteBuffer fromBuffer,
+      ByteOrder byteOrder,
+      CompressedObjectStrategy.CompressionStrategy strategy,
+      SmooshedFileMapper fileMapper
+  )
+  {
+    switch (strategy) {
+      case NONE:
+        return new EntireLayoutIndexedDoubleSupplier(totalSize, fromBuffer, byteOrder);
+      default:
+        return new BlockLayoutIndexedDoubleSupplier(totalSize, sizePer, fromBuffer, byteOrder, strategy, fileMapper);
+    }
+
+  }
+  public static DoubleSupplierSerializer getDoubleSerializer(
+      IOPeon ioPeon,
+      String filenameBase,
+      ByteOrder byteOrder,
+      CompressedObjectStrategy.CompressionStrategy compression
+  )
+  {
+    if (compression == CompressedObjectStrategy.CompressionStrategy.NONE) {
+      return new EntireLayoutDoubleSupplierSerializer(ioPeon, filenameBase, byteOrder);
+    } else {
+      return new BlockLayoutDoubleSupplierSerializer(ioPeon, filenameBase, byteOrder, compression);
+    }
+  }
 }

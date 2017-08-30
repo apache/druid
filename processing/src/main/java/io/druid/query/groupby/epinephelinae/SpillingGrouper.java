@@ -30,6 +30,7 @@ import com.google.common.collect.Lists;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.query.BaseQuery;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.segment.ColumnSelectorFactory;
 import net.jpountz.lz4.LZ4BlockInputStream;
 import net.jpountz.lz4.LZ4BlockOutputStream;
@@ -45,21 +46,26 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * Grouper based around a single underlying {@link BufferGrouper}. Not thread-safe.
+ * Grouper based around a single underlying {@link BufferHashGrouper}. Not thread-safe.
  *
  * When the underlying grouper is full, its contents are sorted and written to temporary files using "spillMapper".
  */
 public class SpillingGrouper<KeyType> implements Grouper<KeyType>
 {
-  private final BufferGrouper<KeyType> grouper;
+  private final Grouper<KeyType> grouper;
+  private static final AggregateResult DISK_FULL = AggregateResult.failure(
+      "Not enough disk space to execute this query. Try raising druid.query.groupBy.maxOnDiskStorage."
+  );
   private final KeySerde<KeyType> keySerde;
   private final LimitedTemporaryStorage temporaryStorage;
   private final ObjectMapper spillMapper;
   private final AggregatorFactory[] aggregatorFactories;
-  private final Comparator<KeyType> keyObjComparator;
+  private final Comparator<Grouper.Entry<KeyType>> keyObjComparator;
+  private final Comparator<Grouper.Entry<KeyType>> defaultOrderKeyObjComparator;
 
   private final List<File> files = Lists.newArrayList();
   private final List<Closeable> closeables = Lists.newArrayList();
+  private final boolean sortHasNonGroupingFields;
 
   private boolean spillingAllowed = false;
 
@@ -73,24 +79,42 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
       final int bufferGrouperInitialBuckets,
       final LimitedTemporaryStorage temporaryStorage,
       final ObjectMapper spillMapper,
-      final boolean spillingAllowed
+      final boolean spillingAllowed,
+      final DefaultLimitSpec limitSpec,
+      final boolean sortHasNonGroupingFields
   )
   {
     this.keySerde = keySerdeFactory.factorize();
-    this.keyObjComparator = keySerdeFactory.objectComparator();
-    this.grouper = new BufferGrouper<>(
-        bufferSupplier,
-        keySerde,
-        columnSelectorFactory,
-        aggregatorFactories,
-        bufferGrouperMaxSize,
-        bufferGrouperMaxLoadFactor,
-        bufferGrouperInitialBuckets
-    );
+    this.keyObjComparator = keySerdeFactory.objectComparator(false);
+    this.defaultOrderKeyObjComparator = keySerdeFactory.objectComparator(true);
+    if (limitSpec != null) {
+      this.grouper = new LimitedBufferHashGrouper<>(
+          bufferSupplier,
+          keySerde,
+          columnSelectorFactory,
+          aggregatorFactories,
+          bufferGrouperMaxSize,
+          bufferGrouperMaxLoadFactor,
+          bufferGrouperInitialBuckets,
+          limitSpec.getLimit(),
+          sortHasNonGroupingFields
+      );
+    } else {
+      this.grouper = new BufferHashGrouper<>(
+          bufferSupplier,
+          keySerde,
+          columnSelectorFactory,
+          aggregatorFactories,
+          bufferGrouperMaxSize,
+          bufferGrouperMaxLoadFactor,
+          bufferGrouperInitialBuckets
+      );
+    }
     this.aggregatorFactories = aggregatorFactories;
     this.temporaryStorage = temporaryStorage;
     this.spillMapper = spillMapper;
     this.spillingAllowed = spillingAllowed;
+    this.sortHasNonGroupingFields = sortHasNonGroupingFields;
   }
 
   @Override
@@ -106,31 +130,27 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   }
 
   @Override
-  public boolean aggregate(KeyType key, int keyHash)
+  public AggregateResult aggregate(KeyType key, int keyHash)
   {
-    if (grouper.aggregate(key, keyHash)) {
-      return true;
-    } else if (spillingAllowed) {
+    final AggregateResult result = grouper.aggregate(key, keyHash);
+
+    if (result.isOk() || temporaryStorage.maxSize() <= 0 || !spillingAllowed) {
+      return result;
+    } else {
       // Warning: this can potentially block up a processing thread for a while.
       try {
         spill();
       }
       catch (TemporaryStorageFullException e) {
-        return false;
+        return DISK_FULL;
       }
       catch (IOException e) {
         throw Throwables.propagate(e);
       }
-      return grouper.aggregate(key, keyHash);
-    } else {
-      return false;
-    }
-  }
 
-  @Override
-  public boolean aggregate(KeyType key)
-  {
-    return aggregate(key, Groupers.hash(key));
+      // Try again.
+      return grouper.aggregate(key, keyHash);
+    }
   }
 
   @Override
@@ -185,7 +205,11 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
       closeables.add(fileIterator);
     }
 
-    return Groupers.mergeIterators(iterators, sorted ? keyObjComparator : null);
+    if (sortHasNonGroupingFields) {
+      return Groupers.mergeIterators(iterators, defaultOrderKeyObjComparator);
+    } else {
+      return Groupers.mergeIterators(iterators, sorted ? keyObjComparator : null);
+    }
   }
 
   private void spill() throws IOException

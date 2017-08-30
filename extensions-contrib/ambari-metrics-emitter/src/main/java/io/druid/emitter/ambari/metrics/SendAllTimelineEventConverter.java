@@ -30,7 +30,7 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import org.apache.hadoop.metrics2.sink.timeline.TimelineMetric;
 
 /**
- * Emits all the events instance of {@link com.metamx.emitter.service.ServiceMetricEvent}.
+ * Emits all the events instance of {@link ServiceMetricEvent}.
  * <p>
  * All the dimensions will be retained and lexicographically order using dimensions name.
  * <p>
@@ -71,7 +71,7 @@ public class SendAllTimelineEventConverter implements DruidToTimelineMetricConve
   public TimelineMetric druidEventToTimelineMetric(ServiceMetricEvent serviceMetricEvent)
   {
     ImmutableList.Builder metricNameBuilder = new ImmutableList.Builder<>();
-    if(!Strings.isNullOrEmpty(namespacePrefix)) {
+    if (!Strings.isNullOrEmpty(namespacePrefix)) {
       metricNameBuilder.add(namespacePrefix);
     }
     metricNameBuilder.add(AmbariMetricsEmitter.sanitize(serviceMetricEvent.getService()));

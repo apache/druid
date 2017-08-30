@@ -66,6 +66,12 @@ public final class NoopBufferAggregator implements BufferAggregator
   }
 
   @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return 0d;
+  }
+
+  @Override
   public void close()
   {
   }
@@ -73,5 +79,6 @@ public final class NoopBufferAggregator implements BufferAggregator
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
+    // nothing to inspect
   }
 }

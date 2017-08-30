@@ -78,6 +78,7 @@ public class RectangularBound implements Bound
     return maxCoords;
   }
 
+  @Override
   @JsonProperty
   public int getLimit()
   {

@@ -27,6 +27,7 @@ import io.druid.client.selector.ServerSelector;
 import io.druid.query.DataSource;
 import io.druid.query.QueryRunner;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
 
@@ -35,6 +36,15 @@ import java.util.concurrent.Executor;
 
 public class TestServerInventoryView implements TimelineServerView
 {
+  private static final DruidServerMetadata DUMMY_SERVER = new DruidServerMetadata(
+      "dummy",
+      "dummy",
+      null,
+      0,
+      ServerType.HISTORICAL,
+      "dummy",
+      0
+  );
   private final List<DataSegment> segments;
 
   public TestServerInventoryView(List<DataSegment> segments)
@@ -51,31 +61,21 @@ public class TestServerInventoryView implements TimelineServerView
   @Override
   public void registerSegmentCallback(Executor exec, final SegmentCallback callback)
   {
-    final DruidServerMetadata dummyServer = new DruidServerMetadata("dummy", "dummy", 0, "dummy", "dummy", 0);
-
     for (final DataSegment segment : segments) {
-      exec.execute(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              callback.segmentAdded(dummyServer, segment);
-            }
-          }
-      );
+      exec.execute(() -> callback.segmentAdded(DUMMY_SERVER, segment));
     }
 
-    exec.execute(
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            callback.segmentViewInitialized();
-          }
-        }
-    );
+    exec.execute(callback::segmentViewInitialized);
+  }
+
+  @Override
+  public void registerTimelineCallback(final Executor exec, final TimelineCallback callback)
+  {
+    for (DataSegment segment : segments) {
+      exec.execute(() -> callback.segmentAdded(DUMMY_SERVER, segment));
+    }
+
+    exec.execute(callback::timelineInitialized);
   }
 
   @Override

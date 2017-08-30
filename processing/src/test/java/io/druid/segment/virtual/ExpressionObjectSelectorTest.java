@@ -21,9 +21,9 @@ package io.druid.segment.virtual;
 
 import com.google.common.base.Supplier;
 import io.druid.common.guava.SettableSupplier;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.DimensionSelector;
 import io.druid.segment.ObjectColumnSelector;
-import io.druid.segment.TestFloatColumnSelector;
-import io.druid.segment.TestLongColumnSelector;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -32,45 +32,29 @@ import java.util.List;
 public class ExpressionObjectSelectorTest
 {
   @Test
-  public void testSupplierFromLongSelector()
+  public void testSupplierFromDimensionSelector()
   {
-    final Supplier<Number> supplier = ExpressionObjectSelector.supplierFromLongSelector(
-        new TestLongColumnSelector()
-        {
-          @Override
-          public long get()
-          {
-            return 1L;
-          }
-        }
+    final SettableSupplier<String> settableSupplier = new SettableSupplier<>();
+    final Supplier<Object> supplier = ExpressionObjectSelector.supplierFromDimensionSelector(
+        dimensionSelectorFromSupplier(settableSupplier)
     );
 
-    Assert.assertEquals(1L, supplier.get());
-  }
+    Assert.assertNotNull(supplier);
+    Assert.assertEquals(null, supplier.get());
 
-  @Test
-  public void testSupplierFromFloatSelector()
-  {
-    final Supplier<Number> supplier = ExpressionObjectSelector.supplierFromFloatSelector(
-        new TestFloatColumnSelector()
-        {
-          @Override
-          public float get()
-          {
-            return 0.1f;
-          }
-        }
-    );
+    settableSupplier.set(null);
+    Assert.assertEquals(null, supplier.get());
 
-    Assert.assertEquals(0.1f, supplier.get());
+    settableSupplier.set("1234");
+    Assert.assertEquals("1234", supplier.get());
   }
 
   @Test
   public void testSupplierFromObjectSelectorObject()
   {
     final SettableSupplier<Object> settableSupplier = new SettableSupplier<>();
-    final Supplier<Number> supplier = ExpressionObjectSelector.supplierFromObjectSelector(
-        selectorFromSupplier(settableSupplier, Object.class)
+    final Supplier<Object> supplier = ExpressionObjectSelector.supplierFromObjectSelector(
+        objectSelectorFromSupplier(settableSupplier, Object.class)
     );
 
     Assert.assertNotNull(supplier);
@@ -83,18 +67,18 @@ public class ExpressionObjectSelectorTest
     Assert.assertEquals(1L, supplier.get());
 
     settableSupplier.set("1234");
-    Assert.assertEquals(1234L, supplier.get());
+    Assert.assertEquals("1234", supplier.get());
 
     settableSupplier.set("1.234");
-    Assert.assertEquals(1.234d, supplier.get());
+    Assert.assertEquals("1.234", supplier.get());
   }
 
   @Test
   public void testSupplierFromObjectSelectorNumber()
   {
     final SettableSupplier<Number> settableSupplier = new SettableSupplier<>();
-    final Supplier<Number> supplier = ExpressionObjectSelector.supplierFromObjectSelector(
-        selectorFromSupplier(settableSupplier, Number.class)
+    final Supplier<Object> supplier = ExpressionObjectSelector.supplierFromObjectSelector(
+        objectSelectorFromSupplier(settableSupplier, Number.class)
     );
 
 
@@ -112,33 +96,56 @@ public class ExpressionObjectSelectorTest
   public void testSupplierFromObjectSelectorString()
   {
     final SettableSupplier<String> settableSupplier = new SettableSupplier<>();
-    final Supplier<Number> supplier = ExpressionObjectSelector.supplierFromObjectSelector(
-        selectorFromSupplier(settableSupplier, String.class)
+    final Supplier<Object> supplier = ExpressionObjectSelector.supplierFromObjectSelector(
+        objectSelectorFromSupplier(settableSupplier, String.class)
     );
 
     Assert.assertNotNull(supplier);
     Assert.assertEquals(null, supplier.get());
 
     settableSupplier.set("1.1");
-    Assert.assertEquals(1.1d, supplier.get());
+    Assert.assertEquals("1.1", supplier.get());
 
     settableSupplier.set("1");
-    Assert.assertEquals(1L, supplier.get());
+    Assert.assertEquals("1", supplier.get());
   }
 
   @Test
   public void testSupplierFromObjectSelectorList()
   {
     final SettableSupplier<List> settableSupplier = new SettableSupplier<>();
-    final Supplier<Number> supplier = ExpressionObjectSelector.supplierFromObjectSelector(
-        selectorFromSupplier(settableSupplier, List.class)
+    final Supplier<Object> supplier = ExpressionObjectSelector.supplierFromObjectSelector(
+        objectSelectorFromSupplier(settableSupplier, List.class)
     );
 
     // List can't be a number, so supplierFromObjectSelector should return null.
     Assert.assertNull(supplier);
   }
 
-  private static <T> ObjectColumnSelector<T> selectorFromSupplier(final Supplier<T> supplier, final Class<T> clazz)
+  private static DimensionSelector dimensionSelectorFromSupplier(
+      final Supplier<String> supplier
+  )
+  {
+    return new BaseSingleValueDimensionSelector()
+    {
+      @Override
+      protected String getValue()
+      {
+        return supplier.get();
+      }
+
+      @Override
+      public void inspectRuntimeShape(final RuntimeShapeInspector inspector)
+      {
+        inspector.visit("supplier", supplier);
+      }
+    };
+  }
+
+  private static <T> ObjectColumnSelector<T> objectSelectorFromSupplier(
+      final Supplier<T> supplier,
+      final Class<T> clazz
+  )
   {
     return new ObjectColumnSelector<T>()
     {

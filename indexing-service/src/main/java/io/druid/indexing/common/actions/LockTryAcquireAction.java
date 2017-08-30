@@ -46,6 +46,7 @@ public class LockTryAcquireAction implements TaskAction<TaskLock>
     return interval;
   }
 
+  @Override
   public TypeReference<TaskLock> getReturnTypeReference()
   {
     return new TypeReference<TaskLock>()

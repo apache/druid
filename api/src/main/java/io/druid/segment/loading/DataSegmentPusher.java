@@ -19,15 +19,60 @@
 
 package io.druid.segment.loading;
 
+import com.google.common.base.Joiner;
+import io.druid.guice.annotations.ExtensionPoint;
+import io.druid.java.util.common.StringUtils;
 import io.druid.timeline.DataSegment;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
+@ExtensionPoint
 public interface DataSegmentPusher
 {
+  Joiner JOINER = Joiner.on("/").skipNulls();
+
   @Deprecated
   String getPathForHadoop(String dataSource);
   String getPathForHadoop();
   DataSegment push(File file, DataSegment segment) throws IOException;
+  //use map instead of LoadSpec class to avoid dependency pollution.
+  Map<String, Object> makeLoadSpec(URI finalIndexZipFilePath);
+
+  default String getStorageDir(DataSegment dataSegment)
+  {
+    return getDefaultStorageDir(dataSegment);
+  }
+
+  default String makeIndexPathName(DataSegment dataSegment, String indexName)
+  {
+    return StringUtils.format("./%s/%s", getStorageDir(dataSegment), indexName);
+  }
+
+  /**
+   * Property prefixes that should be added to the "allowedHadoopPrefix" config for passing down to Hadoop jobs. These
+   * should be property prefixes like "druid.xxx", which means to include "druid.xxx" and "druid.xxx.*".
+   */
+  default List<String> getAllowedPropertyPrefixesForHadoop()
+  {
+    return Collections.emptyList();
+  }
+
+  // Note: storage directory structure format = .../dataSource/interval/version/partitionNumber/
+  // If above format is ever changed, make sure to change it appropriately in other places
+  // e.g. HDFSDataSegmentKiller uses this information to clean the version, interval and dataSource directories
+  // on segment deletion if segment being deleted was the only segment
+  static String getDefaultStorageDir(DataSegment segment)
+  {
+    return JOINER.join(
+        segment.getDataSource(),
+        StringUtils.format("%s_%s", segment.getInterval().getStart(), segment.getInterval().getEnd()),
+        segment.getVersion(),
+        segment.getShardSpec().getPartitionNum()
+    );
+  }
 }

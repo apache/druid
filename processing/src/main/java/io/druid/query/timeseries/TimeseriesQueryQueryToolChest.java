@@ -22,6 +22,7 @@ package io.druid.query.timeseries;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
@@ -32,6 +33,7 @@ import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.CacheStrategy;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -88,6 +90,21 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   {
     return new ResultMergeQueryRunner<Result<TimeseriesResultValue>>(queryRunner)
     {
+      @Override
+      public Sequence<Result<TimeseriesResultValue>> doRun(
+          QueryRunner<Result<TimeseriesResultValue>> baseRunner,
+          QueryPlus<Result<TimeseriesResultValue>> queryPlus,
+          Map<String, Object> context
+      )
+      {
+        return super.doRun(
+            baseRunner,
+            // Don't do post aggs until makePostComputeManipulatorFn() is called
+            queryPlus.withQuery(((TimeseriesQuery) queryPlus.getQuery()).withPostAggregatorSpecs(ImmutableList.of())),
+            context
+        );
+      }
+
       @Override
       protected Ordering<Result<TimeseriesResultValue>> makeOrdering(Query<Result<TimeseriesResultValue>> query)
       {
@@ -218,14 +235,15 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
         {
           @Override
           public Sequence<Result<TimeseriesResultValue>> run(
-              Query<Result<TimeseriesResultValue>> query, Map<String, Object> responseContext
+              QueryPlus<Result<TimeseriesResultValue>> queryPlus, Map<String, Object> responseContext
           )
           {
-            TimeseriesQuery timeseriesQuery = (TimeseriesQuery) query;
+            TimeseriesQuery timeseriesQuery = (TimeseriesQuery) queryPlus.getQuery();
             if (timeseriesQuery.getDimensionsFilter() != null) {
               timeseriesQuery = timeseriesQuery.withDimFilter(timeseriesQuery.getDimensionsFilter().optimize());
+              queryPlus = queryPlus.withQuery(timeseriesQuery);
             }
-            return runner.run(timeseriesQuery, responseContext);
+            return runner.run(queryPlus, responseContext);
           }
         }, this);
   }
@@ -257,7 +275,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       {
         final TimeseriesResultValue holder = result.getValue();
         final Map<String, Object> values = Maps.newHashMap(holder.getBaseObject());
-        if (calculatePostAggs) {
+        if (calculatePostAggs && !query.getPostAggregatorSpecs().isEmpty()) {
           // put non finalized aggregators for calculating dependent post Aggregators
           for (AggregatorFactory agg : query.getAggregatorSpecs()) {
             values.put(agg.getName(), holder.getMetric(agg.getName()));

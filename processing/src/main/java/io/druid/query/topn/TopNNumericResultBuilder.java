@@ -133,16 +133,22 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
     switch (extra) {
       case 7:
         metricValues.put(aggFactoryNames[6], metricVals[6]);
+        // fall through
       case 6:
         metricValues.put(aggFactoryNames[5], metricVals[5]);
+        // fall through
       case 5:
         metricValues.put(aggFactoryNames[4], metricVals[4]);
+        // fall through
       case 4:
         metricValues.put(aggFactoryNames[3], metricVals[3]);
+        // fall through
       case 3:
         metricValues.put(aggFactoryNames[2], metricVals[2]);
+        // fall through
       case 2:
         metricValues.put(aggFactoryNames[1], metricVals[1]);
+        // fall through
       case 1:
         metricValues.put(aggFactoryNames[0], metricVals[0]);
     }

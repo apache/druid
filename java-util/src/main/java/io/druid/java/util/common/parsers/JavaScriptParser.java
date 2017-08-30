@@ -44,6 +44,7 @@ public class JavaScriptParser implements Parser<String, Object>
 
     return new Function<Object, Object>()
     {
+      @Override
       public Object apply(Object input)
       {
         // ideally we need a close() function to discard the context once it is not used anymore

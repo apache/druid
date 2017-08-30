@@ -29,7 +29,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.inject.Inject;
-import io.druid.collections.StupidPool;
+import io.druid.collections.NonBlockingPool;
 import io.druid.data.input.Row;
 import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.IAE;
@@ -37,6 +37,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.GroupByMergedQueryRunner;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryWatcher;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -47,6 +48,7 @@ import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryEngine;
 import io.druid.query.groupby.GroupByQueryHelper;
 import io.druid.query.groupby.GroupByQueryQueryToolChest;
+import io.druid.query.groupby.orderby.NoopLimitSpec;
 import io.druid.query.groupby.resource.GroupByQueryResource;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.segment.StorageAdapter;
@@ -63,14 +65,14 @@ public class GroupByStrategyV1 implements GroupByStrategy
   private final Supplier<GroupByQueryConfig> configSupplier;
   private final GroupByQueryEngine engine;
   private final QueryWatcher queryWatcher;
-  private final StupidPool<ByteBuffer> bufferPool;
+  private final NonBlockingPool<ByteBuffer> bufferPool;
 
   @Inject
   public GroupByStrategyV1(
       Supplier<GroupByQueryConfig> configSupplier,
       GroupByQueryEngine engine,
       QueryWatcher queryWatcher,
-      @Global StupidPool<ByteBuffer> bufferPool
+      @Global NonBlockingPool<ByteBuffer> bufferPool
   )
   {
     this.configSupplier = configSupplier;
@@ -119,38 +121,33 @@ public class GroupByStrategyV1 implements GroupByStrategy
         configSupplier.get(),
         bufferPool,
         baseRunner.run(
-            new GroupByQuery(
-                query.getDataSource(),
-                query.getQuerySegmentSpec(),
-                query.getVirtualColumns(),
-                query.getDimFilter(),
-                query.getGranularity(),
-                query.getDimensions(),
-                query.getAggregatorSpecs(),
-                // Don't do post aggs until the end of this method.
-                ImmutableList.<PostAggregator>of(),
-                // Don't do "having" clause until the end of this method.
-                null,
-                null,
-                query.getContext()
-            ).withOverriddenContext(
-                ImmutableMap.<String, Object>of(
-                    "finalize", false,
-                    //setting sort to false avoids unnecessary sorting while merging results. we only need to sort
-                    //in the end when returning results to user. (note this is only respected by groupBy v1)
-                    GroupByQueryHelper.CTX_KEY_SORT_RESULTS, false,
-                    //no merging needed at historicals because GroupByQueryRunnerFactory.mergeRunners(..) would return
-                    //merged results. (note this is only respected by groupBy v1)
-                    GroupByQueryQueryToolChest.GROUP_BY_MERGE_KEY, false,
-                    GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V1
-                )
+            QueryPlus.wrap(
+                new GroupByQuery.Builder(query)
+                    // Don't do post aggs until the end of this method.
+                    .setPostAggregatorSpecs(ImmutableList.of())
+                    // Don't do "having" clause until the end of this method.
+                    .setHavingSpec(null)
+                    .setLimitSpec(NoopLimitSpec.instance())
+                    .overrideContext(
+                        ImmutableMap.of(
+                            "finalize", false,
+                            //set sort to false avoids unnecessary sorting while merging results. we only need to sort
+                            //in the end when returning results to user. (note this is only respected by groupBy v1)
+                            GroupByQueryHelper.CTX_KEY_SORT_RESULTS, false,
+                            //no merging needed at historicals because GroupByQueryRunnerFactory.mergeRunners(..) would
+                            //return merged results. (note this is only respected by groupBy v1)
+                            GroupByQueryQueryToolChest.GROUP_BY_MERGE_KEY, false,
+                            GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V1
+                        )
+                    )
+                    .build()
             ),
             responseContext
         ),
         true
     );
 
-    return Sequences.withBaggage(query.applyLimit(GroupByQueryHelper.postAggregate(query, index)), index);
+    return Sequences.withBaggage(query.postProcess(GroupByQueryHelper.postAggregate(query, index)), index);
   }
 
   @Override
@@ -253,7 +250,7 @@ public class GroupByStrategyV1 implements GroupByStrategy
     innerQueryResultIndex.close();
 
     return Sequences.withBaggage(
-        outerQuery.applyLimit(GroupByQueryHelper.postAggregate(query, outerQueryResultIndex)),
+        outerQuery.postProcess(GroupByQueryHelper.postAggregate(query, outerQueryResultIndex)),
         outerQueryResultIndex
     );
   }

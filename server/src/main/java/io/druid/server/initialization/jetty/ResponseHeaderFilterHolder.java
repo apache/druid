@@ -75,7 +75,7 @@ public class ResponseHeaderFilterHolder implements ServletFilterHolder
     return null;
   }
 
-  private class ResponseHeaderFilter implements Filter
+  private static class ResponseHeaderFilter implements Filter
   {
     private volatile FilterConfig config;
 
@@ -101,6 +101,8 @@ public class ResponseHeaderFilterHolder implements ServletFilterHolder
     }
 
     @Override
-    public void destroy() { }
+    public void destroy()
+    {
+    }
   }
 }

@@ -48,10 +48,10 @@ public class LongLastAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    long time = timeSelector.get();
+    long time = timeSelector.getLong();
     if (time >= lastTime) {
-      lastTime = timeSelector.get();
-      lastValue = valueSelector.get();
+      lastTime = time;
+      lastValue = valueSelector.getLong();
     }
   }
 
@@ -60,6 +60,12 @@ public class LongLastAggregator implements Aggregator
   {
     lastTime = Long.MIN_VALUE;
     lastValue = 0;
+  }
+
+  @Override
+  public double getDouble()
+  {
+    return (double) lastValue;
   }
 
   @Override
@@ -75,14 +81,14 @@ public class LongLastAggregator implements Aggregator
   }
 
   @Override
-  public void close()
-  {
-
-  }
-
-  @Override
   public long getLong()
   {
     return lastValue;
+  }
+
+  @Override
+  public void close()
+  {
+
   }
 }

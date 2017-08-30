@@ -40,9 +40,10 @@ public class SQLMetadataStorageActionHandlerFactory implements MetadataStorageAc
     this.jsonMapper = jsonMapper;
   }
 
-  public <A,B,C,D> MetadataStorageActionHandler<A,B,C,D> create(
+  @Override
+  public <A, B, C, D> MetadataStorageActionHandler<A, B, C, D> create(
       final String entryType,
-      MetadataStorageActionHandlerTypes<A,B,C,D> payloadTypes
+      MetadataStorageActionHandlerTypes<A, B, C, D> payloadTypes
   )
   {
     return new SQLMetadataStorageActionHandler<>(

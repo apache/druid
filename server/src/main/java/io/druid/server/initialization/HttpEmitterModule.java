@@ -21,7 +21,6 @@ package io.druid.server.initialization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
@@ -53,8 +52,9 @@ public class HttpEmitterModule implements Module
     final SSLContext context;
     try {
       context = SSLContext.getDefault();
-    } catch (NoSuchAlgorithmException e) {
-      throw Throwables.propagate(e);
+    }
+    catch (NoSuchAlgorithmException e) {
+      throw new RuntimeException(e);
     }
 
     binder.bind(SSLContext.class).toProvider(Providers.of(context)).in(LazySingleton.class);

@@ -21,6 +21,7 @@ package io.druid.data.input;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.guice.annotations.PublicApi;
 import org.joda.time.DateTime;
 
 import java.util.List;
@@ -29,6 +30,7 @@ import java.util.List;
  * A Row of data.  This can be used for both input and output into various parts of the system.  It assumes
  * that the user already knows the schema of the row and can query for the parts that they care about.
  */
+@PublicApi
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "version", defaultImpl = MapBasedRow.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "v1", value = MapBasedRow.class)
@@ -90,4 +92,14 @@ public interface Row extends Comparable<Row>
    * @return the long value for the provided column name.
    */
   public long getLongMetric(String metric);
+
+  /**
+   * Returns the double value of the given metric column.
+   * <p/>
+   *
+   * @param metric the column name of the metric requested
+   *
+   * @return the double value for the provided column name.
+   */
+  public double getDoubleMetric(String metric);
 }

@@ -22,6 +22,7 @@ package io.druid.guice;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Provider;
@@ -52,7 +53,8 @@ public class GuiceInjectorsTest
     Assert.assertEquals("Expected String", customEmitter.getOtherValue());
   }
 
-  private static class Emitter {
+  private static class Emitter
+  {
 
     @JacksonInject
     private String value;
@@ -63,13 +65,15 @@ public class GuiceInjectorsTest
     }
   }
 
-  private class CustomEmitterFactory implements Provider<CustomEmitter> {
+  private static class CustomEmitterFactory implements Provider<CustomEmitter>
+  {
 
     private Emitter emitter;
     private Injector injector;
 
-    @com.google.inject.Inject
-    public void configure(Injector injector) {
+    @Inject
+    public void configure(Injector injector)
+    {
       this.injector = injector;
       emitter = injector.getInstance(Emitter.class);
     }
@@ -89,7 +93,8 @@ public class GuiceInjectorsTest
 
     private Emitter emitter;
 
-    public CustomEmitter(Emitter emitter){
+    public CustomEmitter(Emitter emitter)
+    {
       this.emitter = emitter;
     }
   }

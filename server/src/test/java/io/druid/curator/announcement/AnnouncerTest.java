@@ -22,6 +22,7 @@ package io.druid.curator.announcement;
 import com.google.common.collect.Sets;
 import io.druid.concurrent.Execs;
 import io.druid.curator.CuratorTestBase;
+import io.druid.java.util.common.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.CuratorEvent;
 import org.apache.curator.framework.api.CuratorEventType;
@@ -65,7 +66,7 @@ public class AnnouncerTest extends CuratorTestBase
     curator.blockUntilConnected();
     Announcer announcer = new Announcer(curator, exec);
 
-    final byte[] billy = "billy".getBytes();
+    final byte[] billy = StringUtils.toUtf8("billy");
     final String testPath1 = "/test1";
     final String testPath2 = "/somewhere/test2";
     announcer.announce(testPath1, billy);
@@ -137,7 +138,7 @@ public class AnnouncerTest extends CuratorTestBase
       curator.inTransaction().create().forPath("/somewhere").and().commit();
       announcer.start();
 
-      final byte[] billy = "billy".getBytes();
+      final byte[] billy = StringUtils.toUtf8("billy");
       final String testPath1 = "/test1";
       final String testPath2 = "/somewhere/test2";
       final Set<String> paths = Sets.newHashSet(testPath1, testPath2);
@@ -191,7 +192,7 @@ public class AnnouncerTest extends CuratorTestBase
     curator.blockUntilConnected();
     Announcer announcer = new Announcer(curator, exec);
 
-    final byte[] billy = "billy".getBytes();
+    final byte[] billy = StringUtils.toUtf8("billy");
     final String testPath = "/somewhere/test2";
     final String parent = ZKPaths.getPathAndNode(testPath).getPath();
 
@@ -217,7 +218,7 @@ public class AnnouncerTest extends CuratorTestBase
     curator.blockUntilConnected();
     Announcer announcer = new Announcer(curator, exec);
 
-    final byte[] billy = "billy".getBytes();
+    final byte[] billy = StringUtils.toUtf8("billy");
     final String testPath = "/somewhere/test2";
     final String parent = ZKPaths.getPathAndNode(testPath).getPath();
 
@@ -246,7 +247,7 @@ public class AnnouncerTest extends CuratorTestBase
     curator.blockUntilConnected();
     Announcer announcer = new Announcer(curator, exec);
 
-    final byte[] billy = "billy".getBytes();
+    final byte[] billy = StringUtils.toUtf8("billy");
     final String testPath = "/somewhere/test2";
     final String parent = ZKPaths.getPathAndNode(testPath).getPath();
 

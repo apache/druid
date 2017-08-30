@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.java.util.common.StringUtils;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
@@ -77,7 +78,7 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
   }
 
   @Override
-  public boolean accept(String dimVal)
+  public boolean accept(@Nullable String dimVal)
   {
     if (dimVal == null || values == null) {
       return false;

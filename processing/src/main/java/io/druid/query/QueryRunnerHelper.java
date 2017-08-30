@@ -58,13 +58,12 @@ public class QueryRunnerHelper
 
     return Sequences.filter(
         Sequences.map(
-            adapter.makeCursors(filter, queryIntervals.get(0), virtualColumns, granularity, descending),
+            adapter.makeCursors(filter, queryIntervals.get(0), virtualColumns, granularity, descending, null),
             new Function<Cursor, Result<T>>()
             {
               @Override
               public Result<T> apply(Cursor input)
               {
-                log.debug("Running over cursor[%s]", adapter.getInterval(), input.getTime());
                 return mapFn.apply(input);
               }
             }
@@ -73,13 +72,14 @@ public class QueryRunnerHelper
     );
   }
 
-  public static <T>  QueryRunner<T> makeClosingQueryRunner(final QueryRunner<T> runner, final Closeable closeable){
+  public static <T> QueryRunner<T> makeClosingQueryRunner(final QueryRunner<T> runner, final Closeable closeable)
+  {
     return new QueryRunner<T>()
     {
       @Override
-      public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
+      public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
       {
-        return Sequences.withBaggage(runner.run(query, responseContext), closeable);
+        return Sequences.withBaggage(runner.run(queryPlus, responseContext), closeable);
       }
     };
   }

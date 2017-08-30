@@ -19,51 +19,76 @@
 
 package io.druid.query.aggregation.post;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.math.expr.Expr;
+import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.cache.CacheKeyBuilder;
 
+import javax.annotation.Nullable;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
-/**
- */
 public class ExpressionPostAggregator implements PostAggregator
 {
-  private static final Comparator<Number> DEFAULT_COMPARATOR = new Comparator<Number>()
-  {
-    @Override
-    public int compare(Number o1, Number o2)
-    {
-      if (o1 instanceof Long && o2 instanceof Long) {
-        return Long.compare(o1.longValue(), o2.longValue());
+  private static final Comparator<Comparable> DEFAULT_COMPARATOR = Comparator.nullsFirst(
+      (Comparable o1, Comparable o2) -> {
+        if (o1 instanceof Long && o2 instanceof Long) {
+          return Long.compare((long) o1, (long) o2);
+        } else if (o1 instanceof Number && o2 instanceof Number) {
+          return Double.compare(((Number) o1).doubleValue(), ((Number) o2).doubleValue());
+        } else {
+          return o1.compareTo(o2);
+        }
       }
-      return Double.compare(o1.doubleValue(), o2.doubleValue());
-    }
-  };
+  );
 
   private final String name;
   private final String expression;
-  private final Comparator comparator;
+  private final Comparator<Comparable> comparator;
   private final String ordering;
+  private final ExprMacroTable macroTable;
+  private final Map<String, Function<Object, Object>> finalizers;
 
   private final Expr parsed;
-  private final List<String> dependentFields;
+  private final Set<String> dependentFields;
 
+  /**
+   * Constructor for serialization.
+   */
   @JsonCreator
   public ExpressionPostAggregator(
       @JsonProperty("name") String name,
       @JsonProperty("expression") String expression,
-      @JsonProperty("ordering") String ordering
+      @JsonProperty("ordering") String ordering,
+      @JacksonInject ExprMacroTable macroTable
+  )
+  {
+    this(name, expression, ordering, macroTable, ImmutableMap.of());
+  }
+
+  /**
+   * Constructor for {@link #decorate(Map)}.
+   */
+  private ExpressionPostAggregator(
+      final String name,
+      final String expression,
+      @Nullable final String ordering,
+      final ExprMacroTable macroTable,
+      final Map<String, Function<Object, Object>> finalizers
   )
   {
     Preconditions.checkArgument(expression != null, "expression cannot be null");
@@ -72,20 +97,17 @@ public class ExpressionPostAggregator implements PostAggregator
     this.expression = expression;
     this.ordering = ordering;
     this.comparator = ordering == null ? DEFAULT_COMPARATOR : Ordering.valueOf(ordering);
+    this.macroTable = macroTable;
+    this.finalizers = finalizers;
 
-    this.parsed = Parser.parse(expression);
-    this.dependentFields = Parser.findRequiredBindings(parsed);
-  }
-
-  public ExpressionPostAggregator(String name, String fnName)
-  {
-    this(name, fnName, null);
+    this.parsed = Parser.parse(expression, macroTable);
+    this.dependentFields = ImmutableSet.copyOf(Parser.findRequiredBindings(parsed));
   }
 
   @Override
   public Set<String> getDependentFields()
   {
-    return Sets.newHashSet(dependentFields);
+    return dependentFields;
   }
 
   @Override
@@ -97,7 +119,16 @@ public class ExpressionPostAggregator implements PostAggregator
   @Override
   public Object compute(Map<String, Object> values)
   {
-    return parsed.eval(Parser.withMap(values)).value();
+    // Maps.transformEntries is lazy, will only finalize values we actually read.
+    final Map<String, Object> finalizedValues = Maps.transformEntries(
+        values,
+        (String k, Object v) -> {
+          final Function<Object, Object> finalizer = finalizers.get(k);
+          return finalizer != null ? finalizer.apply(v) : v;
+        }
+    );
+
+    return parsed.eval(Parser.withMap(finalizedValues)).value();
   }
 
   @Override
@@ -108,9 +139,20 @@ public class ExpressionPostAggregator implements PostAggregator
   }
 
   @Override
-  public ExpressionPostAggregator decorate(Map<String, AggregatorFactory> aggregators)
+  public ExpressionPostAggregator decorate(final Map<String, AggregatorFactory> aggregators)
   {
-    return this;
+    return new ExpressionPostAggregator(
+        name,
+        expression,
+        ordering,
+        macroTable,
+        aggregators.entrySet().stream().collect(
+            Collectors.toMap(
+                entry -> entry.getKey(),
+                entry -> entry.getValue()::finalizeComputation
+            )
+        )
+    );
   }
 
   @JsonProperty("expression")
@@ -144,30 +186,29 @@ public class ExpressionPostAggregator implements PostAggregator
         .build();
   }
 
-  public static enum Ordering implements Comparator<Number>
+  public enum Ordering implements Comparator<Comparable>
   {
     // ensures the following order: numeric > NaN > Infinite
+    // The name may be referenced via Ordering.valueOf(ordering) in the constructor.
     numericFirst {
-      public int compare(Number lhs, Number rhs)
+      @Override
+      public int compare(Comparable lhs, Comparable rhs)
       {
         if (lhs instanceof Long && rhs instanceof Long) {
-          return Long.compare(lhs.longValue(), rhs.longValue());
+          return Long.compare(((Number) lhs).longValue(), ((Number) rhs).longValue());
+        } else if (lhs instanceof Number && rhs instanceof Number) {
+          double d1 = ((Number) lhs).doubleValue();
+          double d2 = ((Number) rhs).doubleValue();
+          if (Double.isFinite(d1) && !Double.isFinite(d2)) {
+            return 1;
+          }
+          if (!Double.isFinite(d1) && Double.isFinite(d2)) {
+            return -1;
+          }
+          return Double.compare(d1, d2);
+        } else {
+          return Comparators.<Comparable>naturalNullsFirst().compare(lhs, rhs);
         }
-        double d1 = lhs.doubleValue();
-        double d2 = rhs.doubleValue();
-        if (isFinite(d1) && !isFinite(d2)) {
-          return 1;
-        }
-        if (!isFinite(d1) && isFinite(d2)) {
-          return -1;
-        }
-        return Double.compare(d1, d2);
-      }
-
-      // Double.isFinite only exist in JDK8
-      private boolean isFinite(double value)
-      {
-        return !Double.isInfinite(value) && !Double.isNaN(value);
       }
     }
   }

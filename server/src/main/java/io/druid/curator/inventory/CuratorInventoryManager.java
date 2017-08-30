@@ -23,8 +23,9 @@ import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
-import com.google.common.io.Closer;
 import io.druid.curator.cache.PathChildrenCacheFactory;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.common.logger.Logger;
@@ -174,10 +175,12 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
     );
   }
 
-  private byte[] getZkDataForNode(String path) {
+  private byte[] getZkDataForNode(String path)
+  {
     try {
       return curatorFramework.getData().decompressed().forPath(path);
-    } catch(Exception ex) {
+    }
+    catch (Exception ex) {
       log.warn(ex, "Exception while getting data for node %s", path);
       return null;
     }
@@ -228,7 +231,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
             final ChildData child = event.getData();
 
             byte[] data = getZkDataForNode(child.getPath());
-            if(data == null) {
+            if (data == null) {
               log.info("Ignoring event: Type - %s , Path - %s , Version - %s",
                   event.getType(),
                   child.getPath(),
@@ -246,7 +249,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
             if (containers.containsKey(containerKey)) {
               log.error("New node[%s] but there was already one.  That's not good, ignoring new one.", child.getPath());
             } else {
-              final String inventoryPath = String.format("%s/%s", config.getInventoryPath(), containerKey);
+              final String inventoryPath = StringUtils.format("%s/%s", config.getInventoryPath(), containerKey);
               PathChildrenCache inventoryCache = cacheFactory.make(curatorFramework, inventoryPath);
               inventoryCache.getListenable().addListener(new InventoryCacheListener(containerKey, inventoryPath));
 
@@ -256,9 +259,8 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
               inventoryCache.start(PathChildrenCache.StartMode.POST_INITIALIZED_EVENT);
               strategy.newContainer(container);
             }
-
-            break;
           }
+          break;
         case CHILD_REMOVED:
           synchronized (lock) {
             final ChildData child = event.getData();
@@ -281,9 +283,8 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
             synchronized (removed) {
               markInventoryInitialized(removed);
             }
-
-            break;
           }
+          break;
         case CHILD_UPDATED:
           synchronized (lock) {
             final ChildData child = event.getData();
@@ -310,9 +311,8 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
                 holder.setContainer(strategy.updateContainer(holder.getContainer(), container));
               }
             }
-
-            break;
           }
+          break;
         case INITIALIZED:
           synchronized (lock) {
             // must await initialized of all containerholders
@@ -325,8 +325,12 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
             }
             containersInitialized = true;
             maybeDoneInitializing();
-            break;
           }
+          break;
+        case CONNECTION_SUSPENDED:
+        case CONNECTION_RECONNECTED:
+        case CONNECTION_LOST:
+          // do nothing
       }
     }
 
@@ -431,7 +435,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
 
             break;
           }
-          case INITIALIZED:
+          case INITIALIZED: {
             // make sure to acquire locks in (lock -> holder) order
             synchronized (lock) {
               synchronized (holder) {
@@ -440,6 +444,11 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
             }
 
             break;
+          }
+          case CONNECTION_SUSPENDED:
+          case CONNECTION_RECONNECTED:
+          case CONNECTION_LOST:
+            // do nothing
         }
       }
     }

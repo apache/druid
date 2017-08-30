@@ -28,6 +28,7 @@ import io.druid.server.DruidNode;
 import io.druid.guice.annotations.RemoteChatHandler;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.server.initialization.ServerConfig;
 
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -43,17 +44,20 @@ public class ServiceAnnouncingChatHandlerProvider implements ChatHandlerProvider
 
   private final DruidNode node;
   private final ServiceAnnouncer serviceAnnouncer;
+  private final ServerConfig serverConfig;
   private final ConcurrentMap<String, ChatHandler> handlers;
   private final ConcurrentSkipListSet<String> announcements;
 
   @Inject
   public ServiceAnnouncingChatHandlerProvider(
       @RemoteChatHandler DruidNode node,
-      ServiceAnnouncer serviceAnnouncer
+      ServiceAnnouncer serviceAnnouncer,
+      ServerConfig serverConfig
   )
   {
     this.node = node;
     this.serviceAnnouncer = serviceAnnouncer;
+    this.serverConfig = serverConfig;
     this.handlers = Maps.newConcurrentMap();
     this.announcements = new ConcurrentSkipListSet<>();
   }
@@ -73,8 +77,7 @@ public class ServiceAnnouncingChatHandlerProvider implements ChatHandlerProvider
       throw new ISE("handler already registered for service[%s]", service);
     }
 
-    if (announce)
-    {
+    if (announce) {
       try {
         serviceAnnouncer.announce(makeDruidNode(service));
         if (!announcements.add(service)) {
@@ -99,8 +102,7 @@ public class ServiceAnnouncingChatHandlerProvider implements ChatHandlerProvider
       return;
     }
 
-    if (announcements.contains(service))
-    {
+    if (announcements.contains(service)) {
       try {
         serviceAnnouncer.unannounce(makeDruidNode(service));
       }
@@ -122,6 +124,6 @@ public class ServiceAnnouncingChatHandlerProvider implements ChatHandlerProvider
 
   private DruidNode makeDruidNode(String key)
   {
-    return new DruidNode(key, node.getHost(), node.getPort());
+    return new DruidNode(key, node.getHost(), node.getPlaintextPort(), node.getTlsPort(), serverConfig);
   }
 }

@@ -37,6 +37,7 @@ import kafka.consumer.KafkaStream;
 import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.message.InvalidMessageException;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -68,7 +69,7 @@ public class KafkaEightFirehoseFactory implements FirehoseFactory<ByteBufferInpu
   }
 
   @Override
-  public Firehose connect(final ByteBufferInputRowParser firehoseParser) throws IOException
+  public Firehose connect(final ByteBufferInputRowParser firehoseParser, File temporaryDirectory) throws IOException
   {
     Set<String> newDimExclus = Sets.union(
         firehoseParser.getParseSpec().getDimensionsSpec().getDimensionExclusions(),
@@ -128,7 +129,7 @@ public class KafkaEightFirehoseFactory implements FirehoseFactory<ByteBufferInpu
           IF the CRC is caused within the wire transfer, this is not the best way to handel CRC.
           Probably it is better to shutdown the fireHose without commit and start it again.
            */
-          log.error(e,"Message failed its checksum and it is corrupt, will skip it");
+          log.error(e, "Message failed its checksum and it is corrupt, will skip it");
           return null;
         }
       }

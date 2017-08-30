@@ -30,6 +30,7 @@ import com.google.common.primitives.Longs;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedWriter;
 
@@ -90,18 +91,18 @@ public class GenericIndexedWriter<T> implements Closeable
     this.filenameBase = filenameBase;
     this.strategy = strategy;
     this.fileSizeLimit = fileSizeLimit;
-    fileNameByteArray = filenameBase.getBytes();
+    fileNameByteArray = StringUtils.toUtf8(filenameBase);
     buf = ByteBuffer.allocate(Ints.BYTES);
   }
 
   public static String generateValueFileName(String fileNameBase, int fileNum)
   {
-    return String.format("%s_value_%d", fileNameBase, fileNum);
+    return StringUtils.format("%s_value_%d", fileNameBase, fileNum);
   }
 
   public static String generateHeaderFileName(String fileNameBase)
   {
-    return String.format("%s_header", fileNameBase);
+    return StringUtils.format("%s_header", fileNameBase);
   }
 
   private static void writeBytesIntoSmooshedChannel(
@@ -159,7 +160,7 @@ public class GenericIndexedWriter<T> implements Closeable
 
   private String makeFilename(String suffix)
   {
-    return String.format("%s.%s", filenameBase, suffix);
+    return StringUtils.format("%s.%s", filenameBase, suffix);
   }
 
   @Override
@@ -391,7 +392,6 @@ public class GenericIndexedWriter<T> implements Closeable
       }
       writeHeaderLong(smoosher, headerFile, bagSizePower, buffer);
     }
-
   }
 
   public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
@@ -403,7 +403,8 @@ public class GenericIndexedWriter<T> implements Closeable
     }
   }
 
-  private void writeHeaderLong(FileSmoosher smoosher, RandomAccessFile headerFile, int bagSizePower, byte[] buffer) throws IOException
+  private void writeHeaderLong(FileSmoosher smoosher, RandomAccessFile headerFile, int bagSizePower, byte[] buffer)
+      throws IOException
   {
     ByteBuffer helperBuffer = ByteBuffer.allocate(Ints.BYTES).order(ByteOrder.nativeOrder());
 

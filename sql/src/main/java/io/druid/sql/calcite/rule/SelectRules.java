@@ -20,18 +20,13 @@
 package io.druid.sql.calcite.rule;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import io.druid.java.util.common.ISE;
-import io.druid.query.dimension.DimensionSpec;
-import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
+import io.druid.segment.VirtualColumn;
 import io.druid.segment.column.Column;
-import io.druid.segment.column.ValueType;
+import io.druid.sql.calcite.expression.DruidExpression;
 import io.druid.sql.calcite.expression.Expressions;
-import io.druid.sql.calcite.expression.RowExtraction;
 import io.druid.sql.calcite.planner.Calcites;
-import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.rel.DruidRel;
 import io.druid.sql.calcite.rel.SelectProjection;
 import io.druid.sql.calcite.table.RowSignature;
@@ -39,9 +34,8 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sort;
-import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.type.SqlTypeName;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class SelectRules
@@ -51,22 +45,19 @@ public class SelectRules
     // No instantiation.
   }
 
-  public static List<RelOptRule> rules(final DruidOperatorTable operatorTable)
+  public static List<RelOptRule> rules()
   {
     return ImmutableList.of(
-        new DruidSelectProjectionRule(operatorTable),
+        new DruidSelectProjectionRule(),
         new DruidSelectSortRule()
     );
   }
 
   static class DruidSelectProjectionRule extends RelOptRule
   {
-    private final DruidOperatorTable operatorTable;
-
-    public DruidSelectProjectionRule(final DruidOperatorTable operatorTable)
+    public DruidSelectProjectionRule()
     {
       super(operand(Project.class, operand(DruidRel.class, none())));
-      this.operatorTable = operatorTable;
     }
 
     @Override
@@ -89,70 +80,46 @@ public class SelectRules
       // Leave anything more complicated to DruidAggregateProjectRule for possible handling in a GroupBy query.
 
       final RowSignature sourceRowSignature = druidRel.getSourceRowSignature();
-      final List<DimensionSpec> dimensions = Lists.newArrayList();
-      final List<String> metrics = Lists.newArrayList();
-      final List<String> rowOrder = Lists.newArrayList();
+      final List<DruidExpression> expressions = Expressions.toDruidExpressions(
+          druidRel.getPlannerContext(),
+          sourceRowSignature,
+          project.getChildExps()
+      );
 
-      int dimOutputNameCounter = 0;
-      for (int i = 0; i < project.getRowType().getFieldCount(); i++) {
-        final RexNode rexNode = project.getChildExps().get(i);
-        final RowExtraction rex = Expressions.toRowExtraction(
-            operatorTable,
-            druidRel.getPlannerContext(),
-            sourceRowSignature.getRowOrder(),
-            rexNode
-        );
+      if (expressions == null) {
+        return;
+      }
 
-        if (rex == null) {
-          return;
-        }
+      final List<String> directColumns = new ArrayList<>();
+      final List<VirtualColumn> virtualColumns = new ArrayList<>();
+      final List<String> rowOrder = new ArrayList<>();
 
-        final String column = rex.getColumn();
-        final ExtractionFn extractionFn = rex.getExtractionFn();
-
-        // Check if this field should be a dimension, a metric, or a reference to __time.
-        final ValueType columnType = sourceRowSignature.getColumnType(column);
-
-        if (columnType == ValueType.STRING || (column.equals(Column.TIME_COLUMN_NAME) && extractionFn != null)) {
-          // Add to dimensions.
-          do {
-            dimOutputNameCounter++;
-          } while (sourceRowSignature.getColumnType(GroupByRules.dimOutputName(dimOutputNameCounter)) != null);
-          final String outputName = GroupByRules.dimOutputName(dimOutputNameCounter);
-          final SqlTypeName sqlTypeName = rexNode.getType().getSqlTypeName();
-          final ValueType outputType = Calcites.getValueTypeForSqlTypeName(sqlTypeName);
-          if (outputType == null) {
-            throw new ISE("Cannot translate sqlTypeName[%s] to Druid type for field[%s]", sqlTypeName, outputName);
-          }
-          final DimensionSpec dimensionSpec = rex.toDimensionSpec(sourceRowSignature, outputName, columnType);
-
-          if (dimensionSpec == null) {
-            // Really should have been possible due to the checks above.
-            throw new ISE("WTF?! Could not create DimensionSpec for rowExtraction[%s].", rex);
-          }
-
-          dimensions.add(dimensionSpec);
-          rowOrder.add(outputName);
-        } else if (extractionFn == null && !column.equals(Column.TIME_COLUMN_NAME)) {
-          // Add to metrics.
-          metrics.add(column);
-          rowOrder.add(column);
-        } else if (extractionFn == null && column.equals(Column.TIME_COLUMN_NAME)) {
-          // This is __time.
-          rowOrder.add(Column.TIME_COLUMN_NAME);
+      int virtualColumnNameCounter = 0;
+      for (int i = 0; i < expressions.size(); i++) {
+        final DruidExpression expression = expressions.get(i);
+        if (expression.isDirectColumnAccess()) {
+          directColumns.add(expression.getDirectColumn());
+          rowOrder.add(expression.getDirectColumn());
         } else {
-          // Don't know what to do!
-          return;
+          String candidate = "v" + virtualColumnNameCounter++;
+          while (sourceRowSignature.getColumnType(candidate) != null) {
+            candidate = "v" + virtualColumnNameCounter++;
+          }
+          virtualColumns.add(
+              expression.toVirtualColumn(
+                  candidate,
+                  Calcites.getValueTypeForSqlTypeName(project.getChildExps().get(i).getType().getSqlTypeName()),
+                  druidRel.getPlannerContext().getExprMacroTable()
+              )
+          );
+          rowOrder.add(candidate);
         }
       }
 
       call.transformTo(
           druidRel.withQueryBuilder(
               druidRel.getQueryBuilder()
-                      .withSelectProjection(
-                          new SelectProjection(project, dimensions, metrics),
-                          rowOrder
-                      )
+                      .withSelectProjection(new SelectProjection(project, directColumns, virtualColumns), rowOrder)
           )
       );
     }

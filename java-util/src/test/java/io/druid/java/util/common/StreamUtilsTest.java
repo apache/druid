@@ -82,7 +82,7 @@ public class StreamUtilsTest
             10
         )
     );
-    Assert.assertEquals(4, outputFlushes.get());// 2 closes and 2 manual flushes
+    Assert.assertEquals(4, outputFlushes.get()); // 2 closes and 2 manual flushes
     Assert.assertArrayEquals(bytes, byteArrayOutputStream.toByteArray());
   }
 }

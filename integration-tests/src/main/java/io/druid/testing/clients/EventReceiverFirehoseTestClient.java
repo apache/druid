@@ -29,6 +29,7 @@ import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.testing.guice.TestClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -37,6 +38,7 @@ import javax.ws.rs.core.MediaType;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
@@ -68,7 +70,7 @@ public class EventReceiverFirehoseTestClient
 
   private String getURL()
   {
-    return String.format(
+    return StringUtils.format(
         "http://%s/druid/worker/v1/chat/%s/push-events/",
         host,
         chatID
@@ -128,11 +130,10 @@ public class EventReceiverFirehoseTestClient
     try (
         BufferedReader reader = new BufferedReader(
             new InputStreamReader(
-                EventReceiverFirehoseTestClient.class.getResourceAsStream(
-                    file
-                )
+                EventReceiverFirehoseTestClient.class.getResourceAsStream(file),
+                StandardCharsets.UTF_8
             )
-        );
+        )
     ) {
 
       String s;

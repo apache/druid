@@ -22,6 +22,8 @@ package io.druid.timeline;
 import io.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
+import java.util.List;
+
 
 public interface TimelineLookup<VersionType, ObjectType>
 {
@@ -35,7 +37,7 @@ public interface TimelineLookup<VersionType, ObjectType>
    * @return Holders representing the interval that the objects exist for, PartitionHolders
    *         are guaranteed to be complete. Holders returned sorted by the interval.
    */
-  public Iterable<TimelineObjectHolder<VersionType, ObjectType>> lookup(Interval interval);
+  public List<TimelineObjectHolder<VersionType, ObjectType>> lookup(Interval interval);
 
   /**
    * Does a lookup for the objects representing the given time interval.  Will also return
@@ -46,7 +48,7 @@ public interface TimelineLookup<VersionType, ObjectType>
    * @return Holders representing the interval that the objects exist for, PartitionHolders
    *         can be incomplete. Holders returned sorted by the interval.
    */
-  public Iterable<TimelineObjectHolder<VersionType, ObjectType>> lookupWithIncompletePartitions(Interval interval);
+  public List<TimelineObjectHolder<VersionType, ObjectType>> lookupWithIncompletePartitions(Interval interval);
 
   public PartitionHolder<ObjectType> findEntry(Interval interval, VersionType version);
 

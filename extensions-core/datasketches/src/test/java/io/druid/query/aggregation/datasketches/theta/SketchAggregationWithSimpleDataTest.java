@@ -26,6 +26,7 @@ import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -221,7 +222,7 @@ public class SketchAggregationWithSimpleDataTest
         Sequences.toList(seq, Lists.newArrayList())
     );
 
-    Assert.assertEquals(new DateTime("2014-10-20T00:00:00.000Z"), result.getTimestamp());
+    Assert.assertEquals(DateTimes.of("2014-10-20T00:00:00.000Z"), result.getTimestamp());
 
     Assert.assertEquals(50.0, result.getValue().getDoubleMetric("sketch_count"), 0.01);
     Assert.assertEquals(50.0, result.getValue().getDoubleMetric("sketchEstimatePostAgg"), 0.01);
@@ -249,7 +250,7 @@ public class SketchAggregationWithSimpleDataTest
         Sequences.toList(seq, Lists.newArrayList())
     );
 
-    Assert.assertEquals(new DateTime("2014-10-20T00:00:00.000Z"), result.getTimestamp());
+    Assert.assertEquals(DateTimes.of("2014-10-20T00:00:00.000Z"), result.getTimestamp());
 
     DimensionAndMetricValueExtractor value = Iterables.getOnlyElement(result.getValue().getValue());
     Assert.assertEquals(38.0, value.getDoubleMetric("sketch_count"), 0.01);
@@ -277,7 +278,7 @@ public class SketchAggregationWithSimpleDataTest
     );
 
     Result<SelectResultValue> result = (Result<SelectResultValue>) Iterables.getOnlyElement(Sequences.toList(seq, Lists.newArrayList()));
-    Assert.assertEquals(new DateTime("2014-10-20T00:00:00.000Z"), result.getTimestamp());
+    Assert.assertEquals(DateTimes.of("2014-10-20T00:00:00.000Z"), result.getTimestamp());
     Assert.assertEquals(100, result.getValue().getEvents().size());
     Assert.assertEquals("AgMDAAAazJMCAAAAAACAPzz9j7pWTMdROWGf15uY1nI=", result.getValue().getEvents().get(0).getEvent().get("pty_country"));
   }

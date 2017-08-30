@@ -29,7 +29,7 @@
     <parent>
         <artifactId>druid</artifactId>
         <groupId>io.druid</groupId>
-        <version>0.10.0-SNAPSHOT</version>
+        <version>0.11.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -97,10 +97,12 @@
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-lookups-cached-single</argument>
                                 <argument>-c</argument>
+                                <argument>io.druid.extensions:druid-protobuf-extensions</argument>
+                                <argument>-c</argument>
                                 <argument>io.druid.extensions:mysql-metadata-storage</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:postgresql-metadata-storage</argument>
-				                        <argument>-c</argument>
+                                <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-kerberos</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-s3-extensions</argument>
@@ -108,6 +110,8 @@
                                 <argument>io.druid.extensions:druid-stats</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-examples</argument>
+                                <argument>-c</argument>
+                                <argument>io.druid.extensions:simple-client-sslcontext</argument>
                                 <argument>${druid.distribution.pulldeps.opts}</argument>
                             </arguments>
                         </configuration>
@@ -201,7 +205,6 @@
                                         <argument>-l</argument>
                                         <argument>${settings.localRepository}</argument>
                                         <argument>--no-default-hadoop</argument>
-                                        <argument>${druid.distribution.pulldeps.opts}</argument>
                                         <argument>-c</argument>
                                         <argument>io.druid.extensions.contrib:ambari-metrics-emitter</argument>
                                         <argument>-c</argument>
@@ -226,6 +229,8 @@
                                         <argument>io.druid.extensions.contrib:druid-parquet-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>io.druid.extensions.contrib:druid-rabbitmq</argument>
+                                        <argument>-c</argument>
+                                        <argument>io.druid.extensions.contrib:druid-redis-cache</argument>
                                         <argument>-c</argument>
                                         <argument>io.druid.extensions.contrib:scan-query</argument>
                                         <argument>-c</argument>

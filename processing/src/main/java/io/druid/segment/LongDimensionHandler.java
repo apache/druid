@@ -67,21 +67,6 @@ public class LongDimensionHandler implements DimensionHandler<Long, Long, Long>
   }
 
   @Override
-  public DimensionMergerLegacy<Long> makeLegacyMerger(
-      IndexSpec indexSpec, File outDir, IOPeon ioPeon, ColumnCapabilities capabilities, ProgressIndicator progress
-  ) throws IOException
-  {
-    return new LongDimensionMergerLegacy(
-        dimensionName,
-        indexSpec,
-        outDir,
-        ioPeon,
-        capabilities,
-        progress
-    );
-  }
-
-  @Override
   public int getLengthOfEncodedKeyComponent(Long dimVals)
   {
     return LongColumn.ROW_SIZE;
@@ -99,7 +84,12 @@ public class LongDimensionHandler implements DimensionHandler<Long, Long, Long>
   ) throws SegmentValidationException
   {
     if (!lhs.equals(rhs)) {
-      throw new SegmentValidationException("Dim [%s] value not equal. Expected [%s] found [%s]", lhs, rhs);
+      throw new SegmentValidationException(
+          "Dim [%s] value not equal. Expected [%s] found [%s]",
+          dimensionName,
+          lhs,
+          rhs
+      );
     }
   }
 

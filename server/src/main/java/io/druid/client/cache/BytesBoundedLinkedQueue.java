@@ -19,6 +19,8 @@
 
 package io.druid.client.cache;
 
+import io.druid.java.util.common.IAE;
+
 import java.util.AbstractQueue;
 import java.util.Collection;
 import java.util.Iterator;
@@ -63,9 +65,7 @@ public abstract class BytesBoundedLinkedQueue<E> extends AbstractQueue<E> implem
   private void checkSize(E e)
   {
     if (getBytesSize(e) > capacity) {
-      throw new IllegalArgumentException(
-          String.format("cannot add element of size[%d] greater than capacity[%d]", getBytesSize(e), capacity)
-      );
+      throw new IAE("cannot add element of size[%d] greater than capacity[%d]", getBytesSize(e), capacity);
     }
   }
 

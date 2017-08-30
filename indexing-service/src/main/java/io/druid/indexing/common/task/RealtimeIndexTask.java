@@ -31,12 +31,17 @@ import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
+import io.druid.discovery.DiscoveryDruidNode;
+import io.druid.discovery.DruidNodeDiscoveryProvider;
+import io.druid.discovery.LookupNodeService;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockReleaseAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.query.DruidMetrics;
 import io.druid.query.FinalizeResultsQueryRunner;
@@ -63,6 +68,7 @@ import io.druid.segment.realtime.plumber.RealtimePlumberSchool;
 import io.druid.segment.realtime.plumber.VersioningPolicy;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
+import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -76,6 +82,8 @@ import java.util.concurrent.CountDownLatch;
 
 public class RealtimeIndexTask extends AbstractTask
 {
+  public static final String CTX_KEY_LOOKUP_TIER = "lookupTier";
+
   private static final EmittingLogger log = new EmittingLogger(RealtimeIndexTask.class);
   private final static Random random = new Random();
 
@@ -84,7 +92,7 @@ public class RealtimeIndexTask extends AbstractTask
     return makeTaskId(
         fireDepartment.getDataSchema().getDataSource(),
         fireDepartment.getTuningConfig().getShardSpec().getPartitionNum(),
-        new DateTime(),
+        DateTimes.nowUtc(),
         random.nextInt()
     );
   }
@@ -95,7 +103,7 @@ public class RealtimeIndexTask extends AbstractTask
     for (int i = 0; i < Ints.BYTES * 2; ++i) {
       suffix.append((char) ('a' + ((randomBits >>> (i * 4)) & 0x0F)));
     }
-    return String.format(
+    return StringUtils.format(
         "index_realtime_%s_%d_%s_%s",
         dataSource,
         partitionNumber,
@@ -143,7 +151,7 @@ public class RealtimeIndexTask extends AbstractTask
   {
     super(
         id == null ? makeTaskId(fireDepartment) : id,
-        String.format("index_realtime_%s", makeDatasource(fireDepartment)),
+        StringUtils.format("index_realtime_%s", makeDatasource(fireDepartment)),
         taskResource,
         makeDatasource(fireDepartment),
         context
@@ -205,13 +213,16 @@ public class RealtimeIndexTask extends AbstractTask
     // which will typically be either the main data processing loop or the persist thread.
 
     // Wrap default DataSegmentAnnouncer such that we unlock intervals as we unannounce segments
+    final long lockTimeoutMs = getContextValue(Tasks.LOCK_TIMEOUT_KEY, Tasks.DEFAULT_LOCK_TIMEOUT);
+    // Note: if lockTimeoutMs is larger than ServerConfig.maxIdleTime, http timeout error can occur while waiting for a
+    // lock to be acquired.
     final DataSegmentAnnouncer lockingSegmentAnnouncer = new DataSegmentAnnouncer()
     {
       @Override
       public void announceSegment(final DataSegment segment) throws IOException
       {
         // Side effect: Calling announceSegment causes a lock to be acquired
-        toolbox.getTaskActionClient().submit(new LockAcquireAction(segment.getInterval()));
+        toolbox.getTaskActionClient().submit(new LockAcquireAction(segment.getInterval(), lockTimeoutMs));
         toolbox.getSegmentAnnouncer().announceSegment(segment);
       }
 
@@ -231,7 +242,7 @@ public class RealtimeIndexTask extends AbstractTask
       {
         // Side effect: Calling announceSegments causes locks to be acquired
         for (DataSegment segment : segments) {
-          toolbox.getTaskActionClient().submit(new LockAcquireAction(segment.getInterval()));
+          toolbox.getTaskActionClient().submit(new LockAcquireAction(segment.getInterval(), lockTimeoutMs));
         }
         toolbox.getSegmentAnnouncer().announceSegments(segments);
       }
@@ -247,12 +258,6 @@ public class RealtimeIndexTask extends AbstractTask
             toolbox.getTaskActionClient().submit(new LockReleaseAction(segment.getInterval()));
           }
         }
-      }
-
-      @Override
-      public boolean isAnnounced(DataSegment segment)
-      {
-        return toolbox.getSegmentAnnouncer().isAnnounced(segment);
       }
     };
 
@@ -270,7 +275,7 @@ public class RealtimeIndexTask extends AbstractTask
         try {
           // Side effect: Calling getVersion causes a lock to be acquired
           final TaskLock myLock = toolbox.getTaskActionClient()
-                                         .submit(new LockAcquireAction(interval));
+                                         .submit(new LockAcquireAction(interval, lockTimeoutMs));
 
           return myLock.getVersion();
         }
@@ -283,7 +288,7 @@ public class RealtimeIndexTask extends AbstractTask
     DataSchema dataSchema = spec.getDataSchema();
     RealtimeIOConfig realtimeIOConfig = spec.getIOConfig();
     RealtimeTuningConfig tuningConfig = spec.getTuningConfig()
-                                            .withBasePersistDirectory(new File(toolbox.getTaskWorkDir(), "persist"))
+                                            .withBasePersistDirectory(toolbox.getPersistDir())
                                             .withVersioningPolicy(versioningPolicy);
 
     final FireDepartment fireDepartment = new FireDepartment(
@@ -313,7 +318,6 @@ public class RealtimeIndexTask extends AbstractTask
         segmentPublisher,
         toolbox.getSegmentHandoffNotifierFactory(),
         toolbox.getQueryExecutorService(),
-        toolbox.getIndexMerger(),
         toolbox.getIndexMergerV9(),
         toolbox.getIndexIO(),
         toolbox.getCache(),
@@ -324,12 +328,32 @@ public class RealtimeIndexTask extends AbstractTask
     this.plumber = plumberSchool.findPlumber(dataSchema, tuningConfig, metrics);
 
     Supplier<Committer> committerSupplier = null;
+    final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
+
+    LookupNodeService lookupNodeService = getContextValue(CTX_KEY_LOOKUP_TIER) == null ?
+                                          toolbox.getLookupNodeService() :
+                                          new LookupNodeService((String) getContextValue(CTX_KEY_LOOKUP_TIER));
+    DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(
+        toolbox.getDruidNode(),
+        DruidNodeDiscoveryProvider.NODE_TYPE_PEON,
+        ImmutableMap.of(
+            toolbox.getDataNodeService().getName(), toolbox.getDataNodeService(),
+            lookupNodeService.getName(), lookupNodeService
+        )
+    );
 
     try {
+      toolbox.getDataSegmentServerAnnouncer().announce();
+      toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
+
+
       plumber.startJob();
 
       // Set up metrics emission
       toolbox.getMonitorScheduler().addMonitor(metricsMonitor);
+
+      // Firehose temporary directory is automatically removed when this RealtimeIndexTask completes.
+      FileUtils.forceMkdir(firehoseTempDir);
 
       // Delay firehose connection to avoid claiming input resources while the plumber is starting up.
       final FirehoseFactory firehoseFactory = spec.getIOConfig().getFirehoseFactory();
@@ -338,7 +362,7 @@ public class RealtimeIndexTask extends AbstractTask
       // Skip connecting firehose if we've been stopped before we got started.
       synchronized (this) {
         if (!gracefullyStopped) {
-          firehose = firehoseFactory.connect(spec.getDataSchema().getParser());
+          firehose = firehoseFactory.connect(spec.getDataSchema().getParser(), firehoseTempDir);
           committerSupplier = Committers.supplierFromFirehose(firehose);
         }
       }
@@ -425,6 +449,9 @@ public class RealtimeIndexTask extends AbstractTask
           toolbox.getMonitorScheduler().removeMonitor(metricsMonitor);
         }
       }
+
+      toolbox.getDataSegmentServerAnnouncer().unannounce();
+      toolbox.getDruidNodeAnnouncer().unannounce(discoveryDruidNode);
     }
 
     log.info("Job done!");

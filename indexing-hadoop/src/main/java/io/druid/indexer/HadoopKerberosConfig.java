@@ -31,7 +31,8 @@ public class HadoopKerberosConfig
   private final String keytab;
 
   @JsonCreator
-  public HadoopKerberosConfig(@JsonProperty("principal") String principal,@JsonProperty("keytab") String keytab) {
+  public HadoopKerberosConfig(@JsonProperty("principal") String principal, @JsonProperty("keytab") String keytab)
+  {
     this.principal = principal;
     this.keytab = keytab;
   }

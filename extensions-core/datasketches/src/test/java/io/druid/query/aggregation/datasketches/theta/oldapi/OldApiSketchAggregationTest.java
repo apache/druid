@@ -92,7 +92,7 @@ public class OldApiSketchAggregationTest
         readFileFromClasspathAsString("oldapi/old_simple_test_data_aggregators.json"),
         0,
         Granularities.NONE,
-        5,
+        1000,
         readFileFromClasspathAsString("oldapi/old_simple_test_data_group_by_query.json")
     );
 
@@ -124,7 +124,7 @@ public class OldApiSketchAggregationTest
         readFileFromClasspathAsString("oldapi/old_sketch_test_data_aggregators.json"),
         0,
         Granularities.NONE,
-        5,
+        1000,
         readFileFromClasspathAsString("oldapi/old_sketch_test_data_group_by_query.json")
     );
 

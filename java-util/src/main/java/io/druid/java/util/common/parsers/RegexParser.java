@@ -22,6 +22,7 @@ package io.druid.java.util.common.parsers;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.collect.Utils;
@@ -30,6 +31,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 /**
  */
@@ -56,12 +59,9 @@ public class RegexParser implements Parser<String, Object>
       @Override
       public Object apply(String input)
       {
-        final List retVal = Lists.newArrayList(
-            Iterables.transform(
-                listSplitter.split(input),
-                ParserUtils.nullEmptyStringFunction
-            )
-        );
+        final List retVal = StreamSupport.stream(listSplitter.split(input).spliterator(), false)
+                                         .map(Strings::emptyToNull)
+                                         .collect(Collectors.toList());
         if (retVal.size() == 1) {
           return retVal.get(0);
         } else {
@@ -117,7 +117,6 @@ public class RegexParser implements Parser<String, Object>
   }
 
   @Override
-
   public List<String> getFieldNames()
   {
     return fieldNames;

@@ -19,6 +19,7 @@
 
 package io.druid.query.filter;
 
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.filter.BooleanValueMatcher;
@@ -39,7 +40,13 @@ public class FloatValueMatcherColumnSelectorStrategy implements ValueMatcherColu
       @Override
       public boolean matches()
       {
-        return Float.floatToIntBits(selector.get()) == matchValIntBits;
+        return Float.floatToIntBits(selector.getFloat()) == matchValIntBits;
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("selector", selector);
       }
     };
   }
@@ -55,7 +62,14 @@ public class FloatValueMatcherColumnSelectorStrategy implements ValueMatcherColu
       @Override
       public boolean matches()
       {
-        return predicate.applyFloat(selector.get());
+        return predicate.applyFloat(selector.getFloat());
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("selector", selector);
+        inspector.visit("predicate", predicate);
       }
     };
   }
@@ -68,7 +82,7 @@ public class FloatValueMatcherColumnSelectorStrategy implements ValueMatcherColu
       @Override
       public String[] get()
       {
-        return new String[]{ Float.toString(selector.get()) };
+        return new String[]{Float.toString(selector.getFloat())};
       }
     };
   }

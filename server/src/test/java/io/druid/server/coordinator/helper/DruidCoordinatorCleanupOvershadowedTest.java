@@ -26,6 +26,7 @@ import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Ordering;
 import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.ImmutableDruidServer;
+import io.druid.java.util.common.DateTimes;
 import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.DruidCluster;
 import io.druid.server.coordinator.DruidCoordinator;
@@ -38,7 +39,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Test;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class DruidCoordinatorCleanupOvershadowedTest
@@ -46,7 +47,7 @@ public class DruidCoordinatorCleanupOvershadowedTest
   DruidCoordinatorCleanupOvershadowed druidCoordinatorCleanupOvershadowed;
   DruidCoordinator coordinator = EasyMock.createStrictMock(DruidCoordinator.class);
   private List<DataSegment> availableSegments;
-  DateTime start = new DateTime("2012-01-01");
+  DateTime start = DateTimes.of("2012-01-01");
   DruidCluster druidCluster;
   private LoadQueuePeon mockPeon = EasyMock.createMock(LoadQueuePeon.class);
   private ImmutableDruidServer druidServer = EasyMock.createMock(ImmutableDruidServer.class);
@@ -63,6 +64,7 @@ public class DruidCoordinatorCleanupOvershadowedTest
                                                            .interval(new Interval(start, start.plusHours(1)))
                                                            .version("2")
                                                            .build();
+
   @Test
   public void testRun()
   {
@@ -70,14 +72,17 @@ public class DruidCoordinatorCleanupOvershadowedTest
     availableSegments = ImmutableList.of(segmentV1, segmentV0, segmentV2);
 
     druidCluster = new DruidCluster(
-        ImmutableMap.of("normal", MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(Arrays.asList(
-            new ServerHolder(druidServer, mockPeon
-            )))));
+        null,
+        ImmutableMap.of("normal", MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+            Collections.singletonList(new ServerHolder(druidServer, mockPeon))
+        )));
 
     EasyMock.expect(druidServer.getDataSources())
             .andReturn(ImmutableList.of(druidDataSource))
             .anyTimes();
-    EasyMock.expect(druidDataSource.getSegments()).andReturn(ImmutableSet.<DataSegment>of(segmentV1, segmentV2)).anyTimes();
+    EasyMock.expect(druidDataSource.getSegments())
+            .andReturn(ImmutableSet.<DataSegment>of(segmentV1, segmentV2))
+            .anyTimes();
     EasyMock.expect(druidDataSource.getName()).andReturn("test").anyTimes();
     coordinator.removeSegment(segmentV1);
     coordinator.removeSegment(segmentV0);

@@ -40,7 +40,7 @@ import java.util.concurrent.Executor;
 /**
  */
 @ManageLifecycle
-public class SingleServerInventoryView extends ServerInventoryView<DataSegment> implements FilteredServerInventoryView
+public class SingleServerInventoryView extends AbstractCuratorServerInventoryView<DataSegment> implements FilteredServerInventoryView
 {
   private static final EmittingLogger log = new EmittingLogger(SingleServerInventoryView.class);
 
@@ -101,6 +101,7 @@ public class SingleServerInventoryView extends ServerInventoryView<DataSegment> 
     return container;
   }
 
+  @Override
   public void registerSegmentCallback(
       final Executor exec,
       final SegmentCallback callback,

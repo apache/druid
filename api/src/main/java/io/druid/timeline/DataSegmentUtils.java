@@ -20,10 +20,10 @@
 package io.druid.timeline;
 
 import com.google.common.base.Function;
-
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
-
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.format.DateTimeFormatter;
@@ -34,6 +34,7 @@ import java.util.Objects;
 /**
  * identifier to DataSegment.
  */
+@PublicApi
 public class DataSegmentUtils
 {
   private static final Logger LOGGER = new Logger(DataSegmentUtils.class);
@@ -68,12 +69,11 @@ public class DataSegmentUtils
    *
    * @param dataSource the dataSource corresponding to this identifier
    * @param identifier segment identifier
-   * @return a {@link io.druid.timeline.DataSegmentUtils.SegmentIdentifierParts} object if the identifier could be
-   *         parsed, null otherwise
+   * @return a {@link DataSegmentUtils.SegmentIdentifierParts} object if the identifier could be parsed, null otherwise
    */
   public static SegmentIdentifierParts valueOf(String dataSource, String identifier)
   {
-    if (!identifier.startsWith(String.format("%s_", dataSource))) {
+    if (!identifier.startsWith(StringUtils.format("%s_", dataSource))) {
       return null;
     }
 
@@ -93,11 +93,12 @@ public class DataSegmentUtils
 
       return new SegmentIdentifierParts(
           dataSource,
-          new Interval(start.getMillis(), end.getMillis()),
+          new Interval(start, end),
           version,
           trail
       );
-    } catch (IllegalArgumentException e) {
+    }
+    catch (IllegalArgumentException e) {
       return null;
     }
   }

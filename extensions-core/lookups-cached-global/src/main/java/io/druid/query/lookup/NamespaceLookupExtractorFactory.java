@@ -80,7 +80,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
     Preconditions.checkArgument(this.firstCacheTimeout >= 0);
     this.injective = injective;
     this.cacheScheduler = cacheScheduler;
-    this.extractorID = String.format("namespace-factory-%s-%s", extractionNamespace, UUID.randomUUID().toString());
+    this.extractorID = StringUtils.format("namespace-factory-%s-%s", extractionNamespace, UUID.randomUUID().toString());
     this.lookupIntrospectHandler = new NamespaceLookupIntrospectHandler(this);
   }
 
@@ -231,5 +231,22 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
     finally {
       readLock.unlock();
     }
+  }
+
+  @VisibleForTesting
+  CacheScheduler getCacheScheduler()
+  {
+    return cacheScheduler;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "NamespaceLookupExtractorFactory{" +
+           "extractionNamespace=" + extractionNamespace +
+           ", firstCacheTimeout=" + firstCacheTimeout +
+           ", injective=" + injective +
+           ", extractorID='" + extractorID + '\'' +
+           '}';
   }
 }

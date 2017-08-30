@@ -55,7 +55,8 @@ public class HyperUniquesAggregator implements Aggregator
   @Override
   public Object get()
   {
-    // Workaround for OnheapIncrementalIndex's penchant for calling "aggregate" and "get" simultaneously.
+    // Workaround for non-thread-safe use of HyperLogLogCollector.
+    // OnheapIncrementalIndex has a penchant for calling "aggregate" and "get" simultaneously.
     return HyperLogLogCollector.makeCollectorSharingStorage(collector);
   }
 
@@ -69,6 +70,12 @@ public class HyperUniquesAggregator implements Aggregator
   public long getLong()
   {
     throw new UnsupportedOperationException("HyperUniquesAggregator does not support getLong()");
+  }
+
+  @Override
+  public double getDouble()
+  {
+    throw new UnsupportedOperationException("HyperUniquesAggregator does not support getDouble()");
   }
 
   @Override

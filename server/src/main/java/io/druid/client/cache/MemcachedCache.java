@@ -74,6 +74,12 @@ public class MemcachedCache implements Cache
 {
   private static final Logger log = new Logger(MemcachedCache.class);
 
+  /**
+   * Default hash algorithm for cache distribution.
+   *
+   * If some other algorithms are considered as the default algorithm instead of this one, the cache distribution for
+   * those hash algorithms should be checked and compared using {@code CacheDistributionTest}.
+   */
   final static HashAlgorithm MURMUR3_128 = new HashAlgorithm()
   {
     final HashFunction fn = Hashing.murmur3_128();
@@ -409,7 +415,7 @@ public class MemcachedCache implements Cache
   {
     Preconditions.checkArgument(
         config.getMemcachedPrefix().length() <= MAX_PREFIX_LENGTH,
-        "memcachedPrefix length [%d] exceeds maximum length [%d]",
+        "memcachedPrefix length [%s] exceeds maximum length [%s]",
         config.getMemcachedPrefix().length(),
         MAX_PREFIX_LENGTH
     );
@@ -594,8 +600,7 @@ public class MemcachedCache implements Cache
       MemcachedClientIF.MAX_KEY_LENGTH
       - 40 // length of namespace hash
       - 40 // length of key hash
-      - 2  // length of separators
-      ;
+      - 2; // length of separators
 
   private static String computeKeyHash(String memcachedPrefix, NamedKey key)
   {
@@ -603,6 +608,7 @@ public class MemcachedCache implements Cache
     return memcachedPrefix + ":" + DigestUtils.sha1Hex(key.namespace) + ":" + DigestUtils.sha1Hex(key.key);
   }
 
+  @Override
   public boolean isLocal()
   {
     return false;

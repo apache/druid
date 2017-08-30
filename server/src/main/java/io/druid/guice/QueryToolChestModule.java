@@ -21,12 +21,13 @@ package io.druid.guice;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.multibindings.MapBinder;
 import io.druid.query.DefaultGenericQueryMetricsFactory;
+import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.Query;
-import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.datasourcemetadata.DataSourceMetadataQuery;
@@ -63,6 +64,11 @@ import java.util.Map;
  */
 public class QueryToolChestModule implements Module
 {
+  public static final String GENERIC_QUERY_METRICS_FACTORY_PROPERTY = "druid.query.generic.queryMetricsFactory";
+  public static final String GROUPBY_QUERY_METRICS_FACTORY_PROPERTY = "druid.query.groupBy.queryMetricsFactory";
+  public static final String TIMESERIES_QUERY_METRICS_FACTORY_PROPERTY = "druid.query.timeseries.queryMetricsFactory";
+  public static final String TOPN_QUERY_METRICS_FACTORY_PROPERTY = "druid.query.topN.queryMetricsFactory";
+
   public final Map<Class<? extends Query>, Class<? extends QueryToolChest>> mappings =
       ImmutableMap.<Class<? extends Query>, Class<? extends QueryToolChest>>builder()
                   .put(TimeseriesQuery.class, TimeseriesQueryQueryToolChest.class)
@@ -87,15 +93,54 @@ public class QueryToolChestModule implements Module
 
     binder.bind(QueryToolChestWarehouse.class).to(MapQueryToolChestWarehouse.class);
 
-    binder.bind(GenericQueryMetricsFactory.class).to(DefaultGenericQueryMetricsFactory.class);
-    binder.bind(TopNQueryMetricsFactory.class).to(DefaultTopNQueryMetricsFactory.class);
-    binder.bind(GroupByQueryMetricsFactory.class).to(DefaultGroupByQueryMetricsFactory.class);
-    binder.bind(TimeseriesQueryMetricsFactory.class).to(DefaultTimeseriesQueryMetricsFactory.class);
-
     JsonConfigProvider.bind(binder, "druid.query.groupBy", GroupByQueryConfig.class);
     JsonConfigProvider.bind(binder, "druid.query.search", SearchQueryConfig.class);
     JsonConfigProvider.bind(binder, "druid.query.topN", TopNQueryConfig.class);
     JsonConfigProvider.bind(binder, "druid.query.segmentMetadata", SegmentMetadataQueryConfig.class);
     JsonConfigProvider.bind(binder, "druid.query.select", SelectQueryConfig.class);
+
+    PolyBind.createChoice(
+        binder,
+        GENERIC_QUERY_METRICS_FACTORY_PROPERTY,
+        Key.get(GenericQueryMetricsFactory.class),
+        Key.get(DefaultGenericQueryMetricsFactory.class)
+    );
+    PolyBind
+        .optionBinder(binder, Key.get(GenericQueryMetricsFactory.class))
+        .addBinding("default")
+        .to(DefaultGenericQueryMetricsFactory.class);
+
+    PolyBind.createChoice(
+        binder,
+        GROUPBY_QUERY_METRICS_FACTORY_PROPERTY,
+        Key.get(GroupByQueryMetricsFactory.class),
+        Key.get(DefaultGroupByQueryMetricsFactory.class)
+    );
+    PolyBind
+        .optionBinder(binder, Key.get(GroupByQueryMetricsFactory.class))
+        .addBinding("default")
+        .to(DefaultGroupByQueryMetricsFactory.class);
+
+    PolyBind.createChoice(
+        binder,
+        TIMESERIES_QUERY_METRICS_FACTORY_PROPERTY,
+        Key.get(TimeseriesQueryMetricsFactory.class),
+        Key.get(DefaultTimeseriesQueryMetricsFactory.class)
+    );
+    PolyBind
+        .optionBinder(binder, Key.get(TimeseriesQueryMetricsFactory.class))
+        .addBinding("default")
+        .to(DefaultTimeseriesQueryMetricsFactory.class);
+
+    PolyBind.createChoice(
+        binder,
+        TOPN_QUERY_METRICS_FACTORY_PROPERTY,
+        Key.get(TopNQueryMetricsFactory.class),
+        Key.get(DefaultTopNQueryMetricsFactory.class)
+    );
+    PolyBind
+        .optionBinder(binder, Key.get(TopNQueryMetricsFactory.class))
+        .addBinding("default")
+        .to(DefaultTopNQueryMetricsFactory.class);
   }
 }

@@ -19,19 +19,20 @@
 
 package io.druid.indexing.kafka.supervisor;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
-
 import io.druid.indexing.overlord.supervisor.SupervisorReport;
 import io.druid.java.util.common.IAE;
-
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Map;
 
 public class KafkaSupervisorReport extends SupervisorReport
 {
-  public class KafkaSupervisorReportPayload
+  public static class KafkaSupervisorReportPayload
   {
     private final String dataSource;
     private final String topic;
@@ -40,13 +41,21 @@ public class KafkaSupervisorReport extends SupervisorReport
     private final Long durationSeconds;
     private final List<TaskReportData> activeTasks;
     private final List<TaskReportData> publishingTasks;
+    private final Map<Integer, Long> latestOffsets;
+    private final Map<Integer, Long> minimumLag;
+    private final Long aggregateLag;
+    private final DateTime offsetsLastUpdated;
 
     public KafkaSupervisorReportPayload(
         String dataSource,
         String topic,
         Integer partitions,
         Integer replicas,
-        Long durationSeconds
+        Long durationSeconds,
+        @Nullable Map<Integer, Long> latestOffsets,
+        @Nullable Map<Integer, Long> minimumLag,
+        @Nullable Long aggregateLag,
+        @Nullable DateTime offsetsLastUpdated
     )
     {
       this.dataSource = dataSource;
@@ -56,6 +65,10 @@ public class KafkaSupervisorReport extends SupervisorReport
       this.durationSeconds = durationSeconds;
       this.activeTasks = Lists.newArrayList();
       this.publishingTasks = Lists.newArrayList();
+      this.latestOffsets = latestOffsets;
+      this.minimumLag = minimumLag;
+      this.aggregateLag = aggregateLag;
+      this.offsetsLastUpdated = offsetsLastUpdated;
     }
 
     @JsonProperty
@@ -100,6 +113,33 @@ public class KafkaSupervisorReport extends SupervisorReport
       return publishingTasks;
     }
 
+    @JsonProperty
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public Map<Integer, Long> getLatestOffsets()
+    {
+      return latestOffsets;
+    }
+
+    @JsonProperty
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public Map<Integer, Long> getMinimumLag()
+    {
+      return minimumLag;
+    }
+
+    @JsonProperty
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public Long getAggregateLag()
+    {
+      return aggregateLag;
+    }
+
+    @JsonProperty
+    public DateTime getOffsetsLastUpdated()
+    {
+      return offsetsLastUpdated;
+    }
+
     @Override
     public String toString()
     {
@@ -111,6 +151,10 @@ public class KafkaSupervisorReport extends SupervisorReport
              ", durationSeconds=" + durationSeconds +
              ", active=" + activeTasks +
              ", publishing=" + publishingTasks +
+             (latestOffsets != null ? ", latestOffsets=" + latestOffsets : "") +
+             (minimumLag != null ? ", minimumLag=" + minimumLag : "") +
+             (aggregateLag != null ? ", aggregateLag=" + aggregateLag : "") +
+             (offsetsLastUpdated != null ? ", offsetsLastUpdated=" + offsetsLastUpdated : "") +
              '}';
     }
   }
@@ -123,11 +167,25 @@ public class KafkaSupervisorReport extends SupervisorReport
       String topic,
       Integer partitions,
       Integer replicas,
-      Long durationSeconds
+      Long durationSeconds,
+      @Nullable Map<Integer, Long> latestOffsets,
+      @Nullable Map<Integer, Long> minimumLag,
+      @Nullable Long aggregateLag,
+      @Nullable DateTime offsetsLastUpdated
   )
   {
     super(dataSource, generationTime);
-    this.payload = new KafkaSupervisorReportPayload(dataSource, topic, partitions, replicas, durationSeconds);
+    this.payload = new KafkaSupervisorReportPayload(
+        dataSource,
+        topic,
+        partitions,
+        replicas,
+        durationSeconds,
+        latestOffsets,
+        minimumLag,
+        aggregateLag,
+        offsetsLastUpdated
+    );
   }
 
   @Override

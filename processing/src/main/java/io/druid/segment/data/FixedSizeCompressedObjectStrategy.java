@@ -38,7 +38,8 @@ public abstract class FixedSizeCompressedObjectStrategy<T extends Buffer> extend
     this.sizePer = sizePer;
   }
 
-  public int getSize() {
+  public int getSize()
+  {
     return sizePer;
   }
 

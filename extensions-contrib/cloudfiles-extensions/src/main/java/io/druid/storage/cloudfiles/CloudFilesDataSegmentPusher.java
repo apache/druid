@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.SegmentUtils;
@@ -32,8 +31,10 @@ import io.druid.timeline.DataSegment;
 import org.jclouds.rackspace.cloudfiles.v1.CloudFilesApi;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.nio.file.Files;
+import java.util.Map;
 import java.util.concurrent.Callable;
 
 public class CloudFilesDataSegmentPusher implements DataSegmentPusher
@@ -75,7 +76,7 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
   @Override
   public DataSegment push(final File indexFilesDir, final DataSegment inSegment) throws IOException
   {
-    final String segmentPath = CloudFilesUtils.buildCloudFilesPath(this.config.getBasePath(), inSegment);
+    final String segmentPath = CloudFilesUtils.buildCloudFilesPath(this.config.getBasePath(), getStorageDir(inSegment));
 
     File descriptorFile = null;
     File zipOutFile = null;
@@ -100,9 +101,9 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
               log.info("Pushing %s.", segmentData.getPath());
               objectApi.put(segmentData);
 
-              try (FileOutputStream stream = new FileOutputStream(descFile)) {
-                stream.write(jsonMapper.writeValueAsBytes(inSegment));
-              }
+              // Avoid using Guava in DataSegmentPushers because they might be used with very diverse Guava versions in
+              // runtime, and because Guava deletes methods over time, that causes incompatibilities.
+              Files.write(descFile.toPath(), jsonMapper.writeValueAsBytes(inSegment));
               CloudFilesObject descriptorData = new CloudFilesObject(
                   segmentPath, descFile,
                   objectApi.getRegion(), objectApi.getContainer()
@@ -112,18 +113,7 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
 
               final DataSegment outSegment = inSegment
                   .withSize(indexSize)
-                  .withLoadSpec(
-                      ImmutableMap.<String, Object>of(
-                          "type",
-                          CloudFilesStorageDruidModule.SCHEME,
-                          "region",
-                          segmentData.getRegion(),
-                          "container",
-                          segmentData.getContainer(),
-                          "path",
-                          segmentData.getPath()
-                      )
-                  )
+                  .withLoadSpec(makeLoadSpec(new URI(segmentData.getPath())))
                   .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
 
               return outSegment;
@@ -145,5 +135,20 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
         descriptorFile.delete();
       }
     }
+  }
+
+  @Override
+  public Map<String, Object> makeLoadSpec(URI uri)
+  {
+    return ImmutableMap.<String, Object>of(
+        "type",
+        CloudFilesStorageDruidModule.SCHEME,
+        "region",
+        objectApi.getRegion(),
+        "container",
+        objectApi.getContainer(),
+        "path",
+        uri.toString()
+    );
   }
 }

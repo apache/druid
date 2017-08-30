@@ -25,6 +25,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.Druids;
 import io.druid.segment.filter.AndFilter;
 import io.druid.segment.filter.Filters;
@@ -119,6 +120,6 @@ public class AndDimFilter implements DimFilter
   @Override
   public String toString()
   {
-    return String.format("(%s)", AND_JOINER.join(fields));
+    return StringUtils.format("(%s)", AND_JOINER.join(fields));
   }
 }

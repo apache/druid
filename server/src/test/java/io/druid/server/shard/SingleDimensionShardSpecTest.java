@@ -29,6 +29,7 @@ import com.google.common.collect.Maps;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.timeline.partition.SingleDimensionShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
@@ -112,7 +113,7 @@ public class SingleDimensionShardSpecTest
         }
         )
         );
-        Assert.assertEquals(String.format("spec[%s], row[%s]", spec, inputRow), pair.lhs, spec.isInChunk(inputRow.getTimestampFromEpoch(), inputRow));
+        Assert.assertEquals(StringUtils.format("spec[%s], row[%s]", spec, inputRow), pair.lhs, spec.isInChunk(inputRow.getTimestampFromEpoch(), inputRow));
       }
     }
   }
@@ -131,7 +132,7 @@ public class SingleDimensionShardSpecTest
   {
     Preconditions.checkState(arguments.length % 2 == 0);
 
-    final ArrayList<Pair<Boolean,Map<String,String>>> retVal = Lists.newArrayList();
+    final ArrayList<Pair<Boolean, Map<String, String>>> retVal = Lists.newArrayList();
 
     for (int i = 0; i < arguments.length; i += 2) {
       retVal.add(Pair.of((Boolean) arguments[i], makeMap((String) arguments[i + 1])));

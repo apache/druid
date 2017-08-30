@@ -133,6 +133,7 @@ public class ReferenceCountingSegment extends AbstractSegment
     referents.arriveAndDeregister();
   }
 
+  @Override
   public <T> T as(Class<T> clazz)
   {
     return getBaseSegment().as(clazz);

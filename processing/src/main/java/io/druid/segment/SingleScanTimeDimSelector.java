@@ -31,7 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class SingleScanTimeDimSelector implements DimensionSelector
+public class SingleScanTimeDimSelector implements SingleValueDimensionSelector
 {
   private final ExtractionFn extractionFn;
   private final LongColumnSelector selector;
@@ -65,6 +65,12 @@ public class SingleScanTimeDimSelector implements DimensionSelector
   }
 
   @Override
+  public int getRowValue()
+  {
+    return getDimensionValueIndex();
+  }
+
+  @Override
   public ValueMatcher makeValueMatcher(final String value)
   {
     return new ValueMatcher()
@@ -73,6 +79,12 @@ public class SingleScanTimeDimSelector implements DimensionSelector
       public boolean matches()
       {
         return Objects.equals(lookupName(getDimensionValueIndex()), value);
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("selector", SingleScanTimeDimSelector.this);
       }
     };
   }
@@ -87,27 +99,33 @@ public class SingleScanTimeDimSelector implements DimensionSelector
       {
         return predicate.apply(lookupName(getDimensionValueIndex()));
       }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("selector", SingleScanTimeDimSelector.this);
+        inspector.visit("predicate", predicate);
+      }
     };
   }
 
   private int getDimensionValueIndex()
   {
     // if this the first timestamp, apply and cache extraction function result
-    final long timestamp = selector.get();
+    final long timestamp = selector.getLong();
     if (index < 0) {
       currentTimestamp = timestamp;
       currentValue = extractionFn.apply(timestamp);
       ++index;
       timeValues.add(currentValue);
-    }
-    // if this is a new timestamp, apply and cache extraction function result
-    // since timestamps are assumed grouped and scanned once, we only need to
-    // check if the current timestamp is different than the current timestamp.
-    //
-    // If this new timestamp is mapped to the same value by the extraction function,
-    // we can also avoid creating a dimension value and corresponding index
-    // and use the current one
-    else if (timestamp != currentTimestamp) {
+      // if this is a new timestamp, apply and cache extraction function result
+      // since timestamps are assumed grouped and scanned once, we only need to
+      // check if the current timestamp is different than the current timestamp.
+      //
+      // If this new timestamp is mapped to the same value by the extraction function,
+      // we can also avoid creating a dimension value and corresponding index
+      // and use the current one
+    } else if (timestamp != currentTimestamp) {
       if (descending ? timestamp > currentTimestamp : timestamp < currentTimestamp) {
         // re-using this selector for multiple scans would cause the same rows to return different IDs
         // we might want to re-visit if we ever need to do multiple scans with this dimension selector

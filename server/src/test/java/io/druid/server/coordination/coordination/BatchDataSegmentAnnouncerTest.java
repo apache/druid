@@ -31,8 +31,12 @@ import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.announcement.Announcer;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import io.druid.server.coordination.BatchDataSegmentAnnouncer;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.coordination.SegmentChangeRequestHistory;
+import io.druid.server.coordination.SegmentChangeRequestsSnapshot;
+import io.druid.server.coordination.ServerType;
 import io.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
@@ -40,7 +44,6 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingCluster;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -103,8 +106,9 @@ public class BatchDataSegmentAnnouncerTest
         new DruidServerMetadata(
             "id",
             "host",
+            null,
             Long.MAX_VALUE,
-            "type",
+            ServerType.HISTORICAL,
             "tier",
             0
         ),
@@ -145,7 +149,6 @@ public class BatchDataSegmentAnnouncerTest
         announcer,
         jsonMapper
     );
-    segmentAnnouncer.start();
 
     testSegments = Sets.newHashSet();
     for (int i = 0; i < 100; i++) {
@@ -156,7 +159,6 @@ public class BatchDataSegmentAnnouncerTest
   @After
   public void tearDown() throws Exception
   {
-    segmentAnnouncer.stop();
     announcer.stop();
     cf.close();
     testingCluster.stop();
@@ -185,6 +187,12 @@ public class BatchDataSegmentAnnouncerTest
       Assert.assertEquals(Sets.newHashSet(firstSegment, secondSegment), segments);
     }
 
+    SegmentChangeRequestsSnapshot snapshot = segmentAnnouncer.getSegmentChangesSince(
+        new SegmentChangeRequestHistory.Counter(-1, -1)
+    ).get();
+    Assert.assertEquals(2, snapshot.getRequests().size());
+    Assert.assertEquals(2, snapshot.getCounter().getCounter());
+
     segmentAnnouncer.unannounceSegment(firstSegment);
 
     for (String zNode : zNodes) {
@@ -195,6 +203,18 @@ public class BatchDataSegmentAnnouncerTest
     segmentAnnouncer.unannounceSegment(secondSegment);
 
     Assert.assertTrue(cf.getChildren().forPath(testSegmentsPath).isEmpty());
+
+    snapshot = segmentAnnouncer.getSegmentChangesSince(
+        snapshot.getCounter()
+    ).get();
+    Assert.assertEquals(2, snapshot.getRequests().size());
+    Assert.assertEquals(4, snapshot.getCounter().getCounter());
+
+    snapshot = segmentAnnouncer.getSegmentChangesSince(
+        new SegmentChangeRequestHistory.Counter(-1, -1)
+    ).get();
+    Assert.assertEquals(0, snapshot.getRequests().size());
+    Assert.assertEquals(4, snapshot.getCounter().getCounter());
   }
 
   @Test
@@ -273,6 +293,11 @@ public class BatchDataSegmentAnnouncerTest
   @Test
   public void testBatchAnnounce() throws Exception
   {
+    testBatchAnnounce(true);
+  }
+
+  private void testBatchAnnounce(boolean testHistory) throws Exception
+  {
     segmentAnnouncer.announceSegments(testSegments);
 
     List<String> zNodes = cf.getChildren().forPath(testSegmentsPath);
@@ -285,16 +310,40 @@ public class BatchDataSegmentAnnouncerTest
     }
     Assert.assertEquals(allSegments, testSegments);
 
+    SegmentChangeRequestsSnapshot snapshot = null;
+
+    if (testHistory) {
+      snapshot = segmentAnnouncer.getSegmentChangesSince(
+          new SegmentChangeRequestHistory.Counter(-1, -1)
+      ).get();
+      Assert.assertEquals(testSegments.size(), snapshot.getRequests().size());
+    Assert.assertEquals(testSegments.size(), snapshot.getCounter().getCounter());
+  }
+
     segmentAnnouncer.unannounceSegments(testSegments);
 
     Assert.assertTrue(cf.getChildren().forPath(testSegmentsPath).isEmpty());
+
+    if (testHistory) {
+      snapshot = segmentAnnouncer.getSegmentChangesSince(
+          snapshot.getCounter()
+      ).get();
+      Assert.assertEquals(testSegments.size(), snapshot.getRequests().size());
+      Assert.assertEquals(2 * testSegments.size(), snapshot.getCounter().getCounter());
+
+      snapshot = segmentAnnouncer.getSegmentChangesSince(
+          new SegmentChangeRequestHistory.Counter(-1, -1)
+      ).get();
+      Assert.assertEquals(0, snapshot.getRequests().size());
+      Assert.assertEquals(2 * testSegments.size(), snapshot.getCounter().getCounter());
+    }
   }
 
   @Test
   public void testMultipleBatchAnnounce() throws Exception
   {
     for (int i = 0; i < 10; i++) {
-      testBatchAnnounce();
+      testBatchAnnounce(false);
     }
   }
 
@@ -304,18 +353,18 @@ public class BatchDataSegmentAnnouncerTest
                       .dataSource("foo")
                       .interval(
                           new Interval(
-                              new DateTime("2013-01-01").plusDays(offset),
-                              new DateTime("2013-01-02").plusDays(offset)
+                              DateTimes.of("2013-01-01").plusDays(offset),
+                              DateTimes.of("2013-01-02").plusDays(offset)
                           )
                       )
-                      .version(new DateTime().toString())
+                      .version(DateTimes.nowUtc().toString())
                       .dimensions(ImmutableList.<String>of("dim1", "dim2"))
                       .metrics(ImmutableList.<String>of("met1", "met2"))
                       .loadSpec(ImmutableMap.<String, Object>of("type", "local"))
                       .build();
   }
 
-  private class SegmentReader
+  private static class SegmentReader
   {
     private final CuratorFramework cf;
     private final ObjectMapper jsonMapper;

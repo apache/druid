@@ -22,7 +22,7 @@ package io.druid.java.util.common.guava;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Ordering;
-import com.google.common.io.Closer;
+import io.druid.java.util.common.io.Closer;
 
 import java.io.IOException;
 import java.util.PriorityQueue;
@@ -31,16 +31,16 @@ import java.util.PriorityQueue;
  */
 public class MergeSequence<T> extends YieldingSequenceBase<T>
 {
-  private final Ordering<T> ordering;
-  private final Sequence<Sequence<T>> baseSequences;
+  private final Ordering<? super T> ordering;
+  private final Sequence<? extends Sequence<T>> baseSequences;
 
   public MergeSequence(
-      Ordering<T> ordering,
-      Sequence<Sequence<T>> baseSequences
+      Ordering<? super T> ordering,
+      Sequence<? extends Sequence<? extends T>> baseSequences
   )
   {
     this.ordering = ordering;
-    this.baseSequences = baseSequences;
+    this.baseSequences = (Sequence<? extends Sequence<T>>) baseSequences;
   }
 
   @Override
@@ -62,37 +62,32 @@ public class MergeSequence<T> extends YieldingSequenceBase<T>
 
     pQueue = baseSequences.accumulate(
         pQueue,
-        new Accumulator<PriorityQueue<Yielder<T>>, Sequence<T>>()
-        {
-          @Override
-          public PriorityQueue<Yielder<T>> accumulate(PriorityQueue<Yielder<T>> queue, Sequence<T> in)
-          {
-            final Yielder<T> yielder = in.toYielder(
-                null,
-                new YieldingAccumulator<T, T>()
+        (queue, in) -> {
+          final Yielder<T> yielder = in.toYielder(
+              null,
+              new YieldingAccumulator<T, T>()
+              {
+                @Override
+                public T accumulate(T accumulated, T in)
                 {
-                  @Override
-                  public T accumulate(T accumulated, T in)
-                  {
-                    yield();
-                    return in;
-                  }
+                  yield();
+                  return in;
                 }
-            );
+              }
+          );
 
-            if (!yielder.isDone()) {
-              queue.add(yielder);
-            } else {
-              try {
-                yielder.close();
-              }
-              catch (IOException e) {
-                throw Throwables.propagate(e);
-              }
+          if (!yielder.isDone()) {
+            queue.add(yielder);
+          } else {
+            try {
+              yielder.close();
             }
-
-            return queue;
+            catch (IOException e) {
+              throw new RuntimeException(e);
+            }
           }
+
+          return queue;
         }
     );
 

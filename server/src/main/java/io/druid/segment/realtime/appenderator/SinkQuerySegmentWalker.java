@@ -275,7 +275,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
    */
   private <T> QueryRunner<T> withPerSinkMetrics(
       final QueryRunner<T> sinkRunner,
-      final QueryToolChest<?, ? super Query<T>> queryToolChest,
+      final QueryToolChest<T, ? extends Query<T>> queryToolChest,
       final String sinkSegmentIdentifier,
       final AtomicLong cpuTimeAccumulator
   )

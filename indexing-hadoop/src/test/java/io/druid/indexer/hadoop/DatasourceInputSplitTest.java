@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
+import io.druid.java.util.common.Intervals;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
@@ -39,13 +40,13 @@ public class DatasourceInputSplitTest
   @Test
   public void testSerde() throws Exception
   {
-    Interval interval = Interval.parse("2000/3000");
+    Interval interval = Intervals.of("2000/3000");
     DatasourceInputSplit expected = new DatasourceInputSplit(
         Lists.newArrayList(
             new WindowedDataSegment(
                 new DataSegment(
                     "test",
-                    Interval.parse("2000/3000"),
+                    Intervals.of("2000/3000"),
                     "ver",
                     ImmutableMap.<String, Object>of(
                         "type", "local",
@@ -60,7 +61,7 @@ public class DatasourceInputSplitTest
                 interval
             )
         ),
-        new String[] { "server1", "server2", "server3"}
+        new String[] {"server1", "server2", "server3"}
     );
 
     ByteArrayDataOutput out = ByteStreams.newDataOutput();

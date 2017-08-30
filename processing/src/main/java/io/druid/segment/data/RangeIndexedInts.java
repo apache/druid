@@ -20,6 +20,7 @@
 package io.druid.segment.data;
 
 import com.google.common.base.Preconditions;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterators;
 
@@ -72,12 +73,6 @@ public class RangeIndexedInts implements IndexedInts
   }
 
   @Override
-  public void fill(int index, int[] toFill)
-  {
-    throw new UnsupportedOperationException("fill");
-  }
-
-  @Override
   public IntIterator iterator()
   {
     return IntIterators.fromTo(0, size);
@@ -86,6 +81,11 @@ public class RangeIndexedInts implements IndexedInts
   @Override
   public void close() throws IOException
   {
+  }
 
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    // nothing to inspect
   }
 }

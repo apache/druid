@@ -68,6 +68,7 @@ public class JavaScriptPostAggregator implements PostAggregator
 
     return new Function()
     {
+      @Override
       public double apply(Object[] args)
       {
         // ideally we need a close() function to discard the context once it is not used anymore

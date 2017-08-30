@@ -20,12 +20,12 @@
 package io.druid.query.topn;
 
 import com.google.inject.Inject;
-import io.druid.collections.StupidPool;
+import io.druid.collections.NonBlockingPool;
 import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.ChainedExecutionQueryRunner;
-import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
@@ -41,13 +41,13 @@ import java.util.concurrent.ExecutorService;
  */
 public class TopNQueryRunnerFactory implements QueryRunnerFactory<Result<TopNResultValue>, TopNQuery>
 {
-  private final StupidPool<ByteBuffer> computationBufferPool;
+  private final NonBlockingPool<ByteBuffer> computationBufferPool;
   private final TopNQueryQueryToolChest toolchest;
   private final QueryWatcher queryWatcher;
 
   @Inject
   public TopNQueryRunnerFactory(
-      @Global StupidPool<ByteBuffer> computationBufferPool,
+      @Global NonBlockingPool<ByteBuffer> computationBufferPool,
       TopNQueryQueryToolChest toolchest,
       QueryWatcher queryWatcher
   )
@@ -65,15 +65,16 @@ public class TopNQueryRunnerFactory implements QueryRunnerFactory<Result<TopNRes
     {
       @Override
       public Sequence<Result<TopNResultValue>> run(
-          Query<Result<TopNResultValue>> input,
+          QueryPlus<Result<TopNResultValue>> input,
           Map<String, Object> responseContext
       )
       {
-        if (!(input instanceof TopNQuery)) {
+        if (!(input.getQuery() instanceof TopNQuery)) {
           throw new ISE("Got a [%s] which isn't a %s", input.getClass(), TopNQuery.class);
         }
 
-        return queryEngine.query((TopNQuery) input, segment.asStorageAdapter());
+        TopNQuery query = (TopNQuery) input.getQuery();
+        return queryEngine.query(query, segment.asStorageAdapter(), (TopNQueryMetrics) input.getQueryMetrics());
       }
     };
 

@@ -20,46 +20,43 @@
 package io.druid.java.util.common.parsers;
 
 import com.google.common.base.Function;
+import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
-import org.joda.time.DateTime;
+import io.druid.java.util.common.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 public class ParserUtils
 {
-  public static final Function<String, String> nullEmptyStringFunction = new Function<String, String>()
+  private static final String DEFAULT_COLUMN_NAME_PREFIX = "column_";
+
+  public static Function<String, Object> getMultiValueFunction(
+      final String listDelimiter,
+      final Splitter listSplitter
+  )
   {
-    @Override
-    public String apply(String input)
-    {
-      if (input == null || input.isEmpty()) {
-        return null;
+    return (input) -> {
+      if (input != null && input.contains(listDelimiter)) {
+        return StreamSupport.stream(listSplitter.split(input).spliterator(), false)
+                            .map(Strings::emptyToNull)
+                            .collect(Collectors.toList());
+      } else {
+        return Strings.emptyToNull(input);
       }
-      return input;
-    }
-  };
+    };
+  }
 
   public static ArrayList<String> generateFieldNames(int length)
   {
-    ArrayList<String> names = new ArrayList<>(length);
+    final ArrayList<String> names = new ArrayList<>(length);
     for (int i = 0; i < length; ++i) {
-      names.add("column_" + (i + 1));
+      names.add(getDefaultColumnName(i));
     }
     return names;
-  }
-
-  /**
-   * Factored timestamp parsing into its own Parser class, but leaving this here
-   * for compatibility
-   *
-   * @param format
-   *
-   * @return
-   */
-  public static Function<String, DateTime> createTimestampParser(final String format)
-  {
-    return TimestampParser.createTimestampParser(format);
   }
 
   public static Set<String> findDuplicates(Iterable<String> fieldNames)
@@ -68,7 +65,7 @@ public class ParserUtils
     Set<String> uniqueNames = Sets.newHashSet();
 
     for (String fieldName : fieldNames) {
-      String next = fieldName.toLowerCase();
+      String next = StringUtils.toLowerCase(fieldName);
       if (uniqueNames.contains(next)) {
         duplicates.add(next);
       }
@@ -93,5 +90,16 @@ public class ParserUtils
       input = input.substring(1, input.length() - 1).trim();
     }
     return input;
+  }
+
+  /**
+   * Return a function to generate default column names.
+   * Note that the postfix for default column names starts from 1.
+   *
+   * @return column name generating function
+   */
+  public static String getDefaultColumnName(int ordinal)
+  {
+    return DEFAULT_COLUMN_NAME_PREFIX + (ordinal + 1);
   }
 }

@@ -27,9 +27,12 @@ import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.indexing.overlord.ObjectMetadata;
 import io.druid.indexing.overlord.SegmentPublishResult;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.StringUtils;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
+import io.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -43,6 +46,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 public class IndexerSQLMetadataStorageCoordinatorTest
 {
@@ -52,7 +56,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   private final ObjectMapper mapper = new DefaultObjectMapper();
   private final DataSegment defaultSegment = new DataSegment(
       "fooDataSource",
-      Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
+      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "version",
       ImmutableMap.<String, Object>of(),
       ImmutableList.of("dim1"),
@@ -64,7 +68,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   private final DataSegment defaultSegment2 = new DataSegment(
       "fooDataSource",
-      Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
+      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "version",
       ImmutableMap.<String, Object>of(),
       ImmutableList.of("dim1"),
@@ -76,7 +80,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   private final DataSegment defaultSegment3 = new DataSegment(
       "fooDataSource",
-      Interval.parse("2015-01-03T00Z/2015-01-04T00Z"),
+      Intervals.of("2015-01-03T00Z/2015-01-04T00Z"),
       "version",
       ImmutableMap.<String, Object>of(),
       ImmutableList.of("dim1"),
@@ -89,12 +93,72 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   // Overshadows defaultSegment, defaultSegment2
   private final DataSegment defaultSegment4 = new DataSegment(
       "fooDataSource",
-      Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
+      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "zversion",
       ImmutableMap.<String, Object>of(),
       ImmutableList.of("dim1"),
       ImmutableList.of("m1"),
       new LinearShardSpec(0),
+      9,
+      100
+  );
+
+  private final DataSegment numberedSegment0of0 = new DataSegment(
+      "fooDataSource",
+      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
+      "zversion",
+      ImmutableMap.<String, Object>of(),
+      ImmutableList.of("dim1"),
+      ImmutableList.of("m1"),
+      new NumberedShardSpec(0, 0),
+      9,
+      100
+  );
+
+  private final DataSegment numberedSegment1of0 = new DataSegment(
+      "fooDataSource",
+      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
+      "zversion",
+      ImmutableMap.<String, Object>of(),
+      ImmutableList.of("dim1"),
+      ImmutableList.of("m1"),
+      new NumberedShardSpec(1, 0),
+      9,
+      100
+  );
+
+  private final DataSegment numberedSegment2of0 = new DataSegment(
+      "fooDataSource",
+      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
+      "zversion",
+      ImmutableMap.<String, Object>of(),
+      ImmutableList.of("dim1"),
+      ImmutableList.of("m1"),
+      new NumberedShardSpec(2, 0),
+      9,
+      100
+  );
+
+  private final DataSegment numberedSegment2of1 = new DataSegment(
+      "fooDataSource",
+      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
+      "zversion",
+      ImmutableMap.<String, Object>of(),
+      ImmutableList.of("dim1"),
+      ImmutableList.of("m1"),
+      new NumberedShardSpec(2, 1),
+      9,
+      100
+  );
+
+  private final DataSegment numberedSegment3of1 = new DataSegment(
+      "fooDataSource",
+      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
+      "zversion",
+      ImmutableMap.<String, Object>of(),
+      ImmutableList.of("dim1"),
+      ImmutableList.of("m1"),
+      new NumberedShardSpec(3, 1),
       9,
       100
   );
@@ -145,7 +209,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                 public Integer withHandle(Handle handle) throws Exception
                 {
                   return handle.createStatement(
-                      String.format(
+                      StringUtils.format(
                           "UPDATE %s SET used = false WHERE id = :id",
                           derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable()
                       )
@@ -460,8 +524,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         coordinator.getUsedSegmentsForIntervals(
             defaultSegment.getDataSource(),
             ImmutableList.of(
-                Interval.parse("2015-01-03T00Z/2015-01-03T05Z"),
-                Interval.parse("2015-01-03T09Z/2015-01-04T00Z")
+                Intervals.of("2015-01-03T00Z/2015-01-03T05Z"),
+                Intervals.of("2015-01-03T09Z/2015-01-04T00Z")
             )
         )
     );
@@ -491,7 +555,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Set<DataSegment> actualSegments = ImmutableSet.copyOf(
         coordinator.getUsedSegmentsForInterval(
             defaultSegment.getDataSource(),
-            Interval.parse("2014-12-31T23:59:59.999Z/2015-01-01T00:00:00.001Z") // end is exclusive
+            Intervals.of("2014-12-31T23:59:59.999Z/2015-01-01T00:00:00.001Z") // end is exclusive
         )
     );
     Assert.assertEquals(
@@ -510,7 +574,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(
             coordinator.getUsedSegmentsForInterval(
                 defaultSegment.getDataSource(),
-                Interval.parse("2015-1-1T23:59:59.999Z/2015-02-01T00Z")
+                Intervals.of("2015-1-1T23:59:59.999Z/2015-02-01T00Z")
             )
         )
     );
@@ -638,7 +702,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(
             coordinator.getUnusedSegmentsForInterval(
                 defaultSegment.getDataSource(),
-                Interval.parse("2000/2999")
+                Intervals.of("2000/2999")
             )
         )
     );
@@ -712,5 +776,54 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertTrue("deleteValidDataSourceMetadata", coordinator.deleteDataSourceMetadata("fooDataSource"));
 
     Assert.assertNull("getDataSourceMetadataNullAfterDelete", coordinator.getDataSourceMetadata("fooDataSource"));
+  }
+
+  @Test
+  public void testSingleAdditionalNumberedShardWithNoCorePartitions() throws IOException
+  {
+    additionalNumberedShardTest(ImmutableSet.of(numberedSegment0of0));
+  }
+
+  @Test
+  public void testMultipleAdditionalNumberedShardsWithNoCorePartitions() throws IOException
+  {
+    additionalNumberedShardTest(ImmutableSet.of(numberedSegment0of0, numberedSegment1of0, numberedSegment2of0));
+  }
+
+  @Test
+  public void testSingleAdditionalNumberedShardWithOneCorePartition() throws IOException
+  {
+    additionalNumberedShardTest(ImmutableSet.of(numberedSegment2of1));
+  }
+
+  @Test
+  public void testMultipleAdditionalNumberedShardsWithOneCorePartition() throws IOException
+  {
+    additionalNumberedShardTest(ImmutableSet.of(numberedSegment2of1, numberedSegment3of1));
+  }
+
+  private void additionalNumberedShardTest(Set<DataSegment> segments) throws IOException
+  {
+    coordinator.announceHistoricalSegments(segments);
+
+    for (DataSegment segment : segments) {
+      Assert.assertArrayEquals(
+          mapper.writeValueAsString(segment).getBytes("UTF-8"),
+          derbyConnector.lookup(
+              derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
+              "id",
+              "payload",
+              segment.getIdentifier()
+          )
+      );
+    }
+
+    Assert.assertEquals(
+        segments.stream().map(DataSegment::getIdentifier).collect(Collectors.toList()),
+        getUsedIdentifiers()
+    );
+
+    // Should not update dataSource metadata.
+    Assert.assertEquals(0, metadataUpdateCounter.get());
   }
 }

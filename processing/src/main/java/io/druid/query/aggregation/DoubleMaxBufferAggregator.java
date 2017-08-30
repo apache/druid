@@ -19,16 +19,16 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.DoubleColumnSelector;
 
 import java.nio.ByteBuffer;
 
 /**
  */
-public class DoubleMaxBufferAggregator extends DoubleBufferAggregator
+public class DoubleMaxBufferAggregator extends SimpleDoubleBufferAggregator
 {
 
-  DoubleMaxBufferAggregator(FloatColumnSelector selector)
+  DoubleMaxBufferAggregator(DoubleColumnSelector selector)
   {
     super(selector);
   }
@@ -40,8 +40,18 @@ public class DoubleMaxBufferAggregator extends DoubleBufferAggregator
   }
 
   @Override
-  public void aggregate(ByteBuffer buf, int position)
+  public void putFirst(ByteBuffer buf, int position, double value)
   {
-    buf.putDouble(position, Math.max(buf.getDouble(position), (double) selector.get()));
+    if (!Double.isNaN(value)) {
+      buf.putDouble(position, value);
+    } else {
+      init(buf, position);
+    }
+  }
+
+  @Override
+  public void aggregate(ByteBuffer buf, int position, double value)
+  {
+    buf.putDouble(position, Math.max(buf.getDouble(position), value));
   }
 }

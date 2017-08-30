@@ -21,11 +21,15 @@ package io.druid.query.extraction;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.RegisteredLookupExtractionFn;
 
+import javax.annotation.Nullable;
+
 /**
  */
+@ExtensionPoint
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "time", value = TimeDimExtractionFn.class),
@@ -75,7 +79,8 @@ public interface ExtractionFn
    *
    * @return a value that should be used instead of the original
    */
-  public String apply(Object value);
+  @Nullable
+  public String apply(@Nullable Object value);
 
   /**
    * The "extraction" function.  This should map a String value into some other String value.
@@ -87,7 +92,8 @@ public interface ExtractionFn
    *
    * @return a value that should be used instead of the original
    */
-  public String apply(String value);
+  @Nullable
+  public String apply(@Nullable String value);
 
   /**
    * The "extraction" function.  This should map a long value into some String value.
@@ -116,8 +122,7 @@ public interface ExtractionFn
    * modified into another unique value. In the `MANY_TO_ONE` case, there is no longer a 1:1 relation between old dimension
    * value and new dimension value
    *
-   * @return {@link io.druid.query.extraction.ExtractionFn.ExtractionType} declaring what kind of manipulation this
-   * function does
+   * @return {@link ExtractionFn.ExtractionType} declaring what kind of manipulation this function does
    */
   public ExtractionType getExtractionType();
 

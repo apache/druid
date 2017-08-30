@@ -21,13 +21,12 @@ package io.druid.storage.s3;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.ByteStreams;
-import com.google.common.io.Files;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
-
 import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.timeline.DataSegment;
@@ -38,6 +37,10 @@ import org.jets3t.service.model.S3Object;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.nio.file.Files;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 
 public class S3DataSegmentPusher implements DataSegmentPusher
@@ -65,7 +68,10 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   @Override
   public String getPathForHadoop()
   {
-    return String.format("s3n://%s/%s", config.getBucket(), config.getBaseKey());
+    if (config.isUseS3aSchema()) {
+      return StringUtils.format("s3a://%s/%s", config.getBucket(), config.getBaseKey());
+    }
+    return StringUtils.format("s3n://%s/%s", config.getBucket(), config.getBaseKey());
   }
 
   @Deprecated
@@ -76,9 +82,15 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   }
 
   @Override
+  public List<String> getAllowedPropertyPrefixesForHadoop()
+  {
+    return ImmutableList.of("druid.s3");
+  }
+
+  @Override
   public DataSegment push(final File indexFilesDir, final DataSegment inSegment) throws IOException
   {
-    final String s3Path = S3Utils.constructSegmentPath(config.getBaseKey(), inSegment);
+    final String s3Path = S3Utils.constructSegmentPath(config.getBaseKey(), getStorageDir(inSegment));
 
     log.info("Copying segment[%s] to S3 at location[%s]", inSegment.getIdentifier(), s3Path);
 
@@ -107,20 +119,13 @@ public class S3DataSegmentPusher implements DataSegmentPusher
               s3Client.putObject(outputBucket, toPush);
 
               final DataSegment outSegment = inSegment.withSize(indexSize)
-                                                      .withLoadSpec(
-                                                          ImmutableMap.<String, Object>of(
-                                                              "type",
-                                                              "s3_zip",
-                                                              "bucket",
-                                                              outputBucket,
-                                                              "key",
-                                                              toPush.getKey()
-                                                          )
-                                                      )
+                                                      .withLoadSpec(makeLoadSpec(outputBucket, toPush.getKey()))
                                                       .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
 
               File descriptorFile = File.createTempFile("druid", "descriptor.json");
-              Files.copy(ByteStreams.newInputStreamSupplier(jsonMapper.writeValueAsBytes(inSegment)), descriptorFile);
+              // Avoid using Guava in DataSegmentPushers because they might be used with very diverse Guava versions in
+              // runtime, and because Guava deletes methods over time, that causes incompatibilities.
+              Files.write(descriptorFile.toPath(), jsonMapper.writeValueAsBytes(outSegment));
               S3Object descriptorObject = new S3Object(descriptorFile);
               descriptorObject.setBucketName(outputBucket);
               descriptorObject.setKey(s3DescriptorPath);
@@ -148,5 +153,31 @@ public class S3DataSegmentPusher implements DataSegmentPusher
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
+  }
+
+  @Override
+  public Map<String, Object> makeLoadSpec(URI finalIndexZipFilePath)
+  {
+    // remove the leading "/"
+    return makeLoadSpec(finalIndexZipFilePath.getHost(), finalIndexZipFilePath.getPath().substring(1));
+  }
+
+  /**
+   * Any change in loadSpec need to be reflected {@link io.druid.indexer.JobHelper#getURIFromSegment()}
+   *
+   */
+  @SuppressWarnings("JavadocReference")
+  private Map<String, Object> makeLoadSpec(String bucket, String key)
+  {
+    return ImmutableMap.<String, Object>of(
+        "type",
+        "s3_zip",
+        "bucket",
+        bucket,
+        "key",
+        key,
+        "S3Schema",
+        config.isUseS3aSchema() ? "s3a" : "s3n"
+    );
   }
 }

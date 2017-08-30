@@ -51,11 +51,11 @@ public class CoordinatorOverlordRedirectInfo implements RedirectInfo
   }
 
   @Override
-  public URL getRedirectURL(String queryString, String requestURI)
+  public URL getRedirectURL(String scheme, String queryString, String requestURI)
   {
     return isOverlordRequest(requestURI) ?
-           overlordRedirectInfo.getRedirectURL(queryString, requestURI) :
-           coordinatorRedirectInfo.getRedirectURL(queryString, requestURI);
+           overlordRedirectInfo.getRedirectURL(scheme, queryString, requestURI) :
+           coordinatorRedirectInfo.getRedirectURL(scheme, queryString, requestURI);
   }
 
   private boolean isOverlordRequest(String requestURI)

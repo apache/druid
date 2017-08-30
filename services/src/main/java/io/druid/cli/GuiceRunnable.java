@@ -27,7 +27,6 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 
 import io.druid.initialization.Initialization;
-import io.druid.initialization.LogLevelAdjuster;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.log.StartupLoggingConfig;
@@ -72,14 +71,14 @@ public abstract class GuiceRunnable implements Runnable
   public Lifecycle initLifecycle(Injector injector)
   {
     try {
-      LogLevelAdjuster.register();
       final Lifecycle lifecycle = injector.getInstance(Lifecycle.class);
       final StartupLoggingConfig startupLoggingConfig = injector.getInstance(StartupLoggingConfig.class);
 
       log.info(
-          "Starting up with processors[%,d], memory[%,d].",
+          "Starting up with processors[%,d], memory[%,d], maxMemory[%,d].",
           Runtime.getRuntime().availableProcessors(),
-          Runtime.getRuntime().totalMemory()
+          Runtime.getRuntime().totalMemory(),
+          Runtime.getRuntime().maxMemory()
       );
 
       if (startupLoggingConfig.isLogProperties()) {

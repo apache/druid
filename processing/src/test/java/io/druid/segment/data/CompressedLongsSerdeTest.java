@@ -22,7 +22,9 @@ package io.druid.segment.data;
 import com.google.common.base.Supplier;
 import com.google.common.io.ByteSink;
 import com.google.common.primitives.Longs;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
+import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -35,10 +37,9 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.Channels;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -76,7 +77,8 @@ public class CompressedLongsSerdeTest
   private final long values8[] = {Long.MAX_VALUE, 0, 321, 15248425, 13523212136L, 63822, 3426, 96};
 
   // built test value with enough unique values to not use table encoding for auto strategy
-  private static long[] addUniques(long[] val) {
+  private static long[] addUniques(long[] val)
+  {
     long[] ret = new long[val.length + CompressionFactory.MAX_TABLE_SIZE];
     for (int i = 0; i < CompressionFactory.MAX_TABLE_SIZE; i++) {
       ret[i] = i;
@@ -189,9 +191,10 @@ public class CompressedLongsSerdeTest
       indices[i] = i;
     }
 
-    Collections.shuffle(Arrays.asList(indices));
-    // random access
-    for (int i = 0; i < indexed.size(); ++i) {
+    // random access, limited to 1000 elements for large lists (every element would take too long)
+    IntArrays.shuffle(indices, ThreadLocalRandom.current());
+    final int limit = Math.min(indexed.size(), 1000);
+    for (int i = 0; i < limit; ++i) {
       int k = indices[i];
       Assert.assertEquals(vals[k], indexed.get(k));
     }
@@ -248,7 +251,7 @@ public class CompressedLongsSerdeTest
               final long indexedVal = indexed.get(j);
               if (Longs.compare(val, indexedVal) != 0) {
                 failureHappened.set(true);
-                reason.set(String.format("Thread1[%d]: %d != %d", j, val, indexedVal));
+                reason.set(StringUtils.format("Thread1[%d]: %d != %d", j, val, indexedVal));
                 stopLatch.countDown();
                 return;
               }
@@ -287,7 +290,7 @@ public class CompressedLongsSerdeTest
                 final long indexedVal = indexed2.get(j);
                 if (Longs.compare(val, indexedVal) != 0) {
                   failureHappened.set(true);
-                  reason.set(String.format("Thread2[%d]: %d != %d", j, val, indexedVal));
+                  reason.set(StringUtils.format("Thread2[%d]: %d != %d", j, val, indexedVal));
                   stopLatch.countDown();
                   return;
                 }

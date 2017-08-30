@@ -19,6 +19,7 @@
 
 package io.druid.curator;
 
+import io.druid.java.util.common.StringUtils;
 import org.apache.zookeeper.CreateMode;
 import org.junit.After;
 import org.junit.Assert;
@@ -49,19 +50,19 @@ public class CuratorUtilsTest extends CuratorTestBase
         curator,
         "/foo/bar",
         CreateMode.PERSISTENT,
-        "baz".getBytes(),
+        StringUtils.toUtf8("baz"),
         CuratorUtils.DEFAULT_MAX_ZNODE_BYTES
     );
-    Assert.assertEquals("baz", new String(curator.getData().forPath("/foo/bar")));
+    Assert.assertEquals("baz", StringUtils.fromUtf8(curator.getData().forPath("/foo/bar")));
 
     CuratorUtils.createIfNotExists(
         curator,
         "/foo/bar",
         CreateMode.PERSISTENT,
-        "qux".getBytes(),
+        StringUtils.toUtf8("qux"),
         CuratorUtils.DEFAULT_MAX_ZNODE_BYTES
     );
-    Assert.assertEquals("baz", new String(curator.getData().forPath("/foo/bar")));
+    Assert.assertEquals("baz", StringUtils.fromUtf8(curator.getData().forPath("/foo/bar")));
   }
 
   @Test(timeout = 10_000L)
@@ -72,7 +73,13 @@ public class CuratorUtilsTest extends CuratorTestBase
 
     Exception thrown = null;
     try {
-      CuratorUtils.createIfNotExists(curator, "/foo/bar", CreateMode.PERSISTENT, "baz".getBytes(), 2);
+      CuratorUtils.createIfNotExists(
+          curator,
+          "/foo/bar",
+          CreateMode.PERSISTENT,
+          StringUtils.toUtf8("baz"),
+          2
+      );
     }
     catch (Exception e) {
       thrown = e;
@@ -90,11 +97,23 @@ public class CuratorUtilsTest extends CuratorTestBase
 
     Assert.assertNull(curator.checkExists().forPath("/foo/bar"));
 
-    CuratorUtils.createOrSet(curator, "/foo/bar", CreateMode.PERSISTENT, "baz".getBytes(), 3);
-    Assert.assertEquals("baz", new String(curator.getData().forPath("/foo/bar")));
+    CuratorUtils.createOrSet(
+        curator,
+        "/foo/bar",
+        CreateMode.PERSISTENT,
+        StringUtils.toUtf8("baz"),
+        3
+    );
+    Assert.assertEquals("baz", StringUtils.fromUtf8(curator.getData().forPath("/foo/bar")));
 
-    CuratorUtils.createOrSet(curator, "/foo/bar", CreateMode.PERSISTENT, "qux".getBytes(), 3);
-    Assert.assertEquals("qux", new String(curator.getData().forPath("/foo/bar")));
+    CuratorUtils.createOrSet(
+        curator,
+        "/foo/bar",
+        CreateMode.PERSISTENT,
+        StringUtils.toUtf8("qux"),
+        3
+    );
+    Assert.assertEquals("qux", StringUtils.fromUtf8(curator.getData().forPath("/foo/bar")));
   }
 
   @Test(timeout = 10_000L)
@@ -105,7 +124,13 @@ public class CuratorUtilsTest extends CuratorTestBase
 
     Exception thrown = null;
     try {
-      CuratorUtils.createOrSet(curator, "/foo/bar", CreateMode.PERSISTENT, "baz".getBytes(), 2);
+      CuratorUtils.createOrSet(
+          curator,
+          "/foo/bar",
+          CreateMode.PERSISTENT,
+          StringUtils.toUtf8("baz"),
+          2
+      );
     }
     catch (Exception e) {
       thrown = e;

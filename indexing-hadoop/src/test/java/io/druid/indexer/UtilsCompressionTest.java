@@ -20,6 +20,7 @@
 package io.druid.indexer;
 
 import com.google.common.io.ByteStreams;
+import io.druid.java.util.common.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -40,7 +41,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 
 public class UtilsCompressionTest
 {
@@ -86,13 +86,14 @@ public class UtilsCompressionTest
     tmpFolder.delete();
   }
 
-  @Test public void testExistsCompressedFile() throws IOException
+  @Test
+  public void testExistsCompressedFile() throws IOException
   {
-    boolean expected = Utils.exists(mockJobContext,defaultFileSystem,tmpPathWithoutExtension);
+    boolean expected = Utils.exists(mockJobContext, defaultFileSystem, tmpPathWithoutExtension);
     Assert.assertTrue("Should be true since file is created", expected);
     tmpFolder.delete();
-    expected = Utils.exists(mockJobContext,defaultFileSystem,tmpPathWithoutExtension);
-    Assert.assertFalse("Should be false since file is deleted",expected);
+    expected = Utils.exists(mockJobContext, defaultFileSystem, tmpPathWithoutExtension);
+    Assert.assertFalse("Should be false since file is deleted", expected);
   }
 
   @Test
@@ -100,11 +101,11 @@ public class UtilsCompressionTest
   {
     boolean overwrite = true;
     OutputStream outStream = codec.createOutputStream(defaultFileSystem.create(tmpPathWithExtension, overwrite));
-    writeStingToOutputStream(DUMMY_STRING,outStream);
+    writeStingToOutputStream(DUMMY_STRING, outStream);
     InputStream inStream = Utils.openInputStream(mockJobContext, tmpPathWithoutExtension);
-    Assert.assertNotNull("Input stream should not be Null",inStream);
-    String actual = new String(ByteStreams.toByteArray(inStream), StandardCharsets.UTF_8.toString());
-    Assert.assertEquals("Strings not matching", DUMMY_STRING,actual);
+    Assert.assertNotNull("Input stream should not be Null", inStream);
+    String actual = StringUtils.fromUtf8(ByteStreams.toByteArray(inStream));
+    Assert.assertEquals("Strings not matching", DUMMY_STRING, actual);
     inStream.close();
   }
 
@@ -112,18 +113,18 @@ public class UtilsCompressionTest
   public void testCompressedMakePathAndOutputStream() throws IOException
   {
     boolean overwrite = true;
-    OutputStream outStream = Utils.makePathAndOutputStream(mockJobContext,tmpPathWithoutExtension, overwrite);
-    Assert.assertNotNull("Output stream should not be null",outStream);
-    writeStingToOutputStream(DUMMY_STRING,outStream);
+    OutputStream outStream = Utils.makePathAndOutputStream(mockJobContext, tmpPathWithoutExtension, overwrite);
+    Assert.assertNotNull("Output stream should not be null", outStream);
+    writeStingToOutputStream(DUMMY_STRING, outStream);
     InputStream inStream = codec.createInputStream(defaultFileSystem.open(tmpPathWithExtension));
-    String actual = new String(ByteStreams.toByteArray(inStream), StandardCharsets.UTF_8.toString());
-    Assert.assertEquals("Strings not matching", DUMMY_STRING,actual);
+    String actual = StringUtils.fromUtf8(ByteStreams.toByteArray(inStream));
+    Assert.assertEquals("Strings not matching", DUMMY_STRING, actual);
     inStream.close();
   }
 
   private void writeStingToOutputStream(String string, OutputStream outStream) throws IOException
   {
-    outStream.write(string.getBytes(StandardCharsets.UTF_8.toString()));
+    outStream.write(StringUtils.toUtf8(string));
     outStream.flush();
     outStream.close();
   }

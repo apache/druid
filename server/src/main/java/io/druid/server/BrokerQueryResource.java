@@ -22,19 +22,13 @@ package io.druid.server;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.inject.Inject;
-import com.metamx.emitter.service.ServiceEmitter;
 import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.client.ServerViewUtil;
 import io.druid.client.TimelineServerView;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.query.Query;
-import io.druid.query.GenericQueryMetricsFactory;
-import io.druid.query.QuerySegmentWalker;
-import io.druid.query.QueryToolChestWarehouse;
 import io.druid.server.http.security.StateResourceFilter;
-import io.druid.server.initialization.ServerConfig;
-import io.druid.server.log.RequestLogger;
 import io.druid.server.security.AuthConfig;
 
 import javax.servlet.http.HttpServletRequest;
@@ -59,30 +53,20 @@ public class BrokerQueryResource extends QueryResource
 
   @Inject
   public BrokerQueryResource(
-      QueryToolChestWarehouse warehouse,
-      ServerConfig config,
+      QueryLifecycleFactory queryLifecycleFactory,
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
-      QuerySegmentWalker texasRanger,
-      ServiceEmitter emitter,
-      RequestLogger requestLogger,
       QueryManager queryManager,
       AuthConfig authConfig,
-      GenericQueryMetricsFactory queryMetricsFactory,
       TimelineServerView brokerServerView
   )
   {
     super(
-        warehouse,
-        config,
+        queryLifecycleFactory,
         jsonMapper,
         smileMapper,
-        texasRanger,
-        emitter,
-        requestLogger,
         queryManager,
-        authConfig,
-        queryMetricsFactory
+        authConfig
     );
     this.brokerServerView = brokerServerView;
   }

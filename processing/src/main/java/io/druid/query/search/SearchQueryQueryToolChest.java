@@ -30,18 +30,20 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.nary.BinaryFn;
-import io.druid.query.BaseQuery;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DefaultGenericQueryMetricsFactory;
 import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
+import io.druid.query.QueryContexts;
 import io.druid.query.QueryMetrics;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -53,7 +55,6 @@ import io.druid.query.filter.DimFilter;
 import io.druid.query.search.search.SearchHit;
 import io.druid.query.search.search.SearchQuery;
 import io.druid.query.search.search.SearchQueryConfig;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -154,17 +155,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
       private final List<DimensionSpec> dimensionSpecs =
           query.getDimensions() != null ? query.getDimensions() : Collections.<DimensionSpec>emptyList();
       private final List<String> dimOutputNames = dimensionSpecs.size() > 0 ?
-          Lists.transform(
-              dimensionSpecs,
-              new Function<DimensionSpec, String>() {
-                @Override
-                public String apply(DimensionSpec input) {
-                  return input.getOutputName();
-                }
-              }
-          )
-          :
-          Collections.<String>emptyList();
+          Lists.transform(dimensionSpecs, DimensionSpec::getOutputName) : Collections.emptyList();
 
       @Override
       public boolean isCacheable(SearchQuery query, boolean willMergeRunners)
@@ -203,8 +194,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
             .put(granularityBytes)
             .put(filterBytes)
             .put(querySpecBytes)
-            .put(sortSpecBytes)
-            ;
+            .put(sortSpecBytes);
 
         for (byte[] bytes : dimensionsBytes) {
           queryCacheKey.put(bytes);
@@ -263,7 +253,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
 
             return !needsRename
                 ? new Result<>(
-                    new DateTime(((Number) result.get(0)).longValue()),
+                    DateTimes.utc(((Number) result.get(0)).longValue()),
                     new SearchResultValue(
                         Lists.transform(
                             (List) result.get(1),
@@ -289,7 +279,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
                     )
                 )
                 : new Result<>(
-                    new DateTime(((Number) result.get(0)).longValue()),
+                    DateTimes.utc(((Number) result.get(0)).longValue()),
                     new SearchResultValue(
                         Lists.transform(
                             (List) result.get(1),
@@ -302,11 +292,11 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
                                 String val = null;
                                 Integer cnt = null;
                                 if (input instanceof Map) {
-                                  dim = outputNameMap.get((String)((Map) input).get("dimension"));
+                                  dim = outputNameMap.get((String) ((Map) input).get("dimension"));
                                   val = (String) ((Map) input).get("value");
                                   cnt = (Integer) ((Map) input).get("count");
                                 } else if (input instanceof SearchHit) {
-                                  SearchHit cached = (SearchHit)input;
+                                  SearchHit cached = (SearchHit) input;
                                   dim = outputNameMap.get(cached.getDimension());
                                   val = cached.getValue();
                                   cnt = cached.getCount();
@@ -318,8 +308,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
                             }
                         )
                     )
-                )
-                ;
+                );
           }
         };
       }
@@ -348,16 +337,19 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
             {
               @Override
               public Sequence<Result<SearchResultValue>> run(
-                  Query<Result<SearchResultValue>> query, Map<String, Object> responseContext
+                  QueryPlus<Result<SearchResultValue>> queryPlus, Map<String, Object> responseContext
               )
               {
-                SearchQuery searchQuery = (SearchQuery) query;
+                SearchQuery searchQuery = (SearchQuery) queryPlus.getQuery();
                 if (searchQuery.getDimensionsFilter() != null) {
                   searchQuery = searchQuery.withDimFilter(searchQuery.getDimensionsFilter().optimize());
+                  queryPlus = queryPlus.withQuery(searchQuery);
                 }
-                return runner.run(searchQuery, responseContext);
+                return runner.run(queryPlus, responseContext);
               }
-            } , this),
+            },
+            this
+        ),
         config
     );
   }
@@ -378,23 +370,24 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
 
     @Override
     public Sequence<Result<SearchResultValue>> run(
-        Query<Result<SearchResultValue>> input,
+        QueryPlus<Result<SearchResultValue>> queryPlus,
         Map<String, Object> responseContext
     )
     {
+      Query<Result<SearchResultValue>> input = queryPlus.getQuery();
       if (!(input instanceof SearchQuery)) {
         throw new ISE("Can only handle [%s], got [%s]", SearchQuery.class, input.getClass());
       }
 
       final SearchQuery query = (SearchQuery) input;
       if (query.getLimit() < config.getMaxSearchLimit()) {
-        return runner.run(query, responseContext);
+        return runner.run(queryPlus, responseContext);
       }
 
-      final boolean isBySegment = BaseQuery.getContextBySegment(query, false);
+      final boolean isBySegment = QueryContexts.isBySegment(query);
 
       return Sequences.map(
-          runner.run(query.withLimit(config.getMaxSearchLimit()), responseContext),
+          runner.run(queryPlus.withQuery(query.withLimit(config.getMaxSearchLimit())), responseContext),
           new Function<Result<SearchResultValue>, Result<SearchResultValue>>()
           {
             @Override

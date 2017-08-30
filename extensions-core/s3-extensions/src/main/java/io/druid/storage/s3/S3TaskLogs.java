@@ -24,6 +24,8 @@ import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 
+import io.druid.java.util.common.IOE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.tasklogs.TaskLogs;
 import org.jets3t.service.ServiceException;
@@ -103,11 +105,12 @@ public class S3TaskLogs implements TaskLogs
           || "NoSuchBucket".equals(e.getErrorCode())) {
         return Optional.absent();
       } else {
-        throw new IOException(String.format("Failed to stream logs from: %s", taskKey), e);
+        throw new IOE(e, "Failed to stream logs from: %s", taskKey);
       }
     }
   }
 
+  @Override
   public void pushTaskLog(final String taskid, final File logFile) throws IOException
   {
     final String taskKey = getTaskLogKey(taskid);
@@ -136,7 +139,7 @@ public class S3TaskLogs implements TaskLogs
 
   private String getTaskLogKey(String taskid)
   {
-    return String.format("%s/%s/log", config.getS3Prefix(), taskid);
+    return StringUtils.format("%s/%s/log", config.getS3Prefix(), taskid);
   }
 
   @Override

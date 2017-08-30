@@ -26,6 +26,7 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import io.druid.java.util.common.StringUtils;
 
 import java.nio.charset.CharsetEncoder;
 import java.util.ArrayList;
@@ -61,7 +62,7 @@ public class JSONParser implements Parser<String, Object>
         // Some whacky characters are in this string (e.g. \uD900). These are problematic because they are decodeable
         // by new String(...) but will not encode into the same character. This dance here will replace these
         // characters with something more sane.
-        return new String(s.getBytes(Charsets.UTF_8), Charsets.UTF_8);
+        return StringUtils.fromUtf8(StringUtils.toUtf8(s));
       } else {
         return s;
       }

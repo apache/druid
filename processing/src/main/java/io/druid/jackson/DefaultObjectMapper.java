@@ -32,7 +32,7 @@ public class DefaultObjectMapper extends ObjectMapper
 {
   public DefaultObjectMapper()
   {
-    this((JsonFactory)null);
+    this((JsonFactory) null);
   }
 
   public DefaultObjectMapper(DefaultObjectMapper mapper)
@@ -53,7 +53,8 @@ public class DefaultObjectMapper extends ObjectMapper
 
     configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     configure(MapperFeature.AUTO_DETECT_GETTERS, false);
-//    configure(MapperFeature.AUTO_DETECT_CREATORS, false); https://github.com/FasterXML/jackson-databind/issues/170
+    // See https://github.com/FasterXML/jackson-databind/issues/170
+    // configure(MapperFeature.AUTO_DETECT_CREATORS, false);
     configure(MapperFeature.AUTO_DETECT_FIELDS, false);
     configure(MapperFeature.AUTO_DETECT_IS_GETTERS, false);
     configure(MapperFeature.AUTO_DETECT_SETTERS, false);

@@ -47,8 +47,8 @@ public class NamespaceExtractionCacheManagersTest
   public static Collection<Object[]> data()
   {
     return Arrays.asList(new Object[][]{
-        {NamespaceExtractionCacheManagerExecutorsTest.CREATE_ON_HEAP_CACHE_MANAGER},
-        {NamespaceExtractionCacheManagerExecutorsTest.CREATE_OFF_HEAP_CACHE_MANAGER}
+        {CacheSchedulerTest.CREATE_ON_HEAP_CACHE_MANAGER},
+        {CacheSchedulerTest.CREATE_OFF_HEAP_CACHE_MANAGER}
     });
   }
 

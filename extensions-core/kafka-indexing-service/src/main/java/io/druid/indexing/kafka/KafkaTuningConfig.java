@@ -40,8 +40,8 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
   private final File basePersistDirectory;
   private final int maxPendingPersists;
   private final IndexSpec indexSpec;
-  private final boolean buildV9Directly;
   private final boolean reportParseExceptions;
+  @Deprecated
   private final long handoffConditionTimeout;
   private final boolean resetOffsetAutomatically;
 
@@ -53,6 +53,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
+      // This parameter is left for compatibility when reading existing configs, to be removed in Druid 0.12.
       @JsonProperty("buildV9Directly") Boolean buildV9Directly,
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
       @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
@@ -70,7 +71,6 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     this.basePersistDirectory = defaults.getBasePersistDirectory();
     this.maxPendingPersists = maxPendingPersists == null ? defaults.getMaxPendingPersists() : maxPendingPersists;
     this.indexSpec = indexSpec == null ? defaults.getIndexSpec() : indexSpec;
-    this.buildV9Directly = buildV9Directly == null ? defaults.getBuildV9Directly() : buildV9Directly;
     this.reportParseExceptions = reportParseExceptions == null
                                  ? defaults.isReportParseExceptions()
                                  : reportParseExceptions;
@@ -91,13 +91,14 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         config.basePersistDirectory,
         config.maxPendingPersists,
         config.indexSpec,
-        config.buildV9Directly,
+        true,
         config.reportParseExceptions,
         config.handoffConditionTimeout,
         config.resetOffsetAutomatically
     );
   }
 
+  @Override
   @JsonProperty
   public int getMaxRowsInMemory()
   {
@@ -110,42 +111,52 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     return maxRowsPerSegment;
   }
 
+  @Override
   @JsonProperty
   public Period getIntermediatePersistPeriod()
   {
     return intermediatePersistPeriod;
   }
 
+  @Override
   @JsonProperty
   public File getBasePersistDirectory()
   {
     return basePersistDirectory;
   }
 
+  @Override
   @JsonProperty
   public int getMaxPendingPersists()
   {
     return maxPendingPersists;
   }
 
+  @Override
   @JsonProperty
   public IndexSpec getIndexSpec()
   {
     return indexSpec;
   }
 
+  /**
+   * Always returns true, doesn't affect the version being built.
+   */
+  @Deprecated
   @JsonProperty
   public boolean getBuildV9Directly()
   {
-    return buildV9Directly;
+    return true;
   }
 
+  @Override
   @JsonProperty
   public boolean isReportParseExceptions()
   {
     return reportParseExceptions;
   }
 
+  @Deprecated
   @JsonProperty
   public long getHandoffConditionTimeout()
   {
@@ -167,7 +178,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         dir,
         maxPendingPersists,
         indexSpec,
-        buildV9Directly,
+        true,
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically
@@ -183,7 +194,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         basePersistDirectory,
         maxPendingPersists,
         indexSpec,
-        buildV9Directly,
+        true,
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically
@@ -209,9 +220,6 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
       return false;
     }
     if (maxPendingPersists != that.maxPendingPersists) {
-      return false;
-    }
-    if (buildV9Directly != that.buildV9Directly) {
       return false;
     }
     if (reportParseExceptions != that.reportParseExceptions) {
@@ -246,7 +254,6 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     result = 31 * result + (basePersistDirectory != null ? basePersistDirectory.hashCode() : 0);
     result = 31 * result + maxPendingPersists;
     result = 31 * result + (indexSpec != null ? indexSpec.hashCode() : 0);
-    result = 31 * result + (buildV9Directly ? 1 : 0);
     result = 31 * result + (reportParseExceptions ? 1 : 0);
     result = 31 * result + (int) (handoffConditionTimeout ^ (handoffConditionTimeout >>> 32));
     result = 31 * result + (resetOffsetAutomatically ? 1 : 0);
@@ -263,7 +270,6 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
            ", basePersistDirectory=" + basePersistDirectory +
            ", maxPendingPersists=" + maxPendingPersists +
            ", indexSpec=" + indexSpec +
-           ", buildV9Directly=" + buildV9Directly +
            ", reportParseExceptions=" + reportParseExceptions +
            ", handoffConditionTimeout=" + handoffConditionTimeout +
            ", resetOffsetAutomatically=" + resetOffsetAutomatically +

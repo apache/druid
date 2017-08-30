@@ -31,10 +31,10 @@ import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.java.util.common.Intervals;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.Segment;
@@ -46,7 +46,6 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -54,8 +53,10 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
 public class SameIntervalMergeTaskTest
@@ -84,7 +85,7 @@ public class SameIntervalMergeTaskTest
     final SameIntervalMergeTask task = new SameIntervalMergeTask(
         null,
         "foo",
-        new Interval("2010-01-01/P1D"),
+        Intervals.of("2010-01-01/P1D"),
         aggregators,
         true,
         indexSpec,
@@ -106,7 +107,7 @@ public class SameIntervalMergeTaskTest
     Assert.assertEquals("foo", mergeSegment.getDataSource());
     Assert.assertEquals(newVersion, mergeSegment.getVersion());
     // the merged segment's interval is within the requested interval
-    Assert.assertTrue(new Interval("2010-01-01/P1D").contains(mergeSegment.getInterval()));
+    Assert.assertTrue(Intervals.of("2010-01-01/P1D").contains(mergeSegment.getInterval()));
     // the merged segment should be NoneShardSpec
     Assert.assertTrue(mergeSegment.getShardSpec() instanceof NoneShardSpec);
   }
@@ -139,7 +140,7 @@ public class SameIntervalMergeTaskTest
 
     mergeTask.run(
         new TaskToolbox(
-            null, null, new TaskActionClient()
+            null, new TaskActionClient()
         {
           @Override
           public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
@@ -152,19 +153,19 @@ public class SameIntervalMergeTaskTest
               List<DataSegment> segments = ImmutableList.of(
                   DataSegment.builder()
                              .dataSource(mergeTask.getDataSource())
-                             .interval(new Interval("2010-01-01/PT1H"))
+                             .interval(Intervals.of("2010-01-01/PT1H"))
                              .version("oldVersion")
                              .shardSpec(new LinearShardSpec(0))
                              .build(),
                   DataSegment.builder()
                              .dataSource(mergeTask.getDataSource())
-                             .interval(new Interval("2010-01-01/PT1H"))
+                             .interval(Intervals.of("2010-01-01/PT1H"))
                              .version("oldVersion")
                              .shardSpec(new LinearShardSpec(0))
                              .build(),
                   DataSegment.builder()
                              .dataSource(mergeTask.getDataSource())
-                             .interval(new Interval("2010-01-01/PT2H"))
+                             .interval(Intervals.of("2010-01-01/PT2H"))
                              .version("oldVersion")
                              .shardSpec(new LinearShardSpec(0))
                              .build()
@@ -200,7 +201,13 @@ public class SameIntervalMergeTaskTest
             segments.add(segment);
             return segment;
           }
-        }, null, null, null, null, null, null, null, null, new SegmentLoader()
+          @Override
+          public Map<String, Object> makeLoadSpec(URI finalIndexZipFilePath)
+          {
+            return null;
+          }
+
+        }, null, null, null, null, null, null, null, null, null, new SegmentLoader()
         {
           @Override
           public boolean isSegmentLoaded(DataSegment segment) throws SegmentLoadingException
@@ -226,7 +233,8 @@ public class SameIntervalMergeTaskTest
           {
           }
         }, jsonMapper, temporaryFolder.newFolder(),
-            EasyMock.createMock(IndexMerger.class), indexIO, null, null, EasyMock.createMock(IndexMergerV9.class)
+            indexIO, null, null, EasyMock.createMock(IndexMergerV9.class),
+            null, null, null, null
         )
     );
 

@@ -226,7 +226,7 @@ public class ConcatSequenceTest
                             public boolean hasNext()
                             {
                               boolean result = baseIter.hasNext();
-                              if(!result) {
+                              if (!result) {
                                 lastSeqFullyRead.set(true);
                               }
                               return result;
@@ -269,13 +269,13 @@ public class ConcatSequenceTest
     );
 
     List<Integer> result = new ArrayList<>();
-    while(!yielder.isDone()) {
+    while (!yielder.isDone()) {
       result.add(yielder.get());
       yielder = yielder.next(null);
     }
     yielder.close();
 
-    Assert.assertEquals(ImmutableList.of(1,2,3,4,5,6), result);
+    Assert.assertEquals(ImmutableList.of(1, 2, 3, 4, 5, 6), result);
   }
 
   @SuppressWarnings("unchecked")

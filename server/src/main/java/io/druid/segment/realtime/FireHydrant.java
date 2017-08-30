@@ -141,12 +141,17 @@ public class FireHydrant
     }
   }
 
+  public void closeSegment()
+  {
+    adapter.get().close();
+  }
+
   @Override
   public String toString()
   {
     return "FireHydrant{" +
            "index=" + index +
-           ", queryable=" + adapter +
+           ", queryable=" + adapter.get().getIdentifier() +
            ", count=" + count +
            '}';
   }

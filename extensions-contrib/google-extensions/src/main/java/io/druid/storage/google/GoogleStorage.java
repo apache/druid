@@ -58,7 +58,8 @@ public class GoogleStorage
   {
     try {
       return storage.objects().get(bucket, path).executeUsingHead().isSuccessStatusCode();
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       return false;
     }
   }

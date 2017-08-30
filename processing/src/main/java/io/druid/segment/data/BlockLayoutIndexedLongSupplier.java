@@ -21,6 +21,7 @@ package io.druid.segment.data;
 
 import com.google.common.base.Supplier;
 import io.druid.collections.ResourceHolder;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 
@@ -87,6 +88,7 @@ public class BlockLayoutIndexedLongSupplier implements Supplier<IndexedLongs>
             return longBuffer.get(longBuffer.position() + bufferIndex);
           }
 
+          @Override
           protected void loadBuffer(int bufferNum)
           {
             CloseQuietly.close(holder);
@@ -153,7 +155,7 @@ public class BlockLayoutIndexedLongSupplier implements Supplier<IndexedLongs>
     {
       if (totalSize - index < toFill.length) {
         throw new IndexOutOfBoundsException(
-            String.format(
+            StringUtils.format(
                 "Cannot fill array of size[%,d] at index[%,d].  Max size[%,d]", toFill.length, index, totalSize
             )
         );
