@@ -19,6 +19,11 @@
 
 package io.druid.segment.data;
 
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.DoubleColumnSelector;
+import io.druid.segment.LongColumnSelector;
+import io.druid.segment.historical.HistoricalFloatColumnSelector;
+
 import java.io.Closeable;
 
 public interface IndexedDoubles extends Closeable
@@ -29,5 +34,68 @@ public interface IndexedDoubles extends Closeable
 
   @Override
   void close();
+
+  default DoubleColumnSelector makeDoubleColumnSelector(ReadableOffset offset)
+  {
+    return new DoubleColumnSelector()
+    {
+      @Override
+      public double getDouble()
+      {
+        return IndexedDoubles.this.get(offset.getOffset());
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("indexed", IndexedDoubles.this);
+        inspector.visit("offset", offset);
+      }
+    };
+  }
+
+  default HistoricalFloatColumnSelector makeFloatColumnSelector(ReadableOffset offset)
+  {
+    return new HistoricalFloatColumnSelector()
+    {
+      @Override
+      public float get(int offset)
+      {
+        return (float) IndexedDoubles.this.get(offset);
+      }
+
+      @Override
+      public float getFloat()
+      {
+        return (float) IndexedDoubles.this.get(offset.getOffset());
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("indexed", IndexedDoubles.this);
+        inspector.visit("offset", offset);
+      }
+    };
+  }
+
+  default LongColumnSelector makeLongColumnSelector(ReadableOffset offset)
+  {
+    return new LongColumnSelector()
+    {
+      @Override
+      public long getLong()
+      {
+        return (long) IndexedDoubles.this.get(offset.getOffset());
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("indexed", IndexedDoubles.this);
+        inspector.visit("offset", offset);
+      }
+    };
+  }
 }
 

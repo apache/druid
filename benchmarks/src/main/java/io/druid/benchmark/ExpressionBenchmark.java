@@ -176,7 +176,7 @@ public class ExpressionBenchmark
         Sequences.map(
             cursors,
             cursor -> {
-              final BufferAggregator bufferAggregator = aggregatorFactory.apply(cursor);
+              final BufferAggregator bufferAggregator = aggregatorFactory.apply(cursor.getColumnSelectorFactory());
               bufferAggregator.init(aggregationBuffer, 0);
 
               while (!cursor.isDone()) {

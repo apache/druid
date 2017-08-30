@@ -41,6 +41,7 @@ public class WhiteListBasedConverterTest
       prefix,
       false,
       false,
+      false,
       null,
       new DefaultObjectMapper()
   );

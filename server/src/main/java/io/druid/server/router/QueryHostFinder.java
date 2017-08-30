@@ -19,8 +19,6 @@
 
 package io.druid.server.router;
 
-import com.google.common.base.Function;
-import com.google.common.collect.FluentIterable;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.client.selector.Server;
@@ -31,6 +29,7 @@ import io.druid.query.Query;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -62,30 +61,14 @@ public class QueryHostFinder
     return findServerInner(selected);
   }
 
-  public Collection<String> getAllHosts()
+  public Collection<Server> getAllServers()
   {
-    return FluentIterable
-        .from((Collection<List<Server>>) hostSelector.getAllBrokers().values())
-        .transformAndConcat(
-            new Function<List<Server>, Iterable<Server>>()
-            {
-              @Override
-              public Iterable<Server> apply(List<Server> input)
-              {
-                return input;
-              }
-            }
-        ).transform(new Function<Server, String>()
-        {
-          @Override
-          public String apply(Server input)
-          {
-            return input.getHost();
-          }
-        }).toList();
+    return ((Collection<List<Server>>) hostSelector.getAllBrokers().values()).stream()
+                                                                             .flatMap(Collection::stream)
+                                                                             .collect(Collectors.toList());
   }
 
-  public <T> String getHost(Query<T> query)
+  public <T> Server getServer(Query<T> query)
   {
     Server server = findServer(query);
 
@@ -97,13 +80,12 @@ public class QueryHostFinder
       throw new ISE("No server found for query[%s]", query);
     }
 
-    final String host = server.getHost();
-    log.debug("Selected [%s]", host);
+    log.debug("Selected [%s]", server.getHost());
 
-    return host;
+    return server;
   }
 
-  public String getDefaultHost()
+  public Server getDefaultServer()
   {
     Server server = findDefaultServer();
 
@@ -115,7 +97,7 @@ public class QueryHostFinder
       throw new ISE("No default server found!");
     }
 
-    return server.getHost();
+    return server;
   }
 
   private Server findServerInner(final Pair<String, Server> selected)
