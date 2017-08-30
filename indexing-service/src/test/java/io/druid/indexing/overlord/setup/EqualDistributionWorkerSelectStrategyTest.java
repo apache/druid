@@ -27,7 +27,6 @@ import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.worker.Worker;
 import io.druid.java.util.common.DateTimes;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -40,28 +39,28 @@ public class EqualDistributionWorkerSelectStrategyTest
               new Worker("http", "localhost0", "localhost0", 2, "v1"), 0,
               Sets.<String>newHashSet(),
               Sets.<String>newHashSet(),
-              DateTime.now()
+              DateTimes.nowUtc()
           ),
           "localhost1",
           new ImmutableWorkerInfo(
               new Worker("http", "localhost1", "localhost1", 2, "v1"), 0,
               Sets.<String>newHashSet(),
               Sets.<String>newHashSet(),
-              DateTime.now()
+              DateTimes.nowUtc()
           ),
           "localhost2",
           new ImmutableWorkerInfo(
               new Worker("http", "localhost2", "localhost2", 2, "v1"), 1,
               Sets.<String>newHashSet(),
               Sets.<String>newHashSet(),
-              DateTime.now()
+              DateTimes.nowUtc()
           ),
           "localhost3",
           new ImmutableWorkerInfo(
               new Worker("http", "localhost3", "localhost3", 2, "v1"), 1,
               Sets.<String>newHashSet(),
               Sets.<String>newHashSet(),
-              DateTime.now()
+              DateTimes.nowUtc()
           )
       );
 
