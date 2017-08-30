@@ -21,6 +21,7 @@ package io.druid.server.coordinator.cost;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import io.druid.java.util.common.DateTimes;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -40,7 +41,7 @@ public class SegmentsCostCacheTest
 {
 
   private static final String DATA_SOURCE = "dataSource";
-  private static final DateTime REFERENCE_TIME = new DateTime("2014-01-01T00:00:00");
+  private static final DateTime REFERENCE_TIME = DateTimes.of("2014-01-01T00:00:00");
   private static final double EPSILON = 0.00000001;
 
   @Test

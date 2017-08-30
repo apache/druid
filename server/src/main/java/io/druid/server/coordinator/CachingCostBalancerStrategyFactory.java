@@ -50,9 +50,9 @@ public class CachingCostBalancerStrategyFactory implements BalancerStrategyFacto
 
   private final ServerInventoryView serverInventoryView;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
-  private volatile boolean initialized = false;
   private final ExecutorService executor = Execs.singleThreaded("CachingCostBalancerStrategy-executor");
   private final ClusterCostCache.Builder clusterCostCacheBuilder = ClusterCostCache.builder();
+  private volatile boolean initialized = false;
 
   @Inject
   public CachingCostBalancerStrategyFactory(ServerInventoryView serverInventoryView)
@@ -72,18 +72,14 @@ public class CachingCostBalancerStrategyFactory implements BalancerStrategyFacto
           new ServerView.SegmentCallback()
           {
             @Override
-            public ServerView.CallbackAction segmentAdded(
-                DruidServerMetadata server, DataSegment segment
-            )
+            public ServerView.CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment)
             {
               clusterCostCacheBuilder.addSegment(server.getName(), segment);
               return ServerView.CallbackAction.CONTINUE;
             }
 
             @Override
-            public ServerView.CallbackAction segmentRemoved(
-                DruidServerMetadata server, DataSegment segment
-            )
+            public ServerView.CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment)
             {
               clusterCostCacheBuilder.removeSegment(server.getName(), segment);
               return ServerView.CallbackAction.CONTINUE;

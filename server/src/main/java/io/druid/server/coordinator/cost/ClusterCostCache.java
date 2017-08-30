@@ -31,7 +31,7 @@ public class ClusterCostCache
 {
   private final Map<String, ServerCostCache> serversCostCache;
 
-  public ClusterCostCache(Map<String, ServerCostCache> serversCostCache)
+  ClusterCostCache(Map<String, ServerCostCache> serversCostCache)
   {
     this.serversCostCache = Preconditions.checkNotNull(serversCostCache);
   }

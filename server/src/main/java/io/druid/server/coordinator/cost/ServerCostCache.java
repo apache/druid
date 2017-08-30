@@ -31,7 +31,7 @@ public class ServerCostCache
   private final SegmentsCostCache allSegmentsCostCache;
   private final Map<String, SegmentsCostCache> segmentsPerDataSource;
 
-  public ServerCostCache(
+  ServerCostCache(
       SegmentsCostCache allSegmentsCostCache,
       Map<String, SegmentsCostCache> segmentsCostPerDataSource
   )
@@ -40,7 +40,7 @@ public class ServerCostCache
     this.segmentsPerDataSource = Preconditions.checkNotNull(segmentsCostPerDataSource);
   }
 
-  public double computeCost(DataSegment segment)
+  double computeCost(DataSegment segment)
   {
     return allSegmentsCostCache.cost(segment) + computeDataSourceCost(segment);
   }

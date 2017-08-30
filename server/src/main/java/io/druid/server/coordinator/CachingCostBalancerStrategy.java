@@ -40,9 +40,7 @@ public class CachingCostBalancerStrategy extends CostBalancerStrategy
   }
 
   @Override
-  protected double computeCost(
-      DataSegment proposalSegment, ServerHolder server, boolean includeCurrentServer
-  )
+  protected double computeCost(DataSegment proposalSegment, ServerHolder server, boolean includeCurrentServer)
   {
     final long proposalSegmentSize = proposalSegment.getSize();
 

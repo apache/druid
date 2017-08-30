@@ -23,6 +23,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.client.DruidServer;
 import io.druid.concurrent.Execs;
+import io.druid.java.util.common.DateTimes;
 import io.druid.server.coordination.ServerType;
 import io.druid.server.coordinator.CachingCostBalancerStrategy;
 import io.druid.server.coordinator.CostBalancerStrategy;
@@ -60,7 +61,7 @@ public class CachingCostBalancerStrategyTest
   public void setUp() throws Exception
   {
     Random random = new Random(0);
-    DateTime referenceTime = new DateTime("2014-01-01T00:00:00");
+    DateTime referenceTime = DateTimes.of("2014-01-01T00:00:00");
 
     serverHolderList = IntStream
         .range(0, NUMBER_OF_SERVERS)

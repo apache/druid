@@ -98,17 +98,13 @@ public class CliRealtimeExample extends ServerRunnable
   private static class NoopServerView implements ServerView
   {
     @Override
-    public void registerServerRemovedCallback(
-        Executor exec, ServerRemovedCallback callback
-    )
+    public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
     {
       // do nothing
     }
 
     @Override
-    public void registerSegmentCallback(
-        Executor exec, SegmentCallback callback
-    )
+    public void registerSegmentCallback(Executor exec, SegmentCallback callback)
     {
       // do nothing
     }

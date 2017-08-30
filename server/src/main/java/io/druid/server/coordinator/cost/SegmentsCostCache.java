@@ -22,6 +22,7 @@ package io.druid.server.coordinator.cost;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Ordering;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.DurationGranularity;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.server.coordinator.CostBalancerStrategy;
@@ -123,7 +124,7 @@ public class SegmentsCostCache
   private final ArrayList<Bucket> sortedBuckets;
   private final ArrayList<Interval> intervals;
 
-  public SegmentsCostCache(ArrayList<Bucket> sortedBuckets)
+  SegmentsCostCache(ArrayList<Bucket> sortedBuckets)
   {
     this.sortedBuckets = Preconditions.checkNotNull(sortedBuckets, "buckets should not be null");
     this.intervals = sortedBuckets.stream().map(Bucket::getInterval).collect(Collectors.toCollection(ArrayList::new));
@@ -200,7 +201,7 @@ public class SegmentsCostCache
       );
     }
 
-    private Interval getBucketInterval(DataSegment segment)
+    private static Interval getBucketInterval(DataSegment segment)
     {
       return BUCKET_GRANULARITY.bucket(segment.getInterval().getStart());
     }
@@ -214,7 +215,7 @@ public class SegmentsCostCache
     private final double[] leftSum;
     private final double[] rightSum;
 
-    public Bucket(Interval interval, ArrayList<DataSegment> sortedSegments, double[] leftSum, double[] rightSum)
+    Bucket(Interval interval, ArrayList<DataSegment> sortedSegments, double[] leftSum, double[] rightSum)
     {
       this.interval = Preconditions.checkNotNull(interval, "interval");
       this.sortedSegments = Preconditions.checkNotNull(sortedSegments, "sortedSegments");
@@ -228,17 +229,17 @@ public class SegmentsCostCache
       );
     }
 
-    public Interval getInterval()
+    Interval getInterval()
     {
       return interval;
     }
 
-    public boolean inCalculationInterval(DataSegment dataSegment)
+    boolean inCalculationInterval(DataSegment dataSegment)
     {
-      return calculationInterval.contains(dataSegment.getInterval());
+      return calculationInterval.overlaps(dataSegment.getInterval());
     }
 
-    public double cost(DataSegment dataSegment)
+    double cost(DataSegment dataSegment)
     {
       // cost is calculated relatively to bucket start (which is considered as 0)
       double t0 = convertStart(dataSegment, interval);
@@ -388,23 +389,19 @@ public class SegmentsCostCache
         ArrayList<DataSegment> segmentsList = new ArrayList<>(segments.size());
         double[] leftSum = new double[segments.size()];
         double[] rightSum = new double[segments.size()];
-
         int i = 0;
         for (SegmentAndSum segmentAndSum : segments) {
-          segmentsList.add(i, segmentAndSum.dataSegment);
+          segmentsList.add(segmentAndSum.dataSegment);
           leftSum[i] = segmentAndSum.leftSum;
           rightSum[i] = segmentAndSum.rightSum;
           ++i;
         }
-        return new Bucket(
-            new Interval(
-                interval.getStart(),
-                segmentsList.get(segments.size() - 1).getInterval().getEnd()
-            ),
-            segmentsList,
-            leftSum,
-            rightSum
-        );
+        long bucketEndMillis = segmentsList
+            .stream()
+            .mapToLong(s -> s.getInterval().getEndMillis())
+            .max()
+            .orElseGet(interval::getEndMillis);
+        return new Bucket(Intervals.utc(interval.getStartMillis(), bucketEndMillis), segmentsList, leftSum, rightSum);
       }
     }
   }
@@ -415,7 +412,7 @@ public class SegmentsCostCache
     private double leftSum;
     private double rightSum;
 
-    public SegmentAndSum(DataSegment dataSegment, double leftSum, double rightSum)
+    SegmentAndSum(DataSegment dataSegment, double leftSum, double rightSum)
     {
       this.dataSegment = dataSegment;
       this.leftSum = leftSum;
@@ -427,6 +424,18 @@ public class SegmentsCostCache
     {
       int c = Comparators.intervalsByStartThenEnd().compare(dataSegment.getInterval(), o.dataSegment.getInterval());
       return (c != 0) ? c : dataSegment.compareTo(o.dataSegment);
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+      throw new UnsupportedOperationException("Use SegmentAndSum.compareTo()");
+    }
+
+    @Override
+    public int hashCode()
+    {
+      throw new UnsupportedOperationException();
     }
   }
 }
