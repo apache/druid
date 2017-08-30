@@ -86,7 +86,7 @@ public class ReferenceCountingSegmentTest
     Assert.assertTrue(segment.increment());
     Assert.assertEquals(1, segment.getNumReferences());
 
-    Closeable closeable = segment.decrementOnce();
+    Closeable closeable = segment.decrementOnceCloseable();
     closeable.close();
     closeable.close();
     exec.submit(

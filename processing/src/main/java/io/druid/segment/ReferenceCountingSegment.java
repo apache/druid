@@ -116,14 +116,14 @@ public class ReferenceCountingSegment extends AbstractSegment
     return referents.register() >= 0;
   }
 
-  public Closeable decrementOnce()
+  public Closeable decrementOnceCloseable()
   {
     AtomicBoolean decremented = new AtomicBoolean(false);
     return () -> {
       if (decremented.compareAndSet(false, true)) {
         decrement();
       } else {
-        log.warn("close() is called more than once on ReferenceCountingSegment.decrementOnce()");
+        log.warn("close() is called more than once on ReferenceCountingSegment.decrementOnceCloseable()");
       }
     };
   }

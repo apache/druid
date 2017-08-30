@@ -128,7 +128,7 @@ public class FireHydrant
     ReferenceCountingSegment segment = adapter.get();
     while (true) {
       if (segment.increment()) {
-        return new Pair<>(segment, segment.decrementOnce());
+        return new Pair<>(segment, segment.decrementOnceCloseable());
       }
       // segment.increment() returned false, means it is closed. Since close() in swapSegment() happens after segment
       // swap, the new segment should already be visible.

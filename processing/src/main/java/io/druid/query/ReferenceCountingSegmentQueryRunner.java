@@ -51,7 +51,7 @@ public class ReferenceCountingSegmentQueryRunner<T> implements QueryRunner<T>
       try {
         final Sequence<T> baseSequence = factory.createRunner(adapter).run(query, responseContext);
 
-        return Sequences.withBaggage(baseSequence, adapter.decrementOnce());
+        return Sequences.withBaggage(baseSequence, adapter.decrementOnceCloseable());
       }
       catch (Throwable t) {
         try {
