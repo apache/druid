@@ -38,6 +38,8 @@ public interface DruidLeaderSelector
 
   /**
    * Get ID of current Leader. Returns NULL if it can't find the leader.
+   * Note that it is possible for leadership to change right after this call returns, so caller would get wrong
+   * leader.
    */
   @Nullable
   String getCurrentLeader();
@@ -45,6 +47,8 @@ public interface DruidLeaderSelector
   /**
    * Returns true if this node is elected leader from underlying system's point of view. For example if curator
    * is used to implement this then true would be returned when curator believes this node to be the leader.
+   * Note that it is possible for leadership to change right after this call returns, so caller would get wrong
+   * status.
    */
   boolean isLeader();
 
