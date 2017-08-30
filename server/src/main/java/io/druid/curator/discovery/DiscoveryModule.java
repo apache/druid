@@ -191,14 +191,14 @@ public class DiscoveryModule implements Module
     PolyBind.optionBinder(binder, Key.get(DruidLeaderSelector.class, Coordinator.class))
             .addBinding(CURATOR_KEY)
             .toProvider(new DruidLeaderSelectorProvider(
-                (zkPathsConfig) -> ZKPaths.makePath(zkPathsConfig.getCoordinatorPath(), "druid:coordinator"))
+                (zkPathsConfig) -> ZKPaths.makePath(zkPathsConfig.getCoordinatorPath(), "_COORDINATOR"))
             )
             .in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(DruidLeaderSelector.class, IndexingService.class))
             .addBinding(CURATOR_KEY)
             .toProvider(new DruidLeaderSelectorProvider(
-                (zkPathsConfig) -> ZKPaths.makePath(zkPathsConfig.getOverlordPath(), "druid:overlord"))
+                (zkPathsConfig) -> ZKPaths.makePath(zkPathsConfig.getOverlordPath(), "_OVERLORD"))
             )
             .in(LazySingleton.class);
   }

@@ -93,8 +93,6 @@ import java.util.concurrent.ScheduledExecutorService;
 @ManageLifecycle
 public class DruidCoordinator
 {
-  public static final String COORDINATOR_OWNER_NODE = "_COORDINATOR";
-
   public static Comparator<DataSegment> SEGMENT_COMPARATOR = Ordering.from(Comparators.intervalsByEndThenStart())
                                                                      .onResultOf(
                                                                          new Function<DataSegment, Interval>()
