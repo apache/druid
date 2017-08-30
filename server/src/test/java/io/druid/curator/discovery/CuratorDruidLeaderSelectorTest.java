@@ -32,6 +32,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -97,10 +98,17 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
     leaderSelector2.registerListener(
         new DruidLeaderSelector.Listener()
         {
+          private AtomicInteger attemptCount = new AtomicInteger(0);
+
           @Override
           public void becomeLeader()
           {
             logger.info("listener2.becomeLeader().");
+
+            if (attemptCount.getAndIncrement() < 1) {
+              throw new RuntimeException("will become leader on next attempt.");
+            }
+
             currLeader.set("h2:8080");
           }
 
@@ -120,7 +128,7 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
 
     Assert.assertTrue(leaderSelector2.isLeader());
     Assert.assertEquals("h2:8080", leaderSelector1.getCurrentLeader());
-    Assert.assertEquals(1, leaderSelector2.localTerm());
+    Assert.assertEquals(2, leaderSelector2.localTerm());
 
     CuratorDruidLeaderSelector leaderSelector3 = new CuratorDruidLeaderSelector(
         curator,

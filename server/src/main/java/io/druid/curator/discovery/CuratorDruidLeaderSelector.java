@@ -36,6 +36,7 @@ import org.apache.curator.framework.recipes.leader.LeaderLatchListener;
 import org.apache.curator.framework.recipes.leader.Participant;
 
 import javax.annotation.Nullable;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -50,6 +51,8 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
   private final DruidNode self;
   private final CuratorFramework curator;
   private final String latchPath;
+
+  private ExecutorService listenerExecutor;
 
   private DruidLeaderSelector.Listener listener = null;
   private final AtomicReference<LeaderLatch> leaderLatch = new AtomicReference<>();
@@ -125,7 +128,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
             }
           }
         },
-        Execs.singleThreaded(StringUtils.format("LeaderSelector[%s]", latchPath))
+        listenerExecutor
     );
 
     return leaderLatch.getAndSet(newLeaderLatch);
@@ -176,6 +179,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
     }
     try {
       this.listener = listener;
+      this.listenerExecutor = Execs.singleThreaded(StringUtils.format("LeaderSelector[%s]", latchPath));
 
       createNewLeaderLatch();
       leaderLatch.get().start();
@@ -197,5 +201,6 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
       throw new ISE("can't stop.");
     }
     CloseQuietly.close(leaderLatch.get());
+    listenerExecutor.shutdownNow();
   }
 }
