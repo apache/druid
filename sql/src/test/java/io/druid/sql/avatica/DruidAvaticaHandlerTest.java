@@ -126,7 +126,8 @@ public class DruidAvaticaHandlerTest
             CalciteTests.createMockQueryLifecycleFactory(walker),
             operatorTable,
             macroTable,
-            plannerConfig
+            plannerConfig,
+            CalciteTests.getJsonMapper()
         ),
         AVATICA_CONFIG
     );
@@ -565,7 +566,8 @@ public class DruidAvaticaHandlerTest
             CalciteTests.createMockQueryLifecycleFactory(walker),
             operatorTable,
             macroTable,
-            plannerConfig
+            plannerConfig,
+            CalciteTests.getJsonMapper()
         ),
         smallFrameConfig
     )

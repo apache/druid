@@ -84,7 +84,8 @@ public class SqlResourceTest
             CalciteTests.createMockQueryLifecycleFactory(walker),
             operatorTable,
             macroTable,
-            plannerConfig
+            plannerConfig,
+            CalciteTests.getJsonMapper()
         )
     );
   }
