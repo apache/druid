@@ -388,7 +388,6 @@ public class KerberosAuthenticator implements Authenticator
           SecurityUtil.getServerPrincipal(serverPrincipal, node.getHost())
       );
       params.put("kerberos.keytab", serverKeytab);
-      //params.put(AuthenticationFilter.AUTH_TYPE, "kerberos");
       params.put(AuthenticationFilter.AUTH_TYPE, DruidKerberosAuthenticationHandler.class.getName());
       params.put("kerberos.name.rules", authToLocal);
       if (cookieSignatureSecret != null) {

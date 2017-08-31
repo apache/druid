@@ -6,7 +6,6 @@ layout: doc_page
 
 |Property|Type|Description|Default|Required|
 |--------|-----------|--------|--------|--------|
-|`druid.auth.enabled`|boolean|Determines if authentication and authorization checks will be performed on requests.|false|no|
 |`druid.auth.authenticationChain`|JSON List of Strings|List of Authenticator type names|null|yes, if auth enabled|
 |`druid.auth.escalatedAuthenticator`|String|Type of the Authenticator that should be used for internal Druid communications|null|yes, if auth enabled|
 |`druid.auth.authorizers`|JSON List of Strings|List of Authorizer type names |null|yes, if auth enabled|
