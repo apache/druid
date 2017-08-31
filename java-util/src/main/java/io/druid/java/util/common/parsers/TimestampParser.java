@@ -31,6 +31,7 @@ import org.joda.time.format.DateTimeFormatterBuilder;
 import org.joda.time.format.DateTimeParser;
 import org.joda.time.format.ISODateTimeFormat;
 
+import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
 public class TimestampParser
@@ -48,16 +49,20 @@ public class TimestampParser
         public DateTime apply(String input)
         {
           Preconditions.checkArgument(input != null && !input.isEmpty(), "null timestamp");
-          String inputWithoutTimeZone = ParserUtils.removeTimeZone(input);
-          DateTimeZone timeZone = ParserUtils.extractTimeZone(input);
 
           for (int i = 0; i < input.length(); i++) {
             if (input.charAt(i) < '0' || input.charAt(i) > '9') {
-              return new DateTime(parser.parseDateTime(ParserUtils.stripQuotes(inputWithoutTimeZone)), timeZone);
+              DateTimeZone dateTimeZone = DateTimeZone.UTC;
+              if (ParserUtils.isTimezonePresent(input)) {
+                dateTimeZone = DateTimeZone.forTimeZone(TimeZone.getTimeZone(input.substring(input.length() - 3)));
+                input = input.substring(0, input.length() - 3);
+              }
+
+              return new DateTime(parser.parseDateTime(ParserUtils.stripQuotes(input)), dateTimeZone);
             }
           }
 
-          return new DateTime(Long.parseLong(inputWithoutTimeZone), timeZone);
+          return DateTimes.utc(Long.parseLong(input));
         }
       };
     } else if (format.equalsIgnoreCase("iso")) {
