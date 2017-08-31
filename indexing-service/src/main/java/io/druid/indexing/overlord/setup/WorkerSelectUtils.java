@@ -20,6 +20,7 @@
 package io.druid.indexing.overlord.setup;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
@@ -65,40 +66,53 @@ public class WorkerSelectUtils
         .collect(Collectors.toMap(w -> w.getWorker().getHost(), Function.identity()));
 
     if (affinityConfig == null) {
+      // All runnable workers are valid.
       return workerSelector.apply(ImmutableMap.copyOf(runnableWorkers));
     } else {
-      // Workers not assigned to any affinity pool at all.
-      final Map<String, ImmutableWorkerInfo> nonAffinityWorkers = runnableWorkers
-          .entrySet()
-          .stream()
-          .filter(entry -> !affinityConfig.getAffinityWorkers().contains(entry.getKey()))
-          .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-
       // Workers assigned to the affinity pool for our task.
       final Set<String> dataSourceWorkers = affinityConfig.getAffinity().get(task.getDataSource());
 
       if (dataSourceWorkers == null) {
         // No affinity config for this dataSource; use non-affinity workers.
-        return workerSelector.apply(ImmutableMap.copyOf(nonAffinityWorkers));
+        return workerSelector.apply(getNonAffinityWorkers(affinityConfig, runnableWorkers));
       } else {
-        final Map<String, ImmutableWorkerInfo> dataSourceWorkerMap = runnableWorkers
-            .entrySet()
-            .stream()
-            .filter(entry -> dataSourceWorkers.contains(entry.getKey()))
-            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        // Get runnable, affinity workers.
+        final ImmutableMap<String, ImmutableWorkerInfo> dataSourceWorkerMap =
+            ImmutableMap.copyOf(Maps.filterKeys(runnableWorkers, dataSourceWorkers::contains));
 
-        final ImmutableWorkerInfo selected = workerSelector.apply(ImmutableMap.copyOf(dataSourceWorkerMap));
+        final ImmutableWorkerInfo selected = workerSelector.apply(dataSourceWorkerMap);
 
         if (selected != null) {
           return selected;
         } else if (affinityConfig.isStrong()) {
           return null;
         } else {
-          // Weak affinity allows us to use nonAffinityWorkers for this dataSource, if no affinity workesr
+          // Weak affinity allows us to use nonAffinityWorkers for this dataSource, if no affinity workers
           // are available.
-          return workerSelector.apply(ImmutableMap.copyOf(nonAffinityWorkers));
+          return workerSelector.apply(getNonAffinityWorkers(affinityConfig, runnableWorkers));
         }
       }
     }
+  }
+
+  /**
+   * Return workers not assigned to any affinity pool at all.
+   *
+   * @param affinityConfig affinity config
+   * @param workerMap      map of worker hostname to worker info
+   *
+   * @return map of worker hostname to worker info
+   */
+  private static ImmutableMap<String, ImmutableWorkerInfo> getNonAffinityWorkers(
+      final AffinityConfig affinityConfig,
+      final Map<String, ImmutableWorkerInfo> workerMap
+  )
+  {
+    return ImmutableMap.copyOf(
+        Maps.filterKeys(
+            workerMap,
+            workerHost -> !affinityConfig.getAffinityWorkers().contains(workerHost)
+        )
+    );
   }
 }

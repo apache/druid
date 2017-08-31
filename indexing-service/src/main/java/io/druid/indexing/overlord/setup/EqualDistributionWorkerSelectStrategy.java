@@ -68,8 +68,8 @@ public class EqualDistributionWorkerSelectStrategy implements WorkerSelectStrate
 
   private static ImmutableWorkerInfo selectFromEligibleWorkers(final Map<String, ImmutableWorkerInfo> eligibleWorkers)
   {
-    return eligibleWorkers.values().stream().min(
-        Comparator.comparing(ImmutableWorkerInfo::getAvailableCapacity).reversed()
+    return eligibleWorkers.values().stream().max(
+        Comparator.comparing(ImmutableWorkerInfo::getAvailableCapacity)
     ).orElse(null);
   }
 

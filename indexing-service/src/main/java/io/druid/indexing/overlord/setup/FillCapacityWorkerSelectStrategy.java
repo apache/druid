@@ -66,8 +66,8 @@ public class FillCapacityWorkerSelectStrategy implements WorkerSelectStrategy
 
   private static ImmutableWorkerInfo selectFromEligibleWorkers(final Map<String, ImmutableWorkerInfo> eligibleWorkers)
   {
-    return eligibleWorkers.values().stream().min(
-        Comparator.comparing(ImmutableWorkerInfo::getCurrCapacityUsed).reversed()
+    return eligibleWorkers.values().stream().max(
+        Comparator.comparing(ImmutableWorkerInfo::getCurrCapacityUsed)
     ).orElse(null);
   }
 
