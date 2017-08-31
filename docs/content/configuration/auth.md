@@ -72,15 +72,19 @@ Allowing the user to redefine what identity string represents the internal syste
 
 ### Authenticator Internal System User Handling
 
-Authenticators must implement two methods related to the internal system user:
+Authenticators must implement three methods related to the internal system user:
 
 ```java
   public HttpClient createEscalatedClient(HttpClient baseClient);
+
+  public org.eclipse.jetty.client.HttpClient createEscalatedJettyClient(org.eclipse.jetty.client.HttpClient baseClient);
 
   public AuthenticationResult createEscalatedAuthenticationResult();
 ```
 
 `createEscalatedClient` returns an wrapped HttpClient that attaches the credentials of the "internal system user" to requests.
+
+`createEscalatedJettyClient` is similar to `createEscalatedClient`, except that it operates on a Jetty HttpClient.
 
 `createEscalatedAuthenticationResult` returns an AuthenticationResult containing the identity of the "internal system user".
 

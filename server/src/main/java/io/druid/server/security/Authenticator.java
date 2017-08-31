@@ -38,6 +38,8 @@ import java.util.Map;
  *   authentication mechanism, getAuthChallengeHeader().
  * - A method for creating a wrapped HTTP client that can authenticate using the Authenticator's authentication scheme,
  *   used for internal Druid node communications (e.g., broker -> historical messages), createEscalatedClient().
+ * - A method for creating a wrapped Jetty HTTP client that can authenticate using the Authenticator's authentication scheme,
+ *   used by the Druid router, createEscalatedJettyClient().
  * - A method for authenticating credentials contained in a JDBC connection context, used for authenticating Druid SQL
  *   requests received via JDBC, authenticateJDBCContext().
  */
@@ -96,9 +98,21 @@ public interface Authenticator extends ServletFilterHolder
    *
    * @param baseClient Base HTTP client for internal Druid communications
    *
-   * @return HttpClient that sends requests with the credentials of the internal system user
+   * @return metamx HttpClient that sends requests with the credentials of the internal system user
    */
   public HttpClient createEscalatedClient(HttpClient baseClient);
+
+  /**
+   * Return a client that sends requests with the format/information necessary to authenticate successfully
+   * against this Authenticator's authentication scheme using the identity of the internal system user.
+   * <p>
+   * This HTTP client is used by the Druid Router node.
+   *
+   * @param baseClient Base Jetty HttpClient
+   *
+   * @return Jetty HttpClient that sends requests with the credentials of the internal system user
+   */
+  public org.eclipse.jetty.client.HttpClient createEscalatedJettyClient(org.eclipse.jetty.client.HttpClient baseClient);
 
   /**
    * @return an AuthenticationResult representing the identity of the internal system user.

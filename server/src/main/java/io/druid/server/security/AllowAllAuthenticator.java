@@ -110,6 +110,12 @@ public class AllowAllAuthenticator implements Authenticator
   }
 
   @Override
+  public org.eclipse.jetty.client.HttpClient createEscalatedJettyClient(org.eclipse.jetty.client.HttpClient baseClient)
+  {
+    return baseClient;
+  }
+
+  @Override
   public AuthenticationResult createEscalatedAuthenticationResult()
   {
     return ALLOW_ALL_RESULT;
