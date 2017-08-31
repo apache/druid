@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import io.druid.java.util.common.StringUtils;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
@@ -57,7 +56,9 @@ import io.druid.indexing.overlord.TaskRunnerListener;
 import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.supervisor.SupervisorReport;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -609,7 +610,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     expect(taskStorage.getTask("id3")).andReturn(Optional.of(id3)).anyTimes();
     expect(taskClient.getStatusAsync(anyString())).andReturn(Futures.immediateFuture(KafkaIndexTask.Status.NOT_STARTED))
                                                   .anyTimes();
-    expect(taskClient.getStartTimeAsync(anyString())).andReturn(Futures.immediateFuture(DateTime.now())).anyTimes();
+    expect(taskClient.getStartTimeAsync(anyString())).andReturn(Futures.immediateFuture(DateTimes.nowUtc())).anyTimes();
     expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
         new KafkaDataSourceMetadata(
             null
@@ -698,7 +699,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     expect(taskStorage.getTask("id5")).andReturn(Optional.of(id3)).anyTimes();
     expect(taskClient.getStatusAsync(anyString())).andReturn(Futures.immediateFuture(KafkaIndexTask.Status.NOT_STARTED))
                                                   .anyTimes();
-    expect(taskClient.getStartTimeAsync(anyString())).andReturn(Futures.immediateFuture(DateTime.now())).anyTimes();
+    expect(taskClient.getStartTimeAsync(anyString())).andReturn(Futures.immediateFuture(DateTimes.nowUtc())).anyTimes();
     expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
         new KafkaDataSourceMetadata(
             null
@@ -730,7 +731,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.<Task>of()).anyTimes();
     expect(taskClient.getStatusAsync(anyString())).andReturn(Futures.immediateFuture(KafkaIndexTask.Status.NOT_STARTED))
                                                   .anyTimes();
-    expect(taskClient.getStartTimeAsync(anyString())).andReturn(Futures.immediateFuture(DateTime.now())).anyTimes();
+    expect(taskClient.getStartTimeAsync(anyString())).andReturn(Futures.immediateFuture(DateTimes.nowUtc())).anyTimes();
     expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
         new KafkaDataSourceMetadata(
             null
@@ -792,8 +793,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor = getSupervisor(2, 1, true, "PT1H", null, null, false);
     addSomeEvents(1);
 
-    DateTime now = DateTime.now();
-    DateTime maxi = DateTime.now().plusMinutes(60);
+    DateTime now = DateTimes.nowUtc();
+    DateTime maxi = now.plusMinutes(60);
     Task id1 = createKafkaIndexTask(
         "id1",
         DATASOURCE,
@@ -878,7 +879,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.<Task>of()).anyTimes();
     expect(taskClient.getStatusAsync(anyString())).andReturn(Futures.immediateFuture(KafkaIndexTask.Status.NOT_STARTED))
                                                   .anyTimes();
-    expect(taskClient.getStartTimeAsync(anyString())).andReturn(Futures.immediateFuture(DateTime.now())).anyTimes();
+    expect(taskClient.getStartTimeAsync(anyString())).andReturn(Futures.immediateFuture(DateTimes.nowUtc())).anyTimes();
     expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
         new KafkaDataSourceMetadata(
             null
@@ -978,10 +979,10 @@ public class KafkaSupervisorTest extends EasyMockSupport
         .andReturn(Futures.immediateFuture(KafkaIndexTask.Status.READING))
         .anyTimes();
     expect(taskClient.getStartTimeAsync(EasyMock.contains("sequenceName-0")))
-        .andReturn(Futures.immediateFuture(DateTime.now().minusMinutes(2)))
-        .andReturn(Futures.immediateFuture(DateTime.now()));
+        .andReturn(Futures.immediateFuture(DateTimes.nowUtc().minusMinutes(2)))
+        .andReturn(Futures.immediateFuture(DateTimes.nowUtc()));
     expect(taskClient.getStartTimeAsync(EasyMock.contains("sequenceName-1")))
-        .andReturn(Futures.immediateFuture(DateTime.now()))
+        .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
         .times(2);
     expect(taskClient.pauseAsync(EasyMock.contains("sequenceName-0")))
         .andReturn(Futures.immediateFuture((Map<Integer, Long>) ImmutableMap.of(0, 10L, 1, 20L, 2, 30L)))
@@ -1204,7 +1205,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   {
     final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
     final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
-    final DateTime startTime = new DateTime();
+    final DateTime startTime = DateTimes.nowUtc();
 
     supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false);
     addSomeEvents(6);
@@ -1385,10 +1386,10 @@ public class KafkaSupervisorTest extends EasyMockSupport
         .andReturn(Futures.immediateFuture(KafkaIndexTask.Status.READING))
         .anyTimes();
     expect(taskClient.getStartTimeAsync(EasyMock.contains("sequenceName-0")))
-        .andReturn(Futures.immediateFuture(DateTime.now().minusMinutes(2)))
-        .andReturn(Futures.immediateFuture(DateTime.now()));
+        .andReturn(Futures.immediateFuture(DateTimes.nowUtc().minusMinutes(2)))
+        .andReturn(Futures.immediateFuture(DateTimes.nowUtc()));
     expect(taskClient.getStartTimeAsync(EasyMock.contains("sequenceName-1")))
-        .andReturn(Futures.immediateFuture(DateTime.now()))
+        .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
         .times(2);
     expect(taskClient.pauseAsync(EasyMock.contains("sequenceName-0")))
         .andReturn(Futures.<Map<Integer, Long>>immediateFailedFuture(new RuntimeException())).times(2);
@@ -1452,10 +1453,10 @@ public class KafkaSupervisorTest extends EasyMockSupport
         .andReturn(Futures.immediateFuture(KafkaIndexTask.Status.READING))
         .anyTimes();
     expect(taskClient.getStartTimeAsync(EasyMock.contains("sequenceName-0")))
-        .andReturn(Futures.immediateFuture(DateTime.now().minusMinutes(2)))
-        .andReturn(Futures.immediateFuture(DateTime.now()));
+        .andReturn(Futures.immediateFuture(DateTimes.nowUtc().minusMinutes(2)))
+        .andReturn(Futures.immediateFuture(DateTimes.nowUtc()));
     expect(taskClient.getStartTimeAsync(EasyMock.contains("sequenceName-1")))
-        .andReturn(Futures.immediateFuture(DateTime.now()))
+        .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
         .times(2);
     expect(taskClient.pauseAsync(EasyMock.contains("sequenceName-0")))
         .andReturn(Futures.immediateFuture((Map<Integer, Long>) ImmutableMap.of(0, 10L, 1, 20L, 2, 30L)))
@@ -1510,7 +1511,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   {
     final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
     final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
-    final DateTime startTime = new DateTime();
+    final DateTime startTime = DateTimes.nowUtc();
 
     supervisor = getSupervisor(2, 1, true, "PT1H", null, null, false);
     addSomeEvents(1);
@@ -1699,7 +1700,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   {
     final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
     final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
-    final DateTime startTime = new DateTime();
+    final DateTime startTime = DateTimes.nowUtc();
 
     supervisor = getSupervisor(2, 1, true, "PT1H", null, null, false);
     addSomeEvents(1);

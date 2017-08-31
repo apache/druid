@@ -29,6 +29,8 @@ import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -114,14 +116,14 @@ public class IncrementalIndexStorageAdapterTest
     IncrementalIndex index = indexCreator.createIndex();
     index.add(
         new MapBasedInputRow(
-            new DateTime().minus(1).getMillis(),
+            System.currentTimeMillis() - 1,
             Lists.newArrayList("billy"),
             ImmutableMap.<String, Object>of("billy", "hi")
         )
     );
     index.add(
         new MapBasedInputRow(
-            new DateTime().minus(1).getMillis(),
+            System.currentTimeMillis() - 1,
             Lists.newArrayList("sally"),
             ImmutableMap.<String, Object>of("sally", "bo")
         )
@@ -133,7 +135,7 @@ public class IncrementalIndexStorageAdapterTest
         GroupByQuery.builder()
                     .setDataSource("test")
                     .setGranularity(Granularities.ALL)
-                    .setInterval(new Interval(0, new DateTime().getMillis()))
+                    .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
                     .addDimension("billy")
                     .addDimension("sally")
                     .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
@@ -158,14 +160,14 @@ public class IncrementalIndexStorageAdapterTest
     IncrementalIndex index = indexCreator.createIndex();
     index.add(
         new MapBasedInputRow(
-            new DateTime("2014-09-01T00:00:00"),
+            DateTimes.of("2014-09-01T00:00:00"),
             Lists.newArrayList("billy"),
             ImmutableMap.<String, Object>of("billy", "hi")
         )
     );
     index.add(
         new MapBasedInputRow(
-            new DateTime("2014-09-01T01:00:00"),
+            DateTimes.of("2014-09-01T01:00:00"),
             Lists.newArrayList("billy", "sally"),
             ImmutableMap.<String, Object>of(
                 "billy", "hip",
@@ -180,7 +182,7 @@ public class IncrementalIndexStorageAdapterTest
         GroupByQuery.builder()
                     .setDataSource("test")
                     .setGranularity(Granularities.ALL)
-                    .setInterval(new Interval(0, new DateTime().getMillis()))
+                    .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
                     .addDimension("billy")
                     .addDimension("sally")
                     .addAggregator(
@@ -243,7 +245,7 @@ public class IncrementalIndexStorageAdapterTest
   {
 
     IncrementalIndex index = indexCreator.createIndex();
-    DateTime t = DateTime.now();
+    DateTime t = DateTimes.nowUtc();
     Interval interval = new Interval(t.minusMinutes(1), t.plusMinutes(1));
 
     index.add(
@@ -276,7 +278,9 @@ public class IncrementalIndexStorageAdapterTest
       Cursor cursor = Sequences.toList(Sequences.limit(cursorSequence, 1), Lists.<Cursor>newArrayList()).get(0);
       DimensionSelector dimSelector;
 
-      dimSelector = cursor.makeDimensionSelector(new DefaultDimensionSpec("sally", "sally"));
+      dimSelector = cursor
+          .getColumnSelectorFactory()
+          .makeDimensionSelector(new DefaultDimensionSpec("sally", "sally"));
       Assert.assertEquals("bo", dimSelector.lookupName(dimSelector.getRow().get(0)));
 
       index.add(
@@ -290,7 +294,9 @@ public class IncrementalIndexStorageAdapterTest
       // Cursor reset should not be affected by out of order values
       cursor.reset();
 
-      dimSelector = cursor.makeDimensionSelector(new DefaultDimensionSpec("sally", "sally"));
+      dimSelector = cursor
+          .getColumnSelectorFactory()
+          .makeDimensionSelector(new DefaultDimensionSpec("sally", "sally"));
       Assert.assertEquals("bo", dimSelector.lookupName(dimSelector.getRow().get(0)));
     }
   }
@@ -299,7 +305,7 @@ public class IncrementalIndexStorageAdapterTest
   public void testSingleValueTopN() throws IOException
   {
     IncrementalIndex index = indexCreator.createIndex();
-    DateTime t = DateTime.now();
+    DateTime t = DateTimes.nowUtc();
     index.add(
         new MapBasedInputRow(
             t.minus(1).getMillis(),
@@ -326,7 +332,7 @@ public class IncrementalIndexStorageAdapterTest
         engine.query(
             new TopNQueryBuilder().dataSource("test")
                                   .granularity(Granularities.ALL)
-                                  .intervals(Lists.newArrayList(new Interval(0, new DateTime().getMillis())))
+                                  .intervals(Lists.newArrayList(new Interval(DateTimes.EPOCH, DateTimes.nowUtc())))
                                   .dimension("sally")
                                   .metric("cnt")
                                   .threshold(10)
@@ -355,14 +361,14 @@ public class IncrementalIndexStorageAdapterTest
     IncrementalIndex index = indexCreator.createIndex();
     index.add(
         new MapBasedInputRow(
-            new DateTime().minus(1).getMillis(),
+            System.currentTimeMillis() - 1,
             Lists.newArrayList("billy"),
             ImmutableMap.<String, Object>of("billy", "hi")
         )
     );
     index.add(
         new MapBasedInputRow(
-            new DateTime().minus(1).getMillis(),
+            System.currentTimeMillis() - 1,
             Lists.newArrayList("sally"),
             ImmutableMap.<String, Object>of("sally", "bo")
         )
@@ -374,7 +380,7 @@ public class IncrementalIndexStorageAdapterTest
         GroupByQuery.builder()
                     .setDataSource("test")
                     .setGranularity(Granularities.ALL)
-                    .setInterval(new Interval(0, new DateTime().getMillis()))
+                    .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
                     .addDimension("billy")
                     .addDimension("sally")
                     .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
@@ -411,7 +417,7 @@ public class IncrementalIndexStorageAdapterTest
 
     Sequence<Cursor> cursors = sa.makeCursors(
         null,
-        new Interval(timestamp - 60_000, timestamp + 60_000),
+        Intervals.utc(timestamp - 60_000, timestamp + 60_000),
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
@@ -428,12 +434,9 @@ public class IncrementalIndexStorageAdapterTest
               @Override
               public Object apply(Cursor cursor)
               {
-                DimensionSelector dimSelector = cursor.makeDimensionSelector(
-                    new DefaultDimensionSpec(
-                        "billy",
-                        "billy"
-                    )
-                );
+                DimensionSelector dimSelector = cursor
+                    .getColumnSelectorFactory()
+                    .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
                 int cardinality = dimSelector.getValueCardinality();
 
                 //index gets more rows at this point, while other thread is iterating over the cursor
@@ -494,7 +497,7 @@ public class IncrementalIndexStorageAdapterTest
 
     Sequence<Cursor> cursors = sa.makeCursors(
         null,
-        new Interval(timestamp - 60_000, timestamp + 60_000),
+        Intervals.utc(timestamp - 60_000, timestamp + 60_000),
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
@@ -511,12 +514,9 @@ public class IncrementalIndexStorageAdapterTest
               @Override
               public Object apply(Cursor cursor)
               {
-                DimensionSelector dimSelector1A = cursor.makeDimensionSelector(
-                    new DefaultDimensionSpec(
-                        "billy",
-                        "billy"
-                    )
-                );
+                DimensionSelector dimSelector1A = cursor
+                    .getColumnSelectorFactory()
+                    .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
                 int cardinalityA = dimSelector1A.getValueCardinality();
 
                 //index gets more rows at this point, while other thread is iterating over the cursor
@@ -533,12 +533,9 @@ public class IncrementalIndexStorageAdapterTest
                   throw new RuntimeException(ex);
                 }
 
-                DimensionSelector dimSelector1B = cursor.makeDimensionSelector(
-                    new DefaultDimensionSpec(
-                        "billy",
-                        "billy"
-                    )
-                );
+                DimensionSelector dimSelector1B = cursor
+                    .getColumnSelectorFactory()
+                    .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
                 //index gets more rows at this point, while other thread is iterating over the cursor
                 try {
                   index.add(
@@ -560,19 +557,13 @@ public class IncrementalIndexStorageAdapterTest
                   throw new RuntimeException(ex);
                 }
 
-                DimensionSelector dimSelector1C = cursor.makeDimensionSelector(
-                    new DefaultDimensionSpec(
-                        "billy",
-                        "billy"
-                    )
-                );
+                DimensionSelector dimSelector1C = cursor
+                    .getColumnSelectorFactory()
+                    .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
 
-                DimensionSelector dimSelector2D = cursor.makeDimensionSelector(
-                    new DefaultDimensionSpec(
-                        "billy2",
-                        "billy2"
-                    )
-                );
+                DimensionSelector dimSelector2D = cursor
+                    .getColumnSelectorFactory()
+                    .makeDimensionSelector(new DefaultDimensionSpec("billy2", "billy2"));
                 //index gets more rows at this point, while other thread is iterating over the cursor
                 try {
                   index.add(
@@ -594,12 +585,9 @@ public class IncrementalIndexStorageAdapterTest
                   throw new RuntimeException(ex);
                 }
 
-                DimensionSelector dimSelector3E = cursor.makeDimensionSelector(
-                    new DefaultDimensionSpec(
-                        "billy3",
-                        "billy3"
-                    )
-                );
+                DimensionSelector dimSelector3E = cursor
+                    .getColumnSelectorFactory()
+                    .makeDimensionSelector(new DefaultDimensionSpec("billy3", "billy3"));
 
                 int rowNumInCursor = 0;
                 // and then, cursoring continues in the other thread

@@ -27,6 +27,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceEventBuilder;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.client.DruidServerConfig;
+import io.druid.java.util.common.Intervals;
 import io.druid.server.SegmentManager;
 import io.druid.server.coordination.ZkCoordinator;
 import io.druid.timeline.DataSegment;
@@ -34,7 +35,6 @@ import org.easymock.Capture;
 import org.easymock.CaptureType;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -67,7 +67,7 @@ public class HistoricalMetricsMonitorTest extends EasyMockSupport
     final String dataSource = "dataSource";
     final DataSegment dataSegment = new DataSegment(
         dataSource,
-        Interval.parse("2014/2015"),
+        Intervals.of("2014/2015"),
         "version",
         ImmutableMap.<String, Object>of(),
         ImmutableList.<String>of(),

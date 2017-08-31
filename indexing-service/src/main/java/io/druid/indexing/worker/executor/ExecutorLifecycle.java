@@ -33,11 +33,10 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.TaskRunner;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
-
-import org.joda.time.DateTime;
 
 import java.io.File;
 import java.io.IOException;
@@ -118,7 +117,7 @@ public class ExecutorLifecycle
 
           log.info("Attempting to lock file[%s].", taskLockFile);
           final long startLocking = System.currentTimeMillis();
-          final long timeout = new DateTime(startLocking).plus(taskConfig.getDirectoryLockTimeout()).getMillis();
+          final long timeout = DateTimes.utc(startLocking).plus(taskConfig.getDirectoryLockTimeout()).getMillis();
           while (taskLockFileLock == null && System.currentTimeMillis() < timeout) {
             taskLockFileLock = taskLockChannel.tryLock();
             if (taskLockFileLock == null) {

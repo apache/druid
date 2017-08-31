@@ -149,12 +149,6 @@ public class CardinalityAggregatorTest
         }
 
         @Override
-        public void fill(int index, int[] toFill)
-        {
-          throw new UnsupportedOperationException("fill not supported");
-        }
-
-        @Override
         public void close() throws IOException
         {
         }
@@ -292,6 +286,7 @@ public class CardinalityAggregatorTest
   List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> dimInfoList;
   List<DimensionSelector> selectorList;
   CardinalityAggregatorFactory rowAggregatorFactory;
+  CardinalityAggregatorFactory rowAggregatorFactoryRounded;
   CardinalityAggregatorFactory valueAggregatorFactory;
   final TestDimensionSelector dim1;
   final TestDimensionSelector dim2;
@@ -338,6 +333,17 @@ public class CardinalityAggregatorTest
             dimSpec1,
             dimSpec2
         ),
+        true
+    );
+
+    rowAggregatorFactoryRounded = new CardinalityAggregatorFactory(
+        "billy",
+        null,
+        Lists.<DimensionSpec>newArrayList(
+            dimSpec1,
+            dimSpec2
+        ),
+        true,
         true
     );
 
@@ -409,6 +415,7 @@ public class CardinalityAggregatorTest
       aggregate(selectorList, agg);
     }
     Assert.assertEquals(9.0, (Double) rowAggregatorFactory.finalizeComputation(agg.get()), 0.05);
+    Assert.assertEquals(9L, rowAggregatorFactoryRounded.finalizeComputation(agg.get()));
   }
 
   @Test
@@ -424,6 +431,7 @@ public class CardinalityAggregatorTest
       aggregate(selectorList, agg);
     }
     Assert.assertEquals(7.0, (Double) valueAggregatorFactory.finalizeComputation(agg.get()), 0.05);
+    Assert.assertEquals(7L, rowAggregatorFactoryRounded.finalizeComputation(agg.get()));
   }
 
   @Test
@@ -445,6 +453,7 @@ public class CardinalityAggregatorTest
       bufferAggregate(selectorList, agg, buf, pos);
     }
     Assert.assertEquals(9.0, (Double) rowAggregatorFactory.finalizeComputation(agg.get(buf, pos)), 0.05);
+    Assert.assertEquals(9L, rowAggregatorFactoryRounded.finalizeComputation(agg.get(buf, pos)));
   }
 
   @Test
@@ -466,6 +475,7 @@ public class CardinalityAggregatorTest
       bufferAggregate(selectorList, agg, buf, pos);
     }
     Assert.assertEquals(7.0, (Double) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos)), 0.05);
+    Assert.assertEquals(7L, rowAggregatorFactoryRounded.finalizeComputation(agg.get(buf, pos)));
   }
 
   @Test
@@ -612,11 +622,13 @@ public class CardinalityAggregatorTest
   {
     CardinalityAggregatorFactory factory = new CardinalityAggregatorFactory(
         "billy",
+        null,
         ImmutableList.<DimensionSpec>of(
             new DefaultDimensionSpec("b", "b"),
             new DefaultDimensionSpec("a", "a"),
             new DefaultDimensionSpec("c", "c")
         ),
+        true,
         true
     );
     ObjectMapper objectMapper = new DefaultObjectMapper();
@@ -625,7 +637,13 @@ public class CardinalityAggregatorTest
         objectMapper.readValue(objectMapper.writeValueAsString(factory), AggregatorFactory.class)
     );
 
-    String fieldNamesOnly = "{\"type\":\"cardinality\",\"name\":\"billy\",\"fields\":[\"b\",\"a\",\"c\"],\"byRow\":true}";
+    String fieldNamesOnly = "{"
+                            + "\"type\":\"cardinality\","
+                            + "\"name\":\"billy\","
+                            + "\"fields\":[\"b\",\"a\",\"c\"],"
+                            + "\"byRow\":true,"
+                            + "\"round\":true"
+                            + "}";
     Assert.assertEquals(
         factory,
         objectMapper.readValue(fieldNamesOnly, AggregatorFactory.class)

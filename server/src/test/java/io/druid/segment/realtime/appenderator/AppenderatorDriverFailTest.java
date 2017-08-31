@@ -32,6 +32,7 @@ import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.Query;
@@ -44,7 +45,6 @@ import io.druid.segment.realtime.appenderator.AppenderatorDriverTest.TestSegment
 import io.druid.segment.realtime.appenderator.AppenderatorDriverTest.TestSegmentHandoffNotifierFactory;
 import io.druid.timeline.DataSegment;
 import org.hamcrest.CoreMatchers;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -73,17 +73,17 @@ public class AppenderatorDriverFailTest
 
   private static final List<InputRow> ROWS = ImmutableList.of(
       new MapBasedInputRow(
-          new DateTime("2000"),
+          DateTimes.of("2000"),
           ImmutableList.of("dim1"),
           ImmutableMap.of("dim1", "foo", "met1", "1")
       ),
       new MapBasedInputRow(
-          new DateTime("2000T01"),
+          DateTimes.of("2000T01"),
           ImmutableList.of("dim1"),
           ImmutableMap.of("dim1", "foo", "met1", 2.0)
       ),
       new MapBasedInputRow(
-          new DateTime("2000T01"),
+          DateTimes.of("2000T01"),
           ImmutableList.of("dim2"),
           ImmutableMap.of("dim2", "bar", "met1", 2.0)
       )

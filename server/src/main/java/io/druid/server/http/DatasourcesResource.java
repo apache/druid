@@ -33,6 +33,8 @@ import io.druid.client.DruidServer;
 import io.druid.client.ImmutableSegmentLoadInfo;
 import io.druid.client.SegmentLoadInfo;
 import io.druid.client.indexing.IndexingServiceClient;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.MapUtils;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.Comparators;
@@ -213,7 +215,7 @@ public class DatasourcesResource
 
     if (kill != null && Boolean.valueOf(kill)) {
       try {
-        indexingServiceClient.killSegments(dataSourceName, new Interval(interval));
+        indexingServiceClient.killSegments(dataSourceName, Intervals.of(interval));
       }
       catch (IllegalArgumentException e) {
         return Response.status(Response.Status.BAD_REQUEST)
@@ -258,9 +260,9 @@ public class DatasourcesResource
     if (indexingServiceClient == null) {
       return Response.ok(ImmutableMap.of("error", "no indexing service found")).build();
     }
-    final Interval theInterval = new Interval(interval.replace("_", "/"));
+    final Interval theInterval = Intervals.of(interval.replace("_", "/"));
     try {
-      indexingServiceClient.killSegments(dataSourceName, new Interval(theInterval));
+      indexingServiceClient.killSegments(dataSourceName, theInterval);
     }
     catch (Exception e) {
       return Response.serverError()
@@ -348,7 +350,7 @@ public class DatasourcesResource
   )
   {
     final DruidDataSource dataSource = getDataSource(dataSourceName);
-    final Interval theInterval = new Interval(interval.replace("_", "/"));
+    final Interval theInterval = Intervals.of(interval.replace("_", "/"));
 
     if (dataSource == null) {
       return Response.noContent().build();
@@ -594,8 +596,8 @@ public class DatasourcesResource
     Map<String, HashSet<Object>> tierDistinctSegments = Maps.newHashMap();
 
     long totalSegmentSize = 0;
-    long minTime = Long.MAX_VALUE;
-    long maxTime = Long.MIN_VALUE;
+    DateTime minTime = DateTimes.MAX;
+    DateTime maxTime = DateTimes.MIN;
     String tier;
     for (DruidServer druidServer : serverInventoryView.getInventory()) {
       DruidDataSource druidDataSource = druidServer.getDataSource(dataSourceName);
@@ -621,12 +623,8 @@ public class DatasourcesResource
           totalSegmentSize += dataSegment.getSize();
           totalDistinctSegments.add(dataSegment.getIdentifier());
 
-          if (dataSegment.getInterval().getStartMillis() < minTime) {
-            minTime = dataSegment.getInterval().getStartMillis();
-          }
-          if (dataSegment.getInterval().getEndMillis() > maxTime) {
-            maxTime = dataSegment.getInterval().getEndMillis();
-          }
+          minTime = DateTimes.min(minTime, dataSegment.getInterval().getStart());
+          maxTime = DateTimes.max(maxTime, dataSegment.getInterval().getEnd());
         }
       }
 
@@ -644,8 +642,8 @@ public class DatasourcesResource
 
     segments.put("count", totalDistinctSegments.size());
     segments.put("size", totalSegmentSize);
-    segments.put("minTime", new DateTime(minTime));
-    segments.put("maxTime", new DateTime(maxTime));
+    segments.put("minTime", minTime);
+    segments.put("maxTime", maxTime);
     return retVal;
   }
 
@@ -666,7 +664,7 @@ public class DatasourcesResource
     TimelineLookup<String, SegmentLoadInfo> timeline = serverInventoryView.getTimeline(
         new TableDataSource(dataSourceName)
     );
-    final Interval theInterval = new Interval(interval.replace("_", "/"));
+    final Interval theInterval = Intervals.of(interval.replace("_", "/"));
     if (timeline == null) {
       log.debug("No timeline found for datasource[%s]", dataSourceName);
       return Response.ok(Lists.<ImmutableSegmentLoadInfo>newArrayList()).build();

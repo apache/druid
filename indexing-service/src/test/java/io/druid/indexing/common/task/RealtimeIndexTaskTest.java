@@ -69,6 +69,7 @@ import io.druid.indexing.test.TestDataSegmentKiller;
 import io.druid.indexing.test.TestDataSegmentPusher;
 import io.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
@@ -246,7 +247,7 @@ public class RealtimeIndexTaskTest
     EmittingLogger.registerEmitter(emitter);
     emitter.start();
     taskExec = MoreExecutors.listeningDecorator(Execs.singleThreaded("realtime-index-task-test-%d"));
-    now = new DateTime();
+    now = DateTimes.nowUtc();
   }
 
   @After
@@ -260,7 +261,7 @@ public class RealtimeIndexTaskTest
   {
     Assert.assertEquals(
         "index_realtime_test_0_2015-01-02T00:00:00.000Z_abcdefgh",
-        RealtimeIndexTask.makeTaskId("test", 0, new DateTime("2015-01-02"), 0x76543210)
+        RealtimeIndexTask.makeTaskId("test", 0, DateTimes.of("2015-01-02"), 0x76543210)
     );
   }
 

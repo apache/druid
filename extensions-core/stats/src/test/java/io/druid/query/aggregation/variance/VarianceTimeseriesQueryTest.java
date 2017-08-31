@@ -20,6 +20,7 @@
 package io.druid.query.aggregation.variance;
 
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryPlus;
@@ -31,7 +32,6 @@ import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesQueryRunnerTest;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.TestHelper;
-import org.joda.time.DateTime;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -79,7 +79,7 @@ public class VarianceTimeseriesQueryTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 VarianceTestHelper.of(
                     "rows", 13L,
@@ -92,7 +92,7 @@ public class VarianceTimeseriesQueryTest
             )
         ),
         new Result<>(
-            new DateTime("2011-04-02"),
+            DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
                 VarianceTestHelper.of(
                     "rows", 13L,

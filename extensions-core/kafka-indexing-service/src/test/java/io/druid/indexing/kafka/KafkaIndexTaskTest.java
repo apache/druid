@@ -78,7 +78,9 @@ import io.druid.indexing.test.TestDataSegmentAnnouncer;
 import io.druid.indexing.test.TestDataSegmentKiller;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
@@ -129,7 +131,6 @@ import org.apache.curator.test.TestingCluster;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.easymock.EasyMock;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.After;
@@ -421,7 +422,7 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            new DateTime("2010"),
+            DateTimes.of("2010"),
             null,
             false
         ),
@@ -478,7 +479,7 @@ public class KafkaIndexTaskTest
             true,
             false,
             null,
-            new DateTime("2010"),
+            DateTimes.of("2010"),
             false
         ),
         null,
@@ -1666,7 +1667,7 @@ public class KafkaIndexTaskTest
     return FluentIterable.from(
         metadataStorageCoordinator.getUsedSegmentsForInterval(
             DATA_SCHEMA.getDataSource(),
-            new Interval("0000/3000")
+            Intervals.of("0000/3000")
         )
     ).transform(
         new Function<DataSegment, SegmentDescriptor>()
@@ -1762,7 +1763,7 @@ public class KafkaIndexTaskTest
 
   private SegmentDescriptor SD(final Task task, final String intervalString, final int partitionNum)
   {
-    final Interval interval = new Interval(intervalString);
+    final Interval interval = Intervals.of(intervalString);
     return new SegmentDescriptor(interval, getLock(task, interval).getVersion(), partitionNum);
   }
 }

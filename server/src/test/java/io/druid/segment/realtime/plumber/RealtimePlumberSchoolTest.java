@@ -36,6 +36,8 @@ import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.Query;
@@ -256,10 +258,10 @@ public class RealtimePlumberSchoolTest
            .put(
                0L,
                new Sink(
-                   new Interval(0, TimeUnit.HOURS.toMillis(1)),
+                   Intervals.utc(0, TimeUnit.HOURS.toMillis(1)),
                    schema,
                    tuningConfig.getShardSpec(),
-                   new DateTime("2014-12-01T12:34:56.789").toString(),
+                   DateTimes.of("2014-12-01T12:34:56.789").toString(),
                    tuningConfig.getMaxRowsInMemory(),
                    tuningConfig.isReportParseExceptions()
                )
@@ -303,10 +305,10 @@ public class RealtimePlumberSchoolTest
            .put(
                0L,
                new Sink(
-                   new Interval(0, TimeUnit.HOURS.toMillis(1)),
+                   Intervals.utc(0, TimeUnit.HOURS.toMillis(1)),
                    schema,
                    tuningConfig.getShardSpec(),
-                   new DateTime("2014-12-01T12:34:56.789").toString(),
+                   DateTimes.of("2014-12-01T12:34:56.789").toString(),
                    tuningConfig.getMaxRowsInMemory(),
                    tuningConfig.isReportParseExceptions()
                )
@@ -353,7 +355,7 @@ public class RealtimePlumberSchoolTest
 
   private void testPersistHydrantGapsHelper(final Object commitMetadata) throws Exception
   {
-    Interval testInterval = new Interval(new DateTime("1970-01-01"), new DateTime("1971-01-01"));
+    Interval testInterval = new Interval(DateTimes.of("1970-01-01"), DateTimes.of("1971-01-01"));
 
     RealtimePlumber plumber2 = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema2, tuningConfig, metrics);
     plumber2.getSinks()
@@ -363,7 +365,7 @@ public class RealtimePlumberSchoolTest
                     testInterval,
                     schema2,
                     tuningConfig.getShardSpec(),
-                    new DateTime("2014-12-01T12:34:56.789").toString(),
+                    DateTimes.of("2014-12-01T12:34:56.789").toString(),
                     tuningConfig.getMaxRowsInMemory(),
                     tuningConfig.isReportParseExceptions()
                 )
@@ -418,8 +420,8 @@ public class RealtimePlumberSchoolTest
 
 
     List<FireHydrant> hydrants = Lists.newArrayList(sinks.get(new Long(0)));
-    DateTime startTime = new DateTime("1970-01-01T00:00:00.000Z");
-    Interval expectedInterval = new Interval(startTime, new DateTime("1971-01-01T00:00:00.000Z"));
+    DateTime startTime = DateTimes.of("1970-01-01T00:00:00.000Z");
+    Interval expectedInterval = new Interval(startTime, DateTimes.of("1971-01-01T00:00:00.000Z"));
     Assert.assertEquals(0, hydrants.get(0).getCount());
     Assert.assertEquals(
         expectedInterval,
@@ -580,13 +582,13 @@ public class RealtimePlumberSchoolTest
       @Override
       public long getTimestampFromEpoch()
       {
-        return new DateTime(timeStr).getMillis();
+        return DateTimes.of(timeStr).getMillis();
       }
 
       @Override
       public DateTime getTimestamp()
       {
-        return new DateTime(timeStr);
+        return DateTimes.of(timeStr);
       }
 
       @Override
@@ -640,13 +642,13 @@ public class RealtimePlumberSchoolTest
       @Override
       public long getTimestampFromEpoch()
       {
-        return new DateTime(timeStr).getMillis();
+        return DateTimes.of(timeStr).getMillis();
       }
 
       @Override
       public DateTime getTimestamp()
       {
-        return new DateTime(timeStr);
+        return DateTimes.of(timeStr);
       }
 
       @Override

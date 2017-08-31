@@ -27,6 +27,7 @@ import io.druid.collections.NonBlockingPool;
 import io.druid.collections.ResourceHolder;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.BaseSequence;
@@ -128,7 +129,7 @@ public class GroupByQueryEngineV2
 
     final DateTime fudgeTimestamp = fudgeTimestampString == null
                                     ? null
-                                    : new DateTime(Long.parseLong(fudgeTimestampString));
+                                    : DateTimes.utc(Long.parseLong(fudgeTimestampString));
 
     return cursors.flatMap(
         cursor -> new BaseSequence<>(
@@ -141,7 +142,7 @@ public class GroupByQueryEngineV2
                     .createColumnSelectorPluses(
                         STRATEGY_FACTORY,
                         query.getDimensions(),
-                        cursor
+                        cursor.getColumnSelectorFactory()
                     );
                 GroupByColumnSelectorPlus[] dims = createGroupBySelectorPlus(selectorPlus);
 
@@ -433,7 +434,7 @@ public class GroupByQueryEngineV2
       return new BufferHashGrouper<>(
           Suppliers.ofInstance(buffer),
           keySerde,
-          cursor,
+          cursor.getColumnSelectorFactory(),
           query.getAggregatorSpecs()
                .toArray(new AggregatorFactory[query.getAggregatorSpecs().size()]),
           querySpecificConfig.getBufferGrouperMaxSize(),
@@ -586,7 +587,7 @@ public class GroupByQueryEngineV2
     {
       return new BufferArrayGrouper(
           Suppliers.ofInstance(buffer),
-          cursor,
+          cursor.getColumnSelectorFactory(),
           query.getAggregatorSpecs()
                .toArray(new AggregatorFactory[query.getAggregatorSpecs().size()]),
           cardinality

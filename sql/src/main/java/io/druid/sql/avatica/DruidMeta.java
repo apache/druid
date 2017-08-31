@@ -29,7 +29,11 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
+<<<<<<< HEAD
 import com.google.inject.Injector;
+=======
+import io.druid.java.util.common.DateTimes;
+>>>>>>> upstream/master
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
@@ -44,7 +48,6 @@ import org.apache.calcite.avatica.NoSuchConnectionException;
 import org.apache.calcite.avatica.NoSuchStatementException;
 import org.apache.calcite.avatica.QueryState;
 import org.apache.calcite.avatica.remote.TypedValue;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
@@ -614,7 +617,7 @@ public class DruidMeta extends MetaImpl
               log.debug("Connection[%s] timed out.", connectionId);
               closeConnection(new ConnectionHandle(connectionId));
             },
-            new Interval(new DateTime(), config.getConnectionIdleTimeout()).toDurationMillis(),
+            new Interval(DateTimes.nowUtc(), config.getConnectionIdleTimeout()).toDurationMillis(),
             TimeUnit.MILLISECONDS
         )
     );

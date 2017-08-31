@@ -37,7 +37,6 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.guice.GuiceInjectors;
@@ -46,6 +45,8 @@ import io.druid.guice.annotations.Self;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.path.PathSpec;
 import io.druid.initialization.Initialization;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.FunctionalIterable;
@@ -410,9 +411,7 @@ public class HadoopDruidIndexerConfig
   public Optional<Bucket> getBucket(InputRow inputRow)
   {
     final Optional<Interval> timeBucket = schema.getDataSchema().getGranularitySpec().bucketInterval(
-        new DateTime(
-            inputRow.getTimestampFromEpoch()
-        )
+        DateTimes.utc(inputRow.getTimestampFromEpoch())
     );
     if (!timeBucket.isPresent()) {
       return Optional.absent();
@@ -562,8 +561,11 @@ public class HadoopDruidIndexerConfig
 
   public void addJobProperties(Job job)
   {
-    Configuration conf = job.getConfiguration();
+    addJobProperties(job.getConfiguration());
+  }
 
+  public void addJobProperties(Configuration conf)
+  {
     for (final Map.Entry<String, String> entry : schema.getTuningConfig().getJobProperties().entrySet()) {
       conf.set(entry.getKey(), entry.getValue());
     }

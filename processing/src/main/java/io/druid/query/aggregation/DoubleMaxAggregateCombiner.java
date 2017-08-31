@@ -17,19 +17,29 @@
  * under the License.
  */
 
-package io.druid.segment.historical;
+package io.druid.query.aggregation;
 
-import io.druid.segment.data.Offset;
-import io.druid.segment.data.ReadableOffset;
+import io.druid.segment.ColumnValueSelector;
 
-public interface OffsetHolder
+final class DoubleMaxAggregateCombiner extends DoubleAggregateCombiner
 {
-  Offset getOffset();
+  private double max;
 
-  /**
-   * Should return the same, or a "view" of the same offset as {@link #getOffset()}. The difference is that smaller
-   * interface allows to return unwrapped underlying offset sometimes, e. g. {@link
-   * io.druid.segment.FilteredOffset#baseOffset}, instead of the wrapper {@link io.druid.segment.FilteredOffset}.
-   */
-  ReadableOffset getReadableOffset();
+  @Override
+  public void reset(ColumnValueSelector selector)
+  {
+    max = selector.getDouble();
+  }
+
+  @Override
+  public void fold(ColumnValueSelector selector)
+  {
+    max = Math.max(max, selector.getDouble());
+  }
+
+  @Override
+  public double getDouble()
+  {
+    return max;
+  }
 }

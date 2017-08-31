@@ -44,7 +44,6 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
-import io.druid.segment.NullDimensionSelector;
 import io.druid.segment.Segment;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
@@ -132,7 +131,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
         final Object2IntRBTreeMap<SearchHit> set
     )
     {
-      if (selector != null && !(selector instanceof NullDimensionSelector)) {
+      if (selector != null && !isNilSelector(selector)) {
         final IndexedInts vals = selector.getRow();
         for (int i = 0; i < vals.size(); ++i) {
           final String dimVal = selector.lookupName(vals.get(i));
@@ -145,6 +144,13 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
         }
       }
     }
+  }
+
+  private static boolean isNilSelector(final DimensionSelector selector)
+  {
+    return selector.nameLookupPossibleInAdvance()
+           && selector.getValueCardinality() == 1
+           && selector.lookupName(0) == null;
   }
 
   public static class LongSearchColumnSelectorStrategy implements SearchColumnSelectorStrategy<LongColumnSelector>

@@ -22,7 +22,6 @@ package io.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.druid.java.util.common.parsers.JSONToLowerParser;
 import io.druid.java.util.common.parsers.Parser;
 

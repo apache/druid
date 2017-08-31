@@ -36,19 +36,20 @@ import com.metamx.http.client.response.HttpResponseHandler;
 import com.metamx.http.client.response.SequenceInputStreamResponseHandler;
 import io.druid.audit.AuditInfo;
 import io.druid.common.config.JacksonConfigManager;
-import io.druid.java.util.common.StringUtils;
+import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
-import io.druid.query.lookup.LookupModule;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.lookup.LookupsState;
 import io.druid.server.http.HostAndPortWithScheme;
+<<<<<<< HEAD
 import io.druid.server.listener.announcer.ListenerDiscoverer;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticatorHttpClientWrapper;
+=======
+>>>>>>> upstream/master
 import org.easymock.EasyMock;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.Description;
 import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Assert;
@@ -65,6 +66,7 @@ import java.io.InputStream;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -75,7 +77,9 @@ public class LookupCoordinatorManagerTest
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
   private final ObjectMapper mapper = new DefaultObjectMapper();
-  private final ListenerDiscoverer discoverer = EasyMock.createStrictMock(ListenerDiscoverer.class);
+  private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createStrictMock(DruidNodeDiscoveryProvider.class);
+  private final LookupNodeDiscovery lookupNodeDiscovery = EasyMock.createStrictMock(
+      LookupNodeDiscovery.class);
   private final HttpClient client = EasyMock.createStrictMock(HttpClient.class);
   private final JacksonConfigManager configManager = EasyMock.createStrictMock(JacksonConfigManager.class);
   private final LookupCoordinatorManagerConfig lookupCoordinatorManagerConfig = new LookupCoordinatorManagerConfig();
@@ -144,6 +148,8 @@ public class LookupCoordinatorManagerTest
   {
     SERVICE_EMITTER.flush();
     EVENT_EMITS.set(0L);
+
+    EasyMock.reset(lookupNodeDiscovery);
 
     EasyMock.reset(configManager);
     EasyMock.expect(
@@ -538,7 +544,7 @@ public class LookupCoordinatorManagerTest
   {
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
         client,
-        discoverer,
+        druidNodeDiscoveryProvider,
         mapper,
         configManager,
         lookupCoordinatorManagerConfig,
@@ -562,7 +568,7 @@ public class LookupCoordinatorManagerTest
   {
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
         client,
-        discoverer,
+        druidNodeDiscoveryProvider,
         mapper,
         configManager,
         lookupCoordinatorManagerConfig,
@@ -595,7 +601,7 @@ public class LookupCoordinatorManagerTest
   {
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
         client,
-        discoverer,
+        druidNodeDiscoveryProvider,
         mapper,
         configManager,
         lookupCoordinatorManagerConfig,
@@ -633,7 +639,7 @@ public class LookupCoordinatorManagerTest
     final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
         client,
-        discoverer,
+        druidNodeDiscoveryProvider,
         mapper,
         configManager,
         lookupCoordinatorManagerConfig,
@@ -696,7 +702,7 @@ public class LookupCoordinatorManagerTest
     final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
         client,
-        discoverer,
+        druidNodeDiscoveryProvider,
         mapper,
         configManager,
         lookupCoordinatorManagerConfig,
@@ -752,7 +758,7 @@ public class LookupCoordinatorManagerTest
   {
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
         client,
-        discoverer,
+        druidNodeDiscoveryProvider,
         mapper,
         configManager,
         lookupCoordinatorManagerConfig,
@@ -783,7 +789,7 @@ public class LookupCoordinatorManagerTest
   {
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
         client,
-        discoverer,
+        druidNodeDiscoveryProvider,
         mapper,
         configManager,
         lookupCoordinatorManagerConfig,
@@ -818,7 +824,7 @@ public class LookupCoordinatorManagerTest
     final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
         client,
-        discoverer,
+        druidNodeDiscoveryProvider,
         mapper,
         configManager,
         lookupCoordinatorManagerConfig,
@@ -874,7 +880,7 @@ public class LookupCoordinatorManagerTest
     );
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
         client,
-        discoverer,
+        druidNodeDiscoveryProvider,
         mapper,
         configManager,
         lookupCoordinatorManagerConfig,
@@ -920,7 +926,7 @@ public class LookupCoordinatorManagerTest
     );
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
         client,
-        discoverer,
+        druidNodeDiscoveryProvider,
         mapper,
         configManager,
         lookupCoordinatorManagerConfig,
@@ -946,7 +952,7 @@ public class LookupCoordinatorManagerTest
   {
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
         client,
-        discoverer,
+        druidNodeDiscoveryProvider,
         mapper,
         configManager,
         lookupCoordinatorManagerConfig,
@@ -973,7 +979,7 @@ public class LookupCoordinatorManagerTest
     );
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
         client,
-        discoverer,
+        druidNodeDiscoveryProvider,
         mapper,
         configManager,
         lookupCoordinatorManagerConfig,
@@ -1003,7 +1009,7 @@ public class LookupCoordinatorManagerTest
     );
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
         client,
-        discoverer,
+        druidNodeDiscoveryProvider,
         mapper,
         configManager,
         lookupCoordinatorManagerConfig,
@@ -1029,7 +1035,7 @@ public class LookupCoordinatorManagerTest
   {
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
         client,
-        discoverer,
+        druidNodeDiscoveryProvider,
         mapper,
         configManager,
         lookupCoordinatorManagerConfig,
@@ -1072,11 +1078,11 @@ public class LookupCoordinatorManagerTest
     HostAndPortWithScheme host1 = HostAndPortWithScheme.fromParts("http", "host1", 1234);
     HostAndPortWithScheme host2 = HostAndPortWithScheme.fromParts("http", "host2", 3456);
 
-    EasyMock.reset(discoverer);
+    EasyMock.reset(lookupNodeDiscovery);
     EasyMock.expect(
-        discoverer.getNodes(LookupModule.getTierListenerPath("tier1"))
+        lookupNodeDiscovery.getNodesInTier("tier1")
     ).andReturn(ImmutableList.of(host1, host2)).anyTimes();
-    EasyMock.replay(discoverer);
+    EasyMock.replay(lookupNodeDiscovery);
 
     LookupCoordinatorManager.LookupsCommunicator lookupsCommunicator = EasyMock.createMock(LookupCoordinatorManager.LookupsCommunicator.class);
     EasyMock.expect(
@@ -1154,10 +1160,11 @@ public class LookupCoordinatorManagerTest
     };
 
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
-        discoverer,
+        druidNodeDiscoveryProvider,
         configManager,
         lookupCoordinatorManagerConfig,
-        lookupsCommunicator
+        lookupsCommunicator,
+        lookupNodeDiscovery
     );
 
     Assert.assertTrue(manager.knownOldState.get().isEmpty());
@@ -1175,7 +1182,7 @@ public class LookupCoordinatorManagerTest
       Thread.sleep(100);
     }
 
-    EasyMock.verify(discoverer, configManager, lookupsCommunicator);
+    EasyMock.verify(lookupNodeDiscovery, configManager, lookupsCommunicator);
   }
 
   @Test
@@ -1183,7 +1190,7 @@ public class LookupCoordinatorManagerTest
   {
     LookupCoordinatorManager manager = new LookupCoordinatorManager(
         client,
-        discoverer,
+        druidNodeDiscoveryProvider,
         mapper,
         configManager,
         lookupCoordinatorManagerConfig,
@@ -1220,7 +1227,7 @@ public class LookupCoordinatorManagerTest
   {
     LookupCoordinatorManager manager = new LookupCoordinatorManager(
         client,
-        discoverer,
+        druidNodeDiscoveryProvider,
         mapper,
         configManager,
         lookupCoordinatorManagerConfig,
@@ -1268,7 +1275,7 @@ public class LookupCoordinatorManagerTest
 
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
         client,
-        discoverer,
+        druidNodeDiscoveryProvider,
         mapper,
         configManager,
         lookupCoordinatorManagerConfig,
@@ -1306,7 +1313,7 @@ public class LookupCoordinatorManagerTest
 
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
         client,
-        discoverer,
+        druidNodeDiscoveryProvider,
         mapper,
         configManager,
         lookupCoordinatorManagerConfig,
@@ -1351,62 +1358,64 @@ public class LookupCoordinatorManagerTest
   @Test
   public void testLookupDiscoverAll() throws Exception
   {
-    final List<String> fakeChildren = ImmutableList.of("tier1", "tier2");
-    EasyMock.reset(discoverer);
-    EasyMock.expect(discoverer.discoverChildren(LookupCoordinatorManager.LOOKUP_LISTEN_ANNOUNCE_KEY))
+    final Set<String> fakeChildren = ImmutableSet.of("tier1", "tier2");
+    EasyMock.reset(lookupNodeDiscovery);
+    EasyMock.expect(lookupNodeDiscovery.getAllTiers())
             .andReturn(fakeChildren)
             .once();
-    EasyMock.replay(discoverer);
+    EasyMock.replay(lookupNodeDiscovery);
+
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
-        client,
-        discoverer,
-        mapper,
+        druidNodeDiscoveryProvider,
         configManager,
         lookupCoordinatorManagerConfig,
+<<<<<<< HEAD
         authenticatorHttpClientWrapper
+=======
+        EasyMock.createMock(LookupCoordinatorManager.LookupsCommunicator.class),
+        lookupNodeDiscovery
+>>>>>>> upstream/master
     );
+
     manager.start();
     Assert.assertEquals(fakeChildren, manager.discoverTiers());
-    EasyMock.verify(discoverer);
+    EasyMock.verify(lookupNodeDiscovery);
   }
 
   @Test
-  public void testLookupDiscoverAllExceptional() throws Exception
+  public void testDiscoverNodesInTier() throws Exception
   {
-    final IOException ex = new IOException("some exception");
-    EasyMock.reset(discoverer);
-    EasyMock.expect(discoverer.discoverChildren(LookupCoordinatorManager.LOOKUP_LISTEN_ANNOUNCE_KEY))
-            .andThrow(ex)
+    EasyMock.reset(lookupNodeDiscovery);
+    EasyMock.expect(lookupNodeDiscovery.getNodesInTier("tier"))
+            .andReturn(
+                ImmutableSet.of(
+                    HostAndPortWithScheme.fromParts("http", "h1", 8080),
+                    HostAndPortWithScheme.fromParts("http", "h2", 8080)
+                )
+            )
             .once();
-    expectedException.expectCause(
-        new BaseMatcher<Throwable>()
-        {
-          @Override
-          public boolean matches(Object o)
-          {
-            return o == ex;
-          }
+    EasyMock.replay(lookupNodeDiscovery);
 
-          @Override
-          public void describeTo(Description description)
-          {
-
-          }
-        }
-    );
-    EasyMock.replay(discoverer);
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
-        client,
-        discoverer,
-        mapper,
+        druidNodeDiscoveryProvider,
         configManager,
         lookupCoordinatorManagerConfig,
+<<<<<<< HEAD
         authenticatorHttpClientWrapper
+=======
+        EasyMock.createMock(LookupCoordinatorManager.LookupsCommunicator.class),
+        lookupNodeDiscovery
+>>>>>>> upstream/master
     );
 
     manager.start();
-    manager.discoverTiers();
-    EasyMock.verify(discoverer);
+    Assert.assertEquals(
+        ImmutableSet.of(
+            HostAndPort.fromParts("h1", 8080),
+            HostAndPort.fromParts("h2", 8080)
+        ),
+        ImmutableSet.copyOf(manager.discoverNodesInTier("tier")));
+    EasyMock.verify(lookupNodeDiscovery);
   }
 
   //tests that lookups stored in db from 0.10.0 are converted and restored.
@@ -1460,7 +1469,7 @@ public class LookupCoordinatorManagerTest
 
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
         client,
-        discoverer,
+        druidNodeDiscoveryProvider,
         mapper,
         configManager,
         new LookupCoordinatorManagerConfig()

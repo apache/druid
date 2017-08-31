@@ -45,6 +45,7 @@ import io.druid.curator.discovery.ServiceAnnouncer;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.CoordinatorIndexingServiceHelper;
 import io.druid.guice.annotations.Self;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
@@ -238,7 +239,7 @@ public class DruidCoordinator
       return retVal;
     }
 
-    final DateTime now = new DateTime();
+    final DateTime now = DateTimes.nowUtc();
 
     for (final DataSegment segment : getAvailableDataSegments()) {
       final List<Rule> rules = metadataRuleManager.getRulesWithDefault(segment.getDataSource());
@@ -422,28 +423,39 @@ public class DruidCoordinator
           ), segmentName
       );
 
-      loadPeon.loadSegment(
-          segmentToLoad,
-          new LoadPeonCallback()
-          {
-            @Override
-            public void execute()
-            {
+      final LoadPeonCallback loadPeonCallback = () -> {
+        dropPeon.unmarkSegmentToDrop(segmentToLoad);
+        if (callback != null) {
+          callback.execute();
+        }
+      };
+
+      // mark segment to drop before it is actually loaded on server
+      // to be able to account this information in DruidBalancerStrategy immediately
+      dropPeon.markSegmentToDrop(segmentToLoad);
+      try {
+        loadPeon.loadSegment(
+            segmentToLoad,
+            () -> {
               try {
                 if (serverInventoryView.isSegmentLoadedByServer(toServer.getName(), segment) &&
                     curator.checkExists().forPath(toLoadQueueSegPath) == null &&
                     !dropPeon.getSegmentsToDrop().contains(segment)) {
-                  dropPeon.dropSegment(segment, callback);
-                } else if (callback != null) {
-                  callback.execute();
+                  dropPeon.dropSegment(segment, loadPeonCallback);
+                } else {
+                  loadPeonCallback.execute();
                 }
               }
               catch (Exception e) {
                 throw Throwables.propagate(e);
               }
             }
-          }
-      );
+        );
+      }
+      catch (Exception e) {
+        dropPeon.unmarkSegmentToDrop(segmentToLoad);
+        Throwables.propagate(e);
+      }
     }
     catch (Exception e) {
       log.makeAlert(e, "Exception moving segment %s", segmentName).emit();
@@ -828,7 +840,7 @@ public class DruidCoordinator
                                .withDatabaseRuleManager(metadataRuleManager)
                                .withLoadManagementPeons(loadManagementPeons)
                                .withSegmentReplicantLookup(segmentReplicantLookup)
-                               .withBalancerReferenceTimestamp(DateTime.now())
+                               .withBalancerReferenceTimestamp(DateTimes.nowUtc())
                                .build();
                 }
               },

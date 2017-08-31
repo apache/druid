@@ -26,13 +26,13 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.indexing.overlord.TaskMaster;
-import org.easymock.Capture;
+import io.druid.java.util.common.DateTimes;
 import io.druid.server.security.AuthConfig;
+import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.EasyMockSupport;
 import org.easymock.Mock;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -148,7 +148,7 @@ public class SupervisorResourceTest extends EasyMockSupport
   @Test
   public void testSpecGetStatus() throws Exception
   {
-    SupervisorReport report = new SupervisorReport("id", DateTime.now())
+    SupervisorReport report = new SupervisorReport("id", DateTimes.nowUtc())
     {
       @Override
       public Object getPayload()

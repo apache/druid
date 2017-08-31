@@ -25,6 +25,7 @@ import io.druid.client.CoordinatorServerView;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.indexing.IndexingServiceClient;
+import io.druid.java.util.common.Intervals;
 import io.druid.server.coordination.ServerType;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
@@ -67,7 +68,7 @@ public class DatasourcesResourceTest
     dataSegmentList.add(
         new DataSegment(
             "datasource1",
-            new Interval("2010-01-01/P1D"),
+            Intervals.of("2010-01-01/P1D"),
             null,
             null,
             null,
@@ -80,7 +81,7 @@ public class DatasourcesResourceTest
     dataSegmentList.add(
         new DataSegment(
             "datasource1",
-            new Interval("2010-01-22/P1D"),
+            Intervals.of("2010-01-22/P1D"),
             null,
             null,
             null,
@@ -93,7 +94,7 @@ public class DatasourcesResourceTest
     dataSegmentList.add(
         new DataSegment(
             "datasource2",
-            new Interval("2010-01-01/P1D"),
+            Intervals.of("2010-01-01/P1D"),
             null,
             null,
             null,
@@ -281,7 +282,7 @@ public class DatasourcesResourceTest
     DruidDataSource dataSource1 = new DruidDataSource("datasource1", new HashMap());
     dataSource1.addSegment(
         "partition",
-        new DataSegment("datasegment1", new Interval("2010-01-01/P1D"), null, null, null, null, null, 0x9, 10)
+        new DataSegment("datasegment1", Intervals.of("2010-01-01/P1D"), null, null, null, null, null, 0x9, 10)
     );
     EasyMock.expect(server.getDataSource("datasource1")).andReturn(
         dataSource1
@@ -360,9 +361,15 @@ public class DatasourcesResourceTest
     EasyMock.replay(inventoryView);
 
     List<Interval> expectedIntervals = new ArrayList<>();
+<<<<<<< HEAD
     expectedIntervals.add(new Interval("2010-01-22T00:00:00.000Z/2010-01-23T00:00:00.000Z"));
     expectedIntervals.add(new Interval("2010-01-01T00:00:00.000Z/2010-01-02T00:00:00.000Z"));
     DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null, new AuthConfig(), null);
+=======
+    expectedIntervals.add(Intervals.of("2010-01-22T00:00:00.000Z/2010-01-23T00:00:00.000Z"));
+    expectedIntervals.add(Intervals.of("2010-01-01T00:00:00.000Z/2010-01-02T00:00:00.000Z"));
+    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null, new AuthConfig());
+>>>>>>> upstream/master
 
     Response response = datasourcesResource.getSegmentDataSourceIntervals("invalidDataSource", null, null);
     Assert.assertEquals(response.getEntity(), null);
@@ -469,7 +476,7 @@ public class DatasourcesResourceTest
   public void testDeleteDataSourceSpecificInterval() throws Exception
   {
     String interval = "2010-01-01_P1D";
-    Interval theInterval = new Interval(interval.replace("_", "/"));
+    Interval theInterval = Intervals.of(interval.replace("_", "/"));
 
     IndexingServiceClient indexingServiceClient = EasyMock.createStrictMock(IndexingServiceClient.class);
     indexingServiceClient.killSegments("datasource1", theInterval);

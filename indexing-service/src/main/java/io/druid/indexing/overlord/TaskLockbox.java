@@ -34,14 +34,13 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.common.utils.JodaUtils;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.task.Task;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.FunctionalIterable;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -357,11 +356,11 @@ public class TaskLockbox
           // We have a preferred version. We'll trust our caller to not break our ordering assumptions and just use it.
           version = preferredVersion.get();
         } else {
-          // We are running under an interval lock right now, so just using the current time works as long as we can trust
-          // our clock to be monotonic and have enough resolution since the last time we created a TaskLock for the same
-          // interval. This may not always be true; to assure it we would need to use some method of timekeeping other
-          // than the wall clock.
-          version = new DateTime().toString();
+          // We are running under an interval lock right now, so just using the current time works as long as we can
+          // trust our clock to be monotonic and have enough resolution since the last time we created a TaskLock for
+          // the same interval. This may not always be true; to assure it we would need to use some method of
+          // timekeeping other than the wall clock.
+          version = DateTimes.nowUtc().toString();
         }
 
         posseToUse = new TaskLockPosse(new TaskLock(task.getGroupId(), dataSource, interval, version));
@@ -550,11 +549,11 @@ public class TaskLockbox
         final NavigableSet<Interval> dsLockbox = dsRunning.navigableKeySet();
         final Iterable<Interval> searchIntervals = Iterables.concat(
             // Single interval that starts at or before ours
-            Collections.singletonList(dsLockbox.floor(new Interval(interval.getStart(), new DateTime(JodaUtils.MAX_INSTANT)))),
+            Collections.singletonList(dsLockbox.floor(new Interval(interval.getStart(), DateTimes.MAX))),
 
             // All intervals that start somewhere between our start instant (exclusive) and end instant (exclusive)
             dsLockbox.subSet(
-                new Interval(interval.getStart(), new DateTime(JodaUtils.MAX_INSTANT)),
+                new Interval(interval.getStart(), DateTimes.MAX),
                 false,
                 new Interval(interval.getEnd(), interval.getEnd()),
                 false

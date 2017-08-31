@@ -19,6 +19,8 @@
 
 package io.druid.query.aggregation;
 
+import io.druid.guice.annotations.ExtensionPoint;
+
 import java.io.Closeable;
 
 /**
@@ -27,13 +29,10 @@ import java.io.Closeable;
  * it can use to get at the next bit of data.
  *
  * Thus, an Aggregator can be thought of as a closure over some other thing that is stateful and changes between calls
- * to aggregate().  This is currently (as of this documentation) implemented through the use of Offset and
- * FloatColumnSelector objects.  The Aggregator has a handle on a FloatColumnSelector object which has a handle on an Offset.
- * QueryableIndex has both the Aggregators and the Offset object and iterates through the Offset calling the aggregate()
- * method on the Aggregators for each applicable row.
- *
- * This interface is old and going away.  It is being replaced by BufferAggregator
+ * to aggregate(). This is currently (as of this documentation) implemented through the use of {@link
+ * io.druid.segment.ColumnValueSelector} objects.
  */
+@ExtensionPoint
 public interface Aggregator extends Closeable
 {
   void aggregate();

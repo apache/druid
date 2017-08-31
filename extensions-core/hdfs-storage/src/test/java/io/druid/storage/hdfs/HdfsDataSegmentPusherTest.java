@@ -20,7 +20,6 @@
 package io.druid.storage.hdfs;
 
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.InjectableValues;
@@ -42,6 +41,7 @@ import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexer.JobHelper;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.jackson.GranularityModule;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.segment.loading.LocalDataSegmentPusher;
 import io.druid.segment.loading.LocalDataSegmentPusherConfig;
@@ -57,6 +57,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.joda.time.chrono.ISOChronology;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -147,7 +148,7 @@ public class HdfsDataSegmentPusherTest
 
     DataSegment segmentToPush = new DataSegment(
         "foo",
-        new Interval("2015/2016"),
+        Intervals.of("2015/2016"),
         "0",
         Maps.<String, Object>newHashMap(),
         Lists.<String>newArrayList(),
@@ -230,7 +231,7 @@ public class HdfsDataSegmentPusherTest
     for (int i = 0; i < numberOfSegments; i++) {
       segments[i] = new DataSegment(
           "foo",
-          new Interval("2015/2016"),
+          Intervals.of("2015/2016"),
           "0",
           Maps.<String, Object>newHashMap(),
           Lists.<String>newArrayList(),
@@ -337,11 +338,10 @@ public class HdfsDataSegmentPusherTest
             Interval.class, new StdDeserializer<Interval>(Interval.class)
             {
               @Override
-              public Interval deserialize(
-                  JsonParser jsonParser, DeserializationContext deserializationContext
-              ) throws IOException, JsonProcessingException
+              public Interval deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
+                  throws IOException
               {
-                return new Interval(jsonParser.getText());
+                return Intervals.of(jsonParser.getText());
               }
             }
         );
@@ -353,7 +353,7 @@ public class HdfsDataSegmentPusherTest
   public void shouldNotHaveColonsInHdfsStorageDir() throws Exception
   {
 
-    Interval interval = new Interval("2011-10-01/2011-10-02");
+    Interval interval = Intervals.of("2011-10-01/2011-10-02");
     ImmutableMap<String, Object> loadSpec = ImmutableMap.<String, Object>of("something", "or_other");
 
     DataSegment segment = new DataSegment(
@@ -414,7 +414,7 @@ public class HdfsDataSegmentPusherTest
         )
     );
 
-    Bucket bucket = new Bucket(4711, new DateTime(2012, 07, 10, 5, 30), 4712);
+    Bucket bucket = new Bucket(4711, new DateTime(2012, 07, 10, 5, 30, ISOChronology.getInstanceUTC()), 4712);
     Path path = JobHelper.makeFileNamePath(
         new Path(cfg.getSchema().getIOConfig().getSegmentOutputPath()),
         new DistributedFileSystem(),
@@ -524,7 +524,7 @@ public class HdfsDataSegmentPusherTest
         )
     );
 
-    Bucket bucket = new Bucket(4711, new DateTime(2012, 07, 10, 5, 30), 4712);
+    Bucket bucket = new Bucket(4711, new DateTime(2012, 07, 10, 5, 30, ISOChronology.getInstanceUTC()), 4712);
     Path path = JobHelper.makeFileNamePath(
         new Path(cfg.getSchema().getIOConfig().getSegmentOutputPath()),
         new LocalFileSystem(),

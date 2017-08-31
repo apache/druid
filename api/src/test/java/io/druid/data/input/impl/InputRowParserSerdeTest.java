@@ -27,8 +27,8 @@ import com.google.common.collect.Lists;
 import io.druid.TestObjectMapper;
 import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -63,7 +63,7 @@ public class InputRowParserSerdeTest
     Assert.assertEquals(ImmutableList.of("foo", "bar"), parsed.getDimensions());
     Assert.assertEquals(ImmutableList.of("x"), parsed.getDimension("foo"));
     Assert.assertEquals(ImmutableList.of("y"), parsed.getDimension("bar"));
-    Assert.assertEquals(new DateTime("2000").getMillis(), parsed.getTimestampFromEpoch());
+    Assert.assertEquals(DateTimes.of("2000").getMillis(), parsed.getTimestampFromEpoch());
   }
 
   @Test
@@ -79,7 +79,7 @@ public class InputRowParserSerdeTest
       Assert.assertEquals(ImmutableList.of("foo", "bar"), parsed.getDimensions());
       Assert.assertEquals(ImmutableList.of("x"), parsed.getDimension("foo"));
       Assert.assertEquals(ImmutableList.of("y"), parsed.getDimension("bar"));
-      Assert.assertEquals(new DateTime("3000").getMillis(), parsed.getTimestampFromEpoch());
+      Assert.assertEquals(DateTimes.of("3000").getMillis(), parsed.getTimestampFromEpoch());
     }
   }
 
@@ -219,7 +219,7 @@ public class InputRowParserSerdeTest
     Assert.assertEquals(ImmutableList.of("asdf"), parsed.getDimension("hey0barx"));
     Assert.assertEquals(ImmutableList.of("456"), parsed.getDimension("metA"));
     Assert.assertEquals(ImmutableList.of("5"), parsed.getDimension("newmet"));
-    Assert.assertEquals(new DateTime("2999").getMillis(), parsed.getTimestampFromEpoch());
+    Assert.assertEquals(DateTimes.of("2999").getMillis(), parsed.getTimestampFromEpoch());
 
     String testSpec = "{\"enabled\": true,\"useFieldDiscovery\": true, \"fields\": [\"parseThisRootField\"]}";
     final JSONPathSpec parsedSpec = jsonMapper.readValue(testSpec, JSONPathSpec.class);

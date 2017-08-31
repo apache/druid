@@ -48,6 +48,12 @@ import io.druid.indexing.overlord.WorkerTaskRunner;
 import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.http.security.TaskResourceFilter;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+<<<<<<< HEAD
+=======
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.Pair;
+>>>>>>> upstream/master
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.EntryExistsException;
@@ -294,7 +300,7 @@ public class OverlordResource
       @QueryParam("count") final Integer count
   )
   {
-    Interval theInterval = interval == null ? null : new Interval(interval);
+    Interval theInterval = interval == null ? null : Intervals.of(interval);
     if (theInterval == null && count != null) {
       try {
         return Response.ok(
@@ -416,8 +422,8 @@ public class OverlordResource
                     new TaskRunnerWorkItem(
                         task.getId(),
                         SettableFuture.<TaskStatus>create(),
-                        new DateTime(0),
-                        new DateTime(0)
+                        DateTimes.EPOCH,
+                        DateTimes.EPOCH
                     )
                     {
                       @Override
@@ -527,8 +533,8 @@ public class OverlordResource
             // Would be nice to include the real created date, but the TaskStorage API doesn't yet allow it.
             return new TaskResponseObject(
                 taskStatus.getId(),
-                new DateTime(0),
-                new DateTime(0),
+                DateTimes.EPOCH,
+                DateTimes.EPOCH,
                 Optional.of(taskStatus),
                 TaskLocation.unknown()
             );

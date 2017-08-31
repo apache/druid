@@ -69,6 +69,12 @@ public class FloatMaxAggregatorFactory extends SimpleFloatAggregatorFactory
   }
 
   @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    return new DoubleMaxAggregateCombiner();
+  }
+
+  @Override
   public AggregatorFactory getCombiningFactory()
   {
     return new FloatMaxAggregatorFactory(name, name, null, macroTable);

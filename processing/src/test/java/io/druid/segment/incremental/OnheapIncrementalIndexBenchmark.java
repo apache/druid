@@ -33,6 +33,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
@@ -338,7 +339,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         )
     );
     final long timestamp = System.currentTimeMillis();
-    final Interval queryInterval = new Interval("1900-01-01T00:00:00Z/2900-01-01T00:00:00Z");
+    final Interval queryInterval = Intervals.of("1900-01-01T00:00:00Z/2900-01-01T00:00:00Z");
     final List<ListenableFuture<?>> indexFutures = new LinkedList<>();
     final List<ListenableFuture<?>> queryFutures = new LinkedList<>();
     final Segment incrementalIndexSegment = new IncrementalIndexSegment(incrementalIndex, null);

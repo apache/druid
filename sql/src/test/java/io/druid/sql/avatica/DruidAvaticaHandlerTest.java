@@ -30,6 +30,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
@@ -205,8 +206,8 @@ public class DruidAvaticaHandlerTest
     Assert.assertEquals(
         ImmutableList.of(
             ImmutableMap.of(
-                "__time", new Timestamp(new DateTime("2000-01-01T00:00:00.000Z").getMillis()),
-                "t2", new Date(new DateTime("2000-01-01").getMillis())
+                "__time", new Timestamp(DateTimes.of("2000-01-01T00:00:00.000Z").getMillis()),
+                "t2", new Date(DateTimes.of("2000-01-01").getMillis())
             )
         ),
         getRows(resultSet)

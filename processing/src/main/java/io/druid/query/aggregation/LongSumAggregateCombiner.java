@@ -17,17 +17,29 @@
  * under the License.
  */
 
-package io.druid.client.selector;
+package io.druid.query.aggregation;
 
-import io.druid.curator.discovery.ServerDiscoverySelector;
-import io.druid.java.util.common.Pair;
-import io.druid.query.Query;
+import io.druid.segment.ColumnValueSelector;
 
-/**
- */
-public interface HostSelector<T>
+public final class LongSumAggregateCombiner extends LongAggregateCombiner
 {
-  public String getDefaultServiceName();
+  private long sum;
 
-  public Pair<String, ServerDiscoverySelector> select(Query<T> query);
+  @Override
+  public void reset(ColumnValueSelector selector)
+  {
+    sum = selector.getLong();
+  }
+
+  @Override
+  public void fold(ColumnValueSelector selector)
+  {
+    sum += selector.getLong();
+  }
+
+  @Override
+  public long getLong()
+  {
+    return sum;
+  }
 }

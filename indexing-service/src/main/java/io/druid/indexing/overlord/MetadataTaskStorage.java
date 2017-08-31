@@ -34,6 +34,7 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
@@ -134,7 +135,7 @@ public class MetadataTaskStorage implements TaskStorage
     try {
       handler.insert(
           task.getId(),
-          new DateTime(),
+          DateTimes.nowUtc(),
           task.getDataSource(),
           task,
           status.isRunnable(),
@@ -213,7 +214,7 @@ public class MetadataTaskStorage implements TaskStorage
   @Override
   public List<TaskStatus> getRecentlyFinishedTaskStatuses()
   {
-    final DateTime start = new DateTime().minus(config.getRecentlyFinishedThreshold());
+    final DateTime start = DateTimes.nowUtc().minus(config.getRecentlyFinishedThreshold());
 
     return ImmutableList.copyOf(
         Iterables.filter(

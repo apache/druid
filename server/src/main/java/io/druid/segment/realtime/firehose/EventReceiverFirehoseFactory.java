@@ -41,6 +41,7 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
+import io.druid.java.util.common.DateTimes;
 import io.druid.server.metrics.EventReceiverFirehoseMetric;
 import io.druid.server.metrics.EventReceiverFirehoseRegister;
 import org.joda.time.DateTime;
@@ -323,7 +324,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
     )
     {
       try {
-        DateTime shutoffAt = shutoffTime == null ? DateTime.now() : new DateTime(shutoffTime);
+        DateTime shutoffAt = shutoffTime == null ? DateTimes.nowUtc() : DateTimes.of(shutoffTime);
         log.info("Setting Firehose shutoffTime to %s", shutoffTime);
         exec.schedule(
             new Runnable()

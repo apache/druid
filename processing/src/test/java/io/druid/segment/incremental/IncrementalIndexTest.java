@@ -37,7 +37,6 @@ import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.CloserRule;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -152,14 +151,14 @@ public class IncrementalIndexTest
     IncrementalIndex index = closer.closeLater(indexCreator.createIndex());
     index.add(
         new MapBasedInputRow(
-            new DateTime().minus(1).getMillis(),
+            System.currentTimeMillis() - 1,
             Lists.newArrayList("billy", "joe"),
             ImmutableMap.<String, Object>of("billy", "A", "joe", "B")
         )
     );
     index.add(
         new MapBasedInputRow(
-            new DateTime().minus(1).getMillis(),
+            System.currentTimeMillis() - 1,
             Lists.newArrayList("billy", "joe", "joe"),
             ImmutableMap.<String, Object>of("billy", "A", "joe", "B")
         )
@@ -172,7 +171,7 @@ public class IncrementalIndexTest
     IncrementalIndex index = closer.closeLater(indexCreator.createIndex());
     index.add(
         new MapBasedInputRow(
-            new DateTime().minus(1).getMillis(),
+            System.currentTimeMillis() - 1,
             Lists.newArrayList("billy", "joe", "joe"),
             ImmutableMap.<String, Object>of("billy", "A", "joe", "B")
         )
@@ -185,21 +184,21 @@ public class IncrementalIndexTest
     IncrementalIndex index = closer.closeLater(indexCreator.createIndex());
     index.add(
         new MapBasedInputRow(
-            new DateTime().minus(1).getMillis(),
+            System.currentTimeMillis() - 1,
             Lists.newArrayList("billy", "joe"),
             ImmutableMap.<String, Object>of("billy", "A", "joe", "B")
         )
     );
     index.add(
         new MapBasedInputRow(
-            new DateTime().minus(1).getMillis(),
+            System.currentTimeMillis() - 1,
             Lists.newArrayList("billy", "joe"),
             ImmutableMap.<String, Object>of("billy", "C", "joe", "B")
         )
     );
     index.add(
         new MapBasedInputRow(
-            new DateTime().minus(1).getMillis(),
+            System.currentTimeMillis() - 1,
             Lists.newArrayList("billy", "joe"),
             ImmutableMap.<String, Object>of("billy", "A", "joe", "B")
         )
@@ -212,7 +211,7 @@ public class IncrementalIndexTest
     IncrementalIndex<?> index = closer.closeLater(indexCreator.createIndex());
     index.add(
         new MapBasedInputRow(
-            new DateTime().minus(1).getMillis(),
+            System.currentTimeMillis() - 1,
             Lists.newArrayList("string", "float", "long", "double"),
             ImmutableMap.<String, Object>of(
                 "string", Arrays.asList("A", null, ""),
@@ -235,7 +234,7 @@ public class IncrementalIndexTest
   public void sameRow() throws IndexSizeExceededException
   {
     MapBasedInputRow row = new MapBasedInputRow(
-        new DateTime().minus(1).getMillis(),
+        System.currentTimeMillis() - 1,
         Lists.newArrayList("billy", "joe"),
         ImmutableMap.<String, Object>of("billy", "A", "joe", "B")
     );

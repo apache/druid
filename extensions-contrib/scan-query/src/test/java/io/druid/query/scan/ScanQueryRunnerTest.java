@@ -25,7 +25,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.ObjectArrays;
 import com.google.common.collect.Sets;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.DefaultGenericQueryMetricsFactory;
 import io.druid.query.QueryPlus;
@@ -39,8 +41,6 @@ import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -94,7 +94,7 @@ public class ScanQueryRunnerTest
   };
 
   public static final QuerySegmentSpec I_0112_0114 = new LegacySegmentSpec(
-      new Interval("2011-01-12T00:00:00.000Z/2011-01-14T00:00:00.000Z")
+      Intervals.of("2011-01-12T00:00:00.000Z/2011-01-14T00:00:00.000Z")
   );
   public static final String[] V_0112_0114 = ObjectArrays.concat(V_0112, V_0113, String.class);
 
@@ -506,7 +506,7 @@ public class ScanQueryRunnerTest
                       event.put(
                           specs[0],
                           specs.length == 1 || specs[1].equals("STRING") ? values[i] :
-                          specs[1].equals("TIME") ? new DateTime(values[i]) :
+                          specs[1].equals("TIME") ? DateTimes.of(values[i]) :
                           specs[1].equals("FLOAT") ? Float.valueOf(values[i]) :
                           specs[1].equals("DOUBLE") ? Double.valueOf(values[i]) :
                           specs[1].equals("LONG") ? Long.valueOf(values[i]) :

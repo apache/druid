@@ -17,18 +17,13 @@
  * under the License.
  */
 
-package io.druid.indexer;
+package io.druid.query.aggregation;
 
-import com.google.common.base.Function;
-import org.joda.time.Interval;
+import io.druid.segment.ObjectColumnSelector;
 
 /**
-*/
-class StringIntervalFunction implements Function<String, Interval>
+ * Specialization of {@link AggregateCombiner} for object aggregations.
+ */
+public abstract class ObjectAggregateCombiner<T> implements AggregateCombiner, ObjectColumnSelector<T>
 {
-  @Override
-  public Interval apply(String input)
-  {
-    return new Interval(input);
-  }
 }

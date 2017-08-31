@@ -27,6 +27,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.DefaultGenericQueryMetricsFactory;
 import io.druid.query.Druids;
@@ -124,7 +126,7 @@ public class DataSourceMetadataQueryTest
         ), new IncrementalIndexSegment(rtIndex, "test"),
         null
     );
-    DateTime timestamp = new DateTime(System.currentTimeMillis());
+    DateTime timestamp = DateTimes.nowUtc();
     rtIndex.add(
         new MapBasedInputRow(
             timestamp.getMillis(),
@@ -161,7 +163,7 @@ public class DataSourceMetadataQueryTest
               @Override
               public Interval getInterval()
               {
-                return new Interval("2012-01-01/P1D");
+                return Intervals.of("2012-01-01/P1D");
               }
             },
             new LogicalSegment()
@@ -169,7 +171,7 @@ public class DataSourceMetadataQueryTest
               @Override
               public Interval getInterval()
               {
-                return new Interval("2012-01-01T01/PT1H");
+                return Intervals.of("2012-01-01T01/PT1H");
               }
             },
             new LogicalSegment()
@@ -177,7 +179,7 @@ public class DataSourceMetadataQueryTest
               @Override
               public Interval getInterval()
               {
-                return new Interval("2013-01-01/P1D");
+                return Intervals.of("2013-01-01/P1D");
               }
             },
             new LogicalSegment()
@@ -185,7 +187,7 @@ public class DataSourceMetadataQueryTest
               @Override
               public Interval getInterval()
               {
-                return new Interval("2013-01-01T01/PT1H");
+                return Intervals.of("2013-01-01T01/PT1H");
               }
             },
             new LogicalSegment()
@@ -193,7 +195,7 @@ public class DataSourceMetadataQueryTest
               @Override
               public Interval getInterval()
               {
-                return new Interval("2013-01-01T02/PT1H");
+                return Intervals.of("2013-01-01T02/PT1H");
               }
             }
         )
@@ -207,7 +209,7 @@ public class DataSourceMetadataQueryTest
           @Override
           public Interval getInterval()
           {
-            return new Interval("2013-01-01/P1D");
+            return Intervals.of("2013-01-01/P1D");
           }
         },
         new LogicalSegment()
@@ -215,7 +217,7 @@ public class DataSourceMetadataQueryTest
           @Override
           public Interval getInterval()
           {
-            return new Interval("2013-01-01T02/PT1H");
+            return Intervals.of("2013-01-01T02/PT1H");
           }
         }
     );
@@ -228,7 +230,7 @@ public class DataSourceMetadataQueryTest
   @Test
   public void testResultSerialization()
   {
-    final DataSourceMetadataResultValue resultValue = new DataSourceMetadataResultValue(new DateTime("2000-01-01T00Z"));
+    final DataSourceMetadataResultValue resultValue = new DataSourceMetadataResultValue(DateTimes.of("2000-01-01T00Z"));
     final Map<String, Object> resultValueMap = new DefaultObjectMapper().convertValue(
         resultValue,
         new TypeReference<Map<String, Object>>()
@@ -252,7 +254,7 @@ public class DataSourceMetadataQueryTest
         resultValueMap,
         DataSourceMetadataResultValue.class
     );
-    Assert.assertEquals(new DateTime("2000"), resultValue.getMaxIngestedEventTime());
+    Assert.assertEquals(DateTimes.of("2000"), resultValue.getMaxIngestedEventTime());
   }
 
 }

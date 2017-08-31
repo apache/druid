@@ -22,6 +22,7 @@ package io.druid.server;
 import com.google.common.base.Strings;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.DirectDruidClient;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.SequenceWrapper;
@@ -40,9 +41,15 @@ import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.security.Access;
 import io.druid.server.security.AuthConfig;
+<<<<<<< HEAD
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
 import org.joda.time.DateTime;
+=======
+import io.druid.server.security.AuthorizationInfo;
+import io.druid.server.security.Resource;
+import io.druid.server.security.ResourceType;
+>>>>>>> upstream/master
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -325,7 +332,7 @@ public class QueryLifecycle
 
       requestLogger.log(
           new RequestLogLine(
-              new DateTime(startMs),
+              DateTimes.utc(startMs),
               Strings.nullToEmpty(remoteAddress),
               queryPlus.getQuery(),
               new QueryStats(statsMap)

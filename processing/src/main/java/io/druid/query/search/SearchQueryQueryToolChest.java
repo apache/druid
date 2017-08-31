@@ -30,6 +30,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
@@ -54,7 +55,6 @@ import io.druid.query.filter.DimFilter;
 import io.druid.query.search.search.SearchHit;
 import io.druid.query.search.search.SearchQuery;
 import io.druid.query.search.search.SearchQueryConfig;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -253,7 +253,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
 
             return !needsRename
                 ? new Result<>(
-                    new DateTime(((Number) result.get(0)).longValue()),
+                    DateTimes.utc(((Number) result.get(0)).longValue()),
                     new SearchResultValue(
                         Lists.transform(
                             (List) result.get(1),
@@ -279,7 +279,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
                     )
                 )
                 : new Result<>(
-                    new DateTime(((Number) result.get(0)).longValue()),
+                    DateTimes.utc(((Number) result.get(0)).longValue()),
                     new SearchResultValue(
                         Lists.transform(
                             (List) result.get(1),

@@ -21,14 +21,10 @@ package io.druid.query.aggregation;
 
 import io.druid.segment.DoubleColumnSelector;
 
-import java.util.Comparator;
-
 /**
  */
 public class DoubleMinAggregator implements Aggregator
 {
-  static final Comparator COMPARATOR = DoubleSumAggregator.COMPARATOR;
-
   static double combineValues(Object lhs, Object rhs)
   {
     return Math.min(((Number) lhs).doubleValue(), ((Number) rhs).doubleValue());

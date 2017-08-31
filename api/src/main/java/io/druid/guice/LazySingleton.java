@@ -20,6 +20,7 @@
 package io.druid.guice;
 
 import com.google.inject.ScopeAnnotation;
+import io.druid.guice.annotations.PublicApi;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -31,6 +32,7 @@ import java.lang.annotation.Target;
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @ScopeAnnotation
+@PublicApi
 public @interface LazySingleton
 {
 }

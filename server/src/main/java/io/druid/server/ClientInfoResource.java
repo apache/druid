@@ -32,7 +32,14 @@ import io.druid.client.FilteredServerInventoryView;
 import io.druid.client.ServerViewUtil;
 import io.druid.client.TimelineServerView;
 import io.druid.client.selector.ServerSelector;
+<<<<<<< HEAD
 import io.druid.common.utils.JodaUtils;
+=======
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.JodaUtils;
+import io.druid.java.util.common.Pair;
+>>>>>>> upstream/master
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.LocatedSegmentDescriptor;
 import io.druid.query.TableDataSource;
@@ -151,7 +158,7 @@ public class ClientInfoResource
       DateTime now = getCurrentTime();
       theInterval = new Interval(segmentMetadataQueryConfig.getDefaultHistory(), now);
     } else {
-      theInterval = new Interval(interval);
+      theInterval = Intervals.of(interval);
     }
 
     TimelineLookup<String, ServerSelector> timeline = timelineServerView.getTimeline(new TableDataSource(dataSourceName));
@@ -238,7 +245,7 @@ public class ClientInfoResource
       DateTime now = getCurrentTime();
       theInterval = new Interval(segmentMetadataQueryConfig.getDefaultHistory(), now);
     } else {
-      theInterval = new Interval(interval);
+      theInterval = Intervals.of(interval);
     }
 
     for (DataSegment segment : segments) {
@@ -271,7 +278,7 @@ public class ClientInfoResource
       DateTime now = getCurrentTime();
       theInterval = new Interval(segmentMetadataQueryConfig.getDefaultHistory(), now);
     } else {
-      theInterval = new Interval(interval);
+      theInterval = Intervals.of(interval);
     }
 
     for (DataSegment segment : segments) {
@@ -296,7 +303,7 @@ public class ClientInfoResource
   {
     List<Interval> intervalList = Lists.newArrayList();
     for (String interval : intervals.split(",")) {
-      intervalList.add(Interval.parse(interval.trim()));
+      intervalList.add(Intervals.of(interval.trim()));
     }
     List<Interval> condensed = JodaUtils.condenseIntervals(intervalList);
     return ServerViewUtil.getTargetLocations(timelineServerView, datasource, condensed, numCandidates);
@@ -304,7 +311,7 @@ public class ClientInfoResource
 
   protected DateTime getCurrentTime()
   {
-    return new DateTime();
+    return DateTimes.nowUtc();
   }
 
 

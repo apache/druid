@@ -17,62 +17,43 @@
  * under the License.
  */
 
-package io.druid.segment.data;
+package io.druid.java.util.common;
 
-import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.joda.time.DateTime;
+import org.joda.time.chrono.ISOChronology;
 
-/**
- */
-public class ArrayBasedOffset extends Offset
+public final class DateTimes
 {
-  private final int[] ints;
-  private int currIndex;
+  public static final DateTime EPOCH = utc(0);
+  public static final DateTime MAX = utc(JodaUtils.MAX_INSTANT);
+  public static final DateTime MIN = utc(JodaUtils.MIN_INSTANT);
 
-  public ArrayBasedOffset(
-      int[] ints
-  )
+  public static DateTime utc(long instant)
   {
-    this(ints, 0);
+    return new DateTime(instant, ISOChronology.getInstanceUTC());
   }
 
-  public ArrayBasedOffset(
-      int[] ints,
-      int startIndex
-  )
+  public static DateTime of(String instant)
   {
-    this.ints = ints;
-    this.currIndex = startIndex;
+    return new DateTime(instant, ISOChronology.getInstanceUTC());
   }
 
-  @Override
-  public int getOffset()
+  public static DateTime nowUtc()
   {
-    return ints[currIndex];
+    return DateTime.now(ISOChronology.getInstanceUTC());
   }
 
-  @Override
-  public void increment()
+  public static DateTime max(DateTime dt1, DateTime dt2)
   {
-    ++currIndex;
+    return dt1.compareTo(dt2) >= 0 ? dt1 : dt2;
   }
 
-  @Override
-  public boolean withinBounds()
+  public static DateTime min(DateTime dt1, DateTime dt2)
   {
-    return currIndex < ints.length;
+    return dt1.compareTo(dt2) < 0 ? dt1 : dt2;
   }
 
-  @Override
-  public Offset clone()
+  private DateTimes()
   {
-    final ArrayBasedOffset retVal = new ArrayBasedOffset(ints);
-    retVal.currIndex = currIndex;
-    return retVal;
-  }
-
-  @Override
-  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-  {
-    // nothing to inspect
   }
 }

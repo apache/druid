@@ -20,6 +20,7 @@
 package io.druid.sql.calcite.expression;
 
 import com.google.common.collect.ImmutableMap;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.expression.TimestampExtractExprMacro;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
@@ -77,7 +78,7 @@ public class TimeExtractOperatorConversion implements SqlOperatorConversion
             );
           }
         },
-        expression -> String.format(
+        expression -> StringUtils.format(
             "timestamp_extract(%s,%s,%s)",
             expression,
             DruidExpression.stringLiteral(unit.name()),
@@ -107,7 +108,7 @@ public class TimeExtractOperatorConversion implements SqlOperatorConversion
     }
 
     final TimestampExtractExprMacro.Unit unit = TimestampExtractExprMacro.Unit.valueOf(
-        RexLiteral.stringValue(call.getOperands().get(1)).toUpperCase()
+        StringUtils.toUpperCase(RexLiteral.stringValue(call.getOperands().get(1)))
     );
 
     final DateTimeZone timeZone = call.getOperands().size() > 2 && !RexLiteral.isNullLiteral(call.getOperands().get(2))

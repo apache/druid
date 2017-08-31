@@ -36,8 +36,10 @@ import io.druid.collections.DefaultBlockingPool;
 import io.druid.collections.NonBlockingPool;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.DurationGranularity;
 import io.druid.java.util.common.granularity.Granularities;
@@ -92,6 +94,7 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.extraction.RegexDimExtractionFn;
+import io.druid.query.extraction.StringFormatExtractionFn;
 import io.druid.query.extraction.StrlenExtractionFn;
 import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.query.filter.AndDimFilter;
@@ -127,7 +130,6 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -142,6 +144,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -446,6 +449,36 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L, "idxFloat", 2506.415148f, "idxDouble", 2506.415148d),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L, "idxFloat", 97.387433f, "idxDouble", 97.387433d),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L, "idxFloat", 126.411364f, "idxDouble", 126.411364d)
+    );
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testGroupByOnMissingColumn()
+  {
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(
+            Lists.<DimensionSpec>newArrayList(
+                new DefaultDimensionSpec("nonexistent0", "alias0"),
+                new ExtractionDimensionSpec("nonexistent1", "alias1", new StringFormatExtractionFn("foo"))
+            )
+        )
+        .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.rowsCount))
+        .setGranularity(QueryRunnerTestHelper.allGran)
+        .build();
+
+    List<Row> expectedResults = Collections.singletonList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "alias0", null,
+            "alias1", "foo",
+            "rows", 26L
+        )
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
@@ -2492,10 +2525,10 @@ public class GroupByQueryRunnerTest
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-02/2011-04-03")))
             );
             final QueryPlus queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-03/2011-04-04")))
             );
             return new MergeSequence(
                 queryPlus.getQuery().getResultOrdering(),
@@ -2803,10 +2836,10 @@ public class GroupByQueryRunnerTest
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-02/2011-04-03")))
             );
             final QueryPlus queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-03/2011-04-04")))
             );
             return new MergeSequence(
                 queryPlus.getQuery().getResultOrdering(),
@@ -3610,10 +3643,10 @@ public class GroupByQueryRunnerTest
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-02/2011-04-03")))
             );
             final QueryPlus queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-03/2011-04-04")))
             );
             return new MergeSequence(
                 queryPlus.getQuery().getResultOrdering(),
@@ -3828,7 +3861,7 @@ public class GroupByQueryRunnerTest
                         new SelectorDimFilter("idx", "217", null)
                     )
                 ),
-                new SelectorDimFilter("__time", String.valueOf(new DateTime("2011-04-01").getMillis()), null)
+                new SelectorDimFilter("__time", String.valueOf(DateTimes.of("2011-04-01").getMillis()), null)
             )
         )
     );
@@ -3943,10 +3976,10 @@ public class GroupByQueryRunnerTest
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-02/2011-04-03")))
             );
             final QueryPlus queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-03/2011-04-04")))
             );
             return new MergeSequence(
                 queryPlus.getQuery().getResultOrdering(),
@@ -4052,10 +4085,10 @@ public class GroupByQueryRunnerTest
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-02/2011-04-03")))
             );
             final QueryPlus queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-03/2011-04-04")))
             );
             return new MergeSequence(
                 queryPlus.getQuery().getResultOrdering(),
@@ -4278,8 +4311,8 @@ public class GroupByQueryRunnerTest
         .setQuerySegmentSpec(
             new MultipleIntervalSegmentSpec(
                 ImmutableList.of(
-                    new Interval("2011-04-01T00:00:00.000Z/2011-04-01T23:58:00.000Z"),
-                    new Interval("2011-04-02T00:00:00.000Z/2011-04-03T00:00:00.000Z")
+                    Intervals.of("2011-04-01T00:00:00.000Z/2011-04-01T23:58:00.000Z"),
+                    Intervals.of("2011-04-02T00:00:00.000Z/2011-04-03T00:00:00.000Z")
                 )
             )
         )
@@ -4351,8 +4384,8 @@ public class GroupByQueryRunnerTest
         .setQuerySegmentSpec(
             new MultipleIntervalSegmentSpec(
                 ImmutableList.of(
-                    new Interval("2011-04-01T00:00:00.000Z/2011-04-01T23:58:00.000Z"),
-                    new Interval("2011-04-02T00:00:00.000Z/2011-04-03T00:00:00.000Z")
+                    Intervals.of("2011-04-01T00:00:00.000Z/2011-04-01T23:58:00.000Z"),
+                    Intervals.of("2011-04-02T00:00:00.000Z/2011-04-03T00:00:00.000Z")
                 )
             )
         )
@@ -4425,7 +4458,7 @@ public class GroupByQueryRunnerTest
         .setQuerySegmentSpec(
             new MultipleIntervalSegmentSpec(
                 ImmutableList.of(
-                    new Interval("2011-04-01T00:00:00.000Z/2011-04-03T00:00:00.000Z")
+                    Intervals.of("2011-04-01T00:00:00.000Z/2011-04-03T00:00:00.000Z")
                 )
             )
         )
@@ -6601,7 +6634,7 @@ public class GroupByQueryRunnerTest
   {
     int segmentCount = 32;
     Result<BySegmentResultValue> singleSegmentResult = new Result<BySegmentResultValue>(
-        new DateTime("2011-01-12T00:00:00.000Z"),
+        DateTimes.of("2011-01-12T00:00:00.000Z"),
         new BySegmentResultValueClass(
             Arrays.asList(
                 GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -6613,7 +6646,7 @@ public class GroupByQueryRunnerTest
                     "idx",
                     4420L
                 )
-            ), "testSegment", new Interval("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
+            ), "testSegment", Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
         )
     );
     List<Result> bySegmentResults = Lists.newArrayList();
@@ -6663,7 +6696,7 @@ public class GroupByQueryRunnerTest
   {
     int segmentCount = 32;
     Result<BySegmentResultValue> singleSegmentResult = new Result<BySegmentResultValue>(
-        new DateTime("2011-01-12T00:00:00.000Z"),
+        DateTimes.of("2011-01-12T00:00:00.000Z"),
         new BySegmentResultValueClass(
             Arrays.asList(
                 GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -6675,7 +6708,7 @@ public class GroupByQueryRunnerTest
                     "idx",
                     4420L
                 )
-            ), "testSegment", new Interval("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
+            ), "testSegment", Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
         )
     );
     List<Result> bySegmentResults = Lists.newArrayList();
@@ -6737,7 +6770,7 @@ public class GroupByQueryRunnerTest
   {
     int segmentCount = 32;
     Result<BySegmentResultValue> singleSegmentResult = new Result<BySegmentResultValue>(
-        new DateTime("2011-01-12T00:00:00.000Z"),
+        DateTimes.of("2011-01-12T00:00:00.000Z"),
         new BySegmentResultValueClass(
             Arrays.asList(
                 GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -6749,7 +6782,7 @@ public class GroupByQueryRunnerTest
                     "idx",
                     4420L
                 )
-            ), "testSegment", new Interval("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
+            ), "testSegment", Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
         )
     );
     List<Result> bySegmentResults = Lists.newArrayList();
@@ -7153,7 +7186,7 @@ public class GroupByQueryRunnerTest
   {
     int segmentCount = 32;
     Result<BySegmentResultValue> singleSegmentResult = new Result<BySegmentResultValue>(
-        new DateTime("2011-01-12T00:00:00.000Z"),
+        DateTimes.of("2011-01-12T00:00:00.000Z"),
         new BySegmentResultValueClass(
             Arrays.asList(
                 GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -7165,7 +7198,7 @@ public class GroupByQueryRunnerTest
                     "idx",
                     4420L
                 )
-            ), "testSegment", new Interval("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
+            ), "testSegment", Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
         )
     );
     List<Result> bySegmentResults = Lists.newArrayList();
@@ -8721,10 +8754,10 @@ public class GroupByQueryRunnerTest
           {
             // simulate two daily segments
             final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-02/2011-04-03")))
             );
             final QueryPlus<Row> queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-03/2011-04-04")))
             );
 
             return factory.getToolchest().mergeResults(
@@ -8805,10 +8838,10 @@ public class GroupByQueryRunnerTest
           {
             // simulate two daily segments
             final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-02/2011-04-03")))
             );
             final QueryPlus<Row> queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-03/2011-04-04")))
             );
 
             return factory.getToolchest().mergeResults(
@@ -8898,10 +8931,10 @@ public class GroupByQueryRunnerTest
           {
             // simulate two daily segments
             final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-02/2011-04-03")))
             );
             final QueryPlus<Row> queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-03/2011-04-04")))
             );
 
             return factory.getToolchest().mergeResults(
@@ -8995,10 +9028,10 @@ public class GroupByQueryRunnerTest
           {
             // simulate two daily segments
             final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-02/2011-04-03")))
             );
             final QueryPlus<Row> queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-03/2011-04-04")))
             );
 
             return factory.getToolchest().mergeResults(
@@ -9176,8 +9209,8 @@ public class GroupByQueryRunnerTest
         .setQuerySegmentSpec(
             new MultipleIntervalSegmentSpec(
                 ImmutableList.of(
-                    new Interval("2011-04-01T00:00:00.000Z/2011-04-01T23:58:00.000Z"),
-                    new Interval("2011-04-02T00:00:00.000Z/2011-04-03T00:00:00.000Z")
+                    Intervals.of("2011-04-01T00:00:00.000Z/2011-04-01T23:58:00.000Z"),
+                    Intervals.of("2011-04-02T00:00:00.000Z/2011-04-03T00:00:00.000Z")
                 )
             )
         )
