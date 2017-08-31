@@ -23,8 +23,9 @@ import com.google.common.collect.Lists;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Authenticator;
-import io.druid.server.security.NoopAuthenticator;
+import io.druid.server.security.AllowAllAuthenticator;
 import io.druid.server.security.PreResponseAuthorizationCheckFilter;
 import org.easymock.EasyMock;
 import org.junit.Rule;
@@ -39,7 +40,7 @@ import java.util.List;
 
 public class PreResponseAuthorizationCheckFilterTest
 {
-  private static List<Authenticator> authenticators = Lists.newArrayList(new NoopAuthenticator());
+  private static List<Authenticator> authenticators = Lists.newArrayList(new AllowAllAuthenticator());
   private static AuthConfig authConfig = new AuthConfig(true, null, null, null);
 
   @Rule
@@ -48,14 +49,16 @@ public class PreResponseAuthorizationCheckFilterTest
   @Test
   public void testValidRequest() throws Exception
   {
+    AuthenticationResult authenticationResult = new AuthenticationResult("so-very-valid", "so-very-valid");
+
     HttpServletRequest req = EasyMock.createStrictMock(HttpServletRequest.class);
     HttpServletResponse resp = EasyMock.createStrictMock(HttpServletResponse.class);
     FilterChain filterChain = EasyMock.createNiceMock(FilterChain.class);
     ServletOutputStream outputStream = EasyMock.createNiceMock(ServletOutputStream.class);
 
     EasyMock.expect(resp.getOutputStream()).andReturn(outputStream).once();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)).andReturn("so-very-valid").once();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED)).andReturn(true).once();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(authenticationResult).once();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(true).once();
     EasyMock.replay(req, resp, filterChain, outputStream);
 
     PreResponseAuthorizationCheckFilter filter = new PreResponseAuthorizationCheckFilter(
@@ -76,9 +79,7 @@ public class PreResponseAuthorizationCheckFilterTest
       ServletOutputStream outputStream = EasyMock.createNiceMock(ServletOutputStream.class);
 
       EasyMock.expect(resp.getOutputStream()).andReturn(outputStream).once();
-      EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)).andReturn(null).once();
-      resp.addHeader("WWW-Authenticate", "noop");
-      EasyMock.expectLastCall().once();
+      EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(null).once();
       resp.setStatus(401);
       EasyMock.expectLastCall().once();
       resp.setContentType("application/json");
@@ -102,14 +103,16 @@ public class PreResponseAuthorizationCheckFilterTest
     expectedException.expect(ISE.class);
     expectedException.expectMessage("Request did not have an authorization check performed: uri");
 
+    AuthenticationResult authenticationResult = new AuthenticationResult("so-very-valid", "so-very-valid");
+
     HttpServletRequest req = EasyMock.createStrictMock(HttpServletRequest.class);
     HttpServletResponse resp = EasyMock.createStrictMock(HttpServletResponse.class);
     FilterChain filterChain = EasyMock.createNiceMock(FilterChain.class);
     ServletOutputStream outputStream = EasyMock.createNiceMock(ServletOutputStream.class);
 
     EasyMock.expect(resp.getOutputStream()).andReturn(outputStream).once();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)).andReturn("so-very-valid").once();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED)).andReturn(null).once();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(authenticationResult).once();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
     EasyMock.expect(resp.getStatus()).andReturn(200).once();
     EasyMock.expect(req.getRequestURI()).andReturn("uri").once();
     resp.setStatus(403);

@@ -92,6 +92,7 @@ import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticationUtils;
 import io.druid.server.security.Authenticator;
+import io.druid.server.security.AuthenticatorMapper;
 import io.druid.tasklogs.TaskLogStreamer;
 import io.druid.tasklogs.TaskLogs;
 import org.eclipse.jetty.server.Handler;
@@ -316,31 +317,25 @@ public class CliOverlord extends ServerRunnable
 
       final AuthConfig authConfig = injector.getInstance(AuthConfig.class);
       final ObjectMapper jsonMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
-      List<Authenticator> authenticators = null;
-      if (authConfig.isEnabled()) {
-        AuthenticationUtils.addSecuritySanityCheckFilter(root, jsonMapper);
-        authenticators = AuthenticationUtils.getAuthenticatorChainFromConfig(
-            authConfig.getAuthenticatorChain(),
-            injector
-        );
-        AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
+      final AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
 
-      }
+      List<Authenticator> authenticators = null;
+      AuthenticationUtils.addSecuritySanityCheckFilter(root, jsonMapper);
+      authenticators = authenticatorMapper.getAuthenticatorChain();
+      AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
 
       JettyServerInitUtils.addExtensionFilters(root, injector);
 
-      if (authConfig.isEnabled()) {
-        // perform no-op authorization for these static resources
-        AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
+      // perform no-op authorization for these static resources
+      AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
 
-        // Check that requests were authorized before sending responses
-        AuthenticationUtils.addPreResponseAuthorizationCheckFilter(
-            root,
-            authenticators,
-            jsonMapper,
-            authConfig
-        );
-      }
+      // Check that requests were authorized before sending responses
+      AuthenticationUtils.addPreResponseAuthorizationCheckFilter(
+          root,
+          authenticators,
+          jsonMapper,
+          authConfig
+      );
 
       // /status should not redirect, so add first
       root.addFilter(GuiceFilter.class, "/status/*", null);

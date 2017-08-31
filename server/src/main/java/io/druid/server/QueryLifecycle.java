@@ -40,16 +40,9 @@ import io.druid.query.QueryToolChestWarehouse;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.security.Access;
-import io.druid.server.security.AuthConfig;
-<<<<<<< HEAD
+import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
-import org.joda.time.DateTime;
-=======
-import io.druid.server.security.AuthorizationInfo;
-import io.druid.server.security.Resource;
-import io.druid.server.security.ResourceType;
->>>>>>> upstream/master
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -81,7 +74,6 @@ public class QueryLifecycle
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
   private final ServerConfig serverConfig;
-  private final AuthConfig authConfig;
   private final AuthorizerMapper authorizerMapper;
   private final long startMs;
   private final long startNs;
@@ -97,7 +89,6 @@ public class QueryLifecycle
       final ServiceEmitter emitter,
       final RequestLogger requestLogger,
       final ServerConfig serverConfig,
-      final AuthConfig authConfig,
       final AuthorizerMapper authorizerMapper,
       final long startMs,
       final long startNs
@@ -109,7 +100,6 @@ public class QueryLifecycle
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.serverConfig = serverConfig;
-    this.authConfig = authConfig;
     this.authorizerMapper = authorizerMapper;
     this.startMs = startMs;
     this.startNs = startNs;
@@ -133,10 +123,8 @@ public class QueryLifecycle
   @SuppressWarnings("unchecked")
   public <T> Sequence<T> runSimple(
       final Query<T> query,
-      @Nullable final String user,
-      @Nullable final String namespace,
-      @Nullable final String remoteAddress,
-      boolean needsAuth
+      @Nullable final AuthenticationResult authenticationResult,
+      @Nullable final String remoteAddress
   )
   {
     initialize(query);
@@ -144,13 +132,9 @@ public class QueryLifecycle
     final Sequence<T> results;
 
     try {
-      if (needsAuth) {
-        final Access access = authorize(user, namespace, null);
-        if (!access.isAllowed()) {
-          throw new ISE("Unauthorized");
-        }
-      } else {
-        transition(State.INITIALIZED, State.AUTHORIZED);
+      final Access access = authorize(authenticationResult, null);
+      if (!access.isAllowed()) {
+        throw new ISE("Unauthorized");
       }
 
       final QueryLifecycle.QueryResponse queryResponse = execute();
@@ -210,43 +194,35 @@ public class QueryLifecycle
    *
    * */
   public Access authorize(
-      @Nullable final String token,
-      @Nullable final String namespace,
+      @Nullable final AuthenticationResult authenticationResult,
       @Nullable HttpServletRequest req
   )
   {
     transition(State.INITIALIZED, State.AUTHORIZING);
+    Access authResult;
+    if (req != null) {
+      authResult = AuthorizationUtils.authorizeAllResourceActions(
+          req,
+          queryPlus.getQuery().getDataSource().getNames(),
+          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
+          authorizerMapper
+      );
+    } else {
+      authResult = AuthorizationUtils.authorizeAllResourceActions(
+          queryPlus.getQuery().getDataSource().getNames(),
+          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
+          authenticationResult,
+          authorizerMapper
+      );
+    }
 
-    if (authConfig.isEnabled()) {
-      Access authResult;
-      if (req != null) {
-        authResult = AuthorizationUtils.authorizeAllResourceActions(
-            req,
-            queryPlus.getQuery().getDataSource().getNames(),
-            AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
-            authorizerMapper
-        );
-      } else {
-        authResult = AuthorizationUtils.authorizeAllResourceActions(
-            queryPlus.getQuery().getDataSource().getNames(),
-            AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
-            token,
-            namespace,
-            authorizerMapper
-        );
-      }
-
-      if (!authResult.isAllowed()) {
-        // Not authorized; go straight to Jail, do not pass Go.
-        transition(State.AUTHORIZING, State.DONE);
-      } else {
-        transition(State.AUTHORIZING, State.AUTHORIZED);
-      }
-      return authResult;
+    if (!authResult.isAllowed()) {
+      // Not authorized; go straight to Jail, do not pass Go.
+      transition(State.AUTHORIZING, State.DONE);
     } else {
       transition(State.AUTHORIZING, State.AUTHORIZED);
-      return new Access(true);
     }
+    return authResult;
   }
 
   /**

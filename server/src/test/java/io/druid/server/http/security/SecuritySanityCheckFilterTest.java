@@ -21,6 +21,7 @@ package io.druid.server.http.security;
 
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.SecuritySanityCheckFilter;
 import org.easymock.EasyMock;
 import org.junit.Test;
@@ -39,8 +40,8 @@ public class SecuritySanityCheckFilterTest
     HttpServletResponse resp = EasyMock.createStrictMock(HttpServletResponse.class);
     FilterChain filterChain = EasyMock.createStrictMock(FilterChain.class);
 
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED)).andReturn(null).once();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)).andReturn(null).once();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(null).once();
     filterChain.doFilter(req, resp);
     EasyMock.expectLastCall().once();
     EasyMock.replay(req, filterChain);
@@ -57,8 +58,10 @@ public class SecuritySanityCheckFilterTest
     FilterChain filterChain = EasyMock.createStrictMock(FilterChain.class);
     ServletOutputStream outputStream = EasyMock.createNiceMock(ServletOutputStream.class);
 
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED)).andReturn(true).once();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)).andReturn("does-not-belong").once();
+    AuthenticationResult authenticationResult = new AuthenticationResult("does-not-belong", "does-not-belong");
+
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(true).once();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(authenticationResult).once();
     EasyMock.expect(resp.getOutputStream()).andReturn(outputStream).once();
     resp.setStatus(403);
     EasyMock.expectLastCall().once();

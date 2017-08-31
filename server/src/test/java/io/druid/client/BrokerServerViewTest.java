@@ -43,8 +43,8 @@ import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.ServerType;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
-import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticatorHttpClientWrapper;
+import io.druid.server.security.AllowAllAuthenticator;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
@@ -339,7 +339,7 @@ public class BrokerServerViewTest extends CuratorTestBase
         EasyMock.createMock(QueryWatcher.class),
         getSmileMapper(),
         EasyMock.createMock(HttpClient.class),
-        new AuthenticatorHttpClientWrapper(new AuthConfig(), null),
+        new AuthenticatorHttpClientWrapper(new AllowAllAuthenticator()),
         baseView,
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
         new NoopServiceEmitter(),

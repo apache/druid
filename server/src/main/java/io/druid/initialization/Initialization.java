@@ -63,6 +63,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
 import io.druid.server.initialization.AuthenticatorHttpClientWrapperModule;
+import io.druid.server.initialization.AuthenticatorMapperModule;
 import io.druid.server.initialization.AuthorizerMapperModule;
 import io.druid.server.initialization.EmitterModule;
 import io.druid.server.initialization.jetty.JettyServerModule;
@@ -348,10 +349,6 @@ public class Initialization
         // New modules should be added after Log4jShutterDownerModule
         new Log4jShutterDownerModule(),
         new DruidAuthModule(),
-        new AuthenticatorModule(),
-        new AuthenticatorHttpClientWrapperModule(),
-        new AuthorizerModule(),
-        new AuthorizerMapperModule(),
         new LifecycleModule(),
         EmitterModule.class,
         HttpClientModule.global(),
@@ -376,6 +373,11 @@ public class Initialization
         new FirehoseModule(),
         new ParsersModule(),
         new JavaScriptModule(),
+        new AuthenticatorModule(),
+        new AuthenticatorMapperModule(),
+        new AuthenticatorHttpClientWrapperModule(),
+        new AuthorizerModule(),
+        new AuthorizerMapperModule(),
         new StartupLoggingModule()
     );
 

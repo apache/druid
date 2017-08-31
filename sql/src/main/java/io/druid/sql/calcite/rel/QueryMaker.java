@@ -47,6 +47,7 @@ import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.column.Column;
 import io.druid.server.QueryLifecycleFactory;
+import io.druid.server.security.AuthenticationResult;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerContext;
 import org.apache.calcite.avatica.ColumnMetaData;
@@ -231,8 +232,10 @@ public class QueryMaker
   {
     Hook.QUERY_PLAN.run(query);
 
-    // Authorization has already been checked during planning, skip authorization checks here.
-    return queryLifecycleFactory.factorize().runSimple(query, null, null, null, false);
+    final AuthenticationResult authenticationResult =
+        (AuthenticationResult) plannerContext.getQueryContext().get(PlannerContext.CTX_AUTHENTICATION_RESULT);
+
+    return queryLifecycleFactory.factorize().runSimple(query, authenticationResult, null);
   }
 
   private Sequence<Object[]> executeTimeseries(

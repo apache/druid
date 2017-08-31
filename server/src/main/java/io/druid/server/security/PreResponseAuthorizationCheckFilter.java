@@ -77,54 +77,50 @@ public class PreResponseAuthorizationCheckFilter implements Filter
       ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain
   ) throws IOException, ServletException
   {
-    if (authConfig.isEnabled()) {
-      QueryInterruptedException unauthorizedError = new QueryInterruptedException(
-          QueryInterruptedException.UNAUTHORIZED,
-          null,
-          null,
-          DruidNode.getDefaultHost()
+    QueryInterruptedException unauthorizedError = new QueryInterruptedException(
+        QueryInterruptedException.UNAUTHORIZED,
+        null,
+        null,
+        DruidNode.getDefaultHost()
+    );
+    unauthorizedError.setStackTrace(new StackTraceElement[0]);
+    OutputStream out = servletResponse.getOutputStream();
+
+    Boolean authInfoChecked = null;
+    final HttpServletResponse response = (HttpServletResponse) servletResponse;
+
+    // Since this is the last filter in the chain, some previous authentication filter
+    // should have placed an authentication result in the request.
+    // If not, send an authentication challenge.
+    if (servletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT) == null) {
+      Set<String> supportedAuthSchemes = Sets.newHashSet();
+      for (Authenticator authenticator : authenticators) {
+        String challengeHeader = authenticator.getAuthChallengeHeader();
+        if (challengeHeader != null) {
+          supportedAuthSchemes.add(challengeHeader);
+        }
+      }
+      for (String authScheme : supportedAuthSchemes) {
+        response.addHeader("WWW-Authenticate", authScheme);
+      }
+      sendJsonError(response, Response.SC_UNAUTHORIZED, jsonMapper.writeValueAsString(unauthorizedError), out);
+      out.close();
+      return;
+    }
+
+    filterChain.doFilter(servletRequest, servletResponse);
+
+    authInfoChecked = (Boolean) servletRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED);
+    if (authInfoChecked == null && !errorOverridesMissingAuth(response.getStatus())) {
+      String errorMsg = StringUtils.format(
+          "Request did not have an authorization check performed: %s",
+          ((HttpServletRequest) servletRequest).getRequestURI()
       );
-      unauthorizedError.setStackTrace(new StackTraceElement[0]);
-      OutputStream out = servletResponse.getOutputStream();
-
-      Boolean authInfoChecked = null;
-      final HttpServletResponse response = (HttpServletResponse) servletResponse;
-
-      // Since this is the last filter in the chain, some previous authentication filter
-      // should have placed an auth token in the request.
-      // If not, send an auth challenge.
-      if (servletRequest.getAttribute(AuthConfig.DRUID_AUTH_TOKEN) == null) {
-        Set<String> supportedAuthSchemes = Sets.newHashSet();
-        for (Authenticator authenticator : authenticators) {
-          String challengeHeader = authenticator.getAuthChallengeHeader();
-          if (challengeHeader != null) {
-            supportedAuthSchemes.add(challengeHeader);
-          }
-        }
-        for (String authScheme : supportedAuthSchemes) {
-          response.addHeader("WWW-Authenticate", authScheme);
-        }
-        sendJsonError(response, Response.SC_UNAUTHORIZED, jsonMapper.writeValueAsString(unauthorizedError), out);
-        out.close();
-        return;
-      }
-
-      filterChain.doFilter(servletRequest, servletResponse);
-
-      authInfoChecked = (Boolean) servletRequest.getAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED);
-      if (authInfoChecked == null && !errorOverridesMissingAuth(response.getStatus())) {
-        String errorMsg = StringUtils.format(
-            "Request did not have an authorization check performed: %s",
-            ((HttpServletRequest) servletRequest).getRequestURI()
-        );
-        // Note: rather than throwing an exception here, it would be nice to blank out the original response
-        // since the request didn't have any authorization checks performed. However, this breaks proxying
-        // (e.g. OverlordServletProxy), so this is not implemented for now.
-        log.error(errorMsg);
-        throw new ISE(errorMsg);
-      }
-    } else {
-      filterChain.doFilter(servletRequest, servletResponse);
+      // Note: rather than throwing an exception here, it would be nice to blank out the original response
+      // since the request didn't have any authorization checks performed. However, this breaks proxying
+      // (e.g. OverlordServletProxy), so this is not implemented for now.
+      log.error(errorMsg);
+      throw new ISE(errorMsg);
     }
   }
 

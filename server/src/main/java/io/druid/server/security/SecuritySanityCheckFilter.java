@@ -75,9 +75,9 @@ public class SecuritySanityCheckFilter implements Filter
     OutputStream out = httpResponse.getOutputStream();
 
     // make sure the original request isn't trying to fake the auth token checks
-    Boolean authInfoChecked = (Boolean) request.getAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED);
-    String authToken = (String) request.getAttribute(AuthConfig.DRUID_AUTH_TOKEN);
-    if (authInfoChecked != null || authToken != null) {
+    Boolean authInfoChecked = (Boolean) request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED);
+    AuthenticationResult result = (AuthenticationResult) request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT);
+    if (authInfoChecked != null || result != null) {
       sendJsonError(httpResponse, Response.SC_FORBIDDEN, unauthorizedMessage, out);
       out.close();
       return;

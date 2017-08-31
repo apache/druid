@@ -32,8 +32,13 @@ import java.io.IOException;
 import java.util.EnumSet;
 import java.util.Map;
 
-public class NoopAuthenticator implements Authenticator
+/**
+ * Should only be used in conjunction with AllowAllAuthorizer.
+ */
+public class AllowAllAuthenticator implements Authenticator
 {
+  public static final AuthenticationResult ALLOW_ALL_RESULT = new AuthenticationResult("allowAll", "allowAll");
+
   @Override
   public Class<? extends Filter> getFilterClass()
   {
@@ -59,12 +64,6 @@ public class NoopAuthenticator implements Authenticator
   }
 
   @Override
-  public String getNamespace()
-  {
-    return "noop";
-  }
-
-  @Override
   public Filter getFilter()
   {
     return new Filter()
@@ -80,7 +79,7 @@ public class NoopAuthenticator implements Authenticator
           ServletRequest request, ServletResponse response, FilterChain chain
       ) throws IOException, ServletException
       {
-        request.setAttribute(AuthConfig.DRUID_AUTH_TOKEN, "druid");
+        request.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, ALLOW_ALL_RESULT);
         chain.doFilter(request, response);
       }
 
@@ -95,18 +94,24 @@ public class NoopAuthenticator implements Authenticator
   @Override
   public String getAuthChallengeHeader()
   {
-    return "noop";
+    return null;
   }
 
   @Override
-  public boolean authenticateJDBCContext(Map<String, Object> context)
+  public AuthenticationResult authenticateJDBCContext(Map<String, Object> context)
   {
-    return true;
+    return ALLOW_ALL_RESULT;
   }
 
   @Override
   public HttpClient createEscalatedClient(HttpClient baseClient)
   {
     return baseClient;
+  }
+
+  @Override
+  public AuthenticationResult createEscalatedAuthenticationResult()
+  {
+    return ALLOW_ALL_RESULT;
   }
 }

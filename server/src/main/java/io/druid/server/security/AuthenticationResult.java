@@ -19,17 +19,43 @@
 
 package io.druid.server.security;
 
-public class DefaultAuthorizer implements Authorizer
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+/**
+ * An AuthenticationResult contains information about a successfully authenticated request.
+ */
+public class AuthenticationResult
 {
-  @Override
-  public Access authorize(String identity, Resource resource, Action action)
+  /**
+   * the identity of the requester
+   */
+  private final String identity;
+
+  /**
+   * the name of the Authorizer that should handle the authenticated request.
+   */
+  private final String authorizerName;
+
+  @JsonCreator
+  public AuthenticationResult(
+      @JsonProperty("identity") final String identity,
+      @JsonProperty("authorizerName") final String authorizerName
+  )
   {
-    return new Access(false, "Please configure a non-default Authorizer.");
+    this.identity = identity;
+    this.authorizerName = authorizerName;
   }
 
-  @Override
-  public String getNamespace()
+  @JsonProperty
+  public String getIdentity()
   {
-    return "default";
+    return identity;
+  }
+
+  @JsonProperty
+  public String getAuthorizerName()
+  {
+    return authorizerName;
   }
 }

@@ -85,23 +85,22 @@ public class SupervisorResource
           @Override
           public Response apply(SupervisorManager manager)
           {
-            if (authConfig.isEnabled()) {
-              Preconditions.checkArgument(
-                  spec.getDataSources() != null && spec.getDataSources().size() > 0,
-                  "No dataSources found to perform authorization checks"
-              );
+            Preconditions.checkArgument(
+                spec.getDataSources() != null && spec.getDataSources().size() > 0,
+                "No dataSources found to perform authorization checks"
+            );
 
-              Access authResult = AuthorizationUtils.authorizeAllResourceActions(
-                  req,
-                  spec.getDataSources(),
-                  AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR,
-                  authorizerMapper
-              );
+            Access authResult = AuthorizationUtils.authorizeAllResourceActions(
+                req,
+                spec.getDataSources(),
+                AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR,
+                authorizerMapper
+            );
 
-              if (!authResult.isAllowed()) {
-                return Response.status(Response.Status.FORBIDDEN).header("Access-Check-Result", authResult).build();
-              }
+            if (!authResult.isAllowed()) {
+              return Response.status(Response.Status.FORBIDDEN).header("Access-Check-Result", authResult).build();
             }
+
             manager.createOrUpdateAndStartSupervisor(spec);
             return Response.ok(ImmutableMap.of("id", spec.getId())).build();
           }
@@ -120,33 +119,30 @@ public class SupervisorResource
           public Response apply(final SupervisorManager manager)
           {
             final Set<String> supervisorIds;
-            if (authConfig.isEnabled()) {
-              supervisorIds = Sets.newHashSet();
-              for (String supervisorId : manager.getSupervisorIds()) {
-                Optional<SupervisorSpec> supervisorSpecOptional = manager.getSupervisorSpec(supervisorId);
-                if (supervisorSpecOptional.isPresent()) {
-                  Access accessResult = AuthorizationUtils.authorizeAllResourceActions(
-                      req,
-                      supervisorSpecOptional.get().getDataSources(),
-                      AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR,
-                      authorizerMapper
-                  );
+            supervisorIds = Sets.newHashSet();
+            for (String supervisorId : manager.getSupervisorIds()) {
+              Optional<SupervisorSpec> supervisorSpecOptional = manager.getSupervisorSpec(supervisorId);
+              if (supervisorSpecOptional.isPresent()) {
+                Access accessResult = AuthorizationUtils.authorizeAllResourceActions(
+                    req,
+                    supervisorSpecOptional.get().getDataSources(),
+                    AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR,
+                    authorizerMapper
+                );
 
-                  if (accessResult.isAllowed()) {
-                    supervisorIds.add(supervisorId);
-                  }
+                if (accessResult.isAllowed()) {
+                  supervisorIds.add(supervisorId);
                 }
               }
-
-              AuthorizationUtils.authorizeAllResourceActions(
-                  req,
-                  Lists.newArrayList(),
-                  AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR,
-                  authorizerMapper
-              );
-            } else {
-              supervisorIds = manager.getSupervisorIds();
             }
+
+            AuthorizationUtils.authorizeAllResourceActions(
+                req,
+                Lists.newArrayList(),
+                AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR,
+                authorizerMapper
+            );
+
             return Response.ok(supervisorIds).build();
           }
         }
@@ -239,31 +235,27 @@ public class SupervisorResource
           public Response apply(final SupervisorManager manager)
           {
             final Map<String, List<VersionedSupervisorSpec>> supervisorHistory;
-            if (authConfig.isEnabled()) {
-              supervisorHistory = Maps.filterKeys(
-                  manager.getSupervisorHistory(),
-                  new Predicate<String>()
+            supervisorHistory = Maps.filterKeys(
+                manager.getSupervisorHistory(),
+                new Predicate<String>()
+                {
+                  @Override
+                  public boolean apply(String id)
                   {
-                    @Override
-                    public boolean apply(String id)
-                    {
-                      Optional<SupervisorSpec> supervisorSpecOptional = manager.getSupervisorSpec(id);
-                      if (!supervisorSpecOptional.isPresent()) {
-                        return false;
-                      }
-                      Access accessResult = AuthorizationUtils.authorizeAllResourceActions(
-                          req,
-                          supervisorSpecOptional.get().getDataSources(),
-                          AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR,
-                          authorizerMapper
-                      );
-                      return accessResult.isAllowed();
+                    Optional<SupervisorSpec> supervisorSpecOptional = manager.getSupervisorSpec(id);
+                    if (!supervisorSpecOptional.isPresent()) {
+                      return false;
                     }
+                    Access accessResult = AuthorizationUtils.authorizeAllResourceActions(
+                        req,
+                        supervisorSpecOptional.get().getDataSources(),
+                        AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR,
+                        authorizerMapper
+                    );
+                    return accessResult.isAllowed();
                   }
-              );
-            } else {
-              supervisorHistory = manager.getSupervisorHistory();
-            }
+                }
+            );
             return Response.ok(supervisorHistory).build();
           }
         }

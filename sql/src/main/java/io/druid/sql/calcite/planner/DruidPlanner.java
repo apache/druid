@@ -28,6 +28,8 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.server.security.Access;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthenticationResult;
+import io.druid.server.security.AuthenticatorMapper;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
 import io.druid.sql.calcite.rel.DruidConvention;
@@ -69,30 +71,34 @@ public class DruidPlanner implements Closeable
   private final PlannerContext plannerContext;
   private final AuthConfig authConfig;
   private final AuthorizerMapper authorizerMapper;
+  private final AuthenticatorMapper authenticatorMapper;
 
   public DruidPlanner(
       final Planner planner,
       final PlannerContext plannerContext,
       final AuthConfig authConfig,
-      final AuthorizerMapper authorizerMapper
+      final AuthorizerMapper authorizerMapper,
+      final AuthenticatorMapper authenticatorMapper
   )
   {
     this.planner = planner;
     this.plannerContext = plannerContext;
     this.authConfig = authConfig;
     this.authorizerMapper = authorizerMapper;
+    this.authenticatorMapper = authenticatorMapper;
   }
 
   public PlannerResult plan(final String sql) throws SqlParseException, ValidationException, RelConversionException
   {
-    return plan(sql, null, null, null);
+    AuthenticationResult authenticationResult = authenticatorMapper.getEscalatingAuthenticator()
+                                                                   .createEscalatedAuthenticationResult();
+    return plan(sql, null, authenticationResult);
   }
 
   public PlannerResult plan(
       final String sql,
       final HttpServletRequest request,
-      final String user,
-      final String namespace
+      final AuthenticationResult authenticationResult
   ) throws SqlParseException, ValidationException, RelConversionException, SecurityException
   {
     SqlExplain explain = null;
@@ -105,12 +111,12 @@ public class DruidPlanner implements Closeable
     final RelRoot root = planner.rel(validated);
 
     try {
-      return planWithDruidConvention(explain, root, request, user, namespace);
+      return planWithDruidConvention(explain, root, request, authenticationResult);
     }
     catch (RelOptPlanner.CannotPlanException e) {
       // Try again with BINDABLE convention. Used for querying Values, metadata tables, and fallback.
       try {
-        return planWithBindableConvention(explain, root, request, user, namespace);
+        return planWithBindableConvention(explain, root, request, authenticationResult);
       }
       catch (Exception e2) {
         e.addSuppressed(e2);
@@ -134,8 +140,7 @@ public class DruidPlanner implements Closeable
       final SqlExplain explain,
       final RelRoot root,
       final HttpServletRequest request,
-      final String user,
-      final String namespace
+      final AuthenticationResult authenticationResult
   ) throws RelConversionException, SecurityException
   {
     final DruidRel<?> druidRel = (DruidRel<?>) planner.transform(
@@ -146,29 +151,36 @@ public class DruidPlanner implements Closeable
         root.rel
     );
 
-    if (authConfig != null && authConfig.isEnabled()) {
-      List<String> datasourceNames = druidRel.getDatasourceNames();
-      Access authResult;
-      if (request != null) {
-        authResult = AuthorizationUtils.authorizeAllResourceActions(
-            request,
-            datasourceNames,
-            AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
-            authorizerMapper
-        );
-      } else {
-        authResult = AuthorizationUtils.authorizeAllResourceActions(
-            datasourceNames,
-            AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
-            user,
-            namespace,
-            authorizerMapper
-        );
-      }
+    List<String> datasourceNames = druidRel.getDatasourceNames();
+    // we'll eventually run a second authorization check at QueryLifecycle.runSimple(), so store the
+    // authentication result in the planner context.
+    Access authResult;
+    if (request != null) {
+      authResult = AuthorizationUtils.authorizeAllResourceActions(
+          request,
+          datasourceNames,
+          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
+          authorizerMapper
+      );
+      plannerContext.getQueryContext()
+                    .put(
+                        PlannerContext.CTX_AUTHENTICATION_RESULT,
+                        request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)
+                    );
+    } else {
+      authResult = AuthorizationUtils.authorizeAllResourceActions(
+          datasourceNames,
+          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
+          authenticationResult,
+          authorizerMapper
+      );
+      plannerContext.getQueryContext().put(PlannerContext.CTX_AUTHENTICATION_RESULT, authenticationResult);
+    }
 
-      if (!authResult.isAllowed()) {
-        throw new SecurityException(authResult.toString());
-      }
+
+
+    if (!authResult.isAllowed()) {
+      throw new SecurityException(authResult.toString());
     }
 
     if (explain != null) {
@@ -205,7 +217,11 @@ public class DruidPlanner implements Closeable
     }
   }
 
-  private Access authorizeBindableRel(BindableRel rel, HttpServletRequest req, final String user, final String namespace)
+  private Access authorizeBindableRel(
+      BindableRel rel,
+      HttpServletRequest req,
+      final AuthenticationResult authenticationResult
+  )
   {
     Set<String> datasourceNames = Sets.newHashSet();
     rel.childrenAccept(
@@ -238,8 +254,7 @@ public class DruidPlanner implements Closeable
       return AuthorizationUtils.authorizeAllResourceActions(
           datasourceNames,
           AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
-          user,
-          namespace,
+          authenticationResult,
           authorizerMapper
       );
     }
@@ -249,8 +264,7 @@ public class DruidPlanner implements Closeable
       final SqlExplain explain,
       final RelRoot root,
       final HttpServletRequest request,
-      final String user,
-      final String namespace
+      final AuthenticationResult authenticationResult
   ) throws RelConversionException
   {
     BindableRel bindableRel = (BindableRel) planner.transform(
@@ -276,12 +290,10 @@ public class DruidPlanner implements Closeable
           root.validatedRowType
       );
     }
-    
-    if (authConfig != null && authConfig.isEnabled()) {
-      Access accessResult = authorizeBindableRel(bindableRel, request, user, namespace);
-      if (!accessResult.isAllowed()) {
-        throw new SecurityException(accessResult.toString());
-      }
+
+    Access accessResult = authorizeBindableRel(bindableRel, request, authenticationResult);
+    if (!accessResult.isAllowed()) {
+      throw new SecurityException(accessResult.toString());
     }
 
     if (explain != null) {

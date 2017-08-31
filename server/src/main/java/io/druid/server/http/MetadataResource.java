@@ -102,20 +102,14 @@ public class MetadataResource
       );
     }
 
-    final Set<String> dataSourceNamesPostAuth;
+    List<String> datasourceNamesList = AuthorizationUtils.filterAuthorizedResources(
+        req,
+        dataSourceNamesPreAuth,
+        AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
+        authorizerMapper
+    );
 
-    if (authConfig.isEnabled()) {
-      List<String> datasourceNamesList = AuthorizationUtils.filterAuthorizedResources(
-          req,
-          dataSourceNamesPreAuth,
-          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
-          authorizerMapper
-      );
-
-      dataSourceNamesPostAuth = Sets.newTreeSet(datasourceNamesList);
-    } else {
-      dataSourceNamesPostAuth = dataSourceNamesPreAuth;
-    }
+    final Set<String> dataSourceNamesPostAuth = Sets.newTreeSet(datasourceNamesList);
 
     // Cannot do both includeDisabled and full, let includeDisabled take priority
     // Always use dataSourceNamesPostAuth to determine the set of returned dataSources

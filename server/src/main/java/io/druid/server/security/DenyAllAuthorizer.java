@@ -19,17 +19,11 @@
 
 package io.druid.server.security;
 
-public class NoopAuthorizer implements Authorizer
+public class DenyAllAuthorizer implements Authorizer
 {
   @Override
-  public Access authorize(String identity, Resource resource, Action action)
+  public Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action)
   {
-    return new Access(true);
-  }
-
-  @Override
-  public String getNamespace()
-  {
-    return "noop";
+    return new Access(false, "The DenyAll Authorizer denies all requests.");
   }
 }

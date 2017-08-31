@@ -23,13 +23,20 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.ResourceLimitExceededException;
+import io.druid.server.security.AllowAllAuthenticator;
+import io.druid.server.security.AllowAllAuthorizer;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.Authenticator;
+import io.druid.server.security.AuthenticatorMapper;
+import io.druid.server.security.Authorizer;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
@@ -42,6 +49,7 @@ import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import io.druid.sql.http.SqlQuery;
 import io.druid.sql.http.SqlResource;
 import org.apache.calcite.tools.ValidationException;
+import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -49,6 +57,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.ByteArrayOutputStream;
@@ -69,15 +78,42 @@ public class SqlResourceTest
 
   private SqlResource resource;
 
+  private HttpServletRequest req;
+
   @Before
   public void setUp() throws Exception
   {
     Calcites.setSystemProperties();
     walker = CalciteTests.createMockWalker(temporaryFolder.newFolder());
+
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
+    req = EasyMock.createStrictMock(HttpServletRequest.class);
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
+            .anyTimes();
+    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    EasyMock.expectLastCall().anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
+            .anyTimes();
+    EasyMock.replay(req);
+
+
+    AuthorizerMapper authorizerMapper = new AuthorizerMapper(null) {
+      @Override
+      public Authorizer getAuthorizer(String name)
+      {
+        return new AllowAllAuthorizer();
+      }
+    };
+
+    Map<String, Authenticator> defaultMap = Maps.newHashMap();
+    defaultMap.put("allowAll", new AllowAllAuthenticator());
+    AuthenticatorMapper authenticatorMapper = new AuthenticatorMapper(defaultMap, "allowAll");
+
     resource = new SqlResource(
         JSON_MAPPER,
         new PlannerFactory(
@@ -87,7 +123,8 @@ public class SqlResourceTest
             macroTable,
             plannerConfig,
             new AuthConfig(),
-            null
+            authenticatorMapper,
+            authorizerMapper
         )
     );
   }
@@ -240,7 +277,7 @@ public class SqlResourceTest
   // Returns either an error or a result.
   private Pair<QueryInterruptedException, List<Map<String, Object>>> doPost(final SqlQuery query) throws Exception
   {
-    final Response response = resource.doPost(query, null);
+    final Response response = resource.doPost(query, req);
     if (response.getStatus() == 200) {
       final StreamingOutput output = (StreamingOutput) response.getEntity();
       final ByteArrayOutputStream baos = new ByteArrayOutputStream();

@@ -30,13 +30,24 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.inject.Binder;
+import com.google.inject.Injector;
+import com.google.inject.Module;
+import com.google.inject.name.Names;
+import io.druid.guice.GuiceInjectors;
+import io.druid.initialization.Initialization;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.ServerConfig;
+import io.druid.server.security.AllowAllAuthenticator;
+import io.druid.server.security.AllowAllAuthorizer;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.Authenticator;
+import io.druid.server.security.AuthenticatorMapper;
+import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
@@ -73,6 +84,7 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -112,6 +124,7 @@ public class DruidAvaticaHandlerTest
   private Connection clientLosAngeles;
   private DruidMeta druidMeta;
   private String url;
+  private Injector injector;
 
   @Before
   public void setUp() throws Exception
@@ -122,6 +135,26 @@ public class DruidAvaticaHandlerTest
     final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
+    final Map<String, Authorizer> testAuthorizerMap = new HashMap<>();
+    testAuthorizerMap.put("allowAll", new AllowAllAuthorizer());
+    final Map<String, Authenticator> defaultMap = Maps.newHashMap();
+    defaultMap.put("allowAll", new AllowAllAuthenticator());
+
+    injector = Initialization.makeInjectorWithModules(
+        GuiceInjectors.makeStartupInjector(),
+        ImmutableList.of(
+            new Module()
+            {
+              @Override
+              public void configure(Binder binder)
+              {
+                binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
+                binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+                binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
+              }
+            }
+        )
+    );
     druidMeta = new DruidMeta(
         new PlannerFactory(
             druidSchema,
@@ -130,11 +163,12 @@ public class DruidAvaticaHandlerTest
             macroTable,
             plannerConfig,
             new AuthConfig(),
-            new AuthorizerMapper(null)
+            new AuthenticatorMapper(defaultMap, "allowAll"),
+            new AuthorizerMapper(testAuthorizerMap)
         ),
         AVATICA_CONFIG,
         new AuthConfig(),
-        null
+        injector
     );
     final DruidAvaticaHandler handler = new DruidAvaticaHandler(
         druidMeta,
@@ -563,7 +597,10 @@ public class DruidAvaticaHandlerTest
     final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
-
+    final Map<String, Authorizer> testAuthorizerMap = new HashMap<>();
+    testAuthorizerMap.put("allowAll", new AllowAllAuthorizer());
+    final Map<String, Authenticator> defaultMap = Maps.newHashMap();
+    defaultMap.put("allowAll", new AllowAllAuthenticator());
     final List<Meta.Frame> frames = new ArrayList<>();
     DruidMeta smallFrameDruidMeta = new DruidMeta(
         new PlannerFactory(
@@ -573,11 +610,12 @@ public class DruidAvaticaHandlerTest
             macroTable,
             plannerConfig,
             new AuthConfig(),
-            new AuthorizerMapper(null)
+            new AuthenticatorMapper(defaultMap, "allowAll"),
+            new AuthorizerMapper(testAuthorizerMap)
         ),
         smallFrameConfig,
         new AuthConfig(),
-        null
+        injector
     )
     {
       @Override

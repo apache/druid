@@ -39,7 +39,6 @@ public class QueryLifecycleFactory
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
   private final ServerConfig serverConfig;
-  private final AuthConfig authConfig;
   private final AuthorizerMapper authorizerMapper;
 
   @Inject
@@ -60,7 +59,6 @@ public class QueryLifecycleFactory
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.serverConfig = serverConfig;
-    this.authConfig = authConfig;
     this.authorizerMapper = authorizerMapper;
   }
 
@@ -73,7 +71,6 @@ public class QueryLifecycleFactory
         emitter,
         requestLogger,
         serverConfig,
-        authConfig,
         authorizerMapper,
         System.currentTimeMillis(),
         System.nanoTime()

@@ -61,58 +61,56 @@ public class SupervisorResourceFilter extends AbstractResourceFilter
   @Override
   public ContainerRequest filter(ContainerRequest request)
   {
-    if (getAuthConfig().isEnabled()) {
-      final String supervisorId = Preconditions.checkNotNull(
-          request.getPathSegments()
-                 .get(
-                     Iterables.indexOf(
-                         request.getPathSegments(),
-                         new Predicate<PathSegment>()
+    final String supervisorId = Preconditions.checkNotNull(
+        request.getPathSegments()
+               .get(
+                   Iterables.indexOf(
+                       request.getPathSegments(),
+                       new Predicate<PathSegment>()
+                       {
+                         @Override
+                         public boolean apply(PathSegment input)
                          {
-                           @Override
-                           public boolean apply(PathSegment input)
-                           {
-                             return input.getPath().equals("supervisor");
-                           }
+                           return input.getPath().equals("supervisor");
                          }
-                     ) + 1
-                 ).getPath()
+                       }
+                   ) + 1
+               ).getPath()
+    );
+
+    Optional<SupervisorSpec> supervisorSpecOptional = supervisorManager.getSupervisorSpec(supervisorId);
+    if (!supervisorSpecOptional.isPresent()) {
+      throw new WebApplicationException(
+          Response.status(Response.Status.BAD_REQUEST)
+                  .entity(StringUtils.format("Cannot find any supervisor with id: [%s]", supervisorId))
+                  .build()
       );
-
-      Optional<SupervisorSpec> supervisorSpecOptional = supervisorManager.getSupervisorSpec(supervisorId);
-      if (!supervisorSpecOptional.isPresent()) {
-        throw new WebApplicationException(
-            Response.status(Response.Status.BAD_REQUEST)
-                    .entity(StringUtils.format("Cannot find any supervisor with id: [%s]", supervisorId))
-                    .build()
-        );
-      }
+    }
 
 
-      final SupervisorSpec spec = supervisorSpecOptional.get();
-      Preconditions.checkArgument(
-          spec.getDataSources() != null && spec.getDataSources().size() > 0,
-          "No dataSources found to perform authorization checks"
-      );
+    final SupervisorSpec spec = supervisorSpecOptional.get();
+    Preconditions.checkArgument(
+        spec.getDataSources() != null && spec.getDataSources().size() > 0,
+        "No dataSources found to perform authorization checks"
+    );
 
-      Function<String, ResourceAction> resourceActionFunction = getAction(request) == Action.READ ?
-                                                                AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR :
-                                                                AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR;
+    Function<String, ResourceAction> resourceActionFunction = getAction(request) == Action.READ ?
+                                                              AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR :
+                                                              AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR;
 
-      Access authResult = AuthorizationUtils.authorizeAllResourceActions(
-          getReq(),
-          spec.getDataSources(),
-          resourceActionFunction,
-          getAuthorizerMapper()
-      );
+    Access authResult = AuthorizationUtils.authorizeAllResourceActions(
+        getReq(),
+        spec.getDataSources(),
+        resourceActionFunction,
+        getAuthorizerMapper()
+    );
 
-      if (!authResult.isAllowed()) {
-        throw new WebApplicationException(Response.status(Response.Status.FORBIDDEN)
-                                                  .entity(
-                                                      String.format("Access-Check-Result: %s", authResult.toString())
-                                                  )
-                                                  .build());
-      }
+    if (!authResult.isAllowed()) {
+      throw new WebApplicationException(Response.status(Response.Status.FORBIDDEN)
+                                                .entity(
+                                                    StringUtils.format("Access-Check-Result: %s", authResult.toString())
+                                                )
+                                                .build());
     }
 
     return request;

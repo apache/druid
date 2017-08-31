@@ -53,7 +53,7 @@ import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.router.QueryHostFinder;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.Authorizer;
-import io.druid.server.security.NoopAuthorizer;
+import io.druid.server.security.AllowAllAuthorizer;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
@@ -119,9 +119,9 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                     new AuthorizerMapper(null) {
 
                       @Override
-                      public Authorizer getAuthorizer(String namespace)
+                      public Authorizer getAuthorizer(String name)
                       {
-                        return new NoopAuthorizer();
+                        return new AllowAllAuthorizer();
                       }
                     }
                 );

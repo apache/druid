@@ -21,7 +21,7 @@ package io.druid.sql.avatica;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 
@@ -41,7 +41,7 @@ public class DruidConnection
 
   private final String connectionId;
   private final int maxStatements;
-  private final ImmutableMap<String, Object> context;
+  private final Map<String, Object> context;
   private final AtomicInteger statementCounter = new AtomicInteger();
   private final AtomicReference<Future<?>> timeoutFuture = new AtomicReference<>();
 
@@ -55,7 +55,7 @@ public class DruidConnection
   {
     this.connectionId = Preconditions.checkNotNull(connectionId);
     this.maxStatements = maxStatements;
-    this.context = ImmutableMap.copyOf(context);
+    this.context = Maps.newHashMap(context);
     this.statements = new HashMap<>();
   }
 

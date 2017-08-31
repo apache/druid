@@ -22,6 +22,7 @@ package io.druid.sql.calcite;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import io.druid.hll.HLLCV1;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
@@ -84,7 +85,13 @@ import io.druid.query.topn.TopNQueryBuilder;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
+import io.druid.server.security.AllowAllAuthenticator;
+import io.druid.server.security.AllowAllAuthorizer;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.Authenticator;
+import io.druid.server.security.AuthenticatorMapper;
+import io.druid.server.security.Authorizer;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.sql.calcite.filtration.Filtration;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
@@ -175,28 +182,32 @@ public class CalciteQueryTest
   private static final Map<String, Object> QUERY_CONTEXT_DEFAULT = ImmutableMap.<String, Object>of(
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
-      QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
+      QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE,
+      PlannerContext.CTX_AUTHENTICATION_RESULT, AllowAllAuthenticator.ALLOW_ALL_RESULT
   );
 
   private static final Map<String, Object> QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS = ImmutableMap.<String, Object>of(
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
       "skipEmptyBuckets", false,
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
-      QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
+      QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE,
+      PlannerContext.CTX_AUTHENTICATION_RESULT, AllowAllAuthenticator.ALLOW_ALL_RESULT
   );
 
   private static final Map<String, Object> QUERY_CONTEXT_NO_TOPN = ImmutableMap.<String, Object>of(
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
       PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, "false",
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
-      QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
+      QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE,
+      PlannerContext.CTX_AUTHENTICATION_RESULT, AllowAllAuthenticator.ALLOW_ALL_RESULT
   );
 
   private static final Map<String, Object> QUERY_CONTEXT_LOS_ANGELES = ImmutableMap.<String, Object>of(
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
       PlannerContext.CTX_SQL_TIME_ZONE, LOS_ANGELES,
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
-      QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
+      QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE,
+      PlannerContext.CTX_AUTHENTICATION_RESULT, AllowAllAuthenticator.ALLOW_ALL_RESULT
   );
 
   // Matches QUERY_CONTEXT_DEFAULT
@@ -204,17 +215,24 @@ public class CalciteQueryTest
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
       "skipEmptyBuckets", true,
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
-      QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
+      QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE,
+      PlannerContext.CTX_AUTHENTICATION_RESULT, AllowAllAuthenticator.ALLOW_ALL_RESULT
   );
 
   // Matches QUERY_CONTEXT_LOS_ANGELES
-  public static final Map<String, Object> TIMESERIES_CONTEXT_LOS_ANGELES = ImmutableMap.<String, Object>of(
-      PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
-      PlannerContext.CTX_SQL_TIME_ZONE, LOS_ANGELES,
-      "skipEmptyBuckets", true,
-      QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
-      QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
-  );
+  public static final Map<String, Object> TIMESERIES_CONTEXT_LOS_ANGELES = Maps.newHashMap();
+  {
+    TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z");
+    TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_TIME_ZONE, LOS_ANGELES);
+    TIMESERIES_CONTEXT_LOS_ANGELES.put("skipEmptyBuckets", true);
+    TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS);
+    TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
+    TIMESERIES_CONTEXT_LOS_ANGELES.put(
+        PlannerContext.CTX_AUTHENTICATION_RESULT,
+        AllowAllAuthenticator.ALLOW_ALL_RESULT
+    );
+  }
+
   private static final PagingSpec FIRST_PAGING_SPEC = new PagingSpec(null, 1000, true);
 
   @Rule
@@ -5458,6 +5476,9 @@ public class CalciteQueryTest
     final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig, viewManager);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
+    final Map<String, Authenticator> defaultMap = Maps.newHashMap();
+    defaultMap.put("allowAll", new AllowAllAuthenticator());
+
     final PlannerFactory plannerFactory = new PlannerFactory(
         druidSchema,
         CalciteTests.createMockQueryLifecycleFactory(walker),
@@ -5465,7 +5486,14 @@ public class CalciteQueryTest
         macroTable,
         plannerConfig,
         new AuthConfig(),
-        null
+        new AuthenticatorMapper(defaultMap, "allowAll"),
+        new AuthorizerMapper(null) {
+          @Override
+          public Authorizer getAuthorizer(String name)
+          {
+            return new AllowAllAuthorizer();
+          }
+        }
     );
 
     viewManager.createView(

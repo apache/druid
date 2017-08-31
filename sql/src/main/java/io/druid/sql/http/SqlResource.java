@@ -85,7 +85,7 @@ public class SqlResource
     final DateTimeZone timeZone;
 
     try (final DruidPlanner planner = plannerFactory.createPlanner(sqlQuery.getContext())) {
-      plannerResult = planner.plan(sqlQuery.getQuery(), req, null, null);
+      plannerResult = planner.plan(sqlQuery.getQuery(), req, null);
       timeZone = planner.getPlannerContext().getTimeZone();
 
       // Remember which columns are time-typed, so we can emit ISO8601 instead of millis values.

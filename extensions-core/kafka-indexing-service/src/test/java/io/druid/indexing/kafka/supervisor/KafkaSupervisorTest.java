@@ -71,6 +71,7 @@ import io.druid.server.metrics.DruidMonitorSchedulerConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticatorHttpClientWrapper;
+import io.druid.server.security.AllowAllAuthenticator;
 import org.apache.curator.test.TestingCluster;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -1824,7 +1825,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
         null,
         null,
-        new AuthenticatorHttpClientWrapper(new AuthConfig(), null)
+        new AuthenticatorHttpClientWrapper(new AllowAllAuthenticator())
     )
     {
       @Override

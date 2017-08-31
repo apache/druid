@@ -19,26 +19,17 @@
 
 package io.druid.security.kerberos;
 
-
-import com.google.common.base.Throwables;
-import com.google.inject.Inject;
-import com.google.inject.Injector;
-import com.google.inject.Provider;
 import io.druid.guice.http.AbstractHttpClientProvider;
-import io.druid.java.util.common.logger.Logger;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.eclipse.jetty.client.HttpClient;
-import org.eclipse.jetty.client.api.Authentication;
-import org.eclipse.jetty.client.api.ContentResponse;
-import org.eclipse.jetty.client.api.Request;
-import org.eclipse.jetty.util.Attributes;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-
-import java.net.URI;
-import java.security.PrivilegedExceptionAction;
 
 public class KerberosJettyHttpClientProvider extends AbstractHttpClientProvider<HttpClient>
 {
+  @Override
+  public HttpClient get()
+  {
+    return null;
+  }
+  /*
   private static final Logger log = new Logger(KerberosJettyHttpClientProvider.class);
 
   private final Provider<HttpClient> delegateProvider;
@@ -125,4 +116,5 @@ public class KerberosJettyHttpClientProvider extends AbstractHttpClientProvider<
     });
     return httpClient;
   }
+  */
 }

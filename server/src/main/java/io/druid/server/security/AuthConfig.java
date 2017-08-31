@@ -27,22 +27,14 @@ import java.util.List;
 public class AuthConfig
 {
   /**
-   * Use this String as the attribute name for the request attribute to pass an authentication token
-   * from the servlet filter to the jersey resource
+   * HTTP attribute that holds an AuthenticationResult, with info about a successful authentication check.
    */
-  public static final String DRUID_AUTH_TOKEN = "Druid-Auth-Token";
+  public static final String DRUID_AUTHENTICATION_RESULT = "Druid-Authentication-Result";
 
   /**
    * HTTP attribute set when a static method in AuthorizationUtils performs an authorization check on the request.
    */
-  public static final String DRUID_AUTH_TOKEN_CHECKED = "Druid-Auth-Token-Checked";
-
-  /**
-   * HTTP attribute that indicates the namespace for a request. Set by Authenticator implementations when
-   * they successfully authenticate a request. The Authorizer with a matching namespace will be used to
-   * authorize the request.
-   */
-  public static final String DRUID_AUTH_NAMESPACE = "Druid-Auth-Namespace";
+  public static final String DRUID_AUTHORIZATION_CHECKED = "Druid-Auth-Token-Checked";
 
   public AuthConfig()
   {
@@ -53,13 +45,13 @@ public class AuthConfig
   public AuthConfig(
       @JsonProperty("enabled") boolean enabled,
       @JsonProperty("authenticatorChain") List<String> authenticationChain,
-      @JsonProperty("internalAuthenticator") String internalAuthenticator,
+      @JsonProperty("escalatedAuthenticator") String escalatedAuthenticator,
       @JsonProperty("authorizers") List<String> authorizers
   )
   {
     this.enabled = enabled;
     this.authenticatorChain = authenticationChain;
-    this.internalAuthenticator = internalAuthenticator;
+    this.escalatedAuthenticator = escalatedAuthenticator == null ? "allowAll" : escalatedAuthenticator;
     this.authorizers = authorizers;
   }
 
@@ -70,7 +62,7 @@ public class AuthConfig
   private final List<String> authenticatorChain;
 
   @JsonProperty
-  private final String internalAuthenticator;
+  private final String escalatedAuthenticator;
 
   @JsonProperty
   private List<String> authorizers;
@@ -85,9 +77,9 @@ public class AuthConfig
     return authenticatorChain;
   }
 
-  public String getInternalAuthenticator()
+  public String getEscalatedAuthenticator()
   {
-    return internalAuthenticator;
+    return escalatedAuthenticator;
   }
 
   public List<String> getAuthorizers()
@@ -101,7 +93,7 @@ public class AuthConfig
     return "AuthConfig{" +
            "enabled=" + enabled +
            ", authenticatorChain='" + authenticatorChain + '\'' +
-           ", internalAuthenticator='" + internalAuthenticator + '\'' +
+           ", escalatedAuthenticator='" + escalatedAuthenticator + '\'' +
            ", authorizers='" + authorizers + '\'' +
            '}';
   }
@@ -126,9 +118,9 @@ public class AuthConfig
         : that.getAuthenticatorChain() != null) {
       return false;
     }
-    if (getInternalAuthenticator() != null
-        ? !getInternalAuthenticator().equals(that.getInternalAuthenticator())
-        : that.getInternalAuthenticator() != null) {
+    if (getEscalatedAuthenticator() != null
+        ? !getEscalatedAuthenticator().equals(that.getEscalatedAuthenticator())
+        : that.getEscalatedAuthenticator() != null) {
       return false;
     }
     return getAuthorizers() != null
@@ -142,7 +134,7 @@ public class AuthConfig
   {
     int result = (isEnabled() ? 1 : 0);
     result = 31 * result + (getAuthenticatorChain() != null ? getAuthenticatorChain().hashCode() : 0);
-    result = 31 * result + (getInternalAuthenticator() != null ? getInternalAuthenticator().hashCode() : 0);
+    result = 31 * result + (getEscalatedAuthenticator() != null ? getEscalatedAuthenticator().hashCode() : 0);
     result = 31 * result + (getAuthorizers() != null ? getAuthorizers().hashCode() : 0);
     return result;
   }

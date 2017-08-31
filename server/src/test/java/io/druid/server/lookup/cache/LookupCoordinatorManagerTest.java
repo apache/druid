@@ -43,12 +43,8 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.lookup.LookupsState;
 import io.druid.server.http.HostAndPortWithScheme;
-<<<<<<< HEAD
-import io.druid.server.listener.announcer.ListenerDiscoverer;
-import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticatorHttpClientWrapper;
-=======
->>>>>>> upstream/master
+import io.druid.server.security.AllowAllAuthenticator;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 import org.junit.After;
@@ -84,8 +80,7 @@ public class LookupCoordinatorManagerTest
   private final JacksonConfigManager configManager = EasyMock.createStrictMock(JacksonConfigManager.class);
   private final LookupCoordinatorManagerConfig lookupCoordinatorManagerConfig = new LookupCoordinatorManagerConfig();
   private final AuthenticatorHttpClientWrapper authenticatorHttpClientWrapper = new AuthenticatorHttpClientWrapper(
-      new AuthConfig(),
-      null
+      new AllowAllAuthenticator()
   );
 
   private static final String LOOKUP_TIER = "lookup_tier";
@@ -1369,12 +1364,8 @@ public class LookupCoordinatorManagerTest
         druidNodeDiscoveryProvider,
         configManager,
         lookupCoordinatorManagerConfig,
-<<<<<<< HEAD
-        authenticatorHttpClientWrapper
-=======
         EasyMock.createMock(LookupCoordinatorManager.LookupsCommunicator.class),
         lookupNodeDiscovery
->>>>>>> upstream/master
     );
 
     manager.start();
@@ -1400,12 +1391,8 @@ public class LookupCoordinatorManagerTest
         druidNodeDiscoveryProvider,
         configManager,
         lookupCoordinatorManagerConfig,
-<<<<<<< HEAD
-        authenticatorHttpClientWrapper
-=======
         EasyMock.createMock(LookupCoordinatorManager.LookupsCommunicator.class),
         lookupNodeDiscovery
->>>>>>> upstream/master
     );
 
     manager.start();

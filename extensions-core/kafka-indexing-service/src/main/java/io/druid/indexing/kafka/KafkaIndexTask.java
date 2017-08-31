@@ -727,14 +727,13 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   @Path("/stop")
   public Response stop(@Context final HttpServletRequest req)
   {
-    if (authConfig.isEnabled()) {
-      Access access = authorizationCheck(req, Action.WRITE);
-      if (!access.isAllowed()) {
-        return Response.status(Response.Status.FORBIDDEN)
-                       .entity("Request authorization failed.")
-                       .build();
-      }
+    Access access = authorizationCheck(req, Action.WRITE);
+    if (!access.isAllowed()) {
+      return Response.status(Response.Status.FORBIDDEN)
+                     .entity("Request authorization failed.")
+                     .build();
     }
+
     stopGracefully();
     return Response.status(Response.Status.OK).build();
   }
@@ -744,13 +743,12 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   @Produces(MediaType.APPLICATION_JSON)
   public Status getStatusHTTP(@Context final HttpServletRequest req)
   {
-    if (authConfig.isEnabled()) {
-      Access access = authorizationCheck(req, Action.READ);
-      if (!access.isAllowed()) {
-        log.warn("Authorization failure.");
-        return null;
-      }
+    Access access = authorizationCheck(req, Action.READ);
+    if (!access.isAllowed()) {
+      log.warn("Authorization failure.");
+      return null;
     }
+
     return status;
   }
 
@@ -764,13 +762,12 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   @Produces(MediaType.APPLICATION_JSON)
   public Map<Integer, Long> getCurrentOffsets(@Context final HttpServletRequest req)
   {
-    if (authConfig.isEnabled()) {
-      Access access = authorizationCheck(req, Action.READ);
-      if (!access.isAllowed()) {
-        log.warn("Authorization failure.");
-        return null;
-      }
+    Access access = authorizationCheck(req, Action.READ);
+    if (!access.isAllowed()) {
+      log.warn("Authorization failure.");
+      return null;
     }
+
     return getCurrentOffsets();
   }
 
@@ -784,13 +781,12 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   @Produces(MediaType.APPLICATION_JSON)
   public Map<Integer, Long> getEndOffsetsHTTP(@Context final HttpServletRequest req)
   {
-    if (authConfig.isEnabled()) {
-      Access access = authorizationCheck(req, Action.READ);
-      if (!access.isAllowed()) {
-        log.warn("Authorization failure.");
-        return null;
-      }
+    Access access = authorizationCheck(req, Action.READ);
+    if (!access.isAllowed()) {
+      log.warn("Authorization failure.");
+      return null;
     }
+
     return getEndOffsets();
   }
 
@@ -809,13 +805,11 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       @Context final HttpServletRequest req
   ) throws InterruptedException
   {
-    if (authConfig.isEnabled()) {
-      Access access = authorizationCheck(req, Action.WRITE);
-      if (!access.isAllowed()) {
-        return Response.status(Response.Status.FORBIDDEN)
-                       .entity("Request authorization failed.")
-                       .build();
-      }
+    Access access = authorizationCheck(req, Action.WRITE);
+    if (!access.isAllowed()) {
+      return Response.status(Response.Status.FORBIDDEN)
+                     .entity("Request authorization failed.")
+                     .build();
     }
 
     return setEndOffsets(offsets, resume);
@@ -894,14 +888,13 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       @Context final HttpServletRequest req
   ) throws InterruptedException
   {
-    if (authConfig.isEnabled()) {
-      Access access = authorizationCheck(req, Action.WRITE);
-      if (!access.isAllowed()) {
-        return Response.status(Response.Status.FORBIDDEN)
-                       .entity("Request authorization failed.")
-                       .build();
-      }
+    Access access = authorizationCheck(req, Action.WRITE);
+    if (!access.isAllowed()) {
+      return Response.status(Response.Status.FORBIDDEN)
+                     .entity("Request authorization failed.")
+                     .build();
     }
+
     return pause(timeout);
   }
 
@@ -956,14 +949,13 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   @Path("/resume")
   public Response resumeHTTP(@Context final HttpServletRequest req) throws InterruptedException
   {
-    if (authConfig.isEnabled()) {
-      Access access = authorizationCheck(req, Action.WRITE);
-      if (!access.isAllowed()) {
-        return Response.status(Response.Status.FORBIDDEN)
-                       .entity("Request authorization failed.")
-                       .build();
-      }
+    Access access = authorizationCheck(req, Action.WRITE);
+    if (!access.isAllowed()) {
+      return Response.status(Response.Status.FORBIDDEN)
+                     .entity("Request authorization failed.")
+                     .build();
     }
+
     resume();
     return Response.status(Response.Status.OK).build();
   }
@@ -993,12 +985,10 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   @Produces(MediaType.APPLICATION_JSON)
   public DateTime getStartTime(@Context final HttpServletRequest req)
   {
-    if (authConfig.isEnabled()) {
-      Access access = authorizationCheck(req, Action.WRITE);
-      if (!access.isAllowed()) {
-        log.warn("Authorization failure.");
-        return null;
-      }
+    Access access = authorizationCheck(req, Action.WRITE);
+    if (!access.isAllowed()) {
+      log.warn("Authorization failure.");
+      return null;
     }
     return startTime;
   }

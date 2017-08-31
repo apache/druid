@@ -21,7 +21,9 @@ package io.druid.sql.calcite.planner;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import io.druid.math.expr.ExprMacroTable;
+import io.druid.server.security.AuthorizerMapper;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.linq4j.QueryProvider;
@@ -40,6 +42,7 @@ public class PlannerContext
 {
   public static final String CTX_SQL_CURRENT_TIMESTAMP = "sqlCurrentTimestamp";
   public static final String CTX_SQL_TIME_ZONE = "sqlTimeZone";
+  public static final String CTX_AUTHENTICATION_RESULT = "authenticationResult";
 
   private final DruidOperatorTable operatorTable;
   private final ExprMacroTable macroTable;
@@ -47,27 +50,31 @@ public class PlannerContext
   private final DateTime localNow;
   private final long queryStartTimeMillis;
   private final Map<String, Object> queryContext;
+  private final AuthorizerMapper authorizerMapper;
 
   private PlannerContext(
       final DruidOperatorTable operatorTable,
       final ExprMacroTable macroTable,
       final PlannerConfig plannerConfig,
       final DateTime localNow,
+      final AuthorizerMapper authorizerMapper,
       final Map<String, Object> queryContext
   )
   {
     this.operatorTable = operatorTable;
     this.macroTable = macroTable;
     this.plannerConfig = Preconditions.checkNotNull(plannerConfig, "plannerConfig");
-    this.queryContext = queryContext != null ? ImmutableMap.copyOf(queryContext) : ImmutableMap.<String, Object>of();
+    this.queryContext = queryContext != null ? Maps.newHashMap(queryContext) : Maps.newHashMap();
     this.localNow = Preconditions.checkNotNull(localNow, "localNow");
     this.queryStartTimeMillis = System.currentTimeMillis();
+    this.authorizerMapper = authorizerMapper;
   }
 
   public static PlannerContext create(
       final DruidOperatorTable operatorTable,
       final ExprMacroTable macroTable,
       final PlannerConfig plannerConfig,
+      final AuthorizerMapper authorizerMapper,
       final Map<String, Object> queryContext
   )
   {
@@ -99,6 +106,7 @@ public class PlannerContext
         macroTable,
         plannerConfig.withOverrides(queryContext),
         utcNow.withZone(timeZone),
+        authorizerMapper,
         queryContext
     );
   }

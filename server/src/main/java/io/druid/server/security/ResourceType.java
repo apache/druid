@@ -20,6 +20,7 @@
 package io.druid.server.security;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import io.druid.java.util.common.StringUtils;
 
 public enum ResourceType
 {
@@ -33,6 +34,6 @@ public enum ResourceType
     if (name == null) {
       return null;
     }
-    return valueOf(name.toUpperCase());
+    return valueOf(StringUtils.toUpperCase(name));
   }
 }

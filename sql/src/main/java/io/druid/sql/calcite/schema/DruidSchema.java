@@ -50,6 +50,9 @@ import io.druid.query.spec.MultipleSpecificSegmentSpec;
 import io.druid.segment.column.ValueType;
 import io.druid.server.QueryLifecycleFactory;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.security.AuthenticationResult;
+import io.druid.server.security.Authenticator;
+import io.druid.server.security.AuthenticatorMapper;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.table.DruidTable;
 import io.druid.sql.calcite.table.RowSignature;
@@ -114,6 +117,9 @@ public class DruidSchema extends AbstractSchema
   // All segments that need to be refreshed.
   private final TreeSet<DataSegment> segmentsNeedingRefresh = new TreeSet<>(SEGMENT_ORDER);
 
+  // Escalating authenticator, so we can attach an authentication result to queries we generate.
+  private final Authenticator escalatingAuthenticator;
+
   private boolean refreshImmediately = false;
   private long lastRefresh = 0L;
   private boolean isServerViewInitialized = false;
@@ -123,7 +129,8 @@ public class DruidSchema extends AbstractSchema
       final QueryLifecycleFactory queryLifecycleFactory,
       final TimelineServerView serverView,
       final PlannerConfig config,
-      final ViewManager viewManager
+      final ViewManager viewManager,
+      final AuthenticatorMapper authenticatorMapper
   )
   {
     this.queryLifecycleFactory = Preconditions.checkNotNull(queryLifecycleFactory, "queryLifecycleFactory");
@@ -132,6 +139,7 @@ public class DruidSchema extends AbstractSchema
     this.viewManager = Preconditions.checkNotNull(viewManager, "viewManager");
     this.cacheExec = ScheduledExecutors.fixed(1, "DruidSchema-Cache-%d");
     this.tables = Maps.newConcurrentMap();
+    this.escalatingAuthenticator = authenticatorMapper.getEscalatingAuthenticator();
 
     serverView.registerTimelineCallback(
         MoreExecutors.sameThreadExecutor(),
@@ -400,7 +408,8 @@ public class DruidSchema extends AbstractSchema
     final Set<DataSegment> retVal = new HashSet<>();
     final Sequence<SegmentAnalysis> sequence = runSegmentMetadataQuery(
         queryLifecycleFactory,
-        Iterables.limit(segments, MAX_SEGMENTS_PER_QUERY)
+        Iterables.limit(segments, MAX_SEGMENTS_PER_QUERY),
+        escalatingAuthenticator.createEscalatedAuthenticationResult()
     );
 
     Yielder<SegmentAnalysis> yielder = Yielders.each(sequence);
@@ -470,7 +479,8 @@ public class DruidSchema extends AbstractSchema
 
   private static Sequence<SegmentAnalysis> runSegmentMetadataQuery(
       final QueryLifecycleFactory queryLifecycleFactory,
-      final Iterable<DataSegment> segments
+      final Iterable<DataSegment> segments,
+      final AuthenticationResult authenticationResult
   )
   {
     // Sanity check: getOnlyElement of a set, to ensure all segments have the same dataSource.
@@ -495,8 +505,7 @@ public class DruidSchema extends AbstractSchema
         false
     );
 
-    // This is an internally generated query, no authorization is needed.
-    return queryLifecycleFactory.factorize().runSimple(segmentMetadataQuery, null, null, null, false);
+    return queryLifecycleFactory.factorize().runSimple(segmentMetadataQuery, authenticationResult, null);
   }
 
   private static RowSignature analysisToRowSignature(final SegmentAnalysis analysis)

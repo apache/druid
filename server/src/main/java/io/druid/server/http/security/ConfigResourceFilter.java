@@ -56,26 +56,25 @@ public class ConfigResourceFilter extends AbstractResourceFilter
   @Override
   public ContainerRequest filter(ContainerRequest request)
   {
-    if (getAuthConfig().isEnabled()) {
-      final ResourceAction resourceAction = new ResourceAction(
-          new Resource("CONFIG", ResourceType.CONFIG),
-          getAction(request)
-      );
+    final ResourceAction resourceAction = new ResourceAction(
+        new Resource("CONFIG", ResourceType.CONFIG),
+        getAction(request)
+    );
 
-      final Access authResult = AuthorizationUtils.authorizeResourceAction(
-          getReq(),
-          resourceAction,
-          getAuthorizerMapper()
-      );
+    final Access authResult = AuthorizationUtils.authorizeResourceAction(
+        getReq(),
+        resourceAction,
+        getAuthorizerMapper()
+    );
 
-      if (!authResult.isAllowed()) {
-        throw new WebApplicationException(
-            Response.status(Response.Status.FORBIDDEN)
-                    .entity(StringUtils.format("Access-Check-Result: %s", authResult.toString()))
-                    .build()
-        );
-      }
+    if (!authResult.isAllowed()) {
+      throw new WebApplicationException(
+          Response.status(Response.Status.FORBIDDEN)
+                  .entity(StringUtils.format("Access-Check-Result: %s", authResult.toString()))
+                  .build()
+      );
     }
+
     return request;
   }
 

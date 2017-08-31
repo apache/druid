@@ -23,6 +23,7 @@ import com.google.inject.Inject;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.QueryLifecycleFactory;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthenticatorMapper;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.sql.calcite.rel.QueryMaker;
 import io.druid.sql.calcite.schema.DruidSchema;
@@ -58,6 +59,7 @@ public class PlannerFactory
 
   private final AuthConfig authConfig;
   private final AuthorizerMapper authorizerMapper;
+  private final AuthenticatorMapper authenticatorMapper;
 
   @Inject
   public PlannerFactory(
@@ -67,6 +69,7 @@ public class PlannerFactory
       final ExprMacroTable macroTable,
       final PlannerConfig plannerConfig,
       final AuthConfig authConfig,
+      final AuthenticatorMapper authenticatorMapper,
       final AuthorizerMapper authorizerMapper
   )
   {
@@ -77,12 +80,19 @@ public class PlannerFactory
     this.plannerConfig = plannerConfig;
     this.authConfig = authConfig;
     this.authorizerMapper = authorizerMapper;
+    this.authenticatorMapper = authenticatorMapper;
   }
 
   public DruidPlanner createPlanner(final Map<String, Object> queryContext)
   {
     final SchemaPlus rootSchema = Calcites.createRootSchema(druidSchema);
-    final PlannerContext plannerContext = PlannerContext.create(operatorTable, macroTable, plannerConfig, queryContext);
+    final PlannerContext plannerContext = PlannerContext.create(
+        operatorTable,
+        macroTable,
+        plannerConfig,
+        authorizerMapper,
+        queryContext
+    );
     final QueryMaker queryMaker = new QueryMaker(queryLifecycleFactory, plannerContext);
     final FrameworkConfig frameworkConfig = Frameworks
         .newConfigBuilder()
@@ -98,6 +108,12 @@ public class PlannerFactory
         .typeSystem(DruidTypeSystem.INSTANCE)
         .build();
 
-    return new DruidPlanner(Frameworks.getPlanner(frameworkConfig), plannerContext, authConfig, authorizerMapper);
+    return new DruidPlanner(
+        Frameworks.getPlanner(frameworkConfig),
+        plannerContext,
+        authConfig,
+        authorizerMapper,
+        authenticatorMapper
+    );
   }
 }

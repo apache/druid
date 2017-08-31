@@ -67,52 +67,50 @@ public class TaskResourceFilter extends AbstractResourceFilter
   @Override
   public ContainerRequest filter(ContainerRequest request)
   {
-    if (getAuthConfig().isEnabled()) {
-      final String taskId = Preconditions.checkNotNull(
-          request.getPathSegments()
-                 .get(
-                     Iterables.indexOf(
-                         request.getPathSegments(),
-                         new Predicate<PathSegment>()
+    final String taskId = Preconditions.checkNotNull(
+        request.getPathSegments()
+               .get(
+                   Iterables.indexOf(
+                       request.getPathSegments(),
+                       new Predicate<PathSegment>()
+                       {
+                         @Override
+                         public boolean apply(PathSegment input)
                          {
-                           @Override
-                           public boolean apply(PathSegment input)
-                           {
-                             return input.getPath().equals("task");
-                           }
+                           return input.getPath().equals("task");
                          }
-                     ) + 1
-                 ).getPath()
+                       }
+                   ) + 1
+               ).getPath()
+    );
+
+    Optional<Task> taskOptional = taskStorageQueryAdapter.getTask(taskId);
+    if (!taskOptional.isPresent()) {
+      throw new WebApplicationException(
+          Response.status(Response.Status.BAD_REQUEST)
+                  .entity(StringUtils.format("Cannot find any task with id: [%s]", taskId))
+                  .build()
       );
+    }
+    final String dataSourceName = Preconditions.checkNotNull(taskOptional.get().getDataSource());
 
-      Optional<Task> taskOptional = taskStorageQueryAdapter.getTask(taskId);
-      if (!taskOptional.isPresent()) {
-        throw new WebApplicationException(
-            Response.status(Response.Status.BAD_REQUEST)
-                    .entity(StringUtils.format("Cannot find any task with id: [%s]", taskId))
-                    .build()
-        );
-      }
-      final String dataSourceName = Preconditions.checkNotNull(taskOptional.get().getDataSource());
+    final ResourceAction resourceAction = new ResourceAction(
+        new Resource(dataSourceName, ResourceType.DATASOURCE),
+        getAction(request)
+    );
 
-      final ResourceAction resourceAction = new ResourceAction(
-          new Resource(dataSourceName, ResourceType.DATASOURCE),
-          getAction(request)
-      );
+    final Access authResult = AuthorizationUtils.authorizeResourceAction(
+        getReq(),
+        resourceAction,
+        getAuthorizerMapper()
+    );
 
-      final Access authResult = AuthorizationUtils.authorizeResourceAction(
-          getReq(),
-          resourceAction,
-          getAuthorizerMapper()
-      );
-
-      if (!authResult.isAllowed()) {
-        throw new WebApplicationException(Response.status(Response.Status.FORBIDDEN)
-                                                  .entity(
-                                                      StringUtils.format("Access-Check-Result: %s", authResult.toString())
-                                                  )
-                                                  .build());
-      }
+    if (!authResult.isAllowed()) {
+      throw new WebApplicationException(Response.status(Response.Status.FORBIDDEN)
+                                                .entity(
+                                                    StringUtils.format("Access-Check-Result: %s", authResult.toString())
+                                                )
+                                                .build());
     }
 
     return request;

@@ -29,25 +29,20 @@ import java.util.Map;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "noop", value = NoopAuthenticator.class),
+    @JsonSubTypes.Type(name = "allowAll", value = AllowAllAuthenticator.class),
 })
 /**
  * This interface is essentially a ServletFilterHolder with additional requirements on the getFilter() method contract, plus:
  *
- * - A method that returns a WWW-Authenticate challenge header appropriate for the authentication mechanism.
+ * - A method that returns a WWW-Authenticate challenge header appropriate for the
+ *   authentication mechanism, getAuthChallengeHeader().
  * - A method for creating a wrapped HTTP client that can authenticate using the Authenticator's authentication scheme,
- *   used for internal Druid node communications (e.g., broker -> historical messages)
+ *   used for internal Druid node communications (e.g., broker -> historical messages), createEscalatedClient().
  * - A method for authenticating credentials contained in a JDBC connection context, used for authenticating Druid SQL
- *   requests received via JDBC
+ *   requests received via JDBC, authenticateJDBCContext().
  */
 public interface Authenticator extends ServletFilterHolder
 {
-  /**
-   * @return The namespace associated with this Authenticator. This will be used for choosing the correct
-   * Authorizer for authorizing requests that have been authenticated by this Authenticator.
-   */
-  public String getNamespace();
-
   /**
    * Create a Filter that performs authentication checks on incoming HTTP requests.
    * <p>
@@ -90,7 +85,7 @@ public interface Authenticator extends ServletFilterHolder
    *
    * @return true if the identity represented by the context is successfully authenticated
    */
-  public boolean authenticateJDBCContext(Map<String, Object> context);
+  public AuthenticationResult authenticateJDBCContext(Map<String, Object> context);
 
   /**
    * Return a client that sends requests with the format/information necessary to authenticate successfully
@@ -104,4 +99,9 @@ public interface Authenticator extends ServletFilterHolder
    * @return HttpClient that sends requests with the credentials of the internal system user
    */
   public HttpClient createEscalatedClient(HttpClient baseClient);
+
+  /**
+   * @return an AuthenticationResult representing the identity of the internal system user.
+   */
+  public AuthenticationResult createEscalatedAuthenticationResult();
 }

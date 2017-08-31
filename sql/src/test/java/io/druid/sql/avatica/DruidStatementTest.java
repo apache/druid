@@ -21,9 +21,16 @@ package io.druid.sql.avatica;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import io.druid.java.util.common.DateTimes;
 import io.druid.math.expr.ExprMacroTable;
+import io.druid.server.security.AllowAllAuthenticator;
+import io.druid.server.security.AllowAllAuthorizer;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.Authenticator;
+import io.druid.server.security.AuthenticatorMapper;
+import io.druid.server.security.Authorizer;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
@@ -42,6 +49,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.util.List;
+import java.util.Map;
 
 public class DruidStatementTest
 {
@@ -66,6 +74,8 @@ public class DruidStatementTest
     );
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
+    final Map<String, Authenticator> defaultMap = Maps.newHashMap();
+    defaultMap.put("allowAll", new AllowAllAuthenticator());
     plannerFactory = new PlannerFactory(
         druidSchema,
         CalciteTests.createMockQueryLifecycleFactory(walker),
@@ -73,7 +83,14 @@ public class DruidStatementTest
         macroTable,
         plannerConfig,
         new AuthConfig(),
-        null
+        new AuthenticatorMapper(defaultMap, "allowAll"),
+        new AuthorizerMapper(null) {
+          @Override
+          public Authorizer getAuthorizer(String name)
+          {
+            return new AllowAllAuthorizer();
+          }
+        }
     );
   }
 
@@ -88,7 +105,8 @@ public class DruidStatementTest
   public void testSignature() throws Exception
   {
     final String sql = "SELECT * FROM druid.foo";
-    final DruidStatement statement = new DruidStatement("", 0, null, () -> {}).prepare(plannerFactory, sql, -1, null, null);
+    final DruidStatement statement = new DruidStatement("", 0, null, () -> {
+    }).prepare(plannerFactory, sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);
 
     // Check signature.
     final Meta.Signature signature = statement.getSignature();
@@ -127,7 +145,8 @@ public class DruidStatementTest
   public void testSelectAllInFirstFrame() throws Exception
   {
     final String sql = "SELECT __time, cnt, dim1, dim2, m1 FROM druid.foo";
-    final DruidStatement statement = new DruidStatement("", 0, null, () -> {}).prepare(plannerFactory, sql, -1, null, null);
+    final DruidStatement statement = new DruidStatement("", 0, null, () -> {
+    }).prepare(plannerFactory, sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);
 
     // First frame, ask for all rows.
     Meta.Frame frame = statement.execute().nextFrame(DruidStatement.START_OFFSET, 6);
@@ -153,7 +172,8 @@ public class DruidStatementTest
   public void testSelectSplitOverTwoFrames() throws Exception
   {
     final String sql = "SELECT __time, cnt, dim1, dim2, m1 FROM druid.foo";
-    final DruidStatement statement = new DruidStatement("", 0, null, () -> {}).prepare(plannerFactory, sql, -1, null, null);
+    final DruidStatement statement = new DruidStatement("", 0, null, () -> {
+    }).prepare(plannerFactory, sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);
     
     // First frame, ask for 2 rows.
     Meta.Frame frame = statement.execute().nextFrame(DruidStatement.START_OFFSET, 2);

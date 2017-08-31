@@ -45,6 +45,7 @@ import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.Resource;
@@ -73,6 +74,9 @@ public class QueryResourceTest
 {
   private static final QueryToolChestWarehouse warehouse = new MapQueryToolChestWarehouse(ImmutableMap.<Class<? extends Query>, QueryToolChest>of());
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid");
+
+
   public static final ServerConfig serverConfig = new ServerConfig()
   {
     @Override
@@ -171,8 +175,9 @@ public class QueryResourceTest
   @Test
   public void testGoodQuery() throws IOException
   {
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)).andReturn("druid").anyTimes();
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTH_NAMESPACE)).andReturn("druid").anyTimes();
+    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(authenticationResult)
+            .anyTimes();
 
     EasyMock.replay(testServletRequest);
     Response response = queryResource.doPost(
@@ -199,26 +204,26 @@ public class QueryResourceTest
   @Test
   public void testSecuredQuery() throws Exception
   {
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)).andReturn("druid").anyTimes();
+    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(authenticationResult)
+            .anyTimes();
 
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTH_NAMESPACE)).andReturn("druid").anyTimes();
-
-    testServletRequest.setAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED, false);
+    testServletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, false);
     EasyMock.expectLastCall().times(1);
 
-    testServletRequest.setAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED, true);
+    testServletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     EasyMock.expectLastCall().times(1);
 
     EasyMock.replay(testServletRequest);
 
     AuthorizerMapper authMapper = new AuthorizerMapper(null) {
       @Override
-      public Authorizer getAuthorizer(String namespace)
+      public Authorizer getAuthorizer(String name)
       {
         return new Authorizer()
         {
           @Override
-          public Access authorize(String identity, Resource resource, Action action)
+          public Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action)
           {
             if (resource.getName().equals("allow")) {
               return new Access(true);
@@ -227,11 +232,6 @@ public class QueryResourceTest
             }
           }
 
-          @Override
-          public String getNamespace()
-          {
-            return null;
-          }
         };
       }
     };
@@ -280,23 +280,23 @@ public class QueryResourceTest
     final CountDownLatch startAwaitLatch = new CountDownLatch(1);
     final CountDownLatch cancelledCountDownLatch = new CountDownLatch(1);
 
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)).andReturn("druid").anyTimes();
+    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(authenticationResult)
+            .anyTimes();
 
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTH_NAMESPACE)).andReturn("druid").anyTimes();
-
-    testServletRequest.setAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED, true);
+    testServletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     EasyMock.expectLastCall().times(1);
 
     EasyMock.replay(testServletRequest);
 
     AuthorizerMapper authMapper = new AuthorizerMapper(null) {
       @Override
-      public Authorizer getAuthorizer(String namespace)
+      public Authorizer getAuthorizer(String name)
       {
         return new Authorizer()
         {
           @Override
-          public Access authorize(String identity, Resource resource, Action action)
+          public Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action)
           {
             // READ action corresponds to the query
             // WRITE corresponds to cancellation of query
@@ -320,11 +320,6 @@ public class QueryResourceTest
             }
           }
 
-          @Override
-          public String getNamespace()
-          {
-            return null;
-          }
         };
       }
     };
@@ -405,14 +400,14 @@ public class QueryResourceTest
     final CountDownLatch waitFinishLatch = new CountDownLatch(2);
     final CountDownLatch startAwaitLatch = new CountDownLatch(1);
 
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)).andReturn("druid").anyTimes();
+    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(authenticationResult)
+            .anyTimes();
 
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTH_NAMESPACE)).andReturn("druid").anyTimes();
-
-    testServletRequest.setAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED, true);
+    testServletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     EasyMock.expectLastCall().times(1);
 
-    testServletRequest.setAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED, false);
+    testServletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, false);
     EasyMock.expectLastCall().times(1);
 
     EasyMock.replay(testServletRequest);
@@ -420,12 +415,12 @@ public class QueryResourceTest
     AuthorizerMapper authMapper = new AuthorizerMapper(null)
     {
       @Override
-      public Authorizer getAuthorizer(String namespace)
+      public Authorizer getAuthorizer(String name)
       {
         return new Authorizer()
         {
           @Override
-          public Access authorize(String identity, Resource resource, Action action)
+          public Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action)
           {
             // READ action corresponds to the query
             // WRITE corresponds to cancellation of query
@@ -443,11 +438,6 @@ public class QueryResourceTest
             }
           }
 
-          @Override
-          public String getNamespace()
-          {
-            return null;
-          }
         };
       }
     };

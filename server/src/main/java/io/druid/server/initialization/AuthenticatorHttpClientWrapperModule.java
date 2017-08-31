@@ -22,13 +22,12 @@ package io.druid.server.initialization;
 import com.fasterxml.jackson.databind.Module;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
-import com.google.inject.Injector;
 import com.google.inject.Provider;
 import io.druid.guice.LazySingleton;
 import io.druid.initialization.DruidModule;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticatorHttpClientWrapper;
+import io.druid.server.security.AuthenticatorMapper;
 
 import java.util.Collections;
 import java.util.List;
@@ -53,20 +52,18 @@ public class AuthenticatorHttpClientWrapperModule implements DruidModule
 
   private static class AuthenticatorHttpClientWrapperProvider implements Provider<AuthenticatorHttpClientWrapper>
   {
-    private AuthConfig authConfig;
-    private Injector injector;
+    private AuthenticatorHttpClientWrapper wrapper;
 
     @Inject
-    public void inject(Injector injector)
+    public void inject(AuthenticatorMapper authenticatorMapper)
     {
-      this.authConfig = injector.getInstance(AuthConfig.class);
-      this.injector = injector;
+      this.wrapper = new AuthenticatorHttpClientWrapper(authenticatorMapper.getEscalatingAuthenticator());
     }
 
     @Override
     public AuthenticatorHttpClientWrapper get()
     {
-      return new AuthenticatorHttpClientWrapper(authConfig, injector);
+      return wrapper;
     }
   }
 }

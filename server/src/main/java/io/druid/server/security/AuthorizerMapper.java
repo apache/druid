@@ -36,9 +36,9 @@ public class AuthorizerMapper
     this.authorizerMap = authorizerMap;
   }
 
-  public Authorizer getAuthorizer(String namespace)
+  public Authorizer getAuthorizer(String name)
   {
-    return authorizerMap.get(namespace);
+    return authorizerMap.get(name);
   }
 
   @LifecycleStart

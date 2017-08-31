@@ -20,11 +20,6 @@
 package io.druid.server.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.inject.Injector;
-import com.google.inject.Key;
-import com.google.inject.name.Names;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 
@@ -32,22 +27,6 @@ import java.util.List;
 
 public class AuthenticationUtils
 {
-  public static List<Authenticator> getAuthenticatorChainFromConfig(
-      List<String> authenticatorChain,
-      Injector injector
-  )
-  {
-    Preconditions.checkNotNull(authenticatorChain, "No authenticator chain defined!");
-    List<Authenticator> authenticators = Lists.newArrayList();
-    for (String authenticatorName : authenticatorChain) {
-      authenticators.add(
-          injector.getInstance(Key.get(Authenticator.class, Names.named(authenticatorName)))
-      );
-    }
-
-    return authenticators;
-  }
-
   public static void addAuthenticationFilterChain(
       ServletContextHandler root,
       List<Authenticator> authenticators

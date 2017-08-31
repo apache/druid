@@ -45,7 +45,7 @@ import io.druid.server.initialization.jetty.JettyBindings;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
-import io.druid.server.security.NoopAuthorizer;
+import io.druid.server.security.AllowAllAuthorizer;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -82,9 +82,9 @@ public class JettyQosTest extends BaseJettyTest
                     new AuthorizerMapper(null) {
 
                       @Override
-                      public Authorizer getAuthorizer(String namespace)
+                      public Authorizer getAuthorizer(String name)
                       {
-                        return new NoopAuthorizer();
+                        return new AllowAllAuthorizer();
                       }
                     }
                 );

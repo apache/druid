@@ -29,7 +29,7 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.PolyBind;
 import io.druid.server.security.Authorizer;
-import io.druid.server.security.NoopAuthorizer;
+import io.druid.server.security.AllowAllAuthorizer;
 
 public class AuthorizerModule implements Module
 {
@@ -40,14 +40,14 @@ public class AuthorizerModule implements Module
         binder,
         Key.get(Authorizer.class)
     );
-    authorizerMapBinder.addBinding("noop").to(NoopAuthorizer.class).in(LazySingleton.class);
+    authorizerMapBinder.addBinding("allowAll").to(AllowAllAuthorizer.class).in(LazySingleton.class);
   }
 
   @Provides
   @ManageLifecycle
-  @Named("noop")
+  @Named("allowAll")
   public Authorizer getAuthorizer()
   {
-    return new NoopAuthorizer();
+    return new AllowAllAuthorizer();
   }
 }

@@ -39,7 +39,13 @@ import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.segment.QueryableIndex;
+import io.druid.server.security.AllowAllAuthenticator;
+import io.druid.server.security.AllowAllAuthorizer;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.Authenticator;
+import io.druid.server.security.AuthenticatorMapper;
+import io.druid.server.security.Authorizer;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.sql.calcite.planner.DruidPlanner;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.planner.PlannerFactory;
@@ -67,6 +73,7 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -113,7 +120,8 @@ public class SqlBenchmark
     final PlannerConfig plannerConfig = new PlannerConfig();
 
     this.walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(dataSegment, index);
-
+    final Map<String, Authenticator> defaultMap = Maps.newHashMap();
+    defaultMap.put("allowAll", new AllowAllAuthenticator());
     plannerFactory = new PlannerFactory(
         CalciteTests.createMockSchema(walker, plannerConfig),
         CalciteTests.createMockQueryLifecycleFactory(walker),
@@ -121,7 +129,14 @@ public class SqlBenchmark
         CalciteTests.createExprMacroTable(),
         plannerConfig,
         new AuthConfig(),
-        null
+        new AuthenticatorMapper(defaultMap, "allowAll"),
+        new AuthorizerMapper(null) {
+          @Override
+          public Authorizer getAuthorizer(String name)
+          {
+            return new AllowAllAuthorizer();
+          }
+        }
     );
     groupByQuery = GroupByQuery
         .builder()

@@ -45,12 +45,9 @@ import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.server.DruidNode;
 import io.druid.server.coordinator.rules.IntervalLoadRule;
 import io.druid.server.coordinator.rules.Rule;
-<<<<<<< HEAD
-import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticatorHttpClientWrapper;
-=======
+import io.druid.server.security.AllowAllAuthenticator;
 import io.druid.server.initialization.ServerConfig;
->>>>>>> upstream/master
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -330,17 +327,13 @@ public class TieredBrokerHostSelectorTest
         Supplier<TieredBrokerConfig> config
     )
     {
-<<<<<<< HEAD
       super(
           httpClient,
           jsonMapper,
           config,
-          selector,
-          new AuthenticatorHttpClientWrapper(new AuthConfig(), null)
+          null,
+          new AuthenticatorHttpClientWrapper(new AllowAllAuthenticator())
       );
-=======
-      super(httpClient, jsonMapper, config, null);
->>>>>>> upstream/master
     }
 
     @Override

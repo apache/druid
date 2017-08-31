@@ -45,6 +45,7 @@ import io.druid.query.QueryInterruptedException;
 import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.security.Access;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
 import org.joda.time.DateTime;
@@ -128,24 +129,23 @@ public class QueryResource implements QueryCountStatsProvider
     if (log.isDebugEnabled()) {
       log.debug("Received cancel request for query [%s]", queryId);
     }
-    if (authConfig.isEnabled()) {
-      Set<String> datasources = queryManager.getQueryDatasources(queryId);
-      if (datasources == null) {
-        log.warn("QueryId [%s] not registered with QueryManager, cannot cancel", queryId);
-        datasources = Sets.newTreeSet();
-      }
-
-      Access authResult = AuthorizationUtils.authorizeAllResourceActions(
-          req,
-          datasources,
-          AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR,
-          authorizerMapper
-      );
-
-      if (!authResult.isAllowed()) {
-        return Response.status(Response.Status.FORBIDDEN).header("Access-Check-Result", authResult).build();
-      }
+    Set<String> datasources = queryManager.getQueryDatasources(queryId);
+    if (datasources == null) {
+      log.warn("QueryId [%s] not registered with QueryManager, cannot cancel", queryId);
+      datasources = Sets.newTreeSet();
     }
+
+    Access authResult = AuthorizationUtils.authorizeAllResourceActions(
+        req,
+        datasources,
+        AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR,
+        authorizerMapper
+    );
+
+    if (!authResult.isAllowed()) {
+      return Response.status(Response.Status.FORBIDDEN).header("Access-Check-Result", authResult).build();
+    }
+
     queryManager.cancelQuery(queryId);
     return Response.status(Response.Status.ACCEPTED).build();
   }
@@ -177,8 +177,7 @@ public class QueryResource implements QueryCountStatsProvider
       }
 
       final Access authResult = queryLifecycle.authorize(
-          (String) req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN),
-          (String) req.getAttribute(AuthConfig.DRUID_AUTH_NAMESPACE),
+          (AuthenticationResult) req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT),
           req
       );
       if (!authResult.isAllowed()) {

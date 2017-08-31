@@ -48,12 +48,8 @@ import io.druid.indexing.overlord.WorkerTaskRunner;
 import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.http.security.TaskResourceFilter;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
-<<<<<<< HEAD
-=======
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
-import io.druid.java.util.common.Pair;
->>>>>>> upstream/master
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.EntryExistsException;
@@ -139,25 +135,23 @@ public class OverlordResource
       @Context final HttpServletRequest req
   )
   {
-    if (authConfig.isEnabled()) {
-      final String dataSource = task.getDataSource();
-      final ResourceAction resourceAction = new ResourceAction(
-          new Resource(dataSource, ResourceType.DATASOURCE),
-          Action.WRITE
-      );
+    final String dataSource = task.getDataSource();
+    final ResourceAction resourceAction = new ResourceAction(
+        new Resource(dataSource, ResourceType.DATASOURCE),
+        Action.WRITE
+    );
 
-      Access authResult = AuthorizationUtils.authorizeResourceAction(
-          req,
-          resourceAction,
-          authorizerMapper
-      );
+    Access authResult = AuthorizationUtils.authorizeResourceAction(
+        req,
+        resourceAction,
+        authorizerMapper
+    );
 
-      if (!authResult.isAllowed()) {
-        return Response.status(Response.Status.FORBIDDEN)
-                       .header("Access-Check-Result", authResult)
-                       .entity(ImmutableMap.of("error", "Not authorized."))
-                       .build();
-      }
+    if (!authResult.isAllowed()) {
+      return Response.status(Response.Status.FORBIDDEN)
+                     .header("Access-Check-Result", authResult)
+                     .entity(ImmutableMap.of("error", "Not authorized."))
+                     .build();
     }
 
     return asLeaderWith(
@@ -378,29 +372,25 @@ public class OverlordResource
             // off to the runner yet:
             final List<Task> allActiveTasks = taskStorageQueryAdapter.getActiveTasks();
             final List<Task> activeTasks;
-            if (authConfig.isEnabled()) {
-              Function<Task, ResourceAction> raGenerator = new Function<Task, ResourceAction>()
+            Function<Task, ResourceAction> raGenerator = new Function<Task, ResourceAction>()
+            {
+              @Override
+              public ResourceAction apply(Task input)
               {
-                @Override
-                public ResourceAction apply(Task input)
-                {
-                  return new ResourceAction(
-                      new Resource(input.getDataSource(), ResourceType.DATASOURCE),
-                      Action.READ
-                  );
-                }
-              };
+                return new ResourceAction(
+                    new Resource(input.getDataSource(), ResourceType.DATASOURCE),
+                    Action.READ
+                );
+              }
+            };
 
-              activeTasks = AuthorizationUtils.filterAuthorizedResources(
-                  req,
-                  allActiveTasks,
-                  raGenerator,
-                  authorizerMapper
-              );
+            activeTasks = AuthorizationUtils.filterAuthorizedResources(
+                req,
+                allActiveTasks,
+                raGenerator,
+                authorizerMapper
+            );
 
-            } else {
-              activeTasks = allActiveTasks;
-            }
             final Set<String> runnersKnownTasks = Sets.newHashSet(
                 Iterables.transform(
                     taskRunner.getKnownTasks(),
@@ -452,12 +442,7 @@ public class OverlordResource
           @Override
           public Collection<? extends TaskRunnerWorkItem> apply(TaskRunner taskRunner)
           {
-            if (authConfig.isEnabled()) {
-              return securedTaskRunnerWorkItem(taskRunner.getPendingTasks(), req);
-            } else {
-              return taskRunner.getPendingTasks();
-            }
-
+            return securedTaskRunnerWorkItem(taskRunner.getPendingTasks(), req);
           }
         }
     );
@@ -474,11 +459,7 @@ public class OverlordResource
           @Override
           public Collection<? extends TaskRunnerWorkItem> apply(TaskRunner taskRunner)
           {
-            if (authConfig.isEnabled()) {
-              return securedTaskRunnerWorkItem(taskRunner.getRunningTasks(), req);
-            } else {
-              return taskRunner.getRunningTasks();
-            }
+            return securedTaskRunnerWorkItem(taskRunner.getRunningTasks(), req);
           }
         }
     );
@@ -490,38 +471,34 @@ public class OverlordResource
   public Response getCompleteTasks(@Context final HttpServletRequest req)
   {
     final List<TaskStatus> recentlyFinishedTasks;
-    if (authConfig.isEnabled()) {
-      Function<TaskStatus, ResourceAction> raGenerator = new Function<TaskStatus, ResourceAction>()
+    Function<TaskStatus, ResourceAction> raGenerator = new Function<TaskStatus, ResourceAction>()
+    {
+      @Override
+      public ResourceAction apply(TaskStatus input)
       {
-        @Override
-        public ResourceAction apply(TaskStatus input)
-        {
-          final String taskId = input.getId();
-          final Optional<Task> optionalTask = taskStorageQueryAdapter.getTask(taskId);
-          if (!optionalTask.isPresent()) {
-            throw new WebApplicationException(
-                Response.serverError().entity(
-                    String.format("No task information found for task with id: [%s]", taskId)
-                ).build()
-            );
-          }
-
-          return new ResourceAction(
-              new Resource(optionalTask.get().getDataSource(), ResourceType.DATASOURCE),
-              Action.READ
+        final String taskId = input.getId();
+        final Optional<Task> optionalTask = taskStorageQueryAdapter.getTask(taskId);
+        if (!optionalTask.isPresent()) {
+          throw new WebApplicationException(
+              Response.serverError().entity(
+                  StringUtils.format("No task information found for task with id: [%s]", taskId)
+              ).build()
           );
         }
-      };
 
-      recentlyFinishedTasks = AuthorizationUtils.filterAuthorizedResources(
-          req,
-          taskStorageQueryAdapter.getRecentlyFinishedTaskStatuses(),
-          raGenerator,
-          authorizerMapper
-      );
-    } else {
-      recentlyFinishedTasks = taskStorageQueryAdapter.getRecentlyFinishedTaskStatuses();
-    }
+        return new ResourceAction(
+            new Resource(optionalTask.get().getDataSource(), ResourceType.DATASOURCE),
+            Action.READ
+        );
+      }
+    };
+
+    recentlyFinishedTasks = AuthorizationUtils.filterAuthorizedResources(
+        req,
+        taskStorageQueryAdapter.getRecentlyFinishedTaskStatuses(),
+        raGenerator,
+        authorizerMapper
+    );
 
     final List<TaskResponseObject> completeTasks = Lists.transform(
         recentlyFinishedTasks,
@@ -687,7 +664,7 @@ public class OverlordResource
         if (!optionalTask.isPresent()) {
           throw new WebApplicationException(
               Response.serverError().entity(
-                  String.format("No task information found for task with id: [%s]", taskId)
+                  StringUtils.format("No task information found for task with id: [%s]", taskId)
               ).build()
           );
         }

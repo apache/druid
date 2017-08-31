@@ -22,10 +22,10 @@ package io.druid.server.security;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DefaultAuthorizer.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "default", value = DefaultAuthorizer.class),
-    @JsonSubTypes.Type(name = "noop", value = NoopAuthorizer.class)
+    @JsonSubTypes.Type(name = "denyAll", value = DenyAllAuthorizer.class),
+    @JsonSubTypes.Type(name = "allowAll", value = AllowAllAuthorizer.class)
 })
 /**
  * An Authorizer is responsible for performing authorization checks for resource accesses.
@@ -41,22 +41,15 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 public interface Authorizer
 {
   /**
-   * Check if the entity represented by `identity` in `namespace` is authorized to perform `action` on `resource`.
+   * Check if the entity represented by {@code identity} is authorized to perform {@code action} on {@code resource}.
    *
-   * @param identity  The identity of the requester
-   * @param namespace The namespace of the identity
+   * @param authenticationResult  The authentication result of the request
    * @param resource  The resource to be accessed
    * @param action    The action to perform on the resource
    *
    * @return An Access object representing the result of the authorization check.
    */
-  Access authorize(String identity, Resource resource, Action action);
-
-  /**
-   * @return The namespace associated with this Authorizer. Authenticator implementations will
-   * put the namespace in request headers.
-   */
-  String getNamespace();
+  Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action);
 
   /**
    * Authorizers are registered with an AuthorizerMapper. The AuthorizerMapper is lifecycle managed and will

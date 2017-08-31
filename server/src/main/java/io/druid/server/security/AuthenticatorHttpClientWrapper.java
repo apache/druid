@@ -19,10 +19,6 @@
 
 package io.druid.server.security;
 
-import com.google.common.base.Preconditions;
-import com.google.inject.Injector;
-import com.google.inject.Key;
-import com.google.inject.name.Names;
 import com.metamx.http.client.HttpClient;
 
 /**
@@ -31,40 +27,17 @@ import com.metamx.http.client.HttpClient;
  */
 public class AuthenticatorHttpClientWrapper
 {
-  private final AuthConfig authConfig;
-  private Authenticator internalAuthenticator;
+  private Authenticator escalatingAuthenticator;
 
   public AuthenticatorHttpClientWrapper(
-      final AuthConfig authConfig,
-      final Injector injector
+      final Authenticator escalatingAuthenticator
   )
   {
-    this.authConfig = authConfig;
-
-    if (authConfig.isEnabled()) {
-      Preconditions.checkNotNull(
-          authConfig.getInternalAuthenticator(),
-          "Auth is enabled but no internal authenticator is configured."
-      );
-      Preconditions.checkNotNull(
-          authConfig.getAuthenticatorChain(),
-          "Auth is enabled but no authenticators have been configured."
-      );
-
-      String internalAuthenticatorName = authConfig.getInternalAuthenticator();
-      internalAuthenticator = injector.getInstance(Key.get(
-          Authenticator.class,
-          Names.named(internalAuthenticatorName)
-      ));
-    }
+    this.escalatingAuthenticator = escalatingAuthenticator;
   }
 
   public HttpClient getEscalatedClient(HttpClient baseClient)
   {
-    if (authConfig.isEnabled()) {
-      return internalAuthenticator.createEscalatedClient(baseClient);
-    } else {
-      return baseClient;
-    }
+    return escalatingAuthenticator.createEscalatedClient(baseClient);
   }
 }

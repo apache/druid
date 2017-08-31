@@ -17,30 +17,14 @@
  * under the License.
  */
 
-package io.druid.server.initialization;
+package io.druid.server.security;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import com.google.inject.Provides;
-import com.google.inject.name.Named;
-import io.druid.guice.ManageLifecycle;
-import io.druid.server.security.Authorizer;
-import io.druid.server.security.NoopAuthorizer;
-
-public class NoopAuthorizerModule implements Module
+public class AllowAllAuthorizer implements Authorizer
 {
-  public static final String TYPE = "noop";
-
   @Override
-  public void configure(Binder binder)
+  public Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action)
   {
+    return Access.OK;
   }
 
-  @Provides
-  @ManageLifecycle
-  @Named(TYPE)
-  public Authorizer makeAuthorizer()
-  {
-    return new NoopAuthorizer();
-  }
 }

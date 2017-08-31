@@ -19,8 +19,8 @@
 
 package io.druid.security.kerberos;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Throwables;
 import com.metamx.http.client.HttpClient;
@@ -29,6 +29,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.DruidNode;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Authenticator;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.security.SecurityUtil;
@@ -75,6 +76,7 @@ import java.security.Principal;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
@@ -88,27 +90,39 @@ public class KerberosAuthenticator implements Authenticator
   private static final Logger log = new Logger(KerberosAuthenticator.class);
   private static final Pattern HADOOP_AUTH_COOKIE_REGEX = Pattern.compile(".*p=(\\S+)&t=.*");
 
-  private final SpnegoFilterConfig spnegoConfig;
-  private final AuthenticationKerberosConfig authConfig;
   private final DruidNode node;
+  private final String serverPrincipal;
+  private final String serverKeytab;
+  private final String internalClientPrincipal;
+  private final String internalClientKeytab;
+  private final String authToLocal;
+  private final List<String> excludedPaths;
+  private final String cookieSignatureSecret;
+  private final String authorizerName;
   private LoginContext loginContext;
 
   @JsonCreator
   public KerberosAuthenticator(
-      @JacksonInject AuthenticationKerberosConfig authConfig,
-      @JacksonInject SpnegoFilterConfig spnegoConfig,
+      @JsonProperty("serverPrincipal") String serverPrincipal,
+      @JsonProperty("serverKeytab") String serverKeytab,
+      @JsonProperty("internalClientPrincipal") String internalClientPrincipal,
+      @JsonProperty("internalClientKeytab") String internalClientKeytab,
+      @JsonProperty("authToLocal") String authToLocal,
+      @JsonProperty("excludedPaths") List<String> excludedPaths,
+      @JsonProperty("cookieSignatureSecret") String cookieSignatureSecret,
+      @JsonProperty("authorizerName") String authorizerName,
       @Self DruidNode node
   )
   {
-    this.spnegoConfig = spnegoConfig;
-    this.authConfig = authConfig;
     this.node = node;
-  }
-
-  @Override
-  public String getNamespace()
-  {
-    return authConfig.getNamespace();
+    this.serverPrincipal = serverPrincipal;
+    this.serverKeytab = serverKeytab;
+    this.internalClientPrincipal = internalClientPrincipal;
+    this.internalClientKeytab = internalClientKeytab;
+    this.authToLocal = authToLocal;
+    this.excludedPaths = excludedPaths;
+    this.cookieSignatureSecret = cookieSignatureSecret;
+    this.authorizerName = authorizerName;
   }
 
   @Override
@@ -203,8 +217,8 @@ public class KerberosAuthenticator implements Authenticator
       {
         HttpServletRequest httpReq = (HttpServletRequest) request;
 
-        // If there's already an auth token, then we have authenticated already, skip this.
-        if (request.getAttribute(AuthConfig.DRUID_AUTH_TOKEN) != null) {
+        // If there's already an auth result, then we have authenticated already, skip this.
+        if (request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT) != null) {
           filterChain.doFilter(request, response);
           return;
         }
@@ -239,8 +253,10 @@ public class KerberosAuthenticator implements Authenticator
             clientPrincipal = null;
           }
 
-          request.setAttribute(AuthConfig.DRUID_AUTH_TOKEN, clientPrincipal);
-          request.setAttribute(AuthConfig.DRUID_AUTH_NAMESPACE, getNamespace());
+          request.setAttribute(
+              AuthConfig.DRUID_AUTHENTICATION_RESULT,
+              new AuthenticationResult(clientPrincipal, authorizerName)
+          );
         }
 
         doFilterSuper(request, response, filterChain);
@@ -270,7 +286,7 @@ public class KerberosAuthenticator implements Authenticator
           if (getAuthenticationHandler().managementOperation(token, httpRequest, httpResponse)) {
             if (token == null) {
               if (log.isDebugEnabled()) {
-                log.debug("Request [{}] triggering authentication", getRequestURL(httpRequest));
+                log.debug("Request [{%s}] triggering authentication", getRequestURL(httpRequest));
               }
               token = getAuthenticationHandler().authenticate(httpRequest, httpResponse);
               if (token != null && token.getExpires() != 0 &&
@@ -282,7 +298,7 @@ public class KerberosAuthenticator implements Authenticator
             if (token != null) {
               unauthorizedResponse = false;
               if (log.isDebugEnabled()) {
-                log.debug("Request [{}] user [{}] authenticated", getRequestURL(httpRequest), token.getUserName());
+                log.debug("Request [{%s}] user [{%s}] authenticated", getRequestURL(httpRequest), token.getUserName());
               }
               final AuthenticationToken authToken = token;
               httpRequest = new HttpServletRequestWrapper(httpRequest)
@@ -369,14 +385,14 @@ public class KerberosAuthenticator implements Authenticator
     try {
       params.put(
           "kerberos.principal",
-          SecurityUtil.getServerPrincipal(spnegoConfig.getPrincipal(), node.getHost())
+          SecurityUtil.getServerPrincipal(serverPrincipal, node.getHost())
       );
-      params.put("kerberos.keytab", spnegoConfig.getKeytab());
+      params.put("kerberos.keytab", serverKeytab);
       //params.put(AuthenticationFilter.AUTH_TYPE, "kerberos");
       params.put(AuthenticationFilter.AUTH_TYPE, DruidKerberosAuthenticationHandler.class.getName());
-      params.put("kerberos.name.rules", spnegoConfig.getAuthToLocal());
-      if (spnegoConfig.getCookieSignatureSecret() != null) {
-        params.put("signature.secret", spnegoConfig.getCookieSignatureSecret());
+      params.put("kerberos.name.rules", authToLocal);
+      if (cookieSignatureSecret != null) {
+        params.put("signature.secret", cookieSignatureSecret);
       }
     }
     catch (IOException e) {
@@ -404,7 +420,7 @@ public class KerberosAuthenticator implements Authenticator
   }
 
   @Override
-  public boolean authenticateJDBCContext(Map<String, Object> context)
+  public AuthenticationResult authenticateJDBCContext(Map<String, Object> context)
   {
     throw new UnsupportedOperationException("JDBC Kerberos auth not supported yet");
   }
@@ -412,12 +428,18 @@ public class KerberosAuthenticator implements Authenticator
   @Override
   public HttpClient createEscalatedClient(HttpClient baseClient)
   {
-    return new KerberosHttpClient(baseClient, authConfig);
+    return new KerberosHttpClient(baseClient, internalClientPrincipal, internalClientKeytab);
+  }
+
+  @Override
+  public AuthenticationResult createEscalatedAuthenticationResult()
+  {
+    return new AuthenticationResult(internalClientPrincipal, authorizerName);
   }
 
   private boolean isExcluded(String path)
   {
-    for (String excluded : spnegoConfig.getExcludedPaths()) {
+    for (String excluded : excludedPaths) {
       if (path.startsWith(excluded)) {
         return true;
       }
@@ -518,7 +540,7 @@ public class KerberosAuthenticator implements Authenticator
             for (Object cred : serverCreds) {
               if (cred instanceof KeyTab) {
                 KeyTab serverKeyTab = (KeyTab) cred;
-                KerberosPrincipal serverPrincipal = new KerberosPrincipal(spnegoConfig.getPrincipal());
+                KerberosPrincipal serverPrincipal = new KerberosPrincipal(this.serverPrincipal);
                 KerberosKey[] serverKeys = serverKeyTab.getKeys(serverPrincipal);
                 for (KerberosKey key : serverKeys) {
                   if (key.getKeyType() == eType) {
@@ -562,11 +584,11 @@ public class KerberosAuthenticator implements Authenticator
     String keytab;
 
     try {
-      principal = SecurityUtil.getServerPrincipal(spnegoConfig.getPrincipal(), node.getHost());
+      principal = SecurityUtil.getServerPrincipal(serverPrincipal, node.getHost());
       if (principal == null || principal.trim().length() == 0) {
         throw new ServletException("Principal not defined in configuration");
       }
-      keytab = spnegoConfig.getKeytab();
+      keytab = serverKeytab;
       if (keytab == null || keytab.trim().length() == 0) {
         throw new ServletException("Keytab not defined in configuration");
       }

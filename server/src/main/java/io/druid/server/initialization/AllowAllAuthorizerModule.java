@@ -17,37 +17,30 @@
  * under the License.
  */
 
-package io.druid.guice.security;
+package io.druid.server.initialization;
 
 import com.google.inject.Binder;
-import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Named;
-import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;
-import io.druid.guice.PolyBind;
-import io.druid.server.security.Authenticator;
-import io.druid.server.security.AllowAllAuthenticator;
+import io.druid.server.security.Authorizer;
+import io.druid.server.security.AllowAllAuthorizer;
 
-public class AuthenticatorModule implements Module
+public class AllowAllAuthorizerModule implements Module
 {
+  public static final String TYPE = "allowAll";
+
   @Override
   public void configure(Binder binder)
   {
-    final MapBinder<String, Authenticator> authenticatorMapBinder = PolyBind.optionBinder(
-        binder,
-        Key.get(Authenticator.class)
-    );
-    authenticatorMapBinder.addBinding("allowAll").to(AllowAllAuthenticator.class).in(LazySingleton.class);
   }
 
   @Provides
   @ManageLifecycle
-  @Named("allowAll")
-  public Authenticator getAuthenticator()
+  @Named(TYPE)
+  public Authorizer makeAuthorizer()
   {
-    return new AllowAllAuthenticator();
+    return new AllowAllAuthorizer();
   }
 }

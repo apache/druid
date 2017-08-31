@@ -146,16 +146,12 @@ public class LookupCoordinatorManager
         druidNodeDiscoveryProvider,
         configManager,
         lookupCoordinatorManagerConfig,
-<<<<<<< HEAD
         new LookupsCommunicator(
             authenticatorHttpClientWrapper.getEscalatedClient(httpClient),
             lookupCoordinatorManagerConfig,
             smileMapper
-        )
-=======
-        new LookupsCommunicator(httpClient, lookupCoordinatorManagerConfig, smileMapper),
+        ),
         null
->>>>>>> upstream/master
     );
   }
 

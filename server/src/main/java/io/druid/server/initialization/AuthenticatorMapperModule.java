@@ -34,29 +34,29 @@ import io.druid.initialization.DruidModule;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.server.security.AllowAllAuthorizer;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.Authorizer;
-import io.druid.server.security.AuthorizerMapper;
+import io.druid.server.security.Authenticator;
+import io.druid.server.security.AuthenticatorMapper;
+import io.druid.server.security.AllowAllAuthenticator;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-public class AuthorizerMapperModule implements DruidModule
+public class AuthenticatorMapperModule implements DruidModule
 {
-  private static final String AUTHORIZER_PROPERTIES_FORMAT_STRING = "druid.auth.authorizer.%s";
-  private static Logger log = new Logger(AuthorizerMapperModule.class);
+  private static final String AUTHENTICATOR_PROPERTIES_FORMAT_STRING = "druid.auth.authenticator.%s";
+  private static Logger log = new Logger(AuthenticatorMapperModule.class);
 
   @Override
   public void configure(Binder binder)
   {
-    binder.bind(AuthorizerMapper.class)
-          .toProvider(new AuthorizerMapperProvider())
+    binder.bind(AuthenticatorMapper.class)
+          .toProvider(new AuthenticatorMapperProvider())
           .in(LazySingleton.class);
 
-    LifecycleModule.register(binder, AuthorizerMapper.class);
+    LifecycleModule.register(binder, AuthenticatorMapper.class);
   }
 
   @SuppressWarnings("unchecked")
@@ -66,7 +66,7 @@ public class AuthorizerMapperModule implements DruidModule
     return Collections.EMPTY_LIST;
   }
 
-  private static class AuthorizerMapperProvider implements Provider<AuthorizerMapper>
+  private static class AuthenticatorMapperProvider implements Provider<AuthenticatorMapper>
   {
     private AuthConfig authConfig;
     private Injector injector;
@@ -83,41 +83,38 @@ public class AuthorizerMapperModule implements DruidModule
     }
 
     @Override
-    public AuthorizerMapper get()
+    public AuthenticatorMapper get()
     {
-      Map<String, Authorizer> authorizerMap = Maps.newHashMap();
+      // order of the authenticators matters
+      Map<String, Authenticator> authenticatorMap = Maps.newLinkedHashMap();
 
-      List<String> authorizers = authConfig.getAuthorizers();
+      List<String> authenticators = authConfig.getAuthenticatorChain();
 
-      // If user didn't configure any Authorizers, use the default which accepts all requests.
-      if (authorizers == null || authorizers.isEmpty()) {
-        return new AuthorizerMapper(null) {
-          @Override
-          public Authorizer getAuthorizer(String name)
-          {
-            return new AllowAllAuthorizer();
-          }
-        };
+      // If user didn't configure any Authenticators, use the default which accepts all requests.
+      if (authenticators == null || authenticators.isEmpty()) {
+        Map<String, Authenticator> defaultMap = Maps.newHashMap();
+        defaultMap.put("allowAll", new AllowAllAuthenticator());
+        return new AuthenticatorMapper(defaultMap, "allowAll");
       }
 
-      for (String authorizerName : authorizers) {
-        final String authorizerPropertyBase = StringUtils.format(AUTHORIZER_PROPERTIES_FORMAT_STRING, authorizerName);
-        final JsonConfigProvider<Authorizer> authorizerProvider = new JsonConfigProvider<>(
-            authorizerPropertyBase,
-            Authorizer.class
+      for (String authenticatorName : authenticators) {
+        final String authenticatorPropertyBase = StringUtils.format(AUTHENTICATOR_PROPERTIES_FORMAT_STRING, authenticatorName);
+        final JsonConfigProvider<Authenticator> authenticatorProvider = new JsonConfigProvider<>(
+            authenticatorPropertyBase,
+            Authenticator.class
         );
 
-        authorizerProvider.inject(props, configurator);
+        authenticatorProvider.inject(props, configurator);
 
-        Supplier<Authorizer> authorizerSupplier = authorizerProvider.get();
-        if (authorizerSupplier == null) {
-          throw new ISE("Could not create authorizer with name: %s", authorizerName);
+        Supplier<Authenticator> authenticatorSupplier = authenticatorProvider.get();
+        if (authenticatorSupplier == null) {
+          throw new ISE("Could not create authenticator with name: %s", authenticatorName);
         }
-        Authorizer authorizer = authorizerSupplier.get();
-        authorizerMap.put(authorizerName, authorizer);
+        Authenticator authenticator = authenticatorSupplier.get();
+        authenticatorMap.put(authenticatorName, authenticator);
       }
 
-      return new AuthorizerMapper(authorizerMap);
+      return new AuthenticatorMapper(authenticatorMap, authConfig.getEscalatedAuthenticator());
     }
   }
 }

@@ -32,14 +32,9 @@ import io.druid.client.FilteredServerInventoryView;
 import io.druid.client.ServerViewUtil;
 import io.druid.client.TimelineServerView;
 import io.druid.client.selector.ServerSelector;
-<<<<<<< HEAD
-import io.druid.common.utils.JodaUtils;
-=======
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.JodaUtils;
-import io.druid.java.util.common.Pair;
->>>>>>> upstream/master
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.LocatedSegmentDescriptor;
 import io.druid.query.TableDataSource;
@@ -124,16 +119,12 @@ public class ClientInfoResource
   @Produces(MediaType.APPLICATION_JSON)
   public Iterable<String> getDataSources(@Context final HttpServletRequest request)
   {
-    if (authConfig.isEnabled()) {
-      return AuthorizationUtils.filterAuthorizedResources(
-          request,
-          getSegmentsForDatasources().keySet(),
-          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
-          authorizerMapper
-      );
-    } else {
-      return getSegmentsForDatasources().keySet();
-    }
+    return AuthorizationUtils.filterAuthorizedResources(
+        request,
+        getSegmentsForDatasources().keySet(),
+        AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
+        authorizerMapper
+    );
   }
 
   @GET

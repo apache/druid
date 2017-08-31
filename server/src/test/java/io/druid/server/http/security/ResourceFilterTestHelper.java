@@ -36,6 +36,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.Resource;
@@ -109,10 +110,12 @@ public class ResourceFilterTestHelper
         )
     ).anyTimes();
     EasyMock.expect(request.getMethod()).andReturn(requestMethod).anyTimes();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED)).andReturn(null).anyTimes();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)).andReturn("druid").atLeastOnce();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_NAMESPACE)).andReturn("namespace").atLeastOnce();
-    req.setAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED, authCheckResult);
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).anyTimes();
+    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid");
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(authenticationResult)
+            .atLeastOnce();
+    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, authCheckResult);
     EasyMock.expectLastCall().anyTimes();
     EasyMock.expect(authorizerMapper.getAuthorizer(
         EasyMock.anyString()
@@ -120,16 +123,11 @@ public class ResourceFilterTestHelper
         new Authorizer()
         {
           @Override
-          public Access authorize(String identity, Resource resource, Action action)
+          public Access authorize(AuthenticationResult authenticationResult1, Resource resource, Action action)
           {
             return new Access(authCheckResult);
           }
 
-          @Override
-          public String getNamespace()
-          {
-            return null;
-          }
         }
     ).atLeastOnce();
   }

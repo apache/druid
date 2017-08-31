@@ -33,6 +33,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
+import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.Resource;
@@ -82,15 +83,14 @@ public class InventoryViewUtils
   public static Set<DruidDataSource> getSecuredDataSources(
       InventoryView inventoryView,
       final AuthorizerMapper authorizerMapper,
-      final String identity,
-      final String namespace
+      final AuthenticationResult authenticationResult
   )
   {
     if (authorizerMapper == null) {
       throw new ISE("No authorization mapper found");
     }
 
-    final Authorizer authorizer = authorizerMapper.getAuthorizer(namespace);
+    final Authorizer authorizer = authorizerMapper.getAuthorizer(authenticationResult.getAuthorizerName());
     if (authorizer == null) {
       throw new ISE("Invalid to call a secured method with null Authorizer!!");
     } else {
@@ -109,7 +109,7 @@ public class InventoryViewUtils
                   if (resourceAccessMap.containsKey(key)) {
                     return resourceAccessMap.get(key).isAllowed();
                   } else {
-                    Access access = authorizer.authorize(identity, key.lhs, key.rhs);
+                    Access access = authorizer.authorize(authenticationResult, key.lhs, key.rhs);
                     resourceAccessMap.put(key, access);
                     return access.isAllowed();
                   }

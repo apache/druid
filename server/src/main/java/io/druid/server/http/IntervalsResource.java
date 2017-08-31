@@ -27,6 +27,7 @@ import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.MapUtils;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -70,14 +71,11 @@ public class IntervalsResource
   public Response getIntervals(@Context final HttpServletRequest req)
   {
     final Comparator<Interval> comparator = Comparators.inverse(Comparators.intervalsByStartThenEnd());
-    final Set<DruidDataSource> datasources = authConfig.isEnabled() ?
-                                             InventoryViewUtils.getSecuredDataSources(
-                                                 serverInventoryView,
-                                                 authorizerMapper,
-                                                 (String) req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN),
-                                                 (String) req.getAttribute(AuthConfig.DRUID_AUTH_NAMESPACE)
-                                             ) :
-                                             InventoryViewUtils.getDataSources(serverInventoryView);
+    final Set<DruidDataSource> datasources = InventoryViewUtils.getSecuredDataSources(
+        serverInventoryView,
+        authorizerMapper,
+        (AuthenticationResult) req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)
+    );
 
     final Map<Interval, Map<String, Map<String, Object>>> retVal = Maps.newTreeMap(comparator);
     for (DruidDataSource dataSource : datasources) {
@@ -105,14 +103,11 @@ public class IntervalsResource
   )
   {
     final Interval theInterval = Intervals.of(interval.replace("_", "/"));
-    final Set<DruidDataSource> datasources = authConfig.isEnabled() ?
-                                             InventoryViewUtils.getSecuredDataSources(
-                                                 serverInventoryView,
-                                                 authorizerMapper,
-                                                 (String) req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN),
-                                                 (String) req.getAttribute(AuthConfig.DRUID_AUTH_NAMESPACE)
-                                             ) :
-                                             InventoryViewUtils.getDataSources(serverInventoryView);
+    final Set<DruidDataSource> datasources = InventoryViewUtils.getSecuredDataSources(
+        serverInventoryView,
+        authorizerMapper,
+        (AuthenticationResult) req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)
+    );
 
     final Comparator<Interval> comparator = Comparators.inverse(Comparators.intervalsByStartThenEnd());
 

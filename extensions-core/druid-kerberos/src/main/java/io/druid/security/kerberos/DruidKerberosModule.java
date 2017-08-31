@@ -23,14 +23,7 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
-import com.google.inject.Provides;
-import com.google.inject.name.Named;
-import io.druid.guice.JsonConfigProvider;
-import io.druid.guice.ManageLifecycle;
-import io.druid.guice.annotations.Self;
 import io.druid.initialization.DruidModule;
-import io.druid.server.DruidNode;
-import io.druid.server.security.Authenticator;
 
 import java.util.List;
 
@@ -52,10 +45,11 @@ public class DruidKerberosModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", AuthenticationKerberosConfig.class);
-    JsonConfigProvider.bind(binder, "druid.hadoop.security.spnego", SpnegoFilterConfig.class);
+    //JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", AuthenticationKerberosConfig.class);
+    //JsonConfigProvider.bind(binder, "druid.hadoop.security.spnego", SpnegoFilterConfig.class);
   }
 
+  /*
   @Provides
   @ManageLifecycle
   @Named("kerberos")
@@ -67,4 +61,5 @@ public class DruidKerberosModule implements DruidModule
   {
     return new KerberosAuthenticator(authenticationKerberosConfig, spnegoFilterConfig, druidNode);
   }
+  */
 }

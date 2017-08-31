@@ -37,14 +37,12 @@ import java.util.Set;
  */
 public class AuthorizationUtils
 {
-  public final static Access ACCESS_OK = new Access(true, "All resource-actions authorized.");
-
   /**
    * Check a resource-action using the authorization fields from the request.
    *
    * Otherwise, if the resource-actions is authorized, return ACCESS_OK.
    *
-   * This function will set the DRUID_AUTH_TOKEN_CHECKED attribute in the request.
+   * This function will set the DRUID_AUTHORIZATION_CHECKED attribute in the request.
    *
    * If this attribute is already set when this function is called, an exception is thrown.
    *
@@ -74,7 +72,7 @@ public class AuthorizationUtils
    *
    * Otherwise, return ACCESS_OK if all resource-actions were successfully authorized.
    *
-   * This function will set the DRUID_AUTH_TOKEN_CHECKED attribute in the request.
+   * This function will set the DRUID_AUTHORIZATION_CHECKED attribute in the request.
    *
    * If this attribute is already set when this function is called, an exception is thrown.
    * @param request HTTP request to be authorized
@@ -87,19 +85,16 @@ public class AuthorizationUtils
       final AuthorizerMapper authorizerMapper
   )
   {
-    final String identity = (String) request.getAttribute(AuthConfig.DRUID_AUTH_TOKEN);
-    if (identity == null) {
-      throw new ISE("Null identity.");
+    final AuthenticationResult authenticationResult = (AuthenticationResult) request.getAttribute(
+        AuthConfig.DRUID_AUTHENTICATION_RESULT
+    );
+    if (authenticationResult == null) {
+      throw new ISE("Null authentication result");
     }
 
-    final String namespace = (String) request.getAttribute(AuthConfig.DRUID_AUTH_NAMESPACE);
-    if (namespace == null) {
-      throw new ISE("Null namespace.");
-    }
-
-    final Authorizer authorizer = authorizerMapper.getAuthorizer(namespace);
+    final Authorizer authorizer = authorizerMapper.getAuthorizer(authenticationResult.getAuthorizerName());
     if (authorizer == null) {
-      throw new ISE("No authorizer found for namespace: [%s].", namespace);
+      throw new ISE("No authorizer found with name: [%s].", authenticationResult.getAuthorizerName());
     }
 
     // this method returns on first failure, so only successful Access results are kept in the cache
@@ -110,20 +105,20 @@ public class AuthorizationUtils
         continue;
       }
       final Access access = authorizer.authorize(
-          identity,
+          authenticationResult,
           resourceAction.getResource(),
           resourceAction.getAction()
       );
       if (!access.isAllowed()) {
-        request.setAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED, false);
+        request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, false);
         return access;
       } else {
         resultCache.add(resourceAction);
       }
     }
 
-    request.setAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED, true);
-    return ACCESS_OK;
+    request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    return Access.OK;
   }
 
   /**
@@ -135,7 +130,7 @@ public class AuthorizationUtils
    *
    * Otherwise, return ACCESS_OK if all resource-actions were successfully authorized.
    *
-   * This function will set the DRUID_AUTH_TOKEN_CHECKED attribute in the request.
+   * This function will set the DRUID_AUTHORIZATION_CHECKED attribute in the request.
    *
    * If this attribute is already set when this fImmutableList.<Class<?>>of(SupervisorManager.class, Authorizer.class)unction is called, an exception is thrown.
    *
@@ -152,19 +147,16 @@ public class AuthorizationUtils
       final AuthorizerMapper authorizerMapper
   )
   {
-    final String identity = (String) request.getAttribute(AuthConfig.DRUID_AUTH_TOKEN);
-    if (identity == null) {
-      throw new ISE("Null identity.");
+    final AuthenticationResult authenticationResult = (AuthenticationResult) request.getAttribute(
+        AuthConfig.DRUID_AUTHENTICATION_RESULT
+    );
+    if (authenticationResult == null) {
+      throw new ISE("Null authentication result");
     }
 
-    final String namespace = (String) request.getAttribute(AuthConfig.DRUID_AUTH_NAMESPACE);
-    if (namespace == null) {
-      throw new ISE("Null namespace.");
-    }
-
-    final Authorizer authorizer = authorizerMapper.getAuthorizer(namespace);
+    final Authorizer authorizer = authorizerMapper.getAuthorizer(authenticationResult.getAuthorizerName());
     if (authorizer == null) {
-      throw new ISE("No authorizer found for namespace: [%s].", namespace);
+      throw new ISE("No authorizer found with name: [%s].", authenticationResult.getAuthorizerName());
     }
 
     // this method returns on first failure, so only successful Access results are kept in the cache
@@ -176,20 +168,20 @@ public class AuthorizationUtils
         continue;
       }
       final Access access = authorizer.authorize(
-          identity,
+          authenticationResult,
           resourceAction.getResource(),
           resourceAction.getAction()
       );
       if (!access.isAllowed()) {
-        request.setAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED, false);
+        request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, false);
         return access;
       } else {
         resultCache.add(resourceAction);
       }
     }
 
-    request.setAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED, true);
-    return ACCESS_OK;
+    request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    return Access.OK;
   }
 
   /**
@@ -209,17 +201,17 @@ public class AuthorizationUtils
   public static <ResType> Access authorizeAllResourceActions(
       final Collection<ResType> resources,
       final Function<? super ResType, ResourceAction> raGenerator,
-      final String user,
-      final String namespace,
+      final AuthenticationResult authenticationResult,
       final AuthorizerMapper authorizerMapper
   )
   {
-    if (user == null || namespace == null) {
-      throw new ISE("null user or namespace");
+    if (authenticationResult == null) {
+      throw new ISE("null authentication result");
     }
-    final Authorizer authorizer = authorizerMapper.getAuthorizer(namespace);
+
+    final Authorizer authorizer = authorizerMapper.getAuthorizer(authenticationResult.getAuthorizerName());
     if (authorizer == null) {
-      throw new ISE("No authorizer found for namespace: [%s].", namespace);
+      throw new ISE("No authorizer found with name: [%s].", authenticationResult.getAuthorizerName());
     }
 
     // this method returns on first failure, so only successful Access results are kept in the cache
@@ -231,7 +223,7 @@ public class AuthorizationUtils
         continue;
       }
       final Access access = authorizer.authorize(
-          user,
+          authenticationResult,
           resourceAction.getResource(),
           resourceAction.getAction()
       );
@@ -242,14 +234,14 @@ public class AuthorizationUtils
       }
     }
 
-    return ACCESS_OK;
+    return Access.OK;
   }
 
   /**
    * Filter a list of resource-actions using the request's authorization fields, returning a new list of
    * resource-actions that were authorized.
    *
-   * This function will set the DRUID_AUTH_TOKEN_CHECKED attribute in the request.
+   * This function will set the DRUID_AUTHORIZATION_CHECKED attribute in the request.
    *
    * If this attribute is already set when this function is called, an exception is thrown.
    *
@@ -265,19 +257,16 @@ public class AuthorizationUtils
       final AuthorizerMapper authorizerMapper
   )
   {
-    final String identity = (String) request.getAttribute(AuthConfig.DRUID_AUTH_TOKEN);
-    if (identity == null) {
-      throw new ISE("Null identity.");
+    final AuthenticationResult authenticationResult = (AuthenticationResult) request.getAttribute(
+        AuthConfig.DRUID_AUTHENTICATION_RESULT
+    );
+    if (authenticationResult == null) {
+      throw new ISE("Null authentication result");
     }
 
-    final String namespace = (String) request.getAttribute(AuthConfig.DRUID_AUTH_NAMESPACE);
-    if (namespace == null) {
-      throw new ISE("Null namespace.");
-    }
-
-    final Authorizer authorizer = authorizerMapper.getAuthorizer(namespace);
+    final Authorizer authorizer = authorizerMapper.getAuthorizer(authenticationResult.getAuthorizerName());
     if (authorizer == null) {
-      throw new ISE("No authorizer found for namespace: [%s].", namespace);
+      throw new ISE("No authorizer found with name: [%s].", authenticationResult.getAuthorizerName());
     }
 
     int initialSize = resources.size();
@@ -288,7 +277,7 @@ public class AuthorizationUtils
       Access access = resultCache.get(resourceAction);
       if (access == null) {
         access = authorizer.authorize(
-            identity,
+            authenticationResult,
             resourceAction.getResource(),
             resourceAction.getAction()
         );
@@ -299,7 +288,7 @@ public class AuthorizationUtils
       }
     }
 
-    request.setAttribute(AuthConfig.DRUID_AUTH_TOKEN_CHECKED, (filteredResources.size() > 0 || initialSize == 0));
+    request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, (filteredResources.size() > 0 || initialSize == 0));
     return filteredResources;
   }
 
