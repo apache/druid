@@ -36,15 +36,25 @@ postAggregation : {
 }
 ```
 
-### Field accessor post-aggregator
+### Field accessor post-aggregators
 
-This returns the value produced by the specified [aggregator](../querying/aggregations.html).
+These post-aggregators return the value produced by the specified [aggregator](../querying/aggregations.html).
 
 `fieldName` refers to the output name of the aggregator given in the [aggregations](../querying/aggregations.html) portion of the query.
+For complex aggregators, like "cardinality" and "hyperUnique", the `type` of the post-aggregator determines what
+the post-aggregator will return. Use type "fieldAccess" to return the raw aggregation object, or use type
+"finalizingFieldAccess" to return a finalized value, such as an estimated cardinality.
 
 ```json
 { "type" : "fieldAccess", "name": <output_name>, "fieldName" : <aggregator_name> }
 ```
+
+or
+
+```json
+{ "type" : "finalizingFieldAccess", "name": <output_name>, "fieldName" : <aggregator_name> }
+```
+
 
 ### Constant post-aggregator
 
