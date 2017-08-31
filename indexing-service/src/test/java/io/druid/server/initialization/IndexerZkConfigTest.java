@@ -20,7 +20,6 @@
 package io.druid.server.initialization;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
@@ -32,6 +31,7 @@ import io.druid.guice.JsonConfigurator;
 import io.druid.initialization.Initialization;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -267,9 +267,7 @@ public class IndexerZkConfigTest
     );
 
     Map<String, String> value = mapper.readValue(
-        mapper.writeValueAsString(indexerZkConfig), new TypeReference<Map<String, String>>()
-        {
-        }
+        mapper.writeValueAsString(indexerZkConfig), JacksonUtils.TYPE_REFERENCE_MAP_STRING_STRING
     );
     IndexerZkConfig newConfig = new IndexerZkConfig(
         zkPathsConfig,

@@ -19,9 +19,9 @@
 
 package io.druid.indexer;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.ISE;
 
 import org.apache.hadoop.fs.FileSystem;
@@ -110,9 +110,7 @@ public class Utils
 
     return jsonMapper.readValue(
         fs.open(statsPath),
-        new TypeReference<Map<String, Object>>()
-        {
-        }
+        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
   }
 
