@@ -145,11 +145,10 @@ public class DruidMeta extends MetaImpl
     final StatementHandle statement = createStatement(ch);
     final DruidStatement druidStatement = getDruidStatement(statement);
     final DruidConnection druidConnection = getDruidConnection(statement.connectionId);
-    AuthenticationResult authenticationResult = null;
-    if (!authenticateConnection(druidConnection)) {
+    AuthenticationResult authenticationResult = authenticateConnection(druidConnection);
+    if (authenticationResult == null) {
       throw new SecurityException("Authentication failed.");
     }
-    authenticationResult = getConnectionAuthenticationResult(druidConnection);
     statement.signature = druidStatement.prepare(plannerFactory, sql, maxRowCount, authenticationResult).getSignature();
     return statement;
   }
@@ -179,12 +178,10 @@ public class DruidMeta extends MetaImpl
     // Ignore "callback", this class is designed for use with LocalService which doesn't use it.
     final DruidStatement druidStatement = getDruidStatement(statement);
     final DruidConnection druidConnection = getDruidConnection(statement.connectionId);
-    AuthenticationResult authenticationResult = null;
-    if (!authenticateConnection(druidConnection)) {
+    AuthenticationResult authenticationResult = authenticateConnection(druidConnection);
+    if (authenticationResult == null) {
       throw new SecurityException("Authentication failed.");
     }
-    authenticationResult = getConnectionAuthenticationResult(druidConnection);
-
     final Signature signature = druidStatement.prepare(plannerFactory, sql, maxRowCount, authenticationResult).getSignature();
     final Frame firstFrame = druidStatement.execute()
                                            .nextFrame(
@@ -512,23 +509,16 @@ public class DruidMeta extends MetaImpl
     }
   }
 
-  private boolean authenticateConnection(final DruidConnection connection)
+  private AuthenticationResult authenticateConnection(final DruidConnection connection)
   {
     Map<String, Object> context = connection.context();
     for (Authenticator authenticator : authenticators) {
       AuthenticationResult authenticationResult = authenticator.authenticateJDBCContext(context);
       if (authenticationResult != null) {
-        context.put(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
-        return true;
+        return authenticationResult;
       }
     }
-    return false;
-  }
-
-  private AuthenticationResult getConnectionAuthenticationResult(final DruidConnection connection)
-  {
-    Map<String, Object> context = connection.context();
-    return (AuthenticationResult) context.get(AuthConfig.DRUID_AUTHENTICATION_RESULT);
+    return null;
   }
 
   private DruidConnection openDruidConnection(final String connectionId, final Map<String, Object> context)

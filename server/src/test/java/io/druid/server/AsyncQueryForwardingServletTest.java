@@ -22,6 +22,7 @@ package io.druid.server;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -51,6 +52,9 @@ import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.router.QueryHostFinder;
+import io.druid.server.security.AllowAllAuthenticator;
+import io.druid.server.security.Authenticator;
+import io.druid.server.security.AuthenticatorMapper;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.AllowAllAuthorizer;
@@ -75,6 +79,7 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.util.Collection;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
 public class AsyncQueryForwardingServletTest extends BaseJettyTest
@@ -233,6 +238,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         }
       };
 
+      Map<String, Authenticator> defaultMap = Maps.newHashMap();
+      defaultMap.put("allowAll", new AllowAllAuthenticator());
       ObjectMapper jsonMapper = injector.getInstance(ObjectMapper.class);
       ServletHolder holder = new ServletHolder(
           new AsyncQueryForwardingServlet(
@@ -251,7 +258,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                   // noop
                 }
               },
-              new DefaultGenericQueryMetricsFactory(jsonMapper)
+              new DefaultGenericQueryMetricsFactory(jsonMapper),
+              new AuthenticatorMapper(defaultMap, "allowAll")
           )
           {
             @Override
