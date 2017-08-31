@@ -6,9 +6,9 @@ layout: doc_page
 
 |Property|Type|Description|Default|Required|
 |--------|-----------|--------|--------|--------|
-|`druid.auth.authenticationChain`|JSON List of Strings|List of Authenticator type names|null|yes, if auth enabled|
-|`druid.auth.escalatedAuthenticator`|String|Type of the Authenticator that should be used for internal Druid communications|null|yes, if auth enabled|
-|`druid.auth.authorizers`|JSON List of Strings|List of Authorizer type names |null|yes, if auth enabled|
+|`druid.auth.authenticationChain`|JSON List of Strings|List of Authenticator type names|[]|no|
+|`druid.auth.escalatedAuthenticator`|String|Type of the Authenticator that should be used for internal Druid communications|"allowAll"|no|
+|`druid.auth.authorizers`|JSON List of Strings|List of Authorizer type names |[]|no|
 
 ## Enabling Authentication/Authorization
 
@@ -24,6 +24,12 @@ druid.auth.authenticationChain=["kerberos", "basic"]
 ```
 
 A request will pass through all Authenticators in the chain, unless one of the Authenticators sends an HTTP error response. If no Authenticator in the chain successfully authenticated a request, an HTTP error response will be sent.
+
+Druid includes a built-in Authenticator, used for the default unsecured configuration.
+
+### AllowAll Authenticator
+
+This built-in Authenticator authenticates all requests, and always directs them to an Authorizer named "allowAll". It is not intended to be used for anything other than the default unsecured configuration.
 
 ## Internal Authenticator
 The `druid.auth.escalatedAuthenticator` property determines what authentication scheme should be used for internal Druid cluster communications (such as when a broker node communicates with historical nodes for query processing).
@@ -44,11 +50,21 @@ druid.auth.authorizers=["basic"]
 
 Only a single Authorizer will authorize any given request.
 
-### Default Authorizer
-The default Authorizer with type name "default" rejects all requests.
+Druid includes two built in authorizers:
 
-### No-op Authorizer
-The no-op Authorizer with type name "noop" accepts all requests.
+### DenyAll Authorizer
+The Authorizer with type name "denyAll" rejects all requests.
+
+### AllowAll Authorizer
+The Authorizer with type name "allowAll" accepts all requests.
+
+## Default Unsecured Configuration
+
+When `druid.auth.authenticationChain` is left empty or unspecified, Druid will create an authentication chain with a single AllowAll Authenticator named "allowAll".
+
+When `druid.auth.authorizers` is left empty or unspecified, Druid will create a single AllowAll Authorizer named "allowAll".
+
+The default value of `druid.auth.escalatedAuthenticator` is "allowAll" to match the default unsecured Authenticator/Authorizer configurations.
 
 ## Authenticator to Authorizer Routing
 
