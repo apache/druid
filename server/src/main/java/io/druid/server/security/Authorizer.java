@@ -50,20 +50,4 @@ public interface Authorizer
    * @return An Access object representing the result of the authorization check.
    */
   Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action);
-
-  /**
-   * Authorizers are registered with an AuthorizerMapper. The AuthorizerMapper is lifecycle managed and will
-   * call start() on each of its registered Authorizers in the AuthorizerMapper's start() method.
-   */
-  default void start()
-  {
-  }
-
-  /**
-   * Authorizers are registered with an AuthorizerMapper. The AuthorizerMapper is lifecycle managed and will
-   * call stop() on each of its registered Authorizers in the AuthorizerMapper's stop() method.
-   */
-  default void stop()
-  {
-  }
 }

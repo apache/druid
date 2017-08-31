@@ -26,5 +26,4 @@ public class AllowAllAuthorizer implements Authorizer
   {
     return Access.OK;
   }
-
 }

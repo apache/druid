@@ -44,16 +44,10 @@ public class AuthorizerMapper
   @LifecycleStart
   public void start()
   {
-    for (Authorizer authorizer : authorizerMap.values()) {
-      authorizer.start();
-    }
   }
 
   @LifecycleStart
   public void stop()
   {
-    for (Authorizer authorizer : authorizerMap.values()) {
-      authorizer.stop();
-    }
   }
 }
