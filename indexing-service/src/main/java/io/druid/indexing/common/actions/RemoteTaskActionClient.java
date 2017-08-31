@@ -19,7 +19,6 @@
 
 package io.druid.indexing.common.actions;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
@@ -33,6 +32,7 @@ import io.druid.indexing.common.RetryPolicy;
 import io.druid.indexing.common.RetryPolicyFactory;
 import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.IOE;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import org.jboss.netty.channel.ChannelException;
@@ -114,9 +114,7 @@ public class RemoteTaskActionClient implements TaskActionClient
         if (response.getStatus().getCode() / 100 == 2) {
           final Map<String, Object> responseDict = jsonMapper.readValue(
               response.getContent(),
-              new TypeReference<Map<String, Object>>()
-              {
-              }
+              JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
           );
           return jsonMapper.convertValue(responseDict.get("result"), taskAction.getReturnTypeReference());
         } else {

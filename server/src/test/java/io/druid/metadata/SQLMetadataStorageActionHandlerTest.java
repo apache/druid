@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableSet;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -88,9 +89,7 @@ public class SQLMetadataStorageActionHandlerTest
           @Override
           public TypeReference<Map<String, String>> getLogType()
           {
-            return new TypeReference<Map<String, String>>()
-            {
-            };
+            return JacksonUtils.TYPE_REFERENCE_MAP_STRING_STRING;
           }
 
           @Override
