@@ -35,8 +35,7 @@ public class IndexerZkConfig
       @JsonProperty("base") String base,
       @JsonProperty("announcementsPath") String announcementsPath,
       @JsonProperty("tasksPath") String tasksPath,
-      @JsonProperty("statusPath") String statusPath,
-      @JsonProperty("leaderLatchPath") String leaderLatchPath
+      @JsonProperty("statusPath") String statusPath
   )
   {
     this.zkPathsConfig = zkPathsConfig;
@@ -44,7 +43,6 @@ public class IndexerZkConfig
     this.announcementsPath = announcementsPath;
     this.tasksPath = tasksPath;
     this.statusPath = statusPath;
-    this.leaderLatchPath = leaderLatchPath;
   }
 
   @JacksonInject
@@ -61,9 +59,6 @@ public class IndexerZkConfig
 
   @JsonProperty
   private final String statusPath;
-
-  @JsonProperty
-  private final String leaderLatchPath;
 
   private String defaultIndexerPath(final String subPath)
   {
@@ -88,11 +83,6 @@ public class IndexerZkConfig
   public String getStatusPath()
   {
     return statusPath == null ? defaultIndexerPath("status") : statusPath;
-  }
-
-  public String getLeaderLatchPath()
-  {
-    return leaderLatchPath == null ? defaultIndexerPath("leaderLatchPath") : leaderLatchPath;
   }
 
   public ZkPathsConfig getZkPathsConfig()
@@ -120,9 +110,6 @@ public class IndexerZkConfig
     if (base != null ? !base.equals(that.base) : that.base != null) {
       return false;
     }
-    if (leaderLatchPath != null ? !leaderLatchPath.equals(that.leaderLatchPath) : that.leaderLatchPath != null) {
-      return false;
-    }
     if (statusPath != null ? !statusPath.equals(that.statusPath) : that.statusPath != null) {
       return false;
     }
@@ -144,7 +131,6 @@ public class IndexerZkConfig
     result = 31 * result + (announcementsPath != null ? announcementsPath.hashCode() : 0);
     result = 31 * result + (tasksPath != null ? tasksPath.hashCode() : 0);
     result = 31 * result + (statusPath != null ? statusPath.hashCode() : 0);
-    result = 31 * result + (leaderLatchPath != null ? leaderLatchPath.hashCode() : 0);
     return result;
   }
 }
