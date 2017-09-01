@@ -37,6 +37,7 @@ import org.apache.curator.framework.recipes.leader.Participant;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -98,8 +99,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
               leader = false;
               try {
                 //Small delay before starting the latch so that others waiting are chosen to become leader.
-                Thread.sleep(1000);
-
+                Thread.sleep(ThreadLocalRandom.current().nextInt(1000, 5000));
                 leaderLatch.get().start();
               }
               catch (Exception e) {
