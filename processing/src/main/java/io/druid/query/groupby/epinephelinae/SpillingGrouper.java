@@ -28,6 +28,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.BaseQuery;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
@@ -52,6 +53,8 @@ import java.util.List;
  */
 public class SpillingGrouper<KeyType> implements Grouper<KeyType>
 {
+  private static final Logger log = new Logger(SpillingGrouper.class);
+
   private final Grouper<KeyType> grouper;
   private static final AggregateResult DISK_FULL = AggregateResult.failure(
       "Not enough disk space to execute this query. Try raising druid.query.groupBy.maxOnDiskStorage."
@@ -81,14 +84,15 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
       final ObjectMapper spillMapper,
       final boolean spillingAllowed,
       final DefaultLimitSpec limitSpec,
-      final boolean sortHasNonGroupingFields
+      final boolean sortHasNonGroupingFields,
+      final int mergeBufferSize
   )
   {
     this.keySerde = keySerdeFactory.factorize();
     this.keyObjComparator = keySerdeFactory.objectComparator(false);
     this.defaultOrderKeyObjComparator = keySerdeFactory.objectComparator(true);
     if (limitSpec != null) {
-      this.grouper = new LimitedBufferHashGrouper<>(
+      LimitedBufferHashGrouper<KeyType> limitGrouper = new LimitedBufferHashGrouper<>(
           bufferSupplier,
           keySerde,
           columnSelectorFactory,
@@ -99,6 +103,25 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
           limitSpec.getLimit(),
           sortHasNonGroupingFields
       );
+      // if configured buffer size is too small to support limit push down, don't apply that optmization
+      if (!limitGrouper.validateBufferCapacity(mergeBufferSize)) {
+        if (sortHasNonGroupingFields) {
+          log.info("Ignoring forceLimitPushDown, insufficient buffer capacity.");
+        }
+        this.grouper = new BufferHashGrouper<>(
+            bufferSupplier,
+            keySerde,
+            columnSelectorFactory,
+            aggregatorFactories,
+            bufferGrouperMaxSize,
+            bufferGrouperMaxLoadFactor,
+            bufferGrouperInitialBuckets,
+            // when there are non-grouping fields, we need to sort by a dimension-only ordering for merging to work
+            sortHasNonGroupingFields
+        );
+      } else {
+        this.grouper = limitGrouper;
+      }
     } else {
       this.grouper = new BufferHashGrouper<>(
           bufferSupplier,
@@ -107,7 +130,8 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
           aggregatorFactories,
           bufferGrouperMaxSize,
           bufferGrouperMaxLoadFactor,
-          bufferGrouperInitialBuckets
+          bufferGrouperInitialBuckets,
+          true
       );
     }
     this.aggregatorFactories = aggregatorFactories;
