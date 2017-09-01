@@ -80,6 +80,11 @@ public class ZkPathsConfig
     return (null == coordinatorPath) ? defaultPath("coordinator") : coordinatorPath;
   }
 
+  public String getOverlordPath()
+  {
+    return defaultPath("overlord");
+  }
+
   public String getLoadQueuePath()
   {
     return (null == loadQueuePath) ? defaultPath("loadQueue") : loadQueuePath;
