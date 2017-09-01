@@ -25,8 +25,8 @@ import com.google.common.io.Files;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
 import io.druid.benchmark.datagen.SegmentGenerator;
-import io.druid.java.util.common.Intervals;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -118,7 +118,8 @@ public class SqlBenchmark
         CalciteTests.createMockQueryLifecycleFactory(walker),
         CalciteTests.createOperatorTable(),
         CalciteTests.createExprMacroTable(),
-        plannerConfig
+        plannerConfig,
+        CalciteTests.getJsonMapper()
     );
     groupByQuery = GroupByQuery
         .builder()
