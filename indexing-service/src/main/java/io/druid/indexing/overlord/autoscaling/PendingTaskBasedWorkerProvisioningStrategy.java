@@ -145,9 +145,9 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     public synchronized boolean doProvision()
     {
       Collection<Task> pendingTasks = runner.getPendingTaskPayloads();
-      log.info("Pending tasks: %d [%s]", pendingTasks.size(), pendingTasks);
+      log.info("Pending tasks: %d %s", pendingTasks.size(), pendingTasks);
       Collection<ImmutableWorkerInfo> workers = runner.getWorkers();
-      log.info("Workers: %d [%s]", workers.size(), workers);
+      log.info("Workers: %d %s", workers.size(), workers);
       boolean didProvision = false;
       final WorkerBehaviorConfig workerConfig = getWorkerBehaviorConfig("provision");
       if (workerConfig == null) {
@@ -168,10 +168,10 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
           ),
           workerConfig
       );
-      log.info("Currently provisioning: %d [%s]", currentlyProvisioning.size(), currentlyProvisioning);
+      log.info("Currently provisioning: %d %s", currentlyProvisioning.size(), currentlyProvisioning);
       currentlyProvisioning.removeAll(workerNodeIds);
       log.info(
-          "Currently provisioning without WorkerNodeIds: %d [%s]",
+          "Currently provisioning without WorkerNodeIds: %d %s",
           currentlyProvisioning.size(),
           currentlyProvisioning
       );
@@ -190,7 +190,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
             log.warn("NewNodes is empty, returning from provision loop");
             break;
           } else {
-            log.info("Provisioned: %d [%s]", provisioned.getNodeIds().size(), provisioned);
+            log.info("Provisioned: %d [%s]", provisioned.getNodeIds().size(), provisioned.getNodeIds());
             currentlyProvisioning.addAll(newNodes);
             lastProvisionTime = DateTimes.nowUtc();
             scalingStats.addProvisionEvent(provisioned);
@@ -222,7 +222,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
         ips.add(worker.getIp());
       }
       List<String> workerNodeIds = workerConfig.getAutoScaler().ipToIdLookup(ips);
-      log.info("WorkerNodeIds: %d [%s]", workerNodeIds.size(), workerNodeIds);
+      log.info("WorkerNodeIds: %d %s", workerNodeIds.size(), workerNodeIds);
       return workerNodeIds;
     }
 
@@ -279,7 +279,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
           workers,
           ProvisioningUtil.createValidWorkerPredicate(config)
       );
-      log.info("Valid workers: %d [%s]", validWorkers.size(), validWorkers);
+      log.info("Valid workers: %d %s", validWorkers.size(), validWorkers);
 
       Map<String, ImmutableWorkerInfo> workersMap = Maps.newHashMap();
       for (ImmutableWorkerInfo worker : validWorkers) {
@@ -330,7 +330,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
         return false;
       }
 
-      log.info("Currently provisioning: %d [%s]", currentlyProvisioning.size(), currentlyProvisioning);
+      log.info("Currently provisioning: %d %s", currentlyProvisioning.size(), currentlyProvisioning);
       if (!currentlyProvisioning.isEmpty()) {
         log.debug("Already provisioning nodes, Not Terminating any nodes.");
         return false;
@@ -338,10 +338,10 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
 
       boolean didTerminate = false;
       final Collection<String> workerNodeIds = getWorkerNodeIDs(runner.getLazyWorkers(), workerConfig);
-      log.info("Currently terminating: %d [%s]", currentlyTerminating.size(), currentlyTerminating);
-      currentlyProvisioning.retainAll(workerNodeIds);
+      log.info("Currently terminating: %d %s", currentlyTerminating.size(), currentlyTerminating);
+      currentlyTerminating.retainAll(workerNodeIds);
       log.info(
-          "Currently terminating among WorkerNodeIds: %d [%s]",
+          "Currently terminating among WorkerNodeIds: %d %s",
           currentlyTerminating.size(),
           currentlyTerminating
       );
@@ -362,7 +362,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
                   }
                 }
             );
-        log.info("Laziest worker ips: %d [%s]", laziestWorkerIps.size(), laziestWorkerIps);
+        log.info("Laziest worker ips: %d %s", laziestWorkerIps.size(), laziestWorkerIps);
         if (laziestWorkerIps.isEmpty()) {
           log.debug("Found no lazy workers");
         } else {
@@ -375,7 +375,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
           final AutoScalingData terminated = workerConfig.getAutoScaler()
                                                          .terminate(ImmutableList.copyOf(laziestWorkerIps));
           if (terminated != null) {
-            log.info("Terminated: %d [%s]", terminated.getNodeIds().size(), terminated);
+            log.info("Terminated: %d %s", terminated.getNodeIds().size(), terminated.getNodeIds());
             currentlyTerminating.addAll(terminated.getNodeIds());
             lastTerminateTime = DateTimes.nowUtc();
             scalingStats.addTerminateEvent(terminated);
