@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
+import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.MapUtils;
 import io.druid.java.util.common.RetryUtils;
@@ -189,7 +190,10 @@ public class S3DataSegmentMover implements DataSegmentMover
             false
         );
         if (!s3Client.isObjectInBucket(targetS3Bucket, targetS3Path)) {
-          throw new IOException("After copy reported as successful the file doesn't exist in the target location");
+          throw new IOE(
+              "After copy was reported as successful the file doesn't exist in the target location [%s]",
+              copyMsg
+          );
         }
         deleteWithRetriesSilent(s3Bucket, s3Path);
         log.debug("Finished moving file %s", copyMsg);
