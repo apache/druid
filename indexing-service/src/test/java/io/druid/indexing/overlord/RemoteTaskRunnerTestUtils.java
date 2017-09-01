@@ -125,7 +125,7 @@ public class RemoteTaskRunnerTestUtils
               {
                 return basePath;
               }
-            }, null, null, null, null, null
+            }, null, null, null, null
         ),
         cf,
         new PathChildrenCacheFactory.Builder(),

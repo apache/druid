@@ -155,11 +155,10 @@ public class OverlordTest
     taskCompletionCountDownLatches[0] = new CountDownLatch(1);
     taskCompletionCountDownLatches[1] = new CountDownLatch(1);
     announcementLatch = new CountDownLatch(1);
-    IndexerZkConfig indexerZkConfig = new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null, null);
+    IndexerZkConfig indexerZkConfig = new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null);
     setupServerAndCurator();
     curator.start();
     curator.blockUntilConnected();
-    curator.create().creatingParentsIfNeeded().forPath(indexerZkConfig.getLeaderLatchPath());
     druidNode = new DruidNode("hey", "what", 1234, null, new ServerConfig());
     ServiceEmitter serviceEmitter = new NoopServiceEmitter();
     taskMaster = new TaskMaster(
