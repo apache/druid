@@ -19,6 +19,8 @@
 
 package io.druid.query.groupby.epinephelinae;
 
+import java.nio.ByteBuffer;
+
 public class Groupers
 {
   private Groupers()
@@ -65,5 +67,13 @@ public class Groupers
   static int getUsedFlag(int keyHash)
   {
     return keyHash | 0x80000000;
+  }
+
+  public static ByteBuffer getSlice(ByteBuffer buffer, int sliceSize, int i)
+  {
+    final ByteBuffer slice = buffer.duplicate();
+    slice.position(sliceSize * i);
+    slice.limit(slice.position() + sliceSize);
+    return slice.slice();
   }
 }
