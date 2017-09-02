@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -272,7 +273,10 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
         return parallelCombine(sortedIterators, dictionary);
       }
     }
-    return Groupers.mergeIterators(sortedIterators, sorted ? keyObjComparator : null);
+
+    return sorted ?
+           Groupers.mergeIterators(sortedIterators, keyObjComparator) :
+           Iterators.concat(sortedIterators.iterator());
   }
 
   private boolean isParallelizable()

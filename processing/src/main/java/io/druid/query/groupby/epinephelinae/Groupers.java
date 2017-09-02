@@ -19,6 +19,7 @@
 
 package io.druid.query.groupby.epinephelinae;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 
 import java.util.Comparator;
@@ -77,20 +78,10 @@ public class Groupers
       final Comparator<Grouper.Entry<KeyType>> keyTypeComparator
   )
   {
-    if (keyTypeComparator != null) {
-      return Iterators.mergeSorted(
-          iterators,
-          new Comparator<Grouper.Entry<KeyType>>()
-          {
-            @Override
-            public int compare(Grouper.Entry<KeyType> lhs, Grouper.Entry<KeyType> rhs)
-            {
-              return keyTypeComparator.compare(lhs, rhs);
-            }
-          }
-      );
-    } else {
-      return Iterators.concat(iterators.iterator());
-    }
+    Preconditions.checkNotNull(keyTypeComparator);
+    return Iterators.mergeSorted(
+        iterators,
+        keyTypeComparator::compare
+    );
   }
 }

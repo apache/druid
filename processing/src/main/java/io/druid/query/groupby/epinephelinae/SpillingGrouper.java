@@ -235,7 +235,9 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     if (sortHasNonGroupingFields) {
       return Groupers.mergeIterators(iterators, defaultOrderKeyObjComparator);
     } else {
-      return Groupers.mergeIterators(iterators, sorted ? keyObjComparator : null);
+      return sorted ?
+             Groupers.mergeIterators(iterators, keyObjComparator) :
+             Iterators.concat(iterators.iterator());
     }
   }
 
