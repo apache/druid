@@ -102,7 +102,7 @@ public class ParallelCombinerTest
   @AfterClass
   public static void teardown()
   {
-    SERVICE.shutdown();
+    SERVICE.shutdownNow();
   }
 
   @Test

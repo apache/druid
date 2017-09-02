@@ -239,7 +239,7 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
   {
     if (curWriteIndex == maxSlotNum - 1) {
       final long startLoopAt = System.currentTimeMillis();
-      while (nextReadIndex == -1 || nextReadIndex == 0) {
+      while ((nextReadIndex == -1 || nextReadIndex == 0) && !Thread.interrupted()) {
         if (System.currentTimeMillis() - startLoopAt > timeoutMs) {
           throw new RuntimeException(new TimeoutException());
         }
@@ -248,7 +248,7 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
     } else {
       final int nextWriteIndex = curWriteIndex + 1;
       final long startLoopAt = System.currentTimeMillis();
-      while (nextWriteIndex == nextReadIndex) {
+      while ((nextWriteIndex == nextReadIndex) && !Thread.interrupted()) {
         if (System.currentTimeMillis() - startLoopAt > timeoutMs) {
           throw new RuntimeException(new TimeoutException());
         }
@@ -301,7 +301,7 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
       {
         // Waits for some data to be ready
         final long startLoopAt = System.currentTimeMillis();
-        while ((curWriteIndex == -1 || curWriteIndex == 0) && !finished) {
+        while ((curWriteIndex == -1 || curWriteIndex == 0) && !finished && !Thread.interrupted()) {
           if (System.currentTimeMillis() - startLoopAt > timeoutMs) {
             throw new RuntimeException(new TimeoutException());
           }
@@ -343,7 +343,7 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
 
         if (!finished) {
           final long startLoopAt = System.currentTimeMillis();
-          while (toBeUpdated == curWriteIndex && !finished) {
+          while (toBeUpdated == curWriteIndex && !finished && !Thread.interrupted()) {
             if (System.currentTimeMillis() - startLoopAt > timeoutMs) {
               throw new RuntimeException(new TimeoutException());
             }

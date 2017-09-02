@@ -53,6 +53,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
@@ -147,10 +148,14 @@ public class ParallelCombiner<KeyType>
   {
     for (Future future : combineFutures) {
       try {
-        // futures should be done before reaching here and throw exceptions if they failed
-        future.get();
+        if (!future.isDone()) {
+          // Cancel futures if close() for the iterator is called early due to some reason (e.g., test failure)
+          future.cancel(true);
+        } else {
+          future.get();
+        }
       }
-      catch (InterruptedException e) {
+      catch (InterruptedException | CancellationException e) {
         throw new QueryInterruptedException(e);
       }
       catch (ExecutionException e) {
