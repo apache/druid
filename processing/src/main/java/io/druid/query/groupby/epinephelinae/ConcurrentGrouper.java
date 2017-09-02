@@ -358,8 +358,11 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   }
 
   /**
-   * Build a combining tree for the input iterators which combine input entries asynchronously.  This method is called
-   * when data is spilled and thus streaming combine is preferred to avoid too many disk accesses.
+   * Build a combining tree for the input iterators which combine input entries asynchronously.  Each node in the tree
+   * is a combining task which iterates through child iterators, aggregates the inputs from those iterators, and returns
+   * an iterator for the result of aggregation.
+   * <p>
+   * This method is called when data is spilled and thus streaming combine is preferred to avoid too many disk accesses.
    *
    * @return an iterator of the root grouper of the combining tree
    */
@@ -379,6 +382,9 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
         combineKeySerdeFactory.factorizeWithDictionary(mergedDictionary),
         combiningFactories
     );
+    // We want to maximize the parallelism while the size of buffer slice is greater than the minimum buffer size
+    // required by StreamingMergeSortedGrouper. Here, we find the degree of the cominbing tree and the required number
+    // of buffers maximizing the degree of parallelism.
     final Pair<Integer, Integer> degreeAndNumBuffers = findCombineDegreeAndNumBuffers(
         combineBuffer,
         minimumRequiredBufferCapacity,
@@ -398,8 +404,8 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
         bufferSupplier,
         combiningFactories,
         combineDegree,
-        combineFutures,
-        mergedDictionary
+        mergedDictionary,
+        combineFutures
     );
 
     return new Iterator<Entry<KeyType>>()
@@ -470,7 +476,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
    * @param combineBuffer                 entire buffer used for combining tree
    * @param requiredMinimumBufferCapacity minimum buffer capacity for {@link StreamingMergeSortedGrouper}
    * @param concurrencyHint               available degree of parallelism
-   * @param maxDegree                     maximum degree
+   * @param numLeafNodes                  number of leaf nodes of combining tree
    *
    * @return a pair of degree and number of buffers if found.
    */
@@ -478,16 +484,16 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       ByteBuffer combineBuffer,
       int requiredMinimumBufferCapacity,
       int concurrencyHint,
-      int maxDegree
+      int numLeafNodes
   )
   {
-    for (int degree = MINIMUM_COMBINE_DEGREE; degree <= maxDegree; degree++) {
-      // the number of available combine nodes is concurrencyHint because it's the max concurrency and we don't want to
-      // parallelize behind that.
-      final int requiredBufferNum = computeRequiredBufferNum(concurrencyHint, degree);
-      final int expectedSliceSize = combineBuffer.capacity() / requiredBufferNum;
-      if (expectedSliceSize > requiredMinimumBufferCapacity) {
-        return Pair.of(degree, requiredBufferNum);
+    for (int degree = MINIMUM_COMBINE_DEGREE; degree <= numLeafNodes; degree++) {
+      final int requiredBufferNum = computeRequiredBufferNum(numLeafNodes, degree);
+      if (requiredBufferNum <= concurrencyHint) {
+        final int expectedSliceSize = combineBuffer.capacity() / requiredBufferNum;
+        if (expectedSliceSize >= requiredMinimumBufferCapacity) {
+          return Pair.of(degree, requiredBufferNum);
+        }
       }
     }
 
@@ -497,19 +503,22 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   /**
    * Recursively compute number of required buffers in a top-down manner.
    *
-   * @param totalNumNodes total number of descendent nodes
-   * @param degree        degree
+   * @param numLeafNodes  number of leaf nodes
+   * @param combineDegree combine degree
    *
    * @return minimum number of buffers required for combining tree
    */
-  private static int computeRequiredBufferNum(int totalNumNodes, int degree)
+  private static int computeRequiredBufferNum(int numLeafNodes, int combineDegree)
   {
-    if (totalNumNodes > degree) {
-      final int numNodesPerChild = (totalNumNodes + degree - 1) / degree; // ceiling
+    if (numLeafNodes > combineDegree) {
+      final int numLeafNodesPerChild = (numLeafNodes + combineDegree - 1) / combineDegree; // ceiling
       int sum = 1; // count for the current node
-      for (int i = 0; i < degree; i++) {
+      for (int i = 0; i < combineDegree; i++) {
         // further compute for child nodes
-        sum += computeRequiredBufferNum(Math.min(numNodesPerChild, totalNumNodes - i * numNodesPerChild), degree);
+        sum += computeRequiredBufferNum(
+            Math.min(numLeafNodesPerChild, numLeafNodes - i * numLeafNodesPerChild),
+            combineDegree
+        );
       }
 
       return sum;
@@ -519,12 +528,15 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   }
 
   /**
-   * Recursively build a combining tree in a top-down manner.
+   * Recursively build a combining tree in a top-down manner.  Note that this method executes several combining tasks
+   * and stores the futures for those tasks in the given combineFutures. (TODO: check this)
    *
    * @param sortedIterators    sorted iterators
    * @param bufferSupplier     combining buffer supplier
    * @param combiningFactories array of combining aggregator factories
    * @param combineDegree      combining degree
+   * @param dictionary         merged dictionary
+   * @param combineFutures     list of futures for the combining tasks
    *
    * @return an iterator of the root of the combining tree
    */
@@ -533,8 +545,8 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       Supplier<ByteBuffer> bufferSupplier,
       AggregatorFactory[] combiningFactories,
       int combineDegree,
-      List<Future> combineFutures,
-      List<String> dictionary
+      List<String> dictionary,
+      List<Future> combineFutures
   )
   {
     final int numIterators = sortedIterators.size();
@@ -548,8 +560,8 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
                 bufferSupplier,
                 combiningFactories,
                 combineDegree,
-                combineFutures,
-                dictionary
+                dictionary,
+                combineFutures
             )
         );
       }
