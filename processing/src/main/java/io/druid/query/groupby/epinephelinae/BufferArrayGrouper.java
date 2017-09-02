@@ -21,6 +21,7 @@ package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -28,9 +29,9 @@ import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorStrategy;
 import io.druid.segment.ColumnSelectorFactory;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
@@ -225,13 +226,13 @@ public class BufferArrayGrouper implements IntGrouper
   }
 
   @Override
-  public Iterator<Entry<Integer>> iterator(boolean sorted)
+  public CloseableIterator<Entry<Integer>> iterator(boolean sorted)
   {
     if (sorted) {
       throw new UnsupportedOperationException("sorted iterator is not supported yet");
     }
 
-    return new Iterator<Entry<Integer>>()
+    return new CloseableIterator<Entry<Integer>>()
     {
       int cur = -1;
       boolean findNext = false;
@@ -275,6 +276,12 @@ public class BufferArrayGrouper implements IntGrouper
           values[i] = aggregators[i].get(valBuffer, recordOffset + aggregatorOffsets[i]);
         }
         return new Entry<>(cur - 1, values);
+      }
+
+      @Override
+      public void close() throws IOException
+      {
+        // do nothing
       }
     };
   }

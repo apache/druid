@@ -19,12 +19,6 @@
 
 package io.druid.query.groupby.epinephelinae;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterators;
-
-import java.util.Comparator;
-import java.util.Iterator;
-
 public class Groupers
 {
   private Groupers()
@@ -71,17 +65,5 @@ public class Groupers
   static int getUsedFlag(int keyHash)
   {
     return keyHash | 0x80000000;
-  }
-
-  public static <KeyType> Iterator<Grouper.Entry<KeyType>> mergeIterators(
-      final Iterable<Iterator<Grouper.Entry<KeyType>>> iterators,
-      final Comparator<Grouper.Entry<KeyType>> keyTypeComparator
-  )
-  {
-    Preconditions.checkNotNull(keyTypeComparator);
-    return Iterators.mergeSorted(
-        iterators,
-        keyTypeComparator::compare
-    );
   }
 }

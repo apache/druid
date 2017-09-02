@@ -26,6 +26,7 @@ import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.collections.ResourceHolder;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -301,7 +302,9 @@ public class ConcurrentGrouperTest
       eachFuture.get();
     }
 
-    final List<Entry<Long>> actual = Lists.newArrayList(grouper.iterator(true));
+    final CloseableIterator<Entry<Long>> iterator = grouper.iterator(true);
+    final List<Entry<Long>> actual = Lists.newArrayList(iterator);
+    iterator.close();
 
     Assert.assertTrue(testResourceHolder.closed);
 

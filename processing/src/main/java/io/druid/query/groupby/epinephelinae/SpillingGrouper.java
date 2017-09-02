@@ -27,6 +27,8 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.parsers.CloseableIterator;
+import io.druid.java.util.common.CloseableIterators;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.query.BaseQuery;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -200,53 +202,57 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   }
 
   @Override
-  public Iterator<Entry<KeyType>> iterator(final boolean sorted)
+  public CloseableIterator<Entry<KeyType>> iterator(final boolean sorted)
   {
-    final List<Iterator<Entry<KeyType>>> iterators = new ArrayList<>(1 + files.size());
+    final List<CloseableIterator<Entry<KeyType>>> iterators = new ArrayList<>(1 + files.size());
 
     iterators.add(grouper.iterator(sorted));
 
     for (final File file : files) {
       final MappingIterator<Entry<KeyType>> fileIterator = read(file, keySerde.keyClazz());
       iterators.add(
-          Iterators.transform(
-              fileIterator,
-              new Function<Entry<KeyType>, Entry<KeyType>>()
-              {
-                @Override
-                public Entry<KeyType> apply(Entry<KeyType> entry)
-                {
-                  final Object[] deserializedValues = new Object[entry.getValues().length];
-                  for (int i = 0; i < deserializedValues.length; i++) {
-                    deserializedValues[i] = aggregatorFactories[i].deserialize(entry.getValues()[i]);
-                    if (deserializedValues[i] instanceof Integer) {
-                      // Hack to satisfy the groupBy unit tests; perhaps we could do better by adjusting Jackson config.
-                      deserializedValues[i] = ((Integer) deserializedValues[i]).longValue();
+          CloseableIterators.withEmptyBaggage(
+              Iterators.transform(
+                  fileIterator,
+                  new Function<Entry<KeyType>, Entry<KeyType>>()
+                  {
+                    @Override
+                    public Entry<KeyType> apply(Entry<KeyType> entry)
+                    {
+                      final Object[] deserializedValues = new Object[entry.getValues().length];
+                      for (int i = 0; i < deserializedValues.length; i++) {
+                        deserializedValues[i] = aggregatorFactories[i].deserialize(entry.getValues()[i]);
+                        if (deserializedValues[i] instanceof Integer) {
+                          // Hack to satisfy the groupBy unit tests; perhaps we could do better by adjusting Jackson config.
+                          deserializedValues[i] = ((Integer) deserializedValues[i]).longValue();
+                        }
+                      }
+                      return new Entry<>(entry.getKey(), deserializedValues);
                     }
                   }
-                  return new Entry<>(entry.getKey(), deserializedValues);
-                }
-              }
+              )
           )
       );
       closeables.add(fileIterator);
     }
 
     if (sortHasNonGroupingFields) {
-      return Groupers.mergeIterators(iterators, defaultOrderKeyObjComparator);
+      return CloseableIterators.mergeSorted(iterators, defaultOrderKeyObjComparator);
     } else {
       return sorted ?
-             Groupers.mergeIterators(iterators, keyObjComparator) :
-             Iterators.concat(iterators.iterator());
+             CloseableIterators.mergeSorted(iterators, keyObjComparator) :
+             CloseableIterators.concat(iterators);
     }
   }
 
   private void spill() throws IOException
   {
-    files.add(spill(grouper.iterator(true)));
-    dictionaryFiles.add(spill(keySerde.getDictionary().iterator()));
+    try (CloseableIterator<Entry<KeyType>> iterator = grouper.iterator(true)) {
+      files.add(spill(iterator));
+      dictionaryFiles.add(spill(keySerde.getDictionary().iterator()));
 
-    grouper.reset();
+      grouper.reset();
+    }
   }
 
   private <T> File spill(Iterator<T> iterator) throws IOException

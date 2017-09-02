@@ -22,16 +22,18 @@ package io.druid.query.groupby.epinephelinae;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterators;
 import com.google.common.primitives.Ints;
+import io.druid.java.util.common.parsers.CloseableIterator;
+import io.druid.java.util.common.CloseableIterators;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.ColumnSelectorFactory;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.AbstractList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -154,12 +156,12 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
   }
 
   @Override
-  public Iterator<Entry<KeyType>> iterator(boolean sorted)
+  public CloseableIterator<Entry<KeyType>> iterator(boolean sorted)
   {
     if (!initialized) {
       // it's possible for iterator() to be called before initialization when
       // a nested groupBy's subquery has an empty result set (see testEmptySubquery() in GroupByQueryRunnerTest)
-      return Iterators.<Entry<KeyType>>emptyIterator();
+      return CloseableIterators.withEmptyBaggage(Iterators.<Entry<KeyType>>emptyIterator());
     }
 
     if (sorted) {
@@ -207,7 +209,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
           }
       );
 
-      return new Iterator<Entry<KeyType>>()
+      return new CloseableIterator<Entry<KeyType>>()
       {
         int curr = 0;
         final int size = getSize();
@@ -232,10 +234,16 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
         {
           throw new UnsupportedOperationException();
         }
+
+        @Override
+        public void close() throws IOException
+        {
+          // do nothing
+        }
       };
     } else {
       // Unsorted iterator
-      return new Iterator<Entry<KeyType>>()
+      return new CloseableIterator<Entry<KeyType>>()
       {
         int curr = 0;
         final int size = getSize();
@@ -263,6 +271,12 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
         public void remove()
         {
           throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void close() throws IOException
+        {
+          // do nothing
         }
       };
     }
