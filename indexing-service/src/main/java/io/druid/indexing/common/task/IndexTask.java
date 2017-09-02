@@ -60,6 +60,7 @@ import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
+import io.druid.output.OutputMediumFactory;
 import io.druid.query.DruidMetrics;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.DataSchema;
@@ -921,6 +922,8 @@ public class IndexTask extends AbstractTask
     private final boolean forceGuaranteedRollup;
     private final boolean reportParseExceptions;
     private final long publishTimeout;
+    @Nullable
+    private final OutputMediumFactory outputMediumFactory;
 
     @JsonCreator
     public IndexTuningConfig(
@@ -936,8 +939,9 @@ public class IndexTask extends AbstractTask
         @JsonProperty("forceExtendableShardSpecs") @Nullable Boolean forceExtendableShardSpecs,
         @JsonProperty("forceGuaranteedRollup") @Nullable Boolean forceGuaranteedRollup,
         @JsonProperty("reportParseExceptions") @Nullable Boolean reportParseExceptions,
-        @JsonProperty("publishTimeout") @Nullable Long publishTimeout
-    )
+        @JsonProperty("publishTimeout") @Nullable Long publishTimeout,
+        @JsonProperty("outputMediumFactory") @Nullable OutputMediumFactory outputMediumFactory
+        )
     {
       this(
           targetPartitionSize,
@@ -950,13 +954,14 @@ public class IndexTask extends AbstractTask
           forceGuaranteedRollup,
           reportParseExceptions,
           publishTimeout,
-          null
+          null,
+          outputMediumFactory
       );
     }
 
     private IndexTuningConfig()
     {
-      this(null, null, null, null, null, null, null, null, null, null, null);
+      this(null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private IndexTuningConfig(
@@ -970,7 +975,8 @@ public class IndexTask extends AbstractTask
         @Nullable Boolean forceGuaranteedRollup,
         @Nullable Boolean reportParseExceptions,
         @Nullable Long publishTimeout,
-        @Nullable File basePersistDirectory
+        @Nullable File basePersistDirectory,
+        @Nullable OutputMediumFactory outputMediumFactory
     )
     {
       Preconditions.checkArgument(
@@ -1004,6 +1010,8 @@ public class IndexTask extends AbstractTask
           !(this.forceExtendableShardSpecs && this.forceGuaranteedRollup),
           "Perfect rollup cannot be guaranteed with extendable shardSpecs"
       );
+
+      this.outputMediumFactory = outputMediumFactory;
     }
 
     public IndexTuningConfig withBasePersistDirectory(File dir)
@@ -1019,7 +1027,8 @@ public class IndexTask extends AbstractTask
           forceGuaranteedRollup,
           reportParseExceptions,
           publishTimeout,
-          dir
+          dir,
+          outputMediumFactory
       );
     }
 
@@ -1107,6 +1116,14 @@ public class IndexTask extends AbstractTask
     public Period getIntermediatePersistPeriod()
     {
       return new Period(Integer.MAX_VALUE); // intermediate persist doesn't make much sense for batch jobs
+    }
+
+    @Nullable
+    @Override
+    @JsonProperty
+    public OutputMediumFactory getOutputMediumFactory()
+    {
+      return outputMediumFactory;
     }
   }
 }

@@ -19,20 +19,24 @@
 
 package io.druid.segment.data;
 
-import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
+import io.druid.io.Channels;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
+import io.druid.output.HeapByteBufferOutputBytes;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntLists;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
-import java.util.List;
 
 /**
  */
-public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInts>
+public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInts>, WritableSupplier<IndexedInts>
 {
   public static final byte VERSION = 0x0;
 
@@ -43,28 +47,15 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
 
   public static VSizeIndexedInts fromArray(int[] array, int maxValue)
   {
-    return fromList(Ints.asList(array), maxValue);
+    return fromList(IntArrayList.wrap(array), maxValue);
   }
 
   public static VSizeIndexedInts empty()
   {
-    return fromList(Lists.<Integer>newArrayList(), 0);
+    return fromList(IntLists.EMPTY_LIST, 0);
   }
 
-  /**
-   * provide for performance reason.
-   */
-  public static byte[] getBytesNoPaddingFromList(List<Integer> list, int maxValue)
-  {
-    int numBytes = getNumBytesForMax(maxValue);
-
-    final ByteBuffer buffer = ByteBuffer.allocate((list.size() * numBytes));
-    writeToBuffer(buffer, list, numBytes, maxValue);
-
-    return buffer.array();
-  }
-
-  public static VSizeIndexedInts fromList(List<Integer> list, int maxValue)
+  public static VSizeIndexedInts fromList(IntList list, int maxValue)
   {
     int numBytes = getNumBytesForMax(maxValue);
 
@@ -74,11 +65,11 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
     return new VSizeIndexedInts(buffer.asReadOnlyBuffer(), numBytes);
   }
 
-  private static void writeToBuffer(ByteBuffer buffer, List<Integer> list, int numBytes, int maxValue)
+  private static void writeToBuffer(ByteBuffer buffer, IntList list, int numBytes, int maxValue)
   {
-    int i = 0;
     ByteBuffer helperBuffer = ByteBuffer.allocate(Ints.BYTES);
-    for (Integer val : list) {
+    for (int i = 0; i < list.size(); i++) {
+      int val = list.getInt(i);
       if (val < 0) {
         throw new IAE("integer values must be positive, got[%d], i[%d]", val, i);
       }
@@ -88,7 +79,6 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
 
       helperBuffer.putInt(0, val);
       buffer.put(helperBuffer.array(), Ints.BYTES - numBytes, numBytes);
-      ++i;
     }
     buffer.position(0);
   }
@@ -99,15 +89,14 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
       throw new IAE("maxValue[%s] must be positive", maxValue);
     }
 
-    byte numBytes = 4;
     if (maxValue <= 0xFF) {
-      numBytes = 1;
+      return 1;
     } else if (maxValue <= 0xFFFF) {
-      numBytes = 2;
+      return 2;
     } else if (maxValue <= 0xFFFFFF) {
-      numBytes = 3;
+      return 3;
     }
-    return numBytes;
+    return 4;
   }
 
   private final ByteBuffer buffer;
@@ -139,12 +128,16 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
     return buffer.getInt(buffer.position() + (index * numBytes)) >>> bitsToShift;
   }
 
-  public byte[] getBytesNoPadding()
+  public int getNumBytesNoPadding()
   {
-    int bytesToTake = buffer.remaining() - (4 - numBytes);
-    byte[] bytes = new byte[bytesToTake];
-    buffer.asReadOnlyBuffer().get(bytes);
-    return bytes;
+    return buffer.remaining() - (Ints.BYTES - numBytes);
+  }
+
+  public void writeBytesNoPaddingTo(HeapByteBufferOutputBytes out)
+  {
+    ByteBuffer toWrite = buffer.slice();
+    toWrite.limit(toWrite.limit() - (Ints.BYTES - numBytes));
+    out.write(toWrite);
   }
 
   public byte[] getBytes()
@@ -171,10 +164,10 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
     return numBytes;
   }
 
-  public long getSerializedSize()
+  @Override
+  public long getSerializedSize() throws IOException
   {
-    // version, numBytes, size, remaining
-    return 1 + 1 + 4 + buffer.remaining();
+    return metaSize() + buffer.remaining();
   }
 
   @Override
@@ -183,11 +176,29 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
     return new IndexedIntsIterator(this);
   }
 
-  public void writeToChannel(WritableByteChannel channel) throws IOException
+  @Override
+  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    channel.write(ByteBuffer.wrap(new byte[]{VERSION, (byte) numBytes}));
-    channel.write(ByteBuffer.wrap(Ints.toByteArray(buffer.remaining())));
-    channel.write(buffer.asReadOnlyBuffer());
+    ByteBuffer meta = ByteBuffer.allocate(metaSize());
+    meta.put(VERSION);
+    meta.put((byte) numBytes);
+    meta.putInt(buffer.remaining());
+    meta.flip();
+
+    Channels.writeFully(channel, meta);
+    Channels.writeFully(channel, buffer.asReadOnlyBuffer());
+  }
+
+  private int metaSize()
+  {
+    // version, numBytes, size
+    return 1 + 1 + Ints.BYTES;
+  }
+
+  @Override
+  public IndexedInts get()
+  {
+    return this;
   }
 
   public static VSizeIndexedInts readFromByteBuffer(ByteBuffer buffer)
@@ -219,38 +230,5 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
     inspector.visit("buffer", buffer);
-  }
-
-  public WritableSupplier<IndexedInts> asWritableSupplier()
-  {
-    return new VSizeIndexedIntsSupplier(this);
-  }
-
-  public static class VSizeIndexedIntsSupplier implements WritableSupplier<IndexedInts>
-  {
-    final VSizeIndexedInts delegate;
-
-    public VSizeIndexedIntsSupplier(VSizeIndexedInts delegate)
-    {
-      this.delegate = delegate;
-    }
-
-    @Override
-    public long getSerializedSize()
-    {
-      return delegate.getSerializedSize();
-    }
-
-    @Override
-    public void writeToChannel(WritableByteChannel channel) throws IOException
-    {
-      delegate.writeToChannel(channel);
-    }
-
-    @Override
-    public IndexedInts get()
-    {
-      return delegate;
-    }
   }
 }

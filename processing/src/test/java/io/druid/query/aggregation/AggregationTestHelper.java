@@ -47,6 +47,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.Yielder;
 import io.druid.java.util.common.guava.YieldingAccumulator;
+import io.druid.output.OffHeapMemoryOutputMediumFactory;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryPlus;
@@ -143,6 +144,7 @@ public class AggregationTestHelper
 
     IndexIO indexIO = new IndexIO(
         mapper,
+        OffHeapMemoryOutputMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -155,7 +157,7 @@ public class AggregationTestHelper
 
     return new AggregationTestHelper(
         mapper,
-        new IndexMergerV9(mapper, indexIO),
+        new IndexMergerV9(mapper, indexIO, OffHeapMemoryOutputMediumFactory.instance()),
         indexIO,
         factory.getToolchest(),
         factory,
@@ -199,6 +201,7 @@ public class AggregationTestHelper
 
     IndexIO indexIO = new IndexIO(
         mapper,
+        OffHeapMemoryOutputMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -211,7 +214,7 @@ public class AggregationTestHelper
 
     return new AggregationTestHelper(
         mapper,
-        new IndexMergerV9(mapper, indexIO),
+        new IndexMergerV9(mapper, indexIO, OffHeapMemoryOutputMediumFactory.instance()),
         indexIO,
         toolchest,
         factory,
@@ -239,6 +242,7 @@ public class AggregationTestHelper
 
     IndexIO indexIO = new IndexIO(
         mapper,
+        OffHeapMemoryOutputMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -251,7 +255,7 @@ public class AggregationTestHelper
 
     return new AggregationTestHelper(
         mapper,
-        new IndexMergerV9(mapper, indexIO),
+        new IndexMergerV9(mapper, indexIO, OffHeapMemoryOutputMediumFactory.instance()),
         indexIO,
         toolchest,
         factory,
@@ -290,6 +294,7 @@ public class AggregationTestHelper
 
     IndexIO indexIO = new IndexIO(
         mapper,
+        OffHeapMemoryOutputMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -302,7 +307,7 @@ public class AggregationTestHelper
 
     return new AggregationTestHelper(
         mapper,
-        new IndexMergerV9(mapper, indexIO),
+        new IndexMergerV9(mapper, indexIO, OffHeapMemoryOutputMediumFactory.instance()),
         indexIO,
         toolchest,
         factory,
@@ -431,7 +436,7 @@ public class AggregationTestHelper
         if (!index.canAppendRow()) {
           File tmp = tempFolder.newFolder();
           toMerge.add(tmp);
-          indexMerger.persist(index, tmp, new IndexSpec());
+          indexMerger.persist(index, tmp, new IndexSpec(), null);
           index.close();
           index = new IncrementalIndex.Builder()
               .setIndexSchema(
@@ -457,19 +462,19 @@ public class AggregationTestHelper
       if (toMerge.size() > 0) {
         File tmp = tempFolder.newFolder();
         toMerge.add(tmp);
-        indexMerger.persist(index, tmp, new IndexSpec());
+        indexMerger.persist(index, tmp, new IndexSpec(), null);
 
         List<QueryableIndex> indexes = new ArrayList<>(toMerge.size());
         for (File file : toMerge) {
           indexes.add(indexIO.loadIndex(file));
         }
-        indexMerger.mergeQueryableIndex(indexes, true, metrics, outDir, new IndexSpec());
+        indexMerger.mergeQueryableIndex(indexes, true, metrics, outDir, new IndexSpec(), null);
 
         for (QueryableIndex qi : indexes) {
           qi.close();
         }
       } else {
-        indexMerger.persist(index, outDir, new IndexSpec());
+        indexMerger.persist(index, outDir, new IndexSpec(), null);
       }
     }
     finally {

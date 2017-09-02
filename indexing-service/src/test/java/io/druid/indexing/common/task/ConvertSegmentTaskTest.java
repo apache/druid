@@ -51,7 +51,7 @@ public class ConvertSegmentTaskTest
     DateTime start = DateTimes.nowUtc();
     final Interval interval = new Interval(start.minus(1000), start);
 
-    ConvertSegmentTask task = ConvertSegmentTask.create(dataSource, interval, null, false, true, null);
+    ConvertSegmentTask task = ConvertSegmentTask.create(dataSource, interval, null, false, true, null, null);
 
     Task task2 = jsonMapper.readValue(jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(task), Task.class);
     Assert.assertEquals(task, task2);
@@ -68,7 +68,7 @@ public class ConvertSegmentTaskTest
         102937
     );
 
-    task = ConvertSegmentTask.create(segment, null, false, true, null);
+    task = ConvertSegmentTask.create(segment, null, false, true, null, null);
 
     task2 = jsonMapper.readValue(jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(task), Task.class);
     Assert.assertEquals(task, task2);

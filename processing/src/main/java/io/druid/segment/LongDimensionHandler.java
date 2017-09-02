@@ -19,15 +19,14 @@
 
 package io.druid.segment;
 
+import io.druid.output.OutputMedium;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.GenericColumn;
 import io.druid.segment.column.LongColumn;
-import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.Indexed;
 
 import java.io.Closeable;
-import java.io.File;
 import java.io.IOException;
 
 public class LongDimensionHandler implements DimensionHandler<Long, Long, Long>
@@ -53,14 +52,16 @@ public class LongDimensionHandler implements DimensionHandler<Long, Long, Long>
 
   @Override
   public DimensionMergerV9<Long> makeMerger(
-      IndexSpec indexSpec, File outDir, IOPeon ioPeon, ColumnCapabilities capabilities, ProgressIndicator progress
+      IndexSpec indexSpec,
+      OutputMedium outputMedium,
+      ColumnCapabilities capabilities,
+      ProgressIndicator progress
   ) throws IOException
   {
     return new LongDimensionMergerV9(
         dimensionName,
         indexSpec,
-        outDir,
-        ioPeon,
+        outputMedium,
         capabilities,
         progress
     );

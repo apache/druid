@@ -35,6 +35,11 @@
             <artifactId>druid-common</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
+      <dependency>
+        <groupId>io.druid</groupId>
+        <artifactId>java-util</artifactId>
+        <version>${project.parent.version}</version>
+      </dependency>
         <dependency>
             <groupId>io.druid</groupId>
             <artifactId>druid-hll</artifactId>
@@ -96,6 +101,10 @@
         <dependency>
             <groupId>org.ow2.asm</groupId>
             <artifactId>asm-commons</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>it.unimi.dsi</groupId>
+            <artifactId>fastutil</artifactId>
         </dependency>
 
         <!-- Tests -->

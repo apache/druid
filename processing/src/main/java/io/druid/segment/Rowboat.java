@@ -51,7 +51,7 @@ public class Rowboat implements Comparable<Rowboat>
     this.rowNum = rowNum;
     this.handlers = handlers;
 
-    this.comprisedRows = new Int2ObjectOpenHashMap<>();
+    this.comprisedRows = new Int2ObjectOpenHashMap<>(1);
   }
 
   public long getTimestamp()

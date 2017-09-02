@@ -35,6 +35,9 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.output.OffHeapMemoryOutputMediumFactory;
+import io.druid.output.OutputMediumFactory;
+import io.druid.output.TmpFileOutputMediumFactory;
 import io.druid.query.aggregation.AggregationTestHelper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -62,8 +65,8 @@ import io.druid.segment.Segment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 import org.apache.commons.io.FileUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -81,36 +84,38 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class MultiValuedDimensionTest
 {
-  private AggregationTestHelper helper;
+  @Parameterized.Parameters(name = "{0}")
+  public static Collection<?> constructorFeeder() throws IOException
+  {
+    final List<Object[]> constructors = Lists.newArrayList();
+    for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
+      constructors.add(new Object[]{config, TmpFileOutputMediumFactory.instance()});
+      constructors.add(new Object[]{config, OffHeapMemoryOutputMediumFactory.instance()});
+    }
+    return constructors;
+  }
 
-  private static IncrementalIndex incrementalIndex;
-  private static QueryableIndex queryableIndex;
+  private final AggregationTestHelper helper;
+  private final OutputMediumFactory outputMediumFactory;
 
-  private static File persistedSegmentDir;
+  private IncrementalIndex incrementalIndex;
+  private QueryableIndex queryableIndex;
 
-  public MultiValuedDimensionTest(
-      final GroupByQueryConfig config
-  ) throws Exception
+  private File persistedSegmentDir;
+
+  public MultiValuedDimensionTest(final GroupByQueryConfig config, OutputMediumFactory outputMediumFactory)
+      throws Exception
   {
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         ImmutableList.<Module>of(),
         config,
         null
     );
+    this.outputMediumFactory = outputMediumFactory;
   }
 
-  @Parameterized.Parameters(name = "{0}")
-  public static Collection<?> constructorFeeder() throws IOException
-  {
-    final List<Object[]> constructors = Lists.newArrayList();
-    for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
-      constructors.add(new Object[]{config});
-    }
-    return constructors;
-  }
-
-  @BeforeClass
-  public static void setupClass() throws Exception
+  @Before
+  public void setup() throws Exception
   {
     incrementalIndex = new IncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
@@ -141,10 +146,10 @@ public class MultiValuedDimensionTest
     }
 
     persistedSegmentDir = Files.createTempDir();
-    TestHelper.getTestIndexMergerV9()
-              .persist(incrementalIndex, persistedSegmentDir, new IndexSpec());
+    TestHelper.getTestIndexMergerV9(outputMediumFactory)
+              .persist(incrementalIndex, persistedSegmentDir, new IndexSpec(), null);
 
-    queryableIndex = TestHelper.getTestIndexIO().loadIndex(persistedSegmentDir);
+    queryableIndex = TestHelper.getTestIndexIO(outputMediumFactory).loadIndex(persistedSegmentDir);
   }
 
   @Test
@@ -331,8 +336,8 @@ public class MultiValuedDimensionTest
     );
   }
 
-  @AfterClass
-  public static void cleanup() throws Exception
+  @After
+  public void cleanup() throws Exception
   {
     queryableIndex.close();
     incrementalIndex.close();

@@ -33,6 +33,9 @@ import io.druid.data.input.impl.TimestampSpec;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
+import io.druid.output.OffHeapMemoryOutputMediumFactory;
+import io.druid.output.OutputMediumFactory;
+import io.druid.output.TmpFileOutputMediumFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -51,12 +54,17 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class IngestSegmentFirehoseTest
 {
   private static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(
@@ -87,11 +95,26 @@ public class IngestSegmentFirehoseTest
       new HyperUniquesAggregatorFactory("unique_hosts", "unique_hosts")
   );
 
+  @Parameterized.Parameters
+  public static Collection<?> constructorFeeder() throws IOException
+  {
+    return ImmutableList.of(
+        new Object[] {TmpFileOutputMediumFactory.instance()},
+        new Object[] {OffHeapMemoryOutputMediumFactory.instance()}
+    );
+  }
+
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
-  private IndexIO indexIO = TestHelper.getTestIndexIO();
-  private IndexMerger indexMerger = TestHelper.getTestIndexMergerV9();
+  private final IndexIO indexIO;
+  private final IndexMerger indexMerger;
+
+  public IngestSegmentFirehoseTest(OutputMediumFactory outputMediumFactory)
+  {
+    indexIO = TestHelper.getTestIndexIO(outputMediumFactory);
+    indexMerger = TestHelper.getTestIndexMergerV9(outputMediumFactory);
+  }
 
   @Test
   public void testReadFromIndexAndWriteAnotherIndex() throws Exception
@@ -204,7 +227,7 @@ public class IngestSegmentFirehoseTest
       for (String line : rows) {
         index.add(parser.parse(line));
       }
-      indexMerger.persist(index, segmentDir, new IndexSpec());
+      indexMerger.persist(index, segmentDir, new IndexSpec(), null);
     }
   }
 }

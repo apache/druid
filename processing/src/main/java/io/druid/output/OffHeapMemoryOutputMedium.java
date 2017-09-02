@@ -17,41 +17,33 @@
  * under the License.
  */
 
-package io.druid.segment.data;
+package io.druid.output;
 
-import java.nio.Buffer;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
+import io.druid.java.util.common.io.Closer;
 
-public abstract class FixedSizeCompressedObjectStrategy<T extends Buffer> extends CompressedObjectStrategy<T>
+import java.io.IOException;
+
+public final class OffHeapMemoryOutputMedium implements OutputMedium
 {
-  private final int sizePer;
+  private final Closer closer = Closer.create();
 
-  protected FixedSizeCompressedObjectStrategy(
-      ByteOrder order,
-      BufferConverter<T> converter,
-      CompressionStrategy compression,
-      int sizePer
-  )
+  @Override
+  public OutputBytes makeOutputBytes()
   {
-    super(order, converter, compression);
-    this.sizePer = sizePer;
-  }
-
-  public int getSize()
-  {
-    return sizePer;
+    DirectByteBufferOutputBytes outputBytes = new DirectByteBufferOutputBytes();
+    closer.register(outputBytes::free);
+    return outputBytes;
   }
 
   @Override
-  protected ByteBuffer bufferFor(T val)
+  public Closer getCloser()
   {
-    return ByteBuffer.allocate(converter.sizeOf(getSize())).order(order);
+    return closer;
   }
 
   @Override
-  protected void decompress(ByteBuffer buffer, int numBytes, ByteBuffer buf)
+  public void close() throws IOException
   {
-    decompressor.decompress(buffer, numBytes, buf, converter.sizeOf(getSize()));
+    closer.close();
   }
 }

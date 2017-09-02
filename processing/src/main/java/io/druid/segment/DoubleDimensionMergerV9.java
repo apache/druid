@@ -20,14 +20,13 @@
 package io.druid.segment;
 
 import io.druid.java.util.common.io.Closer;
+import io.druid.output.OutputMedium;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.CompressedObjectStrategy;
-import io.druid.segment.data.IOPeon;
+import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.serde.DoubleGenericColumnPartSerde;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.IntBuffer;
 import java.util.List;
@@ -38,15 +37,12 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
   protected ProgressIndicator progress;
   protected final IndexSpec indexSpec;
   protected ColumnCapabilities capabilities;
-  protected final File outDir;
-  protected IOPeon ioPeon;
   private DoubleColumnSerializer serializer;
 
   public DoubleDimensionMergerV9(
       String dimensionName,
       IndexSpec indexSpec,
-      File outDir,
-      IOPeon ioPeon,
+      OutputMedium outputMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress
   )
@@ -54,38 +50,21 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
     this.dimensionName = dimensionName;
     this.indexSpec = indexSpec;
     this.capabilities = capabilities;
-    this.outDir = outDir;
-    this.ioPeon = ioPeon;
     this.progress = progress;
 
     try {
-      setupEncodedValueWriter();
+      setupEncodedValueWriter(outputMedium);
     }
     catch (IOException ioe) {
       throw new RuntimeException(ioe);
     }
   }
 
-  protected void setupEncodedValueWriter() throws IOException
+  protected void setupEncodedValueWriter(OutputMedium outputMedium) throws IOException
   {
-    final CompressedObjectStrategy.CompressionStrategy metCompression = indexSpec.getMetricCompression();
-    this.serializer = DoubleColumnSerializer.create(ioPeon, dimensionName, metCompression);
+    final CompressionStrategy metCompression = indexSpec.getMetricCompression();
+    this.serializer = DoubleColumnSerializer.create(outputMedium, dimensionName, metCompression);
     serializer.open();
-  }
-
-  @Override
-  public ColumnDescriptor makeColumnDescriptor() throws IOException
-  {
-    serializer.close();
-    final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
-    builder.setValueType(ValueType.DOUBLE);
-    builder.addSerde(
-        DoubleGenericColumnPartSerde.serializerBuilder()
-                                    .withByteOrder(IndexIO.BYTE_ORDER)
-                                    .withDelegate(serializer)
-                                    .build()
-    );
-    return builder.build();
   }
 
   @Override
@@ -117,5 +96,19 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
   {
     // a double column can never be all null
     return false;
+  }
+
+  @Override
+  public ColumnDescriptor makeColumnDescriptor() throws IOException
+  {
+    final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
+    builder.setValueType(ValueType.DOUBLE);
+    builder.addSerde(
+        DoubleGenericColumnPartSerde.serializerBuilder()
+                                    .withByteOrder(IndexIO.BYTE_ORDER)
+                                    .withDelegate(serializer)
+                                    .build()
+    );
+    return builder.build();
   }
 }

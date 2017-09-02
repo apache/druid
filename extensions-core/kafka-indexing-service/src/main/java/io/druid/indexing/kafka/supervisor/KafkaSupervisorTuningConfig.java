@@ -21,10 +21,12 @@ package io.druid.indexing.kafka.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.indexing.kafka.KafkaTuningConfig;
+import io.druid.output.OutputMediumFactory;
 import io.druid.segment.IndexSpec;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
+import javax.annotation.Nullable;
 import java.io.File;
 
 public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
@@ -48,6 +50,7 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
       @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout, // for backward compatibility
       @JsonProperty("resetOffsetAutomatically") Boolean resetOffsetAutomatically,
+      @JsonProperty("outputMediumFactory") @Nullable OutputMediumFactory outputMediumFactory,
       @JsonProperty("workerThreads") Integer workerThreads,
       @JsonProperty("chatThreads") Integer chatThreads,
       @JsonProperty("chatRetries") Long chatRetries,
@@ -68,7 +71,8 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
         // Supervised kafka tasks should respect KafkaSupervisorIOConfig.completionTimeout instead of
         // handoffConditionTimeout
         handoffConditionTimeout,
-        resetOffsetAutomatically
+        resetOffsetAutomatically,
+        outputMediumFactory
     );
 
     this.workerThreads = workerThreads;
@@ -128,6 +132,7 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
            ", reportParseExceptions=" + isReportParseExceptions() +
            ", handoffConditionTimeout=" + getHandoffConditionTimeout() +
            ", resetOffsetAutomatically=" + isResetOffsetAutomatically() +
+           ", outputMediumFactory=" + getOutputMediumFactory() +
            ", workerThreads=" + workerThreads +
            ", chatThreads=" + chatThreads +
            ", chatRetries=" + chatRetries +

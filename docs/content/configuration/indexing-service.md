@@ -343,3 +343,24 @@ If the peon is running in remote mode, there must be an overlord up and running.
 |`druid.peon.taskActionClient.retry.minWait`|The minimum retry time to communicate with overlord.|PT5S|
 |`druid.peon.taskActionClient.retry.maxWait`|The maximum retry time to communicate with overlord.|PT1M|
 |`druid.peon.taskActionClient.retry.maxRetryCount`|The maximum number of retries to communicate with overlord.|60|
+
+##### OutputMediumFactory
+
+When new segments are created, Druid temporarily stores some pre-processed data in some buffers. Currently two types of
+*medium* exist for those buffers: *temporary files* and *off-heap memory*.
+
+*Temporary files* (`tmpFile`) are stored under the task working directory (see `druid.indexer.task.baseTaskDir`
+configuration above) and thus share it's mounting properies, e. g. they could be backed by HDD, SSD or memory (tmpfs).
+This type of medium may do unnecessary disk I/O and requires some disk space to be available.
+
+*Off-heap memory medium* (`offHeapMemory`) creates buffers in off-heap memory of a JVM process that is running a task.
+This type of medium is preferred, but it may require to allow the JVM to have more off-heap memory, by changing
+`-XX:MaxDirectMemorySize` configuration.
+
+For most types of tasks OutputMediumFactory could be configured per-task (see [Tasks](../ingestion/tasks.html) page,
+"TuningConfig" section), but if it's not specified for a task, or it's not supported for a particular task type, then
+the value from the configuration below is used:
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.defaultOutputMediumFactory`|`tmpFile` or `offHeapMemory`, see explanation above|`tmpFile`|

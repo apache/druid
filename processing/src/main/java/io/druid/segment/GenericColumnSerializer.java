@@ -20,20 +20,14 @@
 package io.druid.segment;
 
 import io.druid.guice.annotations.ExtensionPoint;
-import io.druid.java.util.common.io.smoosh.FileSmoosher;
+import io.druid.segment.serde.Serializer;
 
-import java.io.Closeable;
 import java.io.IOException;
-import java.nio.channels.WritableByteChannel;
 
 @ExtensionPoint
-public interface GenericColumnSerializer extends Closeable
+public interface GenericColumnSerializer extends Serializer
 {
   public void open() throws IOException;
 
   public void serialize(Object obj) throws IOException;
-
-  public long getSerializedSize();
-
-  public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException;
 }

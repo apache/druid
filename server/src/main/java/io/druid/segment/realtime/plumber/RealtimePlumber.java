@@ -421,7 +421,8 @@ public class RealtimePlumber implements Plumber
                   schema.getGranularitySpec().isRollup(),
                   schema.getAggregators(),
                   mergedTarget,
-                  config.getIndexSpec()
+                  config.getIndexSpec(),
+                  config.getOutputMediumFactory()
               );
 
               // emit merge metrics before publishing segment
@@ -931,7 +932,8 @@ public class RealtimePlumber implements Plumber
             indexToPersist.getIndex(),
             interval,
             new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount())),
-            indexSpec
+            indexSpec,
+            config.getOutputMediumFactory()
         );
 
         indexToPersist.swapSegment(

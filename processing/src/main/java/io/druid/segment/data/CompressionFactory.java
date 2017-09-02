@@ -25,16 +25,16 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import io.druid.output.OutputBytes;
+import io.druid.output.OutputMedium;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Map;
 
 /**
- * Compression of metrics is done by using a combination of {@link CompressedObjectStrategy.CompressionStrategy}
+ * Compression of metrics is done by using a combination of {@link CompressionStrategy}
  * and Encoding(such as {@link LongEncodingStrategy} for type Long). CompressionStrategy is unaware of the data type
  * and is based on byte operations. It must compress and decompress in block of bytes. Encoding refers to compression
  * method relies on data format, so a different set of Encodings exist for each data type.
@@ -215,7 +215,7 @@ public class CompressionFactory
 
   /**
    * This writer output encoded values to the given ByteBuffer or OutputStream. {@link #setBuffer(ByteBuffer)} or
-   * {@link #setOutputStream(OutputStream)} must be called before any value is written, and {@link #flush()} must
+   * {@link #setOutputStream(OutputBytes)} must be called before any value is written, and {@link #flush()} must
    * be called before calling setBuffer or setOutputStream again to set another output.
    */
   public interface LongEncodingWriter
@@ -226,7 +226,7 @@ public class CompressionFactory
      */
     void setBuffer(ByteBuffer buffer);
 
-    void setOutputStream(OutputStream output);
+    void setOutputStream(OutputBytes output);
 
     void write(long value) throws IOException;
 
@@ -239,7 +239,9 @@ public class CompressionFactory
      * Output the header values of the associating encoding format to the given outputStream. The header also include
      * bytes for compression strategy and encoding format(optional) as described above in Compression Storage Format.
      */
-    void putMeta(OutputStream metaOut, CompressedObjectStrategy.CompressionStrategy strategy) throws IOException;
+    void putMeta(ByteBuffer metaOut, CompressionStrategy strategy) throws IOException;
+
+    int metaSize();
 
     /**
      * Get the number of values that can be encoded into each block for the given block size in bytes
@@ -269,11 +271,10 @@ public class CompressionFactory
       ByteBuffer fromBuffer,
       ByteOrder order,
       LongEncodingFormat encodingFormat,
-      CompressedObjectStrategy.CompressionStrategy strategy,
-      SmooshedFileMapper fileMapper
+      CompressionStrategy strategy
   )
   {
-    if (strategy == CompressedObjectStrategy.CompressionStrategy.NONE) {
+    if (strategy == CompressionStrategy.NONE) {
       return new EntireLayoutIndexedLongSupplier(totalSize, encodingFormat.getReader(fromBuffer, order));
     } else {
       return new BlockLayoutIndexedLongSupplier(
@@ -282,28 +283,31 @@ public class CompressionFactory
           fromBuffer,
           order,
           encodingFormat.getReader(fromBuffer, order),
-          strategy,
-          fileMapper
+          strategy
       );
     }
   }
 
   public static LongSupplierSerializer getLongSerializer(
-      IOPeon ioPeon, String filenameBase, ByteOrder order,
+      OutputMedium outputMedium,
+      String filenameBase,
+      ByteOrder order,
       LongEncodingStrategy encodingStrategy,
-      CompressedObjectStrategy.CompressionStrategy compressionStrategy
+      CompressionStrategy compressionStrategy
   )
   {
     if (encodingStrategy == LongEncodingStrategy.AUTO) {
-      return new IntermediateLongSupplierSerializer(ioPeon, filenameBase, order, compressionStrategy);
+      return new IntermediateLongSupplierSerializer(outputMedium, filenameBase, order, compressionStrategy);
     } else if (encodingStrategy == LongEncodingStrategy.LONGS) {
-      if (compressionStrategy == CompressedObjectStrategy.CompressionStrategy.NONE) {
-        return new EntireLayoutLongSupplierSerializer(
-            ioPeon, filenameBase, order, new LongsLongEncodingWriter(order)
-        );
+      if (compressionStrategy == CompressionStrategy.NONE) {
+        return new EntireLayoutLongSupplierSerializer(outputMedium, new LongsLongEncodingWriter(order));
       } else {
         return new BlockLayoutLongSupplierSerializer(
-            ioPeon, filenameBase, order, new LongsLongEncodingWriter(order), compressionStrategy
+            outputMedium,
+            filenameBase,
+            order,
+            new LongsLongEncodingWriter(order),
+            compressionStrategy
         );
       }
     } else {
@@ -318,30 +322,27 @@ public class CompressionFactory
       int sizePer,
       ByteBuffer fromBuffer,
       ByteOrder order,
-      CompressedObjectStrategy.CompressionStrategy strategy,
-      SmooshedFileMapper fileMapper
+      CompressionStrategy strategy
   )
   {
-    if (strategy == CompressedObjectStrategy.CompressionStrategy.NONE) {
+    if (strategy == CompressionStrategy.NONE) {
       return new EntireLayoutIndexedFloatSupplier(totalSize, fromBuffer, order);
     } else {
-      return new BlockLayoutIndexedFloatSupplier(totalSize, sizePer, fromBuffer, order, strategy, fileMapper);
+      return new BlockLayoutIndexedFloatSupplier(totalSize, sizePer, fromBuffer, order, strategy);
     }
   }
 
   public static FloatSupplierSerializer getFloatSerializer(
-      IOPeon ioPeon, String filenameBase, ByteOrder order,
-      CompressedObjectStrategy.CompressionStrategy compressionStrategy
+      OutputMedium outputMedium,
+      String filenameBase,
+      ByteOrder order,
+      CompressionStrategy compressionStrategy
   )
   {
-    if (compressionStrategy == CompressedObjectStrategy.CompressionStrategy.NONE) {
-      return new EntireLayoutFloatSupplierSerializer(
-          ioPeon, filenameBase, order
-      );
+    if (compressionStrategy == CompressionStrategy.NONE) {
+      return new EntireLayoutFloatSupplierSerializer(outputMedium, order);
     } else {
-      return new BlockLayoutFloatSupplierSerializer(
-          ioPeon, filenameBase, order, compressionStrategy
-      );
+      return new BlockLayoutFloatSupplierSerializer(outputMedium, filenameBase, order, compressionStrategy);
     }
   }
 
@@ -350,29 +351,29 @@ public class CompressionFactory
       int sizePer,
       ByteBuffer fromBuffer,
       ByteOrder byteOrder,
-      CompressedObjectStrategy.CompressionStrategy strategy,
-      SmooshedFileMapper fileMapper
+      CompressionStrategy strategy
   )
   {
     switch (strategy) {
       case NONE:
         return new EntireLayoutIndexedDoubleSupplier(totalSize, fromBuffer, byteOrder);
       default:
-        return new BlockLayoutIndexedDoubleSupplier(totalSize, sizePer, fromBuffer, byteOrder, strategy, fileMapper);
+        return new BlockLayoutIndexedDoubleSupplier(totalSize, sizePer, fromBuffer, byteOrder, strategy);
     }
 
   }
+
   public static DoubleSupplierSerializer getDoubleSerializer(
-      IOPeon ioPeon,
+      OutputMedium outputMedium,
       String filenameBase,
       ByteOrder byteOrder,
-      CompressedObjectStrategy.CompressionStrategy compression
+      CompressionStrategy compression
   )
   {
-    if (compression == CompressedObjectStrategy.CompressionStrategy.NONE) {
-      return new EntireLayoutDoubleSupplierSerializer(ioPeon, filenameBase, byteOrder);
+    if (compression == CompressionStrategy.NONE) {
+      return new EntireLayoutDoubleSupplierSerializer(outputMedium, byteOrder);
     } else {
-      return new BlockLayoutDoubleSupplierSerializer(ioPeon, filenameBase, byteOrder, compression);
+      return new BlockLayoutDoubleSupplierSerializer(outputMedium, filenameBase, byteOrder, compression);
     }
   }
 }

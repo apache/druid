@@ -590,7 +590,8 @@ public class AppenderatorImpl implements Appenderator
           schema.getGranularitySpec().isRollup(),
           schema.getAggregators(),
           mergedTarget,
-          tuningConfig.getIndexSpec()
+          tuningConfig.getIndexSpec(),
+          tuningConfig.getOutputMediumFactory()
       );
 
       // Retry pushing segments because uploading to deep storage might fail especially for cloud storage types
@@ -1035,7 +1036,8 @@ public class AppenderatorImpl implements Appenderator
             indexToPersist.getIndex(),
             identifier.getInterval(),
             new File(persistDir, String.valueOf(indexToPersist.getCount())),
-            indexSpec
+            indexSpec,
+            tuningConfig.getOutputMediumFactory()
         );
 
         indexToPersist.swapSegment(

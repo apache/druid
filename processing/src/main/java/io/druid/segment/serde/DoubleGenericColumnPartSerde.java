@@ -19,23 +19,19 @@
 
 package io.druid.segment.serde;
 
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.DoubleColumnSerializer;
+import io.druid.segment.column.ColumnBuilder;
+import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.CompressedDoublesIndexedSupplier;
 
-import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.channels.WritableByteChannel;
 
 public class DoubleGenericColumnPartSerde implements ColumnPartSerde
 {
-  private final ByteOrder byteOrder;
-  private Serializer serialize;
-
   @JsonCreator
   public static DoubleGenericColumnPartSerde getDoubleGenericColumnPartSerde(
       @JsonProperty("byteOrder") ByteOrder byteOrder
@@ -44,39 +40,19 @@ public class DoubleGenericColumnPartSerde implements ColumnPartSerde
     return new DoubleGenericColumnPartSerde(byteOrder, null);
   }
 
+  private final ByteOrder byteOrder;
+  private final Serializer serializer;
+
+  private DoubleGenericColumnPartSerde(ByteOrder byteOrder, Serializer serializer)
+  {
+    this.byteOrder = byteOrder;
+    this.serializer = serializer;
+  }
+
   @JsonProperty
   public ByteOrder getByteOrder()
   {
     return byteOrder;
-  }
-
-
-  public DoubleGenericColumnPartSerde(ByteOrder byteOrder, Serializer serialize)
-  {
-    this.byteOrder = byteOrder;
-    this.serialize = serialize;
-  }
-
-  @Override
-  public Serializer getSerializer()
-  {
-    return serialize;
-  }
-
-  @Override
-  public Deserializer getDeserializer()
-  {
-    return (buffer, builder, columnConfig) -> {
-      final CompressedDoublesIndexedSupplier column = CompressedDoublesIndexedSupplier.fromByteBuffer(
-            buffer,
-            byteOrder,
-            builder.getFileMapper()
-        );
-        builder.setType(ValueType.DOUBLE)
-               .setHasMultipleValues(false)
-               .setGenericColumn(new DoubleGenericColumnSupplier(column));
-
-    };
   }
 
   public static SerializerBuilder serializerBuilder()
@@ -89,8 +65,7 @@ public class DoubleGenericColumnPartSerde implements ColumnPartSerde
     private ByteOrder byteOrder = null;
     private DoubleColumnSerializer delegate = null;
 
-    public
-    SerializerBuilder withByteOrder(final ByteOrder byteOrder)
+    public SerializerBuilder withByteOrder(final ByteOrder byteOrder)
     {
       this.byteOrder = byteOrder;
       return this;
@@ -104,23 +79,33 @@ public class DoubleGenericColumnPartSerde implements ColumnPartSerde
 
     public DoubleGenericColumnPartSerde build()
     {
-      return new DoubleGenericColumnPartSerde(
-          byteOrder,
-          new Serializer()
-          {
-            @Override
-            public long numBytes()
-            {
-              return delegate.getSerializedSize();
-            }
-
-            @Override
-            public void write(WritableByteChannel channel, FileSmoosher fileSmoosher) throws IOException
-            {
-              delegate.writeToChannel(channel, fileSmoosher);
-            }
-          }
-      );
+      return new DoubleGenericColumnPartSerde(byteOrder, delegate);
     }
+  }
+
+  @Override
+  public Serializer getSerializer()
+  {
+    return serializer;
+  }
+
+  @Override
+  public Deserializer getDeserializer()
+  {
+    return new Deserializer()
+    {
+      @Override
+      public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+      {
+        final CompressedDoublesIndexedSupplier column = CompressedDoublesIndexedSupplier.fromByteBuffer(
+            buffer,
+            byteOrder
+        );
+        builder.setType(ValueType.DOUBLE)
+               .setHasMultipleValues(false)
+               .setGenericColumn(new DoubleGenericColumnSupplier(column));
+
+      }
+    };
   }
 }

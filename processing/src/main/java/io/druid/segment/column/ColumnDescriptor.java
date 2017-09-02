@@ -27,6 +27,7 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.segment.serde.ColumnPartSerde;
+import io.druid.segment.serde.Serializer;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -35,7 +36,7 @@ import java.util.List;
 
 /**
  */
-public class ColumnDescriptor
+public class ColumnDescriptor implements Serializer
 {
   public static Builder builder()
   {
@@ -76,21 +77,21 @@ public class ColumnDescriptor
     return parts;
   }
 
-  public long numBytes()
+  @Override
+  public long getSerializedSize() throws IOException
   {
-    long retVal = 0;
-
+    long size = 0;
     for (ColumnPartSerde part : parts) {
-      retVal += part.getSerializer().numBytes();
+      size += part.getSerializer().getSerializedSize();
     }
-
-    return retVal;
+    return size;
   }
 
-  public void write(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  @Override
+  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     for (ColumnPartSerde part : parts) {
-      part.getSerializer().write(channel, smoosher);
+      part.getSerializer().writeTo(channel, smoosher);
     }
   }
 

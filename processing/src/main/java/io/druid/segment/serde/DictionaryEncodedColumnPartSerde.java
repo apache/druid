@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.spatial.ImmutableRTree;
+import io.druid.io.Channels;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
@@ -211,7 +212,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
           new Serializer()
           {
             @Override
-            public long numBytes()
+            public long getSerializedSize() throws IOException
             {
               long size = 1 + // version
                           (version.compareTo(VERSION.COMPRESSED) >= 0
@@ -233,23 +234,23 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
             }
 
             @Override
-            public void write(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+            public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
             {
-              channel.write(ByteBuffer.wrap(new byte[]{version.asByte()}));
+              Channels.writeFully(channel, ByteBuffer.wrap(new byte[]{version.asByte()}));
               if (version.compareTo(VERSION.COMPRESSED) >= 0) {
                 channel.write(ByteBuffer.wrap(Ints.toByteArray(flags)));
               }
               if (dictionaryWriter != null) {
-                dictionaryWriter.writeToChannel(channel, smoosher);
+                dictionaryWriter.writeTo(channel, smoosher);
               }
               if (valueWriter != null) {
-                valueWriter.writeToChannel(channel, smoosher);
+                valueWriter.writeTo(channel, smoosher);
               }
               if (bitmapIndexWriter != null) {
-                bitmapIndexWriter.writeToChannel(channel, smoosher);
+                bitmapIndexWriter.writeTo(channel, smoosher);
               }
               if (spatialIndexWriter != null) {
-                spatialIndexWriter.writeToChannel(channel, smoosher);
+                spatialIndexWriter.writeTo(channel, smoosher);
               }
             }
           }
@@ -341,9 +342,9 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       {
         switch (version) {
           case UNCOMPRESSED_SINGLE_VALUE:
-            return VSizeIndexedInts.readFromByteBuffer(buffer).asWritableSupplier();
+            return VSizeIndexedInts.readFromByteBuffer(buffer);
           case COMPRESSED:
-            return CompressedVSizeIntsIndexedSupplier.fromByteBuffer(buffer, byteOrder, fileMapper);
+            return CompressedVSizeIntsIndexedSupplier.fromByteBuffer(buffer, byteOrder);
           default:
             throw new IAE("Unsupported single-value version[%s]", version);
         }
@@ -355,7 +356,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       {
         switch (version) {
           case UNCOMPRESSED_MULTI_VALUE: {
-            return VSizeIndexed.readFromByteBuffer(buffer).asWritableSupplier();
+            return VSizeIndexed.readFromByteBuffer(buffer);
           }
           case COMPRESSED: {
             if (Feature.MULTI_VALUE.isSet(flags)) {

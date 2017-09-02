@@ -36,6 +36,7 @@ import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.granularity.Granularities;
+import io.druid.output.OffHeapMemoryOutputMediumFactory;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
@@ -148,6 +149,7 @@ public class AppenderatorTester implements AutoCloseable
         0,
         null,
         null,
+        null,
         null
     );
 
@@ -156,6 +158,7 @@ public class AppenderatorTester implements AutoCloseable
 
     indexIO = new IndexIO(
         objectMapper,
+        OffHeapMemoryOutputMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -165,7 +168,7 @@ public class AppenderatorTester implements AutoCloseable
           }
         }
     );
-    indexMerger = new IndexMergerV9(objectMapper, indexIO);
+    indexMerger = new IndexMergerV9(objectMapper, indexIO, OffHeapMemoryOutputMediumFactory.instance());
 
     emitter = new ServiceEmitter(
         "test",

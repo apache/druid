@@ -28,6 +28,7 @@ import io.druid.data.input.InputRow;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.output.OffHeapMemoryOutputMediumFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMergerV9;
@@ -90,6 +91,7 @@ public class IndexMergeBenchmark
     JSON_MAPPER = new DefaultObjectMapper();
     INDEX_IO = new IndexIO(
         JSON_MAPPER,
+        OffHeapMemoryOutputMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -99,7 +101,7 @@ public class IndexMergeBenchmark
           }
         }
     );
-    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO);
+    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemoryOutputMediumFactory.instance());
   }
 
   @Setup
@@ -139,7 +141,8 @@ public class IndexMergeBenchmark
       File indexFile = INDEX_MERGER_V9.persist(
           incIndex,
           tmpDir,
-          new IndexSpec()
+          new IndexSpec(),
+          null
       );
 
       QueryableIndex qIndex = INDEX_IO.loadIndex(indexFile);
@@ -183,7 +186,8 @@ public class IndexMergeBenchmark
           rollup,
           schemaInfo.getAggsArray(),
           tmpFile,
-          new IndexSpec()
+          new IndexSpec(),
+          null
       );
 
       blackhole.consume(mergedFile);

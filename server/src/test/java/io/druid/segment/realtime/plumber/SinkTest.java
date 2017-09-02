@@ -73,6 +73,7 @@ public class SinkTest
         0,
         null,
         null,
+        null,
         null
     );
     final Sink sink = new Sink(

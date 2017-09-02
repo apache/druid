@@ -29,6 +29,7 @@ import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.granularity.Granularities;
+import io.druid.output.OffHeapMemoryOutputMediumFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.TestHelper;
@@ -109,8 +110,8 @@ public class FireDepartmentTest
                 null,
                 null,
                 null,
-                TestHelper.getTestIndexMergerV9(),
-                TestHelper.getTestIndexIO(),
+                TestHelper.getTestIndexMergerV9(OffHeapMemoryOutputMediumFactory.instance()),
+                TestHelper.getTestIndexIO(OffHeapMemoryOutputMediumFactory.instance()),
                 MapCache.create(0),
                 NO_CACHE_CONFIG,
                 TestHelper.getJsonMapper()

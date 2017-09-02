@@ -192,6 +192,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         false,
         null,
         null,
+        null,
         numThreads,
         TEST_CHAT_THREADS,
         TEST_CHAT_RETRIES,

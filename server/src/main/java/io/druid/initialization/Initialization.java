@@ -60,6 +60,7 @@ import io.druid.guice.security.DruidAuthModule;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
+import io.druid.output.OutputMediumModule;
 import io.druid.server.initialization.EmitterModule;
 import io.druid.server.initialization.jetty.JettyServerModule;
 import io.druid.server.metrics.MetricsModule;
@@ -352,6 +353,7 @@ public class Initialization
         new AnnouncerModule(),
         new AWSModule(),
         new MetricsModule(),
+        new OutputMediumModule(),
         new ServerModule(),
         new DruidProcessingConfigModule(),
         new StorageNodeModule(),

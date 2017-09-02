@@ -44,6 +44,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.Smoosh;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.output.OutputMediumFactory;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnCapabilities;
@@ -70,6 +71,7 @@ import io.druid.segment.serde.LongGenericColumnSupplier;
 import io.druid.segment.serde.SpatialIndexColumnPartSupplier;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -95,11 +97,13 @@ public class IndexIO
   private static final SerializerUtils serializerUtils = new SerializerUtils();
 
   private final ObjectMapper mapper;
+  private final OutputMediumFactory defaultOutputMediumFactory;
 
   @Inject
-  public IndexIO(ObjectMapper mapper, ColumnConfig columnConfig)
+  public IndexIO(ObjectMapper mapper, OutputMediumFactory defaultOutputMediumFactory, ColumnConfig columnConfig)
   {
     this.mapper = Preconditions.checkNotNull(mapper, "null ObjectMapper");
+    this.defaultOutputMediumFactory = Preconditions.checkNotNull(defaultOutputMediumFactory, "null OutputMediumFactory");
     Preconditions.checkNotNull(columnConfig, "null ColumnConfig");
     ImmutableMap.Builder<Integer, IndexLoader> indexLoadersBuilder = ImmutableMap.builder();
     LegacyIndexLoader legacyIndexLoader = new LegacyIndexLoader(new DefaultIndexIOHandler(), columnConfig);
@@ -224,13 +228,17 @@ public class IndexIO
       File converted,
       IndexSpec indexSpec,
       boolean forceIfCurrent,
-      boolean validate
+      boolean validate,
+      @Nullable OutputMediumFactory outputMediumFactory
   ) throws IOException
   {
     final int version = SegmentUtils.getVersionFromDir(toConvert);
     boolean current = version == CURRENT_VERSION_ID;
     if (!current || forceIfCurrent) {
-      new IndexMergerV9(mapper, this).convert(toConvert, converted, indexSpec);
+      if (outputMediumFactory == null) {
+        outputMediumFactory = this.defaultOutputMediumFactory;
+      }
+      new IndexMergerV9(mapper, this, outputMediumFactory).convert(toConvert, converted, indexSpec);
       if (validate) {
         validateTwoSegments(toConvert, converted);
       }
@@ -477,7 +485,7 @@ public class IndexIO
               metric,
               new ColumnBuilder()
                   .setType(ValueType.FLOAT)
-                  .setGenericColumn(new FloatGenericColumnSupplier(metricHolder.floatType, BYTE_ORDER))
+                  .setGenericColumn(new FloatGenericColumnSupplier(metricHolder.floatType))
                   .build()
           );
         } else if (metricHolder.getType() == MetricHolder.MetricType.COMPLEX) {

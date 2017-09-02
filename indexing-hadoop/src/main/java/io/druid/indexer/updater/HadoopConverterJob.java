@@ -535,7 +535,8 @@ public class HadoopConverterJob
             inDir,
             outDir,
             config.getIndexSpec(),
-            JobHelper.progressIndicatorForContext(context)
+            JobHelper.progressIndicatorForContext(context),
+            null
         );
       }
       catch (Exception e) {

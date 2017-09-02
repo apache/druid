@@ -19,15 +19,14 @@
 
 package io.druid.segment.data;
 
-import java.nio.ByteBuffer;
-
 import com.google.common.collect.Ordering;
-
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ConciseBitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.bitmap.WrappedImmutableConciseBitmap;
 import io.druid.extendedset.intset.ImmutableConciseSet;
+
+import java.nio.ByteBuffer;
 
 /**
  */
@@ -68,8 +67,7 @@ public class ConciseBitmapSerdeFactory implements BitmapSerdeFactory
     }
   }.nullsFirst();
 
-  private static class ImmutableConciseSetObjectStrategy
-      implements ObjectStrategy<ImmutableBitmap>
+  private static class ImmutableConciseSetObjectStrategy implements ObjectStrategy<ImmutableBitmap>
   {
     @Override
     public Class<ImmutableBitmap> getClazz()

@@ -150,7 +150,7 @@ public class IngestSegmentFirehoseFactoryTest
     if (!persistDir.mkdirs() && !persistDir.exists()) {
       throw new IOE("Could not create directory at [%s]", persistDir.getAbsolutePath());
     }
-    INDEX_MERGER_V9.persist(index, persistDir, indexSpec);
+    INDEX_MERGER_V9.persist(index, persistDir, indexSpec, null);
 
     final TaskLockbox tl = new TaskLockbox(ts);
     final IndexerSQLMetadataStorageCoordinator mdc = new IndexerSQLMetadataStorageCoordinator(null, null, null)

@@ -23,6 +23,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.io.Closer;
 import io.druid.segment.CompressedPools;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.junit.After;
@@ -44,11 +45,12 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class CompressedIntsIndexedSupplierTest extends CompressionStrategyTest
 {
-  public CompressedIntsIndexedSupplierTest(CompressedObjectStrategy.CompressionStrategy compressionStrategy)
+  public CompressedIntsIndexedSupplierTest(CompressionStrategy compressionStrategy)
   {
     super(compressionStrategy);
   }
 
+  private Closer closer;
   private IndexedInts indexed;
   private CompressedIntsIndexedSupplier supplier;
   private int[] vals;
@@ -56,6 +58,7 @@ public class CompressedIntsIndexedSupplierTest extends CompressionStrategyTest
   @Before
   public void setUp() throws Exception
   {
+    closer = Closer.create();
     CloseQuietly.close(indexed);
     indexed = null;
     supplier = null;
@@ -65,6 +68,7 @@ public class CompressedIntsIndexedSupplierTest extends CompressionStrategyTest
   @After
   public void tearDown() throws Exception
   {
+    closer.close();
     CloseQuietly.close(indexed);
   }
 
@@ -78,7 +82,8 @@ public class CompressedIntsIndexedSupplierTest extends CompressionStrategyTest
         IntBuffer.wrap(vals),
         chunkSize,
         ByteOrder.nativeOrder(),
-        compressionStrategy
+        compressionStrategy,
+        closer
     );
 
     indexed = supplier.get();
@@ -97,14 +102,14 @@ public class CompressedIntsIndexedSupplierTest extends CompressionStrategyTest
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final CompressedIntsIndexedSupplier theSupplier = CompressedIntsIndexedSupplier.fromIntBuffer(
-        IntBuffer.wrap(vals), chunkSize, ByteOrder.nativeOrder(), compressionStrategy
+        IntBuffer.wrap(vals), chunkSize, ByteOrder.nativeOrder(), compressionStrategy, closer
     );
-    theSupplier.writeToChannel(Channels.newChannel(baos));
+    theSupplier.writeTo(Channels.newChannel(baos), null);
 
     final byte[] bytes = baos.toByteArray();
     Assert.assertEquals(theSupplier.getSerializedSize(), bytes.length);
 
-    supplier = CompressedIntsIndexedSupplier.fromByteBuffer(ByteBuffer.wrap(bytes), ByteOrder.nativeOrder(), null);
+    supplier = CompressedIntsIndexedSupplier.fromByteBuffer(ByteBuffer.wrap(bytes), ByteOrder.nativeOrder());
     indexed = supplier.get();
   }
 
