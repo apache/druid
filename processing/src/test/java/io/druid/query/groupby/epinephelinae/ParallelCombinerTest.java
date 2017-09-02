@@ -113,8 +113,9 @@ public class ParallelCombinerTest
         new AggregatorFactory[]{new CountAggregatorFactory("cnt").getCombiningFactory()},
         ConcurrentGrouperTest.KEY_SERDE_FACTORY,
         MoreExecutors.listeningDecorator(SERVICE),
+        false,
         THREAD_NUM,
-        false
+        0
     );
 
     final int numRows = 1000;

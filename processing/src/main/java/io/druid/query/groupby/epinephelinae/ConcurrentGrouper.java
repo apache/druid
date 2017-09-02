@@ -139,8 +139,9 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
         getCombiningFactories(aggregatorFactories),
         combineKeySerdeFactory,
         executor,
+        sortHasNonGroupingFields,
         concurrencyHint,
-        sortHasNonGroupingFields
+        priority
     );
     this.maxDictionarySizeForCombiner = combineKeySerdeFactory.getMaxDictionarySize();
   }
