@@ -50,6 +50,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -398,15 +399,16 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
 
     final Supplier<ByteBuffer> bufferSupplier = createCombineBufferSupplier(combineBuffer, numBuffers, sliceSize);
 
-    final List<Future> combineFutures = new ArrayList<>(numBuffers);
-    final Iterator<Entry<KeyType>> combinedIterator = buildCombineTree(
+    final Pair<Iterator<Entry<KeyType>>, List<Future>> combineIteratorAndFutures = buildCombineTree(
         sortedIterators,
         bufferSupplier,
         combiningFactories,
         combineDegree,
-        mergedDictionary,
-        combineFutures
+        mergedDictionary
     );
+
+    final Iterator<Entry<KeyType>> combineIterator = combineIteratorAndFutures.lhs;
+    final List<Future> combineFutures = combineIteratorAndFutures.rhs;
 
     return new Iterator<Entry<KeyType>>()
     {
@@ -415,7 +417,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       @Override
       public boolean hasNext()
       {
-        if (!combinedIterator.hasNext()) {
+        if (!combineIterator.hasNext()) {
           if (!closed) {
             combineBufferHolder.close();
             closed = true;
@@ -441,7 +443,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       @Override
       public Entry<KeyType> next()
       {
-        return combinedIterator.next();
+        return combineIterator.next();
       }
     };
   }
@@ -501,12 +503,16 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   }
 
   /**
-   * Recursively compute number of required buffers in a top-down manner.
+   * Recursively compute the number of required buffers for a combining tree in a top-down manner.  Since each node of
+   * the combining tree represents a combining task and each combining task requires one buffer, the number of required
+   * buffers is the number of nodes of the combining tree.
    *
    * @param numLeafNodes  number of leaf nodes
    * @param combineDegree combine degree
    *
    * @return minimum number of buffers required for combining tree
+   *
+   * @see {@link #buildCombineTree(List, Supplier, AggregatorFactory[], int, List)}
    */
   private static int computeRequiredBufferNum(int numLeafNodes, int combineDegree)
   {
@@ -528,46 +534,59 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   }
 
   /**
-   * Recursively build a combining tree in a top-down manner.  Note that this method executes several combining tasks
-   * and stores the futures for those tasks in the given combineFutures. (TODO: check this)
+   * Recursively build a combining tree in a top-down manner.  Each node of the tree is a task that combines input
+   * iterators asynchronously.
    *
    * @param sortedIterators    sorted iterators
    * @param bufferSupplier     combining buffer supplier
    * @param combiningFactories array of combining aggregator factories
    * @param combineDegree      combining degree
    * @param dictionary         merged dictionary
-   * @param combineFutures     list of futures for the combining tasks
    *
-   * @return an iterator of the root of the combining tree
+   * @return a pair of an iterator of the root of the combining tree and a list of futures of all executed combining
+   * tasks
    */
-  private Iterator<Entry<KeyType>> buildCombineTree(
+  private Pair<Iterator<Entry<KeyType>>, List<Future>> buildCombineTree(
       List<Iterator<Entry<KeyType>>> sortedIterators,
       Supplier<ByteBuffer> bufferSupplier,
       AggregatorFactory[] combiningFactories,
       int combineDegree,
-      List<String> dictionary,
-      List<Future> combineFutures
+      List<String> dictionary
   )
   {
     final int numIterators = sortedIterators.size();
     if (numIterators > combineDegree) {
+      final List<Iterator<Entry<KeyType>>> childIterators = new ArrayList<>(combineDegree);
+      final List<Future> combineFutures = new ArrayList<>(combineDegree + 1);
+
       final int iteratorsPerChild = (numIterators + combineDegree - 1) / combineDegree; // ceiling
-      final List<Iterator<Entry<KeyType>>> childIterators = new ArrayList<>();
       for (int i = 0; i < combineDegree; i++) {
-        childIterators.add(
-            buildCombineTree(
-                sortedIterators.subList(i * iteratorsPerChild, Math.min(numIterators, (i + 1) * iteratorsPerChild)),
-                bufferSupplier,
-                combiningFactories,
-                combineDegree,
-                dictionary,
-                combineFutures
-            )
+        final Pair<Iterator<Entry<KeyType>>, List<Future>> childIteratorAndFutures = buildCombineTree(
+            sortedIterators.subList(i * iteratorsPerChild, Math.min(numIterators, (i + 1) * iteratorsPerChild)),
+            bufferSupplier,
+            combiningFactories,
+            combineDegree,
+            dictionary
         );
+        childIterators.add(childIteratorAndFutures.lhs);
+        combineFutures.addAll(childIteratorAndFutures.rhs);
       }
-      return runCombiner(childIterators, bufferSupplier.get(), combiningFactories, combineFutures, dictionary).iterator();
+      final Pair<Iterator<Entry<KeyType>>, Future> iteratorAndFuture = runCombiner(
+          childIterators,
+          bufferSupplier.get(),
+          combiningFactories,
+          dictionary
+      );
+      combineFutures.add(iteratorAndFuture.rhs);
+      return new Pair<>(iteratorAndFuture.lhs, combineFutures);
     } else {
-      return runCombiner(sortedIterators, bufferSupplier.get(), combiningFactories, combineFutures, dictionary).iterator();
+      final Pair<Iterator<Entry<KeyType>>, Future> iteratorAndFuture = runCombiner(
+          sortedIterators,
+          bufferSupplier.get(),
+          combiningFactories,
+          dictionary
+      );
+      return new Pair<>(iteratorAndFuture.lhs, Collections.singletonList(iteratorAndFuture.rhs));
     }
   }
 
@@ -579,11 +598,10 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
     return slice.slice();
   }
 
-  private StreamingMergeSortedGrouper<KeyType> runCombiner(
+  private Pair<Iterator<Entry<KeyType>>, Future> runCombiner(
       List<Iterator<Entry<KeyType>>> iterators,
       ByteBuffer combineBuffer,
       AggregatorFactory[] combiningFactories,
-      List<Future> combineFutures,
       List<String> dictionary
   )
   {
@@ -611,9 +629,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       grouper.finish();
     });
 
-    combineFutures.add(future);
-
-    return grouper;
+    return new Pair<>(grouper.iterator(), future);
   }
 
   @Override
