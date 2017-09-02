@@ -26,8 +26,8 @@ import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.collections.ResourceHolder;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
@@ -61,19 +61,19 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ConcurrentGrouperTest
 {
-  private static final ExecutorService service = Executors.newFixedThreadPool(8);
-  private static final TestResourceHolder testResourceHolder = new TestResourceHolder();
+  private static final ExecutorService SERVICE = Executors.newFixedThreadPool(8);
+  private static final TestResourceHolder TEST_RESOURCE_HOLDER = new TestResourceHolder(256);
 
   @AfterClass
   public static void teardown()
   {
-    service.shutdown();
+    SERVICE.shutdown();
   }
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  private static final Supplier<ByteBuffer> bufferSupplier = new Supplier<ByteBuffer>()
+  private static final Supplier<ByteBuffer> BUFFER_SUPPLIER = new Supplier<ByteBuffer>()
   {
     private final AtomicBoolean called = new AtomicBoolean(false);
     private ByteBuffer buffer;
@@ -89,7 +89,7 @@ public class ConcurrentGrouperTest
     }
   };
 
-  private static final Supplier<ResourceHolder<ByteBuffer>> combineBufferSupplier = new Supplier<ResourceHolder<ByteBuffer>>()
+  private static final Supplier<ResourceHolder<ByteBuffer>> COMBINE_BUFFER_SUPPLIER = new Supplier<ResourceHolder<ByteBuffer>>()
   {
     private final AtomicBoolean called = new AtomicBoolean(false);
 
@@ -97,17 +97,22 @@ public class ConcurrentGrouperTest
     public ResourceHolder<ByteBuffer> get()
     {
       if (called.compareAndSet(false, true)) {
-        return testResourceHolder;
+        return TEST_RESOURCE_HOLDER;
       } else {
         throw new IAE("should be called once");
       }
     }
   };
 
-  private static class TestResourceHolder implements ResourceHolder<ByteBuffer>
+  static class TestResourceHolder implements ResourceHolder<ByteBuffer>
   {
     private boolean closed;
-    private ByteBuffer buffer = ByteBuffer.allocate(256);
+    private ByteBuffer buffer;
+
+    TestResourceHolder(int bufferSize)
+    {
+      buffer = ByteBuffer.allocate(bufferSize);
+    }
 
     @Override
     public ByteBuffer get()
@@ -122,7 +127,7 @@ public class ConcurrentGrouperTest
     }
   }
 
-  private static final KeySerdeFactory<Long> keySerdeFactory = new KeySerdeFactory<Long>()
+  static final KeySerdeFactory<Long> KEY_SERDE_FACTORY = new KeySerdeFactory<Long>()
   {
     @Override
     public long getMaxDictionarySize()
@@ -260,10 +265,10 @@ public class ConcurrentGrouperTest
   public void testAggregate() throws InterruptedException, ExecutionException, IOException
   {
     final ConcurrentGrouper<Long> grouper = new ConcurrentGrouper<>(
-        bufferSupplier,
-        combineBufferSupplier,
-        keySerdeFactory,
-        keySerdeFactory,
+        BUFFER_SUPPLIER,
+        COMBINE_BUFFER_SUPPLIER,
+        KEY_SERDE_FACTORY,
+        KEY_SERDE_FACTORY,
         null_factory,
         new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
         24,
@@ -274,7 +279,7 @@ public class ConcurrentGrouperTest
         8,
         null,
         false,
-        MoreExecutors.listeningDecorator(service),
+        MoreExecutors.listeningDecorator(SERVICE),
         0,
         false,
         0
@@ -286,7 +291,7 @@ public class ConcurrentGrouperTest
     Future<?>[] futures = new Future[8];
 
     for (int i = 0; i < 8; i++) {
-      futures[i] = service.submit(new Runnable()
+      futures[i] = SERVICE.submit(new Runnable()
       {
         @Override
         public void run()
@@ -306,7 +311,7 @@ public class ConcurrentGrouperTest
     final List<Entry<Long>> actual = Lists.newArrayList(iterator);
     iterator.close();
 
-    Assert.assertTrue(testResourceHolder.closed);
+    Assert.assertTrue(TEST_RESOURCE_HOLDER.closed);
 
     final List<Entry<Long>> expected = new ArrayList<>();
     for (long i = 0; i < numRows; i++) {

@@ -76,15 +76,15 @@ public class ParallelCombiner<KeyType>
       AggregatorFactory[] combiningFactories,
       KeySerdeFactory<KeyType> combineKeySerdeFactory,
       ListeningExecutorService executor,
-      Comparator<Entry<KeyType>> keyObjComparator,
-      int concurrencyHint
+      int concurrencyHint,
+      boolean sortHasNonGroupingFields
   )
   {
     this.combineBufferSupplier = combineBufferSupplier;
     this.combiningFactories = combiningFactories;
     this.combineKeySerdeFactory = combineKeySerdeFactory;
     this.executor = executor;
-    this.keyObjComparator = keyObjComparator;
+    this.keyObjComparator = combineKeySerdeFactory.objectComparator(sortHasNonGroupingFields);;
     this.concurrencyHint = concurrencyHint;
   }
 
@@ -98,11 +98,11 @@ public class ParallelCombiner<KeyType>
    * @return an iterator of the root grouper of the combining tree
    */
   public CloseableIterator<Entry<KeyType>> combine(
-      List<CloseableIterator<Entry<KeyType>>> sortedIterators,
+      List<? extends CloseableIterator<Entry<KeyType>>> sortedIterators,
       List<String> mergedDictionary
   )
   {
-    // CombineBuffer is initialized when this method is called
+    // CombineBuffer is initialized when this method is called and closed after the result iterator is done
     final ResourceHolder<ByteBuffer> combineBufferHolder = combineBufferSupplier.get();
     final ByteBuffer combineBuffer = combineBufferHolder.get();
     final int minimumRequiredBufferCapacity = StreamingMergeSortedGrouper.requiredBufferCapacity(
@@ -258,7 +258,7 @@ public class ParallelCombiner<KeyType>
    * tasks
    */
   private Pair<CloseableIterator<Entry<KeyType>>, List<Future>> buildCombineTree(
-      List<CloseableIterator<Entry<KeyType>>> sortedIterators,
+      List<? extends CloseableIterator<Entry<KeyType>>> sortedIterators,
       Supplier<ByteBuffer> bufferSupplier,
       AggregatorFactory[] combiningFactories,
       int combineDegree,
@@ -302,7 +302,7 @@ public class ParallelCombiner<KeyType>
   }
 
   private Pair<CloseableIterator<Entry<KeyType>>, Future> runCombiner(
-      List<CloseableIterator<Entry<KeyType>>> iterators,
+      List<? extends CloseableIterator<Entry<KeyType>>> iterators,
       ByteBuffer combineBuffer,
       AggregatorFactory[] combiningFactories,
       List<String> dictionary
