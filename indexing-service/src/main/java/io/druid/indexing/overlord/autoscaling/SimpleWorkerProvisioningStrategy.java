@@ -41,7 +41,6 @@ import io.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
-import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -114,34 +113,14 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
       this.runner = runner;
     }
 
-    @Nullable
-    private WorkerBehaviorConfig getWorkerBehaviorConfig(String action)
-    {
-      final BaseWorkerBehaviorConfig baseWorkerBehaviorConfig = workerConfigRef.get();
-      if (baseWorkerBehaviorConfig == null) {
-        log.error("No workerConfig available, cannot %s workers.", action);
-        return null;
-      }
-      if (!(baseWorkerBehaviorConfig instanceof WorkerBehaviorConfig)) {
-        log.error("SimpleWorkerProvisioningStrategy accepts only WorkerBehaviorConfig as "
-                  + "BaseWorkerBehaviorConfig, [%s] given, cannot %s workers", baseWorkerBehaviorConfig, action);
-        return null;
-      }
-      final WorkerBehaviorConfig workerConfig = (WorkerBehaviorConfig) baseWorkerBehaviorConfig;
-      if (workerConfig.getAutoScaler() == null) {
-        log.error("No autoScaler available, cannot %s workers", action);
-        return null;
-      }
-      return workerConfig;
-    }
-
     @Override
     public synchronized boolean doProvision()
     {
       Collection<? extends TaskRunnerWorkItem> pendingTasks = runner.getPendingTasks();
       Collection<ImmutableWorkerInfo> workers = runner.getWorkers();
       boolean didProvision = false;
-      final WorkerBehaviorConfig workerConfig = getWorkerBehaviorConfig("provision");
+      final WorkerBehaviorConfig workerConfig =
+          PendingTaskBasedWorkerProvisioningStrategy.getWorkerBehaviorConfig(workerConfigRef, "provision", log);
       if (workerConfig == null) {
         return false;
       }
@@ -205,7 +184,8 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
     public synchronized boolean doTerminate()
     {
       Collection<? extends TaskRunnerWorkItem> pendingTasks = runner.getPendingTasks();
-      final WorkerBehaviorConfig workerConfig = getWorkerBehaviorConfig("terminate");
+      final WorkerBehaviorConfig workerConfig =
+          PendingTaskBasedWorkerProvisioningStrategy.getWorkerBehaviorConfig(workerConfigRef, "terminate", log);
       if (workerConfig == null) {
         return false;
       }

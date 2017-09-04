@@ -61,6 +61,34 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
 
   private static final String SCHEME = "http";
 
+  @Nullable
+  static WorkerBehaviorConfig getWorkerBehaviorConfig(
+      Supplier<BaseWorkerBehaviorConfig> workerConfigRef,
+      String action,
+      EmittingLogger log
+  )
+  {
+    final BaseWorkerBehaviorConfig baseWorkerBehaviorConfig = workerConfigRef.get();
+    if (baseWorkerBehaviorConfig == null) {
+      log.error("No workerConfig available, cannot %s workers.", action);
+      return null;
+    }
+    if (!(baseWorkerBehaviorConfig instanceof WorkerBehaviorConfig)) {
+      log.error(
+          "Only WorkerBehaviorConfig is supported as BaseWorkerBehaviorConfig, [%s] given, cannot %s workers",
+          baseWorkerBehaviorConfig,
+          action
+      );
+      return null;
+    }
+    final WorkerBehaviorConfig workerConfig = (WorkerBehaviorConfig) baseWorkerBehaviorConfig;
+    if (workerConfig.getAutoScaler() == null) {
+      log.error("No autoScaler available, cannot %s workers", action);
+      return null;
+    }
+    return workerConfig;
+  }
+
   private final PendingTaskBasedWorkerProvisioningConfig config;
   private final Supplier<BaseWorkerBehaviorConfig> workerConfigRef;
 
@@ -120,27 +148,6 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       this.runner = runner;
     }
 
-    @Nullable
-    private WorkerBehaviorConfig getWorkerBehaviorConfig(String action)
-    {
-      final BaseWorkerBehaviorConfig baseWorkerBehaviorConfig = workerConfigRef.get();
-      if (baseWorkerBehaviorConfig == null) {
-        log.error("No workerConfig available, cannot %s workers.", action);
-        return null;
-      }
-      if (!(baseWorkerBehaviorConfig instanceof WorkerBehaviorConfig)) {
-        log.error("PendingTaskBasedWorkerProvisionerStrategy accepts only WorkerBehaviorConfig as "
-                  + "BaseWorkerBehaviorConfig, [%s] given, cannot %s workers", baseWorkerBehaviorConfig, action);
-        return null;
-      }
-      final WorkerBehaviorConfig workerConfig = (WorkerBehaviorConfig) baseWorkerBehaviorConfig;
-      if (workerConfig.getAutoScaler() == null) {
-        log.error("No autoScaler available, cannot %s workers", action);
-        return null;
-      }
-      return workerConfig;
-    }
-
     @Override
     public synchronized boolean doProvision()
     {
@@ -149,7 +156,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       Collection<ImmutableWorkerInfo> workers = runner.getWorkers();
       log.info("Workers: %d %s", workers.size(), workers);
       boolean didProvision = false;
-      final WorkerBehaviorConfig workerConfig = getWorkerBehaviorConfig("provision");
+      final WorkerBehaviorConfig workerConfig = getWorkerBehaviorConfig(workerConfigRef, "provision", log);
       if (workerConfig == null) {
         return false;
       }
@@ -325,7 +332,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     {
       Collection<ImmutableWorkerInfo> zkWorkers = runner.getWorkers();
       log.info("Workers: %d [%s]", zkWorkers.size(), zkWorkers);
-      final WorkerBehaviorConfig workerConfig = getWorkerBehaviorConfig("terminate");
+      final WorkerBehaviorConfig workerConfig = getWorkerBehaviorConfig(workerConfigRef, "terminate", log);
       if (workerConfig == null) {
         return false;
       }
