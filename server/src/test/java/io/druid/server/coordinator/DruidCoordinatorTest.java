@@ -35,6 +35,7 @@ import io.druid.common.config.JacksonConfigManager;
 import io.druid.concurrent.Execs;
 import io.druid.curator.CuratorTestBase;
 import io.druid.curator.discovery.NoopServiceAnnouncer;
+import io.druid.discovery.DruidLeaderSelector;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
@@ -195,7 +196,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         loadManagementPeons,
         null,
         new CostBalancerStrategyFactory(),
-        EasyMock.createNiceMock(LookupCoordinatorManager.class)
+        EasyMock.createNiceMock(LookupCoordinatorManager.class),
+        new TestDruidLeaderSelector()
     );
   }
 
@@ -442,5 +444,44 @@ public class DruidCoordinatorTest extends CuratorTestBase
         Lists.<String>newArrayList(), Lists.<String>newArrayList(), null, 0, 0L
     );
     return segment;
+  }
+
+  private static class TestDruidLeaderSelector implements DruidLeaderSelector
+  {
+    private volatile Listener listener;
+    private volatile String leader;
+
+    @Override
+    public String getCurrentLeader()
+    {
+      return leader;
+    }
+
+    @Override
+    public boolean isLeader()
+    {
+      return leader != null;
+    }
+
+    @Override
+    public int localTerm()
+    {
+      return 0;
+    }
+
+    @Override
+    public void registerListener(Listener listener)
+    {
+      this.listener = listener;
+      leader = "what:1234";
+      listener.becomeLeader();
+    }
+
+    @Override
+    public void unregisterListener()
+    {
+      leader = null;
+      listener.stopBeingLeader();
+    }
   }
 }

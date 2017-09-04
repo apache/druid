@@ -19,7 +19,6 @@
 
 package io.druid.client;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -28,6 +27,7 @@ import com.google.common.collect.Sets;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.segment.IndexIO;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -67,7 +67,10 @@ public class DataSegmentTest
         1
     );
 
-    final Map<String, Object> objectMap = mapper.readValue(mapper.writeValueAsString(segment), new TypeReference<Map<String, Object>>(){});
+    final Map<String, Object> objectMap = mapper.readValue(
+        mapper.writeValueAsString(segment),
+        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+    );
 
     Assert.assertEquals(10, objectMap.size());
     Assert.assertEquals("something", objectMap.get("dataSource"));

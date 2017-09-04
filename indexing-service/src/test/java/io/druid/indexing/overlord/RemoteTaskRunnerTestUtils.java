@@ -126,7 +126,7 @@ public class RemoteTaskRunnerTestUtils
               {
                 return basePath;
               }
-            }, null, null, null, null, null
+            }, null, null, null, null
         ),
         cf,
         new PathChildrenCacheFactory.Builder(),
@@ -212,6 +212,12 @@ public class RemoteTaskRunnerTestUtils
             catch (Exception e) {
               throw Throwables.propagate(e);
             }
+          }
+
+          @Override
+          public String toString()
+          {
+            return StringUtils.format("Path[%s] exists", path);
           }
         }
     );

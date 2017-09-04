@@ -23,9 +23,11 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Stopwatch;
+import io.druid.TestUtil;
 import io.druid.guice.ServerModule;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.expression.TestExprMacroTable;
 import io.druid.segment.IndexIO;
@@ -41,6 +43,8 @@ import java.util.concurrent.TimeUnit;
  */
 public class TestUtils
 {
+  private static final Logger log = new Logger(TestUtil.class);
+
   private final ObjectMapper jsonMapper;
   private final IndexMergerV9 indexMergerV9;
   private final IndexIO indexIO;
@@ -103,11 +107,12 @@ public class TestUtils
       while (!condition.isValid()) {
         Thread.sleep(100);
         if (stopwatch.elapsed(TimeUnit.MILLISECONDS) > timeout) {
-          throw new ISE("Cannot find running task");
+          throw new ISE("Condition[%s] not met", condition);
         }
       }
     }
     catch (Exception e) {
+      log.warn(e, "Condition[%s] not met within timeout[%,d]", condition, timeout);
       return false;
     }
     return true;

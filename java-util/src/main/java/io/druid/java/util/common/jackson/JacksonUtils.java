@@ -17,36 +17,18 @@
  * under the License.
  */
 
-package io.druid.segment.realtime.plumber;
+package io.druid.java.util.common.jackson;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.java.util.common.DateTimes;
-import org.joda.time.Interval;
+import com.fasterxml.jackson.core.type.TypeReference;
 
-/**
- */
-public class CustomVersioningPolicy implements VersioningPolicy
+import java.util.Map;
+
+public class JacksonUtils
 {
-  private final String version;
-
-  @JsonCreator
-  public CustomVersioningPolicy(
-      @JsonProperty("version") String version
-  )
+  public static final TypeReference<Map<String, Object>> TYPE_REFERENCE_MAP_STRING_OBJECT = new TypeReference<Map<String, Object>>()
   {
-    this.version = version == null ? DateTimes.nowUtc().toString() : version;
-  }
-
-  @Override
-  public String getVersion(Interval interval)
+  };
+  public static final TypeReference<Map<String, String>> TYPE_REFERENCE_MAP_STRING_STRING = new TypeReference<Map<String, String>>()
   {
-    return version;
-  }
-
-  @JsonProperty("version")
-  public String getVersion()
-  {
-    return version;
-  }
+  };
 }
