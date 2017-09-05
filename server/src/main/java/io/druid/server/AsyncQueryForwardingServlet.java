@@ -42,6 +42,7 @@ import io.druid.server.log.RequestLogger;
 import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.router.QueryHostFinder;
 import io.druid.server.router.Router;
+import io.druid.server.security.AuthConfig;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
 import org.eclipse.jetty.client.HttpClient;
@@ -270,6 +271,12 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         Throwables.propagate(e);
       }
     }
+
+    // Since we can't see the request object on the remote side, we can't check whether the remote side actually
+    // performed an authorization check here, so always set this to true for the proxy servlet.
+    // If the remote node failed to perform an authorization check, PreResponseAuthorizationCheckFilter
+    // will log that on the remote node.
+    clientRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
 
     super.sendProxyRequest(
         clientRequest,

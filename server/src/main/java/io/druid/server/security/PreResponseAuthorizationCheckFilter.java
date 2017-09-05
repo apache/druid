@@ -77,16 +77,6 @@ public class PreResponseAuthorizationCheckFilter implements Filter
       ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain
   ) throws IOException, ServletException
   {
-    QueryInterruptedException unauthorizedError = new QueryInterruptedException(
-        QueryInterruptedException.UNAUTHORIZED,
-        null,
-        null,
-        DruidNode.getDefaultHost()
-    );
-    unauthorizedError.setStackTrace(new StackTraceElement[0]);
-    OutputStream out = servletResponse.getOutputStream();
-
-    Boolean authInfoChecked = null;
     final HttpServletResponse response = (HttpServletResponse) servletResponse;
 
     // Since this is the last filter in the chain, some previous authentication filter
@@ -103,6 +93,14 @@ public class PreResponseAuthorizationCheckFilter implements Filter
       for (String authScheme : supportedAuthSchemes) {
         response.addHeader("WWW-Authenticate", authScheme);
       }
+      QueryInterruptedException unauthorizedError = new QueryInterruptedException(
+          QueryInterruptedException.UNAUTHORIZED,
+          null,
+          null,
+          DruidNode.getDefaultHost()
+      );
+      unauthorizedError.setStackTrace(new StackTraceElement[0]);
+      OutputStream out = servletResponse.getOutputStream();
       sendJsonError(response, Response.SC_UNAUTHORIZED, jsonMapper.writeValueAsString(unauthorizedError), out);
       out.close();
       return;
@@ -110,7 +108,7 @@ public class PreResponseAuthorizationCheckFilter implements Filter
 
     filterChain.doFilter(servletRequest, servletResponse);
 
-    authInfoChecked = (Boolean) servletRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED);
+    Boolean authInfoChecked = (Boolean) servletRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED);
     if (authInfoChecked == null && !errorOverridesMissingAuth(response.getStatus())) {
       String errorMsg = StringUtils.format(
           "Request did not have an authorization check performed: %s",
