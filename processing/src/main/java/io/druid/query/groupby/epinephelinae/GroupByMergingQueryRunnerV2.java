@@ -92,9 +92,9 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
       Iterable<QueryRunner<Row>> queryables,
       int concurrencyHint,
       BlockingPool<ByteBuffer> mergeBufferPool,
+      int mergeBufferSize,
       ObjectMapper spillMapper,
-      String processingTmpDir,
-      int mergeBufferSize
+      String processingTmpDir
   )
   {
     this.config = config;

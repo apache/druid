@@ -103,11 +103,18 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
           limitSpec.getLimit(),
           sortHasNonGroupingFields
       );
-      // if configured buffer size is too small to support limit push down, don't apply that optmization
+      // if configured buffer size is too small to support limit push down, don't apply that optimization
       if (!limitGrouper.validateBufferCapacity(mergeBufferSize)) {
         if (sortHasNonGroupingFields) {
-          log.info("Ignoring forceLimitPushDown, insufficient buffer capacity.");
+          log.debug("Ignoring forceLimitPushDown, insufficient buffer capacity.");
         }
+        // sortHasNonGroupingFields can only be true here if the user specified forceLimitPushDown
+        // in the query context. Result merging requires that all results are sorted by the same
+        // ordering where all ordering fields are contained in the grouping key.
+        // If sortHasNonGroupingFields is true, we use the default ordering that sorts by all grouping key fields
+        // with lexicographic ascending order.
+        // If sortHasNonGroupingFields is false, then the OrderBy fields are all in the grouping key, so we
+        // can use that ordering.
         this.grouper = new BufferHashGrouper<>(
             bufferSupplier,
             keySerde,
@@ -116,7 +123,6 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
             bufferGrouperMaxSize,
             bufferGrouperMaxLoadFactor,
             bufferGrouperInitialBuckets,
-            // when there are non-grouping fields, we need to sort by a dimension-only ordering for merging to work
             sortHasNonGroupingFields
         );
       } else {

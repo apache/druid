@@ -382,9 +382,9 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
     int requiredSize = targetTableArenaSize + heapSize;
 
     if (bufferCapacity < requiredSize) {
-      log.info(
-          "Buffer capacity [%d] is too small for limit[%d] with load factor[%f], " +
-          "minimum bytes needed: [%d], not applying limit push down optimization.",
+      log.debug(
+          "Buffer capacity [%,d] is too small for limit[%d] with load factor[%f], " +
+          "minimum bytes needed: [%,d], not applying limit push down optimization.",
           bufferCapacity,
           limit,
           maxLoadFactor,

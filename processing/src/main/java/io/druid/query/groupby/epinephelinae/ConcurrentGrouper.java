@@ -79,7 +79,6 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   private final int priority;
   private final boolean hasQueryTimeout;
   private final long queryTimeoutAt;
-  private final int mergeBufferSize;
 
   private volatile boolean initialized = false;
 
@@ -132,7 +131,6 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
     this.priority = priority;
     this.hasQueryTimeout = hasQueryTimeout;
     this.queryTimeoutAt = queryTimeoutAt;
-    this.mergeBufferSize = mergeBufferSize;
   }
 
   @Override

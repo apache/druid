@@ -339,9 +339,9 @@ public class GroupByStrategyV2 implements GroupByStrategy
         queryRunners,
         processingConfig.getNumThreads(),
         mergeBufferPool,
+        processingConfig.intermediateComputeSizeBytes(),
         spillMapper,
-        processingConfig.getTmpDir(),
-        processingConfig.intermediateComputeSizeBytes()
+        processingConfig.getTmpDir()
     );
   }
 
