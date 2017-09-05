@@ -121,6 +121,9 @@ import java.util.List;
  *  implement extra methods from SegmentMetadataQueryMetrics interfaces with empty bodies, AND DELEGATE ALL OTHER
  *  METHODS TO A QueryMetrics OBJECT, provided as a sole parameter in DefaultSegmentMetadataQueryMetrics constructor.
  *
+ *  NOTE: query(),dataSource(), queryType(), interval(), hasFilters(), duration() and queryId() methods or any
+ *  "pre-query-execution-time" methods should either have a empty body or throw exception.
+ *
  *  3. Create `interface SegmentMetadataQueryMetricsFactory` with a single method
  *  `SegmentMetadataQueryMetrics makeMetrics(SegmentMetadataQuery query);`.
  *
@@ -133,9 +136,9 @@ import java.util.List;
  *
  *  6. Establish injection of SegmentMetadataQueryMetricsFactory using config and provider method in
  *  QueryToolChestModule (see how it is done in {@link io.druid.guice.QueryToolChestModule} for existing query types
- *  with custom metrics, e. g. {@link io.druid.query.topn.TopNQueryMetricsFactory}), if the query type belongs to the
- *  core druid-processing, e. g. SegmentMetadataQuery. If the query type defined in an extension, you can specify
- *  `binder.bind(ScanQueryMetricsFactory.class).to(DefaultScanQueryMetricsFactory.class)` in the extension's
+ *  with custom metrics, e. g. {@link io.druid.query.search.search.SearchQueryMetricsFactory}), if the query type
+ *  belongs to the core druid-processing, e. g. SegmentMetadataQuery. If the query type defined in an extension, you
+ *  can specify `binder.bind(ScanQueryMetricsFactory.class).to(DefaultScanQueryMetricsFactory.class)` in the extension's
  *  Guice module, if the query type is defined in an extension, e. g. ScanQuery. Or establish similar configuration,
  *  as for the core query types.
  *
@@ -147,6 +150,9 @@ import java.util.List;
  * same time as the whole QueryMetrics abstraction and their default implementations have to actually emit more
  * dimensions than the default generic QueryMetrics. So those subinterfaces shouldn't be taken as direct examples for
  * following the plan specified above.
+ *
+ * Refer {@link io.druid.query.search.search.SearchQueryMetricsFactory}
+ * and {@link io.druid.query.select.SelectQueryMetricsFactory} as an implementation example of this procedure.
  *
  * @param <QueryType>
  */

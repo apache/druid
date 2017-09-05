@@ -21,16 +21,16 @@ package io.druid.query.search.search;
 
 /**
  * Implementations could be injected using
- * <p>
+ *
  * PolyBind
- * .optionBinder(binder, Key.get(SearchQueryMetricsFactory.class))
- * .addBinding("myCustomSearchQueryMetricsFactory")
- * .to(MyCustomSearchQueryMetricsFactory.class);
- * <p>
+ *    .optionBinder(binder, Key.get(SearchQueryMetricsFactory.class))
+ *    .addBinding("myCustomSearchQueryMetricsFactory")
+ *    .to(MyCustomSearchQueryMetricsFactory.class);
+ *
  * And then setting property:
  * druid.query.search.queryMetricsFactory=myCustomSearchQueryMetricsFactory
  */
 public interface SearchQueryMetricsFactory
 {
-  SearchQueryMetrics makeMetrics(SearchQuery query);
+  SearchQueryMetrics makeMetrics(SearchQuery searchQuery);
 }
