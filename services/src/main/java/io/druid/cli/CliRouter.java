@@ -136,7 +136,7 @@ public class CliRouter extends ServerRunnable
           }
 
           @Provides
-          @LazySingleton
+          @ManageLifecycle
           public DruidLeaderClient getLeaderHttpClient(
               @Global HttpClient httpClient,
               DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,

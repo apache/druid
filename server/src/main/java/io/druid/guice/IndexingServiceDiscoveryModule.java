@@ -54,7 +54,7 @@ public class IndexingServiceDiscoveryModule implements Module
 
   @Provides
   @IndexingService
-  @LazySingleton
+  @ManageLifecycle
   public DruidLeaderClient getLeaderHttpClient(
       @Global HttpClient httpClient,
       DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,

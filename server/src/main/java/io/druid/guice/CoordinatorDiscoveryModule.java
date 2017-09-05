@@ -54,7 +54,7 @@ public class CoordinatorDiscoveryModule implements Module
 
   @Provides
   @Coordinator
-  @LazySingleton
+  @ManageLifecycle
   public DruidLeaderClient getLeaderHttpClient(
       @Global HttpClient httpClient,
       DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,

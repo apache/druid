@@ -121,6 +121,7 @@ public class DruidLeaderClientTest extends BaseJettyTest
         "/simple/leader",
         EasyMock.createNiceMock(ServerDiscoverySelector.class)
     );
+    druidLeaderClient.start();
 
     Request request = druidLeaderClient.makeRequest(HttpMethod.POST, "/simple/direct");
     request.setContent("hello".getBytes("UTF-8"));
@@ -147,6 +148,7 @@ public class DruidLeaderClientTest extends BaseJettyTest
         "/simple/leader",
         EasyMock.createNiceMock(ServerDiscoverySelector.class)
     );
+    druidLeaderClient.start();
 
     Request request = druidLeaderClient.makeRequest(HttpMethod.POST, "/simple/redirect");
     request.setContent("hello".getBytes("UTF-8"));
@@ -183,6 +185,7 @@ public class DruidLeaderClientTest extends BaseJettyTest
         "/simple/leader",
         serverDiscoverySelector
     );
+    druidLeaderClient.start();
 
     Request request = druidLeaderClient.makeRequest(HttpMethod.POST, "/simple/redirect");
     request.setContent("hello".getBytes("UTF-8"));
@@ -209,6 +212,7 @@ public class DruidLeaderClientTest extends BaseJettyTest
         "/simple/leader",
         EasyMock.createNiceMock(ServerDiscoverySelector.class)
     );
+    druidLeaderClient.start();
 
     Assert.assertEquals("http://localhost:1234/", druidLeaderClient.findCurrentLeader());
   }

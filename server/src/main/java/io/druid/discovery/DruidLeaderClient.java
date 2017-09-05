@@ -20,14 +20,18 @@
 package io.druid.discovery;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Preconditions;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.FullResponseHandler;
 import com.metamx.http.client.response.FullResponseHolder;
 import io.druid.client.selector.Server;
+import io.druid.concurrent.LifecycleLock;
 import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.common.logger.Logger;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -36,6 +40,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Iterator;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -61,6 +66,8 @@ public class DruidLeaderClient
   //Note: This is kept for back compatibility with pre 0.11.0 releases and should be removed in future.
   private final ServerDiscoverySelector serverDiscoverySelector;
 
+  private LifecycleLock lifecycleLock = new LifecycleLock();
+  private DruidNodeDiscovery druidNodeDiscovery;
   private AtomicReference<String> currentKnownLeader = new AtomicReference<>();
 
   public DruidLeaderClient(
@@ -78,13 +85,42 @@ public class DruidLeaderClient
     this.serverDiscoverySelector = serverDiscoverySelector;
   }
 
+  @LifecycleStart
+  public void start()
+  {
+    if (!lifecycleLock.canStart()) {
+      throw new ISE("can't start.");
+    }
+
+    try {
+      druidNodeDiscovery = druidNodeDiscoveryProvider.getForNodeType(nodeTypeToWatch);
+      lifecycleLock.started();
+      log.info("Started.");
+    }
+    finally {
+      lifecycleLock.exitStart();
+    }
+  }
+
+  @LifecycleStop
+  public void stop()
+  {
+    if (!lifecycleLock.canStop()) {
+      throw new ISE("can't stop.");
+    }
+
+    log.info("Stopped.");
+  }
+
   public Request makeRequest(HttpMethod httpMethod, String urlPath) throws MalformedURLException
   {
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
     return new Request(httpMethod, new URL(StringUtils.format("%s%s", getCurrentKnownLeader(true), urlPath)));
   }
 
   public FullResponseHolder go(Request request) throws InterruptedException
   {
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
     for (int counter = 0; counter < MAX_RETRIES; counter++) {
 
       final FullResponseHolder fullResponseHolder;
@@ -165,6 +201,7 @@ public class DruidLeaderClient
 
   public String findCurrentLeader()
   {
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
     final FullResponseHolder responseHolder;
     try {
       responseHolder = go(makeRequest(HttpMethod.GET, leaderRequestPath));
@@ -204,9 +241,7 @@ public class DruidLeaderClient
       );
     }
 
-    Iterator<DiscoveryDruidNode> iter = druidNodeDiscoveryProvider.getForNodeType(nodeTypeToWatch)
-                                                                  .getAllNodes()
-                                                                  .iterator();
+    Iterator<DiscoveryDruidNode> iter = druidNodeDiscovery.getAllNodes().iterator();
     if (iter.hasNext()) {
       DiscoveryDruidNode node = iter.next();
       return StringUtils.format(
