@@ -230,8 +230,8 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
 
   private static boolean arrayContains(char[] array, char c)
   {
-    for (int i = 0; i < array.length; i++) {
-      if (array[i] == c) {
+    for (final char arrayChar : array) {
+      if (arrayChar == c) {
         return true;
       }
     }
