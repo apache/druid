@@ -45,6 +45,7 @@ import io.druid.query.aggregation.FloatMinAggregatorFactory;
 import io.druid.query.aggregation.LongMaxAggregatorFactory;
 import io.druid.query.aggregation.LongMinAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
+import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
@@ -246,6 +247,52 @@ public class CalciteQueryTest
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{2}
+        )
+    );
+  }
+
+  @Test
+  public void testSelectTrimFamily() throws Exception
+  {
+    // TRIM has some whacky parsing. Make sure the different forms work.
+
+    testQuery(
+        "SELECT\n"
+        + "TRIM(BOTH 'x' FROM 'xfoox'),\n"
+        + "TRIM(TRAILING 'x' FROM 'xfoox'),\n"
+        + "TRIM(BOTH FROM ' foo '),\n"
+        + "TRIM(TRAILING FROM ' foo '),\n"
+        + "TRIM(' foo '),\n"
+        + "LTRIM(' foo '),\n"
+        + "LTRIM('xfoox', 'x'),\n"
+        + "RTRIM(' foo '),\n"
+        + "RTRIM('xfoox', 'x'),\n"
+        + "COUNT(*)\n"
+        + "FROM foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .postAggregators(
+                      ImmutableList.<PostAggregator>builder()
+                          .add(EXPRESSION_POST_AGG("p0", "'foo'"))
+                          .add(EXPRESSION_POST_AGG("p1", "'xfoo'"))
+                          .add(EXPRESSION_POST_AGG("p2", "'foo'"))
+                          .add(EXPRESSION_POST_AGG("p3", "' foo'"))
+                          .add(EXPRESSION_POST_AGG("p4", "'foo'"))
+                          .add(EXPRESSION_POST_AGG("p5", "'foo '"))
+                          .add(EXPRESSION_POST_AGG("p6", "'foox'"))
+                          .add(EXPRESSION_POST_AGG("p7", "' foo'"))
+                          .add(EXPRESSION_POST_AGG("p8", "'xfoo'"))
+                          .build()
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"foo", "xfoo", "foo", " foo", "foo", "foo ", "foox", " foo", "xfoo", 6L}
         )
     );
   }

@@ -38,8 +38,10 @@ import io.druid.sql.calcite.aggregation.SqlAggregator;
 import io.druid.sql.calcite.expression.CeilOperatorConversion;
 import io.druid.sql.calcite.expression.ExtractOperatorConversion;
 import io.druid.sql.calcite.expression.FloorOperatorConversion;
+import io.druid.sql.calcite.expression.LTrimOperatorConversion;
 import io.druid.sql.calcite.expression.LookupOperatorConversion;
 import io.druid.sql.calcite.expression.MillisToTimestampOperatorConversion;
+import io.druid.sql.calcite.expression.RTrimOperatorConversion;
 import io.druid.sql.calcite.expression.RegexpExtractOperatorConversion;
 import io.druid.sql.calcite.expression.SqlOperatorConversion;
 import io.druid.sql.calcite.expression.SubstringOperatorConversion;
@@ -84,6 +86,8 @@ public class SqlModule implements Module
       .add(TimeShiftOperatorConversion.class)
       .add(TimestampToMillisOperatorConversion.class)
       .add(TrimOperatorConversion.class)
+      .add(LTrimOperatorConversion.class)
+      .add(RTrimOperatorConversion.class)
       .build();
 
   private static final String PROPERTY_SQL_ENABLE = "druid.sql.enable";

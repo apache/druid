@@ -29,8 +29,38 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
 
+import javax.annotation.Nullable;
+
 public class TrimOperatorConversion implements SqlOperatorConversion
 {
+  @Nullable
+  public static DruidExpression makeTrimExpression(
+      final SqlTrimFunction.Flag trimStyle,
+      final DruidExpression stringExpression,
+      final DruidExpression charsExpression
+  )
+  {
+    final String functionName;
+
+    switch (trimStyle) {
+      case LEADING:
+        functionName = "ltrim";
+        break;
+      case TRAILING:
+        functionName = "rtrim";
+        break;
+      case BOTH:
+        functionName = "trim";
+        break;
+      default:
+        // Not reached
+        throw new UnsupportedOperationException();
+    }
+
+    // Druid version of trim is multi-function (ltrim/rtrim/trim) and the other two args are swapped.
+    return DruidExpression.fromFunctionCall(functionName, ImmutableList.of(stringExpression, charsExpression));
+  }
+
   @Override
   public SqlOperator calciteOperator()
   {
@@ -56,34 +86,16 @@ public class TrimOperatorConversion implements SqlOperatorConversion
         call.getOperands().get(1)
     );
 
-    final DruidExpression argExpression = Expressions.toDruidExpression(
+    final DruidExpression stringExpression = Expressions.toDruidExpression(
         plannerContext,
         rowSignature,
         call.getOperands().get(2)
     );
 
-    if (charsExpression == null || argExpression == null) {
+    if (charsExpression == null || stringExpression == null) {
       return null;
     }
 
-    final String functionName;
-
-    switch (trimStyle) {
-      case LEADING:
-        functionName = "ltrim";
-        break;
-      case TRAILING:
-        functionName = "rtrim";
-        break;
-      case BOTH:
-        functionName = "trim";
-        break;
-      default:
-        // Not reached
-        throw new UnsupportedOperationException();
-    }
-
-    // Druid version of trim is multi-function (ltrim/rtrim/trim) and the other two args are swapped.
-    return DruidExpression.fromFunctionCall(functionName, ImmutableList.of(argExpression, charsExpression));
+    return makeTrimExpression(trimStyle, stringExpression, charsExpression);
   }
 }
