@@ -20,7 +20,6 @@
 package io.druid.server.http;
 
 import io.druid.discovery.DruidLeaderClient;
-import io.druid.discovery.DruidLeaderClientProvider;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
@@ -34,10 +33,6 @@ public class OverlordProxyServletTest
   public void testRewriteURI()
   {
     DruidLeaderClient druidLeaderClient = EasyMock.createMock(DruidLeaderClient.class);
-    DruidLeaderClientProvider druidLeaderClientProvider = EasyMock.createMock(DruidLeaderClientProvider.class);
-    EasyMock.expect(druidLeaderClientProvider.get()).andReturn(druidLeaderClient);
-    EasyMock.replay(druidLeaderClientProvider);
-
     EasyMock.expect(druidLeaderClient.findCurrentLeader()).andReturn("overlord:port");
 
     HttpServletRequest request = EasyMock.createMock(HttpServletRequest.class);
@@ -47,7 +42,7 @@ public class OverlordProxyServletTest
 
     EasyMock.replay(druidLeaderClient, request);
 
-    URI uri = URI.create(new OverlordProxyServlet(druidLeaderClientProvider).rewriteTarget(request));
+    URI uri = URI.create(new OverlordProxyServlet(druidLeaderClient).rewriteTarget(request));
     Assert.assertEquals("https://overlord:port/druid/overlord/worker?param1=test&param2=test2", uri.toString());
   }
 

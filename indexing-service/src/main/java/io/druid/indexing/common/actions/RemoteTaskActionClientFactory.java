@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import io.druid.client.indexing.IndexingService;
 import io.druid.discovery.DruidLeaderClient;
-import io.druid.discovery.DruidLeaderClientProvider;
 import io.druid.indexing.common.RetryPolicyFactory;
 import io.druid.indexing.common.task.Task;
 
@@ -37,12 +36,12 @@ public class RemoteTaskActionClientFactory implements TaskActionClientFactory
 
   @Inject
   public RemoteTaskActionClientFactory(
-      @IndexingService DruidLeaderClientProvider druidLeaderClientProvider,
+      @IndexingService DruidLeaderClient leaderHttpClient,
       RetryPolicyFactory retryPolicyFactory,
       ObjectMapper jsonMapper
   )
   {
-    this.druidLeaderClient = druidLeaderClientProvider.get();
+    this.druidLeaderClient = leaderHttpClient;
     this.retryPolicyFactory = retryPolicyFactory;
     this.jsonMapper = jsonMapper;
   }

@@ -27,7 +27,7 @@ import io.druid.client.indexing.IndexingService;
 import io.druid.client.indexing.IndexingServiceSelectorConfig;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
-import io.druid.discovery.DruidLeaderClientProvider;
+import io.druid.discovery.DruidLeaderClient;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.annotations.Global;
 
@@ -55,13 +55,13 @@ public class IndexingServiceDiscoveryModule implements Module
   @Provides
   @IndexingService
   @LazySingleton
-  public DruidLeaderClientProvider getLeaderHttpClient(
+  public DruidLeaderClient getLeaderHttpClient(
       @Global HttpClient httpClient,
       DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       @IndexingService ServerDiscoverySelector serverDiscoverySelector
   )
   {
-    return new DruidLeaderClientProvider(
+    return new DruidLeaderClient(
         httpClient,
         druidNodeDiscoveryProvider,
         DruidNodeDiscoveryProvider.NODE_TYPE_OVERLORD,

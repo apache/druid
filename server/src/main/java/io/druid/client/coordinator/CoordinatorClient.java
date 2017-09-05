@@ -26,7 +26,6 @@ import com.google.inject.Inject;
 import com.metamx.http.client.response.FullResponseHolder;
 import io.druid.client.ImmutableSegmentLoadInfo;
 import io.druid.discovery.DruidLeaderClient;
-import io.druid.discovery.DruidLeaderClientProvider;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -43,11 +42,11 @@ public class CoordinatorClient
   @Inject
   public CoordinatorClient(
       ObjectMapper jsonMapper,
-      @Coordinator DruidLeaderClientProvider druidLeaderClientProvider
+      @Coordinator DruidLeaderClient druidLeaderClient
   )
   {
     this.jsonMapper = jsonMapper;
-    this.druidLeaderClient = druidLeaderClientProvider.get();
+    this.druidLeaderClient = druidLeaderClient;
   }
 
 

@@ -39,10 +39,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * This class facilitates interaction with Coordinator/Overlord leader nodes. Instance of this class obtained by
- * getting DruidLeaderClientProvider injected (via Guice with annotations @Coordinator or @IndexingService) and
- * calling get() on it.
- *
+ * This class facilitates interaction with Coordinator/Overlord leader nodes. Instance of this class is injected
+ * via Guice with annotations @Coordinator or @IndexingService .
  * Usage:
  *   Request request = druidLeaderClient.makeRequest(HttpMethod, requestPath)
  *   request.setXXX(..)
@@ -55,7 +53,8 @@ public class DruidLeaderClient
   private static final int MAX_RETRIES = 3;
 
   private final HttpClient httpClient;
-  private final DruidNodeDiscovery druidNodeDiscovery;
+  private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
+  private final String nodeTypeToWatch;
 
   private final String leaderRequestPath;
 
@@ -66,13 +65,15 @@ public class DruidLeaderClient
 
   public DruidLeaderClient(
       HttpClient httpClient,
-      DruidNodeDiscovery druidNodeDiscovery,
+      DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
+      String nodeTypeToWatch,
       String leaderRequestPath,
       ServerDiscoverySelector serverDiscoverySelector
   )
   {
     this.httpClient = httpClient;
-    this.druidNodeDiscovery = druidNodeDiscovery;
+    this.druidNodeDiscoveryProvider = druidNodeDiscoveryProvider;
+    this.nodeTypeToWatch = nodeTypeToWatch;
     this.leaderRequestPath = leaderRequestPath;
     this.serverDiscoverySelector = serverDiscoverySelector;
   }
@@ -203,7 +204,9 @@ public class DruidLeaderClient
       );
     }
 
-    Iterator<DiscoveryDruidNode> iter = druidNodeDiscovery.getAllNodes().iterator();
+    Iterator<DiscoveryDruidNode> iter = druidNodeDiscoveryProvider.getForNodeType(nodeTypeToWatch)
+                                                                  .getAllNodes()
+                                                                  .iterator();
     if (iter.hasNext()) {
       DiscoveryDruidNode node = iter.next();
       return StringUtils.format(

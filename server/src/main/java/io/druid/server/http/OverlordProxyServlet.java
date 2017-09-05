@@ -23,7 +23,6 @@ import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import io.druid.client.indexing.IndexingService;
 import io.druid.discovery.DruidLeaderClient;
-import io.druid.discovery.DruidLeaderClientProvider;
 import io.druid.java.util.common.ISE;
 import org.eclipse.jetty.proxy.ProxyServlet;
 
@@ -40,10 +39,10 @@ public class OverlordProxyServlet extends ProxyServlet
 
   @Inject
   OverlordProxyServlet(
-      @IndexingService DruidLeaderClientProvider druidLeaderClientProvider
+      @IndexingService DruidLeaderClient druidLeaderClient
   )
   {
-    this.druidLeaderClient = druidLeaderClientProvider.get();
+    this.druidLeaderClient = druidLeaderClient;
   }
 
   @Override
