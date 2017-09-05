@@ -35,6 +35,7 @@ import io.druid.sql.avatica.AvaticaServerConfig;
 import io.druid.sql.avatica.DruidAvaticaHandler;
 import io.druid.sql.calcite.aggregation.ApproxCountDistinctSqlAggregator;
 import io.druid.sql.calcite.aggregation.SqlAggregator;
+import io.druid.sql.calcite.expression.BTrimOperatorConversion;
 import io.druid.sql.calcite.expression.CeilOperatorConversion;
 import io.druid.sql.calcite.expression.ExtractOperatorConversion;
 import io.druid.sql.calcite.expression.FloorOperatorConversion;
@@ -86,6 +87,7 @@ public class SqlModule implements Module
       .add(TimeShiftOperatorConversion.class)
       .add(TimestampToMillisOperatorConversion.class)
       .add(TrimOperatorConversion.class)
+      .add(BTrimOperatorConversion.class)
       .add(LTrimOperatorConversion.class)
       .add(RTrimOperatorConversion.class)
       .build();

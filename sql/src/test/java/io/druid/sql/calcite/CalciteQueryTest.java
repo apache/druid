@@ -260,9 +260,11 @@ public class CalciteQueryTest
         "SELECT\n"
         + "TRIM(BOTH 'x' FROM 'xfoox'),\n"
         + "TRIM(TRAILING 'x' FROM 'xfoox'),\n"
-        + "TRIM(BOTH FROM ' foo '),\n"
+        + "TRIM(' ' FROM ' foo '),\n"
         + "TRIM(TRAILING FROM ' foo '),\n"
         + "TRIM(' foo '),\n"
+        + "BTRIM(' foo '),\n"
+        + "BTRIM('xfoox', 'x'),\n"
         + "LTRIM(' foo '),\n"
         + "LTRIM('xfoox', 'x'),\n"
         + "RTRIM(' foo '),\n"
@@ -282,17 +284,19 @@ public class CalciteQueryTest
                           .add(EXPRESSION_POST_AGG("p2", "'foo'"))
                           .add(EXPRESSION_POST_AGG("p3", "' foo'"))
                           .add(EXPRESSION_POST_AGG("p4", "'foo'"))
-                          .add(EXPRESSION_POST_AGG("p5", "'foo '"))
-                          .add(EXPRESSION_POST_AGG("p6", "'foox'"))
-                          .add(EXPRESSION_POST_AGG("p7", "' foo'"))
-                          .add(EXPRESSION_POST_AGG("p8", "'xfoo'"))
+                          .add(EXPRESSION_POST_AGG("p5", "'foo'"))
+                          .add(EXPRESSION_POST_AGG("p6", "'foo'"))
+                          .add(EXPRESSION_POST_AGG("p7", "'foo '"))
+                          .add(EXPRESSION_POST_AGG("p8", "'foox'"))
+                          .add(EXPRESSION_POST_AGG("p9", "' foo'"))
+                          .add(EXPRESSION_POST_AGG("p10", "'xfoo'"))
                           .build()
                   )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{"foo", "xfoo", "foo", " foo", "foo", "foo ", "foox", " foo", "xfoo", 6L}
+            new Object[]{"foo", "xfoo", "foo", " foo", "foo", "foo", "foo", "foo ", "foox", " foo", "xfoo", 6L}
         )
     );
   }
