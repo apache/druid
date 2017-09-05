@@ -56,7 +56,6 @@ public class PreResponseAuthorizationCheckFilterTest
     FilterChain filterChain = EasyMock.createNiceMock(FilterChain.class);
     ServletOutputStream outputStream = EasyMock.createNiceMock(ServletOutputStream.class);
 
-    EasyMock.expect(resp.getOutputStream()).andReturn(outputStream).once();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(authenticationResult).once();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(true).once();
     EasyMock.replay(req, resp, filterChain, outputStream);
@@ -110,7 +109,6 @@ public class PreResponseAuthorizationCheckFilterTest
     FilterChain filterChain = EasyMock.createNiceMock(FilterChain.class);
     ServletOutputStream outputStream = EasyMock.createNiceMock(ServletOutputStream.class);
 
-    EasyMock.expect(resp.getOutputStream()).andReturn(outputStream).once();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(authenticationResult).once();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
     EasyMock.expect(resp.getStatus()).andReturn(200).once();
