@@ -93,22 +93,11 @@ public class ParserUtils
     return input;
   }
 
-  public static boolean isTimezonePresent(String input)
+  public static boolean isValidTimeZone(String timeZone)
   {
-    int spaceCount = 0;
-    for (int i = 0; i < input.length(); i++) {
-      if (input.charAt(i) == ' ') {
-        spaceCount++;
-      }
-    }
-
-    String timeZone = input.substring(input.length() - 3);
-
-    if (spaceCount == 2) {
-      for (String tz : TimeZone.getAvailableIDs()) {
-        if (tz.equals(timeZone)) {
-          return true;
-        }
+    for (String tz : TimeZone.getAvailableIDs()) {
+      if (tz.equals(timeZone)) {
+        return true;
       }
     }
 

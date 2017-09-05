@@ -53,9 +53,10 @@ public class TimestampParser
           for (int i = 0; i < input.length(); i++) {
             if (input.charAt(i) < '0' || input.charAt(i) > '9') {
               DateTimeZone dateTimeZone = DateTimeZone.UTC;
-              if (ParserUtils.isTimezonePresent(input)) {
-                dateTimeZone = DateTimeZone.forTimeZone(TimeZone.getTimeZone(input.substring(input.length() - 3)));
-                input = input.substring(0, input.length() - 3);
+              int lastIndex = input.lastIndexOf(" ");
+              if (lastIndex > 0 && ParserUtils.isValidTimeZone(input.substring(lastIndex + 1))) {
+                dateTimeZone = DateTimeZone.forTimeZone(TimeZone.getTimeZone(input.substring(lastIndex + 1)));
+                input = input.substring(0, lastIndex);
               }
 
               return new DateTime(parser.parseDateTime(ParserUtils.stripQuotes(input)), dateTimeZone);

@@ -45,12 +45,13 @@ public class TimestampParserTest
   @Test
   public void testExtractTimeZone() throws Exception
   {
-    Assert.assertTrue(ParserUtils.isTimezonePresent("2009-02-13 23:31:30 UTC"));
-    Assert.assertFalse(ParserUtils.isTimezonePresent("2009-02-13T23:31:30Z"));
-    Assert.assertFalse(ParserUtils.isTimezonePresent("2009-02-13 23:31:30-08:00"));
-    Assert.assertTrue(ParserUtils.isTimezonePresent("2009-02-13 23:31:30 PST"));
-    Assert.assertTrue(ParserUtils.isTimezonePresent("hello world PST"));
-    Assert.assertFalse(ParserUtils.isTimezonePresent("hello world PSA"));
+    Assert.assertTrue(ParserUtils.isValidTimeZone("UTC"));
+    Assert.assertTrue(ParserUtils.isValidTimeZone("PST"));
+    Assert.assertFalse(ParserUtils.isValidTimeZone("Hello"));
+    Assert.assertFalse(ParserUtils.isValidTimeZone("AEST"));
+    Assert.assertTrue(ParserUtils.isValidTimeZone("Australia/Hobart"));
+    Assert.assertFalse(ParserUtils.isValidTimeZone(""));
+    Assert.assertFalse(ParserUtils.isValidTimeZone(null));
   }
 
   @Test
