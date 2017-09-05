@@ -21,7 +21,6 @@ package io.druid.sql.calcite.expression;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.sun.xml.internal.ws.handler.ServerSOAPHandlerTube;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.PeriodGranularity;
