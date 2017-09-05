@@ -153,7 +153,8 @@ public class QuantileSqlAggregatorTest
           {
             return new AllowAllAuthorizer();
           }
-        }
+        },
+        CalciteTests.getJsonMapper()
     );
   }
 

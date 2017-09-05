@@ -327,6 +327,11 @@ public class CalciteTests
     );
   }
 
+  public static ObjectMapper getJsonMapper()
+  {
+    return INJECTOR.getInstance(Key.get(ObjectMapper.class, Json.class));
+  }
+
   public static SpecificSegmentsQuerySegmentWalker createMockWalker(final File tmpDir)
   {
     final QueryableIndex index1 = IndexBuilder.create()

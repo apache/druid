@@ -90,7 +90,8 @@ public class DruidStatementTest
           {
             return new AllowAllAuthorizer();
           }
-        }
+        },
+        CalciteTests.getJsonMapper()
     );
   }
 

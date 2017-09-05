@@ -164,7 +164,8 @@ public class DruidAvaticaHandlerTest
             plannerConfig,
             new AuthConfig(),
             new AuthenticatorMapper(defaultMap, "allowAll"),
-            new AuthorizerMapper(testAuthorizerMap)
+            new AuthorizerMapper(testAuthorizerMap),
+            CalciteTests.getJsonMapper()
         ),
         AVATICA_CONFIG,
         new AuthConfig(),
@@ -297,7 +298,7 @@ public class DruidAvaticaHandlerTest
         ImmutableList.of(
             ImmutableMap.of(
                 "PLAN",
-                "DruidQueryRel(dataSource=[foo], dimensions=[[]], aggregations=[[Aggregation{virtualColumns=[], aggregatorFactories=[CountAggregatorFactory{name='a0'}], postAggregator=null}]])\n"
+                "DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"context\":{\"skipEmptyBuckets\":true}}])\n"
             )
         ),
         getRows(resultSet)
@@ -611,7 +612,8 @@ public class DruidAvaticaHandlerTest
             plannerConfig,
             new AuthConfig(),
             new AuthenticatorMapper(defaultMap, "allowAll"),
-            new AuthorizerMapper(testAuthorizerMap)
+            new AuthorizerMapper(testAuthorizerMap),
+            CalciteTests.getJsonMapper()
         ),
         smallFrameConfig,
         new AuthConfig(),

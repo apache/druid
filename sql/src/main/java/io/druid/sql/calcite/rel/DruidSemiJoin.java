@@ -20,6 +20,7 @@
 package io.druid.sql.calcite.rel;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.druid.java.util.common.StringUtils;
@@ -28,6 +29,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.QueryDataSource;
 import io.druid.query.ResourceLimitExceededException;
+import io.druid.query.TableDataSource;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
@@ -42,19 +44,26 @@ import org.apache.calcite.interpreter.BindableConvention;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
+import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 
+import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * DruidRel that has a main query, and also a subquery "right" that is used to filter the main query.
+ */
 public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
 {
   private final DruidRel<?> left;
-  private final DruidRel<?> right;
+  private final RelNode right;
   private final List<DruidExpression> leftExpressions;
   private final List<Integer> rightKeys;
   private final int maxSemiJoinRowsInMemory;
@@ -62,14 +71,15 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
   private DruidSemiJoin(
       final RelOptCluster cluster,
       final RelTraitSet traitSet,
-      final DruidRel left,
-      final DruidRel right,
+      final DruidRel<?> left,
+      final RelNode right,
       final List<DruidExpression> leftExpressions,
       final List<Integer> rightKeys,
-      final int maxSemiJoinRowsInMemory
+      final int maxSemiJoinRowsInMemory,
+      final QueryMaker queryMaker
   )
   {
-    super(cluster, traitSet, left.getQueryMaker());
+    super(cluster, traitSet, queryMaker);
     this.left = left;
     this.right = right;
     this.leftExpressions = ImmutableList.copyOf(leftExpressions);
@@ -114,7 +124,8 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
         right,
         listBuilder.build(),
         rightKeys,
-        plannerContext.getPlannerConfig().getMaxSemiJoinRowsInMemory()
+        plannerContext.getPlannerConfig().getMaxSemiJoinRowsInMemory(),
+        left.getQueryMaker()
     );
   }
 
@@ -140,10 +151,12 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
         right,
         leftExpressions,
         rightKeys,
-        maxSemiJoinRowsInMemory
+        maxSemiJoinRowsInMemory,
+        getQueryMaker()
     );
   }
 
+  @Nullable
   @Override
   public QueryDataSource asDataSource()
   {
@@ -158,10 +171,11 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
         getCluster(),
         getTraitSet().replace(BindableConvention.INSTANCE),
         left,
-        right,
+        RelOptRule.convert(right, BindableConvention.INSTANCE),
         leftExpressions,
         rightKeys,
-        maxSemiJoinRowsInMemory
+        maxSemiJoinRowsInMemory,
+        getQueryMaker()
     );
   }
 
@@ -172,10 +186,11 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
         getCluster(),
         getTraitSet().replace(DruidConvention.instance()),
         left,
-        right,
+        RelOptRule.convert(right, DruidConvention.instance()),
         leftExpressions,
         rightKeys,
-        maxSemiJoinRowsInMemory
+        maxSemiJoinRowsInMemory,
+        getQueryMaker()
     );
   }
 
@@ -192,7 +207,7 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
   @Override
   public int getQueryCount()
   {
-    return left.getQueryCount() + right.getQueryCount();
+    return ((DruidRel) left).getQueryCount() + ((DruidRel) right).getQueryCount();
   }
 
   @Override
@@ -213,13 +228,46 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
   }
 
   @Override
+  public List<RelNode> getInputs()
+  {
+    return ImmutableList.of(right);
+  }
+
+  @Override
+  public RelNode copy(final RelTraitSet traitSet, final List<RelNode> inputs)
+  {
+    return new DruidSemiJoin(
+        getCluster(),
+        getTraitSet(),
+        left,
+        Iterables.getOnlyElement(inputs),
+        leftExpressions,
+        rightKeys,
+        maxSemiJoinRowsInMemory,
+        getQueryMaker()
+    );
+  }
+
+  @Override
   public RelWriter explainTerms(RelWriter pw)
   {
-    return pw
-        .item("leftExpressions", leftExpressions)
-        .item("leftQuery", left.getQueryBuilder())
-        .item("rightKeys", rightKeys)
-        .item("rightQuery", right.getQueryBuilder());
+    final TableDataSource dummyDataSource = new TableDataSource("__subquery__");
+    final String queryString;
+
+    try {
+      queryString = getQueryMaker()
+          .getJsonMapper()
+          .writeValueAsString(left.getQueryBuilder().toQuery(dummyDataSource, getPlannerContext()));
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
+    return super.explainTerms(pw)
+                .input("right", right)
+                .item("query", queryString)
+                .item("leftExpressions", leftExpressions)
+                .item("rightKeys", rightKeys);
   }
 
   @Override
@@ -234,9 +282,11 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
    */
   private DruidRel<?> getLeftRelWithFilter()
   {
+    final DruidRel<?> druidRight = (DruidRel) this.right;
+
     // Build list of acceptable values from right side.
     final Set<List<String>> valuess = Sets.newHashSet();
-    final List<DimFilter> filters = right.runQuery().accumulate(
+    final List<DimFilter> filters = druidRight.runQuery().accumulate(
         new ArrayList<>(),
         new Accumulator<List<DimFilter>, Object[]>()
         {

@@ -21,7 +21,6 @@ package io.druid.indexing.overlord.autoscaling;
 
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Collections2;
@@ -251,14 +250,14 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       // Simulate assigning tasks to dummy workers using configured workerSelectStrategy
       // the number of additional workers needed to assign all the pending tasks is noted
       for (Task task : pendingTasks) {
-        Optional<ImmutableWorkerInfo> selectedWorker = workerSelectStrategy.findWorkerForTask(
+        final ImmutableWorkerInfo selectedWorker = workerSelectStrategy.findWorkerForTask(
             workerTaskRunnerConfig,
             ImmutableMap.copyOf(workersMap),
             task
         );
         final ImmutableWorkerInfo workerRunningTask;
-        if (selectedWorker.isPresent()) {
-          workerRunningTask = selectedWorker.get();
+        if (selectedWorker != null) {
+          workerRunningTask = selectedWorker;
         } else {
           // None of the existing worker can run this task, we need to provision one worker for it.
           // create a dummy worker and try to simulate assigning task to it.

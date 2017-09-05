@@ -19,6 +19,7 @@
 
 package io.druid.sql.calcite.rel;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
@@ -32,7 +33,6 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.math.expr.Evals;
 import io.druid.query.DataSource;
 import io.druid.query.Query;
-import io.druid.query.QueryDataSource;
 import io.druid.query.Result;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.select.EventHolder;
@@ -69,14 +69,17 @@ public class QueryMaker
 {
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final PlannerContext plannerContext;
+  private final ObjectMapper jsonMapper;
 
   public QueryMaker(
       final QueryLifecycleFactory queryLifecycleFactory,
-      final PlannerContext plannerContext
+      final PlannerContext plannerContext,
+      final ObjectMapper jsonMapper
   )
   {
     this.queryLifecycleFactory = queryLifecycleFactory;
     this.plannerContext = plannerContext;
+    this.jsonMapper = jsonMapper;
   }
 
   public PlannerContext getPlannerContext()
@@ -84,42 +87,29 @@ public class QueryMaker
     return plannerContext;
   }
 
+  public ObjectMapper getJsonMapper()
+  {
+    return jsonMapper;
+  }
+
   public Sequence<Object[]> runQuery(
       final DataSource dataSource,
       final DruidQueryBuilder queryBuilder
   )
   {
-    if (dataSource instanceof QueryDataSource) {
-      final GroupByQuery outerQuery = queryBuilder.toGroupByQuery(dataSource, plannerContext);
-      if (outerQuery == null) {
-        // Bug in the planner rules. They shouldn't allow this to happen.
-        throw new IllegalStateException("Can't use QueryDataSource without an outer groupBy query!");
-      }
+    final Query query = queryBuilder.toQuery(dataSource, plannerContext);
 
-      return executeGroupBy(queryBuilder, outerQuery);
+    if (query instanceof TimeseriesQuery) {
+      return executeTimeseries(queryBuilder, (TimeseriesQuery) query);
+    } else if (query instanceof TopNQuery) {
+      return executeTopN(queryBuilder, (TopNQuery) query);
+    } else if (query instanceof GroupByQuery) {
+      return executeGroupBy(queryBuilder, (GroupByQuery) query);
+    } else if (query instanceof SelectQuery) {
+      return executeSelect(queryBuilder, (SelectQuery) query);
+    } else {
+      throw new ISE("Cannot run query of class[%s]", query.getClass().getName());
     }
-
-    final TimeseriesQuery tsQuery = queryBuilder.toTimeseriesQuery(dataSource, plannerContext);
-    if (tsQuery != null) {
-      return executeTimeseries(queryBuilder, tsQuery);
-    }
-
-    final TopNQuery topNQuery = queryBuilder.toTopNQuery(dataSource, plannerContext);
-    if (topNQuery != null) {
-      return executeTopN(queryBuilder, topNQuery);
-    }
-
-    final GroupByQuery groupByQuery = queryBuilder.toGroupByQuery(dataSource, plannerContext);
-    if (groupByQuery != null) {
-      return executeGroupBy(queryBuilder, groupByQuery);
-    }
-
-    final SelectQuery selectQuery = queryBuilder.toSelectQuery(dataSource, plannerContext);
-    if (selectQuery != null) {
-      return executeSelect(queryBuilder, selectQuery);
-    }
-
-    throw new IllegalStateException("WTF?! Cannot execute query even though we planned it?");
   }
 
   private Sequence<Object[]> executeSelect(

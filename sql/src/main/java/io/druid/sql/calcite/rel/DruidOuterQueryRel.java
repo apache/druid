@@ -19,48 +19,51 @@
 
 package io.druid.sql.calcite.rel;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.QueryDataSource;
+import io.druid.query.TableDataSource;
 import io.druid.query.filter.DimFilter;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.interpreter.BindableConvention;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
+import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 
+import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.List;
 
-public class DruidNestedGroupBy extends DruidRel<DruidNestedGroupBy>
+/**
+ * DruidRel that uses a "query" dataSource.
+ */
+public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
 {
-  private final DruidRel sourceRel;
+  private final RelNode sourceRel;
   private final DruidQueryBuilder queryBuilder;
 
-  private DruidNestedGroupBy(
+  private DruidOuterQueryRel(
       RelOptCluster cluster,
       RelTraitSet traitSet,
-      DruidRel sourceRel,
-      DruidQueryBuilder queryBuilder
+      RelNode sourceRel,
+      DruidQueryBuilder queryBuilder,
+      QueryMaker queryMaker
   )
   {
-    super(cluster, traitSet, sourceRel.getQueryMaker());
+    super(cluster, traitSet, queryMaker);
     this.sourceRel = sourceRel;
     this.queryBuilder = queryBuilder;
-
-    if (sourceRel.getQueryBuilder().getGrouping() == null) {
-      throw new IllegalArgumentException("inner query must be groupBy");
-    }
-
-    if (queryBuilder.getGrouping() == null) {
-      throw new IllegalArgumentException("outer query must be groupBy");
-    }
   }
 
-  public static DruidNestedGroupBy from(
+  public static DruidOuterQueryRel from(
       final DruidRel sourceRel,
       final DimFilter filter,
       final Grouping grouping,
@@ -68,21 +71,22 @@ public class DruidNestedGroupBy extends DruidRel<DruidNestedGroupBy>
       final List<String> rowOrder
   )
   {
-    return new DruidNestedGroupBy(
+    return new DruidOuterQueryRel(
         sourceRel.getCluster(),
         sourceRel.getTraitSet(),
         sourceRel,
         DruidQueryBuilder.fullScan(
             sourceRel.getOutputRowSignature(),
             sourceRel.getCluster().getTypeFactory()
-        ).withFilter(filter).withGrouping(grouping, rowType, rowOrder)
+        ).withFilter(filter).withGrouping(grouping, rowType, rowOrder),
+        sourceRel.getQueryMaker()
     );
   }
 
   @Override
   public RowSignature getSourceRowSignature()
   {
-    return sourceRel.getOutputRowSignature();
+    return ((DruidRel) sourceRel).getOutputRowSignature();
   }
 
   @Override
@@ -94,7 +98,7 @@ public class DruidNestedGroupBy extends DruidRel<DruidNestedGroupBy>
   @Override
   public Sequence<Object[]> runQuery()
   {
-    final QueryDataSource queryDataSource = sourceRel.asDataSource();
+    final QueryDataSource queryDataSource = ((DruidRel) sourceRel).asDataSource();
     if (queryDataSource != null) {
       return getQueryMaker().runQuery(
           queryDataSource,
@@ -106,26 +110,28 @@ public class DruidNestedGroupBy extends DruidRel<DruidNestedGroupBy>
   }
 
   @Override
-  public DruidNestedGroupBy withQueryBuilder(DruidQueryBuilder newQueryBuilder)
+  public DruidOuterQueryRel withQueryBuilder(final DruidQueryBuilder newQueryBuilder)
   {
-    return new DruidNestedGroupBy(
+    return new DruidOuterQueryRel(
         getCluster(),
         getTraitSet().plusAll(newQueryBuilder.getRelTraits()),
         sourceRel,
-        newQueryBuilder
+        newQueryBuilder,
+        getQueryMaker()
     );
   }
 
   @Override
   public int getQueryCount()
   {
-    return 1 + sourceRel.getQueryCount();
+    return 1 + ((DruidRel) sourceRel).getQueryCount();
   }
 
+  @Nullable
   @Override
   public QueryDataSource asDataSource()
   {
-    final QueryDataSource queryDataSource = sourceRel.asDataSource();
+    final QueryDataSource queryDataSource = ((DruidRel) sourceRel).asDataSource();
     if (queryDataSource == null) {
       return null;
     } else {
@@ -134,24 +140,44 @@ public class DruidNestedGroupBy extends DruidRel<DruidNestedGroupBy>
   }
 
   @Override
-  public DruidNestedGroupBy asBindable()
+  public DruidOuterQueryRel asBindable()
   {
-    return new DruidNestedGroupBy(
+    return new DruidOuterQueryRel(
         getCluster(),
         getTraitSet().plus(BindableConvention.INSTANCE),
         sourceRel,
-        queryBuilder
+        queryBuilder,
+        getQueryMaker()
     );
   }
 
   @Override
-  public DruidNestedGroupBy asDruidConvention()
+  public DruidOuterQueryRel asDruidConvention()
   {
-    return new DruidNestedGroupBy(
+    return new DruidOuterQueryRel(
         getCluster(),
         getTraitSet().plus(DruidConvention.instance()),
-        sourceRel,
-        queryBuilder
+        RelOptRule.convert(sourceRel, DruidConvention.instance()),
+        queryBuilder,
+        getQueryMaker()
+    );
+  }
+
+  @Override
+  public List<RelNode> getInputs()
+  {
+    return ImmutableList.of(sourceRel);
+  }
+
+  @Override
+  public RelNode copy(final RelTraitSet traitSet, final List<RelNode> inputs)
+  {
+    return new DruidOuterQueryRel(
+        getCluster(),
+        traitSet,
+        Iterables.getOnlyElement(inputs),
+        getQueryBuilder(),
+        getQueryMaker()
     );
   }
 
@@ -164,9 +190,21 @@ public class DruidNestedGroupBy extends DruidRel<DruidNestedGroupBy>
   @Override
   public RelWriter explainTerms(RelWriter pw)
   {
-    return pw
-        .item("sourceRel", sourceRel)
-        .item("queryBuilder", queryBuilder);
+    final TableDataSource dummyDataSource = new TableDataSource("__subquery__");
+    final String queryString;
+
+    try {
+      queryString = getQueryMaker()
+          .getJsonMapper()
+          .writeValueAsString(queryBuilder.toGroupByQuery(dummyDataSource, getPlannerContext()));
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
+    return super.explainTerms(pw)
+                .input("innerQuery", sourceRel)
+                .item("query", queryString);
   }
 
   @Override
@@ -178,6 +216,6 @@ public class DruidNestedGroupBy extends DruidRel<DruidNestedGroupBy>
   @Override
   public RelOptCost computeSelfCost(final RelOptPlanner planner, final RelMetadataQuery mq)
   {
-    return sourceRel.computeSelfCost(planner, mq).multiplyBy(2.0);
+    return planner.getCostFactory().makeCost(mq.getRowCount(sourceRel), 0, 0);
   }
 }

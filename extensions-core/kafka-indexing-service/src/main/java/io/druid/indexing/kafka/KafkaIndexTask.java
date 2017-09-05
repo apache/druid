@@ -629,10 +629,10 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       if (chatHandlerProvider.isPresent()) {
         chatHandlerProvider.get().unregister(getId());
       }
-    }
 
-    toolbox.getDruidNodeAnnouncer().unannounce(discoveryDruidNode);
-    toolbox.getDataSegmentServerAnnouncer().unannounce();
+      toolbox.getDruidNodeAnnouncer().unannounce(discoveryDruidNode);
+      toolbox.getDataSegmentServerAnnouncer().unannounce();
+    }
 
     return success();
   }
