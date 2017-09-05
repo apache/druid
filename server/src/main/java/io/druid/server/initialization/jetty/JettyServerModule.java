@@ -85,7 +85,7 @@ public class JettyServerModule extends JerseyServletModule
   private static final Logger log = new Logger(JettyServerModule.class);
 
   private static final AtomicInteger activeConnections = new AtomicInteger();
-  private static final String GRACEFUL_SHUTDOWN_TIME = "graceful_shutdown_time";
+  private static final String GRACEFUL_SHUTDOWN_TIMEOUT = "graceful_shutdown_timeout";
 
   @Override
   protected void configureServlets()
@@ -228,7 +228,7 @@ public class JettyServerModule extends JerseyServletModule
     }
 
     server.setConnectors(connectors);
-    server.setAttribute(GRACEFUL_SHUTDOWN_TIME, config.getGracefulShutdownTimeout().toStandardDuration().getMillis());
+    server.setAttribute(GRACEFUL_SHUTDOWN_TIMEOUT, config.getGracefulShutdownTimeout().toStandardDuration().getMillis());
 
     return server;
   }
@@ -255,12 +255,16 @@ public class JettyServerModule extends JerseyServletModule
           @Override
           public void stop()
           {
-            if (activeConnections.get() > 0) {
-              long gracefulShutDownTime = (long) server.getAttribute(GRACEFUL_SHUTDOWN_TIME);
+            long startTime = System.currentTimeMillis();
+            long gracefulShutDownTimeout = (long) server.getAttribute(GRACEFUL_SHUTDOWN_TIMEOUT);
+
+            while (activeConnections.get() > 0 &&
+                System.currentTimeMillis() - startTime < gracefulShutDownTimeout) {
               log.info("Waiting for [%s] milliseconds for active requests to be zero, current active requests=[%s]",
-                  gracefulShutDownTime, activeConnections.get());
+                  gracefulShutDownTimeout, activeConnections.get());
+
               try {
-                Thread.sleep(gracefulShutDownTime);
+                Thread.sleep(500);
               }
               catch (InterruptedException e) {
                 log.error("Sleep has been interrupted, while waiting for active requests to be zero");
@@ -269,6 +273,7 @@ public class JettyServerModule extends JerseyServletModule
                 return;
               }
             }
+
             stopImmediately();
           }
 

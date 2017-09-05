@@ -54,7 +54,7 @@ public class ServerConfig
 
   @JsonProperty
   @NotNull
-  private Period gracefulShutdownTimeout = new Period("PT5s");
+  private Period gracefulShutdownTimeout = new Period("PT15s");
 
   public int getNumThreads()
   {
