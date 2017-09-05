@@ -31,7 +31,7 @@ import io.airlift.airline.Command;
 import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
-import io.druid.discovery.DruidLeaderClient;
+import io.druid.discovery.DruidLeaderClientProvider;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
@@ -137,13 +137,13 @@ public class CliRouter extends ServerRunnable
 
           @Provides
           @LazySingleton
-          public DruidLeaderClient getLeaderHttpClient(
+          public DruidLeaderClientProvider getLeaderHttpClient(
               @Global HttpClient httpClient,
               DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
               ServerDiscoverySelector serverDiscoverySelector
           )
           {
-            return new DruidLeaderClient(
+            return new DruidLeaderClientProvider(
                 httpClient,
                 druidNodeDiscoveryProvider,
                 DruidNodeDiscoveryProvider.NODE_TYPE_COORDINATOR,

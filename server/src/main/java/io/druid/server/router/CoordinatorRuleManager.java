@@ -27,6 +27,7 @@ import com.google.inject.Inject;
 import com.metamx.http.client.response.FullResponseHolder;
 import io.druid.concurrent.Execs;
 import io.druid.discovery.DruidLeaderClient;
+import io.druid.discovery.DruidLeaderClientProvider;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.ISE;
@@ -69,12 +70,12 @@ public class CoordinatorRuleManager
   public CoordinatorRuleManager(
       @Json ObjectMapper jsonMapper,
       Supplier<TieredBrokerConfig> config,
-      DruidLeaderClient druidLeaderClient
+      DruidLeaderClientProvider druidLeaderClientProvider
   )
   {
     this.jsonMapper = jsonMapper;
     this.config = config;
-    this.druidLeaderClient = druidLeaderClient;
+    this.druidLeaderClient = druidLeaderClientProvider.get();
 
     this.rules = new AtomicReference<>(
         new ConcurrentHashMap<String, List<Rule>>()

@@ -27,7 +27,7 @@ import io.druid.client.coordinator.Coordinator;
 import io.druid.client.coordinator.CoordinatorSelectorConfig;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
-import io.druid.discovery.DruidLeaderClient;
+import io.druid.discovery.DruidLeaderClientProvider;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.annotations.Global;
 
@@ -55,13 +55,13 @@ public class CoordinatorDiscoveryModule implements Module
   @Provides
   @Coordinator
   @LazySingleton
-  public DruidLeaderClient getLeaderHttpClient(
+  public DruidLeaderClientProvider getLeaderHttpClient(
       @Global HttpClient httpClient,
       DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       @Coordinator ServerDiscoverySelector serverDiscoverySelector
   )
   {
-    return new DruidLeaderClient(
+    return new DruidLeaderClientProvider(
         httpClient,
         druidNodeDiscoveryProvider,
         DruidNodeDiscoveryProvider.NODE_TYPE_COORDINATOR,

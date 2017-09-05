@@ -109,15 +109,11 @@ public class DruidLeaderClientTest extends BaseJettyTest
         ImmutableList.of(discoveryDruidNode)
     );
 
-    DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType("nodetype")).andReturn(druidNodeDiscovery);
-
-    EasyMock.replay(druidNodeDiscovery, druidNodeDiscoveryProvider);
+    EasyMock.replay(druidNodeDiscovery);
 
     DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
         httpClient,
-        druidNodeDiscoveryProvider,
-        "nodetype",
+        druidNodeDiscovery,
         "/simple/leader",
         EasyMock.createNiceMock(ServerDiscoverySelector.class)
     );
@@ -135,15 +131,11 @@ public class DruidLeaderClientTest extends BaseJettyTest
         ImmutableList.of(discoveryDruidNode)
     );
 
-    DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType("nodetype")).andReturn(druidNodeDiscovery);
-
-    EasyMock.replay(druidNodeDiscovery, druidNodeDiscoveryProvider);
+    EasyMock.replay(druidNodeDiscovery);
 
     DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
         httpClient,
-        druidNodeDiscoveryProvider,
-        "nodetype",
+        druidNodeDiscovery,
         "/simple/leader",
         EasyMock.createNiceMock(ServerDiscoverySelector.class)
     );
@@ -171,15 +163,11 @@ public class DruidLeaderClientTest extends BaseJettyTest
         ImmutableList.of(discoveryDruidNode)
     );
 
-    DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType("nodetype")).andReturn(druidNodeDiscovery).anyTimes();
-
-    EasyMock.replay(serverDiscoverySelector, druidNodeDiscovery, druidNodeDiscoveryProvider);
+    EasyMock.replay(serverDiscoverySelector, druidNodeDiscovery);
 
     DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
         httpClient,
-        druidNodeDiscoveryProvider,
-        "nodetype",
+        druidNodeDiscovery,
         "/simple/leader",
         serverDiscoverySelector
     );
@@ -197,15 +185,11 @@ public class DruidLeaderClientTest extends BaseJettyTest
         ImmutableList.of(discoveryDruidNode)
     );
 
-    DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType("nodetype")).andReturn(druidNodeDiscovery);
-
-    EasyMock.replay(druidNodeDiscovery, druidNodeDiscoveryProvider);
+    EasyMock.replay(druidNodeDiscovery);
 
     DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
         httpClient,
-        druidNodeDiscoveryProvider,
-        "nodetype",
+        druidNodeDiscovery,
         "/simple/leader",
         EasyMock.createNiceMock(ServerDiscoverySelector.class)
     );

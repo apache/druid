@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import io.druid.discovery.DruidLeaderClient;
+import io.druid.discovery.DruidLeaderClientProvider;
 import io.druid.java.util.common.IAE;
 import io.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -40,11 +41,11 @@ public class IndexingServiceClient
   @Inject
   public IndexingServiceClient(
       ObjectMapper jsonMapper,
-      @IndexingService DruidLeaderClient druidLeaderClient
+      @IndexingService DruidLeaderClientProvider druidLeaderClientProvider
   )
   {
     this.jsonMapper = jsonMapper;
-    this.druidLeaderClient = druidLeaderClient;
+    this.druidLeaderClient = druidLeaderClientProvider.get();
   }
 
   public void mergeSegments(List<DataSegment> segments)
