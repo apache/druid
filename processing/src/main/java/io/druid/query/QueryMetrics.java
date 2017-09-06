@@ -121,7 +121,7 @@ import java.util.List;
  *  implement extra methods from SegmentMetadataQueryMetrics interfaces with empty bodies, AND DELEGATE ALL OTHER
  *  METHODS TO A QueryMetrics OBJECT, provided as a sole parameter in DefaultSegmentMetadataQueryMetrics constructor.
  *
- *  NOTE: query(),dataSource(), queryType(), interval(), hasFilters(), duration() and queryId() methods or any
+ *  NOTE: query(), dataSource(), queryType(), interval(), hasFilters(), duration() and queryId() methods or any
  *  "pre-query-execution-time" methods should either have a empty body or throw exception.
  *
  *  3. Create `interface SegmentMetadataQueryMetricsFactory` with a single method

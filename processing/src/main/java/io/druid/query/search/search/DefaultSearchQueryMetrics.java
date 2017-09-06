@@ -30,7 +30,7 @@ import org.joda.time.Interval;
 
 import java.util.List;
 
-/*
+/**
  * This class is implemented with delegation to another QueryMetrics for compatibility, see "Making subinterfaces of
  * QueryMetrics for emitting custom dimensions and/or metrics for specific query types" section in {@link QueryMetrics}
  * javadoc.
