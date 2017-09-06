@@ -1157,7 +1157,7 @@
                             <forceJavacCompilerUse>true</forceJavacCompilerUse>
                             <fork>true</fork>
                             <meminitial>1024m</meminitial>
-                            <maxmem>1500m</maxmem>
+                            <maxmem>3000m</maxmem>
                             <source>${maven.compiler.target}</source>
                             <target>${maven.compiler.target}</target>
                             <showWarnings>false</showWarnings>
