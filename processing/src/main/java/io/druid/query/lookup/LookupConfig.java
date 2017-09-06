@@ -29,20 +29,42 @@ public class LookupConfig
   @JsonProperty
   private final String snapshotWorkingDir;
 
+  @JsonProperty
+  private int numLookupLoadingThreads = 10;
+
+  @JsonProperty
+  private boolean disableLookupSync = false;
+
   /**
    * @param snapshotWorkingDir working directory to store lookups snapshot file, passing null or empty string will disable the snapshot utility
+   * @param numLookupLoadingThreads number of threads for loading the lookups as part of the synchronization process
+   * @param disableLookupSync decides whether the lookup synchronization process should be disabled at startup
    */
   @JsonCreator
   public LookupConfig(
-      @JsonProperty("snapshotWorkingDir") String snapshotWorkingDir
+      @JsonProperty("snapshotWorkingDir") String snapshotWorkingDir,
+      @JsonProperty("numLookupLoadingThreads") int numLookupLoadingThreads,
+      @JsonProperty("disableLookupSync") boolean disableLookupSync
   )
   {
     this.snapshotWorkingDir = Strings.nullToEmpty(snapshotWorkingDir);
+    this.numLookupLoadingThreads = numLookupLoadingThreads;
+    this.disableLookupSync = disableLookupSync;
   }
 
   public String getSnapshotWorkingDir()
   {
     return snapshotWorkingDir;
+  }
+
+  public int getNumLookupLoadingThreads()
+  {
+    return numLookupLoadingThreads;
+  }
+
+  public boolean getDisableLookupSync()
+  {
+    return disableLookupSync;
   }
 
 
@@ -67,6 +89,8 @@ public class LookupConfig
   {
     return "LookupConfig{" +
            "snapshotWorkingDir='" + getSnapshotWorkingDir() + '\'' +
+           " numLookupLoadingThreads='" + getNumLookupLoadingThreads() + '\'' +
+           " disableLookupSync='" + getDisableLookupSync() + '\'' +
            '}';
   }
 }
