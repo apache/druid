@@ -32,13 +32,14 @@ public class LookupConfigTest
 {
 
   ObjectMapper mapper = TestHelper.getJsonMapper();
-
+  private final int NUM_THREADS = 10;
+  private final boolean LOOKUP_DISABLE = false;
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
   @Test
   public void TestSerDesr() throws IOException
   {
-    LookupConfig lookupConfig = new LookupConfig(temporaryFolder.newFile().getAbsolutePath());
+    LookupConfig lookupConfig = new LookupConfig(temporaryFolder.newFile().getAbsolutePath(), NUM_THREADS, LOOKUP_DISABLE);
     Assert.assertEquals(lookupConfig, mapper.reader(LookupConfig.class).readValue(mapper.writeValueAsString(lookupConfig)));
   }
 }
