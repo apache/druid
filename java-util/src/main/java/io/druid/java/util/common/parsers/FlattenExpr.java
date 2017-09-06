@@ -53,7 +53,7 @@ public class FlattenExpr
       return this.jsonQueryExpr.apply(document).get(0);
     }
     catch (JsonQueryException e) {
-      // ignore errors
+      // ignore errors.
     }
     return null;
   }
