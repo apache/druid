@@ -212,6 +212,12 @@ public class RemoteTaskRunnerTestUtils
               throw Throwables.propagate(e);
             }
           }
+
+          @Override
+          public String toString()
+          {
+            return StringUtils.format("Path[%s] exists", path);
+          }
         }
     );
   }

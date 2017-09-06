@@ -22,11 +22,9 @@ package io.druid.indexing.overlord.setup;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
@@ -73,12 +71,12 @@ public class JavaScriptWorkerSelectStrategy implements WorkerSelectStrategy
   }
 
   @Override
-  public Optional<ImmutableWorkerInfo> findWorkerForTask(
+  public ImmutableWorkerInfo findWorkerForTask(
       WorkerTaskRunnerConfig config, ImmutableMap<String, ImmutableWorkerInfo> zkWorkers, Task task
   )
   {
     String worker = fnSelector.apply(config, zkWorkers, task);
-    return Optional.fromNullable(worker == null ? null : zkWorkers.get(worker));
+    return worker == null ? null : zkWorkers.get(worker);
   }
 
   @JsonProperty
