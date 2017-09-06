@@ -110,7 +110,7 @@ public class JSONPathParser implements Parser<String, Object>
         } else if (pair.lhs == FieldType.JQ) {
           parsedVal = path.readJq(document);
         } else {
-          throw new IllegalArgumentException("Unknown FieldType: " + pair.lhs);
+          throw new ParseException("Unknown FieldType", pair.lhs);
         }
         if (parsedVal == null) {
           continue;
