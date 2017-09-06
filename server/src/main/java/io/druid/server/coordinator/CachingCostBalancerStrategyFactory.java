@@ -50,6 +50,7 @@ public class CachingCostBalancerStrategyFactory implements BalancerStrategyFacto
 
   private final ServerInventoryView serverInventoryView;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
+  /** Must be single-threaded, because {@link ClusterCostCache.Builder} and downstream builders are not thread-safe */
   private final ExecutorService executor = Execs.singleThreaded("CachingCostBalancerStrategy-executor");
   private final ClusterCostCache.Builder clusterCostCacheBuilder = ClusterCostCache.builder();
   private volatile boolean initialized = false;
@@ -116,6 +117,7 @@ public class CachingCostBalancerStrategyFactory implements BalancerStrategyFacto
       throw new ISE("CachingCostBalancerStrategyFactory can not be stopped");
     }
     executor.shutdownNow();
+    // Not calling lifecycleLock.exitStop() because CachingCostBalancerStrategyFactory is not recycleable
   }
 
   @Override

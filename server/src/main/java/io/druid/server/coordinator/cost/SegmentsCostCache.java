@@ -180,6 +180,8 @@ public class SegmentsCostCache
       Interval interval = getBucketInterval(segment);
       buckets.computeIfPresent(
           interval,
+          // If there are no move segments, returning null in computeIfPresent() removes the interval from the buckets
+          // map
           (i, builder) -> builder.removeSegment(segment).isEmpty() ? null : builder
       );
       return this;
