@@ -20,13 +20,9 @@
 package io.druid.sql.calcite.rel;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.QueryDataSource;
 import io.druid.query.groupby.GroupByQuery;
-import io.druid.segment.VirtualColumns;
-import io.druid.sql.calcite.filtration.Filtration;
-import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.DruidTable;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.interpreter.BindableConvention;
@@ -40,14 +36,22 @@ import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 
+import javax.annotation.Nullable;
+import java.io.IOException;
+
+/**
+ * DruidRel that uses a "table" dataSource.
+ */
 public class DruidQueryRel extends DruidRel<DruidQueryRel>
 {
   // Factors used for computing cost (see computeSelfCost). These are intended to encourage pushing down filters
   // and limits through stacks of nested queries when possible.
   private static final double COST_BASE = 1.0;
+  private static final double COST_PER_COLUMN = 0.001;
   private static final double COST_FILTER_MULTIPLIER = 0.1;
   private static final double COST_GROUPING_MULTIPLIER = 0.5;
   private static final double COST_LIMIT_MULTIPLIER = 0.5;
+  private static final double COST_HAVING_MULTIPLIER = 5.0;
 
   private final RelOptTable table;
   private final DruidTable druidTable;
@@ -75,7 +79,6 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
       final RelOptCluster cluster,
       final RelOptTable table,
       final DruidTable druidTable,
-      final PlannerContext plannerContext,
       final QueryMaker queryMaker
   )
   {
@@ -89,6 +92,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
     );
   }
 
+  @Nullable
   @Override
   public QueryDataSource asDataSource()
   {
@@ -182,34 +186,18 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   @Override
   public RelWriter explainTerms(final RelWriter pw)
   {
-    pw.item("dataSource", druidTable.getDataSource());
-    if (queryBuilder != null) {
-      final Filtration filtration = Filtration.create(queryBuilder.getFilter()).optimize(getSourceRowSignature());
-      final VirtualColumns virtualColumns = queryBuilder.getVirtualColumns(getPlannerContext().getExprMacroTable());
-      if (!virtualColumns.isEmpty()) {
-        pw.item("virtualColumns", virtualColumns);
-      }
-      if (!filtration.getIntervals().equals(ImmutableList.of(Filtration.eternity()))) {
-        pw.item("intervals", filtration.getIntervals());
-      }
-      if (filtration.getDimFilter() != null) {
-        pw.item("filter", filtration.getDimFilter());
-      }
-      if (queryBuilder.getSelectProjection() != null) {
-        pw.item("selectProjection", queryBuilder.getSelectProjection());
-      }
-      if (queryBuilder.getGrouping() != null) {
-        pw.item("dimensions", queryBuilder.getGrouping().getDimensions());
-        pw.item("aggregations", queryBuilder.getGrouping().getAggregations());
-      }
-      if (queryBuilder.getHaving() != null) {
-        pw.item("having", queryBuilder.getHaving());
-      }
-      if (queryBuilder.getLimitSpec() != null) {
-        pw.item("limitSpec", queryBuilder.getLimitSpec());
-      }
+    final String queryString;
+
+    try {
+      queryString = getQueryMaker()
+          .getJsonMapper()
+          .writeValueAsString(queryBuilder.toQuery(druidTable.getDataSource(), getPlannerContext()));
     }
-    return pw;
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
+    return pw.item("query", queryString);
   }
 
   @Override
@@ -217,16 +205,27 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   {
     double cost = COST_BASE;
 
+    if (queryBuilder.getSelectProjection() != null) {
+      cost += COST_PER_COLUMN * queryBuilder.getSelectProjection().getVirtualColumns().size();
+      cost += COST_PER_COLUMN * queryBuilder.getSelectProjection().getDirectColumns().size();
+    }
+
     if (queryBuilder.getFilter() != null) {
       cost *= COST_FILTER_MULTIPLIER;
     }
 
     if (queryBuilder.getGrouping() != null) {
       cost *= COST_GROUPING_MULTIPLIER;
+      cost += COST_PER_COLUMN * queryBuilder.getGrouping().getAggregatorFactories().size();
+      cost += COST_PER_COLUMN * queryBuilder.getGrouping().getPostAggregators().size();
     }
 
-    if (queryBuilder.getLimitSpec() != null) {
+    if (queryBuilder.getLimitSpec() != null && queryBuilder.getLimitSpec().getLimit() < Integer.MAX_VALUE) {
       cost *= COST_LIMIT_MULTIPLIER;
+    }
+
+    if (queryBuilder.getHaving() != null) {
+      cost *= COST_HAVING_MULTIPLIER;
     }
 
     return planner.getCostFactory().makeCost(cost, 0, 0);

@@ -753,7 +753,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       }
 
       ZkWorker assignedWorker = null;
-      Optional<ImmutableWorkerInfo> immutableZkWorker = null;
+      final ImmutableWorkerInfo immutableZkWorker;
       try {
         synchronized (workersWithUnacknowledgedTask) {
           immutableZkWorker = strategy.findWorkerForTask(
@@ -787,10 +787,10 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
               task
           );
 
-          if (immutableZkWorker.isPresent() &&
-              workersWithUnacknowledgedTask.putIfAbsent(immutableZkWorker.get().getWorker().getHost(), task.getId())
-              == null) {
-            assignedWorker = zkWorkers.get(immutableZkWorker.get().getWorker().getHost());
+          if (immutableZkWorker != null &&
+              workersWithUnacknowledgedTask.putIfAbsent(immutableZkWorker.getWorker().getHost(), task.getId())
+                == null) {
+            assignedWorker = zkWorkers.get(immutableZkWorker.getWorker().getHost());
           }
         }
 

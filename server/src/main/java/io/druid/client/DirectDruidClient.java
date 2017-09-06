@@ -22,7 +22,6 @@ package io.druid.client;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.ObjectCodec;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
@@ -51,6 +50,7 @@ import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.Query;
@@ -117,7 +117,10 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   private final AtomicInteger openConnections;
   private final boolean isSmile;
 
-  public static <T, QueryType extends Query<T>> QueryType withDefaultTimeoutAndMaxScatterGatherBytes(final QueryType query, ServerConfig serverConfig)
+  public static <T, QueryType extends Query<T>> QueryType withDefaultTimeoutAndMaxScatterGatherBytes(
+      final QueryType query,
+      ServerConfig serverConfig
+  )
   {
     return (QueryType) QueryContexts.withMaxScatterGatherBytes(
         QueryContexts.withDefaultTimeout(
@@ -251,9 +254,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             if (responseContext != null) {
               context.putAll(
                   objectMapper.<Map<String, Object>>readValue(
-                      responseContext, new TypeReference<Map<String, Object>>()
-                      {
-                      }
+                      responseContext, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
                   )
               );
             }

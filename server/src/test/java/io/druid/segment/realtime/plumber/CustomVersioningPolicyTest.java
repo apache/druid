@@ -19,34 +19,30 @@
 
 package io.druid.segment.realtime.plumber;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.java.util.common.DateTimes;
+import io.druid.TestUtil;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
+import org.junit.Assert;
+import org.junit.Test;
 
-/**
- */
-public class CustomVersioningPolicy implements VersioningPolicy
+public class CustomVersioningPolicyTest
 {
-  private final String version;
 
-  @JsonCreator
-  public CustomVersioningPolicy(
-      @JsonProperty("version") String version
-  )
+  @Test
+  public void testSerialization() throws Exception
   {
-    this.version = version == null ? DateTimes.nowUtc().toString() : version;
-  }
+    Interval interval = new Interval(DateTime.now(DateTimeZone.UTC), DateTime.now(DateTimeZone.UTC));
+    String version = "someversion";
 
-  @Override
-  public String getVersion(Interval interval)
-  {
-    return version;
-  }
+    CustomVersioningPolicy policy = new CustomVersioningPolicy(version);
 
-  @JsonProperty("version")
-  public String getVersion()
-  {
-    return version;
+    CustomVersioningPolicy serialized = TestUtil.MAPPER.readValue(
+        TestUtil.MAPPER.writeValueAsBytes(policy),
+        CustomVersioningPolicy.class
+    );
+
+    Assert.assertEquals(version, policy.getVersion(interval));
+    Assert.assertEquals(version, serialized.getVersion(interval));
   }
 }
