@@ -1,6 +1,6 @@
 language: java
 
-dist: precise
+dist: trusty
 
 jdk:
   - oraclejdk8
@@ -19,17 +19,16 @@ matrix:
 
       # processing module test
     - sudo: false
-      install: mvn install -q -ff -DskipTests -B
-      script: mvn test -B -Pparallel-test -Dmaven.fork.count=2 -pl processing
+      install: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn install -q -ff -DskipTests -B
+      script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -B -Pparallel-test -Dmaven.fork.count=2 -pl processing
 
       # non-processing modules test
     - sudo: false
-      install: mvn install -q -ff -DskipTests -B
-      script: mvn test -B -Pparallel-test -Dmaven.fork.count=2 -pl '!processing'
+      install: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn install -q -ff -DskipTests -B
+      script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -B -Pparallel-test -Dmaven.fork.count=2 -pl '!processing'
 
       # run integration tests
     - sudo: required
-      dist: trusty
       services:
         - docker
       env:
