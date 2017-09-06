@@ -57,7 +57,6 @@ import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.DruidPlanner;
 import io.druid.sql.calcite.planner.PlannerConfig;
-import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.planner.PlannerFactory;
 import io.druid.sql.calcite.planner.PlannerResult;
 import io.druid.sql.calcite.schema.DruidSchema;
@@ -243,8 +242,7 @@ public class QuantileSqlAggregatorTest
                     new QuantilePostAggregator("a8", "a8:agg", 0.50f)
                 ))
                 .context(ImmutableMap.<String, Object>of(
-                    "skipEmptyBuckets", true,
-                    PlannerContext.CTX_AUTHENTICATION_RESULT, AllowAllAuthenticator.ALLOW_ALL_RESULT
+                    "skipEmptyBuckets", true
                 ))
                 .build(),
           Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
@@ -306,8 +304,7 @@ public class QuantileSqlAggregatorTest
                     new QuantilePostAggregator("a6", "a4:agg", 0.999f)
                 ))
                 .context(ImmutableMap.<String, Object>of(
-                    "skipEmptyBuckets", true,
-                    PlannerContext.CTX_AUTHENTICATION_RESULT, AllowAllAuthenticator.ALLOW_ALL_RESULT
+                    "skipEmptyBuckets", true
                 ))
                 .build(),
           Iterables.getOnlyElement(queryLogHook.getRecordedQueries())

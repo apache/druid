@@ -162,11 +162,9 @@ public class DruidPlanner implements Closeable
           AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
           authorizerMapper
       );
-      plannerContext.getQueryContext()
-                    .put(
-                        PlannerContext.CTX_AUTHENTICATION_RESULT,
-                        request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)
-                    );
+      plannerContext.setAuthenticationResult(
+          (AuthenticationResult) request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)
+      );
     } else {
       authResult = AuthorizationUtils.authorizeAllResourceActions(
           datasourceNames,
@@ -174,10 +172,8 @@ public class DruidPlanner implements Closeable
           authenticationResult,
           authorizerMapper
       );
-      plannerContext.getQueryContext().put(PlannerContext.CTX_AUTHENTICATION_RESULT, authenticationResult);
+      plannerContext.setAuthenticationResult(authenticationResult);
     }
-
-
 
     if (!authResult.isAllowed()) {
       throw new SecurityException(authResult.toString());
@@ -219,6 +215,7 @@ public class DruidPlanner implements Closeable
 
   private Access authorizeBindableRel(
       BindableRel rel,
+      final PlannerContext plannerContext,
       HttpServletRequest req,
       final AuthenticationResult authenticationResult
   )
@@ -244,6 +241,9 @@ public class DruidPlanner implements Closeable
         }
     );
     if (req != null) {
+      plannerContext.setAuthenticationResult(
+          (AuthenticationResult) req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)
+      );
       return AuthorizationUtils.authorizeAllResourceActions(
           req,
           datasourceNames,
@@ -251,6 +251,7 @@ public class DruidPlanner implements Closeable
           authorizerMapper
       );
     } else {
+      plannerContext.setAuthenticationResult(authenticationResult);
       return AuthorizationUtils.authorizeAllResourceActions(
           datasourceNames,
           AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
@@ -291,7 +292,7 @@ public class DruidPlanner implements Closeable
       );
     }
 
-    Access accessResult = authorizeBindableRel(bindableRel, request, authenticationResult);
+    Access accessResult = authorizeBindableRel(bindableRel, plannerContext, request, authenticationResult);
     if (!accessResult.isAllowed()) {
       throw new SecurityException(accessResult.toString());
     }

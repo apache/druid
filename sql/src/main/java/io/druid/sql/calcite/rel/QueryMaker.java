@@ -221,10 +221,7 @@ public class QueryMaker
   private <T> Sequence<T> runQuery(final Query<T> query)
   {
     Hook.QUERY_PLAN.run(query);
-
-    final AuthenticationResult authenticationResult =
-        (AuthenticationResult) plannerContext.getQueryContext().get(PlannerContext.CTX_AUTHENTICATION_RESULT);
-
+    final AuthenticationResult authenticationResult = plannerContext.getAuthenticationResult();
     return queryLifecycleFactory.factorize().runSimple(query, authenticationResult, null);
   }
 

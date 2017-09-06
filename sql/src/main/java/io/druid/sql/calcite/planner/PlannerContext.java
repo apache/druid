@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import io.druid.math.expr.ExprMacroTable;
+import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.AuthorizerMapper;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
@@ -51,6 +52,8 @@ public class PlannerContext
   private final long queryStartTimeMillis;
   private final Map<String, Object> queryContext;
   private final AuthorizerMapper authorizerMapper;
+
+  private AuthenticationResult authenticationResult;
 
   private PlannerContext(
       final DruidOperatorTable operatorTable,
@@ -144,6 +147,16 @@ public class PlannerContext
   public long getQueryStartTimeMillis()
   {
     return queryStartTimeMillis;
+  }
+
+  public AuthenticationResult getAuthenticationResult()
+  {
+    return authenticationResult;
+  }
+
+  public void setAuthenticationResult(AuthenticationResult authenticationResult)
+  {
+    this.authenticationResult = authenticationResult;
   }
 
   public DataContext createDataContext(final JavaTypeFactory typeFactory)
