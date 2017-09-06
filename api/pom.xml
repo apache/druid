@@ -90,7 +90,6 @@
         <dependency>
             <groupId>net.thisptr</groupId>
             <artifactId>jackson-jq</artifactId>
-            <version>0.0.7</version>
         </dependency>
         <!-- Tests -->
         <dependency>

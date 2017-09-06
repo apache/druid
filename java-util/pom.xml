@@ -110,7 +110,6 @@
       <dependency>
         <groupId>net.thisptr</groupId>
         <artifactId>jackson-jq</artifactId>
-        <version>RELEASE</version>
       </dependency>
     </dependencies>
 

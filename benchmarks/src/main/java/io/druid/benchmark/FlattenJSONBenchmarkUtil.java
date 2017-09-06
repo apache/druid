@@ -170,7 +170,6 @@ public class FlattenJSONBenchmarkUtil
     fields.add(JSONPathFieldSpec.createRootField("ts"));
 
     fields.add(JSONPathFieldSpec.createRootField("d1"));
-    //fields.add(JSONPathFieldSpec.createRootField("d2"));
     fields.add(JSONPathFieldSpec.createJqField("e1.d1", ".e1.d1"));
     fields.add(JSONPathFieldSpec.createJqField("e1.d2", ".e1.d2"));
     fields.add(JSONPathFieldSpec.createJqField("e2.d3", ".e2.d3"));
@@ -185,7 +184,6 @@ public class FlattenJSONBenchmarkUtil
     fields.add(JSONPathFieldSpec.createJqField("ae1[2].e1.d2", ".ae1[2].e1.d2"));
 
     fields.add(JSONPathFieldSpec.createRootField("m3"));
-    //fields.add(JSONPathFieldSpec.createRootField("m4"));
     fields.add(JSONPathFieldSpec.createJqField("e3.m1", ".e3.m1"));
     fields.add(JSONPathFieldSpec.createJqField("e3.m2", ".e3.m2"));
     fields.add(JSONPathFieldSpec.createJqField("e3.m3", ".e3.m3"));
