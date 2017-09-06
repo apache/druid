@@ -143,7 +143,7 @@ public class JSONPathParser implements Parser<String, Object>
           path = new FlattenExpr(JsonQuery.compile(fieldSpec.getExpr()));
         }
         catch (JsonQueryException e) {
-          throw new ParseException(e, "Unable to compile JQ expression [%s]", fieldSpec.getExpr());
+          throw new IllegalArgumentException("Unable to compile JQ expression: " + fieldSpec.getExpr());
         }
       }
       Pair<FieldType, FlattenExpr> pair = new Pair<>(fieldSpec.getType(), path);
