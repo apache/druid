@@ -48,7 +48,7 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
     setupServerAndCurator();
   }
 
-  @Test(timeout = 5000)
+  @Test(timeout = 15000)
   public void testSimple() throws Exception
   {
     curator.start();
