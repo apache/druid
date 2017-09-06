@@ -208,9 +208,11 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
         }
 
         final byte[] virtualColumnsCacheKey = query.getVirtualColumns().getCacheKey();
+        final byte isDescendingByte = query.isDescending() ? (byte) 1 : 0;
+
         final ByteBuffer queryCacheKey = ByteBuffer
             .allocate(
-                1
+                2
                 + granularityBytes.length
                 + filterBytes.length
                 + query.getPagingSpec().getCacheKey().length
@@ -221,7 +223,8 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
             .put(SELECT_QUERY)
             .put(granularityBytes)
             .put(filterBytes)
-            .put(query.getPagingSpec().getCacheKey());
+            .put(query.getPagingSpec().getCacheKey())
+            .put(isDescendingByte);
 
         for (byte[] dimensionsByte : dimensionsBytes) {
           queryCacheKey.put(dimensionsByte);
