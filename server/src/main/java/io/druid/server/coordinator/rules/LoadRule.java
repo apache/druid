@@ -22,7 +22,6 @@ package io.druid.server.coordinator.rules;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
-import com.google.common.primitives.Ints;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.java.util.common.IAE;
 import io.druid.server.coordinator.BalancerStrategy;
@@ -35,10 +34,10 @@ import io.druid.server.coordinator.ReplicationThrottler;
 import io.druid.server.coordinator.ServerHolder;
 import io.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -79,7 +78,7 @@ public abstract class LoadRule implements Rule
 
     int totalReplicantsInCluster = params.getSegmentReplicantLookup().getTotalReplicants(segment.getIdentifier());
 
-    final Optional<ServerHolder> primaryHolderToLoad;
+    final ServerHolder primaryHolderToLoad;
     if (totalReplicantsInCluster <= 0) {
       log.trace("No replicants for %s", segment.getIdentifier());
       primaryHolderToLoad = getPrimaryHolder(
@@ -90,28 +89,27 @@ public abstract class LoadRule implements Rule
           serverHolderPredicate
       );
 
-      if (primaryHolderToLoad.isPresent()) {
-        final ServerHolder holder = primaryHolderToLoad.get();
+      if (primaryHolderToLoad != null) {
 
-        holder.getPeon().loadSegment(segment, null);
-        stats.addToTieredStat(ASSIGNED_COUNT, holder.getServer().getTier(), 1);
+        primaryHolderToLoad.getPeon().loadSegment(segment, null);
+        stats.addToTieredStat(ASSIGNED_COUNT, primaryHolderToLoad.getServer().getTier(), 1);
         ++totalReplicantsInCluster;
       } else {
         log.trace("No primary holder found for %s", segment.getIdentifier());
         return stats;
       }
     } else {
-      primaryHolderToLoad = Optional.empty();
+      primaryHolderToLoad = null;
     }
 
     for (Map.Entry<String, Integer> entry : tieredReplicants.entrySet()) {
       final String tier = entry.getKey();
       final int expectedReplicantsInTier = entry.getValue();
 
-      final int totalReplicantsInTier = params.getSegmentReplicantLookup()
-                                              .getTotalReplicants(segment.getIdentifier(), tier) +
-                                        (primaryHolderToLoad.map(holder -> holder.getServer().getTier().equals(tier))
-                                                            .orElse(false) ? 1 : 0);
+      int totalReplicantsInTier = params.getSegmentReplicantLookup().getTotalReplicants(segment.getIdentifier(), tier);
+      if (primaryHolderToLoad != null && primaryHolderToLoad.getServer().getTier().equals(tier)) {
+        totalReplicantsInTier += 1;
+      }
 
       final int loadedReplicantsInTier = params.getSegmentReplicantLookup()
                                                .getLoadedReplicants(segment.getIdentifier(), tier);
@@ -127,7 +125,7 @@ public abstract class LoadRule implements Rule
           serverQueue
               .stream()
               .filter(serverHolderPredicate)
-              .filter(holder -> !primaryHolderToLoad.map(holder::equals).orElse(false))
+              .filter(holder -> primaryHolderToLoad != null && !holder.equals(primaryHolderToLoad))
               .collect(Collectors.toList());
 
       if (availableSegments.contains(segment)) {
@@ -152,7 +150,8 @@ public abstract class LoadRule implements Rule
     return stats;
   }
 
-  private static Optional<ServerHolder> getPrimaryHolder(
+  @Nullable
+  private static ServerHolder getPrimaryHolder(
       final DruidCluster cluster,
       final Map<String, Integer> tieredReplicants,
       final BalancerStrategy strategy,
@@ -160,7 +159,7 @@ public abstract class LoadRule implements Rule
       final Predicate<ServerHolder> serverHolderPredicate
   )
   {
-    final List<ServerHolder> candidates = Lists.newLinkedList();
+    ServerHolder topCandidate = null;
 
     for (final Map.Entry<String, Integer> entry : tieredReplicants.entrySet()) {
       final int expectedReplicantsInTier = entry.getValue();
@@ -188,13 +187,17 @@ public abstract class LoadRule implements Rule
             expectedReplicantsInTier
         );
       } else {
-        candidates.add(candidate);
+        if (topCandidate == null) {
+          topCandidate = candidate;
+        } else {
+          if (candidate.getServer().getPriority() > topCandidate.getServer().getPriority()) {
+            topCandidate = candidate;
+          }
+        }
       }
     }
 
-    return candidates
-        .stream()
-        .max((s1, s2) -> Ints.compare(s1.getServer().getPriority(), s2.getServer().getPriority()));
+    return topCandidate;
   }
 
   private int assignReplicas(
