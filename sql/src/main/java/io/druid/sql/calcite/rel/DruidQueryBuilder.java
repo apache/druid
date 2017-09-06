@@ -29,6 +29,8 @@ import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.DataSource;
+import io.druid.query.Query;
+import io.druid.query.QueryDataSource;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
@@ -64,6 +66,7 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.type.SqlTypeName;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -338,6 +341,55 @@ public class DruidQueryBuilder
   }
 
   /**
+   * Return this query as some kind of Druid query. The returned query will either be {@link TopNQuery},
+   * {@link TimeseriesQuery}, {@link GroupByQuery}, or {@link SelectQuery}.
+   *
+   * @param dataSource     data source to query
+   * @param plannerContext planner context
+   *
+   * @return Druid query
+   */
+  public Query toQuery(
+      final DataSource dataSource,
+      final PlannerContext plannerContext
+  )
+  {
+    if (dataSource instanceof QueryDataSource) {
+      // If there is a subquery then the outer query must be a groupBy.
+      final GroupByQuery outerQuery = toGroupByQuery(dataSource, plannerContext);
+
+      if (outerQuery == null) {
+        // Bug in the planner rules. They shouldn't allow this to happen.
+        throw new IllegalStateException("Can't use QueryDataSource without an outer groupBy query!");
+      }
+
+      return outerQuery;
+    }
+
+    final TimeseriesQuery tsQuery = toTimeseriesQuery(dataSource, plannerContext);
+    if (tsQuery != null) {
+      return tsQuery;
+    }
+
+    final TopNQuery topNQuery = toTopNQuery(dataSource, plannerContext);
+    if (topNQuery != null) {
+      return topNQuery;
+    }
+
+    final GroupByQuery groupByQuery = toGroupByQuery(dataSource, plannerContext);
+    if (groupByQuery != null) {
+      return groupByQuery;
+    }
+
+    final SelectQuery selectQuery = toSelectQuery(dataSource, plannerContext);
+    if (selectQuery != null) {
+      return selectQuery;
+    }
+
+    throw new IllegalStateException("WTF?! Cannot build a query even though we planned it?");
+  }
+
+  /**
    * Return this query as a Timeseries query, or null if this query is not compatible with Timeseries.
    *
    * @param dataSource     data source to query
@@ -345,6 +397,7 @@ public class DruidQueryBuilder
    *
    * @return query or null
    */
+  @Nullable
   public TimeseriesQuery toTimeseriesQuery(
       final DataSource dataSource,
       final PlannerContext plannerContext
@@ -417,6 +470,7 @@ public class DruidQueryBuilder
    *
    * @return query or null
    */
+  @Nullable
   public TopNQuery toTopNQuery(
       final DataSource dataSource,
       final PlannerContext plannerContext
@@ -491,6 +545,7 @@ public class DruidQueryBuilder
    *
    * @return query or null
    */
+  @Nullable
   public GroupByQuery toGroupByQuery(
       final DataSource dataSource,
       final PlannerContext plannerContext
@@ -525,6 +580,7 @@ public class DruidQueryBuilder
    *
    * @return query or null
    */
+  @Nullable
   public SelectQuery toSelectQuery(
       final DataSource dataSource,
       final PlannerContext plannerContext
@@ -536,6 +592,7 @@ public class DruidQueryBuilder
 
     final Filtration filtration = Filtration.create(filter).optimize(sourceRowSignature);
     final boolean descending;
+    final int threshold;
 
     if (limitSpec != null) {
       // Safe to assume limitSpec has zero or one entry; DruidSelectSortRule wouldn't push in anything else.
@@ -548,8 +605,11 @@ public class DruidQueryBuilder
       } else {
         descending = false;
       }
+
+      threshold = limitSpec.getLimit();
     } else {
       descending = false;
+      threshold = 0;
     }
 
     // We need to ask for dummy columns to prevent Select from returning all of them.
@@ -576,6 +636,9 @@ public class DruidQueryBuilder
       metrics.add(dummyColumn);
     }
 
+    // Not used for actual queries (will be replaced by QueryMaker) but the threshold is important for the planner.
+    final PagingSpec pagingSpec = new PagingSpec(null, threshold);
+
     return new SelectQuery(
         dataSource,
         filtration.getQuerySegmentSpec(),
@@ -585,7 +648,7 @@ public class DruidQueryBuilder
         ImmutableList.of(new DefaultDimensionSpec(dummyColumn, dummyColumn)),
         metrics.stream().sorted().distinct().collect(Collectors.toList()),
         getVirtualColumns(plannerContext.getExprMacroTable()),
-        new PagingSpec(null, 0) /* dummy -- will be replaced */,
+        pagingSpec,
         plannerContext.getQueryContext()
     );
   }

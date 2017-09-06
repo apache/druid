@@ -158,8 +158,7 @@ public class SelectRules
           (orderBys.size() == 1 && orderBys.get(0).getDimension().equals(Column.TIME_COLUMN_NAME))) {
         call.transformTo(
             druidRel.withQueryBuilder(
-                druidRel.getQueryBuilder()
-                        .withLimitSpec(limitSpec)
+                druidRel.getQueryBuilder().withLimitSpec(limitSpec)
             )
         );
       }

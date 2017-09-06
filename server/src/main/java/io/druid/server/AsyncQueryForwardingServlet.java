@@ -28,6 +28,7 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.client.selector.Server;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.DruidHttpClientConfig;
@@ -72,6 +73,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private static final String APPLICATION_SMILE = "application/smile";
 
   private static final String HOST_ATTRIBUTE = "io.druid.proxy.to.host";
+  private static final String SCHEME_ATTRIBUTE = "io.druid.proxy.to.host.scheme";
   private static final String QUERY_ATTRIBUTE = "io.druid.proxy.query";
   private static final String OBJECTMAPPER_ATTRIBUTE = "io.druid.proxy.objectMapper";
 
@@ -169,35 +171,31 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     final ObjectMapper objectMapper = isSmile ? smileMapper : jsonMapper;
     request.setAttribute(OBJECTMAPPER_ATTRIBUTE, objectMapper);
 
-    final String defaultHost = hostFinder.getDefaultHost();
-    request.setAttribute(HOST_ATTRIBUTE, defaultHost);
+    final Server defaultServer = hostFinder.getDefaultServer();
+    request.setAttribute(HOST_ATTRIBUTE, defaultServer.getHost());
+    request.setAttribute(SCHEME_ATTRIBUTE, defaultServer.getScheme());
 
     final boolean isQueryEndpoint = request.getRequestURI().startsWith("/druid/v2");
 
     if (isQueryEndpoint && HttpMethod.DELETE.is(request.getMethod())) {
       // query cancellation request
-      for (final String host : hostFinder.getAllHosts()) {
+      for (final Server server: hostFinder.getAllServers()) {
         // send query cancellation to all brokers this query may have gone to
         // to keep the code simple, the proxy servlet will also send a request to one of the default brokers
-        if (!host.equals(defaultHost)) {
+        if (!server.getHost().equals(defaultServer.getHost())) {
           // issue async requests
           broadcastClient
-              .newRequest(rewriteURI(request, host))
+              .newRequest(rewriteURI(request, server.getScheme(), server.getHost()))
               .method(HttpMethod.DELETE)
               .timeout(CANCELLATION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
               .send(
-                  new Response.CompleteListener()
-                  {
-                    @Override
-                    public void onComplete(Result result)
-                    {
-                      if (result.isFailed()) {
-                        log.warn(
-                            result.getFailure(),
-                            "Failed to forward cancellation request to [%s]",
-                            host
-                        );
-                      }
+                  result -> {
+                    if (result.isFailed()) {
+                      log.warn(
+                          result.getFailure(),
+                          "Failed to forward cancellation request to [%s]",
+                          server.getHost()
+                      );
                     }
                   }
               );
@@ -209,7 +207,9 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       try {
         Query inputQuery = objectMapper.readValue(request.getInputStream(), Query.class);
         if (inputQuery != null) {
-          request.setAttribute(HOST_ATTRIBUTE, hostFinder.getHost(inputQuery));
+          final Server server = hostFinder.getServer(inputQuery);
+          request.setAttribute(HOST_ATTRIBUTE, server.getHost());
+          request.setAttribute(SCHEME_ATTRIBUTE, server.getScheme());
           if (inputQuery.getId() == null) {
             inputQuery = inputQuery.withId(UUID.randomUUID().toString());
           }
@@ -289,19 +289,19 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   @Override
   protected String rewriteTarget(HttpServletRequest request)
   {
-    return rewriteURI(request, (String) request.getAttribute(HOST_ATTRIBUTE)).toString();
+    return rewriteURI(request, (String) request.getAttribute(SCHEME_ATTRIBUTE), (String) request.getAttribute(HOST_ATTRIBUTE)).toString();
   }
 
-  protected URI rewriteURI(HttpServletRequest request, String host)
+  protected URI rewriteURI(HttpServletRequest request, String scheme, String host)
   {
-    return makeURI(host, request.getRequestURI(), request.getQueryString());
+    return makeURI(scheme, host, request.getRequestURI(), request.getQueryString());
   }
 
-  protected static URI makeURI(String host, String requestURI, String rawQueryString)
+  protected static URI makeURI(String scheme, String host, String requestURI, String rawQueryString)
   {
     try {
       return new URI(
-          "http",
+          scheme,
           host,
           requestURI,
           rawQueryString == null ? null : URLDecoder.decode(rawQueryString, "UTF-8"),

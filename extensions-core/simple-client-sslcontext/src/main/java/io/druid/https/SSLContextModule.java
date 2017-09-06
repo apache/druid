@@ -26,6 +26,7 @@ import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Client;
 import io.druid.guice.annotations.Global;
 import io.druid.initialization.DruidModule;
+import io.druid.server.router.Router;
 
 import javax.net.ssl.SSLContext;
 import java.util.List;
@@ -46,5 +47,6 @@ public class SSLContextModule implements DruidModule
     binder.bind(SSLContext.class).toProvider(SSLContextProvider.class);
     binder.bind(SSLContext.class).annotatedWith(Global.class).toProvider(SSLContextProvider.class);
     binder.bind(SSLContext.class).annotatedWith(Client.class).toProvider(SSLContextProvider.class);
+    binder.bind(SSLContext.class).annotatedWith(Router.class).toProvider(SSLContextProvider.class);
   }
 }

@@ -19,6 +19,8 @@
 
 package io.druid.data.input;
 
+import io.druid.guice.annotations.ExtensionPoint;
+
 import java.util.List;
 
 /**
@@ -28,8 +30,8 @@ import java.util.List;
  * implement "schema-less" data ingestion that allows the system to add new dimensions as they appear.
  *
  */
-public interface
-    InputRow extends Row
+@ExtensionPoint
+public interface InputRow extends Row
 {
   /**
    * Returns the dimensions that exist in this row.

@@ -34,16 +34,20 @@ public class DruidFilterRule extends RelOptRule
   }
 
   @Override
+  public boolean matches(final RelOptRuleCall call)
+  {
+    final DruidRel druidRel = call.rel(1);
+
+    return druidRel.getQueryBuilder().getFilter() == null
+           && druidRel.getQueryBuilder().getSelectProjection() == null
+           && druidRel.getQueryBuilder().getGrouping() == null;
+  }
+
+  @Override
   public void onMatch(RelOptRuleCall call)
   {
     final Filter filter = call.rel(0);
     final DruidRel druidRel = call.rel(1);
-
-    if (druidRel.getQueryBuilder().getFilter() != null
-        || druidRel.getQueryBuilder().getSelectProjection() != null
-        || druidRel.getQueryBuilder().getGrouping() != null) {
-      return;
-    }
 
     final DimFilter dimFilter = Expressions.toFilter(
         druidRel.getPlannerContext(),
@@ -53,8 +57,7 @@ public class DruidFilterRule extends RelOptRule
     if (dimFilter != null) {
       call.transformTo(
           druidRel.withQueryBuilder(
-              druidRel.getQueryBuilder()
-                      .withFilter(dimFilter)
+              druidRel.getQueryBuilder().withFilter(dimFilter)
           )
       );
     }

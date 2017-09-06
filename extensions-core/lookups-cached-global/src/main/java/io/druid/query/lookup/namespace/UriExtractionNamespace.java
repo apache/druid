@@ -26,7 +26,6 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -38,6 +37,7 @@ import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.UOE;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.parsers.CSVParser;
 import io.druid.java.util.common.parsers.DelimitedParser;
 import io.druid.java.util.common.parsers.JSONParser;
@@ -591,10 +591,6 @@ public class UriExtractionNamespace implements ExtractionNamespace
   @JsonTypeName("simpleJson")
   public static class ObjectMapperFlatDataParser implements FlatDataParser
   {
-    private static final TypeReference<Map<String, String>> MAP_STRING_STRING = new TypeReference<Map<String, String>>()
-    {
-    };
-
     private final Parser<String, String> parser;
 
     @JsonCreator
@@ -612,7 +608,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
         public Map<String, String> parse(String input)
         {
           try {
-            return jsonFactory.createParser(input).readValueAs(MAP_STRING_STRING);
+            return jsonFactory.createParser(input).readValueAs(JacksonUtils.TYPE_REFERENCE_MAP_STRING_STRING);
           }
           catch (IOException e) {
             throw Throwables.propagate(e);

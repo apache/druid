@@ -21,6 +21,7 @@ package io.druid.segment;
 
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.IOE;
 
 import java.io.File;
@@ -29,7 +30,9 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
+ * Utility methods useful for implementing deep storage extensions.
  */
+@PublicApi
 public class SegmentUtils
 {
   public static int getVersionFromDir(File inDir) throws IOException

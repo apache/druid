@@ -21,9 +21,9 @@ package io.druid.testing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.logger.Logger;
 
 import java.io.File;
@@ -56,9 +56,7 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
     ObjectMapper jsonMapper = new ObjectMapper();
     try {
       props = jsonMapper.readValue(
-        new File(configFile), new TypeReference<Map<String, String>>()
-        {
-        }
+          new File(configFile), JacksonUtils.TYPE_REFERENCE_MAP_STRING_STRING
       );
     }
     catch (IOException ex) {
