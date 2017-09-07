@@ -79,7 +79,9 @@ public abstract class LoadRule implements Rule
     int totalReplicantsInCluster = params.getSegmentReplicantLookup().getTotalReplicants(segment.getIdentifier());
 
     final ServerHolder primaryHolderToLoad;
-    if (totalReplicantsInCluster <= 0) {
+    if (totalReplicantsInCluster > 0) {
+      primaryHolderToLoad = null;
+    } else {
       log.debug("No replicants for %s", segment.getIdentifier());
       primaryHolderToLoad = getPrimaryHolder(
           params.getDruidCluster(),
@@ -97,8 +99,6 @@ public abstract class LoadRule implements Rule
       primaryHolderToLoad.getPeon().loadSegment(segment, null);
       stats.addToTieredStat(ASSIGNED_COUNT, primaryHolderToLoad.getServer().getTier(), 1);
       ++totalReplicantsInCluster;
-    } else {
-      primaryHolderToLoad = null;
     }
 
     for (Map.Entry<String, Integer> entry : tieredReplicants.entrySet()) {
