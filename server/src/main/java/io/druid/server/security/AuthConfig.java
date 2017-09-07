@@ -34,7 +34,7 @@ public class AuthConfig
   /**
    * HTTP attribute set when a static method in AuthorizationUtils performs an authorization check on the request.
    */
-  public static final String DRUID_AUTHORIZATION_CHECKED = "Druid-Auth-Token-Checked";
+  public static final String DRUID_AUTHORIZATION_CHECKED = "Druid-Authorization-Checked";
 
   public AuthConfig()
   {

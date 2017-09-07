@@ -48,17 +48,20 @@ public interface Authenticator extends ServletFilterHolder
   /**
    * Create a Filter that performs authentication checks on incoming HTTP requests.
    * <p>
-   * If the authentication succeeds, the Filter should set the "Druid-Auth-Token" attribute in the request,
-   * containing a String that represents the authenticated identity of the requester.
+   * If the authentication succeeds, the Filter should set the "Druid-Authentication-Result" attribute in the request,
+   * containing an AuthenticationResult that represents the authenticated identity of the requester, along with
+   * the name of the Authorizer instance that should authorize the request.
    * <p>
-   * If the "Druid-Auth-Token" attribute is already set (i.e., request has been authenticated by an earlier Filter),
-   * this Filter should skip any authentication checks and proceed to the next Filter.
+   * If the "Druid-Authentication-Result" attribute is already set (i.e., request has been authenticated by an
+   * earlier Filter), this Filter should skip any authentication checks and proceed to the next Filter.
    * <p>
-   * If the authentication fails, the Filter should not send an error response. The error response will be sent
-   * after all Filters in the authentication filter chain have been checked.
+   * If a filter cannot recognize a request's format (e.g., the request does not have credentials compatible
+   * with a filter's authentication scheme), the filter should not send an error response, allowing other
+   * filters to handle the request. A challenge response will be sent if the filter chain is exhausted.
    * <p>
-   * If an anonymous request is received, the Filter should continue on to the next Filter, the challenge response
-   * will be sent after the filter chain is exhausted.
+   * If the authentication fails (i.e., a filter recognized the authentication scheme of a request, but the credentials
+   * failed to authenticate successfully) the Filter should send an error response, without needing to proceed to
+   * other filters in the chain..
    *
    * @return Filter that authenticates HTTP requests
    */

@@ -35,7 +35,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
  * attribute, previously set by an Authenticator. Each endpoint will pass this identity String to the
  * Authorizer's authorize() method along with any Resource/Action pairs created for the request being
  * handled. The endpoint can use these checks to filter out resources or deny the request as needed.
- * After a request is authorized, a new attribute, "Druid-Auth-Token-Checked", should be set in the
+ * After a request is authorized, a new attribute, "Druid-Authorization-Checked", should be set in the
  * request header with the result of the authorization decision.
  */
 public interface Authorizer
