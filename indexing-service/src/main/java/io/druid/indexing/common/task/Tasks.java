@@ -19,6 +19,7 @@
 
 package io.druid.indexing.common.task;
 
+import com.google.common.base.Preconditions;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.actions.LockTryAcquireAction;
@@ -60,9 +61,11 @@ public class Tasks
   {
     final Map<Interval, TaskLock> lockMap = new HashMap<>();
     for (Interval interval : computeCompactIntervals(intervals)) {
-      final LockResult lockResult = client.submit(new LockTryAcquireAction(TaskLockType.EXCLUSIVE, interval));
-      checkLockResult(lockResult, interval);
-      lockMap.put(interval, lockResult.getTaskLock());
+      final TaskLock lock = Preconditions.checkNotNull(
+          client.submit(new LockTryAcquireAction(TaskLockType.EXCLUSIVE, interval)),
+          "Cannot acquire a lock for interval[%s]", interval
+      );
+      lockMap.put(interval, lock);
     }
     return lockMap;
   }

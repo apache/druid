@@ -43,7 +43,6 @@ import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.hadoop.OverlordActionBasedUsedSegmentLister;
-import io.druid.indexing.overlord.LockResult;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.StringUtils;
@@ -207,11 +206,13 @@ public class HadoopIndexTask extends HadoopTask
       );
       final long lockTimeoutMs = getContextValue(Tasks.LOCK_TIMEOUT_KEY, Tasks.DEFAULT_LOCK_TIMEOUT);
       // Note: if lockTimeoutMs is larger than ServerConfig.maxIdleTime, the below line can incur http timeout error.
-      final LockResult lockResult = toolbox.getTaskActionClient().submit(
-          new LockAcquireAction(TaskLockType.EXCLUSIVE, interval, lockTimeoutMs)
+      final TaskLock lock = Preconditions.checkNotNull(
+          toolbox.getTaskActionClient().submit(
+              new LockAcquireAction(TaskLockType.EXCLUSIVE, interval, lockTimeoutMs)
+          ),
+          "Cannot acquire a lock for interval[%s]", interval
       );
-      Tasks.checkLockResult(lockResult, interval);
-      version = lockResult.getTaskLock().getVersion();
+      version = lock.getVersion();
     } else {
       Iterable<TaskLock> locks = getTaskLocks(toolbox.getTaskActionClient());
       final TaskLock myLock = Iterables.getOnlyElement(locks);

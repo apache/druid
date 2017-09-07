@@ -38,7 +38,7 @@ public class TaskLock
   private final Interval interval;
   private final String version;
   private final int priority;
-  private final TaskLockStatus lockStatus;
+  private final boolean revoked;
 
   @JsonCreator
   public TaskLock(
@@ -48,7 +48,7 @@ public class TaskLock
       @JsonProperty("interval") Interval interval,
       @JsonProperty("version") String version,
       @JsonProperty("priority") int priority,
-      @JsonProperty("lockStatus") @Nullable TaskLockStatus lockStatus // nullable for backward compatibility
+      @JsonProperty("revoked") boolean revoked
   )
   {
     this.type = type == null ? TaskLockType.EXCLUSIVE : type;
@@ -57,13 +57,7 @@ public class TaskLock
     this.interval = Preconditions.checkNotNull(interval, "interval");
     this.version = Preconditions.checkNotNull(version, "version");
     this.priority = priority;
-    this.lockStatus = lockStatus == null ? TaskLockStatus.NON_PREEMPTIBLE : lockStatus;
-
-    Preconditions.checkArgument(
-        !this.type.equals(TaskLockType.SHARED) || this.lockStatus != TaskLockStatus.NON_PREEMPTIBLE,
-        "lock[%s] cannot be upgraded to non-preemptible",
-        this.type
-    );
+    this.revoked = revoked;
   }
 
   public TaskLock(
@@ -75,33 +69,7 @@ public class TaskLock
       int priority
   )
   {
-    this(type, groupId, dataSource, interval, version, priority, TaskLockStatus.PREEMPTIBLE);
-  }
-
-  public TaskLock upgrade()
-  {
-    return new TaskLock(
-        type,
-        groupId,
-        dataSource,
-        interval,
-        version,
-        priority,
-        lockStatus.transitTo(TaskLockStatus.NON_PREEMPTIBLE)
-    );
-  }
-
-  public TaskLock downgrade()
-  {
-    return new TaskLock(
-        type,
-        groupId,
-        dataSource,
-        interval,
-        version,
-        priority,
-        lockStatus.transitTo(TaskLockStatus.PREEMPTIBLE)
-    );
+    this(type, groupId, dataSource, interval, version, priority, false);
   }
 
   public TaskLock revoke()
@@ -113,7 +81,7 @@ public class TaskLock
         interval,
         version,
         priority,
-        lockStatus.transitTo(TaskLockStatus.REVOKED)
+        true
     );
   }
 
@@ -154,19 +122,9 @@ public class TaskLock
   }
 
   @JsonProperty
-  public TaskLockStatus getLockStatus()
-  {
-    return lockStatus;
-  }
-
-  public boolean isUpgraded()
-  {
-    return lockStatus == TaskLockStatus.NON_PREEMPTIBLE;
-  }
-
   public boolean isRevoked()
   {
-    return lockStatus == TaskLockStatus.REVOKED;
+    return revoked;
   }
 
   @Override
@@ -182,14 +140,14 @@ public class TaskLock
              this.interval.equals(that.interval) &&
              this.version.equals(that.version) &&
              this.priority == that.priority &&
-             this.lockStatus == that.lockStatus;
+             this.revoked == that.revoked;
     }
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hashCode(type, groupId, dataSource, interval, version, priority, lockStatus);
+    return Objects.hashCode(type, groupId, dataSource, interval, version, priority, revoked);
   }
 
   @Override
@@ -202,7 +160,7 @@ public class TaskLock
                   .add("interval", interval)
                   .add("version", version)
                   .add("priority", priority)
-                  .add("lockStatus", lockStatus)
+                  .add("revoked", revoked)
                   .toString();
   }
 }

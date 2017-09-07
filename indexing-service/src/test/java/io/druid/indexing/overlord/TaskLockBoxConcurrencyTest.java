@@ -20,7 +20,8 @@
 package io.druid.indexing.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.druid.indexing.common.TaskLock;
+import com.google.common.collect.ImmutableList;
+import io.druid.common.guava.SettableSupplier;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.config.TaskStorageConfig;
@@ -38,6 +39,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -80,7 +83,8 @@ public class TaskLockBoxConcurrencyTest
   }
 
   @Test(timeout = 5000L)
-  public void testTryExclusiveLock() throws ExecutionException, InterruptedException, EntryExistsException
+  public void testDoInCriticalSectionWithDifferentTasks()
+      throws ExecutionException, InterruptedException, EntryExistsException
   {
     final Interval interval = Intervals.of("2017-01-01/2017-01-02");
     final Task lowPriorityTask = NoopTask.create(10);
@@ -90,55 +94,116 @@ public class TaskLockBoxConcurrencyTest
     taskStorage.insert(lowPriorityTask, TaskStatus.running(lowPriorityTask.getId()));
     taskStorage.insert(highPriorityTask, TaskStatus.running(highPriorityTask.getId()));
 
+    final SettableSupplier<Integer> intSupplier = new SettableSupplier<>(0);
     final CountDownLatch latch = new CountDownLatch(1);
-    final Future<LockResult> lowPriorityFuture = service.submit(() -> {
-      final LockResult lock = lockbox.tryLock(
-          TaskLockType.EXCLUSIVE,
+
+    // lowPriorityTask acquires a lock first and increases the int of intSupplier in the critical section
+    final Future<Integer> lowPriorityFuture = service.submit(() -> {
+      final LockResult result = lockbox.tryLock(TaskLockType.EXCLUSIVE, lowPriorityTask, interval);
+      Assert.assertTrue(result.isOk());
+      Assert.assertFalse(result.isRevoked());
+
+      return lockbox.doInCriticalSection(
           lowPriorityTask,
-          interval
+          Collections.singletonList(interval),
+          () -> {
+            latch.countDown();
+            Thread.sleep(100);
+            intSupplier.set(intSupplier.get() + 1);
+            return intSupplier.get();
+          },
+          () -> {
+            Assert.fail();
+            return null;
+          }
       );
-      latch.countDown();
-      return lock;
     });
-    final Future<LockResult> highPriorityFuture = service.submit(() -> {
+
+    // highPriorityTask awaits for the latch, acquires a lock, and increases the int of intSupplier in the critical
+    // section
+    final Future<Integer> highPriorityFuture = service.submit(() -> {
       latch.await();
-      return lockbox.tryLock(
-          TaskLockType.EXCLUSIVE,
+      final LockResult result = lockbox.lock(TaskLockType.EXCLUSIVE, highPriorityTask, interval);
+      Assert.assertTrue(result.isOk());
+      Assert.assertFalse(result.isRevoked());
+
+      return lockbox.doInCriticalSection(
           highPriorityTask,
-          interval
+          Collections.singletonList(interval),
+          () -> {
+            Thread.sleep(100);
+            intSupplier.set(intSupplier.get() + 1);
+            return intSupplier.get();
+          },
+          () -> {
+            Assert.fail();
+            return null;
+          }
       );
     });
 
-    final TaskLock lowLock = lowPriorityFuture.get().getTaskLock();
-    final TaskLock highLock = highPriorityFuture.get().getTaskLock();
+    Assert.assertEquals(1, lowPriorityFuture.get().intValue());
+    Assert.assertEquals(2, highPriorityFuture.get().intValue());
 
-    Assert.assertNotNull(lowLock);
-    Assert.assertNotNull(highLock);
-
-    final Future<LockResult> lowUpgradeFuture = service.submit(
-        () -> lockbox.upgrade(lowPriorityTask, interval)
-    );
-    final Future<LockResult> highUpgradeFuture = service.submit(
-        () -> lockbox.upgrade(highPriorityTask, interval)
-    );
-
-    final LockResult resultOfHighPriorityLock = highUpgradeFuture.get();
-    Assert.assertTrue(resultOfHighPriorityLock.isOk());
-    Assert.assertTrue(resultOfHighPriorityLock.getTaskLock().isUpgraded());
-    assertEqualsExceptUpgraded(highLock, resultOfHighPriorityLock.getTaskLock());
-
-    final LockResult resultOfLowPriorityLock = lowUpgradeFuture.get();
-    Assert.assertFalse(resultOfLowPriorityLock.isOk());
-    Assert.assertTrue(resultOfLowPriorityLock.isRevoked());
+    // the lock for lowPriorityTask must be revoked by the highPriorityTask after its work is done in critical section
+    final LockResult result = lockbox.tryLock(TaskLockType.EXCLUSIVE, lowPriorityTask, interval);
+    Assert.assertFalse(result.isOk());
+    Assert.assertTrue(result.isRevoked());
   }
 
-  private static void assertEqualsExceptUpgraded(TaskLock expected, TaskLock actual)
+  @Test(timeout = 5000L)
+  public void testDoInCriticalSectionWithOverlappedIntervals() throws Exception
   {
-    Assert.assertEquals(expected.getGroupId(), actual.getGroupId());
-    Assert.assertEquals(expected.getDataSource(), actual.getDataSource());
-    Assert.assertEquals(expected.getType(), actual.getType());
-    Assert.assertEquals(expected.getInterval(), actual.getInterval());
-    Assert.assertEquals(expected.getVersion(), actual.getVersion());
-    Assert.assertEquals(expected.getPriority(), actual.getPriority());
+    final List<Interval> intervals = ImmutableList.of(
+        Intervals.of("2017-01-01/2017-01-02"),
+        Intervals.of("2017-01-02/2017-01-03"),
+        Intervals.of("2017-01-03/2017-01-04")
+    );
+    final Task task = NoopTask.create();
+    lockbox.add(task);
+    taskStorage.insert(task, TaskStatus.running(task.getId()));
+
+    for (Interval interval : intervals) {
+      final LockResult result = lockbox.tryLock(TaskLockType.EXCLUSIVE, task, interval);
+      Assert.assertTrue(result.isOk());
+    }
+
+    final SettableSupplier<Integer> intSupplier = new SettableSupplier<>(0);
+    final CountDownLatch latch = new CountDownLatch(1);
+
+    final Future<Integer> future1 = service.submit(() -> lockbox.doInCriticalSection(
+        task,
+        ImmutableList.of(intervals.get(0), intervals.get(1)),
+        () -> {
+          latch.countDown();
+          Thread.sleep(100);
+          intSupplier.set(intSupplier.get() + 1);
+          return intSupplier.get();
+        },
+        () -> {
+          Assert.fail();
+          return null;
+        }
+    ));
+
+    final Future<Integer> future2 = service.submit(() -> {
+      latch.await();
+      return lockbox.doInCriticalSection(
+          task,
+          ImmutableList.of(intervals.get(1), intervals.get(2)),
+          () -> {
+            Thread.sleep(100);
+            intSupplier.set(intSupplier.get() + 1);
+            return intSupplier.get();
+          },
+          () -> {
+            Assert.fail();
+            return null;
+          }
+      );
+    });
+
+    Assert.assertEquals(1, future1.get().intValue());
+    Assert.assertEquals(2, future2.get().intValue());
   }
 }

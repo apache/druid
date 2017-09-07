@@ -96,7 +96,7 @@ The Index Task is a simpler variation of the Index Hadoop task that is designed 
 
 Druid's indexing tasks use locks for atomic data ingestion. Each lock is acquired for the combination of a dataSource and an interval. Once a task acquires a lock, it can write data for the dataSource and the interval of the acquired lock unless the lock is released or preempted. Please see [the below Locking section](#locking)
 
-Each task has a priority which is used for lock acquisition. Higher-priority tasks can preempt lower-priority tasks if they try to write on the same dataSource and interval. If some locks of a task are preempted, the behavior of the preempted task depends on the task implementation. Usually, most tasks finish as failed if they are preempted.
+Each task has a priority which is used for lock acquisition. The locks of higher-priority tasks can preempt the locks of lower-priority tasks if they try to acquire for the same dataSource and interval. If some locks of a task are preempted, the behavior of the preempted task depends on the task implementation. Usually, most tasks finish as failed if they are preempted.
 
 Tasks can have different default priorities depening on their types. Here are a list of default priorities. Higher the number, higher the priority.
 
@@ -350,12 +350,12 @@ Once an overlord node accepts a task, the task acquires locks for the data sourc
 There are two lock types, i.e., _shared lock_ and _exclusive lock_.
 
 - A task needs to acquire a shared lock before it reads segments of an interval. Multiple shared locks can be acquired for the same dataSource and interval. Shared locks are always preemptable, but they don't preempt each other.
-- A task needs to acquire an exclusive lock before it writes segments for an interval. An exclusive lock is acquired as preemptable and can be upgraded as non-preemptable when publishing segments.
+- A task needs to acquire an exclusive lock before it writes segments for an interval. An exclusive lock is also preemptable except while the task is publishing segments.
 
-Each task can have different lock priorities. The locks of higher-priority tasks can preempt the locks of lower-priority tasks. The lock preemption works based on _optimistic locking_. When a lock is preempted, it is not notified to the owner task immediately. Instead, it's notified when the owner task tries to acquire the same lock again or upgrade it. (Note that lock acquisition is idempotent unless the lock is preempted.) In general, tasks don't contend to acquire locks because they usually targets different dataSources or intervals.
+Each task can have different lock priorities. The locks of higher-priority tasks can preempt the locks of lower-priority tasks. The lock preemption works based on _optimistic locking_. When a lock is preempted, it is not notified to the owner task immediately. Instead, it's notified when the owner task tries to acquire the same lock again. (Note that lock acquisition is idempotent unless the lock is preempted.) In general, tasks don't compete for acquiring locks because they usually targets different dataSources or intervals.
 
-A task writing data into a dataSource must acquire exclusive locks for target intervals. Note that exclusive locks are still preemptable. As a result, the task must _upgrade_ its locks as non-preemptable when it executes a critical operation, _publishing segments_. Once the lock is upgraded, it can't be preempted by even higher-priority locks. After publishing segments, the task downgrades its locks as preemptable.
+A task writing data into a dataSource must acquire exclusive locks for target intervals. Note that exclusive locks are still preemptable. That is, they also be able to be preempted by higher priority locks unless they are _publishing segments_ in a critical section. Once publishing segments is finished, those locks become preemptable again.
 
 Tasks do not need to explicitly release locks, they are released upon task completion. Tasks may potentially release 
-locks early if they desire. Tasks ids are unique by naming them using UUIDs or the timestamp in which the task was created. 
+locks early if they desire. Task ids are unique by naming them using UUIDs or the timestamp in which the task was created. 
 Tasks are also part of a "task group", which is a set of tasks that can share interval locks.

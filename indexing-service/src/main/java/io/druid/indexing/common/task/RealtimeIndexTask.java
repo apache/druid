@@ -22,6 +22,7 @@ package io.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -34,13 +35,13 @@ import io.druid.data.input.FirehoseFactory;
 import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.discovery.LookupNodeService;
+import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockReleaseAction;
 import io.druid.indexing.common.actions.TaskActionClient;
-import io.druid.indexing.overlord.LockResult;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
@@ -229,10 +230,13 @@ public class RealtimeIndexTask extends AbstractTask
       public void announceSegment(final DataSegment segment) throws IOException
       {
         // Side effect: Calling announceSegment causes a lock to be acquired
-        final LockResult lockResult = toolbox.getTaskActionClient().submit(
-            new LockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
+        Preconditions.checkNotNull(
+            toolbox.getTaskActionClient().submit(
+                new LockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
+            ),
+            "Cannot acquire a lock for interval[%s]",
+            segment.getInterval()
         );
-        Tasks.checkLockResult(lockResult, segment.getInterval());
         toolbox.getSegmentAnnouncer().announceSegment(segment);
       }
 
@@ -252,10 +256,13 @@ public class RealtimeIndexTask extends AbstractTask
       {
         // Side effect: Calling announceSegments causes locks to be acquired
         for (DataSegment segment : segments) {
-          final LockResult lockResult = toolbox.getTaskActionClient().submit(
-              new LockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
+          Preconditions.checkNotNull(
+              toolbox.getTaskActionClient().submit(
+                  new LockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
+              ),
+              "Cannot acquire a lock for interval[%s]",
+              segment.getInterval()
           );
-          Tasks.checkLockResult(lockResult, segment.getInterval());
         }
         toolbox.getSegmentAnnouncer().announceSegments(segments);
       }
@@ -288,10 +295,13 @@ public class RealtimeIndexTask extends AbstractTask
         try {
           // Side effect: Calling getVersion causes a lock to be acquired
           final LockAcquireAction action = new LockAcquireAction(TaskLockType.EXCLUSIVE, interval, lockTimeoutMs);
-          final LockResult lockResult = toolbox.getTaskActionClient().submit(action);
+          final TaskLock lock = Preconditions.checkNotNull(
+              toolbox.getTaskActionClient().submit(action),
+              "Cannot acquire a lock for interval[%s]",
+              interval
+          );
 
-          Tasks.checkLockResult(lockResult, interval);
-          return lockResult.getTaskLock().getVersion();
+          return lock.getVersion();
         }
         catch (IOException e) {
           throw Throwables.propagate(e);

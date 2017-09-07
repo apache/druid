@@ -33,6 +33,7 @@ import io.druid.timeline.DataSegment;
 
 import java.io.IOException;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Insert segments into metadata storage. The segment versions must all be less than or equal to a lock held by
@@ -104,38 +105,39 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   {
     TaskActionPreconditions.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
 
-    for (DataSegment segment : segments) {
-      if (!toolbox.getTaskLockbox().upgrade(task, segment.getInterval()).isOk()) {
-        LOG.info("Failed to upgrade the lock for task[%s] and interval[%s]", task.getId(), segment.getInterval());
-
-        // Acquired locks don't have to be released explicitly here because the fail result will make the index task
-        // calling this action failed, and the acquired locks should be released automatically when the task completes.
-        return SegmentPublishResult.fail();
-      }
+    final SegmentPublishResult retVal;
+    try {
+      retVal = toolbox.getTaskLockbox().doInCriticalSection(
+          task,
+          segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
+          () -> toolbox.getIndexerMetadataStorageCoordinator().announceHistoricalSegments(
+              segments,
+              startMetadata,
+              endMetadata
+          ),
+          SegmentPublishResult::fail
+      );
     }
-
-    final SegmentPublishResult retVal = toolbox.getIndexerMetadataStorageCoordinator().announceHistoricalSegments(
-        segments,
-        startMetadata,
-        endMetadata
-    );
-
-    segments.forEach(segment -> toolbox.getTaskLockbox().downgrade(task, segment.getInterval()));
-
-    // Emit metrics
-    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()
-        .setDimension(DruidMetrics.DATASOURCE, task.getDataSource())
-        .setDimension(DruidMetrics.TASK_TYPE, task.getType());
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
 
     if (retVal.isSuccess()) {
-      toolbox.getEmitter().emit(metricBuilder.build("segment/txn/success", 1));
-    } else {
-      toolbox.getEmitter().emit(metricBuilder.build("segment/txn/failure", 1));
-    }
+      // Emit metrics
+      final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()
+          .setDimension(DruidMetrics.DATASOURCE, task.getDataSource())
+          .setDimension(DruidMetrics.TASK_TYPE, task.getType());
 
-    for (DataSegment segment : retVal.getSegments()) {
-      metricBuilder.setDimension(DruidMetrics.INTERVAL, segment.getInterval().toString());
-      toolbox.getEmitter().emit(metricBuilder.build("segment/added/bytes", segment.getSize()));
+      if (retVal.isSuccess()) {
+        toolbox.getEmitter().emit(metricBuilder.build("segment/txn/success", 1));
+      } else {
+        toolbox.getEmitter().emit(metricBuilder.build("segment/txn/failure", 1));
+      }
+
+      for (DataSegment segment : retVal.getSegments()) {
+        metricBuilder.setDimension(DruidMetrics.INTERVAL, segment.getInterval().toString());
+        toolbox.getEmitter().emit(metricBuilder.build("segment/added/bytes", segment.getSize()));
+      }
     }
 
     return retVal;

@@ -35,6 +35,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.util.Collections;
 import java.util.Set;
 
 public class SegmentInsertActionTest
@@ -93,8 +94,15 @@ public class SegmentInsertActionTest
     final SegmentInsertAction action = new SegmentInsertAction(ImmutableSet.of(SEGMENT1, SEGMENT2));
     actionTestKit.getTaskLockbox().add(task);
     actionTestKit.getTaskLockbox().lock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
-    actionTestKit.getTaskLockbox().upgrade(task, INTERVAL);
-    action.perform(task, actionTestKit.getTaskActionToolbox());
+    actionTestKit.getTaskLockbox().doInCriticalSection(
+        task,
+        Collections.singletonList(INTERVAL),
+        () -> action.perform(task, actionTestKit.getTaskActionToolbox()),
+        () -> {
+          Assert.fail();
+          return null;
+        }
+    );
 
     Assert.assertEquals(
         ImmutableSet.of(SEGMENT1, SEGMENT2),
@@ -112,11 +120,19 @@ public class SegmentInsertActionTest
     final SegmentInsertAction action = new SegmentInsertAction(ImmutableSet.of(SEGMENT3));
     actionTestKit.getTaskLockbox().add(task);
     actionTestKit.getTaskLockbox().lock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
-    actionTestKit.getTaskLockbox().upgrade(task, INTERVAL);
 
     thrown.expect(IllegalStateException.class);
     thrown.expectMessage(CoreMatchers.startsWith("Segments not covered by locks for task"));
-    final Set<DataSegment> segments = action.perform(task, actionTestKit.getTaskActionToolbox());
+    final Set<DataSegment> segments = actionTestKit.getTaskLockbox().doInCriticalSection(
+        task,
+        Collections.singletonList(INTERVAL),
+        () -> action.perform(task, actionTestKit.getTaskActionToolbox()),
+        () -> {
+          Assert.fail();
+          return null;
+        }
+    );
+
     Assert.assertEquals(ImmutableSet.of(SEGMENT3), segments);
   }
 }

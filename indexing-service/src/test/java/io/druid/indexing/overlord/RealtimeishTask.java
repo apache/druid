@@ -74,11 +74,10 @@ public class RealtimeishTask extends AbstractTask
     // Sort of similar to what realtime tasks do:
 
     // Acquire lock for first interval
-    final LockResult lockResult1 = toolbox.getTaskActionClient().submit(
+    final TaskLock lock1 = toolbox.getTaskActionClient().submit(
         new LockAcquireAction(TaskLockType.EXCLUSIVE, interval1, 5000)
     );
-    Assert.assertTrue(lockResult1.isOk() && !lockResult1.isRevoked());
-    final TaskLock lock1 = lockResult1.getTaskLock();
+    Assert.assertNotNull(lock1);
     final List<TaskLock> locks1 = toolbox.getTaskActionClient().submit(new LockListAction());
 
     // (Confirm lock sanity)
@@ -86,11 +85,10 @@ public class RealtimeishTask extends AbstractTask
     Assert.assertEquals("locks1", ImmutableList.of(lock1), locks1);
 
     // Acquire lock for second interval
-    final LockResult lockResult2 = toolbox.getTaskActionClient().submit(
+    final TaskLock lock2 = toolbox.getTaskActionClient().submit(
         new LockAcquireAction(TaskLockType.EXCLUSIVE, interval2, 5000)
     );
-    Assert.assertTrue(lockResult2.isOk() && !lockResult2.isRevoked());
-    final TaskLock lock2 = lockResult2.getTaskLock();
+    Assert.assertNotNull(lock2);
     final List<TaskLock> locks2 = toolbox.getTaskActionClient().submit(new LockListAction());
 
     // (Confirm lock sanity)

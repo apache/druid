@@ -42,7 +42,6 @@ import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
-import io.druid.indexing.overlord.LockResult;
 import io.druid.indexing.overlord.SegmentPublishResult;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
@@ -905,28 +904,24 @@ public class IndexTaskTest
         }
 
         if (taskAction instanceof LockAcquireAction) {
-          return (RetType) LockResult.ok(
-              new TaskLock(
-                  TaskLockType.EXCLUSIVE,
-                  "groupId",
-                  "test",
-                  ((LockAcquireAction) taskAction).getInterval(),
-                  DateTimes.nowUtc().toString(),
-                  Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY
-              )
+          return (RetType) new TaskLock(
+              TaskLockType.EXCLUSIVE,
+              "groupId",
+              "test",
+              ((LockAcquireAction) taskAction).getInterval(),
+              DateTimes.nowUtc().toString(),
+              Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY
           );
         }
 
         if (taskAction instanceof LockTryAcquireAction) {
-          return (RetType) LockResult.ok(
-              new TaskLock(
-                  TaskLockType.EXCLUSIVE,
-                  "groupId",
-                  "test",
-                  ((LockTryAcquireAction) taskAction).getInterval(),
-                  DateTimes.nowUtc().toString(),
-                  Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY
-              )
+          return (RetType) new TaskLock(
+              TaskLockType.EXCLUSIVE,
+              "groupId",
+              "test",
+              ((LockTryAcquireAction) taskAction).getInterval(),
+              DateTimes.nowUtc().toString(),
+              Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY
           );
         }
 

@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.LockResult;
@@ -32,7 +33,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 
-public class LockAcquireAction implements TaskAction<LockResult>
+public class LockAcquireAction implements TaskAction<TaskLock>
 {
   private final TaskLockType type;
 
@@ -73,22 +74,21 @@ public class LockAcquireAction implements TaskAction<LockResult>
   }
 
   @Override
-  public TypeReference<LockResult> getReturnTypeReference()
+  public TypeReference<TaskLock> getReturnTypeReference()
   {
-    return new TypeReference<LockResult>()
+    return new TypeReference<TaskLock>()
     {
     };
   }
 
   @Override
-  public LockResult perform(Task task, TaskActionToolbox toolbox)
+  public TaskLock perform(Task task, TaskActionToolbox toolbox)
   {
     try {
-      if (timeoutMs == 0) {
-        return toolbox.getTaskLockbox().lock(type, task, interval);
-      } else {
-        return toolbox.getTaskLockbox().lock(type, task, interval, timeoutMs);
-      }
+      final LockResult result = timeoutMs == 0 ?
+                                toolbox.getTaskLockbox().lock(type, task, interval) :
+                                toolbox.getTaskLockbox().lock(type, task, interval, timeoutMs);
+      return result.isOk() ? result.getTaskLock() : null;
     }
     catch (InterruptedException e) {
       throw Throwables.propagate(e);
