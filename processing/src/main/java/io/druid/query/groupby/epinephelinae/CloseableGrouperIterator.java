@@ -19,7 +19,6 @@
 
 package io.druid.query.groupby.epinephelinae;
 
-import com.google.common.base.Throwables;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.query.groupby.epinephelinae.Grouper.Entry;
@@ -74,7 +73,7 @@ public class CloseableGrouperIterator<KeyType, T> implements CloseableIterator<T
       closer.close();
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 }

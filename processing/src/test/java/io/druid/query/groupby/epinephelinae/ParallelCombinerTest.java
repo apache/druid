@@ -124,15 +124,16 @@ public class ParallelCombinerTest
       baseIterator.add(new Entry<>(i, new Object[]{i * 10}));
     }
 
-    final List<TestIterator> iterators = new ArrayList<>(8);
-    for (int i = 0; i < 8; i++) {
+    final int leafNum = 8;
+    final List<TestIterator> iterators = new ArrayList<>(leafNum);
+    for (int i = 0; i < leafNum; i++) {
       iterators.add(new TestIterator(baseIterator.iterator()));
     }
 
     try (final CloseableIterator<Entry<Long>> iterator = combiner.combine(iterators, new ArrayList<>())) {
       long expectedKey = 0;
       while (iterator.hasNext()) {
-        Assert.assertEquals(new Entry<>(expectedKey, new Object[]{expectedKey++ * 80}), iterator.next());
+        Assert.assertEquals(new Entry<>(expectedKey, new Object[]{expectedKey++ * leafNum * 10}), iterator.next());
       }
     }
 

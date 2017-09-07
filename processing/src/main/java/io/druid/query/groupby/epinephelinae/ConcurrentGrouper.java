@@ -40,6 +40,7 @@ import io.druid.segment.ColumnSelectorFactory;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -331,12 +332,11 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       final List<String> dictionary = grouper.getDictionary();
 
       for (String key : dictionary) {
-        if (!mergedDictionary.contains(key)) {
+        if (mergedDictionary.add(key)) {
           totalDictionarySize += RowBasedGrouperHelper.estimateStringKeySize(key);
           if (totalDictionarySize > maxDictionarySizeForCombiner) {
             return null;
           }
-          mergedDictionary.add(key);
         }
       }
     }
@@ -361,9 +361,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   private AggregatorFactory[] getCombiningFactories(AggregatorFactory[] aggregatorFactories)
   {
     final AggregatorFactory[] combiningFactories = new AggregatorFactory[aggregatorFactories.length];
-    for (int i = 0; i < aggregatorFactories.length; i++) {
-      combiningFactories[i] = aggregatorFactories[i].getCombiningFactory();
-    }
+    Arrays.setAll(combiningFactories, i -> aggregatorFactories[i].getCombiningFactory());
     return combiningFactories;
   }
 }
