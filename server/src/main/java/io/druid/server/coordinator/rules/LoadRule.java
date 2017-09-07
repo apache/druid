@@ -124,7 +124,7 @@ public abstract class LoadRule implements Rule
           serverQueue
               .stream()
               .filter(serverHolderPredicate)
-              .filter(holder -> primaryHolderToLoad != null && !holder.equals(primaryHolderToLoad))
+              .filter(holder -> !holder.equals(primaryHolderToLoad))
               .collect(Collectors.toList());
 
       if (availableSegments.contains(segment)) {
