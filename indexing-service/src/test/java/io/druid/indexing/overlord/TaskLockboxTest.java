@@ -289,8 +289,8 @@ public class TaskLockboxTest
   @Test
   public void testDoInCriticalSectionWithSmallerInterval() throws Exception
   {
-    final Interval interval = new Interval("2017-01-01/2017-02-01");
-    final Interval smallInterval = new Interval("2017-01-10/2017-01-11");
+    final Interval interval = Intervals.of("2017-01-01/2017-02-01");
+    final Interval smallInterval = Intervals.of("2017-01-10/2017-01-11");
     final Task task = NoopTask.create();
     lockbox.add(task);
     final TaskLock lock = lockbox.tryLock(TaskLockType.EXCLUSIVE, task, interval).getTaskLock();
@@ -304,7 +304,7 @@ public class TaskLockboxTest
   @Test
   public void testPreemptionAndDoInCriticalSection() throws Exception
   {
-    final Interval interval = new Interval("2017-01-01/2017-01-02");
+    final Interval interval = Intervals.of("2017-01-01/2017-01-02");
     for (int i = 0; i < 5; i++) {
       final Task task = NoopTask.create();
       lockbox.add(task);
