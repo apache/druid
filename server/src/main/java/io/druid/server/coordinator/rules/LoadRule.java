@@ -89,15 +89,14 @@ public abstract class LoadRule implements Rule
           serverHolderPredicate
       );
 
-      if (primaryHolderToLoad != null) {
-
-        primaryHolderToLoad.getPeon().loadSegment(segment, null);
-        stats.addToTieredStat(ASSIGNED_COUNT, primaryHolderToLoad.getServer().getTier(), 1);
-        ++totalReplicantsInCluster;
-      } else {
+      if (primaryHolderToLoad == null) {
         log.trace("No primary holder found for %s", segment.getIdentifier());
-        return stats;
+        return stats.accumulate(drop(loadStatus, segment, params));
       }
+
+      primaryHolderToLoad.getPeon().loadSegment(segment, null);
+      stats.addToTieredStat(ASSIGNED_COUNT, primaryHolderToLoad.getServer().getTier(), 1);
+      ++totalReplicantsInCluster;
     } else {
       primaryHolderToLoad = null;
     }
