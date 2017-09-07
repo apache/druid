@@ -80,7 +80,7 @@ public abstract class LoadRule implements Rule
 
     final ServerHolder primaryHolderToLoad;
     if (totalReplicantsInCluster <= 0) {
-      log.trace("No replicants for %s", segment.getIdentifier());
+      log.debug("No replicants for %s", segment.getIdentifier());
       primaryHolderToLoad = getPrimaryHolder(
           params.getDruidCluster(),
           tieredReplicants,
