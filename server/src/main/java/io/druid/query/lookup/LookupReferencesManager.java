@@ -357,28 +357,19 @@ public class LookupReferencesManager
 
   private void loadAllLookupsAndInitStateRef()
   {
-    if (!lookupConfig.getDisableLookupSync()) {
+    if (!lookupConfig.getDisableLookupSyncOnStartup()) {
       String tier = lookupListeningAnnouncerConfig.getLookupTier();
-      List<LookupBean> lookupBeanList = new ArrayList<>();
-      // Check if the coordinator is accessible
-      if (getCoordinatorUrl().isEmpty()) {
-        if (lookupSnapshotTaker != null) {
-          LOG.info("Coordinator is unavailable. Loading saved snapshot instead");
-          lookupBeanList = getLookupListFromSnapshot();
-        }
-      } else {
-        lookupBeanList = getLookupListFromCoordinator(tier);
-        if (lookupBeanList == null) {
-          LOG.info("Lookups not accessible from Coordinator. Loading saved snapshot instead");
-          lookupBeanList = getLookupListFromSnapshot();
-        }
+      List<LookupBean> lookupBeanList = getLookupListFromCoordinator(tier);
+      if (lookupBeanList == null) {
+        LOG.info("Coordinator is unavailable. Loading saved snapshot instead");
+        lookupBeanList = getLookupListFromSnapshot();
       }
-      if (!lookupBeanList.isEmpty()) {
+      if (lookupBeanList != null) {
         ImmutableMap.Builder<String, LookupExtractorFactoryContainer> builder = ImmutableMap.builder();
         ListeningScheduledExecutorService executorService = MoreExecutors.listeningDecorator(
             Executors.newScheduledThreadPool(
                 lookupConfig.getNumLookupLoadingThreads(),
-                Execs.makeThreadFactory("LookupReferencesManager--%s")
+                Execs.makeThreadFactory("LookupReferencesManager-Startup-%s")
             )
         );
         try {
@@ -390,12 +381,12 @@ public class LookupReferencesManager
                     () -> {
 
                       LookupExtractorFactoryContainer container = lookupBean.getContainer();
+                      LOG.info(
+                          "Started lookup [%s]:[%s]",
+                          lookupBean.getName(),
+                          container
+                      );
                       if (container.getLookupExtractorFactory().start()) {
-                        LOG.info(
-                            "Started lookup [%s]:[%s]",
-                            lookupBean.getName(),
-                            container
-                        );
                         return new AbstractMap.SimpleImmutableEntry<>(lookupBean.getName(), container);
                       } else {
                         LOG.error(
@@ -431,54 +422,60 @@ public class LookupReferencesManager
         stateRef.set(new LookupUpdateState(ImmutableMap.of(), ImmutableList.of(), ImmutableList.of()));
       }
     } else {
-      LOG.info("Lookup synchronization is disabled");
+      LOG.info("Lookup loading on startup is disabled");
       stateRef.set(new LookupUpdateState(ImmutableMap.of(), ImmutableList.of(), ImmutableList.of()));
     }
   }
 
   private List<LookupBean> getLookupListFromCoordinator(String tier)
   {
-    try {
-      final StatusResponseHolder response = fetchLookupsForTier(tier);
-      List<LookupBean> lookupBeanList = new ArrayList<>();
-      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        LOG.error(
-            "Error while fetching lookup code from Coordinator with status[%s] and content[%s]",
-            response.getStatus(),
-            response.getContent()
-        );
-        if (lookupSnapshotTaker != null) {
-          LOG.info("Attempting to load saved snapshot");
-          return null;
-        }
-      } else {
-        // Older version of getSpecificTier returns a list of lookup names.
-        // Lookup loading is performed via snapshot if older version is present.
-        if (response.getContent().startsWith("[")) {
+    // Check if the coordinator is accessible
+    if (!(getCoordinatorUrl() == null)) {
+      try {
+        final StatusResponseHolder response = fetchLookupsForTier(tier);
+        List<LookupBean> lookupBeanList = new ArrayList<>();
+        if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+          LOG.error(
+              "Error while fetching lookup code from Coordinator with status[%s] and content[%s]",
+              response.getStatus(),
+              response.getContent()
+          );
           return null;
         } else {
-          Map<String, LookupExtractorFactoryContainer> lookupMap = jsonMapper.readValue(
-              response.getContent(),
-              LOOKUPS_ALL_REFERENCE
-          );
-          if (!lookupMap.isEmpty()) {
-            for (Map.Entry<String, LookupExtractorFactoryContainer> e : lookupMap.entrySet()) {
-              lookupBeanList.add(new LookupBean(e.getKey(), null, e.getValue()));
+          // Older version of getSpecificTier returns a list of lookup names.
+          // Lookup loading is performed via snapshot if older version is present.
+          // This check is only for backward compatibility and should be removed in a future release.
+          if (response.getContent().startsWith("[")) {
+            return null;
+          } else {
+            Map<String, LookupExtractorFactoryContainer> lookupMap = jsonMapper.readValue(
+                response.getContent(),
+                LOOKUPS_ALL_REFERENCE
+            );
+            if (!lookupMap.isEmpty()) {
+              for (Map.Entry<String, LookupExtractorFactoryContainer> e : lookupMap.entrySet()) {
+                lookupBeanList.add(new LookupBean(e.getKey(), null, e.getValue()));
+              }
             }
           }
         }
+        return lookupBeanList;
       }
-      return lookupBeanList;
-    }
-    catch (Exception e) {
-      LOG.error(e, "Error while parsing lookup code for tier [%s] from response", tier);
+      catch (Exception e) {
+        LOG.error(e, "Error while parsing lookup code for tier [%s] from response", tier);
+        return null;
+      }
+    } else {
       return null;
     }
   }
 
   private List<LookupBean> getLookupListFromSnapshot()
   {
-    return lookupSnapshotTaker.pullExistingSnapshot();
+    if (lookupSnapshotTaker != null) {
+      return lookupSnapshotTaker.pullExistingSnapshot();
+    }
+    return null;
   }
 
   private String getCoordinatorUrl()
@@ -487,7 +484,7 @@ public class LookupReferencesManager
       final Server instance = selector.pick();
       if (instance == null) {
         LOG.info("Coordinator instance unavailable.");
-        return "";
+        return null;
       }
       return new URI(
           instance.getScheme(),
@@ -501,8 +498,8 @@ public class LookupReferencesManager
     }
     catch (Exception e) {
       LOG.error("Error encountered while connecting to Coordinator");
+      return null;
     }
-    return "";
   }
 
   private LookupUpdateState atomicallyUpdateStateRef(Function<LookupUpdateState, LookupUpdateState> fn)
@@ -532,44 +529,6 @@ public class LookupReferencesManager
         ),
         RESPONSE_HANDLER
     ).get();
-  }
-
-  private LookupExtractorFactoryContainer getLookupEntryFromCode(String tier, String lookupCode)
-  {
-    final StatusResponseHolder lookupTierResponse;
-    try {
-      lookupTierResponse = httpClient.go(
-          new Request(
-              HttpMethod.GET,
-              new URL(
-                  StringUtils.format(
-                      "%s/lookups/%s/%s",
-                      getCoordinatorUrl(),
-                      tier,
-                      lookupCode
-                  )
-              )
-          ),
-          RESPONSE_HANDLER
-      ).get();
-      if (!lookupTierResponse.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE(
-            "Error while fetching lookup entries from Coordinator with status[%s] and content[%s]",
-            lookupTierResponse.getStatus(),
-            lookupTierResponse.getContent()
-        );
-      } else {
-        final LookupExtractorFactoryContainer lookupData = jsonMapper.readValue(
-            lookupTierResponse.getContent(),
-            LookupExtractorFactoryContainer.class
-        );
-        return lookupData;
-      }
-    }
-    catch (Exception ioe) {
-      throw new ISE("Error while parsing lookup entries from response "
-      );
-    }
   }
 
   @VisibleForTesting
