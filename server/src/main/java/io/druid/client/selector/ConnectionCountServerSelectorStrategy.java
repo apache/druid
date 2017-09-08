@@ -31,14 +31,9 @@ import java.util.Set;
 
 public class ConnectionCountServerSelectorStrategy implements ServerSelectorStrategy
 {
-  private static final Comparator<QueryableDruidServer> comparator = new Comparator<QueryableDruidServer>()
-  {
-    @Override
-    public int compare(QueryableDruidServer left, QueryableDruidServer right)
-    {
-      return Ints.compare(left.getClient().getNumOpenConnections(), right.getClient().getNumOpenConnections());
-    }
-  };
+  private static final Comparator<QueryableDruidServer> comparator =
+      (QueryableDruidServer left, QueryableDruidServer right) ->
+          Ints.compare(left.getClient().getNumOpenConnections(), right.getClient().getNumOpenConnections());
 
   @Override
   public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)

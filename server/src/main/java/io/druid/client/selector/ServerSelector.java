@@ -20,9 +20,11 @@
 package io.druid.client.selector;
 
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -35,7 +37,9 @@ import java.util.stream.Collectors;
 public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
 {
 
-  private final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> servers;
+  private final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> historicalServers;
+
+  private final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> realtimeServers;
 
   private final TierSelectorStrategy strategy;
 
@@ -48,7 +52,8 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
   {
     this.segment = new AtomicReference<>(segment);
     this.strategy = strategy;
-    this.servers = new Int2ObjectRBTreeMap<>(strategy.getComparator());
+    this.historicalServers = new Int2ObjectRBTreeMap<>(strategy.getComparator());
+    this.realtimeServers = new Int2ObjectRBTreeMap<>(strategy.getComparator());
   }
 
   public DataSegment getSegment()
@@ -62,8 +67,14 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
   {
     synchronized (this) {
       this.segment.set(segment);
-      int priority = server.getServer().getPriority();
-      Set<QueryableDruidServer> priorityServers = servers.computeIfAbsent(priority, p -> new HashSet<>());
+      Set<QueryableDruidServer> priorityServers;
+      if (server.getServer().getType() == ServerType.REALTIME) {
+        priorityServers = realtimeServers.computeIfAbsent(
+            server.getServer().getPriority(), p -> new HashSet<>());
+      } else {
+        priorityServers = historicalServers.computeIfAbsent(
+            server.getServer().getPriority(), p -> new HashSet<>());
+      }
       priorityServers.add(server);
     }
   }
@@ -71,42 +82,70 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
   public boolean removeServer(QueryableDruidServer server)
   {
     synchronized (this) {
-      int priority = server.getServer().getPriority();
-      Set<QueryableDruidServer> priorityServers = servers.get(priority);
+      Set<QueryableDruidServer> priorityServers;
+      if (server.getServer().getType() == ServerType.REALTIME) {
+        priorityServers = realtimeServers.computeIfAbsent(
+            server.getServer().getPriority(), p -> new HashSet<>());;
+      } else {
+        priorityServers = historicalServers.computeIfAbsent(
+            server.getServer().getPriority(), p -> new HashSet<>());
+      }
+
       if (priorityServers == null) {
         return false;
       }
-      boolean result = priorityServers.remove(server);
-      if (priorityServers.isEmpty()) {
-        servers.remove(priority);
-      }
-      return result;
+
+      return priorityServers.remove(server);
     }
   }
 
   public boolean isEmpty()
   {
     synchronized (this) {
-      return servers.isEmpty();
+      return historicalServers.isEmpty() && realtimeServers.isEmpty();
     }
   }
 
   public List<DruidServerMetadata> getCandidates(final int numCandidates)
   {
+    List<DruidServerMetadata> candidates = new ArrayList<>();
     synchronized (this) {
       if (numCandidates > 0) {
-        return strategy.pick(servers, segment.get(), numCandidates)
-                       .stream()
-                       .map(server -> server.getServer().getMetadata())
-                       .collect(Collectors.toList());
+        candidates.addAll(
+          strategy.pick(historicalServers, segment.get(), numCandidates)
+              .stream()
+              .map(server -> server.getServer().getMetadata())
+              .collect(Collectors.toList())
+        );
+
+        if (candidates.size() < numCandidates) {
+          candidates.addAll(
+            strategy.pick(realtimeServers, segment.get(), numCandidates - candidates.size())
+                .stream()
+                .map(server -> server.getServer().getMetadata())
+                .collect(Collectors.toList())
+          );
+        }
       } else {
         // return all servers as candidates
-        return servers.values()
-                      .stream()
-                      .flatMap(Collection::stream)
-                      .map(server -> server.getServer().getMetadata())
-                      .collect(Collectors.toList());
+        candidates.addAll(
+          historicalServers.values()
+              .stream()
+              .flatMap(Collection::stream)
+              .map(server -> server.getServer().getMetadata())
+              .collect(Collectors.toList())
+        );
+
+        candidates.addAll(
+          realtimeServers.values()
+              .stream()
+              .flatMap(Collection::stream)
+              .map(server -> server.getServer().getMetadata())
+              .collect(Collectors.toList())
+        );
       }
+
+      return candidates;
     }
   }
 
@@ -114,7 +153,10 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
   public QueryableDruidServer pick()
   {
     synchronized (this) {
-      return strategy.pick(servers, segment.get());
+      if (!historicalServers.isEmpty()) {
+        return strategy.pick(historicalServers, segment.get());
+      }
+      return strategy.pick(realtimeServers, segment.get());
     }
   }
 }
