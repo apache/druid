@@ -19,12 +19,14 @@
 
 package io.druid.segment.loading;
 
+import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.timeline.DataSegment;
 
 import java.io.IOException;
 
 /**
  */
+@ExtensionPoint
 public interface DataSegmentKiller
 {
   void kill(DataSegment segments) throws SegmentLoadingException;

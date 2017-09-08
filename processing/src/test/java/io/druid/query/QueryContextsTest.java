@@ -21,8 +21,8 @@ package io.druid.query;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.druid.java.util.common.Intervals;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -36,7 +36,7 @@ public class QueryContextsTest
   {
     final Query<?> query = new TestQuery(
         new TableDataSource("test"),
-        new MultipleIntervalSegmentSpec(ImmutableList.of(new Interval("0/100"))),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
         false,
         new HashMap()
     );
@@ -48,7 +48,7 @@ public class QueryContextsTest
   {
     Query<?> query = new TestQuery(
         new TableDataSource("test"),
-        new MultipleIntervalSegmentSpec(ImmutableList.of(new Interval("0/100"))),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
         false,
         new HashMap()
     );
@@ -63,7 +63,7 @@ public class QueryContextsTest
   {
     Query<?> query = new TestQuery(
         new TableDataSource("test"),
-        new MultipleIntervalSegmentSpec(ImmutableList.of(new Interval("0/100"))),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
         false,
         ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1000)
     );

@@ -30,9 +30,12 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.NoopAggregator;
 import io.druid.query.aggregation.NoopBufferAggregator;
+import io.druid.query.aggregation.ObjectAggregateCombiner;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.ObjectColumnSelector;
 import org.apache.commons.codec.binary.Base64;
 
@@ -136,6 +139,51 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public Object combine(Object lhs, Object rhs)
+  {
+    return VarianceAggregatorCollector.combineValues(lhs, rhs);
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    // VarianceAggregatorFactory.combine() delegates to VarianceAggregatorCollector.combineValues() and it doesn't check
+    // for nulls, so this AggregateCombiner neither.
+    return new ObjectAggregateCombiner<VarianceAggregatorCollector>()
+    {
+      private final VarianceAggregatorCollector combined = new VarianceAggregatorCollector();
+
+      @Override
+      public void reset(ColumnValueSelector selector)
+      {
+        @SuppressWarnings("unchecked")
+        VarianceAggregatorCollector first = ((ObjectColumnSelector<VarianceAggregatorCollector>) selector).get();
+        combined.copyFrom(first);
+      }
+
+      @Override
+      public void fold(ColumnValueSelector selector)
+      {
+        @SuppressWarnings("unchecked")
+        VarianceAggregatorCollector other = ((ObjectColumnSelector<VarianceAggregatorCollector>) selector).get();
+        combined.fold(other);
+      }
+
+      @Override
+      public Class<VarianceAggregatorCollector> classOfObject()
+      {
+        return VarianceAggregatorCollector.class;
+      }
+
+      @Override
+      public VarianceAggregatorCollector get()
+      {
+        return combined;
+      }
+    };
+  }
+
+  @Override
   public AggregatorFactory getCombiningFactory()
   {
     return new VarianceFoldingAggregatorFactory(name, name, estimator);
@@ -161,12 +209,6 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   public Comparator getComparator()
   {
     return VarianceAggregatorCollector.COMPARATOR;
-  }
-
-  @Override
-  public Object combine(Object lhs, Object rhs)
-  {
-    return VarianceAggregatorCollector.combineValues(lhs, rhs);
   }
 
   @Override

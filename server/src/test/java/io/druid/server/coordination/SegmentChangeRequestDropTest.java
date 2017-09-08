@@ -19,10 +19,11 @@
 
 package io.druid.server.coordination;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.segment.IndexIO;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -42,7 +43,7 @@ public class SegmentChangeRequestDropTest
   {
     ObjectMapper mapper = new DefaultObjectMapper();
 
-    final Interval interval = new Interval("2011-10-01/2011-10-02");
+    final Interval interval = Intervals.of("2011-10-01/2011-10-02");
     final ImmutableMap<String, Object> loadSpec = ImmutableMap.<String, Object>of("something", "or_other");
 
     DataSegment segment = new DataSegment(
@@ -60,7 +61,7 @@ public class SegmentChangeRequestDropTest
     final SegmentChangeRequestDrop segmentDrop = new SegmentChangeRequestDrop(segment);
 
     Map<String, Object> objectMap = mapper.readValue(
-        mapper.writeValueAsString(segmentDrop), new TypeReference<Map<String, Object>>(){}
+        mapper.writeValueAsString(segmentDrop), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
     Assert.assertEquals(11, objectMap.size());

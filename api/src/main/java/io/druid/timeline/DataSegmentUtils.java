@@ -20,6 +20,7 @@
 package io.druid.timeline;
 
 import com.google.common.base.Function;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
@@ -33,6 +34,7 @@ import java.util.Objects;
 /**
  * identifier to DataSegment.
  */
+@PublicApi
 public class DataSegmentUtils
 {
   private static final Logger LOGGER = new Logger(DataSegmentUtils.class);
@@ -91,7 +93,7 @@ public class DataSegmentUtils
 
       return new SegmentIdentifierParts(
           dataSource,
-          new Interval(start.getMillis(), end.getMillis()),
+          new Interval(start, end),
           version,
           trail
       );

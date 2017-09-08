@@ -20,11 +20,12 @@
 package io.druid.server.log;
 
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.LegacyDataSource;
@@ -72,7 +73,7 @@ public class LoggingRequestLoggerTest
         @Override
         public List<Interval> getIntervals()
         {
-          return Collections.singletonList(Interval.parse("2016-01-01T00Z/2016-01-02T00Z"));
+          return Collections.singletonList(Intervals.of("2016-01-01T00Z/2016-01-02T00Z"));
         }
 
         @Override
@@ -159,9 +160,7 @@ public class LoggingRequestLoggerTest
 
   private static Map<String, Object> readContextMap(byte[] bytes) throws Exception
   {
-    final Map<String, Object> rawMap = mapper.readValue(bytes, new TypeReference<Map<String, Object>>()
-    {
-    });
+    final Map<String, Object> rawMap = mapper.readValue(bytes, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
     final Object contextMap = rawMap.get("contextMap");
     if (contextMap == null) {
       return null;

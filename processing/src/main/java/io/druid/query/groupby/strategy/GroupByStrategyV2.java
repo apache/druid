@@ -35,6 +35,7 @@ import io.druid.data.input.Row;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Merging;
 import io.druid.guice.annotations.Smile;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
@@ -117,10 +118,10 @@ public class GroupByStrategyV2 implements GroupByStrategy
     final String timestampStringFromContext = query.getContextValue(CTX_KEY_FUDGE_TIMESTAMP, "");
 
     if (!timestampStringFromContext.isEmpty()) {
-      return new DateTime(Long.parseLong(timestampStringFromContext));
+      return DateTimes.utc(Long.parseLong(timestampStringFromContext));
     } else if (Granularities.ALL.equals(gran)) {
-      final long timeStart = query.getIntervals().get(0).getStartMillis();
-      return gran.getIterable(new Interval(timeStart, timeStart + 1)).iterator().next().getStart();
+      final DateTime timeStart = query.getIntervals().get(0).getStart();
+      return gran.getIterable(new Interval(timeStart, timeStart.plus(1))).iterator().next().getStart();
     } else {
       return null;
     }

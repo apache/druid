@@ -22,7 +22,9 @@ package io.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.data.input.InputRow;
+import io.druid.guice.annotations.ExtensionPoint;
 
+@ExtensionPoint
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = StringInputRowParser.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "string", value = StringInputRowParser.class),

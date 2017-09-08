@@ -20,7 +20,7 @@
 package io.druid.segment;
 
 import com.google.common.base.Throwables;
-import org.joda.time.DateTime;
+import io.druid.java.util.common.DateTimes;
 import org.joda.time.Days;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -54,7 +54,7 @@ public class ReferenceCountingSegmentTest
           @Override
           public Interval getDataInterval()
           {
-            return new Interval(DateTime.now().minus(Days.days(1)), DateTime.now());
+            return new Interval(DateTimes.nowUtc().minus(Days.days(1)), DateTimes.nowUtc());
           }
 
           @Override

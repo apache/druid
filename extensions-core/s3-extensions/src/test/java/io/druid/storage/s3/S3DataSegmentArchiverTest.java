@@ -27,11 +27,11 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -73,7 +73,7 @@ public class S3DataSegmentArchiverTest
       .binaryVersion(1)
       .dataSource("dataSource")
       .dimensions(ImmutableList.<String>of())
-      .interval(Interval.parse("2015/2016"))
+      .interval(Intervals.of("2015/2016"))
       .version("version")
       .loadSpec(ImmutableMap.<String, Object>of(
           "type",

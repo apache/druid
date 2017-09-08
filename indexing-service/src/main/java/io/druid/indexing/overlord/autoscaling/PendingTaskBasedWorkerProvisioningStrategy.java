@@ -21,7 +21,6 @@ package io.druid.indexing.overlord.autoscaling;
 
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Collections2;
@@ -40,6 +39,7 @@ import io.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.WorkerSelectStrategy;
 import io.druid.indexing.worker.Worker;
+import io.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
@@ -109,8 +109,8 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     private final Set<String> currentlyProvisioning = Sets.newHashSet();
     private final Set<String> currentlyTerminating = Sets.newHashSet();
 
-    private DateTime lastProvisionTime = new DateTime();
-    private DateTime lastTerminateTime = new DateTime();
+    private DateTime lastProvisionTime = DateTimes.nowUtc();
+    private DateTime lastTerminateTime = lastProvisionTime;
 
     private PendingProvisioner(WorkerTaskRunner runner)
     {
@@ -159,14 +159,14 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
             break;
           } else {
             currentlyProvisioning.addAll(newNodes);
-            lastProvisionTime = new DateTime();
+            lastProvisionTime = DateTimes.nowUtc();
             scalingStats.addProvisionEvent(provisioned);
             want -= provisioned.getNodeIds().size();
             didProvision = true;
           }
         }
       } else {
-        Duration durSinceLastProvision = new Duration(lastProvisionTime, new DateTime());
+        Duration durSinceLastProvision = new Duration(lastProvisionTime, DateTimes.nowUtc());
         log.info("%s provisioning. Current wait time: %s", currentlyProvisioning, durSinceLastProvision);
         if (durSinceLastProvision.isLongerThan(config.getMaxScalingDuration().toStandardDuration())) {
           log.makeAlert("Worker node provisioning taking too long!")
@@ -250,14 +250,14 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       // Simulate assigning tasks to dummy workers using configured workerSelectStrategy
       // the number of additional workers needed to assign all the pending tasks is noted
       for (Task task : pendingTasks) {
-        Optional<ImmutableWorkerInfo> selectedWorker = workerSelectStrategy.findWorkerForTask(
+        final ImmutableWorkerInfo selectedWorker = workerSelectStrategy.findWorkerForTask(
             workerTaskRunnerConfig,
             ImmutableMap.copyOf(workersMap),
             task
         );
         final ImmutableWorkerInfo workerRunningTask;
-        if (selectedWorker.isPresent()) {
-          workerRunningTask = selectedWorker.get();
+        if (selectedWorker != null) {
+          workerRunningTask = selectedWorker;
         } else {
           // None of the existing worker can run this task, we need to provision one worker for it.
           // create a dummy worker and try to simulate assigning task to it.
@@ -329,13 +329,13 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
                                                          .terminate(ImmutableList.copyOf(laziestWorkerIps));
           if (terminated != null) {
             currentlyTerminating.addAll(terminated.getNodeIds());
-            lastTerminateTime = new DateTime();
+            lastTerminateTime = DateTimes.nowUtc();
             scalingStats.addTerminateEvent(terminated);
             didTerminate = true;
           }
         }
       } else {
-        Duration durSinceLastTerminate = new Duration(lastTerminateTime, new DateTime());
+        Duration durSinceLastTerminate = new Duration(lastTerminateTime, DateTimes.nowUtc());
 
         log.info("%s terminating. Current wait time: %s", currentlyTerminating, durSinceLastTerminate);
 
@@ -407,7 +407,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
                 task.getId()
             )
         ),
-        DateTime.now()
+        DateTimes.nowUtc()
     );
   }
 
@@ -418,7 +418,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
         0,
         Sets.<String>newHashSet(),
         Sets.<String>newHashSet(),
-        DateTime.now()
+        DateTimes.nowUtc()
     );
   }
 }

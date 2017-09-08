@@ -534,9 +534,11 @@ public class ApproximateHistogram
    */
   public ApproximateHistogram copy(ApproximateHistogram h)
   {
-    this.size = h.size;
-    this.positions = new float[size];
-    this.bins = new long[size];
+    if (h.size > this.size) {
+      this.size = h.size;
+      this.positions = new float[size];
+      this.bins = new long[size];
+    }
 
     System.arraycopy(h.positions, 0, this.positions, 0, h.binCount);
     System.arraycopy(h.bins, 0, this.bins, 0, h.binCount);

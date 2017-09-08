@@ -22,7 +22,6 @@ package io.druid.indexer;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
@@ -37,7 +36,6 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.guice.GuiceInjectors;
@@ -46,6 +44,9 @@ import io.druid.guice.annotations.Self;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.path.PathSpec;
 import io.druid.initialization.Initialization;
+import io.druid.java.util.common.jackson.JacksonUtils;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.FunctionalIterable;
@@ -159,10 +160,8 @@ public class HadoopDruidIndexerConfig
   {
     try {
       return fromMap(
-          (Map<String, Object>) HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
-              file, new TypeReference<Map<String, Object>>()
-              {
-              }
+          HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
+              file, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
           )
       );
     }
@@ -177,10 +176,8 @@ public class HadoopDruidIndexerConfig
     // This is a map to try and prevent dependency screwbally-ness
     try {
       return fromMap(
-          (Map<String, Object>) HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
-              str, new TypeReference<Map<String, Object>>()
-              {
-              }
+          HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
+              str, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
           )
       );
     }
@@ -198,10 +195,8 @@ public class HadoopDruidIndexerConfig
       Reader reader = new InputStreamReader(fs.open(pt), StandardCharsets.UTF_8);
 
       return fromMap(
-          (Map<String, Object>) HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
-              reader, new TypeReference<Map<String, Object>>()
-              {
-              }
+          HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
+              reader, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
           )
       );
     }
@@ -410,9 +405,7 @@ public class HadoopDruidIndexerConfig
   public Optional<Bucket> getBucket(InputRow inputRow)
   {
     final Optional<Interval> timeBucket = schema.getDataSchema().getGranularitySpec().bucketInterval(
-        new DateTime(
-            inputRow.getTimestampFromEpoch()
-        )
+        DateTimes.utc(inputRow.getTimestampFromEpoch())
     );
     if (!timeBucket.isPresent()) {
       return Optional.absent();
@@ -562,8 +555,11 @@ public class HadoopDruidIndexerConfig
 
   public void addJobProperties(Job job)
   {
-    Configuration conf = job.getConfiguration();
+    addJobProperties(job.getConfiguration());
+  }
 
+  public void addJobProperties(Configuration conf)
+  {
     for (final Map.Entry<String, String> entry : schema.getTuningConfig().getJobProperties().entrySet()) {
       conf.set(entry.getKey(), entry.getValue());
     }

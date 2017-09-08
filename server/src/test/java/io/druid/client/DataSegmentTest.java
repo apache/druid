@@ -19,18 +19,19 @@
 
 package io.druid.client;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.segment.IndexIO;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.SingleDimensionShardSpec;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -51,7 +52,7 @@ public class DataSegmentTest
   public void testV1Serialization() throws Exception
   {
 
-    final Interval interval = new Interval("2011-10-01/2011-10-02");
+    final Interval interval = Intervals.of("2011-10-01/2011-10-02");
     final ImmutableMap<String, Object> loadSpec = ImmutableMap.<String, Object>of("something", "or_other");
 
     DataSegment segment = new DataSegment(
@@ -66,7 +67,10 @@ public class DataSegmentTest
         1
     );
 
-    final Map<String, Object> objectMap = mapper.readValue(mapper.writeValueAsString(segment), new TypeReference<Map<String, Object>>(){});
+    final Map<String, Object> objectMap = mapper.readValue(
+        mapper.writeValueAsString(segment),
+        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+    );
 
     Assert.assertEquals(10, objectMap.size());
     Assert.assertEquals("something", objectMap.get("dataSource"));
@@ -106,8 +110,8 @@ public class DataSegmentTest
   {
     final DataSegment segment = DataSegment.builder()
                                            .dataSource("foo")
-                                           .interval(new Interval("2012-01-01/2012-01-02"))
-                                           .version(new DateTime("2012-01-01T11:22:33.444Z").toString())
+                                           .interval(Intervals.of("2012-01-01/2012-01-02"))
+                                           .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
                                            .shardSpec(NoneShardSpec.instance())
                                            .build();
 
@@ -122,8 +126,8 @@ public class DataSegmentTest
   {
     final DataSegment segment = DataSegment.builder()
                                            .dataSource("foo")
-                                           .interval(new Interval("2012-01-01/2012-01-02"))
-                                           .version(new DateTime("2012-01-01T11:22:33.444Z").toString())
+                                           .interval(Intervals.of("2012-01-01/2012-01-02"))
+                                           .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
                                            .shardSpec(new SingleDimensionShardSpec("bar", null, "abc", 0))
                                            .build();
 
@@ -138,8 +142,8 @@ public class DataSegmentTest
   {
     final DataSegment segment = DataSegment.builder()
                                            .dataSource("foo")
-                                           .interval(new Interval("2012-01-01/2012-01-02"))
-                                           .version(new DateTime("2012-01-01T11:22:33.444Z").toString())
+                                           .interval(Intervals.of("2012-01-01/2012-01-02"))
+                                           .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
                                            .shardSpec(new SingleDimensionShardSpec("bar", "abc", "def", 1))
                                            .build();
 
@@ -154,8 +158,8 @@ public class DataSegmentTest
   {
     final DataSegment segment = DataSegment.builder()
                                            .dataSource("foo")
-                                           .interval(new Interval("2012-01-01/2012-01-02"))
-                                           .version(new DateTime("2012-01-01T11:22:33.444Z").toString())
+                                           .interval(Intervals.of("2012-01-01/2012-01-02"))
+                                           .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
                                            .build();
 
     final DataSegment segment2 = mapper.readValue(mapper.writeValueAsString(segment), DataSegment.class);
@@ -196,7 +200,7 @@ public class DataSegmentTest
   {
     return DataSegment.builder()
                       .dataSource(dataSource)
-                      .interval(new Interval(interval))
+                      .interval(Intervals.of(interval))
                       .version(version)
                       .size(1)
                       .build();

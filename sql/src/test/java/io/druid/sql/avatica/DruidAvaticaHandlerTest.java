@@ -30,6 +30,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
@@ -125,7 +126,8 @@ public class DruidAvaticaHandlerTest
             CalciteTests.createMockQueryLifecycleFactory(walker),
             operatorTable,
             macroTable,
-            plannerConfig
+            plannerConfig,
+            CalciteTests.getJsonMapper()
         ),
         AVATICA_CONFIG
     );
@@ -199,8 +201,8 @@ public class DruidAvaticaHandlerTest
     Assert.assertEquals(
         ImmutableList.of(
             ImmutableMap.of(
-                "__time", new Timestamp(new DateTime("2000-01-01T00:00:00.000Z").getMillis()),
-                "t2", new Date(new DateTime("2000-01-01").getMillis())
+                "__time", new Timestamp(DateTimes.of("2000-01-01T00:00:00.000Z").getMillis()),
+                "t2", new Date(DateTimes.of("2000-01-01").getMillis())
             )
         ),
         getRows(resultSet)
@@ -256,7 +258,7 @@ public class DruidAvaticaHandlerTest
         ImmutableList.of(
             ImmutableMap.of(
                 "PLAN",
-                "DruidQueryRel(dataSource=[foo], dimensions=[[]], aggregations=[[Aggregation{virtualColumns=[], aggregatorFactories=[CountAggregatorFactory{name='a0'}], postAggregator=null}]])\n"
+                "DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"context\":{\"skipEmptyBuckets\":true}}])\n"
             )
         ),
         getRows(resultSet)
@@ -564,7 +566,8 @@ public class DruidAvaticaHandlerTest
             CalciteTests.createMockQueryLifecycleFactory(walker),
             operatorTable,
             macroTable,
-            plannerConfig
+            plannerConfig,
+            CalciteTests.getJsonMapper()
         ),
         smallFrameConfig
     )

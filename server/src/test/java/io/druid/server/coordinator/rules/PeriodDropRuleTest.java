@@ -19,6 +19,7 @@
 
 package io.druid.server.coordinator.rules;
 
+import io.druid.java.util.common.DateTimes;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
@@ -33,13 +34,13 @@ public class PeriodDropRuleTest
 {
   private final static DataSegment.Builder builder = DataSegment.builder()
                                                           .dataSource("test")
-                                                          .version(new DateTime("2012-12-31T01:00:00").toString())
+                                                          .version(DateTimes.of("2012-12-31T01:00:00").toString())
                                                           .shardSpec(NoneShardSpec.instance());
 
   @Test
   public void testAppliesToAll()
   {
-    DateTime now = new DateTime("2012-12-31T01:00:00");
+    DateTime now = DateTimes.of("2012-12-31T01:00:00");
     PeriodDropRule rule = new PeriodDropRule(
         new Period("P5000Y")
     );
@@ -67,7 +68,7 @@ public class PeriodDropRuleTest
   @Test
   public void testAppliesToPeriod()
   {
-    DateTime now = new DateTime("2012-12-31T01:00:00");
+    DateTime now = DateTimes.of("2012-12-31T01:00:00");
     PeriodDropRule rule = new PeriodDropRule(
         new Period("P1M")
     );

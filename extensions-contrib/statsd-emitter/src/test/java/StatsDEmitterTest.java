@@ -22,13 +22,12 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import com.timgroup.statsd.StatsDClient;
 import io.druid.emitter.statsd.StatsDEmitter;
 import io.druid.emitter.statsd.StatsDEmitterConfig;
+import io.druid.java.util.common.DateTimes;
+import org.junit.Test;
 
 import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.verify;
-
-import org.joda.time.DateTime;
-import org.junit.Test;
 
 /**
  */
@@ -47,7 +46,7 @@ public class StatsDEmitterTest
     replay(client);
     emitter.emit(new ServiceMetricEvent.Builder()
                      .setDimension("dataSource", "data-source")
-                     .build(new DateTime(), "query/cache/total/hitRate", 0.54)
+                     .build(DateTimes.nowUtc(), "query/cache/total/hitRate", 0.54)
                      .build("broker", "brokerHost1")
     );
     verify(client);
@@ -75,7 +74,7 @@ public class StatsDEmitterTest
                      .setDimension("remoteAddress", "194.0.90.2")
                      .setDimension("id", "ID")
                      .setDimension("context", "{context}")
-                     .build(new DateTime(), "query/time", 10)
+                     .build(DateTimes.nowUtc(), "query/time", 10)
                      .build("broker", "brokerHost1")
     );
     verify(client);
@@ -103,7 +102,7 @@ public class StatsDEmitterTest
                      .setDimension("remoteAddress", "194.0.90.2")
                      .setDimension("id", "ID")
                      .setDimension("context", "{context}")
-                     .build(new DateTime(), "query/time", 10)
+                     .build(DateTimes.nowUtc(), "query/time", 10)
                      .build("broker", "brokerHost1")
     );
     verify(client);

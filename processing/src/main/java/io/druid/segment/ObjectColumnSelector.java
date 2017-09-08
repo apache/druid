@@ -19,6 +19,8 @@
 
 package io.druid.segment;
 
+import javax.annotation.Nullable;
+
 public interface ObjectColumnSelector<T> extends ColumnValueSelector
 {
   public Class<T> classOfObject();
@@ -28,6 +30,7 @@ public interface ObjectColumnSelector<T> extends ColumnValueSelector
    * ObjectColumnSelector doesn't extend {@link io.druid.query.monomorphicprocessing.HotLoopCallee} yet. If it will,
    * this method should be annotated.
    */
+  @Nullable
   public T get();
 
   /**
@@ -39,7 +42,11 @@ public interface ObjectColumnSelector<T> extends ColumnValueSelector
   @Override
   default float getFloat()
   {
-    return ((Number) get()).floatValue();
+    T value = get();
+    if (value == null) {
+      return 0;
+    }
+    return ((Number) value).floatValue();
   }
 
   /**
@@ -51,7 +58,11 @@ public interface ObjectColumnSelector<T> extends ColumnValueSelector
   @Override
   default double getDouble()
   {
-    return ((Number) get()).doubleValue();
+    T value = get();
+    if (value == null) {
+      return 0;
+    }
+    return ((Number) value).doubleValue();
   }
 
   /**
@@ -63,6 +74,10 @@ public interface ObjectColumnSelector<T> extends ColumnValueSelector
   @Override
   default long getLong()
   {
-    return ((Number) get()).longValue();
+    T value = get();
+    if (value == null) {
+      return 0;
+    }
+    return ((Number) value).longValue();
   }
 }

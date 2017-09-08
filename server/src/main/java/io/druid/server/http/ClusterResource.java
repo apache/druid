@@ -25,6 +25,7 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.LazySingleton;
+import io.druid.java.util.common.StringUtils;
 import io.druid.server.http.security.StateResourceFilter;
 
 import javax.ws.rs.GET;
@@ -98,7 +99,7 @@ public class ClusterResource
     if (nodeType == null || !DruidNodeDiscoveryProvider.ALL_NODE_TYPES.contains(nodeType)) {
       return Response.serverError()
                      .status(Response.Status.BAD_REQUEST)
-                     .entity(String.format(
+                     .entity(StringUtils.format(
                          "Invalid nodeType [%s]. Valid node types are %s .",
                          nodeType,
                          DruidNodeDiscoveryProvider.ALL_NODE_TYPES

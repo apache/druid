@@ -28,6 +28,8 @@ import io.druid.collections.spatial.search.RectangularBound;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.Druids;
@@ -56,7 +58,6 @@ import io.druid.segment.Segment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -77,7 +78,7 @@ import java.util.Set;
 public class SpatialFilterBonusTest
 {
   public static final int NUM_POINTS = 5000;
-  private static Interval DATA_INTERVAL = new Interval("2013-01-01/2013-01-07");
+  private static Interval DATA_INTERVAL = Intervals.of("2013-01-01/2013-01-07");
   private static AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
       new CountAggregatorFactory("rows"),
       new LongSumAggregatorFactory("val", "val")
@@ -142,10 +143,10 @@ public class SpatialFilterBonusTest
 
     theIndex.add(
         new MapBasedInputRow(
-            new DateTime("2013-01-01").getMillis(),
+            DateTimes.of("2013-01-01").getMillis(),
             DIMS,
             ImmutableMap.<String, Object>of(
-                "timestamp", new DateTime("2013-01-01").toString(),
+                "timestamp", DateTimes.of("2013-01-01").toString(),
                 "dim", "foo",
                 "dim.geo", "0.0,0.0",
                 "val", 17L
@@ -154,10 +155,10 @@ public class SpatialFilterBonusTest
     );
     theIndex.add(
         new MapBasedInputRow(
-            new DateTime("2013-01-02").getMillis(),
+            DateTimes.of("2013-01-02").getMillis(),
             DIMS,
             ImmutableMap.<String, Object>of(
-                "timestamp", new DateTime("2013-01-02").toString(),
+                "timestamp", DateTimes.of("2013-01-02").toString(),
                 "dim", "foo",
                 "dim.geo", "1.0,3.0",
                 "val", 29L
@@ -166,10 +167,10 @@ public class SpatialFilterBonusTest
     );
     theIndex.add(
         new MapBasedInputRow(
-            new DateTime("2013-01-03").getMillis(),
+            DateTimes.of("2013-01-03").getMillis(),
             DIMS,
             ImmutableMap.<String, Object>of(
-                "timestamp", new DateTime("2013-01-03").toString(),
+                "timestamp", DateTimes.of("2013-01-03").toString(),
                 "dim", "foo",
                 "dim.geo", "4.0,2.0",
                 "val", 13L
@@ -178,10 +179,10 @@ public class SpatialFilterBonusTest
     );
     theIndex.add(
         new MapBasedInputRow(
-            new DateTime("2013-01-04").getMillis(),
+            DateTimes.of("2013-01-04").getMillis(),
             DIMS,
             ImmutableMap.<String, Object>of(
-                "timestamp", new DateTime("2013-01-04").toString(),
+                "timestamp", DateTimes.of("2013-01-04").toString(),
                 "dim", "foo",
                 "dim.geo", "7.0,3.0",
                 "val", 91L
@@ -190,10 +191,10 @@ public class SpatialFilterBonusTest
     );
     theIndex.add(
         new MapBasedInputRow(
-            new DateTime("2013-01-05").getMillis(),
+            DateTimes.of("2013-01-05").getMillis(),
             DIMS,
             ImmutableMap.<String, Object>of(
-                "timestamp", new DateTime("2013-01-05").toString(),
+                "timestamp", DateTimes.of("2013-01-05").toString(),
                 "dim", "foo",
                 "dim.geo", "8.0,6.0",
                 "val", 47L
@@ -202,10 +203,10 @@ public class SpatialFilterBonusTest
     );
     theIndex.add(
         new MapBasedInputRow(
-            new DateTime("2013-01-05").getMillis(),
+            DateTimes.of("2013-01-05").getMillis(),
             DIMS,
             ImmutableMap.<String, Object>of(
-                "timestamp", new DateTime("2013-01-05").toString(),
+                "timestamp", DateTimes.of("2013-01-05").toString(),
                 "dim", "foo",
                 "dim.geo", "_mmx.unknown",
                 "val", 501L
@@ -230,10 +231,10 @@ public class SpatialFilterBonusTest
       }
       theIndex.add(
           new MapBasedInputRow(
-              new DateTime("2013-01-01").getMillis(),
+              DateTimes.of("2013-01-01").getMillis(),
               DIMS,
               ImmutableMap.<String, Object>of(
-                  "timestamp", new DateTime("2013-01-01").toString(),
+                  "timestamp", DateTimes.of("2013-01-01").toString(),
                   "dim", "boo",
                   "dim.geo", coord,
                   "val", i
@@ -333,10 +334,10 @@ public class SpatialFilterBonusTest
 
       first.add(
           new MapBasedInputRow(
-              new DateTime("2013-01-01").getMillis(),
+              DateTimes.of("2013-01-01").getMillis(),
               DIMS,
               ImmutableMap.<String, Object>of(
-                  "timestamp", new DateTime("2013-01-01").toString(),
+                  "timestamp", DateTimes.of("2013-01-01").toString(),
                   "dim", "foo",
                   "dim.geo", "0.0,0.0",
                   "val", 17L
@@ -345,10 +346,10 @@ public class SpatialFilterBonusTest
       );
       first.add(
           new MapBasedInputRow(
-              new DateTime("2013-01-02").getMillis(),
+              DateTimes.of("2013-01-02").getMillis(),
               DIMS,
               ImmutableMap.<String, Object>of(
-                  "timestamp", new DateTime("2013-01-02").toString(),
+                  "timestamp", DateTimes.of("2013-01-02").toString(),
                   "dim", "foo",
                   "dim.geo", "1.0,3.0",
                   "val", 29L
@@ -357,10 +358,10 @@ public class SpatialFilterBonusTest
       );
       first.add(
           new MapBasedInputRow(
-              new DateTime("2013-01-03").getMillis(),
+              DateTimes.of("2013-01-03").getMillis(),
               DIMS,
               ImmutableMap.<String, Object>of(
-                  "timestamp", new DateTime("2013-01-03").toString(),
+                  "timestamp", DateTimes.of("2013-01-03").toString(),
                   "dim", "foo",
                   "dim.geo", "4.0,2.0",
                   "val", 13L
@@ -369,10 +370,10 @@ public class SpatialFilterBonusTest
       );
       first.add(
           new MapBasedInputRow(
-              new DateTime("2013-01-05").getMillis(),
+              DateTimes.of("2013-01-05").getMillis(),
               DIMS,
               ImmutableMap.<String, Object>of(
-                  "timestamp", new DateTime("2013-01-05").toString(),
+                  "timestamp", DateTimes.of("2013-01-05").toString(),
                   "dim", "foo",
                   "dim.geo", "_mmx.unknown",
                   "val", 501L
@@ -381,10 +382,10 @@ public class SpatialFilterBonusTest
       );
       second.add(
           new MapBasedInputRow(
-              new DateTime("2013-01-04").getMillis(),
+              DateTimes.of("2013-01-04").getMillis(),
               DIMS,
               ImmutableMap.<String, Object>of(
-                  "timestamp", new DateTime("2013-01-04").toString(),
+                  "timestamp", DateTimes.of("2013-01-04").toString(),
                   "dim", "foo",
                   "dim.geo", "7.0,3.0",
                   "val", 91L
@@ -393,10 +394,10 @@ public class SpatialFilterBonusTest
       );
       second.add(
           new MapBasedInputRow(
-              new DateTime("2013-01-05").getMillis(),
+              DateTimes.of("2013-01-05").getMillis(),
               DIMS,
               ImmutableMap.<String, Object>of(
-                  "timestamp", new DateTime("2013-01-05").toString(),
+                  "timestamp", DateTimes.of("2013-01-05").toString(),
                   "dim", "foo",
                   "dim.geo", "8.0,6.0",
                   "val", 47L
@@ -409,10 +410,10 @@ public class SpatialFilterBonusTest
       for (int i = 6; i < NUM_POINTS; i++) {
         third.add(
             new MapBasedInputRow(
-                new DateTime("2013-01-01").getMillis(),
+                DateTimes.of("2013-01-01").getMillis(),
                 DIMS,
                 ImmutableMap.<String, Object>of(
-                    "timestamp", new DateTime("2013-01-01").toString(),
+                    "timestamp", DateTimes.of("2013-01-01").toString(),
                     "dim", "boo",
                     "dim.geo", StringUtils.format(
                         "%s,%s",
@@ -474,7 +475,7 @@ public class SpatialFilterBonusTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .granularity(Granularities.ALL)
-                                  .intervals(Arrays.asList(new Interval("2013-01-01/2013-01-07")))
+                                  .intervals(Arrays.asList(Intervals.of("2013-01-01/2013-01-07")))
                                   .filters(
                                       new SpatialDimFilter(
                                           "dim.geo",
@@ -491,7 +492,7 @@ public class SpatialFilterBonusTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<TimeseriesResultValue>(
-            new DateTime("2013-01-01T00:00:00.000Z"),
+            DateTimes.of("2013-01-01T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                     .put("rows", 3L)
@@ -526,7 +527,7 @@ public class SpatialFilterBonusTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .granularity(Granularities.DAY)
-                                  .intervals(Arrays.asList(new Interval("2013-01-01/2013-01-07")))
+                                  .intervals(Arrays.asList(Intervals.of("2013-01-01/2013-01-07")))
                                   .filters(
                                       new SpatialDimFilter(
                                           "dim.geo",
@@ -543,7 +544,7 @@ public class SpatialFilterBonusTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<TimeseriesResultValue>(
-            new DateTime("2013-01-01T00:00:00.000Z"),
+            DateTimes.of("2013-01-01T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                     .put("rows", 1L)
@@ -552,7 +553,7 @@ public class SpatialFilterBonusTest
             )
         ),
         new Result<TimeseriesResultValue>(
-            new DateTime("2013-01-02T00:00:00.000Z"),
+            DateTimes.of("2013-01-02T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                     .put("rows", 1L)
@@ -561,7 +562,7 @@ public class SpatialFilterBonusTest
             )
         ),
         new Result<TimeseriesResultValue>(
-            new DateTime("2013-01-03T00:00:00.000Z"),
+            DateTimes.of("2013-01-03T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                     .put("rows", 1L)
@@ -570,7 +571,7 @@ public class SpatialFilterBonusTest
             )
         ),
         new Result<TimeseriesResultValue>(
-            new DateTime("2013-01-04T00:00:00.000Z"),
+            DateTimes.of("2013-01-04T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                     .put("rows", 1L)
@@ -579,7 +580,7 @@ public class SpatialFilterBonusTest
             )
         ),
         new Result<TimeseriesResultValue>(
-            new DateTime("2013-01-05T00:00:00.000Z"),
+            DateTimes.of("2013-01-05T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                     .put("rows", 1L)
@@ -614,7 +615,7 @@ public class SpatialFilterBonusTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .granularity(Granularities.DAY)
-                                  .intervals(Arrays.asList(new Interval("2013-01-01/2013-01-07")))
+                                  .intervals(Arrays.asList(Intervals.of("2013-01-01/2013-01-07")))
                                   .aggregators(
                                       Arrays.asList(
                                           new CountAggregatorFactory("rows"),
@@ -632,7 +633,7 @@ public class SpatialFilterBonusTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2013-01-01T00:00:00.000Z"),
+            DateTimes.of("2013-01-01T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                     .put("rows", 4995L)
@@ -642,7 +643,7 @@ public class SpatialFilterBonusTest
             )
         ),
         new Result<>(
-            new DateTime("2013-01-02T00:00:00.000Z"),
+            DateTimes.of("2013-01-02T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                     .put("rows", 1L)
@@ -652,7 +653,7 @@ public class SpatialFilterBonusTest
             )
         ),
         new Result<>(
-            new DateTime("2013-01-03T00:00:00.000Z"),
+            DateTimes.of("2013-01-03T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                     .put("rows", 1L)
@@ -662,7 +663,7 @@ public class SpatialFilterBonusTest
             )
         ),
         new Result<>(
-            new DateTime("2013-01-04T00:00:00.000Z"),
+            DateTimes.of("2013-01-04T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                     .put("rows", 1L)
@@ -672,7 +673,7 @@ public class SpatialFilterBonusTest
             )
         ),
         new Result<>(
-            new DateTime("2013-01-05T00:00:00.000Z"),
+            DateTimes.of("2013-01-05T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                     .put("rows", 2L)

@@ -20,9 +20,7 @@
 package io.druid.data.input.impl;
 
 import com.google.common.collect.Lists;
-
 import io.druid.java.util.common.parsers.ParseException;
-
 import org.junit.Test;
 
 import java.util.Arrays;

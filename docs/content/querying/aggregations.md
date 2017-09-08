@@ -227,11 +227,16 @@ instead of the cardinality aggregator if you do not care about the individual va
   "type": "cardinality",
   "name": "<output_name>",
   "fields": [ <dimension1>, <dimension2>, ... ],
-  "byRow": <false | true> # (optional, defaults to false)
+  "byRow": <false | true> # (optional, defaults to false),
+  "round": <false | true> # (optional, defaults to false)
 }
 ```
 
 Each individual element of the "fields" list can be a String or [DimensionSpec](../querying/dimensionspecs.html). A String dimension in the fields list is equivalent to a DefaultDimensionSpec (no transformations).
+
+The HyperLogLog algorithm generates decimal estimates with some error. "round" can be set to true to round off estimated
+values to whole numbers. Note that even with rounding, the cardinality is still an estimate. The "round" field only
+affects query-time behavior, and is ignored at ingestion-time.
 
 #### Cardinality by value
 
@@ -315,12 +320,17 @@ Uses [HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf) to
   "type" : "hyperUnique",
   "name" : <output_name>,
   "fieldName" : <metric_name>,
-  "isInputHyperUnique" : false
+  "isInputHyperUnique" : false,
+  "round" : false
 }
 ```
 
-isInputHyperUnique can be set to true to index pre-computed HLL (Base64 encoded output from druid-hll is expected).
-The isInputHyperUnique field only affects ingestion-time behavior, and is ignored at query time.
+"isInputHyperUnique" can be set to true to index pre-computed HLL (Base64 encoded output from druid-hll is expected).
+The "isInputHyperUnique" field only affects ingestion-time behavior, and is ignored at query-time.
+
+The HyperLogLog algorithm generates decimal estimates with some error. "round" can be set to true to round off estimated
+values to whole numbers. Note that even with rounding, the cardinality is still an estimate. The "round" field only
+affects query-time behavior, and is ignored at ingestion-time.
 
 For more approximate aggregators, please see [theta sketches](../development/extensions-core/datasketches-aggregators.html).
 

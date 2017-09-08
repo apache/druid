@@ -28,7 +28,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A Marker interface that exists to combine ShardSpec objects together for Jackson
+ * A Marker interface that exists to combine ShardSpec objects together for Jackson. Note that this is not an
+ * extension API. Extensions are not expected to create new kinds of ShardSpecs.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({

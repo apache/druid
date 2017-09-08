@@ -21,7 +21,7 @@ package io.druid.sql.calcite.filtration;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
-import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.ISE;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.filter.DimFilter;
@@ -35,7 +35,6 @@ import java.util.List;
 
 public class Filtration
 {
-  private static final Interval ETERNITY = new Interval(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT);
   private static final DimFilter MATCH_NOTHING = new ExpressionDimFilter(
       "1 == 2", ExprMacroTable.nil()
   );
@@ -51,13 +50,13 @@ public class Filtration
 
   private Filtration(final DimFilter dimFilter, final List<Interval> intervals)
   {
-    this.intervals = intervals != null ? intervals : ImmutableList.of(ETERNITY);
+    this.intervals = intervals != null ? intervals : Intervals.ONLY_ETERNITY;
     this.dimFilter = dimFilter;
   }
 
   public static Interval eternity()
   {
-    return ETERNITY;
+    return Intervals.ETERNITY;
   }
 
   public static DimFilter matchNothing()

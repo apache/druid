@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import io.druid.TestUtil;
+import io.druid.java.util.common.Intervals;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.NumberedShardSpec;
@@ -183,7 +184,7 @@ public class NumberedShardSpecTest
   )
   {
     VersionedIntervalTimeline<String, String> timeline = new VersionedIntervalTimeline<>(Ordering.natural());
-    Interval interval = new Interval("2000/3000");
+    Interval interval = Intervals.of("2000/3000");
     String version = "v1";
     for (PartitionChunk<String> chunk : chunks) {
       timeline.add(interval, version, chunk);

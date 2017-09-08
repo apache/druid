@@ -21,6 +21,7 @@ package io.druid.sql.avatica;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.DateTimes;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
@@ -32,7 +33,6 @@ import io.druid.sql.calcite.util.QueryLogHook;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.Meta;
-import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -70,7 +70,8 @@ public class DruidStatementTest
         CalciteTests.createMockQueryLifecycleFactory(walker),
         operatorTable,
         macroTable,
-        plannerConfig
+        plannerConfig,
+        CalciteTests.getJsonMapper()
     );
   }
 
@@ -133,12 +134,12 @@ public class DruidStatementTest
             0,
             true,
             Lists.<Object>newArrayList(
-                new Object[]{new DateTime("2000-01-01").getMillis(), 1L, "", "a", 1.0f},
-                new Object[]{new DateTime("2000-01-02").getMillis(), 1L, "10.1", "", 2.0f},
-                new Object[]{new DateTime("2000-01-03").getMillis(), 1L, "2", "", 3.0f},
-                new Object[]{new DateTime("2001-01-01").getMillis(), 1L, "1", "a", 4.0f},
-                new Object[]{new DateTime("2001-01-02").getMillis(), 1L, "def", "abc", 5.0f},
-                new Object[]{new DateTime("2001-01-03").getMillis(), 1L, "abc", "", 6.0f}
+                new Object[]{DateTimes.of("2000-01-01").getMillis(), 1L, "", "a", 1.0f},
+                new Object[]{DateTimes.of("2000-01-02").getMillis(), 1L, "10.1", "", 2.0f},
+                new Object[]{DateTimes.of("2000-01-03").getMillis(), 1L, "2", "", 3.0f},
+                new Object[]{DateTimes.of("2001-01-01").getMillis(), 1L, "1", "a", 4.0f},
+                new Object[]{DateTimes.of("2001-01-02").getMillis(), 1L, "def", "abc", 5.0f},
+                new Object[]{DateTimes.of("2001-01-03").getMillis(), 1L, "abc", "", 6.0f}
             )
         ),
         frame
@@ -159,8 +160,8 @@ public class DruidStatementTest
             0,
             false,
             Lists.<Object>newArrayList(
-                new Object[]{new DateTime("2000-01-01").getMillis(), 1L, "", "a", 1.0f},
-                new Object[]{new DateTime("2000-01-02").getMillis(), 1L, "10.1", "", 2.0f}
+                new Object[]{DateTimes.of("2000-01-01").getMillis(), 1L, "", "a", 1.0f},
+                new Object[]{DateTimes.of("2000-01-02").getMillis(), 1L, "10.1", "", 2.0f}
             )
         ),
         frame
@@ -174,10 +175,10 @@ public class DruidStatementTest
             2,
             true,
             Lists.<Object>newArrayList(
-                new Object[]{new DateTime("2000-01-03").getMillis(), 1L, "2", "", 3.0f},
-                new Object[]{new DateTime("2001-01-01").getMillis(), 1L, "1", "a", 4.0f},
-                new Object[]{new DateTime("2001-01-02").getMillis(), 1L, "def", "abc", 5.0f},
-                new Object[]{new DateTime("2001-01-03").getMillis(), 1L, "abc", "", 6.0f}
+                new Object[]{DateTimes.of("2000-01-03").getMillis(), 1L, "2", "", 3.0f},
+                new Object[]{DateTimes.of("2001-01-01").getMillis(), 1L, "1", "a", 4.0f},
+                new Object[]{DateTimes.of("2001-01-02").getMillis(), 1L, "def", "abc", 5.0f},
+                new Object[]{DateTimes.of("2001-01-03").getMillis(), 1L, "abc", "", 6.0f}
             )
         ),
         frame
