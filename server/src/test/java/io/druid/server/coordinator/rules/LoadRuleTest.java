@@ -133,7 +133,7 @@ public class LoadRuleTest
                             1000,
                             ServerType.HISTORICAL,
                             "hot",
-                            0
+                            1
                         ).toImmutableDruidServer(),
                         mockPeon
                     )
@@ -534,7 +534,7 @@ public class LoadRuleTest
 
     Assert.assertEquals(1L, stats1.getTieredStat(LoadRule.ASSIGNED_COUNT, "hot"));
     Assert.assertEquals(1L, stats2.getTieredStat(LoadRule.ASSIGNED_COUNT, "hot"));
-    Assert.assertEquals(0L, stats3.getTieredStat(LoadRule.ASSIGNED_COUNT, "hot"));
+    Assert.assertFalse(stats3.getTiers(LoadRule.ASSIGNED_COUNT).contains("hot"));
 
     EasyMock.verify(throttler);
   }
