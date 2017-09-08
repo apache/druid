@@ -55,6 +55,6 @@ public class LoadQueueTaskMaster
 
   public LoadQueuePeon giveMePeon(String basePath)
   {
-    return new LoadQueuePeon(curator, basePath, jsonMapper, peonExec, callbackExec, config);
+    return new CuratorLoadQueuePeon(curator, basePath, jsonMapper, peonExec, callbackExec, config);
   }
 }
