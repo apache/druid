@@ -147,6 +147,6 @@ public class DruidCluster
   public boolean hasTier(String tier)
   {
     MinMaxPriorityQueue<ServerHolder> servers = historicals.get(tier);
-    return (servers == null) || servers.isEmpty();
+    return (servers != null) && !servers.isEmpty();
   }
 }
