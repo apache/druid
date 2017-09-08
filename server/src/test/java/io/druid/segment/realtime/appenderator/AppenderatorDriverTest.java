@@ -139,8 +139,8 @@ public class AppenderatorDriverTest
         committerSupplier.get(),
         ImmutableList.of("dummy")
     ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
-    Assert.assertFalse(driver.getActiveSegments().containsKey("dummy"));
-    Assert.assertFalse(driver.getPublishPendingSegments().containsKey("dummy"));
+    Assert.assertFalse(driver.getSegmentTracker().getActiveSegments().containsKey("dummy"));
+    Assert.assertFalse(driver.getSegmentTracker().getPublishPendingSegments().containsKey("dummy"));
     final SegmentsAndMetadata segmentsAndMetadata = driver.registerHandoff(published)
                                                           .get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
 
@@ -186,8 +186,8 @@ public class AppenderatorDriverTest
         committerSupplier.get(),
         ImmutableList.of("dummy")
     ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
-    Assert.assertFalse(driver.getActiveSegments().containsKey("dummy"));
-    Assert.assertFalse(driver.getPublishPendingSegments().containsKey("dummy"));
+    Assert.assertFalse(driver.getSegmentTracker().getActiveSegments().containsKey("dummy"));
+    Assert.assertFalse(driver.getSegmentTracker().getPublishPendingSegments().containsKey("dummy"));
     final SegmentsAndMetadata segmentsAndMetadata = driver.registerHandoff(published)
                                                           .get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
     Assert.assertEquals(numSegments, segmentsAndMetadata.getSegments().size());
@@ -212,8 +212,8 @@ public class AppenderatorDriverTest
         committerSupplier.get(),
         ImmutableList.of("dummy")
     ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
-    Assert.assertFalse(driver.getActiveSegments().containsKey("dummy"));
-    Assert.assertFalse(driver.getPublishPendingSegments().containsKey("dummy"));
+    Assert.assertFalse(driver.getSegmentTracker().getActiveSegments().containsKey("dummy"));
+    Assert.assertFalse(driver.getSegmentTracker().getPublishPendingSegments().containsKey("dummy"));
     driver.registerHandoff(published).get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
   }
 

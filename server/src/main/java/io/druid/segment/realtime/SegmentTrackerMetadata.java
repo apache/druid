@@ -17,15 +17,16 @@
  * under the License.
  */
 
-package io.druid.segment.realtime.appenderator;
+package io.druid.segment.realtime;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 
 import java.util.List;
 import java.util.Map;
 
-public class AppenderatorDriverMetadata
+public class SegmentTrackerMetadata
 {
   private final Map<String, List<SegmentIdentifier>> activeSegments;
   private final Map<String, List<SegmentIdentifier>> publishPendingSegments;
@@ -33,7 +34,7 @@ public class AppenderatorDriverMetadata
   private final Object callerMetadata;
 
   @JsonCreator
-  public AppenderatorDriverMetadata(
+  public SegmentTrackerMetadata(
       @JsonProperty("activeSegments") Map<String, List<SegmentIdentifier>> activeSegments,
       @JsonProperty("publishPendingSegments") Map<String, List<SegmentIdentifier>> publishPendingSegments,
       @JsonProperty("lastSegmentIds") Map<String, String> lastSegmentIds,
@@ -73,7 +74,7 @@ public class AppenderatorDriverMetadata
   @Override
   public String toString()
   {
-    return "AppenderatorDriverMetadata{" +
+    return "SegmentTrackerMetadata{" +
            "activeSegments=" + activeSegments +
            ", publishPendingSegments=" + publishPendingSegments +
            ", lastSegmentIds=" + lastSegmentIds +
