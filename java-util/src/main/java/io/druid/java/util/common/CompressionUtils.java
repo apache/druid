@@ -26,6 +26,7 @@ import com.google.common.io.ByteSink;
 import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
+import io.druid.java.util.common.io.NativeIO;
 import io.druid.java.util.common.logger.Logger;
 
 import java.io.BufferedInputStream;
@@ -209,6 +210,7 @@ public class CompressionUtils
       final Enumeration<? extends ZipEntry> enumeration = zipFile.entries();
       while (enumeration.hasMoreElements()) {
         final ZipEntry entry = enumeration.nextElement();
+        File outFile = new File(outDir, entry.getName());
         result.addFiles(
             FileUtils.retryCopy(
                 new ByteSource()
@@ -219,7 +221,7 @@ public class CompressionUtils
                     return new BufferedInputStream(zipFile.getInputStream(entry));
                   }
                 },
-                new File(outDir, entry.getName()),
+                outFile,
                 FileUtils.IS_EXCEPTION,
                 DEFAULT_RETRY_COUNT
             ).getFiles()
@@ -248,7 +250,9 @@ public class CompressionUtils
       ZipEntry entry;
       while ((entry = zipIn.getNextEntry()) != null) {
         final File file = new File(outDir, entry.getName());
-        Files.asByteSink(file).writeFrom(zipIn);
+
+        NativeIO.chunkedCopy(zipIn, file);
+
         result.addFile(file);
         zipIn.closeEntry();
       }
@@ -282,7 +286,7 @@ public class CompressionUtils
   public static FileUtils.FileCopyResult gunzip(InputStream in, File outFile) throws IOException
   {
     try (GZIPInputStream gzipInputStream = gzipInputStream(in)) {
-      Files.asByteSink(outFile).writeFrom(gzipInputStream);
+      NativeIO.chunkedCopy(gzipInputStream, outFile);
       return new FileUtils.FileCopyResult(outFile);
     }
   }

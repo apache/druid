@@ -841,6 +841,11 @@
                 <version>${guava.version}</version>
                 <scope>test</scope>
             </dependency>
+            <dependency>
+                <groupId>net.java.dev.jna</groupId>
+                <artifactId>jna</artifactId>
+                <version>4.4.0</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

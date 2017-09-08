@@ -29,12 +29,14 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.RetryUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.UOE;
+import io.druid.java.util.common.io.NativeIO;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.URIDataPuller;
 import io.druid.timeline.DataSegment;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -202,9 +204,10 @@ public class HdfsDataSegmentPuller implements DataSegmentPuller, URIDataPuller
                       log.warn("[%s] is a child directory, skipping", childPath.toString());
                     } else {
                       final File outFile = new File(outDir, fname);
+                      final FSDataInputStream in = fs.open(childPath);
 
-                      // Actual copy
-                      fs.copyToLocalFile(childPath, new Path(outFile.toURI()));
+                      NativeIO.chunkedCopy(in, outFile);
+
                       result.addFile(outFile);
                     }
                   }
