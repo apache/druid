@@ -30,7 +30,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 /**
  */
@@ -67,11 +66,11 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
   {
     synchronized (this) {
       this.segment.set(segment);
-      Set<QueryableDruidServer> priorityServers;
+      Set<QueryableDruidServer> priorityServers = new HashSet<>();
       if (server.getServer().getType() == ServerType.REALTIME) {
         priorityServers = realtimeServers.computeIfAbsent(
             server.getServer().getPriority(), p -> new HashSet<>());
-      } else {
+      } else if (server.getServer().getType() == ServerType.HISTORICAL) {
         priorityServers = historicalServers.computeIfAbsent(
             server.getServer().getPriority(), p -> new HashSet<>());
       }
@@ -82,21 +81,19 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
   public boolean removeServer(QueryableDruidServer server)
   {
     synchronized (this) {
-      Set<QueryableDruidServer> priorityServers;
       if (server.getServer().getType() == ServerType.REALTIME) {
-        priorityServers = realtimeServers.computeIfAbsent(
-            server.getServer().getPriority(), p -> new HashSet<>());;
-      } else {
-        priorityServers = historicalServers.computeIfAbsent(
-            server.getServer().getPriority(), p -> new HashSet<>());
+        return realtimeServers.computeIfPresent(
+            server.getServer().getPriority(),
+            (p, servers) -> servers.remove(server) ? servers : null
+        ) == null ? false : true;
+      } else if (server.getServer().getType() == ServerType.HISTORICAL) {
+        return historicalServers.computeIfPresent(
+            server.getServer().getPriority(),
+            (p, servers) -> servers.remove(server) ? servers : null
+        ) == null ? false : true;
       }
-
-      if (priorityServers == null) {
-        return false;
-      }
-
-      return priorityServers.remove(server);
     }
+    return false;
   }
 
   public boolean isEmpty()
@@ -108,41 +105,35 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
 
   public List<DruidServerMetadata> getCandidates(final int numCandidates)
   {
-    List<DruidServerMetadata> candidates = new ArrayList<>();
+    List<DruidServerMetadata> candidates;
     synchronized (this) {
       if (numCandidates > 0) {
-        candidates.addAll(
-          strategy.pick(historicalServers, segment.get(), numCandidates)
-              .stream()
-              .map(server -> server.getServer().getMetadata())
-              .collect(Collectors.toList())
-        );
+        candidates = new ArrayList<>(numCandidates);
+        strategy.pick(historicalServers, segment.get(), numCandidates)
+            .stream()
+            .map(server -> server.getServer().getMetadata())
+            .forEach(candidates::add);
 
         if (candidates.size() < numCandidates) {
-          candidates.addAll(
-            strategy.pick(realtimeServers, segment.get(), numCandidates - candidates.size())
-                .stream()
-                .map(server -> server.getServer().getMetadata())
-                .collect(Collectors.toList())
-          );
+          strategy.pick(realtimeServers, segment.get(), numCandidates - candidates.size())
+              .stream()
+              .map(server -> server.getServer().getMetadata())
+              .forEach(candidates::add);
         }
       } else {
+        candidates = new ArrayList<>();
         // return all servers as candidates
-        candidates.addAll(
-          historicalServers.values()
-              .stream()
-              .flatMap(Collection::stream)
-              .map(server -> server.getServer().getMetadata())
-              .collect(Collectors.toList())
-        );
+        historicalServers.values()
+            .stream()
+            .flatMap(Collection::stream)
+            .map(server -> server.getServer().getMetadata())
+            .forEach(candidates::add);
 
-        candidates.addAll(
-          realtimeServers.values()
-              .stream()
-              .flatMap(Collection::stream)
-              .map(server -> server.getServer().getMetadata())
-              .collect(Collectors.toList())
-        );
+        realtimeServers.values()
+            .stream()
+            .flatMap(Collection::stream)
+            .map(server -> server.getServer().getMetadata())
+            .forEach(candidates::add);
       }
 
       return candidates;

@@ -21,7 +21,6 @@ package io.druid.client.selector;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
-import com.google.common.primitives.Ints;
 import io.druid.timeline.DataSegment;
 
 import java.util.Collections;
@@ -32,8 +31,7 @@ import java.util.Set;
 public class ConnectionCountServerSelectorStrategy implements ServerSelectorStrategy
 {
   private static final Comparator<QueryableDruidServer> comparator =
-      (QueryableDruidServer left, QueryableDruidServer right) ->
-          Ints.compare(left.getClient().getNumOpenConnections(), right.getClient().getNumOpenConnections());
+      Comparator.comparingInt(value -> value.getClient().getNumOpenConnections());
 
   @Override
   public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
