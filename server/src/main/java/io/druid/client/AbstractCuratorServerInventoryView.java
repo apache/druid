@@ -156,14 +156,7 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
           {
             log.info("Inventory Initialized");
             runSegmentCallbacks(
-                new Function<SegmentCallback, CallbackAction>()
-                {
-                  @Override
-                  public CallbackAction apply(SegmentCallback input)
-                  {
-                    return input.segmentViewInitialized();
-                  }
-                }
+                (SegmentCallback input) -> input.segmentViewInitialized()
             );
           }
         }
@@ -232,15 +225,10 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
   {
     for (final Map.Entry<SegmentCallback, Executor> entry : segmentCallbacks.entrySet()) {
       entry.getValue().execute(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              if (CallbackAction.UNREGISTER == fn.apply(entry.getKey())) {
-                segmentCallbackRemoved(entry.getKey());
-                segmentCallbacks.remove(entry.getKey());
-              }
+          () -> {
+            if (CallbackAction.UNREGISTER == fn.apply(entry.getKey())) {
+              segmentCallbackRemoved(entry.getKey());
+              segmentCallbacks.remove(entry.getKey());
             }
           }
       );
@@ -251,14 +239,9 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
   {
     for (final Map.Entry<ServerRemovedCallback, Executor> entry : serverRemovedCallbacks.entrySet()) {
       entry.getValue().execute(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              if (CallbackAction.UNREGISTER == entry.getKey().serverRemoved(server)) {
-                serverRemovedCallbacks.remove(entry.getKey());
-              }
+          () -> {
+            if (CallbackAction.UNREGISTER == entry.getKey().serverRemoved(server)) {
+              serverRemovedCallbacks.remove(entry.getKey());
             }
           }
       );
@@ -285,14 +268,7 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
     container.addDataSegment(inventory.getIdentifier(), inventory);
 
     runSegmentCallbacks(
-        new Function<SegmentCallback, CallbackAction>()
-        {
-          @Override
-          public CallbackAction apply(SegmentCallback input)
-          {
-            return input.segmentAdded(container.getMetadata(), inventory);
-          }
-        }
+        (input) -> input.segmentAdded(container.getMetadata(), inventory)
     );
   }
 
@@ -314,14 +290,7 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
     container.removeDataSegment(inventoryKey);
 
     runSegmentCallbacks(
-        new Function<SegmentCallback, CallbackAction>()
-        {
-          @Override
-          public CallbackAction apply(SegmentCallback input)
-          {
-            return input.segmentRemoved(container.getMetadata(), segment);
-          }
-        }
+        (input) -> input.segmentRemoved(container.getMetadata(), segment)
     );
   }
 

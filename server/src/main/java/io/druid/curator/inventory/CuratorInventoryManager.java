@@ -19,7 +19,6 @@
 
 package io.druid.curator.inventory;
 
-import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
@@ -106,7 +105,8 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
       childrenCache = cacheFactory.make(curatorFramework, config.getContainerPath());
     }
 
-    childrenCache.getListenable().addListener(new ContainerCacheListener());
+    ContainerCacheListener containerCacheListener = new ContainerCacheListener();
+    childrenCache.getListenable().addListener(containerCacheListener);
 
     try {
       childrenCache.start(PathChildrenCache.StartMode.POST_INITIALIZED_EVENT);
@@ -121,6 +121,11 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
         }
       }
       throw e;
+    }
+
+    // Block start() till PathChildrenCache is fully loaded
+    while (!containerCacheListener.doneInitializing) {
+      Thread.sleep(500);
     }
   }
 
@@ -164,14 +169,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
   {
     return Iterables.transform(
         containers.values(),
-        new Function<ContainerHolder, ContainerClass>()
-        {
-          @Override
-          public ContainerClass apply(ContainerHolder input)
-          {
-            return input.getContainer();
-          }
-        }
+        (ContainerHolder input) -> input.getContainer()
     );
   }
 
@@ -197,7 +195,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
         PathChildrenCache cache
     )
     {
-      this.container = new AtomicReference<ContainerClass>(container);
+      this.container = new AtomicReference<>(container);
       this.cache = cache;
     }
 

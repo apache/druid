@@ -27,7 +27,6 @@ import io.druid.curator.CuratorTestBase;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.CuratorEvent;
 import org.apache.curator.framework.api.CuratorEventType;
-import org.apache.curator.framework.api.CuratorListener;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.Watcher;
 import org.junit.After;
@@ -62,7 +61,7 @@ public class CuratorInventoryManagerTest extends CuratorTestBase
   public void testSanity() throws Exception
   {
     final MapStrategy strategy = new MapStrategy();
-    CuratorInventoryManager<Map<String, Integer>, Integer> manager = new CuratorInventoryManager<Map<String, Integer>, Integer>(
+    CuratorInventoryManager<Map<String, Integer>, Integer> manager = new CuratorInventoryManager<>(
         curator, new StringInventoryManagerConfig("/container", "/inventory"), exec, strategy
     );
 
@@ -114,14 +113,10 @@ public class CuratorInventoryManagerTest extends CuratorTestBase
 
     final CountDownLatch latch = new CountDownLatch(1);
     curator.getCuratorListenable().addListener(
-        new CuratorListener() {
-          @Override
-          public void eventReceived(CuratorFramework client, CuratorEvent event) throws Exception
-          {
-            if (event.getType() == CuratorEventType.WATCHED
-                && event.getWatchedEvent().getState() == Watcher.Event.KeeperState.Disconnected) {
-              latch.countDown();
-            }
+        (CuratorFramework client, CuratorEvent event) -> {
+          if (event.getType() == CuratorEventType.WATCHED
+              && event.getWatchedEvent().getState() == Watcher.Event.KeeperState.Disconnected) {
+            latch.countDown();
           }
         }
     );
@@ -245,11 +240,6 @@ public class CuratorInventoryManagerTest extends CuratorTestBase
     private void setNewContainerLatch(CountDownLatch newContainerLatch)
     {
       this.newContainerLatch = newContainerLatch;
-    }
-
-    private void setDeadContainerLatch(CountDownLatch deadContainerLatch)
-    {
-      this.deadContainerLatch = deadContainerLatch;
     }
 
     private void setNewInventoryLatch(CountDownLatch newInventoryLatch)
