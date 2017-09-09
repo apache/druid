@@ -205,7 +205,9 @@ public class JettyServerModule extends JerseyServletModule
       log.info("Creating https connector with port [%d]", node.getTlsPort());
       final SslContextFactory sslContextFactory;
       if (sslContextFactoryBinding == null) {
-        sslContextFactory = new SslContextFactory(tlsServerConfig.getKeyStorePath());
+        // Never trust all certificates by default
+        sslContextFactory = new SslContextFactory(false);
+        sslContextFactory.setKeyStorePath(tlsServerConfig.getKeyStorePath());
         sslContextFactory.setKeyStoreType(tlsServerConfig.getKeyStoreType());
         sslContextFactory.setKeyStorePassword(tlsServerConfig.getKeyStorePasswordProvider().getPassword());
         sslContextFactory.setCertAlias(tlsServerConfig.getCertAlias());

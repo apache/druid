@@ -30,7 +30,7 @@ values for the below mentioned configs among others provided by Java implementat
 |`druid.server.https.keyStoreType`|The type of the key store.|none|yes|
 |`druid.server.https.certAlias`|Alias of TLS/SSL certificate for the connector.|none|yes|
 |`druid.server.https.keyStorePassword`|The [Password Provider](../operations/password-provider.html) or String password for the Key Store.|none|yes|
-|`druid.server.https.keyManagerFactoryAlgorithm`|Algorithm to use for creating KeyManager, more details [here](https://docs.oracle.com/javase/7/docs/technotes/guides/security/jsse/JSSERefGuide.html#KeyManager).|`KeyManagerFactory.getDefaultAlgorithm()`|no|
+|`druid.server.https.keyManagerFactoryAlgorithm`|Algorithm to use for creating KeyManager, more details [here](https://docs.oracle.com/javase/7/docs/technotes/guides/security/jsse/JSSERefGuide.html#KeyManager).|`javax.net.ssl.KeyManagerFactory.getDefaultAlgorithm()`|no|
 |`druid.server.https.keyManagerPassword`|The [Password Provider](../operations/password-provider.html) or String password for the Key Manager.|none|no|
 
 # Druid's internal communication over TLS
