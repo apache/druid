@@ -286,9 +286,11 @@ public class ParallelCombiner<KeyType>
     //  o   o   o
     // / \ / \ / \
     // o o o o o o
+    //
+    // We can expect that the aggregates can be combined as early as possible because the tree is built in a bottom-up
+    // manner.
 
-    int i;
-    for (i = 0; i < numChildLevelIterators; i += combineDegree) {
+    for (int i = 0; i < numChildLevelIterators; i += combineDegree) {
       if (i < numChildLevelIterators - 1) {
         final List<? extends CloseableIterator<Entry<KeyType>>> subIterators = childIterators.subList(
             i,

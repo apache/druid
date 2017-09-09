@@ -66,6 +66,8 @@ import io.druid.segment.LongColumnSelector;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
+import it.unimi.dsi.fastutil.ints.IntArrays;
+import it.unimi.dsi.fastutil.ints.IntComparator;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.joda.time.DateTime;
@@ -81,6 +83,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 // this class contains shared code between GroupByMergingQueryRunnerV2 and GroupByRowProcessor
 public class RowBasedGrouperHelper
@@ -939,7 +943,7 @@ public class RowBasedGrouperHelper
   private static class RowBasedKeySerde implements Grouper.KeySerde<RowBasedGrouperHelper.RowBasedKey>
   {
     private static final int DICTIONARY_INITIAL_CAPACITY = 10000;
-    private static final int UNKNOWN_DICTIONARY_KEY = -1;
+    private static final int UNKNOWN_DICTIONARY_ID = -1;
 
     private final boolean includeTimestamp;
     private final boolean sortByDimsFirst;
@@ -962,6 +966,7 @@ public class RowBasedGrouperHelper
     private long currentEstimatedSize = 0;
 
     // dictionary id -> its position if it were sorted by dictionary value
+    // This is mutable only when runtime dictionary generation is enabled.
     private int[] sortableIds = null;
 
     RowBasedKeySerde(
@@ -985,7 +990,7 @@ public class RowBasedGrouperHelper
       this.reverseDictionary = enableRuntimeDictionaryGeneration ?
                                new Object2IntOpenHashMap<>(DICTIONARY_INITIAL_CAPACITY) :
                                new Object2IntOpenHashMap<>(dictionary.size());
-      this.reverseDictionary.defaultReturnValue(UNKNOWN_DICTIONARY_KEY);
+      this.reverseDictionary.defaultReturnValue(UNKNOWN_DICTIONARY_ID);
       this.maxDictionarySize = maxDictionarySize;
       this.serdeHelpers = makeSerdeHelpers(limitSpec != null, enableRuntimeDictionaryGeneration);
       this.keySize = (includeTimestamp ? Longs.BYTES : 0) + getTotalKeySize();
@@ -1107,7 +1112,6 @@ public class RowBasedGrouperHelper
             {
               final int cmp = compareDimsInBuffersForNullFudgeTimestamp(
                   serdeHelpers,
-                  dimCount,
                   lhsBuffer,
                   rhsBuffer,
                   lhsPosition,
@@ -1134,7 +1138,6 @@ public class RowBasedGrouperHelper
 
               return compareDimsInBuffersForNullFudgeTimestamp(
                   serdeHelpers,
-                  dimCount,
                   lhsBuffer,
                   rhsBuffer,
                   lhsPosition,
@@ -1499,7 +1502,7 @@ public class RowBasedGrouperHelper
       private int addToDictionary(final String s)
       {
         int idx = reverseDictionary.getInt(s);
-        if (idx == UNKNOWN_DICTIONARY_KEY) {
+        if (idx == UNKNOWN_DICTIONARY_ID) {
           final long additionalEstimatedSize = estimateStringKeySize(s);
           if (currentEstimatedSize + additionalEstimatedSize > maxDictionarySize) {
             return -1;
@@ -1531,7 +1534,7 @@ public class RowBasedGrouperHelper
         final String stringKey = (String) key.getKey()[idx];
 
         final int dictIndex = reverseDictionary.getInt(stringKey);
-        if (dictIndex == UNKNOWN_DICTIONARY_KEY) {
+        if (dictIndex == UNKNOWN_DICTIONARY_ID) {
           throw new ISE("Cannot find key[%s] from dictionary", stringKey);
         }
         keyBuffer.putInt(dictIndex);
@@ -1698,15 +1701,14 @@ public class RowBasedGrouperHelper
 
   private static int compareDimsInBuffersForNullFudgeTimestamp(
       List<RowBasedKeySerdeHelper> serdeHelpers,
-      int dimCount,
       ByteBuffer lhsBuffer,
       ByteBuffer rhsBuffer,
       int lhsPosition,
       int rhsPosition
   )
   {
-    for (int i = 0; i < dimCount; i++) {
-      final int cmp = serdeHelpers.get(i).compare(
+    for (RowBasedKeySerdeHelper serdeHelper : serdeHelpers) {
+      final int cmp = serdeHelper.compare(
           lhsBuffer,
           rhsBuffer,
           lhsPosition + Longs.BYTES,
