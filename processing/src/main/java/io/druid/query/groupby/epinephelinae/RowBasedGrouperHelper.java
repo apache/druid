@@ -947,7 +947,7 @@ public class RowBasedGrouperHelper
     private final int dimCount;
     private final int keySize;
     private final ByteBuffer keyBuffer;
-    private final List<RowBasedKeySerdeHelper> serdeHelpers;
+    private final RowBasedKeySerdeHelper[] serdeHelpers;
     private final DefaultLimitSpec limitSpec;
     private final List<ValueType> valueTypes;
 
@@ -1057,7 +1057,7 @@ public class RowBasedGrouperHelper
         dimStart = 0;
       }
       for (int i = dimStart; i < key.getKey().length; i++) {
-        if (!serdeHelpers.get(i - dimStart).putToKeyBuffer(key, i)) {
+        if (!serdeHelpers[i - dimStart].putToKeyBuffer(key, i)) {
           return null;
         }
       }
@@ -1086,7 +1086,7 @@ public class RowBasedGrouperHelper
 
       for (int i = dimStart; i < key.length; i++) {
         // Writes value from buffer to key[i]
-        serdeHelpers.get(i - dimStart).getFromByteBuffer(buffer, dimsPosition, i, key);
+        serdeHelpers[i - dimStart].getFromByteBuffer(buffer, dimsPosition, i, key);
       }
 
       return new RowBasedKey(key);
@@ -1149,7 +1149,7 @@ public class RowBasedGrouperHelper
           public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
           {
             for (int i = 0; i < dimCount; i++) {
-              final int cmp = serdeHelpers.get(i).compare(
+              final int cmp = serdeHelpers[i].compare(
                   lhsBuffer,
                   rhsBuffer,
                   lhsPosition,
@@ -1185,7 +1185,7 @@ public class RowBasedGrouperHelper
         needsReverse = orderSpec.getDirection() != OrderByColumnSpec.Direction.ASCENDING;
         int dimIndex = OrderByColumnSpec.getDimIndexForOrderBy(orderSpec, dimensions);
         if (dimIndex >= 0) {
-          RowBasedKeySerdeHelper serdeHelper = serdeHelpers.get(dimIndex);
+          RowBasedKeySerdeHelper serdeHelper = serdeHelpers[dimIndex];
           orderByHelpers.add(serdeHelper);
           orderByIndices.add(dimIndex);
           needsReverses.add(needsReverse);
@@ -1214,7 +1214,7 @@ public class RowBasedGrouperHelper
 
       for (int i = 0; i < dimCount; i++) {
         if (!orderByIndices.contains(i)) {
-          otherDimHelpers.add(serdeHelpers.get(i));
+          otherDimHelpers.add(serdeHelpers[i]);
           needsReverses.add(false); // default to Ascending order if dim is not in an orderby spec
         }
       }
@@ -1328,7 +1328,7 @@ public class RowBasedGrouperHelper
       return size;
     }
 
-    private List<RowBasedKeySerdeHelper> makeSerdeHelpers(
+    private RowBasedKeySerdeHelper[] makeSerdeHelpers(
         boolean pushLimitDown,
         boolean enableRuntimeDictionaryGeneration
     )
@@ -1357,7 +1357,7 @@ public class RowBasedGrouperHelper
         helpers.add(helper);
       }
 
-      return helpers;
+      return helpers.toArray(new RowBasedKeySerdeHelper[helpers.size()]);
     }
 
     private RowBasedKeySerdeHelper makeSerdeHelper(
@@ -1696,7 +1696,7 @@ public class RowBasedGrouperHelper
   }
 
   private static int compareDimsInBuffersForNullFudgeTimestamp(
-      List<RowBasedKeySerdeHelper> serdeHelpers,
+      RowBasedKeySerdeHelper[] serdeHelpers,
       ByteBuffer lhsBuffer,
       ByteBuffer rhsBuffer,
       int lhsPosition,
