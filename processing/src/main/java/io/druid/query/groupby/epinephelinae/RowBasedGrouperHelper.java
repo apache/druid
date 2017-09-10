@@ -961,9 +961,9 @@ public class RowBasedGrouperHelper
 
     private long currentEstimatedSize = 0;
 
-    // dictionary id -> its position if it were sorted by dictionary value
+    // dictionary id -> rank of the sorted dictionary
     // This is mutable only when runtime dictionary generation is enabled.
-    private int[] sortableIds = null;
+    private int[] rankOfDictionaryIds = null;
 
     RowBasedKeySerde(
         final boolean includeTimestamp,
@@ -1020,9 +1020,9 @@ public class RowBasedGrouperHelper
       }
       Arrays.sort(dictAndIds, Comparator.comparing(pair -> pair.lhs));
 
-      sortableIds = new int[dictionarySize];
+      rankOfDictionaryIds = new int[dictionarySize];
       for (int i = 0; i < dictionarySize; i++) {
-        sortableIds[dictAndIds[i].rhs] = i;
+        rankOfDictionaryIds[dictAndIds[i].rhs] = i;
       }
     }
 
@@ -1095,7 +1095,7 @@ public class RowBasedGrouperHelper
     @Override
     public Grouper.BufferComparator bufferComparator()
     {
-      if (sortableIds == null) {
+      if (rankOfDictionaryIds == null) {
         initializeSortableIds();
       }
 
@@ -1314,7 +1314,7 @@ public class RowBasedGrouperHelper
       if (enableRuntimeDictionaryGeneration) {
         dictionary.clear();
         reverseDictionary.clear();
-        sortableIds = null;
+        rankOfDictionaryIds = null;
         currentEstimatedSize = 0;
       }
     }
@@ -1431,8 +1431,8 @@ public class RowBasedGrouperHelper
         this.keyBufferPosition = keyBufferPosition;
         if (!pushLimitDown) {
           bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> Ints.compare(
-              sortableIds[lhsBuffer.getInt(lhsPosition + keyBufferPosition)],
-              sortableIds[rhsBuffer.getInt(rhsPosition + keyBufferPosition)]
+              rankOfDictionaryIds[lhsBuffer.getInt(lhsPosition + keyBufferPosition)],
+              rankOfDictionaryIds[rhsBuffer.getInt(rhsPosition + keyBufferPosition)]
           );
         } else {
           final StringComparator realComparator = stringComparator == null ?
