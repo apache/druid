@@ -41,6 +41,7 @@ public class Plumbers
 
   public static void addNextRow(
       final Supplier<Committer> committerSupplier,
+      final String sequenceName,
       final Firehose firehose,
       final Plumber plumber,
       final boolean reportParseExceptions,
@@ -73,7 +74,7 @@ public class Plumbers
 
     final int numRows;
     try {
-      numRows = plumber.add(inputRow, committerSupplier);
+      numRows = plumber.add(inputRow, sequenceName, committerSupplier);
     }
     catch (IndexSizeExceededException e) {
       // Shouldn't happen if this is only being called by a single thread.

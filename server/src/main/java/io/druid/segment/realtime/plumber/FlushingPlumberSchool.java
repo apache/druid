@@ -34,6 +34,7 @@ import io.druid.segment.IndexMergerV9;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireDepartmentMetrics;
+import io.druid.segment.realtime.appenderator.SegmentAllocator;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.Duration;
 
@@ -102,6 +103,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
 
   @Override
   public Plumber findPlumber(
+      final SegmentAllocator segmentAllocator,
       final DataSchema schema,
       final RealtimeTuningConfig config,
       final FireDepartmentMetrics metrics
@@ -122,7 +124,8 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
         indexIO,
         cache,
         cacheConfig,
-        objectMapper
+        objectMapper,
+        segmentAllocator
     );
   }
 

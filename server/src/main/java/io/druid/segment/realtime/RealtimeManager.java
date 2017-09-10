@@ -338,6 +338,7 @@ public class RealtimeManager implements QuerySegmentWalker
 
       log.info("FirehoseV2 started");
       final Supplier<Committer> committerSupplier = Committers.supplierFromFirehoseV2(firehose);
+      final String sequenceName = generateSequenceName();
       boolean haveRow = true;
       while (haveRow) {
         if (Thread.interrupted() || stopping) {
@@ -348,7 +349,7 @@ public class RealtimeManager implements QuerySegmentWalker
         try {
           inputRow = firehose.currRow();
           if (inputRow != null) {
-            numRows = plumber.add(inputRow, committerSupplier);
+            numRows = plumber.add(inputRow, sequenceName, committerSupplier);
             if (numRows < 0) {
               metrics.incrementThrownAway();
               log.debug("Throwing away event[%s]", inputRow);
@@ -379,13 +380,19 @@ public class RealtimeManager implements QuerySegmentWalker
     private boolean runFirehose(Firehose firehose)
     {
       final Supplier<Committer> committerSupplier = Committers.supplierFromFirehose(firehose);
+      final String sequenceName = generateSequenceName();
       while (firehose.hasMore()) {
         if (Thread.interrupted() || stopping) {
           return false;
         }
-        Plumbers.addNextRow(committerSupplier, firehose, plumber, config.isReportParseExceptions(), metrics);
+        Plumbers.addNextRow(committerSupplier, sequenceName, firehose, plumber, config.isReportParseExceptions(), metrics);
       }
       return true;
+    }
+
+    private String generateSequenceName()
+    {
+      return "index_" + fireDepartment.getDataSchema().getDataSource() + "_" + config.getShardSpec().getPartitionNum();
     }
 
     public <T> QueryRunner<T> getQueryRunner(Query<T> query)

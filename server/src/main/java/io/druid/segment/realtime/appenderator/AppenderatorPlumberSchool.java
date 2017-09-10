@@ -55,6 +55,7 @@ public class AppenderatorPlumberSchool implements PlumberSchool
 
   @Override
   public Plumber findPlumber(
+      final SegmentAllocator segmentAllocator,
       final DataSchema schema,
       final RealtimeTuningConfig config,
       final FireDepartmentMetrics metrics

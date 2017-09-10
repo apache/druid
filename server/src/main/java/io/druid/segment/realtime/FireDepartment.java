@@ -28,6 +28,8 @@ import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.IngestionSpec;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.RealtimeTuningConfig;
+import io.druid.segment.realtime.appenderator.SegmentAllocator;
+import io.druid.segment.realtime.appenderator.SpecBasedSegmentAllocator;
 import io.druid.segment.realtime.plumber.Plumber;
 
 import java.io.IOException;
@@ -91,7 +93,8 @@ public class FireDepartment extends IngestionSpec<RealtimeIOConfig, RealtimeTuni
 
   public Plumber findPlumber()
   {
-    return ioConfig.getPlumberSchool().findPlumber(dataSchema, tuningConfig, metrics);
+    final SegmentAllocator segmentAllocator = new SpecBasedSegmentAllocator(dataSchema, tuningConfig);
+    return ioConfig.getPlumberSchool().findPlumber(segmentAllocator, dataSchema, tuningConfig, metrics);
   }
 
   public boolean checkFirehoseV2()

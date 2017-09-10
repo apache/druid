@@ -35,6 +35,7 @@ import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.SegmentPublisher;
+import io.druid.segment.realtime.appenderator.SegmentAllocator;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 
 import java.util.concurrent.ExecutorService;
@@ -89,6 +90,7 @@ public class RealtimePlumberSchool implements PlumberSchool
 
   @Override
   public Plumber findPlumber(
+      final SegmentAllocator segmentAllocator,
       final DataSchema schema,
       final RealtimeTuningConfig config,
       final FireDepartmentMetrics metrics
@@ -111,7 +113,8 @@ public class RealtimePlumberSchool implements PlumberSchool
         indexIO,
         cache,
         cacheConfig,
-        objectMapper
+        objectMapper,
+        segmentAllocator
     );
   }
 

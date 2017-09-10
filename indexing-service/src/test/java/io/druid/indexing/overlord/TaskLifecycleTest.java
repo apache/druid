@@ -95,6 +95,7 @@ import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.RealtimeTuningConfig;
+import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentMover;
@@ -107,6 +108,8 @@ import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentTest;
+import io.druid.segment.realtime.appenderator.SegmentAllocator;
+import io.druid.segment.realtime.appenderator.TestSegmentAllocator;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.DruidNode;
@@ -119,6 +122,7 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Hours;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -1182,11 +1186,12 @@ public class TaskLifecycleTest
   private RealtimeIndexTask newRealtimeIndexTask()
   {
     String taskId = StringUtils.format("rt_task_%s", System.currentTimeMillis());
+    GranularitySpec granularitySpec = new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null);
     DataSchema dataSchema = new DataSchema(
         "test_ds",
         null,
         new AggregatorFactory[]{new LongSumAggregatorFactory("count", "rows")},
-        new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
+        granularitySpec,
         mapper
     );
     RealtimeIOConfig realtimeIOConfig = new RealtimeIOConfig(
@@ -1218,6 +1223,13 @@ public class TaskLifecycleTest
         new TaskResource(taskId, 1),
         fireDepartment,
         null
-    );
+    ) {
+      @Override
+      protected SegmentAllocator createSegmentAllocator(TaskToolbox toolbox)
+      {
+        String version = DateTime.now(DateTimeZone.UTC).toString();
+        return new TestSegmentAllocator(dataSchema.getDataSource(), version, granularitySpec.getSegmentGranularity());
+      }
+    };
   }
 }

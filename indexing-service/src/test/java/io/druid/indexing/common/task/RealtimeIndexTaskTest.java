@@ -33,7 +33,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 //CHECKSTYLE.OFF: Regexp
 import com.metamx.common.logger.Logger;
-//CHECKSTYLE.ON: Regexp
+
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.LoggingEmitter;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -100,11 +100,14 @@ import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.RealtimeTuningConfig;
+import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.segment.realtime.FireDepartment;
+import io.druid.segment.realtime.appenderator.SegmentAllocator;
+import io.druid.segment.realtime.appenderator.TestSegmentAllocator;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.segment.realtime.plumber.ServerTimeRejectionPolicyFactory;
@@ -115,6 +118,7 @@ import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -874,11 +878,12 @@ public class RealtimeIndexTaskTest
   private RealtimeIndexTask makeRealtimeTask(final String taskId, boolean reportParseExceptions, long handoffTimeout)
   {
     ObjectMapper objectMapper = new DefaultObjectMapper();
+    GranularitySpec granularitySpec = new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null);
     DataSchema dataSchema = new DataSchema(
         "test_ds",
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows"), new LongSumAggregatorFactory("met1", "met1")},
-        new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
+        granularitySpec,
         objectMapper
     );
     RealtimeIOConfig realtimeIOConfig = new RealtimeIOConfig(
@@ -914,6 +919,13 @@ public class RealtimeIndexTaskTest
       protected boolean isFirehoseDrainableByClosing(FirehoseFactory firehoseFactory)
       {
         return true;
+      }
+
+      @Override
+      protected SegmentAllocator createSegmentAllocator(TaskToolbox toolbox)
+      {
+        String version = DateTime.now(DateTimeZone.UTC).toString();
+        return new TestSegmentAllocator(dataSchema.getDataSource(), version, granularitySpec.getSegmentGranularity());
       }
     };
   }

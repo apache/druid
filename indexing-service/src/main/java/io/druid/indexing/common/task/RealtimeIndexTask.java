@@ -34,7 +34,7 @@ import io.druid.data.input.FirehoseFactory;
 import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.discovery.LookupNodeService;
-import io.druid.indexing.common.TaskLock;
+import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
@@ -57,6 +57,7 @@ import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.RealtimeMetricsMonitor;
 import io.druid.segment.realtime.SegmentPublisher;
+import io.druid.segment.realtime.appenderator.SegmentAllocator;
 import io.druid.segment.realtime.firehose.ClippedFirehoseFactory;
 import io.druid.segment.realtime.firehose.EventReceiverFirehoseFactory;
 import io.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
@@ -65,12 +66,10 @@ import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
 import io.druid.segment.realtime.plumber.Plumbers;
 import io.druid.segment.realtime.plumber.RealtimePlumberSchool;
-import io.druid.segment.realtime.plumber.VersioningPolicy;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
 
 import java.io.File;
 import java.io.IOException;
@@ -261,35 +260,10 @@ public class RealtimeIndexTask extends AbstractTask
       }
     };
 
-    // NOTE: getVersion will block if there is lock contention, which will block plumber.getSink
-    // NOTE: (and thus the firehose)
-
-    // Shouldn't usually happen, since we don't expect people to submit tasks that intersect with the
-    // realtime window, but if they do it can be problematic. If we decide to care, we can use more threads in
-    // the plumber such that waiting for the coordinator doesn't block data processing.
-    final VersioningPolicy versioningPolicy = new VersioningPolicy()
-    {
-      @Override
-      public String getVersion(final Interval interval)
-      {
-        try {
-          // Side effect: Calling getVersion causes a lock to be acquired
-          final TaskLock myLock = toolbox.getTaskActionClient()
-                                         .submit(new LockAcquireAction(interval, lockTimeoutMs));
-
-          return myLock.getVersion();
-        }
-        catch (IOException e) {
-          throw Throwables.propagate(e);
-        }
-      }
-    };
-
     DataSchema dataSchema = spec.getDataSchema();
     RealtimeIOConfig realtimeIOConfig = spec.getIOConfig();
     RealtimeTuningConfig tuningConfig = spec.getTuningConfig()
-                                            .withBasePersistDirectory(toolbox.getPersistDir())
-                                            .withVersioningPolicy(versioningPolicy);
+                                            .withBasePersistDirectory(toolbox.getPersistDir());
 
     final FireDepartment fireDepartment = new FireDepartment(
         dataSchema,
@@ -304,6 +278,8 @@ public class RealtimeIndexTask extends AbstractTask
         )
     );
     this.queryRunnerFactoryConglomerate = toolbox.getQueryRunnerFactoryConglomerate();
+
+    final SegmentAllocator segmentAllocator = createSegmentAllocator(toolbox);
 
     // NOTE: This pusher selects path based purely on global configuration and the DataSegment, which means
     // NOTE: that redundant realtime tasks will upload to the same location. This can cause index.zip
@@ -325,7 +301,7 @@ public class RealtimeIndexTask extends AbstractTask
         toolbox.getObjectMapper()
     );
 
-    this.plumber = plumberSchool.findPlumber(dataSchema, tuningConfig, metrics);
+    this.plumber = plumberSchool.findPlumber(segmentAllocator, dataSchema, tuningConfig, metrics);
 
     Supplier<Committer> committerSupplier = null;
     final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
@@ -367,10 +343,13 @@ public class RealtimeIndexTask extends AbstractTask
         }
       }
 
+      final String sequenceName = getId();
+
       // Time to read data!
       while (firehose != null && (!gracefullyStopped || firehoseDrainableByClosing) && firehose.hasMore()) {
         Plumbers.addNextRow(
             committerSupplier,
+            sequenceName,
             firehose,
             plumber,
             tuningConfig.isReportParseExceptions(),
@@ -530,6 +509,11 @@ public class RealtimeIndexTask extends AbstractTask
                && isFirehoseDrainableByClosing(((TimedShutoffFirehoseFactory) firehoseFactory).getDelegateFactory()))
            || (firehoseFactory instanceof ClippedFirehoseFactory
                && isFirehoseDrainableByClosing(((ClippedFirehoseFactory) firehoseFactory).getDelegate()));
+  }
+
+  protected SegmentAllocator createSegmentAllocator(TaskToolbox toolbox)
+  {
+    return new ActionBasedSegmentAllocator(toolbox.getTaskActionClient(), spec.getDataSchema());
   }
 
   public static class TaskActionSegmentPublisher implements SegmentPublisher

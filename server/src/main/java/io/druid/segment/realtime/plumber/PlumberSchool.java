@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireDepartmentMetrics;
+import io.druid.segment.realtime.appenderator.SegmentAllocator;
 
 /**
  */
@@ -39,6 +40,11 @@ public interface PlumberSchool
    *
    * @return returns a plumber
    */
-  public Plumber findPlumber(DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics);
+  Plumber findPlumber(
+      SegmentAllocator segmentAllocator,
+      DataSchema schema,
+      RealtimeTuningConfig config,
+      FireDepartmentMetrics metrics
+  );
 
 }

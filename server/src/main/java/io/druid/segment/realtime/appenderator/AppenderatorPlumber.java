@@ -145,7 +145,7 @@ public class AppenderatorPlumber implements Plumber
   }
 
   @Override
-  public int add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
+  public int add(InputRow row, String sequenceName, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
   {
     final SegmentIdentifier identifier = getSegmentIdentifier(row.getTimestampFromEpoch());
     if (identifier == null) {

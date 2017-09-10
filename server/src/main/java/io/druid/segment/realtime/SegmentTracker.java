@@ -64,9 +64,7 @@ public class SegmentTracker
 
   private final SegmentAllocator segmentAllocator;
 
-  public SegmentTracker(
-      final SegmentAllocator segmentAllocator
-  )
+  public SegmentTracker(SegmentAllocator segmentAllocator)
   {
     this.segmentAllocator = segmentAllocator;
   }
@@ -182,18 +180,6 @@ public class SegmentTracker
 
 
         if (newSegment != null) {
-          /*
-          for (SegmentIdentifier identifier : appenderator.getSegments()) {
-            if (identifier.equals(newSegment)) {
-              throw new ISE(
-                  "WTF?! Allocated segment[%s] which conflicts with existing segment[%s].",
-                  newSegment,
-                  identifier
-              );
-            }
-          }
-          */
-
           log.info("New segment[%s] for sequenceName[%s].", newSegment, sequenceName);
           addSegment(sequenceName, newSegment);
         } else {

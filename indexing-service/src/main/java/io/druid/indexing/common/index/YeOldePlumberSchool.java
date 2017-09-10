@@ -46,6 +46,7 @@ import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.FireHydrant;
+import io.druid.segment.realtime.appenderator.SegmentAllocator;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
 import io.druid.segment.realtime.plumber.Sink;
@@ -93,6 +94,7 @@ public class YeOldePlumberSchool implements PlumberSchool
 
   @Override
   public Plumber findPlumber(
+      final SegmentAllocator segmentAllocator,
       final DataSchema schema,
       final RealtimeTuningConfig config,
       final FireDepartmentMetrics metrics
@@ -123,7 +125,7 @@ public class YeOldePlumberSchool implements PlumberSchool
       }
 
       @Override
-      public int add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
+      public int add(InputRow row, String sequenceName, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
       {
         Sink sink = getSink(row.getTimestampFromEpoch());
         if (sink == null) {

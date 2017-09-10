@@ -762,7 +762,7 @@ public class AppenderatorImpl implements Appenderator
 
       try {
         final SegmentIdentifier identifier = objectMapper.readValue(
-            new File(sinkDir, "identifier.json"),
+            new File(sinkDir, IDENTIFIER_FILE_NAME),
             SegmentIdentifier.class
         );
 

@@ -240,27 +240,6 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     return alertTimeout;
   }
 
-  public RealtimeTuningConfig withVersioningPolicy(VersioningPolicy policy)
-  {
-    return new RealtimeTuningConfig(
-        maxRowsInMemory,
-        intermediatePersistPeriod,
-        windowPeriod,
-        basePersistDirectory,
-        policy,
-        rejectionPolicyFactory,
-        maxPendingPersists,
-        shardSpec,
-        indexSpec,
-        true,
-        persistThreadPriority,
-        mergeThreadPriority,
-        reportParseExceptions,
-        handoffConditionTimeout,
-        alertTimeout
-    );
-  }
-
   public RealtimeTuningConfig withBasePersistDirectory(File dir)
   {
     return new RealtimeTuningConfig(

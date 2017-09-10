@@ -109,7 +109,8 @@ public class AppenderatorDriver implements Closeable
   }
 
   @VisibleForTesting
-  SegmentTracker getSegmentTracker() {
+  SegmentTracker getSegmentTracker()
+  {
     return segmentTracker;
   }
 
