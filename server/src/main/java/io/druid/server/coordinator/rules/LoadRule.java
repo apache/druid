@@ -288,7 +288,7 @@ public abstract class LoadRule implements Rule
 
   private static int dropForTier(
       final int numToDrop,
-      final MinMaxPriorityQueue<ServerHolder> holders,
+      final MinMaxPriorityQueue<ServerHolder> holdersInTier,
       final DataSegment segment
   )
   {
@@ -296,7 +296,7 @@ public abstract class LoadRule implements Rule
 
     final List<ServerHolder> droppedHolders = new LinkedList<>();
     while (numDropped < numToDrop) {
-      final ServerHolder holder = holders.pollLast();
+      final ServerHolder holder = holdersInTier.pollLast();
       if (holder == null) {
         log.warn("Wtf, holder was null?  I have no servers serving [%s]?", segment.getIdentifier());
         break;
@@ -309,7 +309,7 @@ public abstract class LoadRule implements Rule
       droppedHolders.add(holder);
     }
     // add back the holders
-    holders.addAll(droppedHolders);
+    holdersInTier.addAll(droppedHolders);
 
     return numDropped;
   }
