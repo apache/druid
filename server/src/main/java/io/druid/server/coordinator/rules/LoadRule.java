@@ -33,7 +33,6 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -103,8 +102,7 @@ public abstract class LoadRule implements Rule
           getFilteredHolders(
               tier,
               params.getDruidCluster(),
-              createLoadQueueSizeLimitingPredicate(params),
-              holder -> !holder.equals(primaryHolderToLoad)
+              createLoadQueueSizeLimitingPredicate(params).and(holder -> !holder.equals(primaryHolderToLoad))
           ),
           segment
       );
@@ -131,12 +129,10 @@ public abstract class LoadRule implements Rule
     }
   }
 
-  @SafeVarargs
   private static List<ServerHolder> getFilteredHolders(
       final String tier,
       final DruidCluster druidCluster,
-      final Predicate<ServerHolder> firstPredicate,
-      final Predicate<ServerHolder>... otherPredicates
+      final Predicate<ServerHolder> predicate
   )
   {
     final MinMaxPriorityQueue<ServerHolder> queue = druidCluster.getHistoricalsByTier(tier);
@@ -145,7 +141,6 @@ public abstract class LoadRule implements Rule
       return Collections.emptyList();
     }
 
-    final Predicate<ServerHolder> predicate = Arrays.stream(otherPredicates).reduce(firstPredicate, Predicate::and);
     return queue.stream().filter(predicate).collect(Collectors.toList());
   }
 
@@ -165,7 +160,11 @@ public abstract class LoadRule implements Rule
 
       final String tier = entry.getKey();
 
-      final List<ServerHolder> holders = getFilteredHolders(tier, params.getDruidCluster(), createLoadQueueSizeLimitingPredicate(params));
+      final List<ServerHolder> holders = getFilteredHolders(
+          tier,
+          params.getDruidCluster(),
+          createLoadQueueSizeLimitingPredicate(params)
+      );
       if (holders.isEmpty()) {
         continue;
       }
