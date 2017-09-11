@@ -33,8 +33,8 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -293,7 +293,7 @@ public abstract class LoadRule implements Rule
   {
     int numDropped = 0;
 
-    final List<ServerHolder> droppedHolders = new LinkedList<>();
+    final List<ServerHolder> droppedHolders = new ArrayList<>();
     while (numDropped < numToDrop) {
       final ServerHolder holder = holdersInTier.pollLast();
       if (holder == null) {
