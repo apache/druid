@@ -22,10 +22,15 @@ package io.druid.guice;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.metamx.http.client.HttpClient;
 import io.druid.client.coordinator.Coordinator;
 import io.druid.client.coordinator.CoordinatorSelectorConfig;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
+import io.druid.discovery.DruidLeaderClient;
+import io.druid.discovery.DruidNodeDiscoveryProvider;
+import io.druid.guice.annotations.Global;
+import io.druid.server.security.AuthenticatorHttpClientWrapper;
 
 /**
  */
@@ -46,5 +51,24 @@ public class CoordinatorDiscoveryModule implements Module
   )
   {
     return serverDiscoveryFactory.createSelector(config.getServiceName());
+  }
+
+  @Provides
+  @Coordinator
+  @ManageLifecycle
+  public DruidLeaderClient getLeaderHttpClient(
+      @Global HttpClient httpClient,
+      DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
+      @Coordinator ServerDiscoverySelector serverDiscoverySelector,
+      AuthenticatorHttpClientWrapper authenticatorHttpClientWrapper
+  )
+  {
+    return new DruidLeaderClient(
+        authenticatorHttpClientWrapper.getEscalatedClient(httpClient),
+        druidNodeDiscoveryProvider,
+        DruidNodeDiscoveryProvider.NODE_TYPE_COORDINATOR,
+        "/druid/coordinator/v1/leader",
+        serverDiscoverySelector
+    );
   }
 }

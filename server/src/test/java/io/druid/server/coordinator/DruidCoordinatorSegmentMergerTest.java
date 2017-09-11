@@ -457,12 +457,7 @@ public class DruidCoordinatorSegmentMergerTest
     EasyMock.replay(configManager);
 
     final List<List<DataSegment>> retVal = Lists.newArrayList();
-    final IndexingServiceClient indexingServiceClient = new IndexingServiceClient(
-        null,
-        null,
-        null,
-        new AuthenticatorHttpClientWrapper(new AllowAllAuthenticator())
-    )
+    final IndexingServiceClient indexingServiceClient = new IndexingServiceClient(null, null)
     {
       @Override
       public void mergeSegments(List<DataSegment> segmentsToMerge)

@@ -27,13 +27,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.metamx.http.client.HttpClient;
 import io.druid.client.DruidServer;
 import io.druid.client.selector.Server;
 import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscovery;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
-import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
@@ -117,7 +115,7 @@ public class TieredBrokerHostSelectorTest
     EasyMock.replay(druidNodeDiscoveryProvider);
 
     brokerSelector = new TieredBrokerHostSelector(
-        new TestRuleManager(null, null, null),
+        new TestRuleManager(null, null),
         new TieredBrokerConfig()
         {
           @Override
@@ -322,18 +320,11 @@ public class TieredBrokerHostSelectorTest
   private static class TestRuleManager extends CoordinatorRuleManager
   {
     public TestRuleManager(
-        @Global HttpClient httpClient,
         @Json ObjectMapper jsonMapper,
         Supplier<TieredBrokerConfig> config
     )
     {
-      super(
-          httpClient,
-          jsonMapper,
-          config,
-          null,
-          new AuthenticatorHttpClientWrapper(new AllowAllAuthenticator())
-      );
+      super(jsonMapper, config, null);
     }
 
     @Override

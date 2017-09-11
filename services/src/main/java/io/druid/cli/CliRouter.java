@@ -26,10 +26,12 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
+import com.metamx.http.client.HttpClient;
 import io.airlift.airline.Command;
 import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
+import io.druid.discovery.DruidLeaderClient;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
@@ -39,6 +41,7 @@ import io.druid.guice.ManageLifecycle;
 import io.druid.guice.QueryRunnerFactoryModule;
 import io.druid.guice.QueryableModule;
 import io.druid.guice.RouterProcessingModule;
+import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Self;
 import io.druid.guice.http.JettyHttpClientModule;
 import io.druid.java.util.common.logger.Logger;
@@ -54,6 +57,7 @@ import io.druid.server.router.TieredBrokerConfig;
 import io.druid.server.router.TieredBrokerHostSelector;
 import io.druid.server.router.TieredBrokerSelectorStrategiesProvider;
 import io.druid.server.router.TieredBrokerSelectorStrategy;
+import io.druid.server.security.AuthenticatorHttpClientWrapper;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
@@ -130,6 +134,24 @@ public class CliRouter extends ServerRunnable
           )
           {
             return factory.createSelector(config.getCoordinatorServiceName());
+          }
+
+          @Provides
+          @ManageLifecycle
+          public DruidLeaderClient getLeaderHttpClient(
+              @Global HttpClient httpClient,
+              DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
+              ServerDiscoverySelector serverDiscoverySelector,
+              AuthenticatorHttpClientWrapper authenticatorHttpClientWrapper
+          )
+          {
+            return new DruidLeaderClient(
+                authenticatorHttpClientWrapper.getEscalatedClient(httpClient),
+                druidNodeDiscoveryProvider,
+                DruidNodeDiscoveryProvider.NODE_TYPE_COORDINATOR,
+                "/druid/coordinator/v1/leader",
+                serverDiscoverySelector
+            );
           }
         },
         new LookupModule()
