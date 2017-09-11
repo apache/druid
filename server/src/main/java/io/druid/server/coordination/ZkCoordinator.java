@@ -26,7 +26,6 @@ import com.metamx.emitter.EmittingLogger;
 import io.druid.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
-import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.ChildData;
@@ -45,10 +44,9 @@ public class ZkCoordinator
 
   private final Object lock = new Object();
 
-  private final SimpleDataSegmentChangeHandler dataSegmentChangeHandler;
+  private final DataSegmentChangeHandler dataSegmentChangeHandler;
   private final ObjectMapper jsonMapper;
   private final ZkPathsConfig zkPaths;
-  private final SegmentLoaderConfig config;
   private final DruidServerMetadata me;
   private final CuratorFramework curator;
 
@@ -57,18 +55,16 @@ public class ZkCoordinator
 
   @Inject
   public ZkCoordinator(
-      SimpleDataSegmentChangeHandler dataSegmentChangeHandler,
+      SegmentLoadDropHandler loadDropHandler,
       ObjectMapper jsonMapper,
-      SegmentLoaderConfig config,
       ZkPathsConfig zkPaths,
       DruidServerMetadata me,
       CuratorFramework curator
   )
   {
-    this.dataSegmentChangeHandler = dataSegmentChangeHandler;
+    this.dataSegmentChangeHandler = loadDropHandler.getSyncLoadingHanlder();
     this.jsonMapper = jsonMapper;
     this.zkPaths = zkPaths;
-    this.config = config;
     this.me = me;
     this.curator = curator;
   }
@@ -92,7 +88,7 @@ public class ZkCoordinator
           loadQueueLocation,
           true,
           true,
-          Execs.multiThreaded(config.getNumLoadingThreads(), "ZkCoordinator-%s")
+          Execs.singleThreaded("ZkCoordinator")
       );
 
       try {

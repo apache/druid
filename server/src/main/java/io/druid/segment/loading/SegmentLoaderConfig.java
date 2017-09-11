@@ -53,6 +53,9 @@ public class SegmentLoaderConfig
   @JsonProperty
   private File infoDir = null;
 
+  @JsonProperty
+  private int statusQueueMaxSize = 100;
+
   public List<StorageLocationConfig> getLocations()
   {
     return locations;
@@ -94,6 +97,11 @@ public class SegmentLoaderConfig
     }
 
     return infoDir;
+  }
+
+  public int getStatusQueueMaxSize()
+  {
+    return statusQueueMaxSize;
   }
 
   public SegmentLoaderConfig withLocations(List<StorageLocationConfig> locations)
