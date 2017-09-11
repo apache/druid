@@ -43,8 +43,6 @@ import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.server.DruidNode;
 import io.druid.server.coordinator.rules.IntervalLoadRule;
 import io.druid.server.coordinator.rules.Rule;
-import io.druid.server.security.AuthenticatorHttpClientWrapper;
-import io.druid.server.security.AllowAllAuthenticator;
 import io.druid.server.initialization.ServerConfig;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;

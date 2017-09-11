@@ -44,7 +44,6 @@ import io.druid.server.DruidNode;
 import io.druid.server.initialization.BaseJettyTest;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
-import io.druid.server.security.AuthenticatorHttpClientWrapper;
 import org.easymock.EasyMock;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;

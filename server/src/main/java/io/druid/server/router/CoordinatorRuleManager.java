@@ -35,7 +35,6 @@ import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.coordinator.rules.Rule;
-import io.druid.server.security.AuthenticatorHttpClientWrapper;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;

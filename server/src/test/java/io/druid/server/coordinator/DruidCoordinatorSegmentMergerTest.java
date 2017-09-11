@@ -27,8 +27,6 @@ import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.common.config.JacksonConfigManager;
 import io.druid.java.util.common.Intervals;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
-import io.druid.server.security.AuthenticatorHttpClientWrapper;
-import io.druid.server.security.AllowAllAuthenticator;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import org.easymock.EasyMock;

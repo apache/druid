@@ -25,7 +25,6 @@ import io.druid.client.indexing.IndexingService;
 import io.druid.discovery.DruidLeaderClient;
 import io.druid.indexing.common.RetryPolicyFactory;
 import io.druid.indexing.common.task.Task;
-import io.druid.server.security.AuthenticatorHttpClientWrapper;
 
 /**
  */
@@ -38,12 +37,10 @@ public class RemoteTaskActionClientFactory implements TaskActionClientFactory
   @Inject
   public RemoteTaskActionClientFactory(
       @IndexingService DruidLeaderClient leaderHttpClient,
-      RetryPolicyFactory retryPoslicyFactory,
-      ObjectMapper jsonMapper,
-      AuthenticatorHttpClientWrapper authenticatorHttpClientWrapper
+      RetryPolicyFactory retryPolicyFactory,
+      ObjectMapper jsonMapper
   )
   {
-    this.druidLeaderClient = authenticatorHttpClientWrapper.getEscalatedClient(leaderHttpClient);
     this.druidLeaderClient = leaderHttpClient;
     this.retryPolicyFactory = retryPolicyFactory;
     this.jsonMapper = jsonMapper;
