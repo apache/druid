@@ -83,7 +83,7 @@ public abstract class LoadRule implements Rule
   {
     // if primary replica already exists
     if (!currentReplicants.isEmpty()) {
-      assignReplicas(targetReplicants, currentReplicants, params, segment, stats);
+      assignReplicas(targetReplicants, currentReplicants, params, segment, stats, null);
     } else {
       final ServerHolder primaryHolderToLoad = assignPrimary(targetReplicants, params, segment);
       if (primaryHolderToLoad == null) {
@@ -108,12 +108,7 @@ public abstract class LoadRule implements Rule
       );
       stats.addToTieredStat(ASSIGNED_COUNT, tier, numAssigned);
 
-      // tier with primary replica
-      final int targetReplicantsInTier = targetReplicants.removeInt(tier);
-      // assign replicas for the other tiers
-      assignReplicas(targetReplicants, currentReplicants, params, segment, stats);
-      // add back tier (this is for processing drop)
-      targetReplicants.put(tier, targetReplicantsInTier);
+      assignReplicas(targetReplicants, currentReplicants, params, segment, stats, tier);
     }
   }
 
@@ -192,11 +187,15 @@ public abstract class LoadRule implements Rule
       final Object2IntMap<String> currentReplicants,
       final DruidCoordinatorRuntimeParams params,
       final DataSegment segment,
-      final CoordinatorStats stats
+      final CoordinatorStats stats,
+      @Nullable final String primaryTier
   )
   {
     for (final Object2IntMap.Entry<String> entry : targetReplicants.object2IntEntrySet()) {
       final String tier = entry.getKey();
+      if (tier.equals(primaryTier)) {
+        continue;
+      }
       final int numAssigned = assignReplicasForTier(
           tier,
           entry.getIntValue(),
