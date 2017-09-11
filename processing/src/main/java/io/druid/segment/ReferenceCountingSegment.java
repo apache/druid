@@ -27,6 +27,12 @@ import java.io.Closeable;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * ReferenceCountingSegment allows to call {@link #close()} before some other "users", which called {@link
+ * #increment()}, has not called {@link #decrement()} yet, and the wrapped {@link Segment} won't be actually closed
+ * until that. So ReferenceCountingSegment implements something like automatic reference count-based resource
+ * management.
+ */
 public class ReferenceCountingSegment extends AbstractSegment
 {
   private static final EmittingLogger log = new EmittingLogger(ReferenceCountingSegment.class);
@@ -116,6 +122,10 @@ public class ReferenceCountingSegment extends AbstractSegment
     return referents.register() >= 0;
   }
 
+  /**
+   * Returns a {@link Closeable} which action is to call {@link #decrement()} only once. If close() is called on the
+   * returned Closeable object for the second time, it won't call {@link #decrement()} again.
+   */
   public Closeable decrementOnceCloseable()
   {
     AtomicBoolean decremented = new AtomicBoolean(false);
