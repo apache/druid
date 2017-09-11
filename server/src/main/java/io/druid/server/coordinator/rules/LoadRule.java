@@ -277,7 +277,8 @@ public abstract class LoadRule implements Rule
         log.makeAlert("No holders found for tier[%s]", tier).emit();
         numDropped = 0;
       } else {
-        final int numToDrop = entry.getIntValue() - targetReplicants.getOrDefault(tier, 0);
+        final int currentReplicantsInTier = entry.getIntValue();
+        final int numToDrop = currentReplicantsInTier - targetReplicants.getOrDefault(tier, 0);
         numDropped = dropForTier(numToDrop, holders, segment);
       }
 
