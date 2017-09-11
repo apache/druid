@@ -18,17 +18,27 @@
  */
 
 package io.druid.server.coordination;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
+import com.google.common.util.concurrent.AbstractFuture;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.concurrent.Execs;
+import io.druid.guice.ManageLifecycle;
+import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.segment.loading.SegmentLoaderConfig;
@@ -38,30 +48,36 @@ import io.druid.timeline.DataSegment;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
-public class SimpleDataSegmentChangeHandler implements DataSegmentChangeHandler
+@ManageLifecycle
+public class SegmentLoadDropHandler
 {
-  private static final EmittingLogger log = new EmittingLogger(SimpleDataSegmentChangeHandler.class);
+  private static final EmittingLogger log = new EmittingLogger(SegmentLoadDropHandler.class);
 
   private final Object lock = new Object();
 
   private final ObjectMapper jsonMapper;
   private final SegmentLoaderConfig config;
-  private final DruidServerMetadata me; //unused ?
   private final DataSegmentAnnouncer announcer;
   private final DataSegmentServerAnnouncer serverAnnouncer;
   private final SegmentManager segmentManager;
@@ -70,28 +86,53 @@ public class SimpleDataSegmentChangeHandler implements DataSegmentChangeHandler
 
   private volatile boolean started = false;
 
-  //TODO: this also needs to have concept of asynchrounous add/remove segments that would be used in the SegmentListerResource.
+  // Keep history of load/drop request status in a LRU cache to maintain idempotency if same request shows up
+  // again and to return status of a completed request. Maximum size of this cache must be significantly greater
+  // than number of pending load/drop requests. so that history is not lost too quickly.
+  private final Cache<DataSegmentChangeRequest, AtomicReference<Status>> requestStatuses;
+  private final Object requestStatusesLock = new Object();
+
+  // This is the list of unresolved futures returned to callers of processBatch(List<DataSegmentChangeRequest>)
+  // Threads loading/dropping segments resolve these futures as and when some segment load/drop finishes.
+  private final LinkedHashSet<CustomSettableFuture> waitingFutures = new LinkedHashSet<>();
 
   @Inject
-  public SimpleDataSegmentChangeHandler(
+  public SegmentLoadDropHandler(
       ObjectMapper jsonMapper,
       SegmentLoaderConfig config,
-      DruidServerMetadata me,
+      DataSegmentAnnouncer announcer,
+      DataSegmentServerAnnouncer serverAnnouncer,
+      SegmentManager segmentManager
+  )
+  {
+    this(jsonMapper, config, announcer, serverAnnouncer, segmentManager,
+         Executors.newScheduledThreadPool(
+             config.getNumLoadingThreads(),
+             Execs.makeThreadFactory("SimpleDataSegmentChangeHandler-%s")
+         )
+    );
+  }
+
+  @VisibleForTesting
+  SegmentLoadDropHandler(
+      ObjectMapper jsonMapper,
+      SegmentLoaderConfig config,
       DataSegmentAnnouncer announcer,
       DataSegmentServerAnnouncer serverAnnouncer,
       SegmentManager segmentManager,
-      ScheduledExecutorFactory factory
+      ScheduledExecutorService exec
   )
   {
     this.jsonMapper = jsonMapper;
     this.config = config;
-    this.me = me;
     this.announcer = announcer;
     this.serverAnnouncer = serverAnnouncer;
     this.segmentManager = segmentManager;
 
-    this.exec = factory.create(1, "SimpleDataSegmentChangeHandler-Exec--%d");
+    this.exec = exec;
     this.segmentsToDelete = new ConcurrentSkipListSet<>();
+
+    requestStatuses = CacheBuilder.newBuilder().maximumSize(config.getStatusQueueMaxSize()).initialCapacity(8).build();
   }
 
   @LifecycleStart
@@ -102,15 +143,9 @@ public class SimpleDataSegmentChangeHandler implements DataSegmentChangeHandler
         return;
       }
 
+      log.info("Starting...");
       try {
         loadLocalCache();
-
-        //TODO: announce this historical here too, is this class used at realtime nodes too, then we have two locations
-        //where announcement happens?
-        //lifecycle driven, will all peons run this code? Maybe ZkCoordinator was not configured to run on realtime nodes
-        //but then how were they listening for segment load requests?
-        //however since announcement is lifecycle.last so DiscoveryDruidNode announcement doesn't have to be done here
-        //explicitly?
         serverAnnouncer.announce();
       }
       catch (Exception e) {
@@ -118,6 +153,7 @@ public class SimpleDataSegmentChangeHandler implements DataSegmentChangeHandler
         throw Throwables.propagate(e);
       }
       started = true;
+      log.info("Started.");
     }
   }
 
@@ -129,9 +165,9 @@ public class SimpleDataSegmentChangeHandler implements DataSegmentChangeHandler
         return;
       }
 
+      log.info("Stopping...");
       try {
         serverAnnouncer.unannounce();
-        //TODO: should we unannounce the server here?
       }
       catch (Exception e) {
         throw Throwables.propagate(e);
@@ -139,6 +175,7 @@ public class SimpleDataSegmentChangeHandler implements DataSegmentChangeHandler
       finally {
         started = false;
       }
+      log.info("Stopped.");
     }
   }
 
@@ -147,12 +184,16 @@ public class SimpleDataSegmentChangeHandler implements DataSegmentChangeHandler
     return started;
   }
 
-  public void loadLocalCache()
+  private void loadLocalCache()
   {
     final long start = System.currentTimeMillis();
     File baseDir = config.getInfoDir();
-    if (!baseDir.exists() && !config.getInfoDir().mkdirs()) {
-      return;
+    if (!baseDir.isDirectory()) {
+      if (baseDir.exists()) {
+        throw new ISE("[%s] exists but not a directory.", baseDir);
+      } else if (!baseDir.mkdirs()) {
+        throw new ISE("Failed to create directory[%s].", baseDir);
+      }
     }
 
     List<DataSegment> cachedSegments = Lists.newArrayList();
@@ -172,7 +213,7 @@ public class SimpleDataSegmentChangeHandler implements DataSegmentChangeHandler
         } else {
           log.warn("Unable to find cache file for %s. Deleting lookup entry", segment.getIdentifier());
 
-          File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
+          File segmentInfoCacheFile = new File(baseDir, segment.getIdentifier());
           if (!segmentInfoCacheFile.delete()) {
             log.warn("Unable to delete segmentInfoCacheFile[%s]", segmentInfoCacheFile);
           }
@@ -217,7 +258,7 @@ public class SimpleDataSegmentChangeHandler implements DataSegmentChangeHandler
       loaded = segmentManager.loadSegment(segment);
     }
     catch (Exception e) {
-      removeSegment(segment, callback);
+      removeSegment(segment, callback, false);
       throw new SegmentLoadingException(e, "Exception loading segment[%s]", segment.getIdentifier());
     }
 
@@ -228,7 +269,7 @@ public class SimpleDataSegmentChangeHandler implements DataSegmentChangeHandler
           jsonMapper.writeValue(segmentInfoCacheFile, segment);
         }
         catch (IOException e) {
-          removeSegment(segment, callback);
+          removeSegment(segment, callback, false);
           throw new SegmentLoadingException(
               e, "Failed to write to disk segment info cache file[%s]", segmentInfoCacheFile
           );
@@ -237,9 +278,9 @@ public class SimpleDataSegmentChangeHandler implements DataSegmentChangeHandler
     }
   }
 
-  @Override
-  public void addSegment(DataSegment segment, DataSegmentChangeCallback callback)
+  void addSegment(DataSegment segment, DataSegmentChangeCallback callback)
   {
+    Status result = null;
     try {
       log.info("Loading segment %s", segment.getIdentifier());
       /*
@@ -266,13 +307,17 @@ public class SimpleDataSegmentChangeHandler implements DataSegmentChangeHandler
       catch (IOException e) {
         throw new SegmentLoadingException(e, "Failed to announce segment[%s]", segment.getIdentifier());
       }
+
+      result = Status.SUCCESS;
     }
-    catch (SegmentLoadingException e) {
+    catch (Exception e) {
       log.makeAlert(e, "Failed to load segment for dataSource")
          .addData("segment", segment)
          .emit();
+      result = Status.failed(e.getMessage());
     }
     finally {
+      updateStatusAndResolveWaitingFutures(new SegmentChangeRequestLoad(segment), result);
       callback.execute();
     }
   }
@@ -285,7 +330,7 @@ public class SimpleDataSegmentChangeHandler implements DataSegmentChangeHandler
 
       backgroundSegmentAnnouncer.startAnnouncing();
 
-      loadingExecutor = Execs.multiThreaded(config.getNumBootstrapThreads(), "ZkCoordinator-loading-%s");
+      loadingExecutor = Execs.multiThreaded(config.getNumBootstrapThreads(), "Segment-Load-Startup-%s");
 
       final int numSegments = segments.size();
       final CountDownLatch latch = new CountDownLatch(numSegments);
@@ -354,48 +399,67 @@ public class SimpleDataSegmentChangeHandler implements DataSegmentChangeHandler
     }
   }
 
-
-  @Override
-  public void removeSegment(final DataSegment segment, final DataSegmentChangeCallback callback)
+  void removeSegment(
+      final DataSegment segment,
+      final DataSegmentChangeCallback callback,
+      final boolean scheduleDrop
+  )
   {
     try {
       announcer.unannounceSegment(segment);
       segmentsToDelete.add(segment);
 
-      log.info("Completely removing [%s] in [%,d] millis", segment.getIdentifier(), config.getDropSegmentDelayMillis());
-      exec.schedule(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              try {
-                synchronized (lock) {
-                  if (segmentsToDelete.remove(segment)) {
-                    segmentManager.dropSegment(segment);
+      Runnable runnable = new Runnable()
+      {
+        @Override
+        public void run()
+        {
+          Status result = null;
+          try {
+            synchronized (lock) {
+              if (segmentsToDelete.remove(segment)) {
+                segmentManager.dropSegment(segment);
 
-                    File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
-                    if (!segmentInfoCacheFile.delete()) {
-                      log.warn("Unable to delete segmentInfoCacheFile[%s]", segmentInfoCacheFile);
-                    }
-                  }
+                File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
+                if (!segmentInfoCacheFile.delete()) {
+                  log.warn("Unable to delete segmentInfoCacheFile[%s]", segmentInfoCacheFile);
                 }
               }
-              catch (Exception e) {
-                log.makeAlert(e, "Failed to remove segment! Possible resource leak!")
-                   .addData("segment", segment)
-                   .emit();
-              }
             }
-          },
-          config.getDropSegmentDelayMillis(),
-          TimeUnit.MILLISECONDS
-      );
+
+            result = Status.SUCCESS;
+          }
+          catch (Exception e) {
+            log.makeAlert(e, "Failed to remove segment! Possible resource leak!")
+               .addData("segment", segment)
+               .emit();
+            result = Status.failed(e.getMessage());
+          }
+          finally {
+            updateStatusAndResolveWaitingFutures(new SegmentChangeRequestDrop(segment), result);
+          }
+        }
+      };
+
+      if (scheduleDrop) {
+        log.info(
+            "Completely removing [%s] in [%,d] millis",
+            segment.getIdentifier(),
+            config.getDropSegmentDelayMillis()
+        );
+        exec.schedule(
+            runnable,
+            config.getDropSegmentDelayMillis(),
+            TimeUnit.MILLISECONDS
+        );
+      }
     }
     catch (Exception e) {
       log.makeAlert(e, "Failed to remove segment")
          .addData("segment", segment)
          .emit();
+
+      updateStatusAndResolveWaitingFutures(new SegmentChangeRequestDrop(segment), Status.failed(e.getMessage()));
     }
     finally {
       callback.execute();
@@ -405,6 +469,107 @@ public class SimpleDataSegmentChangeHandler implements DataSegmentChangeHandler
   public Collection<DataSegment> getPendingDeleteSnapshot()
   {
     return ImmutableList.copyOf(segmentsToDelete);
+  }
+
+  public ListenableFuture<List<Pair<DataSegmentChangeRequest, Status>>> processBatch(List<DataSegmentChangeRequest> changeRequests)
+  {
+    boolean isAnyRequestDone = false;
+
+    Map<DataSegmentChangeRequest, AtomicReference<Status>> statuses = new HashMap<>(changeRequests.size());
+
+    for (DataSegmentChangeRequest cr : changeRequests) {
+      AtomicReference<Status> status = processRequest(cr);
+      if (status.get().getState() != Status.STATE.PENDING) {
+        isAnyRequestDone = true;
+      }
+      statuses.put(cr, status);
+    }
+
+    CustomSettableFuture future = new CustomSettableFuture(waitingFutures, statuses);
+
+    if (isAnyRequestDone) {
+      future.resolve();
+    } else {
+      synchronized (waitingFutures) {
+        waitingFutures.add(future);
+      }
+    }
+
+    return future;
+  }
+
+  private AtomicReference<Status> processRequest(DataSegmentChangeRequest changeRequest)
+  {
+    synchronized (requestStatusesLock) {
+      if (requestStatuses.getIfPresent(changeRequest) == null) {
+        if (changeRequest instanceof SegmentChangeRequestLoad) {
+          requestStatuses.put(changeRequest, new AtomicReference<>(Status.PENDING));
+          exec.submit(
+              () -> SegmentLoadDropHandler.this.addSegment(
+                  ((SegmentChangeRequestLoad) changeRequest).getSegment(),
+                  DataSegmentChangeCallback.NOOP
+              )
+          );
+        } else if (changeRequest instanceof SegmentChangeRequestDrop) {
+          requestStatuses.put(changeRequest, new AtomicReference<>(Status.PENDING));
+          SegmentLoadDropHandler.this.removeSegment(
+              ((SegmentChangeRequestDrop) changeRequest).getSegment(),
+              DataSegmentChangeCallback.NOOP,
+              true
+          );
+        } else {
+          throw new IAE("Not a segment load/drop request[%s].", changeRequest.getClass().getName());
+        }
+      }
+      return requestStatuses.getIfPresent(changeRequest);
+    }
+  }
+
+  private void updateStatusAndResolveWaitingFutures(DataSegmentChangeRequest chanteRequest, Status result)
+  {
+    if (result == null) {
+      result = Status.failed("Unknown reason. Check server logs.");
+    }
+    synchronized (requestStatusesLock) {
+      AtomicReference<Status> statusRef = requestStatuses.getIfPresent(chanteRequest);
+      if (statusRef != null) {
+        statusRef.set(result);
+      }
+    }
+
+    LinkedHashSet<CustomSettableFuture> waitingFuturesCopy = new LinkedHashSet<>();
+    synchronized (waitingFutures) {
+      waitingFuturesCopy.addAll(waitingFutures);
+      waitingFutures.clear();
+    }
+    for (CustomSettableFuture future : waitingFuturesCopy) {
+      future.resolve();
+    }
+  }
+
+  public DataSegmentChangeHandler getSyncLoadingHanlder()
+  {
+    return new DataSegmentChangeHandler()
+    {
+      @Override
+      public void addSegment(DataSegment segment, DataSegmentChangeCallback callback)
+      {
+        SegmentLoadDropHandler.this.addSegment(segment, callback);
+      }
+
+      @Override
+      public void removeSegment(DataSegment segment, DataSegmentChangeCallback callback)
+      {
+        try {
+          SegmentLoadDropHandler.this.removeSegment(segment, callback, true);
+        }
+        catch (Exception ex) {
+          log.makeAlert(ex, "Failed to remove segment")
+             .addData("segment", segment)
+             .emit();
+        }
+      }
+    };
   }
 
   private static class BackgroundSegmentAnnouncer implements AutoCloseable
@@ -537,4 +702,96 @@ public class SimpleDataSegmentChangeHandler implements DataSegmentChangeHandler
       }
     }
   }
+
+  // Future with cancel() implementation to remove it from "waitingFutures" list
+  private static class CustomSettableFuture extends AbstractFuture<List<Pair<DataSegmentChangeRequest, Status>>>
+  {
+    private final LinkedHashSet<CustomSettableFuture> waitingFutures;
+    private final Map<DataSegmentChangeRequest, AtomicReference<Status>> statusRefs;
+
+    private CustomSettableFuture(
+        LinkedHashSet<CustomSettableFuture> waitingFutures,
+        Map<DataSegmentChangeRequest, AtomicReference<Status>> statusRefs
+    )
+    {
+      this.waitingFutures = waitingFutures;
+      this.statusRefs = statusRefs;
+    }
+
+    public void resolve()
+    {
+      List<Pair<DataSegmentChangeRequest, Status>> result = new ArrayList<>(statusRefs.size());
+      statusRefs.forEach(
+          (request, statusRef) -> result.add(new Pair(request, statusRef.get()))
+      );
+
+      super.set(result);
+    }
+
+    @Override
+    public boolean setException(Throwable throwable)
+    {
+      return super.setException(throwable);
+    }
+
+    @Override
+    public boolean cancel(boolean interruptIfRunning)
+    {
+      synchronized (waitingFutures) {
+        waitingFutures.remove(this);
+      }
+      return true;
+    }
+  }
+
+  public static class Status
+  {
+    public enum STATE
+    {
+      SUCCESS, FAILED, PENDING
+    }
+
+    private final STATE state;
+    private final String failureCause;
+
+    public final static Status SUCCESS = new Status(STATE.SUCCESS, null);
+    public final static Status PENDING = new Status(STATE.PENDING, null);
+
+    Status(
+        @JsonProperty("state") STATE state,
+        @JsonProperty("failureCause") String failureCause
+    )
+    {
+      Preconditions.checkNotNull(state, "state must be non-null");
+      this.state = state;
+      this.failureCause = failureCause;
+    }
+
+    public static Status failed(String cause)
+    {
+      return new Status(STATE.FAILED, cause);
+    }
+
+    @JsonProperty
+    public STATE getState()
+    {
+      return state;
+    }
+
+    @JsonProperty
+    public String getFailureCause()
+    {
+      return failureCause;
+    }
+
+    @Override
+    public String toString()
+    {
+      return "Status{" +
+             "state=" + state +
+             ", failureCause='" + failureCause + '\'' +
+             '}';
+    }
+  }
 }
+

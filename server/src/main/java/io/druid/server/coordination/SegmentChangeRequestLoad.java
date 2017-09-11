@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import io.druid.java.util.common.StringUtils;
 import io.druid.timeline.DataSegment;
 
+import java.util.Objects;
+
 /**
  */
 public class SegmentChangeRequestLoad implements DataSegmentChangeRequest
@@ -56,6 +58,25 @@ public class SegmentChangeRequestLoad implements DataSegmentChangeRequest
   public String asString()
   {
     return StringUtils.format("LOAD: %s", segment.getIdentifier());
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    SegmentChangeRequestLoad that = (SegmentChangeRequestLoad) o;
+    return Objects.equals(segment, that.segment);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(segment);
   }
 
   @Override

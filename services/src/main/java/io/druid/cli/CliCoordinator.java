@@ -28,6 +28,7 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
+import com.metamx.http.client.HttpClient;
 import io.airlift.airline.Command;
 import io.druid.audit.AuditManager;
 import io.druid.client.CoordinatorServerView;
@@ -42,6 +43,7 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.CoordinatorIndexingServiceHelper;
+import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataRuleManager;
@@ -74,6 +76,7 @@ import io.druid.server.http.RedirectInfo;
 import io.druid.server.http.RulesResource;
 import io.druid.server.http.ServersResource;
 import io.druid.server.http.TiersResource;
+import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.lookup.cache.LookupCoordinatorManager;
 import io.druid.server.lookup.cache.LookupCoordinatorManagerConfig;
@@ -221,12 +224,14 @@ public class CliCoordinator extends ServerRunnable
               CuratorFramework curator,
               ObjectMapper jsonMapper,
               ScheduledExecutorFactory factory,
-              DruidCoordinatorConfig config
+              DruidCoordinatorConfig config,
+              @Global HttpClient httpClient,
+              ZkPathsConfig zkPaths
           )
           {
             return new LoadQueueTaskMaster(
                 curator, jsonMapper, factory.create(1, "Master-PeonExec--%d"),
-                Executors.newSingleThreadExecutor(), config
+                Executors.newSingleThreadExecutor(), config, httpClient, zkPaths
             );
           }
         }

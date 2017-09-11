@@ -19,6 +19,7 @@
 
 package io.druid.java.util.common;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 
 import java.util.Comparator;
@@ -33,10 +34,16 @@ public class Pair<T1, T2>
     return new Pair<>(lhs, rhs);
   }
 
+  @JsonProperty
   public final T1 lhs;
+
+  @JsonProperty
   public final T2 rhs;
 
-  public Pair(T1 lhs, T2 rhs)
+  public Pair(
+      @JsonProperty("lhs") T1 lhs,
+      @JsonProperty("rhs") T2 rhs
+  )
   {
     this.lhs = lhs;
     this.rhs = rhs;
