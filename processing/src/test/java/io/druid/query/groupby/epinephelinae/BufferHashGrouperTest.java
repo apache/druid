@@ -29,11 +29,10 @@ import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import io.druid.data.input.MapBasedRow;
 import io.druid.java.util.common.ByteBufferUtils;
-import io.druid.java.util.common.ISE;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
-import org.junit.After;
+import io.druid.segment.CloserRule;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -53,15 +52,8 @@ public class BufferHashGrouperTest
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  private MappedByteBuffer buffer;
-
-  @After
-  public void tearDown()
-  {
-    if (buffer != null) {
-      ByteBufferUtils.unmap(buffer);
-    }
-  }
+  @Rule
+  public CloserRule closerRule = new CloserRule(true);
 
   @Test
   public void testSimple()
@@ -203,9 +195,7 @@ public class BufferHashGrouperTest
       int initialBuckets
   )
   {
-    if (buffer != null) {
-      throw new ISE("Can only call makeGrouper once per test");
-    }
+    final MappedByteBuffer buffer;
 
     try {
       final File file = temporaryFolder.newFile();
@@ -213,6 +203,7 @@ public class BufferHashGrouperTest
         channel.truncate(bufferSize);
       }
       buffer = Files.map(file, FileChannel.MapMode.READ_WRITE, bufferSize);
+      closerRule.closeLater(() -> ByteBufferUtils.unmap(buffer));
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
