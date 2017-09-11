@@ -188,12 +188,12 @@ public abstract class LoadRule implements Rule
       final DruidCoordinatorRuntimeParams params,
       final DataSegment segment,
       final CoordinatorStats stats,
-      @Nullable final String primaryTier
+      @Nullable final String tierToSkip
   )
   {
     for (final Object2IntMap.Entry<String> entry : targetReplicants.object2IntEntrySet()) {
       final String tier = entry.getKey();
-      if (tier.equals(primaryTier)) {
+      if (tier.equals(tierToSkip)) {
         continue;
       }
       final int numAssigned = assignReplicasForTier(
