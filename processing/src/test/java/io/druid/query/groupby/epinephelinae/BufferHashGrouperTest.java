@@ -28,14 +28,19 @@ import com.google.common.collect.Ordering;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import io.druid.data.input.MapBasedRow;
+import io.druid.java.util.common.ByteBufferUtils;
+import io.druid.java.util.common.ISE;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
@@ -47,6 +52,16 @@ public class BufferHashGrouperTest
 {
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  private MappedByteBuffer buffer;
+
+  @After
+  public void tearDown()
+  {
+    if (buffer != null) {
+      ByteBufferUtils.unmap(buffer);
+    }
+  }
 
   @Test
   public void testSimple()
@@ -188,10 +203,16 @@ public class BufferHashGrouperTest
       int initialBuckets
   )
   {
-    final MappedByteBuffer buffer;
+    if (buffer != null) {
+      throw new ISE("Can only call makeGrouper once per test");
+    }
 
     try {
-      buffer = Files.map(temporaryFolder.newFile(), FileChannel.MapMode.READ_WRITE, bufferSize);
+      final File file = temporaryFolder.newFile();
+      try (final FileChannel channel = new FileOutputStream(file).getChannel()) {
+        channel.truncate(bufferSize);
+      }
+      buffer = Files.map(file, FileChannel.MapMode.READ_WRITE, bufferSize);
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
