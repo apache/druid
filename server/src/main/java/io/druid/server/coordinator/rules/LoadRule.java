@@ -103,7 +103,7 @@ public abstract class LoadRule implements Rule
           getHolderList(
               tier,
               params.getDruidCluster(),
-              createPredicate(params),
+              createLoadQueueSizeLimitingPredicate(params),
               holder -> !holder.equals(primaryHolderToLoad)
           ),
           segment
@@ -119,7 +119,9 @@ public abstract class LoadRule implements Rule
     }
   }
 
-  private static Predicate<ServerHolder> createPredicate(final DruidCoordinatorRuntimeParams params)
+  private static Predicate<ServerHolder> createLoadQueueSizeLimitingPredicate(
+      final DruidCoordinatorRuntimeParams params
+  )
   {
     final int maxSegmentsInNodeLoadingQueue = params.getCoordinatorDynamicConfig().getMaxSegmentsInNodeLoadingQueue();
     if (maxSegmentsInNodeLoadingQueue <= 0) {
@@ -163,7 +165,7 @@ public abstract class LoadRule implements Rule
 
       final String tier = entry.getKey();
 
-      final List<ServerHolder> holders = getHolderList(tier, params.getDruidCluster(), createPredicate(params));
+      final List<ServerHolder> holders = getHolderList(tier, params.getDruidCluster(), createLoadQueueSizeLimitingPredicate(params));
       if (holders.isEmpty()) {
         continue;
       }
@@ -201,7 +203,7 @@ public abstract class LoadRule implements Rule
           entry.getIntValue(),
           currentReplicants.getOrDefault(tier, 0),
           params,
-          getHolderList(tier, params.getDruidCluster(), createPredicate(params)),
+          getHolderList(tier, params.getDruidCluster(), createLoadQueueSizeLimitingPredicate(params)),
           segment
       );
       stats.addToTieredStat(ASSIGNED_COUNT, tier, numAssigned);
