@@ -100,7 +100,7 @@ public abstract class LoadRule implements Rule
           targetReplicants.getOrDefault(tier, 0),
           currentReplicants.getOrDefault(tier, 0) + 1,
           params,
-          getHolderList(
+          getFilteredHolders(
               tier,
               params.getDruidCluster(),
               createLoadQueueSizeLimitingPredicate(params),
@@ -132,7 +132,7 @@ public abstract class LoadRule implements Rule
   }
 
   @SafeVarargs
-  private static List<ServerHolder> getHolderList(
+  private static List<ServerHolder> getFilteredHolders(
       final String tier,
       final DruidCluster druidCluster,
       final Predicate<ServerHolder> firstPredicate,
@@ -165,7 +165,7 @@ public abstract class LoadRule implements Rule
 
       final String tier = entry.getKey();
 
-      final List<ServerHolder> holders = getHolderList(tier, params.getDruidCluster(), createLoadQueueSizeLimitingPredicate(params));
+      final List<ServerHolder> holders = getFilteredHolders(tier, params.getDruidCluster(), createLoadQueueSizeLimitingPredicate(params));
       if (holders.isEmpty()) {
         continue;
       }
@@ -203,7 +203,7 @@ public abstract class LoadRule implements Rule
           entry.getIntValue(),
           currentReplicants.getOrDefault(tier, 0),
           params,
-          getHolderList(tier, params.getDruidCluster(), createLoadQueueSizeLimitingPredicate(params)),
+          getFilteredHolders(tier, params.getDruidCluster(), createLoadQueueSizeLimitingPredicate(params)),
           segment
       );
       stats.addToTieredStat(ASSIGNED_COUNT, tier, numAssigned);
