@@ -130,7 +130,7 @@ public class S3DataSegmentMover implements DataSegmentMover
               selfCheckingMove(s3Bucket, targetS3Bucket, s3Path, targetS3Path, copyMsg);
               return null;
             }
-            catch (Exception e) {
+            catch (ServiceException | IOException | SegmentLoadingException e) {
               log.info(e, "Error while trying to move " + copyMsg);
               throw e;
             }
@@ -156,7 +156,7 @@ public class S3DataSegmentMover implements DataSegmentMover
       String s3Path,
       String targetS3Path,
       String copyMsg
-  ) throws Exception
+  ) throws ServiceException, IOException, SegmentLoadingException
   {
     if (s3Bucket.equals(targetS3Bucket) && s3Path.equals(targetS3Path)) {
       log.info("No need to move file[s3://%s/%s] onto itself", s3Bucket, s3Path);
