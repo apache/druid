@@ -31,6 +31,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
 import com.google.common.collect.Iterables;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.jackson.CommaListJoinDeserializer;
 import io.druid.jackson.CommaListJoinSerializer;
 import io.druid.java.util.common.granularity.Granularities;
@@ -46,6 +47,7 @@ import java.util.Map;
 
 /**
  */
+@PublicApi
 public class DataSegment implements Comparable<DataSegment>
 {
   public static String delimiter = "_";

@@ -167,7 +167,7 @@ public class QueryLifecycle
     transition(State.NEW, State.INITIALIZED);
 
     String queryId = baseQuery.getId();
-    if (queryId == null) {
+    if (Strings.isNullOrEmpty(queryId)) {
       queryId = UUID.randomUUID().toString();
     }
 

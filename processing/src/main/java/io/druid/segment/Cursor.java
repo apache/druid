@@ -24,8 +24,9 @@ import org.joda.time.DateTime;
 /**
  */
 
-public interface Cursor extends ColumnSelectorFactory
+public interface Cursor
 {
+  ColumnSelectorFactory getColumnSelectorFactory();
   DateTime getTime();
   void advance();
   void advanceUninterruptibly();

@@ -19,7 +19,6 @@
 
 package io.druid.query.datasourcemetadata;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -30,6 +29,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.query.DefaultGenericQueryMetricsFactory;
 import io.druid.query.Druids;
 import io.druid.query.GenericQueryMetricsFactory;
@@ -156,50 +156,50 @@ public class DataSourceMetadataQueryTest
     DataSourceQueryQueryToolChest toolChest = new DataSourceQueryQueryToolChest(queryMetricsFactory);
     List<LogicalSegment> segments = toolChest
         .filterSegments(
-        null,
-        Arrays.asList(
-            new LogicalSegment()
-            {
-              @Override
-              public Interval getInterval()
-              {
-                return Intervals.of("2012-01-01/P1D");
-              }
-            },
-            new LogicalSegment()
-            {
-              @Override
-              public Interval getInterval()
-              {
-                return Intervals.of("2012-01-01T01/PT1H");
-              }
-            },
-            new LogicalSegment()
-            {
-              @Override
-              public Interval getInterval()
-              {
-                return Intervals.of("2013-01-01/P1D");
-              }
-            },
-            new LogicalSegment()
-            {
-              @Override
-              public Interval getInterval()
-              {
-                return Intervals.of("2013-01-01T01/PT1H");
-              }
-            },
-            new LogicalSegment()
-            {
-              @Override
-              public Interval getInterval()
-              {
-                return Intervals.of("2013-01-01T02/PT1H");
-              }
-            }
-        )
-    );
+            null,
+            Arrays.asList(
+                new LogicalSegment()
+                {
+                  @Override
+                  public Interval getInterval()
+                  {
+                    return Intervals.of("2012-01-01/P1D");
+                  }
+                },
+                new LogicalSegment()
+                {
+                  @Override
+                  public Interval getInterval()
+                  {
+                    return Intervals.of("2012-01-01T01/PT1H");
+                  }
+                },
+                new LogicalSegment()
+                {
+                  @Override
+                  public Interval getInterval()
+                  {
+                    return Intervals.of("2013-01-01/P1D");
+                  }
+                },
+                new LogicalSegment()
+                {
+                  @Override
+                  public Interval getInterval()
+                  {
+                    return Intervals.of("2013-01-01T01/PT1H");
+                  }
+                },
+                new LogicalSegment()
+                {
+                  @Override
+                  public Interval getInterval()
+                  {
+                    return Intervals.of("2013-01-01T02/PT1H");
+                  }
+                }
+            )
+        );
 
     Assert.assertEquals(segments.size(), 2);
     // should only have the latest segments. 
@@ -233,9 +233,7 @@ public class DataSourceMetadataQueryTest
     final DataSourceMetadataResultValue resultValue = new DataSourceMetadataResultValue(DateTimes.of("2000-01-01T00Z"));
     final Map<String, Object> resultValueMap = new DefaultObjectMapper().convertValue(
         resultValue,
-        new TypeReference<Map<String, Object>>()
-        {
-        }
+        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
     Assert.assertEquals(
         ImmutableMap.<String, Object>of("maxIngestedEventTime", "2000-01-01T00:00:00.000Z"),

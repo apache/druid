@@ -34,6 +34,7 @@ import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.NoopAggregator;
 import io.druid.query.aggregation.NoopBufferAggregator;
 import io.druid.query.aggregation.cardinality.HyperLogLogCollectorAggregateCombiner;
+import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ObjectColumnSelector;
 import org.apache.commons.codec.binary.Base64;
@@ -49,29 +50,39 @@ import java.util.Objects;
  */
 public class HyperUniquesAggregatorFactory extends AggregatorFactory
 {
-  public static Object estimateCardinality(Object object)
+  public static Object estimateCardinality(Object object, boolean round)
   {
     if (object == null) {
       return 0;
     }
 
-    return ((HyperLogLogCollector) object).estimateCardinality();
+    final HyperLogLogCollector collector = (HyperLogLogCollector) object;
+
+    // Avoid ternary, it causes estimateCardinalityRound to be cast to double.
+    if (round) {
+      return collector.estimateCardinalityRound();
+    } else {
+      return collector.estimateCardinality();
+    }
   }
 
   private final String name;
   private final String fieldName;
   private final boolean isInputHyperUnique;
+  private final boolean round;
 
   @JsonCreator
   public HyperUniquesAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") String fieldName,
-      @JsonProperty("isInputHyperUnique") Boolean isInputHyperUnique
+      @JsonProperty("isInputHyperUnique") boolean isInputHyperUnique,
+      @JsonProperty("round") boolean round
   )
   {
     this.name = name;
     this.fieldName = fieldName;
-    this.isInputHyperUnique = (isInputHyperUnique == null) ? false : isInputHyperUnique;
+    this.isInputHyperUnique = isInputHyperUnique;
+    this.round = round;
   }
 
   public HyperUniquesAggregatorFactory(
@@ -79,7 +90,7 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
       String fieldName
   )
   {
-    this(name, fieldName, false);
+    this(name, fieldName, false, false);
   }
 
   @Override
@@ -147,7 +158,7 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new HyperUniquesAggregatorFactory(name, name, false);
+    return new HyperUniquesAggregatorFactory(name, name, false, round);
   }
 
   @Override
@@ -166,7 +177,8 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
     return Arrays.<AggregatorFactory>asList(new HyperUniquesAggregatorFactory(
         fieldName,
         fieldName,
-        isInputHyperUnique
+        isInputHyperUnique,
+        round
     ));
   }
 
@@ -192,7 +204,7 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   @Override
   public Object finalizeComputation(Object object)
   {
-    return estimateCardinality(object);
+    return estimateCardinality(object, round);
   }
 
   @Override
@@ -220,15 +232,19 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
     return isInputHyperUnique;
   }
 
+  @JsonProperty
+  public boolean isRound()
+  {
+    return round;
+  }
+
   @Override
   public byte[] getCacheKey()
   {
-    byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
-
-    return ByteBuffer.allocate(1 + fieldNameBytes.length)
-                     .put(AggregatorUtil.HYPER_UNIQUE_CACHE_TYPE_ID)
-                     .put(fieldNameBytes)
-                     .array();
+    return new CacheKeyBuilder(AggregatorUtil.HYPER_UNIQUE_CACHE_TYPE_ID)
+        .appendString(fieldName)
+        .appendBoolean(round)
+        .build();
   }
 
   @Override
@@ -254,11 +270,12 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
            "name='" + name + '\'' +
            ", fieldName='" + fieldName + '\'' +
            ", isInputHyperUnique=" + isInputHyperUnique +
+           ", round=" + round +
            '}';
   }
 
   @Override
-  public boolean equals(Object o)
+  public boolean equals(final Object o)
   {
     if (this == o) {
       return true;
@@ -266,16 +283,16 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    HyperUniquesAggregatorFactory that = (HyperUniquesAggregatorFactory) o;
-
-    return Objects.equals(fieldName, that.fieldName) && Objects.equals(name, that.name) &&
-           Objects.equals(isInputHyperUnique, that.isInputHyperUnique);
+    final HyperUniquesAggregatorFactory that = (HyperUniquesAggregatorFactory) o;
+    return isInputHyperUnique == that.isInputHyperUnique &&
+           round == that.round &&
+           Objects.equals(name, that.name) &&
+           Objects.equals(fieldName, that.fieldName);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, fieldName, isInputHyperUnique);
+    return Objects.hash(name, fieldName, isInputHyperUnique, round);
   }
 }

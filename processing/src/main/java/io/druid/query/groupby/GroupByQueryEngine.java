@@ -332,7 +332,7 @@ public class GroupByQueryEngine
           );
         }
 
-        final DimensionSelector selector = cursor.makeDimensionSelector(dimSpec);
+        final DimensionSelector selector = cursor.getColumnSelectorFactory().makeDimensionSelector(dimSpec);
         if (selector != null) {
           if (selector.getValueCardinality() == DimensionSelector.CARDINALITY_UNKNOWN) {
             throw new UnsupportedOperationException(
@@ -349,7 +349,7 @@ public class GroupByQueryEngine
       sizesRequired = new int[aggregatorSpecs.size()];
       for (int i = 0; i < aggregatorSpecs.size(); ++i) {
         AggregatorFactory aggregatorSpec = aggregatorSpecs.get(i);
-        aggregators[i] = aggregatorSpec.factorizeBuffered(cursor);
+        aggregators[i] = aggregatorSpec.factorizeBuffered(cursor.getColumnSelectorFactory());
         metricNames[i] = aggregatorSpec.getName();
         sizesRequired[i] = aggregatorSpec.getMaxIntermediateSize();
       }

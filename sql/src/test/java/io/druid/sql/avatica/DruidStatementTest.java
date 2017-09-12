@@ -70,7 +70,8 @@ public class DruidStatementTest
         CalciteTests.createMockQueryLifecycleFactory(walker),
         operatorTable,
         macroTable,
-        plannerConfig
+        plannerConfig,
+        CalciteTests.getJsonMapper()
     );
   }
 

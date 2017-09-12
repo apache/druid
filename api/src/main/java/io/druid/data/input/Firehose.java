@@ -19,6 +19,8 @@
 
 package io.druid.data.input;
 
+import io.druid.guice.annotations.ExtensionPoint;
+
 import javax.annotation.Nullable;
 import java.io.Closeable;
 
@@ -36,6 +38,7 @@ import java.io.Closeable;
  * which will be called on another thread, so the operations inside of that callback must be thread-safe.
  * </p>
  */
+@ExtensionPoint
 public interface Firehose extends Closeable
 {
   /**

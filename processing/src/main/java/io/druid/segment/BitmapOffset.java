@@ -27,6 +27,7 @@ import io.druid.extendedset.intset.EmptyIntIterator;
 import io.druid.java.util.common.RE;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.Offset;
+import io.druid.segment.data.ReadableOffset;
 import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.roaringbitmap.IntIterator;
 
@@ -200,6 +201,12 @@ public class BitmapOffset extends Offset
   {
     iterator = safeClone(iteratorForReset);
     value = valueForReset;
+  }
+
+  @Override
+  public ReadableOffset getBaseReadableOffset()
+  {
+    return this;
   }
 
   @SuppressWarnings("MethodDoesntCallSuperMethod")

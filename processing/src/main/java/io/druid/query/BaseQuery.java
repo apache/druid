@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -33,6 +34,7 @@ import java.util.Map;
 
 /**
  */
+@ExtensionPoint
 public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
 {
   public static void checkInterrupted()

@@ -20,6 +20,7 @@
 package io.druid.query.aggregation;
 
 import com.google.common.collect.Lists;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.Pair;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
@@ -34,6 +35,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
+@PublicApi
 public class AggregatorUtil
 {
   public static final byte STRING_SEPARATOR = (byte) 0xFF;
