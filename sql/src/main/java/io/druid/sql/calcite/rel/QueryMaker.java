@@ -21,6 +21,7 @@ package io.druid.sql.calcite.rel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
@@ -36,12 +37,17 @@ import io.druid.query.Query;
 import io.druid.query.Result;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.scan.ScanQuery;
+import io.druid.query.select.EventHolder;
+import io.druid.query.select.PagingSpec;
+import io.druid.query.select.SelectQuery;
+import io.druid.query.select.SelectResultValue;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.query.topn.DimensionAndMetricValueExtractor;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.DimensionHandlerUtils;
+import io.druid.segment.column.Column;
 import io.druid.server.QueryLifecycleFactory;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerContext;
@@ -53,8 +59,12 @@ import org.apache.calcite.util.NlsString;
 import org.joda.time.DateTime;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class QueryMaker
 {
@@ -98,6 +108,8 @@ public class QueryMaker
       return executeGroupBy(queryBuilder, (GroupByQuery) query);
     } else if (query instanceof ScanQuery) {
       return executeScan(queryBuilder, (ScanQuery) query);
+    } else if (query instanceof SelectQuery) {
+      return executeSelect(queryBuilder, (SelectQuery) query);
     } else {
       throw new ISE("Cannot run query of class[%s]", query.getClass().getName());
     }
@@ -145,6 +157,110 @@ public class QueryMaker
             }
         )
     );
+  }
+
+  private Sequence<Object[]> executeSelect(
+      final DruidQueryBuilder queryBuilder,
+      final SelectQuery baseQuery
+  )
+  {
+    Preconditions.checkState(queryBuilder.getGrouping() == null, "grouping must be null");
+
+    final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
+    final Integer limit = queryBuilder.getLimitSpec() != null ? queryBuilder.getLimitSpec().getLimit() : null;
+
+    // Select is paginated, we need to make multiple queries.
+    final Sequence<Sequence<Object[]>> sequenceOfSequences = Sequences.simple(
+        new Iterable<Sequence<Object[]>>()
+        {
+          @Override
+          public Iterator<Sequence<Object[]>> iterator()
+          {
+            final AtomicBoolean morePages = new AtomicBoolean(true);
+            final AtomicReference<Map<String, Integer>> pagingIdentifiers = new AtomicReference<>();
+            final AtomicLong rowsRead = new AtomicLong();
+
+            // Each Sequence<Object[]> is one page.
+            return new Iterator<Sequence<Object[]>>()
+            {
+              @Override
+              public boolean hasNext()
+              {
+                return morePages.get();
+              }
+
+              @Override
+              public Sequence<Object[]> next()
+              {
+                final SelectQuery queryWithPagination = baseQuery.withPagingSpec(
+                    new PagingSpec(
+                        pagingIdentifiers.get(),
+                        plannerContext.getPlannerConfig().getSelectThreshold(),
+                        true
+                    )
+                );
+
+                morePages.set(false);
+                final AtomicBoolean gotResult = new AtomicBoolean();
+
+                return Sequences.concat(
+                    Sequences.map(
+                        runQuery(queryWithPagination),
+                        new Function<Result<SelectResultValue>, Sequence<Object[]>>()
+                        {
+                          @Override
+                          public Sequence<Object[]> apply(final Result<SelectResultValue> result)
+                          {
+                            if (!gotResult.compareAndSet(false, true)) {
+                              throw new ISE("WTF?! Expected single result from Select query but got multiple!");
+                            }
+
+                            pagingIdentifiers.set(result.getValue().getPagingIdentifiers());
+                            final List<Object[]> retVals = new ArrayList<>();
+                            for (EventHolder holder : result.getValue().getEvents()) {
+                              morePages.set(true);
+                              final Map<String, Object> map = holder.getEvent();
+                              final Object[] retVal = new Object[fieldList.size()];
+                              for (RelDataTypeField field : fieldList) {
+                                final String outputName = queryBuilder.getRowOrder().get(field.getIndex());
+                                if (outputName.equals(Column.TIME_COLUMN_NAME)) {
+                                  retVal[field.getIndex()] = coerce(
+                                      holder.getTimestamp().getMillis(),
+                                      field.getType().getSqlTypeName()
+                                  );
+                                } else {
+                                  retVal[field.getIndex()] = coerce(
+                                      map.get(outputName),
+                                      field.getType().getSqlTypeName()
+                                  );
+                                }
+                              }
+                              if (limit == null || rowsRead.incrementAndGet() <= limit) {
+                                retVals.add(retVal);
+                              } else {
+                                morePages.set(false);
+                                return Sequences.simple(retVals);
+                              }
+                            }
+
+                            return Sequences.simple(retVals);
+                          }
+                        }
+                    )
+                );
+              }
+
+              @Override
+              public void remove()
+              {
+                throw new UnsupportedOperationException();
+              }
+            };
+          }
+        }
+    );
+
+    return Sequences.concat(sequenceOfSequences);
   }
 
   @SuppressWarnings("unchecked")

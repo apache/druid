@@ -20,6 +20,7 @@
 package io.druid.sql.calcite.rel;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -32,6 +33,7 @@ import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.DataSource;
 import io.druid.query.Query;
 import io.druid.query.QueryDataSource;
+import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.groupby.GroupByQuery;
@@ -40,6 +42,8 @@ import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
 import io.druid.query.ordering.StringComparators;
 import io.druid.query.scan.ScanQuery;
+import io.druid.query.select.PagingSpec;
+import io.druid.query.select.SelectQuery;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.topn.DimensionTopNMetricSpec;
 import io.druid.query.topn.InvertedTopNMetricSpec;
@@ -70,6 +74,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class DruidQueryBuilder
 {
@@ -384,6 +389,11 @@ public class DruidQueryBuilder
       return scanQuery;
     }
 
+    final SelectQuery selectQuery = toSelectQuery(dataSource, plannerContext);
+    if (selectQuery != null) {
+      return selectQuery;
+    }
+
     throw new IllegalStateException("WTF?! Cannot build a query even though we planned it?");
   }
 
@@ -585,6 +595,12 @@ public class DruidQueryBuilder
   )
   {
     if (grouping != null) {
+      // Scan cannot GROUP BY.
+      return null;
+    }
+
+    if (limitSpec != null && limitSpec.getColumns().size() > 0) {
+      // Scan cannot ORDER BY.
       return null;
     }
 
@@ -610,6 +626,87 @@ public class DruidQueryBuilder
         filtration.getDimFilter(),
         Ordering.natural().sortedCopy(ImmutableSet.copyOf(getRowOrder())),
         false,
+        plannerContext.getQueryContext()
+    );
+  }
+
+  /**
+   * Return this query as a Select query, or null if this query is not compatible with Select.
+   *
+   * @param dataSource     data source to query
+   * @param plannerContext planner context
+   *
+   * @return query or null
+   */
+  @Nullable
+  public SelectQuery toSelectQuery(
+      final DataSource dataSource,
+      final PlannerContext plannerContext
+  )
+  {
+    if (grouping != null) {
+      return null;
+    }
+
+    final Filtration filtration = Filtration.create(filter).optimize(sourceRowSignature);
+    final boolean descending;
+    final int threshold;
+
+    if (limitSpec != null) {
+      // Safe to assume limitSpec has zero or one entry; DruidSelectSortRule wouldn't push in anything else.
+      if (limitSpec.getColumns().size() > 0) {
+        final OrderByColumnSpec orderBy = Iterables.getOnlyElement(limitSpec.getColumns());
+        if (!orderBy.getDimension().equals(Column.TIME_COLUMN_NAME)) {
+          throw new ISE("WTF?! Got select with non-time orderBy[%s]", orderBy);
+        }
+        descending = orderBy.getDirection() == OrderByColumnSpec.Direction.DESCENDING;
+      } else {
+        descending = false;
+      }
+
+      threshold = limitSpec.getLimit();
+    } else {
+      descending = false;
+      threshold = 0;
+    }
+
+    // We need to ask for dummy columns to prevent Select from returning all of them.
+    String dummyColumn = "dummy";
+    while (sourceRowSignature.getColumnType(dummyColumn) != null
+           || getRowOrder().contains(dummyColumn)) {
+      dummyColumn = dummyColumn + "_";
+    }
+
+    final List<String> metrics = new ArrayList<>();
+
+    if (selectProjection != null) {
+      metrics.addAll(selectProjection.getDirectColumns());
+      metrics.addAll(selectProjection.getVirtualColumns()
+                                     .stream()
+                                     .map(VirtualColumn::getOutputName)
+                                     .collect(Collectors.toList()));
+    } else {
+      // No projection, rowOrder should reference direct columns.
+      metrics.addAll(getRowOrder());
+    }
+
+    if (metrics.isEmpty()) {
+      metrics.add(dummyColumn);
+    }
+
+    // Not used for actual queries (will be replaced by QueryMaker) but the threshold is important for the planner.
+    final PagingSpec pagingSpec = new PagingSpec(null, threshold);
+
+    return new SelectQuery(
+        dataSource,
+        filtration.getQuerySegmentSpec(),
+        descending,
+        filtration.getDimFilter(),
+        Granularities.ALL,
+        ImmutableList.of(new DefaultDimensionSpec(dummyColumn, dummyColumn)),
+        metrics.stream().sorted().distinct().collect(Collectors.toList()),
+        getVirtualColumns(plannerContext.getExprMacroTable()),
+        pagingSpec,
         plannerContext.getQueryContext()
     );
   }

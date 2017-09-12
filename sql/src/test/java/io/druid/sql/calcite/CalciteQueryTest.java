@@ -448,6 +448,74 @@ public class CalciteQueryTest
   }
 
   @Test
+  public void testSelectStarWithLimitTimeDescending() throws Exception
+  {
+    testQuery(
+        "SELECT * FROM druid.foo ORDER BY __time DESC LIMIT 2",
+        ImmutableList.of(
+            Druids.newSelectQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .dimensions(ImmutableList.of("dummy"))
+                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
+                  .descending(true)
+                  .pagingSpec(FIRST_PAGING_SPEC)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{T("2001-01-03"), 1L, "abc", "", 6f, 6d, HLLCV1.class.getName()},
+            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5f, 5d, HLLCV1.class.getName()}
+        )
+    );
+  }
+
+  @Test
+  public void testSelectStarWithoutLimitTimeAscending() throws Exception
+  {
+    testQuery(
+        "SELECT * FROM druid.foo ORDER BY __time",
+        ImmutableList.of(
+            Druids.newSelectQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .dimensions(ImmutableList.of("dummy"))
+                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
+                  .descending(false)
+                  .pagingSpec(FIRST_PAGING_SPEC)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build(),
+            Druids.newSelectQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .dimensions(ImmutableList.of("dummy"))
+                  .metrics(ImmutableList.of("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1"))
+                  .descending(false)
+                  .pagingSpec(
+                      new PagingSpec(
+                          ImmutableMap.of("foo_1970-01-01T00:00:00.000Z_2001-01-03T00:00:00.001Z_1", 5),
+                          1000,
+                          true
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{T("2000-01-01"), 1L, "", "a", 1f, 1.0, HLLCV1.class.getName()},
+            new Object[]{T("2000-01-02"), 1L, "10.1", "", 2f, 2.0, HLLCV1.class.getName()},
+            new Object[]{T("2000-01-03"), 1L, "2", "", 3f, 3.0, HLLCV1.class.getName()},
+            new Object[]{T("2001-01-01"), 1L, "1", "a", 4f, 4.0, HLLCV1.class.getName()},
+            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5f, 5.0, HLLCV1.class.getName()},
+            new Object[]{T("2001-01-03"), 1L, "abc", "", 6f, 6.0, HLLCV1.class.getName()}
+        )
+    );
+  }
+
+  @Test
   public void testSelectSingleColumnTwice() throws Exception
   {
     testQuery(
@@ -470,7 +538,6 @@ public class CalciteQueryTest
   }
 
   @Test
-  @Ignore // Scan query doesn't support descending order
   public void testSelectSingleColumnWithLimitDescending() throws Exception
   {
     testQuery(
@@ -1152,8 +1219,6 @@ public class CalciteQueryTest
     // It's also here so when we do support these features, we can have "real" tests for these queries.
 
     final List<String> queries = ImmutableList.of(
-        "SELECT * FROM druid.foo ORDER BY __time DESC", // SELECT with ORDER BY time
-        "SELECT dim1 FROM druid.foo ORDER BY dim1", // SELECT with ORDER BY non-time
         "SELECT TRIM(dim1) FROM druid.foo", // TRIM function
         "SELECT COUNT(*) FROM druid.foo x, druid.foo y", // Self-join
         "SELECT DISTINCT dim2 FROM druid.foo ORDER BY dim2 LIMIT 2 OFFSET 5" // DISTINCT with OFFSET

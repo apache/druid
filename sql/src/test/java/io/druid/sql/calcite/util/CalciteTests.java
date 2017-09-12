@@ -72,7 +72,11 @@ import io.druid.query.scan.ScanQueryConfig;
 import io.druid.query.scan.ScanQueryEngine;
 import io.druid.query.scan.ScanQueryQueryToolChest;
 import io.druid.query.scan.ScanQueryRunnerFactory;
+import io.druid.query.select.SelectQuery;
 import io.druid.query.select.SelectQueryConfig;
+import io.druid.query.select.SelectQueryEngine;
+import io.druid.query.select.SelectQueryQueryToolChest;
+import io.druid.query.select.SelectQueryRunnerFactory;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesQueryEngine;
 import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
@@ -165,6 +169,18 @@ public class CalciteTests
                       new DefaultGenericQueryMetricsFactory(TestHelper.getJsonMapper())
                   ),
                   new ScanQueryEngine()
+              )
+          )
+          .put(
+              SelectQuery.class,
+              new SelectQueryRunnerFactory(
+                  new SelectQueryQueryToolChest(
+                      TestHelper.getJsonMapper(),
+                      QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
+                      SELECT_CONFIG_SUPPLIER
+                  ),
+                  new SelectQueryEngine(SELECT_CONFIG_SUPPLIER),
+                  QueryRunnerTestHelper.NOOP_QUERYWATCHER
               )
           )
           .put(
