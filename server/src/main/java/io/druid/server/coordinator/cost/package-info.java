@@ -17,21 +17,7 @@
  * under the License.
  */
 
-package io.druid.client;
+@ParametersAreNonnullByDefault
+package io.druid.server.coordinator.cost;
 
-import com.google.common.base.Predicate;
-
-import io.druid.java.util.common.Pair;
-import io.druid.server.coordination.DruidServerMetadata;
-import io.druid.timeline.DataSegment;
-
-import java.util.concurrent.Executor;
-
-public interface FilteredServerInventoryView extends InventoryView
-{
-  public void registerSegmentCallback(
-      Executor exec, ServerView.SegmentCallback callback, Predicate<Pair<DruidServerMetadata, DataSegment>> filter
-  );
-
-  public void registerServerRemovedCallback(Executor exec, ServerView.ServerRemovedCallback callback);
-}
+import javax.annotation.ParametersAreNonnullByDefault;
