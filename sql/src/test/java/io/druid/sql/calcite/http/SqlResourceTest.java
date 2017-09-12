@@ -249,13 +249,18 @@ public class SqlResourceTest
   @Test
   public void testCannotConvert() throws Exception
   {
-    // TRIM unsupported
-    final QueryInterruptedException exception = doPost(new SqlQuery("SELECT TRIM(dim1) FROM druid.foo", null)).lhs;
+    // SELECT + ORDER unsupported
+    final QueryInterruptedException exception = doPost(
+        new SqlQuery("SELECT dim1 FROM druid.foo ORDER BY dim1", null)
+    ).lhs;
 
     Assert.assertNotNull(exception);
     Assert.assertEquals(QueryInterruptedException.UNKNOWN_EXCEPTION, exception.getErrorCode());
     Assert.assertEquals(ISE.class.getName(), exception.getErrorClass());
-    Assert.assertTrue(exception.getMessage().contains("Cannot build plan for query: SELECT TRIM(dim1) FROM druid.foo"));
+    Assert.assertTrue(
+        exception.getMessage()
+                 .contains("Cannot build plan for query: SELECT dim1 FROM druid.foo ORDER BY dim1")
+    );
   }
 
   @Test

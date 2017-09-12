@@ -19,38 +19,28 @@
 
 package io.druid.sql.calcite.expression;
 
-import com.google.inject.Inject;
-import io.druid.java.util.common.StringUtils;
-import io.druid.math.expr.Expr;
-import io.druid.query.lookup.LookupReferencesManager;
-import io.druid.query.lookup.RegisteredLookupExtractionFn;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 
-public class LookupOperatorConversion implements SqlOperatorConversion
+public class LTrimOperatorConversion implements SqlOperatorConversion
 {
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
-      .operatorBuilder("LOOKUP")
+      .operatorBuilder("LTRIM")
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)
       .returnType(SqlTypeName.VARCHAR)
       .functionCategory(SqlFunctionCategory.STRING)
+      .requiredOperands(1)
       .build();
 
-  private final LookupReferencesManager lookupReferencesManager;
-
-  @Inject
-  public LookupOperatorConversion(final LookupReferencesManager lookupReferencesManager)
-  {
-    this.lookupReferencesManager = lookupReferencesManager;
-  }
-
   @Override
-  public SqlFunction calciteOperator()
+  public SqlOperator calciteOperator()
   {
     return SQL_FUNCTION;
   }
@@ -66,24 +56,19 @@ public class LookupOperatorConversion implements SqlOperatorConversion
         plannerContext,
         rowSignature,
         rexNode,
-        StringUtils.toLowerCase(calciteOperator().getName()),
-        inputExpressions -> {
-          final DruidExpression arg = inputExpressions.get(0);
-          final Expr lookupNameExpr = inputExpressions.get(1).parse(plannerContext.getExprMacroTable());
-
-          if (arg.isSimpleExtraction() && lookupNameExpr.isLiteral()) {
-            return arg.getSimpleExtraction().cascade(
-                new RegisteredLookupExtractionFn(
-                    lookupReferencesManager,
-                    (String) lookupNameExpr.getLiteralValue(),
-                    false,
-                    null,
-                    false,
-                    true
-                )
+        druidExpressions -> {
+          if (druidExpressions.size() > 1) {
+            return TrimOperatorConversion.makeTrimExpression(
+                SqlTrimFunction.Flag.LEADING,
+                druidExpressions.get(0),
+                druidExpressions.get(1)
             );
           } else {
-            return null;
+            return TrimOperatorConversion.makeTrimExpression(
+                SqlTrimFunction.Flag.LEADING,
+                druidExpressions.get(0),
+                DruidExpression.fromExpression(DruidExpression.stringLiteral(" "))
+            );
           }
         }
     );

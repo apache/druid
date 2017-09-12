@@ -46,6 +46,7 @@ import io.druid.query.aggregation.FloatMinAggregatorFactory;
 import io.druid.query.aggregation.LongMaxAggregatorFactory;
 import io.druid.query.aggregation.LongMinAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
+import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
@@ -256,6 +257,56 @@ public class CalciteQueryTest
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{2}
+        )
+    );
+  }
+
+  @Test
+  public void testSelectTrimFamily() throws Exception
+  {
+    // TRIM has some whacky parsing. Make sure the different forms work.
+
+    testQuery(
+        "SELECT\n"
+        + "TRIM(BOTH 'x' FROM 'xfoox'),\n"
+        + "TRIM(TRAILING 'x' FROM 'xfoox'),\n"
+        + "TRIM(' ' FROM ' foo '),\n"
+        + "TRIM(TRAILING FROM ' foo '),\n"
+        + "TRIM(' foo '),\n"
+        + "BTRIM(' foo '),\n"
+        + "BTRIM('xfoox', 'x'),\n"
+        + "LTRIM(' foo '),\n"
+        + "LTRIM('xfoox', 'x'),\n"
+        + "RTRIM(' foo '),\n"
+        + "RTRIM('xfoox', 'x'),\n"
+        + "COUNT(*)\n"
+        + "FROM foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .postAggregators(
+                      ImmutableList.<PostAggregator>builder()
+                          .add(EXPRESSION_POST_AGG("p0", "'foo'"))
+                          .add(EXPRESSION_POST_AGG("p1", "'xfoo'"))
+                          .add(EXPRESSION_POST_AGG("p2", "'foo'"))
+                          .add(EXPRESSION_POST_AGG("p3", "' foo'"))
+                          .add(EXPRESSION_POST_AGG("p4", "'foo'"))
+                          .add(EXPRESSION_POST_AGG("p5", "'foo'"))
+                          .add(EXPRESSION_POST_AGG("p6", "'foo'"))
+                          .add(EXPRESSION_POST_AGG("p7", "'foo '"))
+                          .add(EXPRESSION_POST_AGG("p8", "'foox'"))
+                          .add(EXPRESSION_POST_AGG("p9", "' foo'"))
+                          .add(EXPRESSION_POST_AGG("p10", "'xfoo'"))
+                          .build()
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"foo", "xfoo", "foo", " foo", "foo", "foo", "foo", "foo ", "foox", " foo", "xfoo", 6L}
         )
     );
   }
@@ -1223,7 +1274,6 @@ public class CalciteQueryTest
 
     final List<String> queries = ImmutableList.of(
         "SELECT dim1 FROM druid.foo ORDER BY dim1", // SELECT query with order by
-        "SELECT TRIM(dim1) FROM druid.foo", // TRIM function
         "SELECT COUNT(*) FROM druid.foo x, druid.foo y", // Self-join
         "SELECT DISTINCT dim2 FROM druid.foo ORDER BY dim2 LIMIT 2 OFFSET 5" // DISTINCT with OFFSET
     );
@@ -3805,6 +3855,41 @@ public class CalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{4L}
+        )
+    );
+  }
+
+  @Test
+  public void testCountDistinctOfTrim() throws Exception
+  {
+    // Test a couple different syntax variants of TRIM.
+
+    testQuery(
+        "SELECT COUNT(DISTINCT TRIM(BOTH ' ' FROM dim1)) FROM druid.foo WHERE TRIM(dim1) <> ''",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .filters(NOT(SELECTOR("dim1", "", null)))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(EXPRESSION_VIRTUAL_COLUMN("a0:v", "trim(\"dim1\",' ')", ValueType.STRING))
+                  .filters(EXPRESSION_FILTER("(trim(\"dim1\",' ') != '')"))
+                  .aggregators(
+                      AGGS(
+                          new CardinalityAggregatorFactory(
+                              "a0",
+                              null,
+                              DIMS(new DefaultDimensionSpec("a0:v", "a0:v", ValueType.STRING)),
+                              false,
+                              true
+                          )
+                      )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{5L}
         )
     );
   }
