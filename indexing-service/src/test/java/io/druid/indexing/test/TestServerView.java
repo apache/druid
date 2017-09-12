@@ -48,7 +48,7 @@ public class TestServerView implements FilteredServerInventoryView, ServerView.S
   }
 
   @Override
-  public void registerServerCallback(Executor exec, ServerView.ServerCallback callback)
+  public void registerServerRemovedCallback(Executor exec, ServerView.ServerRemovedCallback callback)
   {
     // No-op
   }
