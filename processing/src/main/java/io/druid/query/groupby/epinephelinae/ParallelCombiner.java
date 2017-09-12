@@ -234,7 +234,7 @@ public class ParallelCombiner<KeyType>
    *
    * @see #buildCombineTree(List, Supplier, AggregatorFactory[], int, List)
    */
-  private static int computeRequiredBufferNum(int numChildNodes, int combineDegree)
+  static int computeRequiredBufferNum(int numChildNodes, int combineDegree)
   {
     // numChildrenForLastNode used to determine that the last node is needed for the current level.
     // Please see buildCombineTree() for more details.
@@ -338,7 +338,7 @@ public class ParallelCombiner<KeyType>
         settableColumnSelectorFactory,
         combiningFactories
     );
-    grouper.init();
+    grouper.init(); // init() must be called before iterator(), so cannot be called inside the below callable.
 
     final ListenableFuture future = executor.submit(
         new AbstractPrioritizedCallable<Void>(priority)

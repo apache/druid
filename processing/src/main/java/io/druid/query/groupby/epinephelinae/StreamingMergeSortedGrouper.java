@@ -62,20 +62,21 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
   private int maxSlotNum;
   private boolean initialized;
 
-  // Below variables can be read/written by differernt threads
-
   /**
-   * Indicate that this grouper consumed the last input or not.
+   * Indicate that this grouper consumed the last input or not.  Always set by the writing thread and ready by the
+   * reading thread.
    */
   private volatile boolean finished;
 
   /**
-   * Currently writing position. This is always moved ahead of nextReadIndex.
+   * Currently writing position.  This is always moved ahead of nextReadIndex.
+   * Also, it is always incremented by the writing thread and read by both the writing and the reading threads.
    */
   private volatile int curWriteIndex;
 
   /**
-   * Next read position. This can be moved to a position only when write for the position is finished.
+   * Next read position.  This can be moved to a position only when write for the position is finished.
+   * Also, it is always incremented by the reading thread and read by both the writing and the reading threads.
    */
   private volatile int nextReadIndex;
 
@@ -189,9 +190,9 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
 
       return AggregateResult.ok();
     }
-    catch (Throwable t) {
-      finish();
-      throw t;
+    catch (RuntimeException e) {
+      finished = true;
+      throw e;
     }
   }
 
@@ -200,12 +201,6 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
     int i = 0;
     for (; i + Long.BYTES <= keySize; i += Long.BYTES) {
       if (curKeyBuffer.getLong(i) != buffer.getLong(bufferOffset + i)) {
-        return false;
-      }
-    }
-
-    for (; i + Integer.BYTES <= keySize; i += Integer.BYTES) {
-      if (curKeyBuffer.getInt(i) != buffer.getInt(bufferOffset + i)) {
         return false;
       }
     }

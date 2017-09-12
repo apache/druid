@@ -329,7 +329,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
     long totalDictionarySize = 0L;
 
     for (SpillingGrouper<KeyType> grouper : groupers) {
-      final List<String> dictionary = grouper.getDictionary();
+      final List<String> dictionary = grouper.mergeAndGetDictionary();
 
       for (String key : dictionary) {
         if (mergedDictionary.add(key)) {
