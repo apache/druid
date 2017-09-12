@@ -19,6 +19,7 @@
 
 package io.druid.client.selector;
 
+import io.druid.java.util.common.RE;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
@@ -66,13 +67,19 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
   {
     synchronized (this) {
       this.segment.set(segment);
-      Set<QueryableDruidServer> priorityServers = new HashSet<>();
+      Set<QueryableDruidServer> priorityServers;
       if (server.getServer().getType() == ServerType.REALTIME) {
         priorityServers = realtimeServers.computeIfAbsent(
-            server.getServer().getPriority(), p -> new HashSet<>());
+            server.getServer().getPriority(),
+            p -> new HashSet<>()
+        );
       } else if (server.getServer().getType() == ServerType.HISTORICAL) {
         priorityServers = historicalServers.computeIfAbsent(
-            server.getServer().getPriority(), p -> new HashSet<>());
+            server.getServer().getPriority(),
+            p -> new HashSet<>()
+        );
+      } else {
+        throw new RE("Server type [%s] is unsupported for server[%s]", server.getServer().getType(), server);
       }
       priorityServers.add(server);
     }
@@ -81,19 +88,30 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
   public boolean removeServer(QueryableDruidServer server)
   {
     synchronized (this) {
+      Int2ObjectRBTreeMap<Set<QueryableDruidServer>> servers;
+      Set<QueryableDruidServer> priorityServers;
+      int priority = server.getServer().getPriority();
       if (server.getServer().getType() == ServerType.REALTIME) {
-        return realtimeServers.computeIfPresent(
-            server.getServer().getPriority(),
-            (p, servers) -> servers.remove(server) ? servers : null
-        ) == null ? false : true;
+        servers = realtimeServers;
+        priorityServers = realtimeServers.get(priority);
       } else if (server.getServer().getType() == ServerType.HISTORICAL) {
-        return historicalServers.computeIfPresent(
-            server.getServer().getPriority(),
-            (p, servers) -> servers.remove(server) ? servers : null
-        ) == null ? false : true;
+        servers = historicalServers;
+        priorityServers = historicalServers.get(priority);
+      } else {
+        throw new RE("Server type [%s] is unsupported for server[%s]", server.getServer().getType(), server);
       }
+
+      if (priorityServers == null) {
+        return false;
+      }
+
+      boolean result = priorityServers.remove(server);
+
+      if (priorityServers.isEmpty()) {
+        servers.remove(priority);
+      }
+      return result;
     }
-    return false;
   }
 
   public boolean isEmpty()
@@ -120,24 +138,30 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
               .map(server -> server.getServer().getMetadata())
               .forEach(candidates::add);
         }
+        return candidates;
       } else {
-        candidates = new ArrayList<>();
-        // return all servers as candidates
-        historicalServers.values()
-            .stream()
-            .flatMap(Collection::stream)
-            .map(server -> server.getServer().getMetadata())
-            .forEach(candidates::add);
-
-        realtimeServers.values()
-            .stream()
-            .flatMap(Collection::stream)
-            .map(server -> server.getServer().getMetadata())
-            .forEach(candidates::add);
+        return getAllServers();
       }
-
-      return candidates;
     }
+  }
+
+  public List<DruidServerMetadata> getAllServers()
+  {
+    List<DruidServerMetadata> servers = new ArrayList<>();
+    // return all servers as candidates
+    historicalServers.values()
+        .stream()
+        .flatMap(Collection::stream)
+        .map(server -> server.getServer().getMetadata())
+        .forEach(servers::add);
+
+    realtimeServers.values()
+        .stream()
+        .flatMap(Collection::stream)
+        .map(server -> server.getServer().getMetadata())
+        .forEach(servers::add);
+
+    return servers;
   }
 
   @Override
