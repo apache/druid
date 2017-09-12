@@ -139,29 +139,31 @@ public class ExecutorLifecycle
       throw Throwables.propagate(e);
     }
 
-    // Spawn monitor thread to keep a watch on parent's stdin
-    // If stdin reaches eof, the parent is gone, and we should shut down
-    parentMonitorExec.submit(
-        new Runnable()
-        {
-          @Override
-          public void run()
+    if (taskExecutorConfig.isParentStreamDefined()) {
+      // Spawn monitor thread to keep a watch on parent's stdin
+      // If stdin reaches eof, the parent is gone, and we should shut down
+      parentMonitorExec.submit(
+          new Runnable()
           {
-            try {
-              while (parentStream.read() != -1) {
-                // Toss the byte
+            @Override
+            public void run()
+            {
+              try {
+                while (parentStream.read() != -1) {
+                  // Toss the byte
+                }
               }
-            }
-            catch (Exception e) {
-              log.error(e, "Failed to read from stdin");
-            }
+              catch (Exception e) {
+                log.error(e, "Failed to read from stdin");
+              }
 
-            // Kind of gross, but best way to kill the JVM as far as I know
-            log.info("Triggering JVM shutdown.");
-            System.exit(2);
+              // Kind of gross, but best way to kill the JVM as far as I know
+              log.info("Triggering JVM shutdown.");
+              System.exit(2);
+            }
           }
-        }
-    );
+      );
+    }
 
     // Won't hurt in remote mode, and is required for setting up locks in local mode:
     try {
