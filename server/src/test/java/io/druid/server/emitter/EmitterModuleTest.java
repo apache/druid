@@ -25,11 +25,13 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.metamx.emitter.core.Emitter;
+import com.metamx.emitter.core.ParametrizedUriEmitter;
 import io.druid.guice.DruidGuiceExtensions;
 import io.druid.guice.JsonConfigurator;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ServerModule;
+import org.junit.Assert;
 import org.junit.Test;
 
 import javax.validation.Validation;
@@ -55,7 +57,8 @@ public class EmitterModuleTest
 
     final Emitter emitter =
         makeInjectorWithProperties(props).getInstance(Emitter.class);
-    System.out.println(emitter);
+    // Testing that ParametrizedUriEmitter is successfully deserialized from the above config
+    Assert.assertTrue(emitter instanceof ParametrizedUriEmitter);
   }
 
   private Injector makeInjectorWithProperties(final Properties props)
