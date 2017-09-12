@@ -595,13 +595,18 @@ public class DruidQueryBuilder
 
     final Filtration filtration = Filtration.create(filter).optimize(sourceRowSignature);
 
+    // DefaultLimitSpec (which we use to "remember" limits) is int typed, and Integer.MAX_VALUE means "no limit".
+    final long scanLimit = limitSpec == null || limitSpec.getLimit() == Integer.MAX_VALUE
+                           ? 0L
+                           : (long) limitSpec.getLimit();
+
     return new ScanQuery(
         dataSource,
         filtration.getQuerySegmentSpec(),
         selectProjection != null ? VirtualColumns.create(selectProjection.getVirtualColumns()) : VirtualColumns.EMPTY,
         ScanQuery.RESULT_FORMAT_COMPACTED_LIST,
         0,
-        limitSpec == null || limitSpec.getLimit() == Integer.MAX_VALUE ? 0 : limitSpec.getLimit(),
+        scanLimit,
         filtration.getDimFilter(),
         Ordering.natural().sortedCopy(ImmutableSet.copyOf(getRowOrder())),
         false,
