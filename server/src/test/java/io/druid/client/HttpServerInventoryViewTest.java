@@ -224,9 +224,9 @@ public class HttpServerInventoryViewTest
     );
 
     final CountDownLatch serverRemovedCalled = new CountDownLatch(1);
-    httpServerInventoryView.registerServerCallback(
+    httpServerInventoryView.registerServerRemovedCallback(
         MoreExecutors.sameThreadExecutor(),
-        new ServerView.ServerCallback()
+        new ServerView.ServerRemovedCallback()
         {
           @Override
           public ServerView.CallbackAction serverRemoved(DruidServer server)
