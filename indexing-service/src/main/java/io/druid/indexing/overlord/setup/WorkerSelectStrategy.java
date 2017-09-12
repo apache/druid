@@ -21,11 +21,12 @@ package io.druid.indexing.overlord.setup;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
+
+import javax.annotation.Nullable;
 
 /**
  * The {@link io.druid.indexing.overlord.RemoteTaskRunner} uses this class to select a worker to assign tasks to.
@@ -49,7 +50,8 @@ public interface WorkerSelectStrategy
    *
    * @return A {@link ImmutableWorkerInfo} to run the task if one is available.
    */
-  Optional<ImmutableWorkerInfo> findWorkerForTask(
+  @Nullable
+  ImmutableWorkerInfo findWorkerForTask(
       final WorkerTaskRunnerConfig config,
       final ImmutableMap<String, ImmutableWorkerInfo> zkWorkers,
       final Task task

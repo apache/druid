@@ -17,21 +17,7 @@
  * under the License.
  */
 
-package io.druid.indexing.overlord.setup;
+@ParametersAreNonnullByDefault
+package io.druid.server.coordinator.cost;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-/**
- * Only exists for backwards compatibility with existing "equalDistributionWithAffinity" worker configs.
- */
-public class EqualDistributionWithAffinityWorkerSelectStrategy extends EqualDistributionWorkerSelectStrategy
-{
-  @JsonCreator
-  public EqualDistributionWithAffinityWorkerSelectStrategy(
-      @JsonProperty("affinityConfig") AffinityConfig affinityConfig
-  )
-  {
-    super(affinityConfig);
-  }
-}
+import javax.annotation.ParametersAreNonnullByDefault;

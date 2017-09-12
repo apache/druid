@@ -52,7 +52,7 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
   private final CuratorInventoryManager<DruidServer, InventoryType> inventoryManager;
   private final AtomicBoolean started = new AtomicBoolean(false);
 
-  private final ConcurrentMap<ServerCallback, Executor> serverCallbacks = new MapMaker().makeMap();
+  private final ConcurrentMap<ServerRemovedCallback, Executor> serverRemovedCallbacks = new MapMaker().makeMap();
   private final ConcurrentMap<SegmentCallback, Executor> segmentCallbacks = new MapMaker().makeMap();
 
   public AbstractCuratorServerInventoryView(
@@ -118,7 +118,7 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
           public void deadContainer(DruidServer deadContainer)
           {
             log.info("Server Disappeared[%s]", deadContainer);
-            runServerCallbacks(deadContainer);
+            runServerRemovedCallbacks(deadContainer);
           }
 
           @Override
@@ -210,9 +210,9 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
   }
 
   @Override
-  public void registerServerCallback(Executor exec, ServerCallback callback)
+  public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
   {
-    serverCallbacks.put(callback, exec);
+    serverRemovedCallbacks.put(callback, exec);
   }
 
   @Override
@@ -247,9 +247,9 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
     }
   }
 
-  protected void runServerCallbacks(final DruidServer server)
+  private void runServerRemovedCallbacks(final DruidServer server)
   {
-    for (final Map.Entry<ServerCallback, Executor> entry : serverCallbacks.entrySet()) {
+    for (final Map.Entry<ServerRemovedCallback, Executor> entry : serverRemovedCallbacks.entrySet()) {
       entry.getValue().execute(
           new Runnable()
           {
@@ -257,7 +257,7 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
             public void run()
             {
               if (CallbackAction.UNREGISTER == entry.getKey().serverRemoved(server)) {
-                serverCallbacks.remove(entry.getKey());
+                serverRemovedCallbacks.remove(entry.getKey());
               }
             }
           }
