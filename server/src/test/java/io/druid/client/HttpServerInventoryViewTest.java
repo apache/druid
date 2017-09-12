@@ -34,6 +34,7 @@ import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscovery;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.RE;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.DruidServerMetadata;
@@ -51,7 +52,6 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.Duration;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -79,22 +79,22 @@ public class HttpServerInventoryViewTest
     EasyMock.replay(druidNodeDiscoveryProvider);
 
     final DataSegment segment1 = new DataSegment(
-        "test1", new Interval("2014/2015"), "v1",
+        "test1", Intervals.of("2014/2015"), "v1",
         null, null, null, null, 0, 0
     );
 
     final DataSegment segment2 = new DataSegment(
-        "test2", new Interval("2014/2015"), "v1",
+        "test2", Intervals.of("2014/2015"), "v1",
         null, null, null, null, 0, 0
     );
 
     final DataSegment segment3 = new DataSegment(
-        "test3", new Interval("2014/2015"), "v1",
+        "test3", Intervals.of("2014/2015"), "v1",
         null, null, null, null, 0, 0
     );
 
     final DataSegment segment4 = new DataSegment(
-        "test4", new Interval("2014/2015"), "v1",
+        "test4", Intervals.of("2014/2015"), "v1",
         null, null, null, null, 0, 0
     );
 
@@ -310,7 +310,8 @@ public class HttpServerInventoryViewTest
       );
       try {
         return results.take();
-      } catch (InterruptedException ex) {
+      }
+      catch (InterruptedException ex) {
         throw new RE(ex, "Interrupted.");
       }
     }
