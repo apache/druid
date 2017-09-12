@@ -22,7 +22,7 @@ package io.druid.segment.column;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.data.IndexedInts;
-import io.druid.segment.historical.OffsetHolder;
+import io.druid.segment.data.ReadableOffset;
 
 import java.io.Closeable;
 
@@ -38,5 +38,5 @@ public interface DictionaryEncodedColumn<ActualType extends Comparable> extends 
   public int lookupId(ActualType name);
   public int getCardinality();
 
-  DimensionSelector makeDimensionSelector(OffsetHolder offsetHolder, ExtractionFn extractionFn);
+  DimensionSelector makeDimensionSelector(ReadableOffset offset, ExtractionFn extractionFn);
 }

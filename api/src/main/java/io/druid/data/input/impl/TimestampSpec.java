@@ -22,6 +22,7 @@ package io.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.parsers.TimestampParser;
 import org.joda.time.DateTime;
 
@@ -31,6 +32,7 @@ import java.util.Objects;
 
 /**
  */
+@PublicApi
 public class TimestampSpec
 {
   private static class ParseCtx

@@ -19,7 +19,6 @@
 
 package io.druid.tests.indexer;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.metamx.http.client.HttpClient;
@@ -28,6 +27,7 @@ import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.clients.EventReceiverFirehoseTestClient;
@@ -227,10 +227,8 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
         LOG.info("sending event: [%s]\n", event);
         Collection<Map<String, Object>> events = new ArrayList<Map<String, Object>>();
         events.add(
-            (Map<String, Object>) this.jsonMapper.readValue(
-                event, new TypeReference<Map<String, Object>>()
-                {
-                }
+            this.jsonMapper.readValue(
+                event, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
             )
         );
         int eventsPosted = client.postEvents(events, this.jsonMapper, MediaType.APPLICATION_JSON);

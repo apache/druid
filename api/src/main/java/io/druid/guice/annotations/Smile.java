@@ -31,6 +31,7 @@ import java.lang.annotation.Target;
 @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @BindingAnnotation
+@PublicApi
 public @interface Smile
 {
 }

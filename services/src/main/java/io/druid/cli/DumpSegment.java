@@ -278,7 +278,9 @@ public class DumpSegment extends GuiceRunnable
                     final List<ObjectColumnSelector> selectors = Lists.newArrayList();
 
                     for (String columnName : columnNames) {
-                      selectors.add(makeSelector(columnName, index.getColumn(columnName), cursor));
+                      selectors.add(
+                          makeSelector(columnName, index.getColumn(columnName), cursor.getColumnSelectorFactory())
+                      );
                     }
 
                     while (!cursor.isDone()) {

@@ -132,7 +132,8 @@ public class QuantileSqlAggregatorTest
         CalciteTests.createMockQueryLifecycleFactory(walker),
         operatorTable,
         CalciteTests.createExprMacroTable(),
-        plannerConfig
+        plannerConfig,
+        CalciteTests.getJsonMapper()
     );
   }
 

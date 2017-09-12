@@ -21,6 +21,7 @@ package io.druid.segment;
 
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.Offset;
+import io.druid.segment.data.ReadableOffset;
 
 public class NoFilterOffset extends Offset
 {
@@ -53,6 +54,12 @@ public class NoFilterOffset extends Offset
   public void reset()
   {
     currentOffset = initialOffset;
+  }
+
+  @Override
+  public ReadableOffset getBaseReadableOffset()
+  {
+    return this;
   }
 
   @Override

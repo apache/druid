@@ -20,7 +20,9 @@
 package io.druid.segment.historical;
 
 import io.druid.segment.Cursor;
+import io.druid.segment.data.Offset;
 
-public interface HistoricalCursor extends Cursor, OffsetHolder
+public interface HistoricalCursor extends Cursor
 {
+  Offset getOffset();
 }

@@ -17,19 +17,18 @@
  * under the License.
  */
 
-package io.druid.segment.historical;
+package io.druid.java.util.common.jackson;
 
-import io.druid.segment.data.Offset;
-import io.druid.segment.data.ReadableOffset;
+import com.fasterxml.jackson.core.type.TypeReference;
 
-public interface OffsetHolder
+import java.util.Map;
+
+public class JacksonUtils
 {
-  Offset getOffset();
-
-  /**
-   * Should return the same, or a "view" of the same offset as {@link #getOffset()}. The difference is that smaller
-   * interface allows to return unwrapped underlying offset sometimes, e. g. {@link
-   * io.druid.segment.FilteredOffset#baseOffset}, instead of the wrapper {@link io.druid.segment.FilteredOffset}.
-   */
-  ReadableOffset getReadableOffset();
+  public static final TypeReference<Map<String, Object>> TYPE_REFERENCE_MAP_STRING_OBJECT = new TypeReference<Map<String, Object>>()
+  {
+  };
+  public static final TypeReference<Map<String, String>> TYPE_REFERENCE_MAP_STRING_STRING = new TypeReference<Map<String, String>>()
+  {
+  };
 }
