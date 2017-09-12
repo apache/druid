@@ -2734,7 +2734,7 @@ public class CachingClusteredClientTest
           }
 
           @Override
-          public void registerServerCallback(Executor exec, ServerCallback callback)
+          public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
           {
 
           }
