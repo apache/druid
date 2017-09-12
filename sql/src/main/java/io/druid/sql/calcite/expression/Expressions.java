@@ -89,7 +89,6 @@ public class Expressions
       .put(SqlStdOperatorTable.POWER, "pow")
       .put(SqlStdOperatorTable.REPLACE, "replace")
       .put(SqlStdOperatorTable.SQRT, "sqrt")
-      .put(SqlStdOperatorTable.TRIM, "trim")
       .put(SqlStdOperatorTable.UPPER, "upper")
       .build();
 

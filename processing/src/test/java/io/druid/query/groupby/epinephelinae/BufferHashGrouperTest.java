@@ -69,7 +69,8 @@ public class BufferHashGrouperTest
         },
         Integer.MAX_VALUE,
         0,
-        0
+        0,
+        true
     );
     grouper.init();
 
@@ -219,7 +220,8 @@ public class BufferHashGrouperTest
         },
         Integer.MAX_VALUE,
         0.75f,
-        initialBuckets
+        initialBuckets,
+        true
     );
     grouper.init();
     return grouper;

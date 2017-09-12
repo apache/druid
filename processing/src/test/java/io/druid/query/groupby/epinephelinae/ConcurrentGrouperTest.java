@@ -51,6 +51,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class ConcurrentGrouperTest
 {
   private static final ExecutorService service = Executors.newFixedThreadPool(8);
+  private static final int BYTE_BUFFER_SIZE = 192;
 
   @AfterClass
   public static void teardown()
@@ -66,7 +67,7 @@ public class ConcurrentGrouperTest
     public ByteBuffer get()
     {
       if (called.compareAndSet(false, true)) {
-        return ByteBuffer.allocate(192);
+        return ByteBuffer.allocate(BYTE_BUFFER_SIZE);
       } else {
         throw new IAE("should be called once");
       }
@@ -208,7 +209,8 @@ public class ConcurrentGrouperTest
         MoreExecutors.listeningDecorator(Execs.multiThreaded(4, "concurrent-grouper-test-%d")),
         0,
         false,
-        0
+        0,
+        BYTE_BUFFER_SIZE
     );
 
     Future<?>[] futures = new Future[8];
