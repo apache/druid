@@ -35,11 +35,13 @@ import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.AbstractRelNode;
 
+import javax.annotation.Nullable;
+
 public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode implements BindableRel
 {
   private final QueryMaker queryMaker;
 
-  public DruidRel(RelOptCluster cluster, RelTraitSet traitSet, QueryMaker queryMaker)
+  protected DruidRel(RelOptCluster cluster, RelTraitSet traitSet, QueryMaker queryMaker)
   {
     super(cluster, traitSet);
     this.queryMaker = queryMaker;
@@ -74,6 +76,7 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode imple
    *
    * @return query dataSource, or null if it is known in advance that this rel will yield an empty result set.
    */
+  @Nullable
   public abstract QueryDataSource asDataSource();
 
   public abstract T asBindable();

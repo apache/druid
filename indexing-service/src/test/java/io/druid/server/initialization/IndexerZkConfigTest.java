@@ -20,7 +20,6 @@
 package io.druid.server.initialization;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
@@ -32,6 +31,7 @@ import io.druid.guice.JsonConfigurator;
 import io.druid.initialization.Initialization;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -156,7 +156,7 @@ public class IndexerZkConfigTest
     );
     indexerZkConfig.inject(propertyValues, configurator);
 
-    Assert.assertEquals("/druid/indexer/leaderLatchPath", indexerZkConfig.get().get().getLeaderLatchPath());
+    Assert.assertEquals("/druid/indexer/tasks", indexerZkConfig.get().get().getTasksPath());
   }
 
   @Test
@@ -245,7 +245,7 @@ public class IndexerZkConfigTest
 
     ZkPathsConfig zkPathsConfig1 = zkPathsConfig.get().get();
 
-    IndexerZkConfig indexerZkConfig = new IndexerZkConfig(zkPathsConfig1, null, null, null, null, null);
+    IndexerZkConfig indexerZkConfig = new IndexerZkConfig(zkPathsConfig1, null, null, null, null);
 
     Assert.assertEquals("/druid/metrics/indexer", indexerZkConfig.getBase());
     Assert.assertEquals("/druid/metrics/indexer/announcements", indexerZkConfig.getAnnouncementsPath());
@@ -262,22 +262,18 @@ public class IndexerZkConfigTest
         "/druid/prod",
         "/druid/prod/a",
         "/druid/prod/t",
-        "/druid/prod/s",
-        "/druid/prod/l"
+        "/druid/prod/s"
     );
 
     Map<String, String> value = mapper.readValue(
-        mapper.writeValueAsString(indexerZkConfig), new TypeReference<Map<String, String>>()
-        {
-        }
+        mapper.writeValueAsString(indexerZkConfig), JacksonUtils.TYPE_REFERENCE_MAP_STRING_STRING
     );
     IndexerZkConfig newConfig = new IndexerZkConfig(
         zkPathsConfig,
         value.get("base"),
         value.get("announcementsPath"),
         value.get("tasksPath"),
-        value.get("statusPath"),
-        value.get("leaderLatchPath")
+        value.get("statusPath")
     );
 
     Assert.assertEquals(indexerZkConfig, newConfig);

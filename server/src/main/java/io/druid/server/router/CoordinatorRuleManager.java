@@ -21,20 +21,15 @@ package io.druid.server.router;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.Request;
-import com.metamx.http.client.response.FullResponseHandler;
 import com.metamx.http.client.response.FullResponseHolder;
-import io.druid.client.selector.Server;
 import io.druid.concurrent.Execs;
-import io.druid.curator.discovery.ServerDiscoverySelector;
+import io.druid.discovery.DruidLeaderClient;
 import io.druid.guice.ManageLifecycle;
-import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Json;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
@@ -44,9 +39,6 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -60,13 +52,12 @@ public class CoordinatorRuleManager
 {
   private static final Logger log = new Logger(CoordinatorRuleManager.class);
 
-  private final HttpClient httpClient;
   private final ObjectMapper jsonMapper;
   private final Supplier<TieredBrokerConfig> config;
-  private final ServerDiscoverySelector selector;
 
-  private final FullResponseHandler responseHandler;
   private final AtomicReference<ConcurrentHashMap<String, List<Rule>>> rules;
+
+  private final DruidLeaderClient druidLeaderClient;
 
   private volatile ScheduledExecutorService exec;
 
@@ -76,18 +67,15 @@ public class CoordinatorRuleManager
 
   @Inject
   public CoordinatorRuleManager(
-      @Global HttpClient httpClient,
       @Json ObjectMapper jsonMapper,
       Supplier<TieredBrokerConfig> config,
-      ServerDiscoverySelector selector
+      DruidLeaderClient druidLeaderClient
   )
   {
-    this.httpClient = httpClient;
     this.jsonMapper = jsonMapper;
     this.config = config;
-    this.selector = selector;
+    this.druidLeaderClient = druidLeaderClient;
 
-    this.responseHandler = new FullResponseHandler(Charsets.UTF_8);
     this.rules = new AtomicReference<>(
         new ConcurrentHashMap<String, List<Rule>>()
     );
@@ -146,29 +134,16 @@ public class CoordinatorRuleManager
   public void poll()
   {
     try {
-      String url = getRuleURL();
-      if (url == null) {
-        return;
-      }
+      FullResponseHolder response = druidLeaderClient.go(
+          druidLeaderClient.makeRequest(HttpMethod.GET, config.get().getRulesEndpoint())
+      );
 
-      FullResponseHolder response = httpClient.go(
-          new Request(
-              HttpMethod.GET,
-              new URL(url)
-          ),
-          responseHandler
-      ).get();
-
-      if (response.getStatus().equals(HttpResponseStatus.FOUND)) {
-        url = response.getResponse().headers().get("Location");
-        log.info("Redirecting rule request to [%s]", url);
-        response = httpClient.go(
-            new Request(
-                HttpMethod.GET,
-                new URL(url)
-            ),
-            responseHandler
-        ).get();
+      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        throw new ISE(
+            "Error while polling rules, status[%s] content[%s]",
+            response.getStatus(),
+            response.getContent()
+        );
       }
 
       ConcurrentHashMap<String, List<Rule>> newRules = new ConcurrentHashMap<>(
@@ -199,25 +174,5 @@ public class CoordinatorRuleManager
       retVal.addAll(theRules.get(config.get().getDefaultRule()));
     }
     return retVal;
-  }
-
-  private String getRuleURL() throws URISyntaxException
-  {
-    Server server = selector.pick();
-
-    if (server == null) {
-      log.error("No instances found for [%s]!", config.get().getCoordinatorServiceName());
-      return null;
-    }
-
-    return new URI(
-        server.getScheme(),
-        null,
-        server.getAddress(),
-        server.getPort(),
-        config.get().getRulesEndpoint(),
-        null,
-        null
-    ).toString();
   }
 }
