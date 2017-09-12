@@ -170,7 +170,8 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
                 spillMapper,
                 false,
                 limitSpec,
-                sortHasNonGroupingFields
+                sortHasNonGroupingFields,
+                sliceSize
             );
             grouper.init();
             groupers.add(grouper);

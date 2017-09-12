@@ -19,23 +19,48 @@
 
 package io.druid.segment;
 
+import com.google.common.base.Preconditions;
 import com.metamx.emitter.EmittingLogger;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
-import java.io.IOException;
+import java.util.concurrent.Phaser;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * ReferenceCountingSegment allows to call {@link #close()} before some other "users", which called {@link
+ * #increment()}, has not called {@link #decrement()} yet, and the wrapped {@link Segment} won't be actually closed
+ * until that. So ReferenceCountingSegment implements something like automatic reference count-based resource
+ * management.
+ */
 public class ReferenceCountingSegment extends AbstractSegment
 {
   private static final EmittingLogger log = new EmittingLogger(ReferenceCountingSegment.class);
 
   private final Segment baseSegment;
-
-  private final Object lock = new Object();
-
-  private volatile int numReferences = 0;
-  private volatile boolean isClosed = false;
+  private final AtomicBoolean closed = new AtomicBoolean(false);
+  private final Phaser referents = new Phaser(1)
+  {
+    @Override
+    protected boolean onAdvance(int phase, int registeredParties)
+    {
+      Preconditions.checkState(registeredParties == 0);
+      // Ensure that onAdvance() doesn't throw exception, otherwise termination won't happen
+      try {
+        baseSegment.close();
+      }
+      catch (Exception e) {
+        try {
+          log.error(e, "Exception while closing segment[%s]", baseSegment.getIdentifier());
+        }
+        catch (Exception e2) {
+          // ignore
+        }
+      }
+      // Always terminate.
+      return true;
+    }
+  };
 
   public ReferenceCountingSegment(Segment baseSegment)
   {
@@ -44,141 +69,78 @@ public class ReferenceCountingSegment extends AbstractSegment
 
   public Segment getBaseSegment()
   {
-    synchronized (lock) {
-      if (isClosed) {
-        return null;
-      }
-
-      return baseSegment;
-    }
+    return !isClosed() ? baseSegment : null;
   }
 
   public int getNumReferences()
   {
-    return numReferences;
+    return Math.max(referents.getRegisteredParties() - 1, 0);
   }
 
   public boolean isClosed()
   {
-    return isClosed;
+    return referents.isTerminated();
   }
 
   @Override
   public String getIdentifier()
   {
-    synchronized (lock) {
-      if (isClosed) {
-        return null;
-      }
-
-      return baseSegment.getIdentifier();
-    }
+    return !isClosed() ? baseSegment.getIdentifier() : null;
   }
 
   @Override
   public Interval getDataInterval()
   {
-    synchronized (lock) {
-      if (isClosed) {
-        return null;
-      }
-
-      return baseSegment.getDataInterval();
-    }
+    return !isClosed() ? baseSegment.getDataInterval() : null;
   }
 
   @Override
   public QueryableIndex asQueryableIndex()
   {
-    synchronized (lock) {
-      if (isClosed) {
-        return null;
-      }
-
-      return baseSegment.asQueryableIndex();
-    }
+    return !isClosed() ? baseSegment.asQueryableIndex() : null;
   }
 
   @Override
   public StorageAdapter asStorageAdapter()
   {
-    synchronized (lock) {
-      if (isClosed) {
-        return null;
-      }
-
-      return baseSegment.asStorageAdapter();
-    }
+    return !isClosed() ? baseSegment.asStorageAdapter() : null;
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
-    synchronized (lock) {
-      if (isClosed) {
-        log.info("Failed to close, %s is closed already", baseSegment.getIdentifier());
-        return;
-      }
+    if (closed.compareAndSet(false, true)) {
+      referents.arriveAndDeregister();
+    } else {
+      log.warn("close() is called more than once on ReferenceCountingSegment");
+    }
+  }
 
-      if (numReferences > 0) {
-        log.info("%d references to %s still exist. Decrementing.", numReferences, baseSegment.getIdentifier());
+  public boolean increment()
+  {
+    // Negative return from referents.register() means the Phaser is terminated.
+    return referents.register() >= 0;
+  }
 
+  /**
+   * Returns a {@link Closeable} which action is to call {@link #decrement()} only once. If close() is called on the
+   * returned Closeable object for the second time, it won't call {@link #decrement()} again.
+   */
+  public Closeable decrementOnceCloseable()
+  {
+    AtomicBoolean decremented = new AtomicBoolean(false);
+    return () -> {
+      if (decremented.compareAndSet(false, true)) {
         decrement();
       } else {
-        log.info("Closing %s", baseSegment.getIdentifier());
-        innerClose();
+        log.warn("close() is called more than once on ReferenceCountingSegment.decrementOnceCloseable()");
       }
-    }
+    };
   }
 
-  public Closeable increment()
+  public void decrement()
   {
-    synchronized (lock) {
-      if (isClosed) {
-        return null;
-      }
-
-      numReferences++;
-      final AtomicBoolean decrementOnce = new AtomicBoolean(false);
-      return new Closeable()
-      {
-        @Override
-        public void close() throws IOException
-        {
-          if (decrementOnce.compareAndSet(false, true)) {
-            decrement();
-          }
-        }
-      };
-    }
-  }
-
-  private void decrement()
-  {
-    synchronized (lock) {
-      if (isClosed) {
-        return;
-      }
-
-      if (--numReferences < 0) {
-        try {
-          innerClose();
-        }
-        catch (Exception e) {
-          log.error("Unable to close queryable index %s", getIdentifier());
-        }
-      }
-    }
-  }
-
-  private void innerClose() throws IOException
-  {
-    synchronized (lock) {
-      log.info("Closing %s, numReferences: %d", baseSegment.getIdentifier(), numReferences);
-
-      isClosed = true;
-      baseSegment.close();
-    }
+    referents.arriveAndDeregister();
   }
 
   @Override

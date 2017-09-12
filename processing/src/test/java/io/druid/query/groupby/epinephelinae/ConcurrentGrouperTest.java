@@ -63,6 +63,7 @@ public class ConcurrentGrouperTest
 {
   private static final ExecutorService SERVICE = Executors.newFixedThreadPool(8);
   private static final TestResourceHolder TEST_RESOURCE_HOLDER = new TestResourceHolder(256);
+  private static final int BYTE_BUFFER_SIZE = 256;
 
   @AfterClass
   public static void teardown()
@@ -82,7 +83,7 @@ public class ConcurrentGrouperTest
     public ByteBuffer get()
     {
       if (called.compareAndSet(false, true)) {
-        buffer = ByteBuffer.allocate(256);
+        buffer = ByteBuffer.allocate(BYTE_BUFFER_SIZE);
       }
 
       return buffer;

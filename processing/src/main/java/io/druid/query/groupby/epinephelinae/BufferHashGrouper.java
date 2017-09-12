@@ -44,8 +44,18 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
   private static final int DEFAULT_INITIAL_BUCKETS = 1024;
   private static final float DEFAULT_MAX_LOAD_FACTOR = 0.7f;
 
+  private final AggregatorFactory[] aggregatorFactories;
   private ByteBuffer buffer;
   private boolean initialized = false;
+
+  // The BufferHashGrouper normally sorts by all fields of the grouping key with lexicographic ascending order.
+  // However, when a query will have the limit push down optimization applied (see LimitedBufferHashGrouper),
+  // the optimization may not be applied on some nodes because of buffer capacity limits. In this case,
+  // those nodes will use BufferHashGrouper instead of LimitedBufferHashGrouper. In this mixed use case,
+  // nodes using BufferHashGrouper need to use the same sorting order as nodes using LimitedBufferHashGrouper, so that
+  // results are merged properly. When useDefaultSorting is false, we call keySerde.bufferComparatorWithAggregators()
+  // to get a comparator that uses the ordering defined by the OrderByColumnSpec of a query.
+  private final boolean useDefaultSorting;
 
   // Track the offsets of used buckets using this list.
   // When a new bucket is initialized by initializeNewBucketKey(), an offset is added to this list.
@@ -60,10 +70,12 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
       final AggregatorFactory[] aggregatorFactories,
       final int bufferGrouperMaxSize,
       final float maxLoadFactor,
-      final int initialBuckets
+      final int initialBuckets,
+      final boolean useDefaultSorting
   )
   {
     super(bufferSupplier, keySerde, aggregatorFactories, bufferGrouperMaxSize);
+    this.aggregatorFactories = aggregatorFactories;
 
     this.maxLoadFactor = maxLoadFactor > 0 ? maxLoadFactor : DEFAULT_MAX_LOAD_FACTOR;
     this.initialBuckets = initialBuckets > 0 ? Math.max(MIN_INITIAL_BUCKETS, initialBuckets) : DEFAULT_INITIAL_BUCKETS;
@@ -80,6 +92,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
     }
 
     this.bucketSize = offset;
+    this.useDefaultSorting = useDefaultSorting;
   }
 
   @Override
@@ -188,7 +201,12 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
         }
       };
 
-      final BufferComparator comparator = keySerde.bufferComparator();
+      final BufferComparator comparator;
+      if (useDefaultSorting) {
+        comparator = keySerde.bufferComparator();
+      } else {
+        comparator = keySerde.bufferComparatorWithAggregators(aggregatorFactories, aggregatorOffsets);
+      }
 
       // Sort offsets in-place.
       Collections.sort(

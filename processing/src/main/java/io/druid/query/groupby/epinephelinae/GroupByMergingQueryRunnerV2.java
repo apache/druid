@@ -87,6 +87,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
   private final BlockingPool<ByteBuffer> mergeBufferPool;
   private final ObjectMapper spillMapper;
   private final String processingTmpDir;
+  private final int mergeBufferSize;
 
   public GroupByMergingQueryRunnerV2(
       GroupByQueryConfig config,
@@ -96,6 +97,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
       int concurrencyHint,
       NonBlockingPool<ByteBuffer> processingBufferPool,
       BlockingPool<ByteBuffer> mergeBufferPool,
+      int mergeBufferSize,
       ObjectMapper spillMapper,
       String processingTmpDir
   )
@@ -109,6 +111,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
     this.mergeBufferPool = mergeBufferPool;
     this.spillMapper = spillMapper;
     this.processingTmpDir = processingTmpDir;
+    this.mergeBufferSize = mergeBufferSize;
   }
 
   @Override
@@ -221,7 +224,8 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
                   exec,
                   priority,
                   hasTimeout,
-                  timeoutAt
+                  timeoutAt,
+                  mergeBufferSize
               );
               final Grouper<RowBasedKey> grouper = pair.lhs;
               final Accumulator<AggregateResult, Row> accumulator = pair.rhs;

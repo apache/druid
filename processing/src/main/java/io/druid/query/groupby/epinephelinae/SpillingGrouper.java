@@ -30,6 +30,7 @@ import com.google.common.collect.Lists;
 import io.druid.java.util.common.CloseableIterators;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.parsers.CloseableIterator;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.BaseQuery;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
@@ -55,6 +56,8 @@ import java.util.Set;
  */
 public class SpillingGrouper<KeyType> implements Grouper<KeyType>
 {
+  private static final Logger log = new Logger(SpillingGrouper.class);
+
   private final Grouper<KeyType> grouper;
   private static final AggregateResult DISK_FULL = AggregateResult.failure(
       "Not enough disk space to execute this query. Try raising druid.query.groupBy.maxOnDiskStorage."
@@ -84,14 +87,15 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
       final ObjectMapper spillMapper,
       final boolean spillingAllowed,
       final DefaultLimitSpec limitSpec,
-      final boolean sortHasNonGroupingFields
+      final boolean sortHasNonGroupingFields,
+      final int mergeBufferSize
   )
   {
     this.keySerde = keySerdeFactory.factorize();
     this.keyObjComparator = keySerdeFactory.objectComparator(false);
     this.defaultOrderKeyObjComparator = keySerdeFactory.objectComparator(true);
     if (limitSpec != null) {
-      this.grouper = new LimitedBufferHashGrouper<>(
+      LimitedBufferHashGrouper<KeyType> limitGrouper = new LimitedBufferHashGrouper<>(
           bufferSupplier,
           keySerde,
           columnSelectorFactory,
@@ -102,6 +106,31 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
           limitSpec.getLimit(),
           sortHasNonGroupingFields
       );
+      // if configured buffer size is too small to support limit push down, don't apply that optimization
+      if (!limitGrouper.validateBufferCapacity(mergeBufferSize)) {
+        if (sortHasNonGroupingFields) {
+          log.debug("Ignoring forceLimitPushDown, insufficient buffer capacity.");
+        }
+        // sortHasNonGroupingFields can only be true here if the user specified forceLimitPushDown
+        // in the query context. Result merging requires that all results are sorted by the same
+        // ordering where all ordering fields are contained in the grouping key.
+        // If sortHasNonGroupingFields is true, we use the default ordering that sorts by all grouping key fields
+        // with lexicographic ascending order.
+        // If sortHasNonGroupingFields is false, then the OrderBy fields are all in the grouping key, so we
+        // can use that ordering.
+        this.grouper = new BufferHashGrouper<>(
+            bufferSupplier,
+            keySerde,
+            columnSelectorFactory,
+            aggregatorFactories,
+            bufferGrouperMaxSize,
+            bufferGrouperMaxLoadFactor,
+            bufferGrouperInitialBuckets,
+            sortHasNonGroupingFields
+        );
+      } else {
+        this.grouper = limitGrouper;
+      }
     } else {
       this.grouper = new BufferHashGrouper<>(
           bufferSupplier,
@@ -110,7 +139,8 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
           aggregatorFactories,
           bufferGrouperMaxSize,
           bufferGrouperMaxLoadFactor,
-          bufferGrouperInitialBuckets
+          bufferGrouperInitialBuckets,
+          true
       );
     }
     this.aggregatorFactories = aggregatorFactories;
