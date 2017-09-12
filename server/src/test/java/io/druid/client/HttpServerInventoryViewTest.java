@@ -176,8 +176,6 @@ public class HttpServerInventoryViewTest
         new HttpServerInventoryViewConfig(null, null, null)
     );
 
-    httpServerInventoryView.start();
-
     CountDownLatch initializeCallback1 = new CountDownLatch(1);
 
     Map<String, CountDownLatch> segmentAddLathces = ImmutableMap.of(
@@ -241,6 +239,8 @@ public class HttpServerInventoryViewTest
         }
     );
 
+    httpServerInventoryView.start();
+
     druidNodeDiscovery.listener.nodesAdded(ImmutableList.of(druidNode));
 
     initializeCallback1.await();
@@ -276,6 +276,7 @@ public class HttpServerInventoryViewTest
     @Override
     public void registerListener(Listener listener)
     {
+      listener.nodesAdded(ImmutableList.of());
       this.listener = listener;
     }
   }

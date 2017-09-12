@@ -78,6 +78,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * This class uses CuratorInventoryManager to listen for queryable server membership which serve segments(e.g. Historicals).
@@ -111,6 +112,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   private final HttpClient httpClient;
   private final ObjectMapper smileMapper;
   private final HttpServerInventoryViewConfig config;
+
+  private final CountDownLatch inventoryInitializationLatch = new CountDownLatch(1);
 
   @Inject
   public HttpServerInventoryView(
@@ -179,7 +182,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         druidNodeDiscovery.registerListener(
             new DruidNodeDiscovery.Listener()
             {
-              private volatile boolean initialized = false;
+              private final AtomicBoolean initialized = new AtomicBoolean(false);
 
               @Override
               public void nodesAdded(List<DiscoveryDruidNode> nodes)
@@ -188,8 +191,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
                     node -> serverAdded(toDruidServer(node))
                 );
 
-                if (!initialized) {
-                  initialized = true;
+                if (!initialized.getAndSet(true)) {
                   queue.add(HttpServerInventoryView.this::serverInventoryInitialized);
                 }
               }
@@ -218,12 +220,19 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
             }
         );
 
-        log.info("Started HttpServerInventoryView.");
         lifecycleLock.started();
       }
       finally {
         lifecycleLock.exitStart();
       }
+
+      log.info("Waiting for Server Inventory Initialization...");
+
+      while (!inventoryInitializationLatch.await(1, TimeUnit.MINUTES)) {
+        log.info("Still waiting for Server Inventory Initialization...");
+      }
+
+      log.info("Started HttpServerInventoryView.");
     }
   }
 
@@ -351,6 +360,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     for (DruidServerHolder server : servers.values()) {
       server.awaitInitialization();
     }
+
+    inventoryInitializationLatch.countDown();
 
     log.info("Calling SegmentCallback.segmentViewInitialized() for all callbacks.");
 
