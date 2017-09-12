@@ -24,8 +24,12 @@ import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
 import io.druid.java.util.common.StringUtils;
+import org.joda.time.DateTimeZone;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.stream.Collectors;
@@ -34,6 +38,19 @@ import java.util.stream.StreamSupport;
 public class ParserUtils
 {
   private static final String DEFAULT_COLUMN_NAME_PREFIX = "column_";
+
+  private static final Map<String, DateTimeZone> TIMEZONE_LOOKUP = new HashMap<>();
+
+  static {
+    for (String tz : TimeZone.getAvailableIDs()) {
+      try {
+        TIMEZONE_LOOKUP.put(tz, DateTimeZone.forTimeZone(TimeZone.getTimeZone(tz)));
+      }
+      catch (IllegalArgumentException e) {
+        // Ignore certain date time zone ids like SystemV/AST4. More here https://confluence.atlassian.com/confkb/the-datetime-zone-id-is-not-recognised-167183146.html
+      }
+    }
+  }
 
   public static Function<String, Object> getMultiValueFunction(
       final String listDelimiter,
@@ -93,15 +110,10 @@ public class ParserUtils
     return input;
   }
 
-  public static boolean isValidTimeZone(String timeZone)
+  @Nullable
+  public static DateTimeZone getDateTimeZone(String timeZone)
   {
-    for (String tz : TimeZone.getAvailableIDs()) {
-      if (tz.equals(timeZone)) {
-        return true;
-      }
-    }
-
-    return false;
+    return TIMEZONE_LOOKUP.get(timeZone);
   }
 
   /**

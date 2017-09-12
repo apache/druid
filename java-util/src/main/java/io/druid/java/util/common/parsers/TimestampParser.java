@@ -31,7 +31,6 @@ import org.joda.time.format.DateTimeFormatterBuilder;
 import org.joda.time.format.DateTimeParser;
 import org.joda.time.format.ISODateTimeFormat;
 
-import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
 public class TimestampParser
@@ -43,75 +42,53 @@ public class TimestampParser
     if (format.equalsIgnoreCase("auto")) {
       // Could be iso or millis
       final DateTimeFormatter parser = createAutoParser();
-      return new Function<String, DateTime>()
-      {
-        @Override
-        public DateTime apply(String input)
-        {
-          Preconditions.checkArgument(input != null && !input.isEmpty(), "null timestamp");
+      return (String input) -> {
+        Preconditions.checkArgument(input != null && !input.isEmpty(), "null timestamp");
 
-          for (int i = 0; i < input.length(); i++) {
-            if (input.charAt(i) < '0' || input.charAt(i) > '9') {
-              DateTimeZone dateTimeZone = DateTimeZone.UTC;
-              int lastIndex = input.lastIndexOf(" ");
-              if (lastIndex > 0 && ParserUtils.isValidTimeZone(input.substring(lastIndex + 1))) {
-                dateTimeZone = DateTimeZone.forTimeZone(TimeZone.getTimeZone(input.substring(lastIndex + 1)));
-                input = input.substring(0, lastIndex);
-              }
-
-              return new DateTime(parser.parseDateTime(ParserUtils.stripQuotes(input)), dateTimeZone);
+        for (int i = 0; i < input.length(); i++) {
+          if (input.charAt(i) < '0' || input.charAt(i) > '9') {
+            input = ParserUtils.stripQuotes(input);
+            int lastIndex = input.lastIndexOf(' ');
+            DateTimeZone timeZoneFromString = ParserUtils.getDateTimeZone(input.substring(lastIndex + 1));
+            if (lastIndex > 0 && timeZoneFromString != null) {
+              input = input.substring(0, lastIndex);
             }
-          }
 
-          return DateTimes.utc(Long.parseLong(input));
+            return new DateTime(
+                parser.parseDateTime(input),
+                timeZoneFromString == null ? DateTimeZone.UTC : timeZoneFromString
+            );
+          }
         }
+
+        return DateTimes.utc(Long.parseLong(input));
       };
     } else if (format.equalsIgnoreCase("iso")) {
-      return new Function<String, DateTime>()
-      {
-        @Override
-        public DateTime apply(String input)
-        {
-          Preconditions.checkArgument(input != null && !input.isEmpty(), "null timestamp");
-          return DateTimes.of(ParserUtils.stripQuotes(input));
-        }
+      return input -> {
+        Preconditions.checkArgument(input != null && !input.isEmpty(), "null timestamp");
+        return DateTimes.of(ParserUtils.stripQuotes(input));
       };
     } else if (format.equalsIgnoreCase("posix")
-               || format.equalsIgnoreCase("millis")
-               || format.equalsIgnoreCase("nano")) {
+        || format.equalsIgnoreCase("millis")
+        || format.equalsIgnoreCase("nano")) {
       final Function<Number, DateTime> numericFun = createNumericTimestampParser(format);
-      return new Function<String, DateTime>()
-      {
-        @Override
-        public DateTime apply(String input)
-        {
-          Preconditions.checkArgument(input != null && !input.isEmpty(), "null timestamp");
-          return numericFun.apply(Long.parseLong(ParserUtils.stripQuotes(input)));
-        }
+      return input -> {
+        Preconditions.checkArgument(input != null && !input.isEmpty(), "null timestamp");
+        return numericFun.apply(Long.parseLong(ParserUtils.stripQuotes(input)));
       };
     } else if (format.equalsIgnoreCase("ruby")) {
       // Numeric parser ignores millis for ruby.
       final Function<Number, DateTime> numericFun = createNumericTimestampParser(format);
-      return new Function<String, DateTime>()
-      {
-        @Override
-        public DateTime apply(String input)
-        {
-          Preconditions.checkArgument(input != null && !input.isEmpty(), "null timestamp");
-          return numericFun.apply(Double.parseDouble(ParserUtils.stripQuotes(input)));
-        }
+      return input -> {
+        Preconditions.checkArgument(input != null && !input.isEmpty(), "null timestamp");
+        return numericFun.apply(Double.parseDouble(ParserUtils.stripQuotes(input)));
       };
     } else {
       try {
         final DateTimeFormatter formatter = DateTimeFormat.forPattern(format);
-        return new Function<String, DateTime>()
-        {
-          @Override
-          public DateTime apply(String input)
-          {
-            Preconditions.checkArgument(input != null && !input.isEmpty(), "null timestamp");
-            return formatter.parseDateTime(ParserUtils.stripQuotes(input));
-          }
+        return input -> {
+          Preconditions.checkArgument(input != null && !input.isEmpty(), "null timestamp");
+          return formatter.parseDateTime(ParserUtils.stripQuotes(input));
         };
       }
       catch (Exception e) {
@@ -126,32 +103,11 @@ public class TimestampParser
   {
     // Ignore millis for ruby
     if (format.equalsIgnoreCase("posix") || format.equalsIgnoreCase("ruby")) {
-      return new Function<Number, DateTime>()
-      {
-        @Override
-        public DateTime apply(Number input)
-        {
-          return DateTimes.utc(TimeUnit.SECONDS.toMillis(input.longValue()));
-        }
-      };
+      return input -> DateTimes.utc(TimeUnit.SECONDS.toMillis(input.longValue()));
     } else if (format.equalsIgnoreCase("nano")) {
-      return new Function<Number, DateTime>()
-      {
-        @Override
-        public DateTime apply(Number input)
-        {
-          return DateTimes.utc(TimeUnit.NANOSECONDS.toMillis(input.longValue()));
-        }
-      };
+      return input -> DateTimes.utc(TimeUnit.NANOSECONDS.toMillis(input.longValue()));
     } else {
-      return new Function<Number, DateTime>()
-      {
-        @Override
-        public DateTime apply(Number input)
-        {
-          return DateTimes.utc(input.longValue());
-        }
-      };
+      return input -> DateTimes.utc(input.longValue());
     }
   }
 
@@ -162,18 +118,13 @@ public class TimestampParser
     final Function<String, DateTime> stringFun = createTimestampParser(format);
     final Function<Number, DateTime> numericFun = createNumericTimestampParser(format);
 
-    return new Function<Object, DateTime>()
-    {
-      @Override
-      public DateTime apply(Object o)
-      {
-        Preconditions.checkArgument(o != null, "null timestamp");
+    return (o) -> {
+      Preconditions.checkArgument(o != null, "null timestamp");
 
-        if (o instanceof Number) {
-          return numericFun.apply((Number) o);
-        } else {
-          return stringFun.apply(o.toString());
-        }
+      if (o instanceof Number) {
+        return numericFun.apply((Number) o);
+      } else {
+        return stringFun.apply(o.toString());
       }
     };
   }

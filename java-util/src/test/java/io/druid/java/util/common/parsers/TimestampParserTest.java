@@ -45,13 +45,14 @@ public class TimestampParserTest
   @Test
   public void testExtractTimeZone() throws Exception
   {
-    Assert.assertTrue(ParserUtils.isValidTimeZone("UTC"));
-    Assert.assertTrue(ParserUtils.isValidTimeZone("PST"));
-    Assert.assertFalse(ParserUtils.isValidTimeZone("Hello"));
-    Assert.assertFalse(ParserUtils.isValidTimeZone("AEST"));
-    Assert.assertTrue(ParserUtils.isValidTimeZone("Australia/Hobart"));
-    Assert.assertFalse(ParserUtils.isValidTimeZone(""));
-    Assert.assertFalse(ParserUtils.isValidTimeZone(null));
+    Assert.assertEquals(DateTimeZone.UTC, ParserUtils.getDateTimeZone("UTC"));
+    Assert.assertEquals(DateTimeZone.forTimeZone(TimeZone.getTimeZone("PST")), ParserUtils.getDateTimeZone("PST"));
+    Assert.assertNull(ParserUtils.getDateTimeZone("Hello"));
+    Assert.assertNull(ParserUtils.getDateTimeZone("AEST"));
+    Assert.assertEquals(DateTimeZone.forTimeZone(TimeZone.getTimeZone("Australia/Hobart")),
+        ParserUtils.getDateTimeZone("Australia/Hobart"));
+    Assert.assertNull(ParserUtils.getDateTimeZone(""));
+    Assert.assertNull(ParserUtils.getDateTimeZone(null));
   }
 
   @Test
@@ -70,6 +71,8 @@ public class TimestampParserTest
     Assert.assertEquals(DateTimes.of("2009-02-13T23:31:30Z"), parser.apply("2009-02-13 23:31:30 UTC"));
     Assert.assertEquals(new DateTime("2009-02-13T23:31:30Z", DateTimeZone.forTimeZone(TimeZone.getTimeZone("PST"))),
         parser.apply("2009-02-13 23:31:30 PST"));
+    Assert.assertEquals(new DateTime("2009-02-13T23:31:30Z", DateTimeZone.forTimeZone(TimeZone.getTimeZone("PST"))),
+        parser.apply("\"2009-02-13 23:31:30 PST\""));
   }
 
   @Test
