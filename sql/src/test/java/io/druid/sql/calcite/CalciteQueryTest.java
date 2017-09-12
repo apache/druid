@@ -5120,6 +5120,42 @@ public class CalciteQueryTest
         + "  FROM druid.foo\n"
         + ") AS x\n"
         + "GROUP BY gran\n"
+        + "LIMIT 1",
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(QSS(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .dimension(
+                    new ExtractionDimensionSpec(
+                        "__time",
+                        "d0",
+                        ValueType.LONG,
+                        new TimeFormatExtractionFn(null, null, null, Granularities.MONTH, true)
+                    )
+                )
+                .aggregators(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
+                .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
+                .threshold(1)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{T("2000-01-01"), 3L}
+        )
+    );
+  }
+
+  @Test
+  public void testTimeseriesWithOrderByAndLimit() throws Exception
+  {
+    testQuery(
+        "SELECT gran, SUM(cnt)\n"
+        + "FROM (\n"
+        + "  SELECT floor(__time TO month) AS gran, cnt\n"
+        + "  FROM druid.foo\n"
+        + ") AS x\n"
+        + "GROUP BY gran\n"
         + "ORDER BY gran\n"
         + "LIMIT 1",
         ImmutableList.of(
