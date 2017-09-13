@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
@@ -369,11 +370,16 @@ public class LookupReferencesManager
 
                       LookupExtractorFactoryContainer container = lookupBean.getContainer();
                       LOG.info(
-                          "Started lookup [%s]:[%s]",
+                          "Starting lookup [%s]:[%s]",
                           lookupBean.getName(),
                           container
                       );
                       if (container.getLookupExtractorFactory().start()) {
+                        LOG.info(
+                            "Started lookup [%s]:[%s]",
+                            lookupBean.getName(),
+                            container
+                        );
                         return new AbstractMap.SimpleImmutableEntry<>(lookupBean.getName(), container);
                       } else {
                         LOG.error(
@@ -393,17 +399,27 @@ public class LookupReferencesManager
                       .stream()
                       .filter(Objects::nonNull)
                       .forEach(builder::put);
+
+            stateRef.set(new LookupUpdateState(builder.build(), ImmutableList.of(), ImmutableList.of()));
+
+            executorService.shutdownNow();
+            if (!executorService.awaitTermination(60, TimeUnit.SECONDS)){
+              LOG.warn("Lookup loading didn't complete in 60 seconds!");
+            }
+          }
+          catch (InterruptedException e) {
+            LOG.error("Lookup loading interrupted. ");
+            Thread.currentThread().interrupt();
+
           }
           catch (Exception ex) {
             futureList.cancel(true);
             throw ex;
           }
-          stateRef.set(new LookupUpdateState(builder.build(), ImmutableList.of(), ImmutableList.of()));
         }
         catch (Exception e) {
           LOG.error(e, "Failed to finish lookup load process.");
         }
-        executorService.shutdownNow();
       } else {
         LOG.info("No lookups to be loaded at this point");
         stateRef.set(new LookupUpdateState(ImmutableMap.of(), ImmutableList.of(), ImmutableList.of()));
@@ -451,7 +467,7 @@ public class LookupReferencesManager
       return null;
     }
     catch (Exception e) {
-      LOG.error(e, "Error while parsing lookup code for tier [%s] from response", tier);
+      LOG.error(e, "Error while trying to get lookup list from coordinator for tier[%s]", tier);
       return null;
     }
   }
