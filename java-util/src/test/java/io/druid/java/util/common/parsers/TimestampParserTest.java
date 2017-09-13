@@ -80,7 +80,7 @@ public class TimestampParserTest
   {
     final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("auto");
 
-    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expect(NullPointerException.class);
     parser.apply(null);
   }
 
