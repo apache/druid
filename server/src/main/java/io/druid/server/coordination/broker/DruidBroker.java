@@ -20,16 +20,11 @@
 package io.druid.server.coordination.broker;
 
 import com.google.common.base.Predicates;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import io.druid.client.FilteredServerInventoryView;
 import io.druid.client.ServerView;
 import io.druid.curator.discovery.ServiceAnnouncer;
-import io.druid.discovery.DiscoveryDruidNode;
-import io.druid.discovery.DruidNodeAnnouncer;
-import io.druid.discovery.DruidNodeDiscoveryProvider;
-import io.druid.discovery.LookupNodeService;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Self;
 import io.druid.java.util.common.Pair;
@@ -44,8 +39,6 @@ public class DruidBroker
 {
   private final DruidNode self;
   private final ServiceAnnouncer serviceAnnouncer;
-  private final DruidNodeAnnouncer druidNodeAnnouncer;
-  private final DiscoveryDruidNode discoveryDruidNode;
 
   private volatile boolean started = false;
 
@@ -53,19 +46,11 @@ public class DruidBroker
   public DruidBroker(
       final FilteredServerInventoryView serverInventoryView,
       final @Self DruidNode self,
-      final ServiceAnnouncer serviceAnnouncer,
-      final DruidNodeAnnouncer druidNodeAnnouncer,
-      final LookupNodeService lookupNodeService
+      final ServiceAnnouncer serviceAnnouncer
       )
   {
     this.self = self;
     this.serviceAnnouncer = serviceAnnouncer;
-    this.druidNodeAnnouncer = druidNodeAnnouncer;
-    this.discoveryDruidNode = new DiscoveryDruidNode(
-        self,
-        DruidNodeDiscoveryProvider.NODE_TYPE_BROKER,
-        ImmutableMap.of(lookupNodeService.getName(), lookupNodeService)
-    );
 
     serverInventoryView.registerSegmentCallback(
         MoreExecutors.sameThreadExecutor(),
@@ -75,7 +60,6 @@ public class DruidBroker
           public ServerView.CallbackAction segmentViewInitialized()
           {
             serviceAnnouncer.announce(self);
-            druidNodeAnnouncer.announce(discoveryDruidNode);
             return ServerView.CallbackAction.UNREGISTER;
           }
         },
@@ -103,7 +87,6 @@ public class DruidBroker
         return;
       }
       serviceAnnouncer.unannounce(self);
-      druidNodeAnnouncer.unannounce(discoveryDruidNode);
       started = false;
     }
   }

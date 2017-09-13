@@ -81,18 +81,27 @@ public class RetryUtils
     return retry(f, shouldRetry, 0, maxTries);
   }
 
-  private static void awaitNextRetry(final Throwable e, final int nTry, final boolean quiet) throws InterruptedException
+  private static void awaitNextRetry(Throwable e, final int nTry, final boolean quiet) throws InterruptedException
+  {
+
+    final long sleepMillis = nextRetrySleepMillis(nTry);
+
+    if (quiet) {
+      log.debug(e, "Failed on try %d, retrying in %,dms.", nTry, sleepMillis);
+    } else {
+      log.warn(e, "Failed on try %d, retrying in %,dms.", nTry, sleepMillis);
+    }
+
+    Thread.sleep(sleepMillis);
+  }
+
+  public static long nextRetrySleepMillis(final int nTry) throws InterruptedException
   {
     final long baseSleepMillis = 1000;
     final long maxSleepMillis = 60000;
     final double fuzzyMultiplier = Math.min(Math.max(1 + 0.2 * ThreadLocalRandom.current().nextGaussian(), 0), 2);
     final long sleepMillis = (long) (Math.min(maxSleepMillis, baseSleepMillis * Math.pow(2, nTry - 1))
                                      * fuzzyMultiplier);
-    if (quiet) {
-      log.debug(e, "Failed on try %d, retrying in %,dms.", nTry, sleepMillis);
-    } else {
-      log.warn(e, "Failed on try %d, retrying in %,dms.", nTry, sleepMillis);
-    }
-    Thread.sleep(sleepMillis);
+    return sleepMillis;
   }
 }
