@@ -261,6 +261,8 @@ public class HttpServerInventoryViewTest
     Assert.assertNull(httpServerInventoryView.getInventoryValue("host:8080"));
 
     EasyMock.verify(druidNodeDiscoveryProvider);
+
+    httpServerInventoryView.stop();
   }
 
   private static class TestDruidNodeDiscovery implements DruidNodeDiscovery

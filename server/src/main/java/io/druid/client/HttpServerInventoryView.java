@@ -525,6 +525,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
                     }
 
                     if (counter == null) {
+                      // means, on last request either server had asked us to reset the counter or it was very first
+                      // request to the server.
                       Map<String, DataSegment> toRemove = Maps.newHashMap(druidServer.getSegments());
 
                       for (DataSegmentChangeRequest request : delta.getRequests()) {
