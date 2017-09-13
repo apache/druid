@@ -19,7 +19,6 @@
 
 package io.druid.query.aggregation;
 
-import com.google.common.primitives.Longs;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.segment.ObjectColumnSelector;
 
