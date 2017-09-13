@@ -31,7 +31,10 @@ There are several main parts to a scan query:
 |columns|A String array of dimensions and metrics to scan. If left empty, all dimensions and metrics are returned.|no|
 |batchSize|How many rows buffered before return to client. Default is `20480`|no|
 |limit|How many rows to return. If not specified, all rows will be returned.|no|
+|legacy|Return results consistent with the legacy "scan-query" contrib extension. Defaults to the value set by `druid.query.scan.legacy`, which in turn defaults to false. See [Legacy mode](#legacy-mode) for details.|no|
 |context|An additional JSON Object which can be used to specify certain flags.|no|
+
+## Example results
 
 The format of the result when resultFormat equals to `list`:
 
@@ -155,3 +158,18 @@ The biggest difference between select query and scan query is that, scan query d
 It will cause memory pressure if too many rows required by select query.  
 Scan query doesn't have this issue.  
 Scan query can return all rows without issuing another pagination query, which is extremely useful when query against historical or realtime node directly.
+
+## Legacy mode
+
+The Scan query supports a legacy mode designed for protocol compatibility with the former scan-query contrib extension.
+In legacy mode you can expect the following behavior changes:
+
+- The __time column is returned as "timestamp" rather than "__time". This will take precedence over any other column
+you may have that is named "timestamp".
+- The __time column is included in the list of columns even if you do not specifically ask for it.
+- Timestamps are returned as ISO8601 time strings rather than integers (milliseconds since 1970-01-01 00:00:00 UTC).
+
+Legacy mode can be triggered either by passing `"legacy" : true` in your query JSON, or by setting
+`druid.query.scan.legacy = true` on your Druid nodes. If you were previously using the scan-query contrib extension,
+the best way to migrate is to activate legacy mode during a rolling upgrade, then switch it off after the upgrade
+is complete.
