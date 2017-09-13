@@ -648,7 +648,7 @@ public class GroupByRules
       }
     }
 
-    if (!orderBys.isEmpty() || limitSpec.getLimit() < Integer.MAX_VALUE) {
+    if (!orderBys.isEmpty() || limitSpec.isLimited()) {
       return druidRel.withQueryBuilder(
           druidRel.getQueryBuilder()
                   .withAdjustedGrouping(

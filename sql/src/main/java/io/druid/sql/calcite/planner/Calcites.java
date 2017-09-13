@@ -133,6 +133,11 @@ public class Calcites
   public static StringComparator getStringComparatorForSqlTypeName(SqlTypeName sqlTypeName)
   {
     final ValueType valueType = getValueTypeForSqlTypeName(sqlTypeName);
+    return getStringComparatorForValueType(valueType);
+  }
+
+  public static StringComparator getStringComparatorForValueType(ValueType valueType)
+  {
     if (ValueType.isNumeric(valueType)) {
       return StringComparators.NUMERIC;
     } else if (ValueType.STRING == valueType) {

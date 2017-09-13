@@ -195,8 +195,7 @@ public class JSONPathParser implements Parser<String, Object>
 
     if (val.isArray()) {
       List<Object> newList = new ArrayList<>();
-      for (Iterator<JsonNode> it = val.iterator(); it.hasNext(); ) {
-        JsonNode entry = it.next();
+      for (JsonNode entry : val) {
         newList.add(valueConversionFunction(entry));
       }
       return newList;
