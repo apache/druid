@@ -35,8 +35,6 @@ JVM Flags:
 
 `ExitOnOutOfMemoryError` flag is only supported starting JDK 8u92 . For older versions, `-XX:OnOutOfMemoryError='kill -9 %p'` can be used.
 
-It's still important to make sure that Druid is not configured to allocate more off-heap memory than your machine has available. Important settings here include druid.processing.numThreads, druid.processing.numMergeBuffers, and druid.processing.buffer.sizeBytes.
-
 `MaxDirectMemorySize` restricts jvm from allocating more than specified limit, by setting it to unlimited jvm restriction is lifted and OS level memory limits would still be effective. It's still important to make sure that Druid is not configured to allocate more off-heap memory than your machine has available. Important settings here include druid.processing.numThreads, druid.processing.numMergeBuffers, and druid.processing.buffer.sizeBytes.
 
 Please note that above flags are general guidelines only. Be cautious and feel free to change them if necessary for the specific deployment.
