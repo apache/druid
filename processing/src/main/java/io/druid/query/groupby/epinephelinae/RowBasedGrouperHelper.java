@@ -66,6 +66,8 @@ import io.druid.segment.LongColumnSelector;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
+import it.unimi.dsi.fastutil.ints.IntArrays;
+import it.unimi.dsi.fastutil.ints.IntComparator;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.joda.time.DateTime;
@@ -75,12 +77,14 @@ import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.IntStream;
 
 // this class contains shared code between GroupByMergingQueryRunnerV2 and GroupByRowProcessor
 public class RowBasedGrouperHelper
@@ -952,6 +956,7 @@ public class RowBasedGrouperHelper
     private final int keySize;
     private final ByteBuffer keyBuffer;
     private final RowBasedKeySerdeHelper[] serdeHelpers;
+    private final BufferComparator[] serdeHelperComparators;
     private final DefaultLimitSpec limitSpec;
     private final List<ValueType> valueTypes;
 
@@ -994,6 +999,8 @@ public class RowBasedGrouperHelper
       this.reverseDictionary.defaultReturnValue(UNKNOWN_DICTIONARY_ID);
       this.maxDictionarySize = maxDictionarySize;
       this.serdeHelpers = makeSerdeHelpers(limitSpec != null, enableRuntimeDictionaryGeneration);
+      this.serdeHelperComparators = new BufferComparator[serdeHelpers.length];
+      Arrays.setAll(serdeHelperComparators, i -> serdeHelpers[i].getBufferComparator());
       this.keySize = (includeTimestamp ? Longs.BYTES : 0) + getTotalKeySize();
       this.keyBuffer = ByteBuffer.allocate(keySize);
 
@@ -1012,23 +1019,60 @@ public class RowBasedGrouperHelper
           reverseDictionary.put(dictionary.get(i), i);
         }
 
-        initializeSortableIds();
+        initializeRankOfDictionaryIds();
       }
     }
 
-    private void initializeSortableIds()
+    private void initializeRankOfDictionaryIds()
     {
       final int dictionarySize = dictionary.size();
-      final Pair<String, Integer>[] dictAndIds = new Pair[dictionarySize];
-      for (int id = 0; id < dictionarySize; id++) {
-        dictAndIds[id] = new Pair<>(dictionary.get(id), id);
-      }
-      Arrays.sort(dictAndIds, Comparator.comparing(pair -> pair.lhs));
+      rankOfDictionaryIds = IntStream.range(0, dictionarySize).toArray();
+      IntArrays.quickSort(
+          rankOfDictionaryIds,
+          new IntComparator()
+          {
+            @Override
+            public int compare(int i1, int i2)
+            {
+              return dictionary.get(i1).compareTo(dictionary.get(i2));
+            }
 
-      rankOfDictionaryIds = new int[dictionarySize];
-      for (int i = 0; i < dictionarySize; i++) {
-        rankOfDictionaryIds[dictAndIds[i].rhs] = i;
+            @Override
+            public int compare(Integer o1, Integer o2)
+            {
+              return compare(o1.intValue(), o2.intValue());
+            }
+          }
+      );
+
+      inverse(rankOfDictionaryIds);
+    }
+
+    private static void inverse(int[] a) {
+      final BitSet visited = new BitSet(a.length);
+      for (int i = 0; i < a.length; i++) {
+        if (!visited.get(i)) {
+          inverseLoop(a, i, visited);
+        }
       }
+    }
+
+    private static void inverseLoop(int[] a, int startValue, BitSet visited) {
+      final int startIndex = a[startValue];
+
+      int nextIndex = startIndex;
+      int nextValue = startValue;
+
+      do {
+        final int curIndex = nextIndex;
+        final int curValue = nextValue;
+
+        nextValue = nextIndex;
+        nextIndex = a[curIndex];
+
+        visited.set(curIndex);
+        a[curIndex] = curValue;
+      } while (nextIndex != startIndex);
     }
 
     @Override
@@ -1101,7 +1145,7 @@ public class RowBasedGrouperHelper
     public Grouper.BufferComparator bufferComparator()
     {
       if (rankOfDictionaryIds == null) {
-        initializeSortableIds();
+        initializeRankOfDictionaryIds();
       }
 
       if (includeTimestamp) {
@@ -1112,7 +1156,7 @@ public class RowBasedGrouperHelper
             public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
             {
               final int cmp = compareDimsInBuffersForNullFudgeTimestamp(
-                  serdeHelpers,
+                  serdeHelperComparators,
                   lhsBuffer,
                   rhsBuffer,
                   lhsPosition,
@@ -1138,7 +1182,7 @@ public class RowBasedGrouperHelper
               }
 
               return compareDimsInBuffersForNullFudgeTimestamp(
-                  serdeHelpers,
+                  serdeHelperComparators,
                   lhsBuffer,
                   rhsBuffer,
                   lhsPosition,
@@ -1154,7 +1198,7 @@ public class RowBasedGrouperHelper
           public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
           {
             for (int i = 0; i < dimCount; i++) {
-              final int cmp = serdeHelpers[i].compare(
+              final int cmp = serdeHelperComparators[i].compare(
                   lhsBuffer,
                   rhsBuffer,
                   lhsPosition,
@@ -1227,6 +1271,9 @@ public class RowBasedGrouperHelper
       adjustedSerdeHelpers = orderByHelpers;
       adjustedSerdeHelpers.addAll(otherDimHelpers);
 
+      final BufferComparator[] adjustedSerdeHelperComparators = new BufferComparator[adjustedSerdeHelpers.size()];
+      Arrays.setAll(adjustedSerdeHelperComparators, i -> adjustedSerdeHelpers.get(i).getBufferComparator());
+
       final int fieldCount = dimCount + aggCount;
 
       if (includeTimestamp) {
@@ -1237,7 +1284,7 @@ public class RowBasedGrouperHelper
             public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
             {
               final int cmp = compareDimsInBuffersForNullFudgeTimestampForPushDown(
-                  adjustedSerdeHelpers,
+                  adjustedSerdeHelperComparators,
                   needsReverses,
                   fieldCount,
                   lhsBuffer,
@@ -1265,7 +1312,7 @@ public class RowBasedGrouperHelper
               }
 
               int cmp = compareDimsInBuffersForNullFudgeTimestampForPushDown(
-                  adjustedSerdeHelpers,
+                  adjustedSerdeHelperComparators,
                   needsReverses,
                   fieldCount,
                   lhsBuffer,
@@ -1287,14 +1334,14 @@ public class RowBasedGrouperHelper
             for (int i = 0; i < fieldCount; i++) {
               final int cmp;
               if (needsReverses.get(i)) {
-                cmp = adjustedSerdeHelpers.get(i).compare(
+                cmp = adjustedSerdeHelperComparators[i].compare(
                     rhsBuffer,
                     lhsBuffer,
                     rhsPosition,
                     lhsPosition
                 );
               } else {
-                cmp = adjustedSerdeHelpers.get(i).compare(
+                cmp = adjustedSerdeHelperComparators[i].compare(
                     lhsBuffer,
                     rhsBuffer,
                     lhsPosition,
@@ -1464,9 +1511,9 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
+      public BufferComparator getBufferComparator()
       {
-        return bufferComparator.compare(lhsBuffer, rhsBuffer, lhsPosition, rhsPosition);
+        return bufferComparator;
       }
     }
 
@@ -1590,9 +1637,9 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
+      public BufferComparator getBufferComparator()
       {
-        return bufferComparator.compare(lhsBuffer, rhsBuffer, lhsPosition, rhsPosition);
+        return bufferComparator;
       }
     }
 
@@ -1641,9 +1688,9 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
+      public BufferComparator getBufferComparator()
       {
-        return bufferComparator.compare(lhsBuffer, rhsBuffer, lhsPosition, rhsPosition);
+        return bufferComparator;
       }
     }
 
@@ -1693,23 +1740,23 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
+      public BufferComparator getBufferComparator()
       {
-        return bufferComparator.compare(lhsBuffer, rhsBuffer, lhsPosition, rhsPosition);
+        return bufferComparator;
       }
     }
   }
 
   private static int compareDimsInBuffersForNullFudgeTimestamp(
-      RowBasedKeySerdeHelper[] serdeHelpers,
+      BufferComparator[] serdeHelperComparators,
       ByteBuffer lhsBuffer,
       ByteBuffer rhsBuffer,
       int lhsPosition,
       int rhsPosition
   )
   {
-    for (RowBasedKeySerdeHelper serdeHelper : serdeHelpers) {
-      final int cmp = serdeHelper.compare(
+    for (BufferComparator comparator : serdeHelperComparators) {
+      final int cmp = comparator.compare(
           lhsBuffer,
           rhsBuffer,
           lhsPosition + Longs.BYTES,
@@ -1724,7 +1771,7 @@ public class RowBasedGrouperHelper
   }
 
   private static int compareDimsInBuffersForNullFudgeTimestampForPushDown(
-      List<RowBasedKeySerdeHelper> serdeHelpers,
+      BufferComparator[] serdeHelperComparators,
       List<Boolean> needsReverses,
       int dimCount,
       ByteBuffer lhsBuffer,
@@ -1736,14 +1783,14 @@ public class RowBasedGrouperHelper
     for (int i = 0; i < dimCount; i++) {
       final int cmp;
       if (needsReverses.get(i)) {
-        cmp = serdeHelpers.get(i).compare(
+        cmp = serdeHelperComparators[i].compare(
             rhsBuffer,
             lhsBuffer,
             rhsPosition + Longs.BYTES,
             lhsPosition + Longs.BYTES
         );
       } else {
-        cmp = serdeHelpers.get(i).compare(
+        cmp = serdeHelperComparators[i].compare(
             lhsBuffer,
             rhsBuffer,
             lhsPosition + Longs.BYTES,

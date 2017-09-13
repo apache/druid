@@ -45,8 +45,8 @@ import java.util.concurrent.TimeoutException;
 public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
 {
   private static final Logger LOG = new Logger(StreamingMergeSortedGrouper.class);
-  // Timeout for waiting for a slot to be available for read/write. This is required to prevent for the processing
-  // thread from being blocked if its iterator is not consumed due to some failure.
+  // Timeout for waiting for a slot to be available for read/write. This is required to prevent the processing
+  // thread from being blocked if the iterator of this grouper is not consumed due to some failures.
   private static final long DEFAULT_TIMEOUT_MS = 5000L;
 
   private final Supplier<ByteBuffer> bufferSupplier;
@@ -59,17 +59,17 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
 
   // Below variables are initialized when init() is called
   private ByteBuffer buffer;
-  private int maxSlotNum;
+  private int maxNumSlots;
   private boolean initialized;
 
   /**
-   * Indicate that this grouper consumed the last input or not.  Always set by the writing thread and ready by the
+   * Indicate that this grouper consumed the last input or not.  Always set by the writing thread and read by the
    * reading thread.
    */
   private volatile boolean finished;
 
   /**
-   * Currently writing position.  This is always moved ahead of nextReadIndex.
+   * Current write position.  This is always moved ahead of nextReadIndex.
    * Also, it is always incremented by the writing thread and read by both the writing and the reading threads.
    */
   private volatile int curWriteIndex;
@@ -139,9 +139,9 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
   {
     if (!initialized) {
       buffer = bufferSupplier.get();
-      maxSlotNum = buffer.capacity() / recordSize;
+      maxNumSlots = buffer.capacity() / recordSize;
       Preconditions.checkState(
-          maxSlotNum > 2,
+          maxNumSlots > 2,
           "Buffer[%s] should be large enough to store at least three records[%s]",
           buffer.capacity(),
           recordSize
@@ -240,21 +240,23 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
    */
   private void increaseWriteIndex()
   {
-    if (curWriteIndex == maxSlotNum - 1) {
+    if (curWriteIndex == maxNumSlots - 1) {
       final long startLoopAt = System.currentTimeMillis();
-      while ((nextReadIndex == -1 || nextReadIndex == 0) && !Thread.interrupted()) {
+      while ((nextReadIndex == -1 || nextReadIndex == 0) && !Thread.currentThread().isInterrupted()) {
         if (System.currentTimeMillis() - startLoopAt > timeoutMs) {
           throw new RuntimeException(new TimeoutException());
         }
+        Thread.yield();
       }
       curWriteIndex = 0;
     } else {
       final int nextWriteIndex = curWriteIndex + 1;
       final long startLoopAt = System.currentTimeMillis();
-      while ((nextWriteIndex == nextReadIndex) && !Thread.interrupted()) {
+      while ((nextWriteIndex == nextReadIndex) && !Thread.currentThread().isInterrupted()) {
         if (System.currentTimeMillis() - startLoopAt > timeoutMs) {
           throw new RuntimeException(new TimeoutException());
         }
+        Thread.yield();
       }
       curWriteIndex = nextWriteIndex;
     }
@@ -307,13 +309,7 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
     {
       {
         // Waits for some data to be ready
-        final long startLoopAt = System.currentTimeMillis();
-        while ((curWriteIndex == -1 || curWriteIndex == 0) && !finished && !Thread.interrupted()) {
-          if (System.currentTimeMillis() - startLoopAt > timeoutMs) {
-            throw new RuntimeException(new TimeoutException());
-          }
-        }
-        nextReadIndex = 0;
+        increaseReadIndex(0);
       }
 
       @Override
@@ -327,7 +323,7 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
         if (curWriteIndex >= nextReadIndex) {
           return curWriteIndex - nextReadIndex;
         } else {
-          return (maxSlotNum - nextReadIndex) + curWriteIndex;
+          return (maxNumSlots - nextReadIndex) + curWriteIndex;
         }
       }
 
@@ -346,20 +342,29 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
           values[i] = aggregators[i].get(buffer, recordOffset + aggregatorOffsets[i]);
         }
 
-        final int toBeUpdated = nextReadIndex == maxSlotNum - 1 ? 0 : nextReadIndex + 1;
-
-        if (!finished) {
-          final long startLoopAt = System.currentTimeMillis();
-          while (toBeUpdated == curWriteIndex && !finished && !Thread.interrupted()) {
-            if (System.currentTimeMillis() - startLoopAt > timeoutMs) {
-              throw new RuntimeException(new TimeoutException());
-            }
-          }
-        }
-
-        nextReadIndex = toBeUpdated;
+        final int increaseTo = nextReadIndex == maxNumSlots - 1 ? 0 : nextReadIndex + 1;
+        increaseReadIndex(increaseTo);
 
         return new Entry<>(key, values);
+      }
+
+      private void increaseReadIndex(int increaseTo)
+      {
+        final long startLoopAt = System.currentTimeMillis();
+        while ((!isReady() || increaseTo == curWriteIndex) && !finished && !Thread.currentThread().isInterrupted()) {
+          if (System.currentTimeMillis() - startLoopAt > timeoutMs) {
+            throw new RuntimeException(new TimeoutException());
+          }
+
+          Thread.yield();
+        }
+
+        nextReadIndex = increaseTo;
+      }
+
+      private boolean isReady()
+      {
+        return curWriteIndex != -1;
       }
 
       @Override

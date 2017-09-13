@@ -19,6 +19,7 @@
 
 package io.druid.query.groupby.epinephelinae;
 
+import io.druid.query.groupby.epinephelinae.Grouper.BufferComparator;
 import io.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
 
 import java.nio.ByteBuffer;
@@ -69,5 +70,7 @@ interface RowBasedKeySerdeHelper
    *
    * @return Negative number if lhs < rhs, positive if lhs > rhs, 0 if lhs == rhs
    */
-  int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition);
+//  int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition);
+
+  BufferComparator getBufferComparator();
 }
