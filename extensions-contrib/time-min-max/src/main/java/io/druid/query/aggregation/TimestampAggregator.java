@@ -26,7 +26,7 @@ import java.util.Comparator;
 
 public class TimestampAggregator implements Aggregator
 {
-  static final Comparator COMPARATOR = LongMaxAggregator.COMPARATOR;
+  static final Comparator COMPARATOR = Comparator.comparingLong(n -> ((Number) n).longValue());
 
   static Object combineValues(Comparator<Long> comparator, Object lhs, Object rhs)
   {
