@@ -205,10 +205,11 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
       }
     }
 
-    for (; i + Integer.BYTES <= keySize; i += Integer.BYTES) {
+    if (i + Integer.BYTES <= keySize) {
       if (curKeyBuffer.getInt(i) != buffer.getInt(bufferOffset + i)) {
         return false;
       }
+      i += Integer.BYTES;
     }
 
     for (; i < keySize; i++) {
