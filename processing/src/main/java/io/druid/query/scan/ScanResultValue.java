@@ -25,8 +25,6 @@ import java.util.List;
 
 public class ScanResultValue implements Comparable<ScanResultValue>
 {
-  public static final String timestampKey = "timestamp";
-
   private final String segmentId;
   private final List<String> columns;
   private final Object events;

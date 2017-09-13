@@ -21,6 +21,7 @@ package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
 import io.airlift.airline.Command;
@@ -33,6 +34,8 @@ import io.druid.client.cache.CacheMonitor;
 import io.druid.client.selector.CustomTierSelectorStrategyConfig;
 import io.druid.client.selector.ServerSelectorStrategy;
 import io.druid.client.selector.TierSelectorStrategy;
+import io.druid.discovery.DruidNodeDiscoveryProvider;
+import io.druid.discovery.LookupNodeService;
 import io.druid.guice.CacheModule;
 import io.druid.guice.DruidProcessingModule;
 import io.druid.guice.Jerseys;
@@ -120,6 +123,14 @@ public class CliBroker extends ServerRunnable
             MetricsModule.register(binder, CacheMonitor.class);
 
             LifecycleModule.register(binder, Server.class);
+
+            binder.bind(DiscoverySideEffectsProvider.Child.class).toProvider(
+                new DiscoverySideEffectsProvider(
+                    DruidNodeDiscoveryProvider.NODE_TYPE_BROKER,
+                    ImmutableList.of(LookupNodeService.class)
+                )
+            ).in(LazySingleton.class);
+            LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
           }
         },
         new LookupModule(),

@@ -22,6 +22,7 @@ package io.druid.query.extraction;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.guice.annotations.ExtensionPoint;
+import io.druid.java.util.common.Cacheable;
 import io.druid.query.lookup.LookupExtractionFn;
 
 import javax.annotation.Nullable;
@@ -55,16 +56,8 @@ import javax.annotation.Nullable;
  * regular expression with a capture group.  When the regular expression matches the value of a dimension,
  * the value captured by the group is used for grouping operations instead of the dimension value.
  */
-public interface ExtractionFn
+public interface ExtractionFn extends Cacheable
 {
-  /**
-   * Returns a byte[] unique to all concrete implementations of DimExtractionFn.  This byte[] is used to
-   * generate a cache key for the specific query.
-   *
-   * @return a byte[] unit to all concrete implements of DimExtractionFn
-   */
-  public byte[] getCacheKey();
-
   /**
    * The "extraction" function.  This should map an Object into some String value.
    * <p>
