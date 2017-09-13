@@ -48,6 +48,7 @@ import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.RetryUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
@@ -429,8 +430,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
     private final CountDownLatch initializationLatch = new CountDownLatch(1);
 
-    private volatile boolean isUnstable = false;
     private volatile long unstableStartTime = -1;
+    private volatile int consecutiveFailedAttemptCount = 0;
 
     DruidServerHolder(DruidServer druidServer)
     {
@@ -567,7 +568,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
                   }
 
                   initializationLatch.countDown();
-                  isUnstable = false;
+                  consecutiveFailedAttemptCount = 0;
                 }
                 catch (Exception ex) {
                   log.error(ex, "error processing segment list response from server [%s]", druidServer.getName());
@@ -588,7 +589,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
                       responseHandler.description
                   );
 
-                  if (hasUnstabilityTimeoutPassed()) {
+                  if (incrementFailedAttemptAndCheckUnstabilityTimeout()) {
                     if (t != null) {
                       log.error(t, logMsg);
                     } else {
@@ -605,7 +606,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
                   // sleep for a bit so that retry does not happen immediately.
                   try {
-                    Thread.sleep(5000);
+                    Thread.sleep(RetryUtils.nextRetrySleepMillis(consecutiveFailedAttemptCount));
                   }
                   catch (InterruptedException ex) {
                     Thread.currentThread().interrupt();
@@ -625,7 +626,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
               "Fatal error while fetching segment list from server [%s].", druidServer.getName()
           );
 
-          if (hasUnstabilityTimeoutPassed()) {
+          if (incrementFailedAttemptAndCheckUnstabilityTimeout()) {
             log.makeAlert(th, logMsg).emit();
           } else {
             log.info("Temporary Failure. %s", logMsg);
@@ -634,7 +635,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
           // sleep for a bit so that retry does not happen immediately.
           try {
-            Thread.sleep(5000);
+            Thread.sleep(RetryUtils.nextRetrySleepMillis(consecutiveFailedAttemptCount));
           }
           catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
@@ -707,14 +708,14 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       );
     }
 
-    private boolean hasUnstabilityTimeoutPassed()
+    private boolean incrementFailedAttemptAndCheckUnstabilityTimeout()
     {
-      if (isUnstable && (System.currentTimeMillis() - unstableStartTime) > config.getServerUnstabilityTimeout()) {
+      if (consecutiveFailedAttemptCount > 0
+          && (System.currentTimeMillis() - unstableStartTime) > config.getServerUnstabilityTimeout()) {
         return true;
       }
 
-      if (!isUnstable) {
-        isUnstable = true;
+      if (consecutiveFailedAttemptCount++ == 0) {
         unstableStartTime = System.currentTimeMillis();
       }
 
