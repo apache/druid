@@ -86,12 +86,6 @@ public class FunctionTest
   }
 
   @Test
-  public void testTrim()
-  {
-    assertExpr("trim(concat(' ',x,' '))", "foo");
-  }
-
-  @Test
   public void testLower()
   {
     assertExpr("lower('FOO')", "foo");

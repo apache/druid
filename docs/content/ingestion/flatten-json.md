@@ -17,9 +17,9 @@ Defining the JSON Flatten Spec allows nested JSON fields to be flattened during 
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | Type of the field, "root" or "path". | yes |
+| type | String | Type of the field, "root", "path" or "jq". | yes |
 | name | String | This string will be used as the column name when the data has been ingested.  | yes |
-| expr | String | Defines an expression for accessing the field within the JSON object, using [JsonPath](https://github.com/jayway/JsonPath) notation. Only used for type "path", otherwise ignored. | only for type "path" |
+| expr | String | Defines an expression for accessing the field within the JSON object, using [JsonPath](https://github.com/jayway/JsonPath) notation for type "path", and [jackson-jq](https://github.com/eiiches/jackson-jq) for type "jq". This field is only used for type "path" and "jq", otherwise ignored. | only for type "path" or "jq" |
 
 Suppose the event JSON has the following form:
 
@@ -99,6 +99,16 @@ To flatten this JSON, the parseSpec could be defined as follows:
         "type": "path",
         "name": "second-food",
         "expr": "$.thing.food[1]"
+      },
+      {
+        "type": "jq",
+        "name": "first-food-by-jq",
+        "expr": ".thing.food[1]"
+      },
+      {
+        "type": "jq",
+        "name": "hello-total",
+        "expr": ".hello | sum"
       }
     ]
   },
@@ -147,3 +157,4 @@ Note that:
 * If auto field discovery is enabled, any discovered field with the same name as one already defined in the field specs will be skipped and not added twice.
 * The JSON input must be a JSON object at the root, not an array. e.g., {"valid": "true"} and {"valid":[1,2,3]} are supported but [{"invalid": "true"}] and [1,2,3] are not.
 * [http://jsonpath.herokuapp.com/](http://jsonpath.herokuapp.com/) is useful for testing the path expressions.
+* jackson-jq supports subset of [./jq](https://stedolan.github.io/jq/) syntax.  Please refer jackson-jq document.

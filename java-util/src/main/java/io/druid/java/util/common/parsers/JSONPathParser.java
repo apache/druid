@@ -19,21 +19,23 @@
 
 package io.druid.java.util.common.parsers;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
-import com.jayway.jsonpath.spi.json.JacksonJsonProvider;
+import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider;
 import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
+import net.thisptr.jackson.jq.JsonQuery;
+import net.thisptr.jackson.jq.exception.JsonQueryException;
 
-import java.math.BigInteger;
 import java.nio.charset.CharsetEncoder;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,7 +45,7 @@ import java.util.Map;
  */
 public class JSONPathParser implements Parser<String, Object>
 {
-  private final Map<String, Pair<FieldType, JsonPath>> fieldPathMap;
+  private final Map<String, Pair<FieldType, FlattenExpr>> fieldPathMap;
   private final boolean useFieldDiscovery;
   private final ObjectMapper mapper;
   private final CharsetEncoder enc = Charsets.UTF_8.newEncoder();
@@ -65,7 +67,7 @@ public class JSONPathParser implements Parser<String, Object>
 
     // Avoid using defaultConfiguration, as this depends on json-smart which we are excluding.
     this.jsonPathConfig = Configuration.builder()
-                                       .jsonProvider(new JacksonJsonProvider())
+                                       .jsonProvider(new JacksonJsonNodeJsonProvider())
                                        .mappingProvider(new JacksonMappingProvider())
                                        .options(EnumSet.of(Option.SUPPRESS_EXCEPTIONS))
                                        .build();
@@ -94,27 +96,26 @@ public class JSONPathParser implements Parser<String, Object>
   {
     try {
       Map<String, Object> map = new LinkedHashMap<>();
-      Map<String, Object> document = mapper.readValue(
-          input,
-          new TypeReference<Map<String, Object>>()
-          {
-          }
-      );
-      for (Map.Entry<String, Pair<FieldType, JsonPath>> entry : fieldPathMap.entrySet()) {
+      JsonNode document = mapper.readValue(input, JsonNode.class);
+
+      for (Map.Entry<String, Pair<FieldType, FlattenExpr>> entry : fieldPathMap.entrySet()) {
         String fieldName = entry.getKey();
-        Pair<FieldType, JsonPath> pair = entry.getValue();
-        JsonPath path = pair.rhs;
-        Object parsedVal;
+        Pair<FieldType, FlattenExpr> pair = entry.getValue();
+        FlattenExpr path = pair.rhs;
+        JsonNode parsedVal;
         if (pair.lhs == FieldType.ROOT) {
           parsedVal = document.get(fieldName);
+        } else if (pair.lhs == FieldType.PATH) {
+          parsedVal = path.readPath(document, jsonPathConfig);
+        } else if (pair.lhs == FieldType.JQ) {
+          parsedVal = path.readJq(document);
         } else {
-          parsedVal = path.read(document, jsonPathConfig);
+          throw new ParseException("Unknown FieldType", pair.lhs);
         }
         if (parsedVal == null) {
           continue;
         }
-        parsedVal = valueConversionFunction(parsedVal);
-        map.put(fieldName, parsedVal);
+        map.put(fieldName, valueConversionFunction(parsedVal));
       }
       if (useFieldDiscovery) {
         discoverFields(map, document);
@@ -126,70 +127,84 @@ public class JSONPathParser implements Parser<String, Object>
     }
   }
 
-  private Map<String, Pair<FieldType, JsonPath>> generateFieldPaths(List<FieldSpec> fieldSpecs)
+  private Map<String, Pair<FieldType, FlattenExpr>> generateFieldPaths(List<FieldSpec> fieldSpecs)
   {
-    Map<String, Pair<FieldType, JsonPath>> map = new LinkedHashMap<>();
+    Map<String, Pair<FieldType, FlattenExpr>> map = new LinkedHashMap<>();
     for (FieldSpec fieldSpec : fieldSpecs) {
       String fieldName = fieldSpec.getName();
       if (map.get(fieldName) != null) {
         throw new IllegalArgumentException("Cannot have duplicate field definition: " + fieldName);
       }
-      JsonPath path = fieldSpec.getType() == FieldType.PATH ? JsonPath.compile(fieldSpec.getExpr()) : null;
-      Pair<FieldType, JsonPath> pair = new Pair<>(fieldSpec.getType(), path);
+      FlattenExpr path = null;
+      if (fieldSpec.getType() == FieldType.PATH) {
+        path = new FlattenExpr(JsonPath.compile(fieldSpec.getExpr()));
+      } else if (fieldSpec.getType() == FieldType.JQ) {
+        try {
+          path = new FlattenExpr(JsonQuery.compile(fieldSpec.getExpr()));
+        }
+        catch (JsonQueryException e) {
+          throw new IllegalArgumentException("Unable to compile JQ expression: " + fieldSpec.getExpr());
+        }
+      }
+      Pair<FieldType, FlattenExpr> pair = new Pair<>(fieldSpec.getType(), path);
       map.put(fieldName, pair);
     }
     return map;
   }
 
-  private void discoverFields(Map<String, Object> map, Map<String, Object> document)
+  private void discoverFields(Map<String, Object> map, JsonNode document)
   {
-    for (Map.Entry<String, Object> e : document.entrySet()) {
+    for (Iterator<Map.Entry<String, JsonNode>> it = document.fields(); it.hasNext(); ) {
+      Map.Entry<String, JsonNode> e = it.next();
       String field = e.getKey();
       if (!map.containsKey(field)) {
-        Object val = e.getValue();
-        if (val == null) {
+        JsonNode val = e.getValue();
+        if (val.isNull()) {
           continue;
         }
-        if (val instanceof Map) {
+        if (val.isObject()) {
           continue;
         }
-        if (val instanceof List) {
-          if (!isFlatList((List) val)) {
+        if (val.isArray()) {
+          if (!isFlatList(val)) {
             continue;
           }
         }
-        val = valueConversionFunction(val);
-        map.put(field, val);
+        map.put(field, valueConversionFunction(val));
       }
     }
   }
 
-  private Object valueConversionFunction(Object val)
+  private Object valueConversionFunction(JsonNode val)
   {
-    if (val instanceof Integer) {
-      return Long.valueOf((Integer) val);
+    if (val == null) {
+      return null;
     }
 
-    if (val instanceof BigInteger) {
-      return Double.valueOf(((BigInteger) val).doubleValue());
+    if (val.isInt() || val.isLong()) {
+      return val.asLong();
     }
 
-    if (val instanceof String) {
-      return charsetFix((String) val);
+    if (val.isNumber()) {
+      return val.asDouble();
     }
 
-    if (val instanceof List) {
+    if (val.isTextual()) {
+      return charsetFix(val.asText());
+    }
+
+    if (val.isArray()) {
       List<Object> newList = new ArrayList<>();
-      for (Object entry : ((List) val)) {
+      for (JsonNode entry : val) {
         newList.add(valueConversionFunction(entry));
       }
       return newList;
     }
 
-    if (val instanceof Map) {
+    if (val.isObject()) {
       Map<String, Object> newMap = new LinkedHashMap<>();
-      Map<String, Object> valMap = (Map<String, Object>) val;
-      for (Map.Entry<String, Object> entry : valMap.entrySet()) {
+      for (Iterator<Map.Entry<String, JsonNode>> it = val.fields(); it.hasNext(); ) {
+        Map.Entry<String, JsonNode> entry = it.next();
         newMap.put(entry.getKey(), valueConversionFunction(entry.getValue()));
       }
       return newMap;
@@ -210,10 +225,10 @@ public class JSONPathParser implements Parser<String, Object>
     }
   }
 
-  private boolean isFlatList(List<Object> list)
+  private boolean isFlatList(JsonNode list)
   {
-    for (Object obj : list) {
-      if ((obj instanceof Map) || (obj instanceof List)) {
+    for (JsonNode obj : list) {
+      if (obj.isObject() || obj.isArray()) {
         return false;
       }
     }
@@ -233,7 +248,12 @@ public class JSONPathParser implements Parser<String, Object>
     /**
      * A PATH field uses a JsonPath expression to retrieve the field value
      */
-    PATH;
+    PATH,
+
+    /**
+     * A JQ field uses a JsonQuery expression to retrieve the field value
+     */
+    JQ;
   }
 
   /**
