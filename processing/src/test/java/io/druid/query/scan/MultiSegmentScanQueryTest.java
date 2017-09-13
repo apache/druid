@@ -64,6 +64,7 @@ import java.util.Map;
 public class MultiSegmentScanQueryTest
 {
   private static final ScanQueryQueryToolChest toolChest = new ScanQueryQueryToolChest(
+      new ScanQueryConfig(),
       DefaultGenericQueryMetricsFactory.instance()
   );
 
@@ -184,6 +185,7 @@ public class MultiSegmentScanQueryTest
                     .intervals(SelectQueryRunnerTest.I_0112_0114)
                     .batchSize(batchSize)
                     .columns(Arrays.<String>asList())
+                    .legacy(false)
                     .limit(limit);
   }
 

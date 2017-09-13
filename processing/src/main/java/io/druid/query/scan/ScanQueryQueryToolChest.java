@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package io.druid.query.scan;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -41,11 +42,16 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   {
   };
 
+  private final ScanQueryConfig scanQueryConfig;
   private final GenericQueryMetricsFactory queryMetricsFactory;
 
   @Inject
-  public ScanQueryQueryToolChest(GenericQueryMetricsFactory queryMetricsFactory)
+  public ScanQueryQueryToolChest(
+      final ScanQueryConfig scanQueryConfig,
+      final GenericQueryMetricsFactory queryMetricsFactory
+  )
   {
+    this.scanQueryConfig = scanQueryConfig;
     this.queryMetricsFactory = queryMetricsFactory;
   }
 
@@ -59,9 +65,13 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
           final QueryPlus<ScanResultValue> queryPlus, final Map<String, Object> responseContext
       )
       {
-        ScanQuery scanQuery = (ScanQuery) queryPlus.getQuery();
+        // Ensure "legacy" is a non-null value, such that all other nodes this query is forwarded to will treat it
+        // the same way, even if they have different default legacy values.
+        final ScanQuery scanQuery = ((ScanQuery) queryPlus.getQuery()).withNonNullLegacy(scanQueryConfig);
+        final QueryPlus<ScanResultValue> queryPlusWithNonNullLegacy = queryPlus.withQuery(scanQuery);
+
         if (scanQuery.getLimit() == Long.MAX_VALUE) {
-          return runner.run(queryPlus, responseContext);
+          return runner.run(queryPlusWithNonNullLegacy, responseContext);
         }
         return new BaseSequence<>(
             new BaseSequence.IteratorMaker<ScanResultValue, ScanQueryLimitRowIterator>()
@@ -69,7 +79,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
               @Override
               public ScanQueryLimitRowIterator make()
               {
-                return new ScanQueryLimitRowIterator(runner, queryPlus, responseContext);
+                return new ScanQueryLimitRowIterator(runner, queryPlusWithNonNullLegacy, responseContext);
               }
 
               @Override
@@ -114,8 +124,8 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
       )
       {
         ScanQuery scanQuery = (ScanQuery) queryPlus.getQuery();
-        if (scanQuery.getDimensionsFilter() != null) {
-          scanQuery = scanQuery.withDimFilter(scanQuery.getDimensionsFilter().optimize());
+        if (scanQuery.getFilter() != null) {
+          scanQuery = scanQuery.withDimFilter(scanQuery.getFilter().optimize());
           queryPlus = queryPlus.withQuery(scanQuery);
         }
         return runner.run(queryPlus, responseContext);
