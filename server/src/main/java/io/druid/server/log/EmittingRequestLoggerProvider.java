@@ -53,7 +53,7 @@ public class EmittingRequestLoggerProvider implements RequestLoggerProvider
   public RequestLogger get()
   {
     EmittingRequestLogger logger = new EmittingRequestLogger(emitter, feed);
-    log.info(new Exception("Stack trace"), "Creating %s at", logger);
+    log.debug(new Exception("Stack trace"), "Creating %s at", logger);
     return logger;
   }
 }

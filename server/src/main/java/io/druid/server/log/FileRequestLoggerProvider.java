@@ -56,7 +56,7 @@ public class FileRequestLoggerProvider implements RequestLoggerProvider
   public RequestLogger get()
   {
     FileRequestLogger logger = new FileRequestLogger(jsonMapper, factory.create(1, "RequestLogger-%s"), dir);
-    log.info(new Exception("Stack trace"), "Creating %s at", logger);
+    log.debug(new Exception("Stack trace"), "Creating %s at", logger);
     return logger;
   }
 }

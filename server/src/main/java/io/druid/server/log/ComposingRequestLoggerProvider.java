@@ -50,7 +50,7 @@ public class ComposingRequestLoggerProvider implements RequestLoggerProvider
       loggers.add(loggerProvider.get());
     }
     ComposingRequestLogger logger = new ComposingRequestLogger(loggers);
-    log.info(new Exception("Stack trace"), "Creating %s at", logger);
+    log.debug(new Exception("Stack trace"), "Creating %s at", logger);
     return logger;
   }
 

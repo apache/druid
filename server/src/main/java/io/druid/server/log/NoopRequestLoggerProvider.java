@@ -30,7 +30,7 @@ public class NoopRequestLoggerProvider implements RequestLoggerProvider
   @Override
   public RequestLogger get()
   {
-    log.info(new Exception("Stack trace"), "Creating NoopRequestLogger at");
+    log.debug(new Exception("Stack trace"), "Creating NoopRequestLogger at");
     return new NoopRequestLogger();
   }
 }

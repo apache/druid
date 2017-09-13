@@ -45,7 +45,7 @@ public class LoggingRequestLoggerProvider implements RequestLoggerProvider
   public RequestLogger get()
   {
     LoggingRequestLogger logger = new LoggingRequestLogger(mapper, setMDC, setContextMDC);
-    log.info(new Exception("Stack trace"), "Creating %s at", logger);
+    log.debug(new Exception("Stack trace"), "Creating %s at", logger);
     return logger;
   }
 }
