@@ -17,20 +17,32 @@
  * under the License.
  */
 
-package io.druid.server.log;
+package io.druid.server.emitter;
 
-import io.druid.java.util.common.logger.Logger;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import com.google.inject.Provides;
+import com.google.inject.name.Named;
+import com.metamx.emitter.core.Emitter;
+import com.metamx.emitter.core.NoopEmitter;
+import io.druid.guice.ManageLifecycle;
 
 /**
  */
-public class NoopRequestLoggerProvider implements RequestLoggerProvider
+public class NoopEmitterModule implements Module
 {
-  private static final Logger log = new Logger(NoopRequestLoggerProvider.class);
+  public static final String EMITTER_TYPE = "noop";
 
   @Override
-  public RequestLogger get()
+  public void configure(Binder binder)
   {
-    log.debug(new Exception("Stack trace"), "Creating NoopRequestLogger at");
-    return new NoopRequestLogger();
+  }
+
+  @Provides
+  @ManageLifecycle
+  @Named(EMITTER_TYPE)
+  public Emitter makeEmitter()
+  {
+    return new NoopEmitter();
   }
 }
