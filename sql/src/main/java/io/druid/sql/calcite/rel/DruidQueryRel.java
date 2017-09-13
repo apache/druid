@@ -227,7 +227,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
       cost += COST_PER_COLUMN * queryBuilder.getGrouping().getPostAggregators().size();
     }
 
-    if (queryBuilder.getLimitSpec() != null && queryBuilder.getLimitSpec().getLimit() < Integer.MAX_VALUE) {
+    if (queryBuilder.getLimitSpec() != null && queryBuilder.getLimitSpec().isLimited()) {
       cost *= COST_LIMIT_MULTIPLIER;
     }
 

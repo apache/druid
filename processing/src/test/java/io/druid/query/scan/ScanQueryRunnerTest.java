@@ -20,20 +20,25 @@
 package io.druid.query.scan;
 
 import com.google.common.base.Function;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.ObjectArrays;
 import com.google.common.collect.Sets;
+import com.google.common.hash.Hashing;
+import io.druid.hll.HyperLogLogCollector;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.DefaultGenericQueryMetricsFactory;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.TableDataSource;
+import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.DimFilter;
@@ -41,6 +46,11 @@ import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
+import io.druid.segment.VirtualColumn;
+import io.druid.segment.column.Column;
+import io.druid.segment.column.ValueType;
+import io.druid.segment.virtual.ExpressionVirtualColumn;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -61,6 +71,9 @@ import java.util.Set;
 @RunWith(Parameterized.class)
 public class ScanQueryRunnerTest
 {
+  private static final VirtualColumn EXPR_COLUMN =
+      new ExpressionVirtualColumn("expr", "index * 2", ValueType.LONG, TestExprMacroTable.INSTANCE);
+
   // copied from druid.sample.numeric.tsv
   public static final String[] V_0112 = {
       "2011-01-12T00:00:00.000Z\tspot\tautomotive\t1000\t10000.0\t10000.0\t100000\tpreferred\tapreferred\t100.000000",
@@ -99,10 +112,11 @@ public class ScanQueryRunnerTest
   public static final String[] V_0112_0114 = ObjectArrays.concat(V_0112, V_0113, String.class);
 
   private static final ScanQueryQueryToolChest toolChest = new ScanQueryQueryToolChest(
+      new ScanQueryConfig(),
       DefaultGenericQueryMetricsFactory.instance()
   );
 
-  @Parameterized.Parameters(name = "{0}")
+  @Parameterized.Parameters(name = "{0}, legacy = {1}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     return QueryRunnerTestHelper.cartesian(
@@ -111,15 +125,18 @@ public class ScanQueryRunnerTest
                 toolChest,
                 new ScanQueryEngine()
             )
-        )
+        ),
+        ImmutableList.of(false, true)
     );
   }
 
   private final QueryRunner runner;
+  private final boolean legacy;
 
-  public ScanQueryRunnerTest(QueryRunner runner)
+  public ScanQueryRunnerTest(final QueryRunner runner, final boolean legacy)
   {
     this.runner = runner;
+    this.legacy = legacy;
   }
 
   private ScanQuery.ScanQueryBuilder newTestQuery()
@@ -128,14 +145,16 @@ public class ScanQueryRunnerTest
                     .dataSource(new TableDataSource(QueryRunnerTestHelper.dataSource))
                     .columns(Arrays.<String>asList())
                     .intervals(QueryRunnerTestHelper.fullOnInterval)
-                    .limit(3);
+                    .limit(3)
+                    .legacy(legacy);
   }
 
   @Test
   public void testFullOnSelect()
   {
     List<String> columns = Lists.newArrayList(
-        ScanResultValue.timestampKey,
+        getTimestampName(),
+        "expr",
         "market",
         "quality",
         "qualityLong",
@@ -156,6 +175,7 @@ public class ScanQueryRunnerTest
     );
     ScanQuery query = newTestQuery()
         .intervals(I_0112_0114)
+        .virtualColumns(EXPR_COLUMN)
         .build();
 
     HashMap<String, Object> context = new HashMap<String, Object>();
@@ -177,7 +197,8 @@ public class ScanQueryRunnerTest
   public void testFullOnSelectAsCompactedList()
   {
     final List<String> columns = Lists.newArrayList(
-        ScanResultValue.timestampKey,
+        getTimestampName(),
+        "expr",
         "market",
         "quality",
         "qualityLong",
@@ -198,6 +219,7 @@ public class ScanQueryRunnerTest
     );
     ScanQuery query = newTestQuery()
         .intervals(I_0112_0114)
+        .virtualColumns(EXPR_COLUMN)
         .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
         .build();
 
@@ -217,6 +239,56 @@ public class ScanQueryRunnerTest
   }
 
   @Test
+  public void testSelectWithUnderscoreUnderscoreTime()
+  {
+    ScanQuery query = newTestQuery()
+        .intervals(I_0112_0114)
+        .columns(Column.TIME_COLUMN_NAME, QueryRunnerTestHelper.marketDimension, QueryRunnerTestHelper.indexMetric)
+        .build();
+
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    Iterable<ScanResultValue> results = Sequences.toList(
+        runner.run(QueryPlus.wrap(query), context),
+        Lists.<ScanResultValue>newArrayList()
+    );
+
+    final List<List<Map<String, Object>>> expectedEvents = toEvents(
+        new String[]{
+            getTimestampName() + ":TIME",
+            QueryRunnerTestHelper.marketDimension + ":STRING",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            QueryRunnerTestHelper.indexMetric + ":DOUBLE"
+        },
+        V_0112_0114
+    );
+
+    // Add "__time" to all the expected events in legacy mode
+    if (legacy) {
+      for (List<Map<String, Object>> batch : expectedEvents) {
+        for (Map<String, Object> event : batch) {
+          event.put("__time", ((DateTime) event.get("timestamp")).getMillis());
+        }
+      }
+    }
+
+    List<ScanResultValue> expectedResults = toExpected(
+        expectedEvents,
+        legacy
+        ? Lists.newArrayList(getTimestampName(), "__time", "market", "index")
+        : Lists.newArrayList("__time", "market", "index"),
+        0,
+        3
+    );
+    verify(expectedResults, results);
+  }
+
+  @Test
   public void testSelectWithDimsAndMets()
   {
     ScanQuery query = newTestQuery()
@@ -233,7 +305,7 @@ public class ScanQueryRunnerTest
     List<ScanResultValue> expectedResults = toExpected(
         toEvents(
             new String[]{
-                ScanResultValue.timestampKey + ":TIME",
+                legacy ? getTimestampName() + ":TIME" : null,
                 QueryRunnerTestHelper.marketDimension + ":STRING",
                 null,
                 null,
@@ -246,7 +318,7 @@ public class ScanQueryRunnerTest
             },
             V_0112_0114
         ),
-        Lists.newArrayList(ScanResultValue.timestampKey, "market", "index"),
+        legacy ? Lists.newArrayList(getTimestampName(), "market", "index") : Lists.newArrayList("market", "index"),
         0,
         3
     );
@@ -271,7 +343,7 @@ public class ScanQueryRunnerTest
     List<ScanResultValue> expectedResults = toExpected(
         toEvents(
             new String[]{
-                ScanResultValue.timestampKey + ":TIME",
+                legacy ? getTimestampName() + ":TIME" : null,
                 QueryRunnerTestHelper.marketDimension + ":STRING",
                 null,
                 null,
@@ -284,7 +356,7 @@ public class ScanQueryRunnerTest
             },
             V_0112_0114
         ),
-        Lists.newArrayList(ScanResultValue.timestampKey, "market", "index"),
+        legacy ? Lists.newArrayList(getTimestampName(), "market", "index") : Lists.newArrayList("market", "index"),
         0,
         3
     );
@@ -311,7 +383,7 @@ public class ScanQueryRunnerTest
 
       final List<List<Map<String, Object>>> events = toEvents(
           new String[]{
-              ScanResultValue.timestampKey + ":TIME",
+              legacy ? getTimestampName() + ":TIME" : null,
               null,
               QueryRunnerTestHelper.qualityDimension + ":STRING",
               null,
@@ -345,7 +417,7 @@ public class ScanQueryRunnerTest
 
       List<ScanResultValue> expectedResults = toExpected(
           events,
-          Lists.newArrayList(ScanResultValue.timestampKey, "quality", "index"),
+          legacy ? Lists.newArrayList(getTimestampName(), "quality", "index") : Lists.newArrayList("quality", "index"),
           0,
           limit
       );
@@ -378,7 +450,7 @@ public class ScanQueryRunnerTest
 
     final List<List<Map<String, Object>>> events = toEvents(
         new String[]{
-            ScanResultValue.timestampKey + ":TIME",
+            legacy ? getTimestampName() + ":TIME" : null,
             null,
             QueryRunnerTestHelper.qualityDimension + ":STRING",
             null,
@@ -398,7 +470,14 @@ public class ScanQueryRunnerTest
 
     List<ScanResultValue> expectedResults = toExpected(
         events,
-        Lists.newArrayList(ScanResultValue.timestampKey, QueryRunnerTestHelper.qualityDimension, QueryRunnerTestHelper.indexMetric),
+        legacy ? Lists.newArrayList(
+            getTimestampName(),
+            QueryRunnerTestHelper.qualityDimension,
+            QueryRunnerTestHelper.indexMetric
+        ) : Lists.newArrayList(
+            QueryRunnerTestHelper.qualityDimension,
+            QueryRunnerTestHelper.indexMetric
+        ),
         0,
         3
     );
@@ -446,18 +525,17 @@ public class ScanQueryRunnerTest
     );
 
     final List<List<Map<String, Object>>> events = toEvents(
-        new String[]{
-            ScanResultValue.timestampKey + ":TIME"
-        },
+        legacy ? new String[]{getTimestampName() + ":TIME"} : new String[0],
         V_0112_0114
     );
 
     List<ScanResultValue> expectedResults = toExpected(
         events,
-        Lists.<String>newArrayList(ScanResultValue.timestampKey, "foo", "foo2"),
+        legacy ? Lists.newArrayList(getTimestampName(), "foo", "foo2") : Lists.newArrayList("foo", "foo2"),
         0,
         3
     );
+
     verify(expectedResults, results);
   }
 
@@ -465,7 +543,7 @@ public class ScanQueryRunnerTest
   {
     return toEvents(
         new String[]{
-            ScanResultValue.timestampKey + ":TIME",
+            getTimestampName() + ":TIME",
             QueryRunnerTestHelper.marketDimension + ":STRING",
             QueryRunnerTestHelper.qualityDimension + ":STRING",
             "qualityLong" + ":LONG",
@@ -475,7 +553,14 @@ public class ScanQueryRunnerTest
             QueryRunnerTestHelper.placementDimension + ":STRING",
             QueryRunnerTestHelper.placementishDimension + ":STRINGS",
             QueryRunnerTestHelper.indexMetric + ":DOUBLE",
-            QueryRunnerTestHelper.partialNullDimension + ":STRING"
+            QueryRunnerTestHelper.partialNullDimension + ":STRING",
+            "expr",
+            "indexMin",
+            "indexFloat",
+            "indexMaxPlusTen",
+            "indexMinFloat",
+            "indexMaxFloat",
+            "quality_uniques"
         },
         valueSet
     );
@@ -499,14 +584,53 @@ public class ScanQueryRunnerTest
                     Map<String, Object> event = Maps.newHashMap();
                     String[] values = input.split("\\t");
                     for (int i = 0; i < dimSpecs.length; i++) {
-                      if (dimSpecs[i] == null || i >= dimSpecs.length || i >= values.length) {
+                      if (dimSpecs[i] == null || i >= dimSpecs.length) {
                         continue;
                       }
+
+                      // For testing metrics and virtual columns we have some special handling here, since
+                      // they don't appear in the source data.
+                      if (dimSpecs[i].equals(EXPR_COLUMN.getOutputName())) {
+                        event.put(
+                            EXPR_COLUMN.getOutputName(),
+                            (double) event.get(QueryRunnerTestHelper.indexMetric) * 2
+                        );
+                        continue;
+                      } else if (dimSpecs[i].equals("indexMin")) {
+                        event.put("indexMin", (double) event.get(QueryRunnerTestHelper.indexMetric));
+                        continue;
+                      } else if (dimSpecs[i].equals("indexFloat")) {
+                        event.put("indexFloat", (float) (double) event.get(QueryRunnerTestHelper.indexMetric));
+                        continue;
+                      } else if (dimSpecs[i].equals("indexMaxPlusTen")) {
+                        event.put("indexMaxPlusTen", (double) event.get(QueryRunnerTestHelper.indexMetric) + 10);
+                        continue;
+                      } else if (dimSpecs[i].equals("indexMinFloat")) {
+                        event.put("indexMinFloat", (float) (double) event.get(QueryRunnerTestHelper.indexMetric));
+                        continue;
+                      } else if (dimSpecs[i].equals("indexMaxFloat")) {
+                        event.put("indexMaxFloat", (float) (double) event.get(QueryRunnerTestHelper.indexMetric));
+                        continue;
+                      } else if (dimSpecs[i].equals("quality_uniques")) {
+                        final HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
+                        collector.add(
+                            Hashing.murmur3_128()
+                                   .hashBytes(StringUtils.toUtf8((String) event.get("quality")))
+                                   .asBytes()
+                        );
+                        event.put("quality_uniques", collector);
+                      }
+
+                      if (i >= values.length) {
+                        continue;
+                      }
+
                       String[] specs = dimSpecs[i].split(":");
+
                       event.put(
                           specs[0],
                           specs.length == 1 || specs[1].equals("STRING") ? values[i] :
-                          specs[1].equals("TIME") ? DateTimes.of(values[i]) :
+                          specs[1].equals("TIME") ? toTimestamp(values[i]) :
                           specs[1].equals("FLOAT") ? Float.valueOf(values[i]) :
                           specs[1].equals("DOUBLE") ? Double.valueOf(values[i]) :
                           specs[1].equals("LONG") ? Long.valueOf(values[i]) :
@@ -522,6 +646,20 @@ public class ScanQueryRunnerTest
         )
     );
     return events;
+  }
+
+  private Object toTimestamp(final String value)
+  {
+    if (legacy) {
+      return DateTimes.of(value);
+    } else {
+      return DateTimes.of(value).getMillis();
+    }
+  }
+
+  private String getTimestampName()
+  {
+    return legacy ? "timestamp" : Column.TIME_COLUMN_NAME;
   }
 
   private List<ScanResultValue> toExpected(
@@ -578,8 +716,22 @@ public class ScanQueryRunnerTest
         for (Map.Entry<String, Object> ex : exHolder.entrySet()) {
           Object actVal = acHolder.get(ex.getKey());
 
-          // work around for current II limitations
+          if (actVal instanceof String[]) {
+            actVal = Arrays.asList((String[]) actVal);
+          }
+
           Assert.assertEquals("invalid value for " + ex.getKey(), ex.getValue(), actVal);
+        }
+
+        for (Map.Entry<String, Object> ac : acHolder.entrySet()) {
+          Object exVal = exHolder.get(ac.getKey());
+          Object actVal = ac.getValue();
+
+          if (actVal instanceof String[]) {
+            actVal = Arrays.asList((String[]) actVal);
+          }
+
+          Assert.assertEquals("invalid value for " + ac.getKey(), exVal, actVal);
         }
       }
 
@@ -612,7 +764,7 @@ public class ScanQueryRunnerTest
 
   private Iterable<ScanResultValue> compactedListToRow(Iterable<ScanResultValue> results)
   {
-    return Iterables.transform(results, new Function<ScanResultValue, ScanResultValue>()
+    return Lists.newArrayList(Iterables.transform(results, new Function<ScanResultValue, ScanResultValue>()
     {
       @Override
       public ScanResultValue apply(ScanResultValue input)
@@ -629,6 +781,6 @@ public class ScanQueryRunnerTest
         }
         return new ScanResultValue(input.getSegmentId(), input.getColumns(), mapEvents);
       }
-    });
+    }));
   }
 }

@@ -17,13 +17,52 @@
  * under the License.
  */
 
-package io.druid.server.security;
+package io.druid.query.scan;
 
-public class DenyAllAuthorizer implements Authorizer
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.util.Objects;
+
+public class ScanQueryConfig
 {
-  @Override
-  public Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action)
+  @JsonProperty
+  private boolean legacy = false;
+
+  public boolean isLegacy()
   {
-    return new Access(false, "The DenyAll Authorizer denies all requests.");
+    return legacy;
+  }
+
+  public ScanQueryConfig setLegacy(final boolean legacy)
+  {
+    this.legacy = legacy;
+    return this;
+  }
+
+  @Override
+  public boolean equals(final Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    final ScanQueryConfig that = (ScanQueryConfig) o;
+    return legacy == that.legacy;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(legacy);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "ScanQueryConfig{" +
+           "legacy=" + legacy +
+           '}';
   }
 }
