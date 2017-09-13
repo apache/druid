@@ -25,6 +25,7 @@ import io.druid.java.util.common.Intervals;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.TableDataSource;
 import io.druid.query.spec.LegacySegmentSpec;
+import io.druid.segment.VirtualColumns;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -48,22 +49,26 @@ public class ScanQuerySpecTest
     String current =
         "{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"testing\"},"
         + "\"intervals\":{\"type\":\"LegacySegmentSpec\",\"intervals\":[\"2011-01-12T00:00:00.000Z/2011-01-14T00:00:00.000Z\"]},"
+        + "\"virtualColumns\":[],"
         + "\"resultFormat\":\"list\","
         + "\"batchSize\":20480,"
         + "\"limit\":3,"
         + "\"filter\":null,"
         + "\"columns\":[\"market\",\"quality\",\"index\"],"
+        + "\"legacy\":null,"
         + "\"context\":null,"
         + "\"descending\":false}";
 
     ScanQuery query = new ScanQuery(
         new TableDataSource(QueryRunnerTestHelper.dataSource),
         new LegacySegmentSpec(Intervals.of("2011-01-12/2011-01-14")),
+        VirtualColumns.EMPTY,
         null,
         0,
         3,
         null,
         Arrays.<String>asList("market", "quality", "index"),
+        null,
         null
     );
 

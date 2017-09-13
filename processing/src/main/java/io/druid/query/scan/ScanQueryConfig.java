@@ -17,28 +17,52 @@
  * under the License.
  */
 
-package io.druid.data.input.impl;
+package io.druid.query.scan;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonValue;
-import io.druid.java.util.common.StringUtils;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-public enum JSONPathFieldType
+import java.util.Objects;
+
+public class ScanQueryConfig
 {
-  ROOT,
-  PATH,
-  JQ;
+  @JsonProperty
+  private boolean legacy = false;
 
-  @JsonValue
+  public boolean isLegacy()
+  {
+    return legacy;
+  }
+
+  public ScanQueryConfig setLegacy(final boolean legacy)
+  {
+    this.legacy = legacy;
+    return this;
+  }
+
+  @Override
+  public boolean equals(final Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    final ScanQueryConfig that = (ScanQueryConfig) o;
+    return legacy == that.legacy;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(legacy);
+  }
+
   @Override
   public String toString()
   {
-    return StringUtils.toLowerCase(this.name());
-  }
-
-  @JsonCreator
-  public static JSONPathFieldType fromString(String name)
-  {
-    return valueOf(StringUtils.toUpperCase(name));
+    return "ScanQueryConfig{" +
+           "legacy=" + legacy +
+           '}';
   }
 }
