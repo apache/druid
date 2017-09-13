@@ -38,7 +38,6 @@ import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.having.DimFilterHavingSpec;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
-import io.druid.query.ordering.StringComparators;
 import io.druid.query.select.PagingSpec;
 import io.druid.query.select.SelectQuery;
 import io.druid.query.timeseries.TimeseriesQuery;
@@ -408,10 +407,12 @@ public class DruidQueryBuilder
     }
 
     final Granularity queryGranularity;
+    final boolean descending;
     final List<DimensionSpec> dimensions = grouping.getDimensionSpecs();
 
     if (dimensions.isEmpty()) {
       queryGranularity = Granularities.ALL;
+      descending = false;
     } else if (dimensions.size() == 1) {
       final DimensionSpec dimensionSpec = Iterables.getOnlyElement(dimensions);
       final Granularity gran = ExtractionFns.toQueryGranularity(dimensionSpec.getExtractionFn());
@@ -419,32 +420,42 @@ public class DruidQueryBuilder
       if (gran == null || !dimensionSpec.getDimension().equals(Column.TIME_COLUMN_NAME)) {
         // Timeseries only applies if the single dimension is granular __time.
         return null;
+      } else {
+        queryGranularity = gran;
       }
 
-      // Timeseries only applies if sort is null, or if the first sort field is the time dimension.
-      final boolean sortingOnTime =
-          limitSpec == null || limitSpec.getColumns().isEmpty()
-          || (limitSpec.getLimit() == Integer.MAX_VALUE
-              && limitSpec.getColumns().get(0).getDimension().equals(dimensionSpec.getOutputName()));
+      if (limitSpec != null) {
+        // If there is a limit spec, timeseries cannot LIMIT; and must be ORDER BY time (or nothing).
 
-      if (sortingOnTime) {
-        queryGranularity = gran;
+        if (limitSpec.isLimited()) {
+          return null;
+        }
+
+        if (limitSpec.getColumns().isEmpty()) {
+          descending = false;
+        } else {
+          // We're ok if the first order by is time (since every time value is distinct, the rest of the columns
+          // wouldn't matter anyway).
+          final OrderByColumnSpec firstOrderBy = limitSpec.getColumns().get(0);
+
+          if (firstOrderBy.getDimension().equals(dimensionSpec.getOutputName())) {
+            // Order by time.
+            descending = firstOrderBy.getDirection() == OrderByColumnSpec.Direction.DESCENDING;
+          } else {
+            // Order by something else.
+            return null;
+          }
+        }
       } else {
-        return null;
+        // No limitSpec.
+        descending = false;
       }
     } else {
+      // More than one dimension, timeseries cannot handle.
       return null;
     }
 
     final Filtration filtration = Filtration.create(filter).optimize(sourceRowSignature);
-
-    final boolean descending;
-    if (limitSpec != null && !limitSpec.getColumns().isEmpty()) {
-      descending = limitSpec.getColumns().get(0).getDirection() == OrderByColumnSpec.Direction.DESCENDING;
-    } else {
-      descending = false;
-    }
-
     final Map<String, Object> theContext = Maps.newHashMap();
     theContext.put("skipEmptyBuckets", true);
     theContext.putAll(plannerContext.getQueryContext());
@@ -494,7 +505,7 @@ public class DruidQueryBuilder
       limitColumn = new OrderByColumnSpec(
           dimensionSpec.getOutputName(),
           OrderByColumnSpec.Direction.ASCENDING,
-          StringComparators.LEXICOGRAPHIC
+          Calcites.getStringComparatorForValueType(dimensionSpec.getOutputType())
       );
     } else {
       limitColumn = Iterables.getOnlyElement(limitSpec.getColumns());

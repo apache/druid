@@ -164,6 +164,46 @@ public class FlattenJSONBenchmarkUtil
     return spec.makeParser();
   }
 
+  public Parser getJqParser()
+  {
+    List<JSONPathFieldSpec> fields = new ArrayList<>();
+    fields.add(JSONPathFieldSpec.createRootField("ts"));
+
+    fields.add(JSONPathFieldSpec.createRootField("d1"));
+    fields.add(JSONPathFieldSpec.createJqField("e1.d1", ".e1.d1"));
+    fields.add(JSONPathFieldSpec.createJqField("e1.d2", ".e1.d2"));
+    fields.add(JSONPathFieldSpec.createJqField("e2.d3", ".e2.d3"));
+    fields.add(JSONPathFieldSpec.createJqField("e2.d4", ".e2.d4"));
+    fields.add(JSONPathFieldSpec.createJqField("e2.d5", ".e2.d5"));
+    fields.add(JSONPathFieldSpec.createJqField("e2.d6", ".e2.d6"));
+    fields.add(JSONPathFieldSpec.createJqField("e2.ad1[0]", ".e2.ad1[0]"));
+    fields.add(JSONPathFieldSpec.createJqField("e2.ad1[1]", ".e2.ad1[1]"));
+    fields.add(JSONPathFieldSpec.createJqField("e2.ad1[2]", ".e2.ad1[2]"));
+    fields.add(JSONPathFieldSpec.createJqField("ae1[0].d1", ".ae1[0].d1"));
+    fields.add(JSONPathFieldSpec.createJqField("ae1[1].d1", ".ae1[1].d1"));
+    fields.add(JSONPathFieldSpec.createJqField("ae1[2].e1.d2", ".ae1[2].e1.d2"));
+
+    fields.add(JSONPathFieldSpec.createRootField("m3"));
+    fields.add(JSONPathFieldSpec.createJqField("e3.m1", ".e3.m1"));
+    fields.add(JSONPathFieldSpec.createJqField("e3.m2", ".e3.m2"));
+    fields.add(JSONPathFieldSpec.createJqField("e3.m3", ".e3.m3"));
+    fields.add(JSONPathFieldSpec.createJqField("e3.m4", ".e3.m4"));
+    fields.add(JSONPathFieldSpec.createJqField("e3.am1[0]", ".e3.am1[0]"));
+    fields.add(JSONPathFieldSpec.createJqField("e3.am1[1]", ".e3.am1[1]"));
+    fields.add(JSONPathFieldSpec.createJqField("e3.am1[2]", ".e3.am1[2]"));
+    fields.add(JSONPathFieldSpec.createJqField("e3.am1[3]", ".e3.am1[3]"));
+    fields.add(JSONPathFieldSpec.createJqField("e4.e4.m4", ".e4.e4.m4"));
+
+    JSONPathSpec flattenSpec = new JSONPathSpec(true, fields);
+    JSONParseSpec spec = new JSONParseSpec(
+        new TimestampSpec("ts", "iso", null),
+        new DimensionsSpec(null, null, null),
+        flattenSpec,
+        null
+    );
+
+    return spec.makeParser();
+  }
 
   public String generateFlatEvent() throws Exception
   {
