@@ -344,7 +344,7 @@ public class DruidQueryBuilder
 
   /**
    * Return this query as some kind of Druid query. The returned query will either be {@link TopNQuery},
-   * {@link TimeseriesQuery}, {@link GroupByQuery}, or {@link ScanQuery}.
+   * {@link TimeseriesQuery}, {@link GroupByQuery}, {@link ScanQuery}, or {@link SelectQuery}.
    *
    * @param dataSource     data source to query
    * @param plannerContext planner context
