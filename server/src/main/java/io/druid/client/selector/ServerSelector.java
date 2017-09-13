@@ -148,7 +148,6 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
   public List<DruidServerMetadata> getAllServers()
   {
     List<DruidServerMetadata> servers = new ArrayList<>();
-    // return all servers as candidates
     historicalServers.values()
         .stream()
         .flatMap(Collection::stream)
