@@ -23,7 +23,6 @@ package io.druid.query.lookup;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
@@ -34,17 +33,12 @@ import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.Request;
-import com.metamx.http.client.response.StatusResponseHandler;
-import com.metamx.http.client.response.StatusResponseHolder;
+import com.metamx.http.client.response.FullResponseHolder;
 import io.druid.client.coordinator.Coordinator;
-import io.druid.client.selector.Server;
 import io.druid.concurrent.Execs;
 import io.druid.concurrent.LifecycleLock;
-import io.druid.curator.discovery.ServerDiscoverySelector;
+import io.druid.discovery.DruidLeaderClient;
 import io.druid.guice.ManageLifecycle;
-import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
@@ -55,8 +49,6 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nullable;
 import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URL;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -103,13 +95,9 @@ public class LookupReferencesManager
   //for unit testing only
   private final boolean testMode;
 
-  private final ServerDiscoverySelector selector;
-
-  private final HttpClient httpClient;
+  private final DruidLeaderClient druidLeaderClient;
 
   private final ObjectMapper jsonMapper;
-
-  private static final StatusResponseHandler RESPONSE_HANDLER = new StatusResponseHandler(Charsets.UTF_8);
 
   private static final TypeReference<Map<String, LookupExtractorFactoryContainer>> LOOKUPS_ALL_REFERENCE =
       new TypeReference<Map<String, LookupExtractorFactoryContainer>>()
@@ -123,16 +111,16 @@ public class LookupReferencesManager
   @Inject
   public LookupReferencesManager(
       LookupConfig lookupConfig, @Json ObjectMapper objectMapper,
-      @Coordinator ServerDiscoverySelector selector, @Global HttpClient client,
+      @Coordinator DruidLeaderClient druidLeaderClient,
       LookupListeningAnnouncerConfig lookupListeningAnnouncerConfig
   )
   {
-    this(lookupConfig, objectMapper, selector, client, lookupListeningAnnouncerConfig, false);
+    this(lookupConfig, objectMapper, druidLeaderClient, lookupListeningAnnouncerConfig, false);
   }
 
   @VisibleForTesting
   LookupReferencesManager(
-      LookupConfig lookupConfig, ObjectMapper objectMapper, ServerDiscoverySelector selector, HttpClient client,
+      LookupConfig lookupConfig, ObjectMapper objectMapper, DruidLeaderClient druidLeaderClient,
       LookupListeningAnnouncerConfig lookupListeningAnnouncerConfig, boolean testMode
   )
   {
@@ -141,8 +129,7 @@ public class LookupReferencesManager
     } else {
       this.lookupSnapshotTaker = new LookupSnapshotTaker(objectMapper, lookupConfig.getSnapshotWorkingDir());
     }
-    this.selector = selector;
-    this.httpClient = client;
+    this.druidLeaderClient = druidLeaderClient;
     this.jsonMapper = objectMapper;
     this.lookupListeningAnnouncerConfig = lookupListeningAnnouncerConfig;
     this.lookupConfig = lookupConfig;
@@ -429,43 +416,42 @@ public class LookupReferencesManager
 
   private List<LookupBean> getLookupListFromCoordinator(String tier)
   {
-    // Check if the coordinator is accessible
-    if (!(getCoordinatorUrl() == null)) {
-      try {
-        final StatusResponseHolder response = fetchLookupsForTier(tier);
-        List<LookupBean> lookupBeanList = new ArrayList<>();
-        if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-          LOG.error(
-              "Error while fetching lookup code from Coordinator with status[%s] and content[%s]",
-              response.getStatus(),
-              response.getContent()
-          );
+    try {
+      final FullResponseHolder response = fetchLookupsForTier(tier);
+      List<LookupBean> lookupBeanList = new ArrayList<>();
+      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        LOG.error(
+            "Error while fetching lookup code from Coordinator with status[%s] and content[%s]",
+            response.getStatus(),
+            response.getContent()
+        );
+        return null;
+      } else {
+        // Older version of getSpecificTier returns a list of lookup names.
+        // Lookup loading is performed via snapshot if older version is present.
+        // This check is only for backward compatibility and should be removed in a future release
+        if (response.getContent().startsWith("[")) {
           return null;
         } else {
-          // Older version of getSpecificTier returns a list of lookup names.
-          // Lookup loading is performed via snapshot if older version is present.
-          // This check is only for backward compatibility and should be removed in a future release.
-          if (response.getContent().startsWith("[")) {
-            return null;
-          } else {
-            Map<String, LookupExtractorFactoryContainer> lookupMap = jsonMapper.readValue(
-                response.getContent(),
-                LOOKUPS_ALL_REFERENCE
-            );
-            if (!lookupMap.isEmpty()) {
-              for (Map.Entry<String, LookupExtractorFactoryContainer> e : lookupMap.entrySet()) {
-                lookupBeanList.add(new LookupBean(e.getKey(), null, e.getValue()));
-              }
+          Map<String, LookupExtractorFactoryContainer> lookupMap = jsonMapper.readValue(
+              response.getContent(),
+              LOOKUPS_ALL_REFERENCE
+          );
+          if (!lookupMap.isEmpty()) {
+            for (Map.Entry<String, LookupExtractorFactoryContainer> e : lookupMap.entrySet()) {
+              lookupBeanList.add(new LookupBean(e.getKey(), null, e.getValue()));
             }
           }
         }
-        return lookupBeanList;
       }
-      catch (Exception e) {
-        LOG.error(e, "Error while parsing lookup code for tier [%s] from response", tier);
-        return null;
-      }
-    } else {
+      return lookupBeanList;
+    }
+    catch (ISE ise) {
+      LOG.error(ise, "Coordinator is unavailable");
+      return null;
+    }
+    catch (Exception e) {
+      LOG.error(e, "Error while parsing lookup code for tier [%s] from response", tier);
       return null;
     }
   }
@@ -476,30 +462,6 @@ public class LookupReferencesManager
       return lookupSnapshotTaker.pullExistingSnapshot();
     }
     return null;
-  }
-
-  private String getCoordinatorUrl()
-  {
-    try {
-      final Server instance = selector.pick();
-      if (instance == null) {
-        LOG.info("Coordinator instance unavailable.");
-        return null;
-      }
-      return new URI(
-          instance.getScheme(),
-          null,
-          instance.getAddress(),
-          instance.getPort(),
-          "/druid/coordinator/v1",
-          null,
-          null
-      ).toString();
-    }
-    catch (Exception e) {
-      LOG.error("Error encountered while connecting to Coordinator");
-      return null;
-    }
   }
 
   private LookupUpdateState atomicallyUpdateStateRef(Function<LookupUpdateState, LookupUpdateState> fn)
@@ -513,22 +475,17 @@ public class LookupReferencesManager
     }
   }
 
-  private StatusResponseHolder fetchLookupsForTier(String tier)
+  private FullResponseHolder fetchLookupsForTier(String tier)
       throws ExecutionException, InterruptedException, MalformedURLException
   {
-    return httpClient.go(
-        new Request(
+    return druidLeaderClient.go(
+        druidLeaderClient.makeRequest(
             HttpMethod.GET,
-            new URL(
-                StringUtils.format(
-                    "%s/lookups/%s?detailed=true",
-                    getCoordinatorUrl(),
-                    tier
-                )
+            StringUtils.format(
+                "/druid/coordinator/v1/lookups/%s?detailed=true",
+                tier
             )
-        ),
-        RESPONSE_HANDLER
-    ).get();
+        ));
   }
 
   @VisibleForTesting
