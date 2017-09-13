@@ -5,12 +5,19 @@ layout: doc_page
 Recommendations
 ===============
 
-# Some Genearl guidelines
+# Some General guidelines
 
-JVM Flags..
+JVM Flags:
+
 ```
 -Duser.timezone=UTC
 -Dfile.encoding=UTF-8
+-Djava.io.tmpdir=<something other than /tmp which might be mounted to volatile tmpfs file system>
+-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+-Dorg.jboss.logging.provider=slf4j
+-Dnet.spy.log.LoggerImpl=net.spy.memcached.compat.log.SLF4JLogger
+-Dlog4j.shutdownCallbackRegistry=io.druid.common.config.Log4jShutdown
+-Dlog4j.shutdownHookEnabled=true
 -XX:+PrintGCDetails
 -XX:+PrintGCDateStamps
 -XX:+PrintGCTimeStamps
@@ -28,13 +35,15 @@ JVM Flags..
 
 `ExitOnOutOfMemoryError` flag is only supported starting JDK 8u92 . For older versions, `-XX:OnOutOfMemoryError='kill -9 %p'` can be used.
 
-`MaxDirectMemorySize` restricts jvm from allocating more than specified limit, by setting it to unlimited jvm restriction is lifted and OS level memory limits would take effect.
+It's still important to make sure that Druid is not configured to allocate more off-heap memory than your machine has available. Important settings here include druid.processing.numThreads, druid.processing.numMergeBuffers, and druid.processing.buffer.sizeBytes.
 
-Please note that above flags are general guidelines only, Be cautious and feel free to change them if necessary for the specific deployment.
+`MaxDirectMemorySize` restricts jvm from allocating more than specified limit, by setting it to unlimited jvm restriction is lifted and OS level memory limits would still be effective. It's still important to make sure that Druid is not configured to allocate more off-heap memory than your machine has available. Important settings here include druid.processing.numThreads, druid.processing.numMergeBuffers, and druid.processing.buffer.sizeBytes.
 
-Additionally, for large jvm heaps, here are few Garbage Collection efficiency guidelines that have been known to help in some cases.
+Please note that above flags are general guidelines only. Be cautious and feel free to change them if necessary for the specific deployment.
+
+Additionally, for large jvm heaps, here are a few Garbage Collection efficiency guidelines that have been known to help in some cases.
 - Mount /tmp on tmpfs ( See http://www.evanjones.ca/jvm-mmap-pause.html )
-- On Disc-IO intensive nodes (e.g. Historical and MiddleManager), GC and Druid logs should be written to a different disk than where data is written.
+- On Disk-IO intensive nodes (e.g. Historical and MiddleManager), GC and Druid logs should be written to a different disk than where data is written.
 - Disable Transparent Huge Pages ( See https://blogs.oracle.com/linux/performance-issues-with-transparent-huge-pages-thp )
 
 
