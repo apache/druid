@@ -62,6 +62,7 @@ import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  */
@@ -286,7 +287,7 @@ public class HttpServerInventoryViewTest
   private static class TestHttpClient implements HttpClient
   {
     BlockingQueue<ListenableFuture> results;
-    int requestNum = 0;
+    AtomicInteger requestNum = new AtomicInteger(0);
 
     TestHttpClient(List<ListenableFuture> resultsList)
     {
@@ -307,12 +308,12 @@ public class HttpServerInventoryViewTest
         Request request, HttpResponseHandler<Intermediate, Final> httpResponseHandler, Duration duration
     )
     {
-      if (requestNum++ == 0) {
+      if (requestNum.getAndIncrement() == 0) {
         //fail first request immediately
         throw new RuntimeException("simulating couldn't send request to server for some reason.");
       }
 
-      if (requestNum++ == 1) {
+      if (requestNum.get() == 2) {
         //fail scenario where request is sent to server but we got an unexpected response.
         HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR);
         httpResponse.setContent(ChannelBuffers.buffer(0));
