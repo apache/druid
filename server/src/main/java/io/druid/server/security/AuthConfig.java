@@ -38,25 +38,20 @@ public class AuthConfig
 
   public AuthConfig()
   {
-    this(false, null, null, null);
+    this(null, null, null);
   }
 
   @JsonCreator
   public AuthConfig(
-      @JsonProperty("enabled") boolean enabled,
       @JsonProperty("authenticatorChain") List<String> authenticationChain,
       @JsonProperty("escalatedAuthenticator") String escalatedAuthenticator,
       @JsonProperty("authorizers") List<String> authorizers
   )
   {
-    this.enabled = enabled;
     this.authenticatorChain = authenticationChain;
     this.escalatedAuthenticator = escalatedAuthenticator == null ? "allowAll" : escalatedAuthenticator;
     this.authorizers = authorizers;
   }
-
-  @JsonProperty
-  private final boolean enabled;
 
   @JsonProperty
   private final List<String> authenticatorChain;
@@ -66,11 +61,6 @@ public class AuthConfig
 
   @JsonProperty
   private List<String> authorizers;
-
-  public boolean isEnabled()
-  {
-    return enabled;
-  }
 
   public List<String> getAuthenticatorChain()
   {
@@ -91,8 +81,7 @@ public class AuthConfig
   public String toString()
   {
     return "AuthConfig{" +
-           "enabled=" + enabled +
-           ", authenticatorChain='" + authenticatorChain + '\'' +
+           "authenticatorChain='" + authenticatorChain + '\'' +
            ", escalatedAuthenticator='" + escalatedAuthenticator + '\'' +
            ", authorizers='" + authorizers + '\'' +
            '}';
@@ -110,9 +99,6 @@ public class AuthConfig
 
     AuthConfig that = (AuthConfig) o;
 
-    if (isEnabled() != that.isEnabled()) {
-      return false;
-    }
     if (getAuthenticatorChain() != null
         ? !getAuthenticatorChain().equals(that.getAuthenticatorChain())
         : that.getAuthenticatorChain() != null) {
@@ -123,20 +109,16 @@ public class AuthConfig
         : that.getEscalatedAuthenticator() != null) {
       return false;
     }
-    return getAuthorizers() != null
-           ? getAuthorizers().equals(that.getAuthorizers())
-           : that.getAuthorizers() == null;
+    return getAuthorizers() != null ? getAuthorizers().equals(that.getAuthorizers()) : that.getAuthorizers() == null;
 
   }
 
   @Override
   public int hashCode()
   {
-    int result = (isEnabled() ? 1 : 0);
-    result = 31 * result + (getAuthenticatorChain() != null ? getAuthenticatorChain().hashCode() : 0);
+    int result = getAuthenticatorChain() != null ? getAuthenticatorChain().hashCode() : 0;
     result = 31 * result + (getEscalatedAuthenticator() != null ? getEscalatedAuthenticator().hashCode() : 0);
     result = 31 * result + (getAuthorizers() != null ? getAuthorizers().hashCode() : 0);
     return result;
   }
-
 }

@@ -47,7 +47,7 @@ import io.druid.common.config.JacksonConfigManager;
 import io.druid.concurrent.Execs;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
-import io.druid.guice.annotations.Global;
+import io.druid.guice.annotations.EscalatedGlobal;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.IOE;
@@ -57,7 +57,6 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.query.lookup.LookupsState;
 import io.druid.server.http.HostAndPortWithScheme;
 import io.druid.server.listener.resource.ListenerResource;
-import io.druid.server.security.AuthenticatorHttpClientWrapper;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -134,20 +133,19 @@ public class LookupCoordinatorManager
 
   @Inject
   public LookupCoordinatorManager(
-      final @Global HttpClient httpClient,
+      final @EscalatedGlobal HttpClient httpClient,
       final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       final @Smile ObjectMapper smileMapper,
       final JacksonConfigManager configManager,
-      final LookupCoordinatorManagerConfig lookupCoordinatorManagerConfig,
-      final AuthenticatorHttpClientWrapper authenticatorHttpClientWrapper
-      )
+      final LookupCoordinatorManagerConfig lookupCoordinatorManagerConfig
+  )
   {
     this(
         druidNodeDiscoveryProvider,
         configManager,
         lookupCoordinatorManagerConfig,
         new LookupsCommunicator(
-            authenticatorHttpClientWrapper.getEscalatedClient(httpClient),
+            httpClient,
             lookupCoordinatorManagerConfig,
             smileMapper
         ),

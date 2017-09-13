@@ -21,9 +21,9 @@ package io.druid.server.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
+import com.metamx.emitter.EmittingLogger;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.logger.Logger;
 import io.druid.query.QueryInterruptedException;
 import io.druid.server.DruidNode;
 import org.eclipse.jetty.server.Response;
@@ -49,19 +49,16 @@ import java.util.Set;
  */
 public class PreResponseAuthorizationCheckFilter implements Filter
 {
-  private static final Logger log = new Logger(PreResponseAuthorizationCheckFilter.class);
+  private static final EmittingLogger log = new EmittingLogger(PreResponseAuthorizationCheckFilter.class);
 
-  private final AuthConfig authConfig;
   private final List<Authenticator> authenticators;
   private final ObjectMapper jsonMapper;
 
   public PreResponseAuthorizationCheckFilter(
-      AuthConfig authConfig,
       List<Authenticator> authenticators,
       ObjectMapper jsonMapper
   )
   {
-    this.authConfig = authConfig;
     this.authenticators = authenticators;
     this.jsonMapper = jsonMapper;
   }
@@ -117,8 +114,15 @@ public class PreResponseAuthorizationCheckFilter implements Filter
       // Note: rather than throwing an exception here, it would be nice to blank out the original response
       // since the request didn't have any authorization checks performed. However, this breaks proxying
       // (e.g. OverlordServletProxy), so this is not implemented for now.
-      log.error(errorMsg);
-      throw new ISE(errorMsg);
+      handleAuthorizationCheckError(errorMsg, servletResponse);
+    }
+
+    if (authInfoChecked != null && !authInfoChecked && response.getStatus() != Response.SC_FORBIDDEN) {
+      String errorMsg = StringUtils.format(
+          "Request's authorization check failed but status code was not 403: %s",
+          ((HttpServletRequest) servletRequest).getRequestURI()
+      );
+      handleAuthorizationCheckError(errorMsg, servletResponse);
     }
   }
 
@@ -126,6 +130,25 @@ public class PreResponseAuthorizationCheckFilter implements Filter
   public void destroy()
   {
 
+  }
+
+  private void handleAuthorizationCheckError(String errorMsg, ServletResponse servletResponse)
+  {
+    log.error(errorMsg);
+
+    // Send out an alert so there's a centralized collection point for seeing errors of this nature
+    log.makeAlert(errorMsg);
+
+    if (servletResponse.isCommitted()) {
+      throw new ISE(errorMsg);
+    } else {
+      try {
+        ((HttpServletResponse) servletResponse).sendError(Response.SC_FORBIDDEN);
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    }
   }
 
   private static boolean errorOverridesMissingAuth(int status)

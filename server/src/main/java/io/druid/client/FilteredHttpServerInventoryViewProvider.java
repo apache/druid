@@ -24,11 +24,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicates;
 import com.metamx.http.client.HttpClient;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
-import io.druid.guice.annotations.Client;
+import io.druid.guice.annotations.EscalatedClient;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.Pair;
 import io.druid.server.coordination.DruidServerMetadata;
-import io.druid.server.security.AuthenticatorHttpClientWrapper;
 import io.druid.timeline.DataSegment;
 
 import javax.validation.constraints.NotNull;
@@ -39,7 +38,7 @@ public class FilteredHttpServerInventoryViewProvider implements FilteredServerIn
 {
   @JacksonInject
   @NotNull
-  @Client
+  @EscalatedClient
   HttpClient httpClient = null;
 
   @JacksonInject
@@ -55,10 +54,6 @@ public class FilteredHttpServerInventoryViewProvider implements FilteredServerIn
   @NotNull
   private DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = null;
 
-  @JacksonInject
-  @NotNull
-  private AuthenticatorHttpClientWrapper authenticatorHttpClientWrapper = null;
-
   @Override
   public HttpServerInventoryView get()
   {
@@ -66,8 +61,7 @@ public class FilteredHttpServerInventoryViewProvider implements FilteredServerIn
         smileMapper, httpClient,
         druidNodeDiscoveryProvider,
         Predicates.<Pair<DruidServerMetadata, DataSegment>>alwaysTrue(),
-        config,
-        authenticatorHttpClientWrapper
+        config
     );
   }
 }

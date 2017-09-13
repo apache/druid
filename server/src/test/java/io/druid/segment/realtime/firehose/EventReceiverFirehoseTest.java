@@ -32,10 +32,8 @@ import io.druid.java.util.common.ISE;
 import io.druid.server.metrics.EventReceiverFirehoseMetric;
 import io.druid.server.metrics.EventReceiverFirehoseRegister;
 import io.druid.server.security.AllowAllAuthenticator;
-import io.druid.server.security.AllowAllAuthorizer;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.Authorizer;
-import io.druid.server.security.AuthorizerMapper;
+import io.druid.server.security.AuthTestUtils;
 import org.apache.commons.io.IOUtils;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -68,14 +66,6 @@ public class EventReceiverFirehoseTest
   private EventReceiverFirehoseFactory.EventReceiverFirehose firehose;
   private EventReceiverFirehoseRegister register = new EventReceiverFirehoseRegister();
   private HttpServletRequest req;
-  private AuthorizerMapper authorizerMapper = new AuthorizerMapper(null)
-  {
-    @Override
-    public Authorizer getAuthorizer(String name)
-    {
-      return new AllowAllAuthorizer();
-    }
-  };
 
   @Before
   public void setUp() throws Exception
@@ -88,7 +78,7 @@ public class EventReceiverFirehoseTest
         new DefaultObjectMapper(),
         new DefaultObjectMapper(),
         register,
-        authorizerMapper
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER
     );
     firehose = (EventReceiverFirehoseFactory.EventReceiverFirehose) eventReceiverFirehoseFactory.connect(
         new MapInputRowParser(
@@ -109,6 +99,9 @@ public class EventReceiverFirehoseTest
   @Test
   public void testSingleThread() throws IOException
   {
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
+            .andReturn(null)
+            .anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
             .anyTimes();
@@ -156,6 +149,9 @@ public class EventReceiverFirehoseTest
   @Test
   public void testMultipleThreads() throws InterruptedException, IOException, TimeoutException, ExecutionException
   {
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
+            .andReturn(null)
+            .anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
             .anyTimes();
@@ -231,7 +227,7 @@ public class EventReceiverFirehoseTest
         new DefaultObjectMapper(),
         new DefaultObjectMapper(),
         register,
-        authorizerMapper
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER
     );
     EventReceiverFirehoseFactory.EventReceiverFirehose firehose2 =
         (EventReceiverFirehoseFactory.EventReceiverFirehose) eventReceiverFirehoseFactory2
@@ -254,6 +250,9 @@ public class EventReceiverFirehoseTest
   @Test(timeout = 40_000L)
   public void testShutdownWithPrevTime() throws Exception
   {
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
+            .andReturn(null)
+            .anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
             .anyTimes();
@@ -270,6 +269,9 @@ public class EventReceiverFirehoseTest
   @Test(timeout = 40_000L)
   public void testShutdown() throws Exception
   {
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
+            .andReturn(null)
+            .anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
             .anyTimes();

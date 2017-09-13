@@ -97,8 +97,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
     AuthenticationUtils.addPreResponseAuthorizationCheckFilter(
         root,
         authenticators,
-        jsonMapper,
-        authConfig
+        jsonMapper
     );
 
 

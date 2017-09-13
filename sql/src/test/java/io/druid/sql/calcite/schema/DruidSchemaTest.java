@@ -22,7 +22,6 @@ package io.druid.sql.calcite.schema;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.Intervals;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -33,9 +32,7 @@ import io.druid.segment.IndexBuilder;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.server.security.AllowAllAuthenticator;
-import io.druid.server.security.Authenticator;
-import io.druid.server.security.AuthenticatorMapper;
+import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.table.DruidTable;
@@ -143,15 +140,13 @@ public class DruidSchemaTest
         index2
     );
 
-    Map<String, Authenticator> defaultMap = Maps.newHashMap();
-    defaultMap.put("allowAll", new AllowAllAuthenticator());
 
     schema = new DruidSchema(
         CalciteTests.createMockQueryLifecycleFactory(walker),
         new TestServerInventoryView(walker.getSegments()),
         PLANNER_CONFIG_DEFAULT,
         new NoopViewManager(),
-        new AuthenticatorMapper(defaultMap, "allowAll")
+        AuthTestUtils.TEST_AUTHENTICATOR_MAPPER
     );
 
     schema.start();

@@ -174,8 +174,7 @@ public class HttpServerInventoryViewTest
         httpClient,
         druidNodeDiscoveryProvider,
         Predicates.alwaysTrue(),
-        new HttpServerInventoryViewConfig(null, null, null),
-        null
+        new HttpServerInventoryViewConfig(null, null, null)
     );
 
     CountDownLatch initializeCallback1 = new CountDownLatch(1);

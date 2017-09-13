@@ -22,10 +22,9 @@ package io.druid.indexing.kafka;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.metamx.http.client.HttpClient;
-import io.druid.guice.annotations.Global;
+import io.druid.guice.annotations.EscalatedGlobal;
 import io.druid.guice.annotations.Json;
 import io.druid.indexing.common.TaskInfoProvider;
-import io.druid.server.security.AuthenticatorHttpClientWrapper;
 import org.joda.time.Duration;
 
 public class KafkaIndexTaskClientFactory
@@ -35,12 +34,11 @@ public class KafkaIndexTaskClientFactory
 
   @Inject
   public KafkaIndexTaskClientFactory(
-      @Global HttpClient httpClient,
-      @Json ObjectMapper mapper,
-      AuthenticatorHttpClientWrapper authenticatorHttpClientWrapper
+      @EscalatedGlobal HttpClient httpClient,
+      @Json ObjectMapper mapper
   )
   {
-    this.httpClient = authenticatorHttpClientWrapper.getEscalatedClient(httpClient);
+    this.httpClient = httpClient;
     this.mapper = mapper;
   }
 

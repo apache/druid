@@ -6,9 +6,9 @@ layout: doc_page
 
 |Property|Type|Description|Default|Required|
 |--------|-----------|--------|--------|--------|
-|`druid.auth.authenticationChain`|JSON List of Strings|List of Authenticator type names|[]|no|
-|`druid.auth.escalatedAuthenticator`|String|Type of the Authenticator that should be used for internal Druid communications|"allowAll"|no|
-|`druid.auth.authorizers`|JSON List of Strings|List of Authorizer type names |[]|no|
+|`druid.auth.authenticationChain`|JSON List of Strings|List of Authenticator type names|["allowAll"]|no|
+|`druid.auth.escalatedAuthenticator`|String|Type of the Authenticator that should be used for internal Druid communications. This Authenticator must be present in `druid.auth.authenticationChain`.|"allowAll"|no|
+|`druid.auth.authorizers`|JSON List of Strings|List of Authorizer type names |["allowAll"]|no|
 
 ## Enabling Authentication/Authorization
 
@@ -50,10 +50,7 @@ druid.auth.authorizers=["basic"]
 
 Only a single Authorizer will authorize any given request.
 
-Druid includes two built in authorizers:
-
-### DenyAll Authorizer
-The Authorizer with type name "denyAll" rejects all requests.
+Druid includes one built in authorizer:
 
 ### AllowAll Authorizer
 The Authorizer with type name "allowAll" accepts all requests.
@@ -74,17 +71,15 @@ An Authenticator implementation should provide some means through configuration 
 
 ## Internal System User
 
-Internal requests between Druid nodes (non-user initiated communications) need to have authentication credentials attached. These requests should be run as an "internal system user".
+Internal requests between Druid nodes (non-user initiated communications) need to have authentication credentials attached. 
 
-We recommend that extension implementers follow the guidelines below regarding the "internal system user", for maximum compatibility between different Authenticator and Authorizer implementations.
+These requests should be run as an "internal system user", an identity that represents the Druid cluster itself, with full access permissions.
+
+The details of how the internal system user is defined is left to Authorizer and Authenticator implementations.
 
 ### Authorizer Internal System User Handling
 
-Authorizers implementations must recognize and authorize an identity for the "internal system user", with unrestricted permissions.
-
-We recommend that this "internal system user" be represented by the identity string "__DRUID_INTERNAL_SYSTEM". This is a guideline only and not enforced; if an Authorizer needs to use a different identity string format, it is free to do so.
-
-Allowing the user to redefine what identity string represents the internal system user is also recommended.
+Authorizers implementations must recognize and authorize an identity for the "internal system user", with full access permissions.
 
 ### Authenticator Internal System User Handling
 
@@ -103,9 +98,3 @@ Authenticators must implement three methods related to the internal system user:
 `createEscalatedJettyClient` is similar to `createEscalatedClient`, except that it operates on a Jetty HttpClient.
 
 `createEscalatedAuthenticationResult` returns an AuthenticationResult containing the identity of the "internal system user".
-
-As with Authenticators, we recommend that the "internal system user" be represented by default with the identity string "__DRUID_INTERNAL_SYSTEM". This is a guideline and not enforced.
-
-We also recommend that Authenticator implementations allow the user to redefine the identity string used for the internal system users, if feasible.
-
-

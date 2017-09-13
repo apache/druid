@@ -45,9 +45,11 @@ import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthTestUtils;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
+import io.druid.server.security.ForbiddenException;
 import io.druid.server.security.Resource;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -146,7 +148,7 @@ public class QueryResourceTest
             new NoopRequestLogger(),
             serverConfig,
             new AuthConfig(),
-            new AuthorizerMapper(null)
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER
         ),
         jsonMapper,
         jsonMapper,
@@ -175,9 +177,16 @@ public class QueryResourceTest
   @Test
   public void testGoodQuery() throws IOException
   {
+    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
+            .andReturn(null)
+            .anyTimes();
+
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(authenticationResult)
             .anyTimes();
+
+    testServletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    EasyMock.expectLastCall().anyTimes();
 
     EasyMock.replay(testServletRequest);
     Response response = queryResource.doPost(
@@ -204,6 +213,10 @@ public class QueryResourceTest
   @Test
   public void testSecuredQuery() throws Exception
   {
+    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
+            .andReturn(null)
+            .anyTimes();
+
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(authenticationResult)
             .anyTimes();
@@ -244,25 +257,30 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             new NoopRequestLogger(),
             serverConfig,
-            new AuthConfig(true, null, null, null),
+            new AuthConfig(null, null, null),
             authMapper
         ),
         jsonMapper,
         jsonMapper,
         queryManager,
-        new AuthConfig(true, null, null, null),
+        new AuthConfig(null, null, null),
         authMapper,
         new DefaultGenericQueryMetricsFactory(jsonMapper)
     );
 
-    Response response = queryResource.doPost(
-        new ByteArrayInputStream(simpleTimeSeriesQuery.getBytes("UTF-8")),
-        null /*pretty*/,
-        testServletRequest
-    );
-    Assert.assertEquals(Response.Status.FORBIDDEN.getStatusCode(), response.getStatus());
 
-    response = queryResource.doPost(
+    try {
+      queryResource.doPost(
+          new ByteArrayInputStream(simpleTimeSeriesQuery.getBytes("UTF-8")),
+          null /*pretty*/,
+          testServletRequest
+      );
+      Assert.fail("doPost did not throw ForbiddenException for an unauthorized query");
+    }
+    catch (ForbiddenException e) {
+    }
+
+    Response response = queryResource.doPost(
         new ByteArrayInputStream("{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\"}".getBytes("UTF-8")),
         null /*pretty*/,
         testServletRequest
@@ -279,6 +297,10 @@ public class QueryResourceTest
     final CountDownLatch waitFinishLatch = new CountDownLatch(2);
     final CountDownLatch startAwaitLatch = new CountDownLatch(1);
     final CountDownLatch cancelledCountDownLatch = new CountDownLatch(1);
+
+    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
+            .andReturn(null)
+            .anyTimes();
 
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(authenticationResult)
@@ -332,13 +354,13 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             new NoopRequestLogger(),
             serverConfig,
-            new AuthConfig(true, null, null, null),
+            new AuthConfig(null, null, null),
             authMapper
         ),
         jsonMapper,
         jsonMapper,
         queryManager,
-        new AuthConfig(true, null, null, null),
+        new AuthConfig(null, null, null),
         authMapper,
         new DefaultGenericQueryMetricsFactory(jsonMapper)
     );
@@ -400,6 +422,10 @@ public class QueryResourceTest
     final CountDownLatch waitFinishLatch = new CountDownLatch(2);
     final CountDownLatch startAwaitLatch = new CountDownLatch(1);
 
+    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
+            .andReturn(null)
+            .anyTimes();
+
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(authenticationResult)
             .anyTimes();
@@ -450,13 +476,13 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             new NoopRequestLogger(),
             serverConfig,
-            new AuthConfig(true, null, null, null),
+            new AuthConfig(null, null, null),
             authMapper
         ),
         jsonMapper,
         jsonMapper,
         queryManager,
-        new AuthConfig(true, null, null, null),
+        new AuthConfig(null, null, null),
         authMapper,
         new DefaultGenericQueryMetricsFactory(jsonMapper)
     );
@@ -500,10 +526,13 @@ public class QueryResourceTest
           @Override
           public void run()
           {
-            Response response = queryResource.getServer("id_1", testServletRequest);
-            Assert.assertEquals(Response.Status.FORBIDDEN.getStatusCode(), response.getStatus());
-            waitForCancellationLatch.countDown();
-            waitFinishLatch.countDown();
+            try {
+              queryResource.getServer("id_1", testServletRequest);
+            }
+            catch (ForbiddenException e) {
+              waitForCancellationLatch.countDown();
+              waitFinishLatch.countDown();
+            }
           }
         }
     );

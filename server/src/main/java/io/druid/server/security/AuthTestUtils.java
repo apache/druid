@@ -17,20 +17,28 @@
  * under the License.
  */
 
-package io.druid.guice.annotations;
+package io.druid.server.security;
 
-import com.google.inject.BindingAnnotation;
+import com.google.common.collect.Maps;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.util.Map;
 
-/**
- */
-@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
-@Retention(RetentionPolicy.RUNTIME)
-@BindingAnnotation
-public @interface EscalatedClient
+public class AuthTestUtils
 {
+  public static final AuthenticatorMapper TEST_AUTHENTICATOR_MAPPER;
+  public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER;
+
+  static {
+    final Map<String, Authenticator> defaultMap = Maps.newHashMap();
+    defaultMap.put("allowAll", new AllowAllAuthenticator());
+    TEST_AUTHENTICATOR_MAPPER = new AuthenticatorMapper(defaultMap, "allowAll");
+
+    TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null) {
+      @Override
+      public Authorizer getAuthorizer(String name)
+      {
+        return new AllowAllAuthorizer();
+      }
+    };
+  }
 }

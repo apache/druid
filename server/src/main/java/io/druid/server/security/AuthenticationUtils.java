@@ -69,13 +69,12 @@ public class AuthenticationUtils
   public static void addPreResponseAuthorizationCheckFilter(
       ServletContextHandler root,
       List<Authenticator> authenticators,
-      ObjectMapper jsonMapper,
-      AuthConfig authConfig
+      ObjectMapper jsonMapper
   )
   {
     root.addFilter(
         new FilterHolder(
-            new PreResponseAuthorizationCheckFilter(authConfig, authenticators, jsonMapper)
+            new PreResponseAuthorizationCheckFilter(authenticators, jsonMapper)
         ),
         "/*",
         null

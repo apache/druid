@@ -21,17 +21,13 @@ package io.druid.server.http.security;
 
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ContainerRequest;
-import io.druid.java.util.common.StringUtils;
 import io.druid.server.security.Access;
-import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
+import io.druid.server.security.ForbiddenException;
 import io.druid.server.security.Resource;
 import io.druid.server.security.ResourceAction;
 import io.druid.server.security.ResourceType;
-
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.Response;
 
 /**
  * Use this ResourceFilter at end points where Druid Cluster configuration is read or written
@@ -46,11 +42,10 @@ public class ConfigResourceFilter extends AbstractResourceFilter
 {
   @Inject
   public ConfigResourceFilter(
-      AuthConfig authConfig,
       AuthorizerMapper authorizerMapper
   )
   {
-    super(authConfig, authorizerMapper);
+    super(authorizerMapper);
   }
 
   @Override
@@ -68,11 +63,7 @@ public class ConfigResourceFilter extends AbstractResourceFilter
     );
 
     if (!authResult.isAllowed()) {
-      throw new WebApplicationException(
-          Response.status(Response.Status.FORBIDDEN)
-                  .entity(StringUtils.format("Access-Check-Result: %s", authResult.toString()))
-                  .build()
-      );
+      throw new ForbiddenException(authResult.toString());
     }
 
     return request;

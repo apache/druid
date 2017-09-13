@@ -37,6 +37,7 @@ import io.druid.server.http.MetadataResource;
 import io.druid.server.http.RulesResource;
 import io.druid.server.http.ServersResource;
 import io.druid.server.http.TiersResource;
+import io.druid.server.security.ForbiddenException;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -44,8 +45,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.Response;
 import java.util.Collection;
 
 @RunWith(Parameterized.class)
@@ -108,7 +107,7 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
     EasyMock.verify(req, request, authorizerMapper);
   }
 
-  @Test(expected = WebApplicationException.class)
+  @Test(expected = ForbiddenException.class)
   public void testResourcesFilteringNoAccess()
   {
     setUpMockExpectations(requestPath, false, requestMethod);
@@ -116,9 +115,9 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
     Assert.assertTrue(((AbstractResourceFilter) resourceFilter.getRequestFilter()).isApplicable(requestPath));
     try {
       resourceFilter.getRequestFilter().filter(request);
+      Assert.fail();
     }
-    catch (WebApplicationException e) {
-      Assert.assertEquals(Response.Status.FORBIDDEN.getStatusCode(), e.getResponse().getStatus());
+    catch (ForbiddenException e) {
       throw e;
     }
     EasyMock.verify(req, request, authorizerMapper);
@@ -132,5 +131,4 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
     Assert.assertFalse(((AbstractResourceFilter) resourceFilter.getRequestFilter()).isApplicable(badRequestPath));
     EasyMock.verify(req, request, authorizerMapper);
   }
-
 }

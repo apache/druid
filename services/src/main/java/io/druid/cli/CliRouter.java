@@ -41,7 +41,7 @@ import io.druid.guice.ManageLifecycle;
 import io.druid.guice.QueryRunnerFactoryModule;
 import io.druid.guice.QueryableModule;
 import io.druid.guice.RouterProcessingModule;
-import io.druid.guice.annotations.Global;
+import io.druid.guice.annotations.EscalatedGlobal;
 import io.druid.guice.annotations.Self;
 import io.druid.guice.http.JettyHttpClientModule;
 import io.druid.java.util.common.logger.Logger;
@@ -57,7 +57,6 @@ import io.druid.server.router.TieredBrokerConfig;
 import io.druid.server.router.TieredBrokerHostSelector;
 import io.druid.server.router.TieredBrokerSelectorStrategiesProvider;
 import io.druid.server.router.TieredBrokerSelectorStrategy;
-import io.druid.server.security.AuthenticatorHttpClientWrapper;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
@@ -139,14 +138,13 @@ public class CliRouter extends ServerRunnable
           @Provides
           @ManageLifecycle
           public DruidLeaderClient getLeaderHttpClient(
-              @Global HttpClient httpClient,
+              @EscalatedGlobal HttpClient httpClient,
               DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
-              ServerDiscoverySelector serverDiscoverySelector,
-              AuthenticatorHttpClientWrapper authenticatorHttpClientWrapper
+              ServerDiscoverySelector serverDiscoverySelector
           )
           {
             return new DruidLeaderClient(
-                authenticatorHttpClientWrapper.getEscalatedClient(httpClient),
+                httpClient,
                 druidNodeDiscoveryProvider,
                 DruidNodeDiscoveryProvider.NODE_TYPE_COORDINATOR,
                 "/druid/coordinator/v1/leader",

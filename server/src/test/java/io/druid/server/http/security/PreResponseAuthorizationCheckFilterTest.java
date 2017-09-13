@@ -22,10 +22,10 @@ package io.druid.server.http.security;
 import com.google.common.collect.Lists;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
+import io.druid.server.security.AllowAllAuthenticator;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Authenticator;
-import io.druid.server.security.AllowAllAuthenticator;
 import io.druid.server.security.PreResponseAuthorizationCheckFilter;
 import org.easymock.EasyMock;
 import org.junit.Rule;
@@ -41,7 +41,6 @@ import java.util.List;
 public class PreResponseAuthorizationCheckFilterTest
 {
   private static List<Authenticator> authenticators = Lists.newArrayList(new AllowAllAuthenticator());
-  private static AuthConfig authConfig = new AuthConfig(true, null, null, null);
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -61,7 +60,6 @@ public class PreResponseAuthorizationCheckFilterTest
     EasyMock.replay(req, resp, filterChain, outputStream);
 
     PreResponseAuthorizationCheckFilter filter = new PreResponseAuthorizationCheckFilter(
-        authConfig,
         authenticators,
         new DefaultObjectMapper()
     );
@@ -88,7 +86,6 @@ public class PreResponseAuthorizationCheckFilterTest
       EasyMock.replay(req, resp, filterChain, outputStream);
 
       PreResponseAuthorizationCheckFilter filter = new PreResponseAuthorizationCheckFilter(
-          authConfig,
           authenticators,
           new DefaultObjectMapper()
       );
@@ -122,7 +119,6 @@ public class PreResponseAuthorizationCheckFilterTest
     EasyMock.replay(req, resp, filterChain, outputStream);
 
     PreResponseAuthorizationCheckFilter filter = new PreResponseAuthorizationCheckFilter(
-        authConfig,
         authenticators,
         new DefaultObjectMapper()
     );

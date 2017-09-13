@@ -42,12 +42,15 @@ import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
+import io.druid.server.security.ForbiddenException;
 import io.druid.server.security.Resource;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
@@ -61,6 +64,9 @@ public class OverlordResourceTest
   private TaskStorageQueryAdapter tsqa;
   private HttpServletRequest req;
   private TaskRunner taskRunner;
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @Before
   public void setUp() throws Exception
@@ -100,7 +106,6 @@ public class OverlordResourceTest
         null,
         null,
         null,
-        new AuthConfig(true, null, null, null),
         authMapper
     );
   }
@@ -249,12 +254,13 @@ public class OverlordResourceTest
   @Test
   public void testSecuredTaskPost()
   {
+    expectedException.expect(ForbiddenException.class);
+    expectedException.expectMessage("Allowed:false, Message:");
     expectAuthorizationTokenCheck();
 
     EasyMock.replay(taskRunner, taskMaster, tsqa, req);
     Task task = NoopTask.create();
-    Response response = overlordResource.taskPost(task, req);
-    Assert.assertEquals(Response.Status.FORBIDDEN.getStatusCode(), response.getStatus());
+    overlordResource.taskPost(task, req);
   }
 
   @After

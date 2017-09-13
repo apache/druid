@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -32,6 +33,7 @@ import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.AuthenticatorMapper;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
+import io.druid.server.security.ForbiddenException;
 import io.druid.sql.calcite.rel.DruidConvention;
 import io.druid.sql.calcite.rel.DruidRel;
 import org.apache.calcite.DataContext;
@@ -99,7 +101,7 @@ public class DruidPlanner implements Closeable
       final String sql,
       final HttpServletRequest request,
       final AuthenticationResult authenticationResult
-  ) throws SqlParseException, ValidationException, RelConversionException, SecurityException
+  ) throws SqlParseException, ValidationException, RelConversionException, ForbiddenException
   {
     SqlExplain explain = null;
     SqlNode parsed = planner.parse(sql);
@@ -141,7 +143,7 @@ public class DruidPlanner implements Closeable
       final RelRoot root,
       final HttpServletRequest request,
       final AuthenticationResult authenticationResult
-  ) throws RelConversionException, SecurityException
+  ) throws RelConversionException, ForbiddenException
   {
     final DruidRel<?> druidRel = (DruidRel<?>) planner.transform(
         Rules.DRUID_CONVENTION_RULES,
@@ -158,8 +160,7 @@ public class DruidPlanner implements Closeable
     if (request != null) {
       authResult = AuthorizationUtils.authorizeAllResourceActions(
           request,
-          datasourceNames,
-          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
+          Iterables.transform(datasourceNames, AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR),
           authorizerMapper
       );
       plannerContext.setAuthenticationResult(
@@ -167,16 +168,15 @@ public class DruidPlanner implements Closeable
       );
     } else {
       authResult = AuthorizationUtils.authorizeAllResourceActions(
-          datasourceNames,
-          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
           authenticationResult,
+          Iterables.transform(datasourceNames, AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR),
           authorizerMapper
       );
       plannerContext.setAuthenticationResult(authenticationResult);
     }
 
     if (!authResult.isAllowed()) {
-      throw new SecurityException(authResult.toString());
+      throw new ForbiddenException(authResult.toString());
     }
 
     if (explain != null) {
@@ -246,16 +246,14 @@ public class DruidPlanner implements Closeable
       );
       return AuthorizationUtils.authorizeAllResourceActions(
           req,
-          datasourceNames,
-          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
+          Iterables.transform(datasourceNames, AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR),
           authorizerMapper
       );
     } else {
       plannerContext.setAuthenticationResult(authenticationResult);
       return AuthorizationUtils.authorizeAllResourceActions(
-          datasourceNames,
-          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
           authenticationResult,
+          Iterables.transform(datasourceNames, AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR),
           authorizerMapper
       );
     }
@@ -294,7 +292,7 @@ public class DruidPlanner implements Closeable
 
     Access accessResult = authorizeBindableRel(bindableRel, plannerContext, request, authenticationResult);
     if (!accessResult.isAllowed()) {
-      throw new SecurityException(accessResult.toString());
+      throw new ForbiddenException(accessResult.toString());
     }
 
     if (explain != null) {

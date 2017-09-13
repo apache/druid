@@ -29,8 +29,7 @@ import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.discovery.DruidLeaderClient;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
-import io.druid.guice.annotations.Global;
-import io.druid.server.security.AuthenticatorHttpClientWrapper;
+import io.druid.guice.annotations.EscalatedGlobal;
 
 /**
  */
@@ -57,14 +56,13 @@ public class IndexingServiceDiscoveryModule implements Module
   @IndexingService
   @ManageLifecycle
   public DruidLeaderClient getLeaderHttpClient(
-      @Global HttpClient httpClient,
+      @EscalatedGlobal HttpClient httpClient,
       DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
-      @IndexingService ServerDiscoverySelector serverDiscoverySelector,
-      AuthenticatorHttpClientWrapper authenticatorHttpClientWrapper
+      @IndexingService ServerDiscoverySelector serverDiscoverySelector
   )
   {
     return new DruidLeaderClient(
-        authenticatorHttpClientWrapper.getEscalatedClient(httpClient),
+        httpClient,
         druidNodeDiscoveryProvider,
         DruidNodeDiscoveryProvider.NODE_TYPE_OVERLORD,
         "/druid/indexer/v1/leader",

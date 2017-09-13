@@ -59,11 +59,9 @@ import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
-import io.druid.server.security.AllowAllAuthorizer;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthTestUtils;
 import io.druid.server.security.AuthenticationResult;
-import io.druid.server.security.Authorizer;
-import io.druid.server.security.AuthorizerMapper;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryOneTime;
@@ -131,6 +129,7 @@ public class OverlordTest
   public void setUp() throws Exception
   {
     req = EasyMock.createMock(HttpServletRequest.class);
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
         new AuthenticationResult("druid", "druid")
     ).anyTimes();
@@ -213,15 +212,6 @@ public class OverlordTest
     }
     Assert.assertEquals(taskMaster.getCurrentLeader(), druidNode.getHostAndPort());
 
-    AuthorizerMapper authorizerMapper = new AuthorizerMapper(null) {
-
-      @Override
-      public Authorizer getAuthorizer(String name)
-      {
-        return new AllowAllAuthorizer();
-      }
-    };
-
     // Test Overlord resource stuff
     overlordResource = new OverlordResource(
         taskMaster,
@@ -229,8 +219,7 @@ public class OverlordTest
         null,
         null,
         null,
-        new AuthConfig(),
-        authorizerMapper
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER
     );
     Response response = overlordResource.getLeader();
     Assert.assertEquals(druidNode.getHostAndPort(), response.getEntity());

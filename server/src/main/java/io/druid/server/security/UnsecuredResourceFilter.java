@@ -29,10 +29,6 @@ import java.io.IOException;
 
 public class UnsecuredResourceFilter implements Filter
 {
-  public UnsecuredResourceFilter()
-  {
-  }
-
   @Override
   public void init(FilterConfig filterConfig) throws ServletException
   {

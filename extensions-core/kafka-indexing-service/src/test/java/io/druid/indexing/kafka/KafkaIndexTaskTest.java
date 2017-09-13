@@ -125,7 +125,6 @@ import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.DataSegmentServerAnnouncer;
 import io.druid.server.coordination.ServerType;
-import io.druid.server.security.AuthConfig;
 import io.druid.timeline.DataSegment;
 import org.apache.curator.test.TestingCluster;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -1489,7 +1488,6 @@ public class KafkaIndexTaskTest
         ioConfig,
         null,
         null,
-        new AuthConfig(),
         null
     );
     task.setPollRetryMs(POLL_RETRY_MS);

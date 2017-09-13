@@ -26,7 +26,6 @@ import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Named;
 import io.druid.guice.LazySingleton;
-import io.druid.guice.ManageLifecycle;
 import io.druid.guice.PolyBind;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AllowAllAuthenticator;
@@ -44,7 +43,6 @@ public class AuthenticatorModule implements Module
   }
 
   @Provides
-  @ManageLifecycle
   @Named("allowAll")
   public Authenticator getAuthenticator()
   {

@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
@@ -45,13 +44,8 @@ import io.druid.segment.TestHelper;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
-import io.druid.server.security.AllowAllAuthenticator;
-import io.druid.server.security.AllowAllAuthorizer;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.Authenticator;
-import io.druid.server.security.AuthenticatorMapper;
-import io.druid.server.security.Authorizer;
-import io.druid.server.security.AuthorizerMapper;
+import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.filtration.Filtration;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
@@ -74,7 +68,6 @@ import org.junit.rules.TemporaryFolder;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class QuantileSqlAggregatorTest
 {
@@ -136,8 +129,7 @@ public class QuantileSqlAggregatorTest
         ImmutableSet.of(new QuantileSqlAggregator()),
         ImmutableSet.of()
     );
-    final Map<String, Authenticator> defaultMap = Maps.newHashMap();
-    defaultMap.put("allowAll", new AllowAllAuthenticator());
+
     plannerFactory = new PlannerFactory(
         druidSchema,
         CalciteTests.createMockQueryLifecycleFactory(walker),
@@ -145,14 +137,8 @@ public class QuantileSqlAggregatorTest
         CalciteTests.createExprMacroTable(),
         plannerConfig,
         new AuthConfig(),
-        new AuthenticatorMapper(defaultMap, "allowAll"),
-        new AuthorizerMapper(null) {
-          @Override
-          public Authorizer getAuthorizer(String name)
-          {
-            return new AllowAllAuthorizer();
-          }
-        },
+        AuthTestUtils.TEST_AUTHENTICATOR_MAPPER,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper()
     );
   }
@@ -241,9 +227,7 @@ public class QuantileSqlAggregatorTest
                     new QuantilePostAggregator("a7", "a5:agg", 0.999f),
                     new QuantilePostAggregator("a8", "a8:agg", 0.50f)
                 ))
-                .context(ImmutableMap.<String, Object>of(
-                    "skipEmptyBuckets", true
-                ))
+                .context(ImmutableMap.<String, Object>of("skipEmptyBuckets", true))
                 .build(),
           Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
       );
@@ -303,9 +287,7 @@ public class QuantileSqlAggregatorTest
                     new QuantilePostAggregator("a5", "a5:agg", 0.999f),
                     new QuantilePostAggregator("a6", "a4:agg", 0.999f)
                 ))
-                .context(ImmutableMap.<String, Object>of(
-                    "skipEmptyBuckets", true
-                ))
+                .context(ImmutableMap.<String, Object>of("skipEmptyBuckets", true))
                 .build(),
           Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
       );

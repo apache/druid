@@ -27,12 +27,10 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.indexing.overlord.TaskMaster;
-import io.druid.server.security.AllowAllAuthorizer;
-import io.druid.server.security.AuthenticationResult;
-import io.druid.server.security.Authorizer;
-import io.druid.server.security.AuthorizerMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthTestUtils;
+import io.druid.server.security.AuthenticationResult;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
@@ -66,15 +64,7 @@ public class SupervisorResourceTest extends EasyMockSupport
   @Before
   public void setUp() throws Exception
   {
-    AuthorizerMapper authorizerMapper = new AuthorizerMapper(null) {
-
-      @Override
-      public Authorizer getAuthorizer(String name)
-      {
-        return new AllowAllAuthorizer();
-      }
-    };
-    supervisorResource = new SupervisorResource(taskMaster, new AuthConfig(), authorizerMapper);
+    supervisorResource = new SupervisorResource(taskMaster, new AuthConfig(), AuthTestUtils.TEST_AUTHORIZER_MAPPER);
   }
 
   @Test
@@ -91,6 +81,7 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
     EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec)).andReturn(true);
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
         new AuthenticationResult("druid", "druid")
     ).atLeastOnce();
@@ -136,9 +127,10 @@ public class SupervisorResourceTest extends EasyMockSupport
     };
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
-    EasyMock.expect(supervisorManager.getSupervisorIds()).andReturn(supervisorIds);
+    EasyMock.expect(supervisorManager.getSupervisorIds()).andReturn(supervisorIds).atLeastOnce();
     EasyMock.expect(supervisorManager.getSupervisorSpec("id1")).andReturn(Optional.of(spec1));
     EasyMock.expect(supervisorManager.getSupervisorSpec("id2")).andReturn(Optional.of(spec2));
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
         new AuthenticationResult("druid", "druid")
     ).atLeastOnce();
@@ -287,6 +279,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     };
     EasyMock.expect(supervisorManager.getSupervisorSpec("id1")).andReturn(Optional.of(spec1)).atLeastOnce();
     EasyMock.expect(supervisorManager.getSupervisorSpec("id2")).andReturn(Optional.of(spec2)).atLeastOnce();
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
         new AuthenticationResult("druid", "druid")
     ).atLeastOnce();

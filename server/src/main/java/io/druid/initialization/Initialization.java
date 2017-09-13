@@ -53,6 +53,7 @@ import io.druid.guice.ServerViewModule;
 import io.druid.guice.StartupLoggingModule;
 import io.druid.guice.StorageNodeModule;
 import io.druid.guice.annotations.Client;
+import io.druid.guice.annotations.EscalatedClient;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.HttpClientModule;
@@ -352,7 +353,9 @@ public class Initialization
         new LifecycleModule(),
         EmitterModule.class,
         HttpClientModule.global(),
+        HttpClientModule.escalatedGlobal(),
         new HttpClientModule("druid.broker.http", Client.class),
+        new HttpClientModule("druid.broker.http", EscalatedClient.class),
         new CuratorModule(),
         new AnnouncerModule(),
         new AWSModule(),

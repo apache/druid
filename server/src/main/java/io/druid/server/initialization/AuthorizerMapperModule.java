@@ -31,6 +31,7 @@ import io.druid.guice.JsonConfigurator;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.initialization.DruidModule;
+import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
@@ -86,11 +87,10 @@ public class AuthorizerMapperModule implements DruidModule
     public AuthorizerMapper get()
     {
       Map<String, Authorizer> authorizerMap = Maps.newHashMap();
-
       List<String> authorizers = authConfig.getAuthorizers();
 
-      // If user didn't configure any Authorizers, use the default which accepts all requests.
-      if (authorizers == null || authorizers.isEmpty()) {
+      // Default is allow all
+      if (authorizers == null) {
         return new AuthorizerMapper(null) {
           @Override
           public Authorizer getAuthorizer(String name)
@@ -98,6 +98,10 @@ public class AuthorizerMapperModule implements DruidModule
             return new AllowAllAuthorizer();
           }
         };
+      }
+
+      if (authorizers.isEmpty()) {
+        throw new IAE("Must have at least one Authorizer configured.");
       }
 
       for (String authorizerName : authorizers) {

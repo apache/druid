@@ -33,9 +33,9 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.server.http.security.AbstractResourceFilter;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
-import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
+import io.druid.server.security.ForbiddenException;
 import io.druid.server.security.ResourceAction;
 
 import javax.ws.rs.WebApplicationException;
@@ -49,12 +49,11 @@ public class SupervisorResourceFilter extends AbstractResourceFilter
 
   @Inject
   public SupervisorResourceFilter(
-      AuthConfig authConfig,
       AuthorizerMapper authorizerMapper,
       SupervisorManager supervisorManager
   )
   {
-    super(authConfig, authorizerMapper);
+    super(authorizerMapper);
     this.supervisorManager = supervisorManager;
   }
 
@@ -100,17 +99,12 @@ public class SupervisorResourceFilter extends AbstractResourceFilter
 
     Access authResult = AuthorizationUtils.authorizeAllResourceActions(
         getReq(),
-        spec.getDataSources(),
-        resourceActionFunction,
+        Iterables.transform(spec.getDataSources(), resourceActionFunction),
         getAuthorizerMapper()
     );
 
     if (!authResult.isAllowed()) {
-      throw new WebApplicationException(Response.status(Response.Status.FORBIDDEN)
-                                                .entity(
-                                                    StringUtils.format("Access-Check-Result: %s", authResult.toString())
-                                                )
-                                                .build());
+      throw new ForbiddenException(authResult.toString());
     }
 
     return request;

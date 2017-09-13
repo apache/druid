@@ -17,20 +17,28 @@
  * under the License.
  */
 
-package io.druid.guice.annotations;
+package io.druid.server.initialization.jetty;
 
-import com.google.inject.BindingAnnotation;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import com.google.common.collect.ImmutableMap;
+import io.druid.server.security.ForbiddenException;
 
-/**
- */
-@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
-@Retention(RetentionPolicy.RUNTIME)
-@BindingAnnotation
-public @interface EscalatedClient
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.ext.ExceptionMapper;
+import javax.ws.rs.ext.Provider;
+
+@Provider
+public class ForbiddenExceptionMapper implements ExceptionMapper<ForbiddenException>
 {
+  @Override
+  public Response toResponse(ForbiddenException exception)
+  {
+    return Response.status(Response.Status.FORBIDDEN)
+                   .type(MediaType.APPLICATION_JSON)
+                   .entity(ImmutableMap.of(
+                       "Access-Check-Result", exception.getMessage()
+                   ))
+                   .build();
+  }
 }

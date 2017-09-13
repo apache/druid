@@ -638,7 +638,7 @@ public class DruidQueryBuilder
         filtration.getDimFilter(),
         Ordering.natural().sortedCopy(ImmutableSet.copyOf(getRowOrder())),
         false,
-        plannerContext.getQueryContext()
+        ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
     );
   }
 

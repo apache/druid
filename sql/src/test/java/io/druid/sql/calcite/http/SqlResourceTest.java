@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
@@ -31,12 +30,8 @@ import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.ResourceLimitExceededException;
 import io.druid.server.security.AllowAllAuthenticator;
-import io.druid.server.security.AllowAllAuthorizer;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.Authenticator;
-import io.druid.server.security.AuthenticatorMapper;
-import io.druid.server.security.Authorizer;
-import io.druid.server.security.AuthorizerMapper;
+import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
@@ -91,6 +86,9 @@ public class SqlResourceTest
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     req = EasyMock.createStrictMock(HttpServletRequest.class);
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
+            .andReturn(null)
+            .anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
             .anyTimes();
@@ -101,19 +99,6 @@ public class SqlResourceTest
             .anyTimes();
     EasyMock.replay(req);
 
-
-    AuthorizerMapper authorizerMapper = new AuthorizerMapper(null) {
-      @Override
-      public Authorizer getAuthorizer(String name)
-      {
-        return new AllowAllAuthorizer();
-      }
-    };
-
-    Map<String, Authenticator> defaultMap = Maps.newHashMap();
-    defaultMap.put("allowAll", new AllowAllAuthenticator());
-    AuthenticatorMapper authenticatorMapper = new AuthenticatorMapper(defaultMap, "allowAll");
-
     resource = new SqlResource(
         JSON_MAPPER,
         new PlannerFactory(
@@ -123,8 +108,8 @@ public class SqlResourceTest
             macroTable,
             plannerConfig,
             new AuthConfig(),
-            authenticatorMapper,
-            authorizerMapper,
+            AuthTestUtils.TEST_AUTHENTICATOR_MAPPER,
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             CalciteTests.getJsonMapper()
         )
     );

@@ -29,8 +29,8 @@ import io.druid.java.util.common.Intervals;
 import io.druid.server.coordination.ServerType;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
-import io.druid.server.security.AllowAllAuthorizer;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthTestUtils;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
@@ -54,15 +54,6 @@ import java.util.TreeSet;
 
 public class DatasourcesResourceTest
 {
-  private AuthorizerMapper authorizerMapper = new AuthorizerMapper(null) {
-
-    @Override
-    public Authorizer getAuthorizer(String name)
-    {
-      return new AllowAllAuthorizer();
-    }
-  };
-
   private CoordinatorServerView inventoryView;
   private DruidServer server;
   private List<DruidDataSource> listDataSources;
@@ -142,7 +133,7 @@ public class DatasourcesResourceTest
         null,
         null,
         new AuthConfig(),
-        authorizerMapper
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER
     );
     Response response = datasourcesResource.getQueryableDataSources("full", null, request);
     Set<DruidDataSource> result = (Set<DruidDataSource>) response.getEntity();
@@ -202,7 +193,7 @@ public class DatasourcesResourceTest
         inventoryView,
         null,
         null,
-        new AuthConfig(true, null, null, null),
+        new AuthConfig(null, null, null),
         authMapper
     );
     Response response = datasourcesResource.getQueryableDataSources("full", null, request);
@@ -251,7 +242,7 @@ public class DatasourcesResourceTest
         null,
         null,
         new AuthConfig(),
-        authorizerMapper
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER
     );
     Response response = datasourcesResource.getQueryableDataSources(null, "simple", request);
     Assert.assertEquals(200, response.getStatus());

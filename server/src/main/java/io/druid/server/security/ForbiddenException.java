@@ -17,20 +17,21 @@
  * under the License.
  */
 
-package io.druid.guice.annotations;
-
-import com.google.inject.BindingAnnotation;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+package io.druid.server.security;
 
 /**
+ * Throw this when a request is unauthorized and we want to send a 403 response back, Jersey exception mapper will
+ * take care of sending the response.
  */
-@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
-@Retention(RetentionPolicy.RUNTIME)
-@BindingAnnotation
-public @interface EscalatedClient
+public class ForbiddenException extends SecurityException
 {
+  public ForbiddenException()
+  {
+    super("Unauthorized.");
+  }
+
+  public ForbiddenException(String msg)
+  {
+    super(msg);
+  }
 }

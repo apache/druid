@@ -57,9 +57,9 @@ import io.druid.server.http.security.ConfigResourceFilter;
 import io.druid.server.http.security.StateResourceFilter;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
-import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
+import io.druid.server.security.ForbiddenException;
 import io.druid.server.security.Resource;
 import io.druid.server.security.ResourceAction;
 import io.druid.server.security.ResourceType;
@@ -101,7 +101,6 @@ public class OverlordResource
   private final TaskLogStreamer taskLogStreamer;
   private final JacksonConfigManager configManager;
   private final AuditManager auditManager;
-  private final AuthConfig authConfig;
   private final AuthorizerMapper authorizerMapper;
 
   private AtomicReference<WorkerBehaviorConfig> workerConfigRef = null;
@@ -113,7 +112,6 @@ public class OverlordResource
       TaskLogStreamer taskLogStreamer,
       JacksonConfigManager configManager,
       AuditManager auditManager,
-      AuthConfig authConfig,
       AuthorizerMapper authorizerMapper
   ) throws Exception
   {
@@ -122,7 +120,6 @@ public class OverlordResource
     this.taskLogStreamer = taskLogStreamer;
     this.configManager = configManager;
     this.auditManager = auditManager;
-    this.authConfig = authConfig;
     this.authorizerMapper = authorizerMapper;
   }
 
@@ -148,10 +145,7 @@ public class OverlordResource
     );
 
     if (!authResult.isAllowed()) {
-      return Response.status(Response.Status.FORBIDDEN)
-                     .header("Access-Check-Result", authResult)
-                     .entity(ImmutableMap.of("error", "Not authorized."))
-                     .build();
+      throw new ForbiddenException(authResult.toString());
     }
 
     return asLeaderWith(

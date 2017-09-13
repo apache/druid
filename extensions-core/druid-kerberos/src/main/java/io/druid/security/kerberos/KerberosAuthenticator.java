@@ -19,6 +19,7 @@
 
 package io.druid.security.kerberos;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
@@ -81,6 +82,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -97,6 +99,7 @@ public class KerberosAuthenticator implements Authenticator
 {
   private static final Logger log = new Logger(KerberosAuthenticator.class);
   private static final Pattern HADOOP_AUTH_COOKIE_REGEX = Pattern.compile(".*p=(\\S+)&t=.*");
+  public static final List<String> DEFAULT_EXCLUDED_PATHS = Collections.emptyList();
 
   private final DruidNode node;
   private final String serverPrincipal;
@@ -109,6 +112,7 @@ public class KerberosAuthenticator implements Authenticator
   private final String authorizerName;
   private LoginContext loginContext;
 
+
   @JsonCreator
   public KerberosAuthenticator(
       @JsonProperty("serverPrincipal") String serverPrincipal,
@@ -119,7 +123,7 @@ public class KerberosAuthenticator implements Authenticator
       @JsonProperty("excludedPaths") List<String> excludedPaths,
       @JsonProperty("cookieSignatureSecret") String cookieSignatureSecret,
       @JsonProperty("authorizerName") String authorizerName,
-      @Self DruidNode node
+      @JacksonInject @Self DruidNode node
   )
   {
     this.node = node;
@@ -127,8 +131,8 @@ public class KerberosAuthenticator implements Authenticator
     this.serverKeytab = serverKeytab;
     this.internalClientPrincipal = internalClientPrincipal;
     this.internalClientKeytab = internalClientKeytab;
-    this.authToLocal = authToLocal;
-    this.excludedPaths = excludedPaths;
+    this.authToLocal = authToLocal == null ? "DEFAULT" : authToLocal;
+    this.excludedPaths = excludedPaths == null ? DEFAULT_EXCLUDED_PATHS : excludedPaths;
     this.cookieSignatureSecret = cookieSignatureSecret;
     this.authorizerName = authorizerName;
   }
@@ -186,6 +190,7 @@ public class KerberosAuthenticator implements Authenticator
         }
       }
 
+      // Copied from hadoop-auth's AuthenticationFilter, to allow us to change error response handling in doFilterSuper
       @Override
       protected AuthenticationToken getToken(HttpServletRequest request) throws IOException, AuthenticationException
       {
@@ -261,15 +266,18 @@ public class KerberosAuthenticator implements Authenticator
             clientPrincipal = null;
           }
 
-          request.setAttribute(
-              AuthConfig.DRUID_AUTHENTICATION_RESULT,
-              new AuthenticationResult(clientPrincipal, authorizerName)
-          );
+          if (clientPrincipal != null) {
+            request.setAttribute(
+                AuthConfig.DRUID_AUTHENTICATION_RESULT,
+                new AuthenticationResult(clientPrincipal, authorizerName)
+            );
+          }
         }
 
         doFilterSuper(request, response, filterChain);
       }
 
+      // Copied from hadoop-auth's AuthenticationFilter, to allow us to change error response handling
       private void doFilterSuper(ServletRequest request, ServletResponse response, FilterChain filterChain)
           throws IOException, ServletException
       {
@@ -518,7 +526,7 @@ public class KerberosAuthenticator implements Authenticator
 
 
   /**
-   * Kerberos context configuration for the JDK GSS library.
+   * Kerberos context configuration for the JDK GSS library. Copied from hadoop-auth's KerberosAuthenticationHandler.
    */
   public static class DruidKerberosConfiguration extends Configuration
   {

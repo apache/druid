@@ -333,8 +333,7 @@ public class CliOverlord extends ServerRunnable
       AuthenticationUtils.addPreResponseAuthorizationCheckFilter(
           root,
           authenticators,
-          jsonMapper,
-          authConfig
+          jsonMapper
       );
 
       // /status should not redirect, so add first

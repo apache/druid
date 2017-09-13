@@ -42,13 +42,8 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.ServerConfig;
-import io.druid.server.security.AllowAllAuthenticator;
-import io.druid.server.security.AllowAllAuthorizer;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.Authenticator;
-import io.druid.server.security.AuthenticatorMapper;
-import io.druid.server.security.Authorizer;
-import io.druid.server.security.AuthorizerMapper;
+import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
@@ -84,7 +79,6 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -135,10 +129,6 @@ public class DruidAvaticaHandlerTest
     final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
-    final Map<String, Authorizer> testAuthorizerMap = new HashMap<>();
-    testAuthorizerMap.put("allowAll", new AllowAllAuthorizer());
-    final Map<String, Authenticator> defaultMap = Maps.newHashMap();
-    defaultMap.put("allowAll", new AllowAllAuthenticator());
 
     injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
@@ -163,8 +153,8 @@ public class DruidAvaticaHandlerTest
             macroTable,
             plannerConfig,
             new AuthConfig(),
-            new AuthenticatorMapper(defaultMap, "allowAll"),
-            new AuthorizerMapper(testAuthorizerMap),
+            AuthTestUtils.TEST_AUTHENTICATOR_MAPPER,
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             CalciteTests.getJsonMapper()
         ),
         AVATICA_CONFIG,
@@ -598,10 +588,6 @@ public class DruidAvaticaHandlerTest
     final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
-    final Map<String, Authorizer> testAuthorizerMap = new HashMap<>();
-    testAuthorizerMap.put("allowAll", new AllowAllAuthorizer());
-    final Map<String, Authenticator> defaultMap = Maps.newHashMap();
-    defaultMap.put("allowAll", new AllowAllAuthenticator());
     final List<Meta.Frame> frames = new ArrayList<>();
     DruidMeta smallFrameDruidMeta = new DruidMeta(
         new PlannerFactory(
@@ -611,8 +597,8 @@ public class DruidAvaticaHandlerTest
             macroTable,
             plannerConfig,
             new AuthConfig(),
-            new AuthenticatorMapper(defaultMap, "allowAll"),
-            new AuthorizerMapper(testAuthorizerMap),
+            AuthTestUtils.TEST_AUTHENTICATOR_MAPPER,
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             CalciteTests.getJsonMapper()
         ),
         smallFrameConfig,

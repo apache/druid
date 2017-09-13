@@ -20,7 +20,6 @@
 package io.druid.server.security;
 
 import io.druid.guice.ManageLifecycle;
-import io.druid.java.util.common.lifecycle.LifecycleStart;
 
 import java.util.Map;
 
@@ -39,15 +38,5 @@ public class AuthorizerMapper
   public Authorizer getAuthorizer(String name)
   {
     return authorizerMap.get(name);
-  }
-
-  @LifecycleStart
-  public void start()
-  {
-  }
-
-  @LifecycleStart
-  public void stop()
-  {
   }
 }

@@ -20,6 +20,7 @@
 package io.druid.server;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.Iterables;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.DirectDruidClient;
 import io.druid.java.util.common.DateTimes;
@@ -132,7 +133,7 @@ public class QueryLifecycle
     final Sequence<T> results;
 
     try {
-      final Access access = authorize(authenticationResult, null);
+      final Access access = authorize(authenticationResult);
       if (!access.isAllowed()) {
         throw new ISE("Unauthorized");
       }
@@ -187,6 +188,39 @@ public class QueryLifecycle
    *
    * @param token authentication token from the request
    * @param namespace namespace of the authentication token
+   * @param authenticationResult authentication result of the request
+   *
+   * @return authorization result
+   *
+   * */
+  public Access authorize(
+      @Nullable final AuthenticationResult authenticationResult
+  )
+  {
+    transition(State.INITIALIZED, State.AUTHORIZING);
+    Access authResult = AuthorizationUtils.authorizeAllResourceActions(
+        authenticationResult,
+        Iterables.transform(
+            queryPlus.getQuery().getDataSource().getNames(),
+            AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
+        ),
+        authorizerMapper
+    );
+
+    if (!authResult.isAllowed()) {
+      // Not authorized; go straight to Jail, do not pass Go.
+      transition(State.AUTHORIZING, State.DONE);
+    } else {
+      transition(State.AUTHORIZING, State.AUTHORIZED);
+    }
+    return authResult;
+  }
+
+  /**
+   * Authorize the query. Will return an Access object denoting whether the query is authorized or not.
+   *
+   * @param token authentication token from the request
+   * @param namespace namespace of the authentication token
    * @param req HTTP request object of the request. If provided, the auth-related fields in the HTTP request
    *            will be automatically set.
    *
@@ -194,27 +228,18 @@ public class QueryLifecycle
    *
    * */
   public Access authorize(
-      @Nullable final AuthenticationResult authenticationResult,
       @Nullable HttpServletRequest req
   )
   {
     transition(State.INITIALIZED, State.AUTHORIZING);
-    Access authResult;
-    if (req != null) {
-      authResult = AuthorizationUtils.authorizeAllResourceActions(
-          req,
-          queryPlus.getQuery().getDataSource().getNames(),
-          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
-          authorizerMapper
-      );
-    } else {
-      authResult = AuthorizationUtils.authorizeAllResourceActions(
-          queryPlus.getQuery().getDataSource().getNames(),
-          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
-          authenticationResult,
-          authorizerMapper
-      );
-    }
+    Access authResult = AuthorizationUtils.authorizeAllResourceActions(
+        req,
+        Iterables.transform(
+            queryPlus.getQuery().getDataSource().getNames(),
+            AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
+        ),
+        authorizerMapper
+    );
 
     if (!authResult.isAllowed()) {
       // Not authorized; go straight to Jail, do not pass Go.

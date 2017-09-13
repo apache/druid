@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "denyAll", value = DenyAllAuthorizer.class),
     @JsonSubTypes.Type(name = "allowAll", value = AllowAllAuthorizer.class)
 })
 /**
@@ -47,7 +46,7 @@ public interface Authorizer
    * @param resource  The resource to be accessed
    * @param action    The action to perform on the resource
    *
-   * @return An Access object representing the result of the authorization check.
+   * @return An Access object representing the result of the authorization check. Must not be null.
    */
   Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action);
 }

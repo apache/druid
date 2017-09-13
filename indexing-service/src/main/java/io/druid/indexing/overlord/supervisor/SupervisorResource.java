@@ -24,6 +24,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -36,6 +37,7 @@ import io.druid.server.security.Access;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
+import io.druid.server.security.ForbiddenException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -92,13 +94,12 @@ public class SupervisorResource
 
             Access authResult = AuthorizationUtils.authorizeAllResourceActions(
                 req,
-                spec.getDataSources(),
-                AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR,
+                Iterables.transform(spec.getDataSources(), AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR),
                 authorizerMapper
             );
 
             if (!authResult.isAllowed()) {
-              return Response.status(Response.Status.FORBIDDEN).header("Access-Check-Result", authResult).build();
+              throw new ForbiddenException(authResult.toString());
             }
 
             manager.createOrUpdateAndStartSupervisor(spec);
@@ -125,8 +126,10 @@ public class SupervisorResource
               if (supervisorSpecOptional.isPresent()) {
                 Access accessResult = AuthorizationUtils.authorizeAllResourceActions(
                     req,
-                    supervisorSpecOptional.get().getDataSources(),
-                    AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR,
+                    Iterables.transform(
+                        supervisorSpecOptional.get().getDataSources(),
+                        AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR
+                    ),
                     authorizerMapper
                 );
 
@@ -136,12 +139,14 @@ public class SupervisorResource
               }
             }
 
-            AuthorizationUtils.authorizeAllResourceActions(
-                req,
-                Lists.newArrayList(),
-                AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR,
-                authorizerMapper
-            );
+            // If there were no supervisorIds, go ahead and authorize the request.
+            if (manager.getSupervisorIds().size() == 0) {
+              AuthorizationUtils.authorizeAllResourceActions(
+                  req,
+                  Lists.newArrayList(),
+                  authorizerMapper
+              );
+            }
 
             return Response.ok(supervisorIds).build();
           }
@@ -248,8 +253,10 @@ public class SupervisorResource
                     }
                     Access accessResult = AuthorizationUtils.authorizeAllResourceActions(
                         req,
-                        supervisorSpecOptional.get().getDataSources(),
-                        AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR,
+                        Iterables.transform(
+                            supervisorSpecOptional.get().getDataSources(),
+                            AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR
+                        ),
                         authorizerMapper
                     );
                     return accessResult.isAllowed();

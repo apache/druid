@@ -21,16 +21,12 @@ package io.druid.sql.avatica;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+
 import io.druid.java.util.common.DateTimes;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.security.AllowAllAuthenticator;
-import io.druid.server.security.AllowAllAuthorizer;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.Authenticator;
-import io.druid.server.security.AuthenticatorMapper;
-import io.druid.server.security.Authorizer;
-import io.druid.server.security.AuthorizerMapper;
+import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
@@ -49,7 +45,6 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.util.List;
-import java.util.Map;
 
 public class DruidStatementTest
 {
@@ -74,8 +69,6 @@ public class DruidStatementTest
     );
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
-    final Map<String, Authenticator> defaultMap = Maps.newHashMap();
-    defaultMap.put("allowAll", new AllowAllAuthenticator());
     plannerFactory = new PlannerFactory(
         druidSchema,
         CalciteTests.createMockQueryLifecycleFactory(walker),
@@ -83,14 +76,8 @@ public class DruidStatementTest
         macroTable,
         plannerConfig,
         new AuthConfig(),
-        new AuthenticatorMapper(defaultMap, "allowAll"),
-        new AuthorizerMapper(null) {
-          @Override
-          public Authorizer getAuthorizer(String name)
-          {
-            return new AllowAllAuthorizer();
-          }
-        },
+        AuthTestUtils.TEST_AUTHENTICATOR_MAPPER,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper()
     );
   }

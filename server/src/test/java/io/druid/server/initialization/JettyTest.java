@@ -41,9 +41,8 @@ import io.druid.initialization.Initialization;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.initialization.jetty.ServletFilterHolder;
-import io.druid.server.security.Authorizer;
+import io.druid.server.security.AuthTestUtils;
 import io.druid.server.security.AuthorizerMapper;
-import io.druid.server.security.AllowAllAuthorizer;
 import org.apache.commons.io.IOUtils;
 import org.eclipse.jetty.server.Server;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -129,16 +128,7 @@ public class JettyTest extends BaseJettyTest
                 Jerseys.addResource(binder, SlowResource.class);
                 Jerseys.addResource(binder, ExceptionResource.class);
                 Jerseys.addResource(binder, DefaultResource.class);
-                binder.bind(AuthorizerMapper.class).toInstance(
-                    new AuthorizerMapper(null) {
-
-                      @Override
-                      public Authorizer getAuthorizer(String name)
-                      {
-                        return new AllowAllAuthorizer();
-                      }
-                    }
-                );
+                binder.bind(AuthorizerMapper.class).toInstance(AuthTestUtils.TEST_AUTHORIZER_MAPPER);
                 LifecycleModule.register(binder, Server.class);
               }
             }

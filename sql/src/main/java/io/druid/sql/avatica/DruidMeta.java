@@ -38,6 +38,7 @@ import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
+import io.druid.server.security.ForbiddenException;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.calcite.avatica.MetaImpl;
@@ -147,7 +148,7 @@ public class DruidMeta extends MetaImpl
     final DruidConnection druidConnection = getDruidConnection(statement.connectionId);
     AuthenticationResult authenticationResult = authenticateConnection(druidConnection);
     if (authenticationResult == null) {
-      throw new SecurityException("Authentication failed.");
+      throw new ForbiddenException("Authentication failed.");
     }
     statement.signature = druidStatement.prepare(plannerFactory, sql, maxRowCount, authenticationResult).getSignature();
     return statement;
@@ -180,7 +181,7 @@ public class DruidMeta extends MetaImpl
     final DruidConnection druidConnection = getDruidConnection(statement.connectionId);
     AuthenticationResult authenticationResult = authenticateConnection(druidConnection);
     if (authenticationResult == null) {
-      throw new SecurityException("Authentication failed.");
+      throw new ForbiddenException("Authentication failed.");
     }
     final Signature signature = druidStatement.prepare(plannerFactory, sql, maxRowCount, authenticationResult).getSignature();
     final Frame firstFrame = druidStatement.execute()

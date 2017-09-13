@@ -21,7 +21,6 @@ package io.druid.sql.calcite.expression;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.PeriodGranularity;
@@ -30,9 +29,7 @@ import io.druid.math.expr.Parser;
 import io.druid.query.extraction.RegexDimExtractionFn;
 import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.segment.column.ValueType;
-import io.druid.server.security.AllowAllAuthenticator;
-import io.druid.server.security.Authenticator;
-import io.druid.server.security.AuthorizerMapper;
+import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.planner.PlannerContext;
@@ -63,16 +60,11 @@ public class ExpressionsTest
 {
   private static final DateTimeZone LOS_ANGELES = DateTimeZone.forID("America/Los_Angeles");
 
-  private static final Map<String, Authenticator> defaultMap = Maps.newHashMap();
-  {
-    defaultMap.put("allowAll", new AllowAllAuthenticator());
-  }
-
   private final PlannerContext plannerContext = PlannerContext.create(
       CalciteTests.createOperatorTable(),
       CalciteTests.createExprMacroTable(),
       new PlannerConfig(),
-      new AuthorizerMapper(null),
+      AuthTestUtils.TEST_AUTHORIZER_MAPPER,
       ImmutableMap.of()
   );
   private final RowSignature rowSignature = RowSignature

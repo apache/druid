@@ -43,8 +43,6 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.lookup.LookupsState;
 import io.druid.server.http.HostAndPortWithScheme;
-import io.druid.server.security.AuthenticatorHttpClientWrapper;
-import io.druid.server.security.AllowAllAuthenticator;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 import org.junit.After;
@@ -79,9 +77,6 @@ public class LookupCoordinatorManagerTest
   private final HttpClient client = EasyMock.createStrictMock(HttpClient.class);
   private final JacksonConfigManager configManager = EasyMock.createStrictMock(JacksonConfigManager.class);
   private final LookupCoordinatorManagerConfig lookupCoordinatorManagerConfig = new LookupCoordinatorManagerConfig();
-  private final AuthenticatorHttpClientWrapper authenticatorHttpClientWrapper = new AuthenticatorHttpClientWrapper(
-      new AllowAllAuthenticator()
-  );
 
   private static final String LOOKUP_TIER = "lookup_tier";
   private static final String SINGLE_LOOKUP_NAME = "lookupName";
@@ -542,8 +537,7 @@ public class LookupCoordinatorManagerTest
         druidNodeDiscoveryProvider,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig,
-        authenticatorHttpClientWrapper
+        lookupCoordinatorManagerConfig
     )
     {
       @Override
@@ -566,8 +560,7 @@ public class LookupCoordinatorManagerTest
         druidNodeDiscoveryProvider,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig,
-        authenticatorHttpClientWrapper
+        lookupCoordinatorManagerConfig
     )
     {
       @Override
@@ -599,8 +592,7 @@ public class LookupCoordinatorManagerTest
         druidNodeDiscoveryProvider,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig,
-        authenticatorHttpClientWrapper
+        lookupCoordinatorManagerConfig
     )
     {
       @Override
@@ -637,8 +629,7 @@ public class LookupCoordinatorManagerTest
         druidNodeDiscoveryProvider,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig,
-        authenticatorHttpClientWrapper
+        lookupCoordinatorManagerConfig
     )
     {
       @Override
@@ -700,8 +691,7 @@ public class LookupCoordinatorManagerTest
         druidNodeDiscoveryProvider,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig,
-        authenticatorHttpClientWrapper
+        lookupCoordinatorManagerConfig
     )
     {
       @Override
@@ -756,8 +746,7 @@ public class LookupCoordinatorManagerTest
         druidNodeDiscoveryProvider,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig,
-        authenticatorHttpClientWrapper
+        lookupCoordinatorManagerConfig
     )
     {
       @Override
@@ -787,8 +776,7 @@ public class LookupCoordinatorManagerTest
         druidNodeDiscoveryProvider,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig,
-        authenticatorHttpClientWrapper
+        lookupCoordinatorManagerConfig
     )
     {
       @Override
@@ -822,8 +810,7 @@ public class LookupCoordinatorManagerTest
         druidNodeDiscoveryProvider,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig,
-        authenticatorHttpClientWrapper
+        lookupCoordinatorManagerConfig
     )
     {
       @Override
@@ -878,8 +865,7 @@ public class LookupCoordinatorManagerTest
         druidNodeDiscoveryProvider,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig,
-        authenticatorHttpClientWrapper
+        lookupCoordinatorManagerConfig
     )
     {
       @Override
@@ -924,8 +910,7 @@ public class LookupCoordinatorManagerTest
         druidNodeDiscoveryProvider,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig,
-        authenticatorHttpClientWrapper
+        lookupCoordinatorManagerConfig
     )
     {
       @Override
@@ -950,8 +935,7 @@ public class LookupCoordinatorManagerTest
         druidNodeDiscoveryProvider,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig,
-        authenticatorHttpClientWrapper
+        lookupCoordinatorManagerConfig
     )
     {
       @Override
@@ -977,8 +961,7 @@ public class LookupCoordinatorManagerTest
         druidNodeDiscoveryProvider,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig,
-        authenticatorHttpClientWrapper
+        lookupCoordinatorManagerConfig
     )
     {
       @Override
@@ -1007,8 +990,7 @@ public class LookupCoordinatorManagerTest
         druidNodeDiscoveryProvider,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig,
-        authenticatorHttpClientWrapper
+        lookupCoordinatorManagerConfig
     )
     {
       @Override
@@ -1033,8 +1015,7 @@ public class LookupCoordinatorManagerTest
         druidNodeDiscoveryProvider,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig,
-        authenticatorHttpClientWrapper
+        lookupCoordinatorManagerConfig
     )
     {
       @Override
@@ -1188,8 +1169,7 @@ public class LookupCoordinatorManagerTest
         druidNodeDiscoveryProvider,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig,
-        authenticatorHttpClientWrapper
+        lookupCoordinatorManagerConfig
     );
 
     LookupsState<LookupExtractorFactoryMapContainer> currNodeState = new LookupsState<>(
@@ -1225,8 +1205,7 @@ public class LookupCoordinatorManagerTest
         druidNodeDiscoveryProvider,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig,
-        authenticatorHttpClientWrapper
+        lookupCoordinatorManagerConfig
     );
 
     LookupsState<LookupExtractorFactoryMapContainer> currNodeState = new LookupsState<>(
@@ -1273,8 +1252,7 @@ public class LookupCoordinatorManagerTest
         druidNodeDiscoveryProvider,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig,
-        authenticatorHttpClientWrapper
+        lookupCoordinatorManagerConfig
     );
 
     Assert.assertFalse(manager.lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
@@ -1311,8 +1289,7 @@ public class LookupCoordinatorManagerTest
         druidNodeDiscoveryProvider,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig,
-        authenticatorHttpClientWrapper
+        lookupCoordinatorManagerConfig
     );
 
     Assert.assertFalse(manager.lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
@@ -1466,8 +1443,7 @@ public class LookupCoordinatorManagerTest
           {
             return 1;
           }
-        },
-        authenticatorHttpClientWrapper
+        }
     );
     manager.start();
     EasyMock.verify(configManager);

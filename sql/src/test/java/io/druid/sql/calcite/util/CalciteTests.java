@@ -25,7 +25,6 @@ import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -93,13 +92,8 @@ import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.server.QueryLifecycleFactory;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.NoopRequestLogger;
-import io.druid.server.security.AllowAllAuthenticator;
-import io.druid.server.security.AllowAllAuthorizer;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.Authenticator;
-import io.druid.server.security.AuthenticatorMapper;
-import io.druid.server.security.Authorizer;
-import io.druid.server.security.AuthorizerMapper;
+import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.aggregation.SqlAggregator;
 import io.druid.sql.calcite.expression.SqlOperatorConversion;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
@@ -116,7 +110,6 @@ import org.joda.time.chrono.ISOChronology;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -321,8 +314,6 @@ public class CalciteTests
 
   public static QueryLifecycleFactory createMockQueryLifecycleFactory(final QuerySegmentWalker walker)
   {
-    Map<String, Authorizer> testAuthorizerMap = new HashMap<>();
-    testAuthorizerMap.put("allowAll", new AllowAllAuthorizer());
     return new QueryLifecycleFactory(
         new QueryToolChestWarehouse()
         {
@@ -338,7 +329,7 @@ public class CalciteTests
         new NoopRequestLogger(),
         new ServerConfig(),
         new AuthConfig(),
-        new AuthorizerMapper(testAuthorizerMap)
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER
     );
   }
 
@@ -427,15 +418,12 @@ public class CalciteTests
       final ViewManager viewManager
   )
   {
-    Map<String, Authenticator> defaultMap = Maps.newHashMap();
-    defaultMap.put("allowAll", new AllowAllAuthenticator());
-
     final DruidSchema schema = new DruidSchema(
         CalciteTests.createMockQueryLifecycleFactory(walker),
         new TestServerInventoryView(walker.getSegments()),
         plannerConfig,
         viewManager,
-        new AuthenticatorMapper(defaultMap, "allowAll")
+        AuthTestUtils.TEST_AUTHENTICATOR_MAPPER
     );
 
     schema.start();

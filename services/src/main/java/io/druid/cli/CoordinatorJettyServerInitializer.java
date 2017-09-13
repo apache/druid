@@ -54,17 +54,15 @@ import java.util.Properties;
 class CoordinatorJettyServerInitializer implements JettyServerInitializer
 {
   private static List<String> UNSECURED_PATHS = Lists.newArrayList(
-      "/",
       "/favicon.ico",
       "/css/*",
       "/druid.js",
       "/druid.css",
       "/pages/*",
-      "/druid/*",
       "/fonts/*",
       "/old-console/*",
-      "/coordinator/*",
-      "/overlord/*"
+      "/coordinator/false",
+      "/overlord/false"
   );
 
   private static Logger log = new Logger(CoordinatorJettyServerInitializer.class);
@@ -126,8 +124,7 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     AuthenticationUtils.addPreResponseAuthorizationCheckFilter(
         root,
         authenticators,
-        jsonMapper,
-        authConfig
+        jsonMapper
     );
 
     // /status should not redirect, so add first

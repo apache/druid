@@ -24,14 +24,13 @@ import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import com.metamx.http.client.HttpClient;
 import io.druid.curator.cache.PathChildrenCacheFactory;
-import io.druid.guice.annotations.Global;
+import io.druid.guice.annotations.EscalatedGlobal;
 import io.druid.indexing.overlord.autoscaling.NoopProvisioningStrategy;
 import io.druid.indexing.overlord.autoscaling.ProvisioningSchedulerConfig;
 import io.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.server.initialization.IndexerZkConfig;
-import io.druid.server.security.AuthenticatorHttpClientWrapper;
 import org.apache.curator.framework.CuratorFramework;
 
 /**
@@ -54,18 +53,17 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunn
       final RemoteTaskRunnerConfig remoteTaskRunnerConfig,
       final IndexerZkConfig zkPaths,
       final ObjectMapper jsonMapper,
-      @Global final HttpClient httpClient,
+      @EscalatedGlobal final HttpClient httpClient,
       final Supplier<WorkerBehaviorConfig> workerConfigRef,
       final ProvisioningSchedulerConfig provisioningSchedulerConfig,
-      final ProvisioningStrategy provisioningStrategy,
-      final AuthenticatorHttpClientWrapper authenticatorHttpClientWrapper
-      )
+      final ProvisioningStrategy provisioningStrategy
+  )
   {
     this.curator = curator;
     this.remoteTaskRunnerConfig = remoteTaskRunnerConfig;
     this.zkPaths = zkPaths;
     this.jsonMapper = jsonMapper;
-    this.httpClient = authenticatorHttpClientWrapper.getEscalatedClient(httpClient);
+    this.httpClient = httpClient;
     this.workerConfigRef = workerConfigRef;
     this.provisioningSchedulerConfig = provisioningSchedulerConfig;
     this.provisioningStrategy = provisioningStrategy;

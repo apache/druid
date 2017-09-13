@@ -78,8 +78,7 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
     AuthenticationUtils.addPreResponseAuthorizationCheckFilter(
         root,
         authenticators,
-        jsonMapper,
-        authConfig
+        jsonMapper
     );
 
     root.addFilter(GuiceFilter.class, "/*", null);

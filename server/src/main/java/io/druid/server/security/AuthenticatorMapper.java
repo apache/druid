@@ -22,7 +22,6 @@ package io.druid.server.security;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import io.druid.guice.ManageLifecycle;
-import io.druid.java.util.common.lifecycle.LifecycleStart;
 
 import java.util.List;
 import java.util.Map;
@@ -47,11 +46,6 @@ public class AuthenticatorMapper
     );
   }
 
-  public Authenticator getAuthenticator(String namespace)
-  {
-    return authenticatorMap.get(namespace);
-  }
-
   public Authenticator getEscalatingAuthenticator()
   {
     return escalatingAuthenticator;
@@ -60,21 +54,5 @@ public class AuthenticatorMapper
   public List<Authenticator> getAuthenticatorChain()
   {
     return Lists.newArrayList(authenticatorMap.values());
-  }
-
-  @LifecycleStart
-  public void start()
-  {
-    for (Authenticator authenticator : authenticatorMap.values()) {
-      //authenticator.start();
-    }
-  }
-
-  @LifecycleStart
-  public void stop()
-  {
-    for (Authenticator authenticator : authenticatorMap.values()) {
-      //authenticator.stop();
-    }
   }
 }

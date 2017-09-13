@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.metamx.http.client.HttpClient;
 import io.druid.server.initialization.jetty.ServletFilterHolder;
 
+import javax.annotation.Nullable;
 import javax.servlet.Filter;
 import java.util.Map;
 
@@ -72,10 +73,12 @@ public interface Authenticator extends ServletFilterHolder
    * Return a WWW-Authenticate challenge scheme string appropriate for this Authenticator's authentication mechanism.
    * <p>
    * For example, a Basic HTTP implementation should return "Basic", while a Kerberos implementation would return
-   * "Negotiate".
+   * "Negotiate". If this method returns null, no authentication scheme will be added for that Authenticator
+   * implementation.
    *
    * @return Authentication scheme
    */
+  @Nullable
   public String getAuthChallengeHeader();
 
   /**
@@ -88,8 +91,10 @@ public interface Authenticator extends ServletFilterHolder
    *
    * @param context JDBC connection context
    *
-   * @return true if the identity represented by the context is successfully authenticated
+   * @return AuthenticationResult of the identity represented by the context is successfully authenticated,
+   *         null if authentication failed
    */
+  @Nullable
   public AuthenticationResult authenticateJDBCContext(Map<String, Object> context);
 
   /**

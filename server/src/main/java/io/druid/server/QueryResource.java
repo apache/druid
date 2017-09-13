@@ -26,6 +26,7 @@ import com.fasterxml.jackson.datatype.joda.ser.DateTimeSerializer;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
@@ -45,9 +46,9 @@ import io.druid.query.QueryInterruptedException;
 import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.security.Access;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
+import io.druid.server.security.ForbiddenException;
 import org.joda.time.DateTime;
 
 import javax.servlet.http.HttpServletRequest;
@@ -137,13 +138,12 @@ public class QueryResource implements QueryCountStatsProvider
 
     Access authResult = AuthorizationUtils.authorizeAllResourceActions(
         req,
-        datasources,
-        AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR,
+        Iterables.transform(datasources, AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR),
         authorizerMapper
     );
 
     if (!authResult.isAllowed()) {
-      return Response.status(Response.Status.FORBIDDEN).header("Access-Check-Result", authResult).build();
+      throw new ForbiddenException(authResult.toString());
     }
 
     queryManager.cancelQuery(queryId);
@@ -176,12 +176,9 @@ public class QueryResource implements QueryCountStatsProvider
         log.debug("Got query [%s]", query);
       }
 
-      final Access authResult = queryLifecycle.authorize(
-          (AuthenticationResult) req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT),
-          req
-      );
+      final Access authResult = queryLifecycle.authorize(req);
       if (!authResult.isAllowed()) {
-        return Response.status(Response.Status.FORBIDDEN).header("Access-Check-Result", authResult).build();
+        throw new ForbiddenException(authResult.toString());
       }
 
       final QueryLifecycle.QueryResponse queryResponse = queryLifecycle.execute();
@@ -273,6 +270,12 @@ public class QueryResource implements QueryCountStatsProvider
     catch (QueryInterruptedException e) {
       interruptedQueryCount.incrementAndGet();
       queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr(), -1);
+      return context.gotError(e);
+    }
+    catch (ForbiddenException e) {
+      // don't do anything for an authorization failure, ForbiddenExceptionMapper will catch this later and
+      // send an error response if this is thrown.
+      Throwables.propagate(e);
       return context.gotError(e);
     }
     catch (Exception e) {

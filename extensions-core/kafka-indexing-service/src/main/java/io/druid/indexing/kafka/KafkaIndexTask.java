@@ -80,9 +80,9 @@ import io.druid.segment.realtime.firehose.ChatHandler;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
-import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
+import io.druid.server.security.ForbiddenException;
 import io.druid.server.security.Resource;
 import io.druid.server.security.ResourceAction;
 import io.druid.server.security.ResourceType;
@@ -144,7 +144,6 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private final InputRowParser<ByteBuffer> parser;
   private final KafkaTuningConfig tuningConfig;
   private final KafkaIOConfig ioConfig;
-  private final AuthConfig authConfig;
   private final AuthorizerMapper authorizerMapper;
   private final Optional<ChatHandlerProvider> chatHandlerProvider;
 
@@ -211,7 +210,6 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       @JsonProperty("ioConfig") KafkaIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
-      @JacksonInject AuthConfig authConfig,
       @JacksonInject AuthorizerMapper authorizerMapper
   )
   {
@@ -228,7 +226,6 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
     this.ioConfig = Preconditions.checkNotNull(ioConfig, "ioConfig");
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
-    this.authConfig = authConfig;
     this.authorizerMapper = authorizerMapper;
 
     this.endOffsets.putAll(ioConfig.getEndPartitions().getPartitionOffsetMap());
@@ -655,7 +652,12 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         action
     );
 
-    return AuthorizationUtils.authorizeResourceAction(req, resourceAction, authorizerMapper);
+    Access access = AuthorizationUtils.authorizeResourceAction(req, resourceAction, authorizerMapper);
+    if (!access.isAllowed()) {
+      throw new ForbiddenException(access.toString());
+    }
+
+    return access;
   }
 
   @Override
@@ -727,13 +729,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   @Path("/stop")
   public Response stop(@Context final HttpServletRequest req)
   {
-    Access access = authorizationCheck(req, Action.WRITE);
-    if (!access.isAllowed()) {
-      return Response.status(Response.Status.FORBIDDEN)
-                     .entity("Request authorization failed.")
-                     .build();
-    }
-
+    authorizationCheck(req, Action.WRITE);
     stopGracefully();
     return Response.status(Response.Status.OK).build();
   }
@@ -743,12 +739,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   @Produces(MediaType.APPLICATION_JSON)
   public Status getStatusHTTP(@Context final HttpServletRequest req)
   {
-    Access access = authorizationCheck(req, Action.READ);
-    if (!access.isAllowed()) {
-      log.warn("Authorization failure.");
-      return null;
-    }
-
+    authorizationCheck(req, Action.READ);
     return status;
   }
 
@@ -762,12 +753,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   @Produces(MediaType.APPLICATION_JSON)
   public Map<Integer, Long> getCurrentOffsets(@Context final HttpServletRequest req)
   {
-    Access access = authorizationCheck(req, Action.READ);
-    if (!access.isAllowed()) {
-      log.warn("Authorization failure.");
-      return null;
-    }
-
+    authorizationCheck(req, Action.READ);
     return getCurrentOffsets();
   }
 
@@ -781,12 +767,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   @Produces(MediaType.APPLICATION_JSON)
   public Map<Integer, Long> getEndOffsetsHTTP(@Context final HttpServletRequest req)
   {
-    Access access = authorizationCheck(req, Action.READ);
-    if (!access.isAllowed()) {
-      log.warn("Authorization failure.");
-      return null;
-    }
-
+    authorizationCheck(req, Action.READ);
     return getEndOffsets();
   }
 
@@ -805,13 +786,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       @Context final HttpServletRequest req
   ) throws InterruptedException
   {
-    Access access = authorizationCheck(req, Action.WRITE);
-    if (!access.isAllowed()) {
-      return Response.status(Response.Status.FORBIDDEN)
-                     .entity("Request authorization failed.")
-                     .build();
-    }
-
+    authorizationCheck(req, Action.WRITE);
     return setEndOffsets(offsets, resume);
   }
 
@@ -888,13 +863,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       @Context final HttpServletRequest req
   ) throws InterruptedException
   {
-    Access access = authorizationCheck(req, Action.WRITE);
-    if (!access.isAllowed()) {
-      return Response.status(Response.Status.FORBIDDEN)
-                     .entity("Request authorization failed.")
-                     .build();
-    }
-
+    authorizationCheck(req, Action.WRITE);
     return pause(timeout);
   }
 
@@ -949,13 +918,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   @Path("/resume")
   public Response resumeHTTP(@Context final HttpServletRequest req) throws InterruptedException
   {
-    Access access = authorizationCheck(req, Action.WRITE);
-    if (!access.isAllowed()) {
-      return Response.status(Response.Status.FORBIDDEN)
-                     .entity("Request authorization failed.")
-                     .build();
-    }
-
+    authorizationCheck(req, Action.WRITE);
     resume();
     return Response.status(Response.Status.OK).build();
   }
@@ -985,11 +948,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   @Produces(MediaType.APPLICATION_JSON)
   public DateTime getStartTime(@Context final HttpServletRequest req)
   {
-    Access access = authorizationCheck(req, Action.WRITE);
-    if (!access.isAllowed()) {
-      log.warn("Authorization failure.");
-      return null;
-    }
+    authorizationCheck(req, Action.WRITE);
     return startTime;
   }
 

@@ -36,6 +36,7 @@ import io.druid.indexing.worker.http.WorkerResource;
 import io.druid.server.http.security.AbstractResourceFilter;
 import io.druid.server.http.security.ResourceFilterTestHelper;
 import io.druid.server.security.AuthorizerMapper;
+import io.druid.server.security.ForbiddenException;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
@@ -44,8 +45,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.Response;
 import java.util.Collection;
 import java.util.List;
 
@@ -155,7 +154,7 @@ public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
     Assert.assertTrue(((AbstractResourceFilter) resourceFilter.getRequestFilter()).isApplicable(requestPath));
   }
 
-  @Test(expected = WebApplicationException.class)
+  @Test(expected = ForbiddenException.class)
   public void testDatasourcesResourcesFilteringNoAccess()
   {
     setUpMockExpectations(requestPath, false, requestMethod);
@@ -165,8 +164,7 @@ public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
     try {
       resourceFilter.getRequestFilter().filter(request);
     }
-    catch (WebApplicationException e) {
-      Assert.assertEquals(Response.Status.FORBIDDEN.getStatusCode(), e.getResponse().getStatus());
+    catch (ForbiddenException e) {
       throw e;
     }
   }
