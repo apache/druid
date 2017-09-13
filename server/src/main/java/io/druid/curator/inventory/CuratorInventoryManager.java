@@ -125,7 +125,8 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
 
     // Block start() till PathChildrenCache is fully loaded
     while (!containerCacheListener.doneInitializing) {
-      Thread.sleep(500);
+      Thread.sleep(2000);
+      log.info("Waiting for PathChildrenCache to be completely loaded.");
     }
   }
 
