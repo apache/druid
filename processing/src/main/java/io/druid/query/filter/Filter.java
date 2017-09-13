@@ -22,6 +22,7 @@ package io.druid.query.filter;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.BitmapResultFactory;
 import io.druid.query.DefaultBitmapResultFactory;
+import io.druid.query.search.AutoStrategy;
 import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 
@@ -60,7 +61,7 @@ public interface Filter
 
   /**
    * Estimate selectivity of this filter.
-   * This method can be used for cost-based query planning like in {@link io.druid.query.search.search.AutoStrategy}.
+   * This method can be used for cost-based query planning like in {@link AutoStrategy}.
    * To avoid significant performance degradation for calculating the exact cost,
    * implementation of this method targets to achieve rapid selectivity estimation
    * with reasonable sacrifice of the accuracy.

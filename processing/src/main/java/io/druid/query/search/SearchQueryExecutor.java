@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.query.search.search;
+package io.druid.query.search;
 
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.Segment;

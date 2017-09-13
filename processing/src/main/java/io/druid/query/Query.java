@@ -27,7 +27,7 @@ import io.druid.query.datasourcemetadata.DataSourceMetadataQuery;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
-import io.druid.query.search.search.SearchQuery;
+import io.druid.query.search.SearchQuery;
 import io.druid.query.select.SelectQuery;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.query.timeboundary.TimeBoundaryQuery;

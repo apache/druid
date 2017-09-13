@@ -33,7 +33,7 @@ import io.druid.query.groupby.GroupByQueryRunnerFactory;
 import io.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.query.search.SearchQueryRunnerFactory;
-import io.druid.query.search.search.SearchQuery;
+import io.druid.query.search.SearchQuery;
 import io.druid.query.select.SelectQuery;
 import io.druid.query.select.SelectQueryRunnerFactory;
 import io.druid.query.timeboundary.TimeBoundaryQuery;

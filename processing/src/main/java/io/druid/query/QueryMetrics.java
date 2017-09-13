@@ -22,6 +22,7 @@ package io.druid.query;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.query.filter.Filter;
+import io.druid.query.search.SearchQuery;
 import org.joda.time.Interval;
 
 import java.util.List;
@@ -110,7 +111,7 @@ import java.util.List;
  *
  * Making subinterfaces of QueryMetrics for emitting custom dimensions and/or metrics for specific query types
  * -----------------------------------------------------------------------------------------------------------
- * If a query type (e. g. {@link io.druid.query.search.search.SearchQuery} (it's runners) needs to emit custom
+ * If a query type (e. g. {@link SearchQuery} (it's runners) needs to emit custom
  * dimensions and/or metrics which doesn't make sense for all other query types, the following steps should be executed:
  *  1. Create `interface SearchQueryMetrics extends QueryMetrics` (here and below "Search" is the query type) with
  *  additional methods (see "Adding new methods" section above).
