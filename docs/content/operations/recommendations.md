@@ -5,6 +5,39 @@ layout: doc_page
 Recommendations
 ===============
 
+# Some Genearl guidelines
+
+JVM Flags..
+```
+-Duser.timezone=UTC
+-Dfile.encoding=UTF-8
+-XX:+PrintGCDetails
+-XX:+PrintGCDateStamps
+-XX:+PrintGCTimeStamps
+-XX:+PrintGCApplicationStoppedTime
+-XX:+PrintGCApplicationConcurrentTime
+-Xloggc:/var/logs/druid/historical.gc.log
+-XX:+UseGCLogFileRotation
+-XX:NumberOfGCLogFiles=50
+-XX:GCLogFileSize=10m
+-XX:+ExitOnOutOfMemoryError
+-XX:+HeapDumpOnOutOfMemoryError
+-XX:HeapDumpPath=/var/logs/druid/historical.hprof
+-XX:MaxDirectMemorySize=10240g
+```
+
+`ExitOnOutOfMemoryError` flag is only supported starting JDK 8u92 . For older versions, `-XX:OnOutOfMemoryError='kill -9 %p'` can be used.
+
+`MaxDirectMemorySize` restricts jvm from allocating more than specified limit, by setting it to unlimited jvm restriction is lifted and OS level memory limits would take effect.
+
+Please note that above flags are general guidelines only, Be cautious and feel free to change them if necessary for the specific deployment.
+
+Additionally, for large jvm heaps, here are few Garbage Collection efficiency guidelines that have been known to help in some cases.
+- Mount /tmp on tmpfs ( See http://www.evanjones.ca/jvm-mmap-pause.html )
+- On Disc-IO intensive nodes (e.g. Historical and MiddleManager), GC and Druid logs should be written to a different disk than where data is written.
+- Disable Transparent Huge Pages ( See https://blogs.oracle.com/linux/performance-issues-with-transparent-huge-pages-thp )
+
+
 # Use UTC Timezone
 
 We recommend using UTC timezone for all your events and across on your nodes, not just for Druid, but for all data infrastructure. This can greatly mitigate potential query problems with inconsistent timezones. To query in a non-UTC timezone see [query granularities](../querying/granularities.html#period-granularities)
