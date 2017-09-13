@@ -966,7 +966,8 @@ public class RowBasedGrouperHelper
     private long currentEstimatedSize = 0;
 
     // dictionary id -> rank of the sorted dictionary
-    // This is mutable only when runtime dictionary generation is enabled.
+    // This is initialized in the constructor and bufferComparator() with static dictionary and dynamic dictionary,
+    // respectively.
     private int[] rankOfDictionaryIds = null;
 
     RowBasedKeySerde(
