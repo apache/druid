@@ -231,13 +231,6 @@ public class S3DataSegmentMover implements DataSegmentMover
         (Callable<Void>) () -> {
           try {
             s3Client.deleteObject(s3Bucket, s3Path);
-            if (s3Client.isObjectInBucket(s3Bucket, s3Path)) {
-              throw new IOException(StringUtils.format(
-                  "After delete reported as successful the deleted file [s3://%s/%s] still exists",
-                  s3Bucket,
-                  s3Path
-              ));
-            }
             return null;
           }
           catch (Exception e) {
