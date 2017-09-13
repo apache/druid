@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation;
 
+import com.google.common.primitives.Longs;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.segment.ObjectColumnSelector;
 
@@ -26,7 +27,7 @@ import java.util.Comparator;
 
 public class TimestampAggregator implements Aggregator
 {
-  static final Comparator COMPARATOR = LongMaxAggregator.COMPARATOR;
+  static final Comparator COMPARATOR = (a, b) -> Longs.compare(((Number) a).longValue(), ((Number) b).longValue());
 
   static Object combineValues(Comparator<Long> comparator, Object lhs, Object rhs)
   {
