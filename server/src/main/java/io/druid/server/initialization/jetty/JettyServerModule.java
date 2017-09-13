@@ -67,6 +67,7 @@ import org.eclipse.jetty.server.SecureRequestCustomizer;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
+import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler;
@@ -227,6 +228,7 @@ public class JettyServerModule extends JerseyServletModule
       connector.setConnectionFactories(monitoredConnFactories);
     }
 
+    server.setHandler(new StatisticsHandler());
     server.setConnectors(connectors);
     server.setAttribute(GRACEFUL_SHUTDOWN_TIMEOUT, config.getGracefulShutdownTimeout().toStandardDuration().getMillis());
 
@@ -252,26 +254,44 @@ public class JettyServerModule extends JerseyServletModule
             server.start();
           }
 
+          private Handler getStatisticsHandler()
+          {
+            for (Handler handler : server.getHandlers()) {
+              if (handler.getClass().equals(StatisticsHandler.class)) {
+                return handler;
+              }
+            }
+
+            return null;
+          }
+
           @Override
           public void stop()
           {
-            long startTime = System.currentTimeMillis();
-            long gracefulShutDownTimeout = (long) server.getAttribute(GRACEFUL_SHUTDOWN_TIMEOUT);
+            StatisticsHandler statisticsHandler = (StatisticsHandler) getStatisticsHandler();
 
-            while (activeConnections.get() > 0 &&
-                System.currentTimeMillis() - startTime < gracefulShutDownTimeout) {
-              log.info("Waiting for [%s] milliseconds for active requests to be zero, current active requests=[%s]",
-                  gracefulShutDownTimeout, activeConnections.get());
+            if (statisticsHandler != null) {
+              long startTime = System.currentTimeMillis();
+              long gracefulShutDownTimeout = (long) server.getAttribute(GRACEFUL_SHUTDOWN_TIMEOUT);
 
-              try {
-                Thread.sleep(500);
+              if (statisticsHandler.getRequestsActive() > 0) {
+                log.info("Waiting for upto [%s] milliseconds for active requests to be zero, current active requests=[%s]",
+                    gracefulShutDownTimeout, statisticsHandler.getRequestsActive());
               }
-              catch (InterruptedException e) {
-                log.error("Sleep has been interrupted, while waiting for active requests to be zero");
-                stopImmediately();
-                Thread.currentThread().interrupt();
-                return;
+
+              while (statisticsHandler.getRequestsActive() > 0 &&
+                  System.currentTimeMillis() - startTime < gracefulShutDownTimeout) {
+                try {
+                  Thread.sleep(500);
+                }
+                catch (InterruptedException e) {
+                  log.error("Sleep has been interrupted, while waiting for active requests to be zero");
+                  stopImmediately();
+                  Thread.currentThread().interrupt();
+                  return;
+                }
               }
+              log.info("Stopping Jetty Server with active requests=[%s]", statisticsHandler.getRequestsActive());
             }
 
             stopImmediately();
@@ -279,7 +299,6 @@ public class JettyServerModule extends JerseyServletModule
 
           private void stopImmediately()
           {
-            log.info("Stopping Jetty Server with active requests=[%s]", activeConnections.get());
             try {
               server.stop();
             }
