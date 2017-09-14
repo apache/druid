@@ -22,7 +22,7 @@ package io.druid.segment.historical;
 import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import io.druid.segment.ColumnValueSelector;
 
-public interface HistoricalColumnSelector extends ColumnValueSelector
+public interface HistoricalColumnSelector<T> extends ColumnValueSelector<T>
 {
   @CalledFromHotLoop
   double getDouble(int offset);

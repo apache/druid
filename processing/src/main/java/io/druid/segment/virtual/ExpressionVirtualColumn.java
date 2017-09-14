@@ -101,9 +101,9 @@ public class ExpressionVirtualColumn implements VirtualColumn
       }
 
       @Override
-      public Object get()
+      public Object getObject()
       {
-        return baseSelector.get().value();
+        return baseSelector.getObject().value();
       }
     };
   }

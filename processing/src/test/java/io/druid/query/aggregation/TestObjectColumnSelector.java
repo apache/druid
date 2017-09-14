@@ -41,7 +41,7 @@ public class TestObjectColumnSelector implements ObjectColumnSelector
   }
 
   @Override
-  public Object get()
+  public Object getObject()
   {
     return objects[index];
   }
