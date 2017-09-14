@@ -1048,7 +1048,16 @@ public class RowBasedGrouperHelper
       inverse(rankOfDictionaryIds);
     }
 
-    private static void inverse(int[] a) {
+    /**
+     * Inverses the values of the given array with their indexes.
+     * For example, the result for [2, 0, 1] is [1, 2, 0] because
+     *
+     * a[0]: 2 => a[2]: 0
+     * a[1]: 0 => a[0]: 1
+     * a[2]: 1 => a[1]: 2
+     */
+    private static void inverse(int[] a)
+    {
       final BitSet visited = new BitSet(a.length);
       for (int i = 0; i < a.length; i++) {
         if (!visited.get(i)) {
@@ -1057,7 +1066,8 @@ public class RowBasedGrouperHelper
       }
     }
 
-    private static void inverseLoop(int[] a, int startValue, BitSet visited) {
+    private static void inverseLoop(int[] a, int startValue, BitSet visited)
+    {
       final int startIndex = a[startValue];
 
       int nextIndex = startIndex;
@@ -1470,11 +1480,11 @@ public class RowBasedGrouperHelper
 
     private abstract class AbstractStringRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
     {
-      protected final int keyBufferPosition;
+      final int keyBufferPosition;
 
-      protected final BufferComparator bufferComparator;
+      final BufferComparator bufferComparator;
 
-      protected AbstractStringRowBasedKeySerdeHelper(
+      AbstractStringRowBasedKeySerdeHelper(
           int keyBufferPosition,
           boolean pushLimitDown,
           @Nullable StringComparator stringComparator

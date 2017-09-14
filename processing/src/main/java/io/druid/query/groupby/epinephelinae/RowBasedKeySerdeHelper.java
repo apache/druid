@@ -60,17 +60,7 @@ interface RowBasedKeySerdeHelper
   void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues);
 
   /**
-   * Compare the values at lhsBuffer[lhsPosition] and rhsBuffer[rhsPosition] using the natural ordering
-   * for this SerdeHelper's value type.
-   *
-   * @param lhsBuffer   ByteBuffer containing an array of grouping keys for a row
-   * @param rhsBuffer   ByteBuffer containing an array of grouping keys for a row
-   * @param lhsPosition Position of value within lhsBuffer
-   * @param rhsPosition Position of value within rhsBuffer
-   *
-   * @return Negative number if lhs < rhs, positive if lhs > rhs, 0 if lhs == rhs
+   * Return a {@link BufferComparator} to compare keys stored in ByteBuffer.
    */
-//  int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition);
-
   BufferComparator getBufferComparator();
 }
