@@ -17,28 +17,40 @@
  * under the License.
  */
 
-package io.druid.query.search.search;
+package io.druid.query.search;
 
-import io.druid.query.dimension.DimensionSpec;
-import io.druid.segment.Segment;
-import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.List;
-
-public abstract class SearchQueryExecutor
+/**
+ */
+public class InsensitiveContainsSearchQuerySpec extends ContainsSearchQuerySpec
 {
-  protected final SearchQuery query;
-  protected final SearchQuerySpec searchQuerySpec;
-  protected final Segment segment;
-  protected final List<DimensionSpec> dimsToSearch;
-
-  public SearchQueryExecutor(SearchQuery query, Segment segment, List<DimensionSpec> dimensionSpecs)
+  @JsonCreator
+  public InsensitiveContainsSearchQuerySpec(
+      @JsonProperty("value") String value
+  )
   {
-    this.query = query;
-    this.segment = segment;
-    this.searchQuerySpec = query.getQuery();
-    this.dimsToSearch = dimensionSpecs;
+    super(value, false);
   }
 
-  public abstract Object2IntRBTreeMap<SearchHit> execute(int limit);
+  @Override
+  public String toString()
+  {
+    return "InsensitiveContainsSearchQuerySpec{" +
+           "value=" + getValue() +
+           "}";
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    return super.equals(o);
+  }
 }

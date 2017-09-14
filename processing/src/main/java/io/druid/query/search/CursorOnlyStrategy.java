@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.query.search.search;
+package io.druid.query.search;
 
 import com.google.common.collect.ImmutableList;
 import io.druid.java.util.common.guava.Accumulator;
@@ -25,7 +25,6 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.Filter;
-import io.druid.query.search.SearchQueryRunner;
 import io.druid.query.search.SearchQueryRunner.SearchColumnSelectorStrategy;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionHandlerUtils;

@@ -17,40 +17,26 @@
  * under the License.
  */
 
-package io.druid.query.search.search;
+package io.druid.query.search;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
+import javax.annotation.Nullable;
 
 /**
  */
-public class InsensitiveContainsSearchQuerySpec extends ContainsSearchQuerySpec
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "contains", value = ContainsSearchQuerySpec.class),
+    @JsonSubTypes.Type(name = "insensitive_contains", value = InsensitiveContainsSearchQuerySpec.class),
+    @JsonSubTypes.Type(name = "fragment", value = FragmentSearchQuerySpec.class),
+    @JsonSubTypes.Type(name = "regex", value = RegexSearchQuerySpec.class),
+    @JsonSubTypes.Type(name = "all", value = AllSearchQuerySpec.class)
+})
+public interface SearchQuerySpec
 {
-  @JsonCreator
-  public InsensitiveContainsSearchQuerySpec(
-      @JsonProperty("value") String value
-  )
-  {
-    super(value, false);
-  }
+  public boolean accept(@Nullable String dimVal);
 
-  @Override
-  public String toString()
-  {
-    return "InsensitiveContainsSearchQuerySpec{" +
-           "value=" + getValue() +
-           "}";
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    return super.equals(o);
-  }
+  public byte[] getCacheKey();
 }

@@ -56,7 +56,7 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.search.SearchResultValue;
-import io.druid.query.search.search.SearchQuery;
+import io.druid.query.search.SearchQuery;
 import io.druid.segment.AbstractSegment;
 import io.druid.segment.IndexIO;
 import io.druid.segment.QueryableIndex;

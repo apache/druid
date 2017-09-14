@@ -17,26 +17,22 @@
  * under the License.
  */
 
-package io.druid.query.search.search;
+package io.druid.query.search;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-
-import javax.annotation.Nullable;
-
-/**
- */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "contains", value = ContainsSearchQuerySpec.class),
-    @JsonSubTypes.Type(name = "insensitive_contains", value = InsensitiveContainsSearchQuerySpec.class),
-    @JsonSubTypes.Type(name = "fragment", value = FragmentSearchQuerySpec.class),
-    @JsonSubTypes.Type(name = "regex", value = RegexSearchQuerySpec.class),
-    @JsonSubTypes.Type(name = "all", value = AllSearchQuerySpec.class)
-})
-public interface SearchQuerySpec
+public class RoaringBitmapDecisionHelper extends SearchQueryDecisionHelper
 {
-  public boolean accept(@Nullable String dimVal);
+  // This value comes from an experiment.
+  // See the discussion at https://github.com/druid-io/druid/pull/3792#issuecomment-268331804.
+  private static final double BITMAP_INTERSECT_COST = 4.5;
+  private static final RoaringBitmapDecisionHelper INSTANCE = new RoaringBitmapDecisionHelper();
 
-  public byte[] getCacheKey();
+  public static RoaringBitmapDecisionHelper instance()
+  {
+    return INSTANCE;
+  }
+
+  private RoaringBitmapDecisionHelper()
+  {
+    super(BITMAP_INTERSECT_COST);
+  }
 }

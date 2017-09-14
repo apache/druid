@@ -17,43 +17,28 @@
  * under the License.
  */
 
-package io.druid.query.search.search;
+package io.druid.query.search;
 
-import javax.annotation.Nullable;
+import io.druid.query.dimension.DimensionSpec;
+import io.druid.segment.Segment;
+import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
 
-/**
- */
-public class AllSearchQuerySpec implements SearchQuerySpec
+import java.util.List;
+
+public abstract class SearchQueryExecutor
 {
-  private static final byte CACHE_TYPE_ID = 0x7f;
+  protected final SearchQuery query;
+  protected final SearchQuerySpec searchQuerySpec;
+  protected final Segment segment;
+  protected final List<DimensionSpec> dimsToSearch;
 
-  @Override
-  public boolean accept(@Nullable String dimVal)
+  public SearchQueryExecutor(SearchQuery query, Segment segment, List<DimensionSpec> dimensionSpecs)
   {
-    return true;
+    this.query = query;
+    this.segment = segment;
+    this.searchQuerySpec = query.getQuery();
+    this.dimsToSearch = dimensionSpecs;
   }
 
-  @Override
-  public byte[] getCacheKey()
-  {
-    return new byte[]{CACHE_TYPE_ID};
-  }
-
-  @Override
-  public boolean equals(Object object)
-  {
-    return object instanceof AllSearchQuerySpec;
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return CACHE_TYPE_ID;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "AllSearchQuerySpec{}";
-  }
+  public abstract Object2IntRBTreeMap<SearchHit> execute(int limit);
 }
