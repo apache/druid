@@ -33,6 +33,7 @@ import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
@@ -42,22 +43,48 @@ import java.util.function.Function;
  */
 public class OperatorConversions
 {
-  public static DruidExpression functionCall(
+  @Nullable
+  public static DruidExpression convertCall(
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final RexNode rexNode,
       final String functionName
   )
   {
-    return functionCall(plannerContext, rowSignature, rexNode, functionName, null);
+    return convertCall(
+        plannerContext,
+        rowSignature,
+        rexNode,
+        druidExpressions -> DruidExpression.fromFunctionCall(functionName, druidExpressions)
+    );
   }
 
-  public static DruidExpression functionCall(
+  @Nullable
+  public static DruidExpression convertCall(
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final RexNode rexNode,
       final String functionName,
       final Function<List<DruidExpression>, SimpleExtraction> simpleExtractionFunction
+  )
+  {
+    return convertCall(
+        plannerContext,
+        rowSignature,
+        rexNode,
+        druidExpressions -> DruidExpression.of(
+            simpleExtractionFunction == null ? null : simpleExtractionFunction.apply(druidExpressions),
+            DruidExpression.functionCall(functionName, druidExpressions)
+        )
+    );
+  }
+
+  @Nullable
+  public static DruidExpression convertCall(
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      final RexNode rexNode,
+      final Function<List<DruidExpression>, DruidExpression> expressionFunction
   )
   {
     final RexCall call = (RexCall) rexNode;
@@ -72,10 +99,7 @@ public class OperatorConversions
       return null;
     }
 
-    return DruidExpression.of(
-        simpleExtractionFunction == null ? null : simpleExtractionFunction.apply(druidExpressions),
-        DruidExpression.functionCall(functionName, druidExpressions)
-    );
+    return expressionFunction.apply(druidExpressions);
   }
 
   public static OperatorBuilder operatorBuilder(final String name)

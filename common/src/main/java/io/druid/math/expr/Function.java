@@ -990,26 +990,6 @@ interface Function
     }
   }
 
-  class TrimFunc implements Function
-  {
-    @Override
-    public String name()
-    {
-      return "trim";
-    }
-
-    @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
-    {
-      if (args.size() != 1) {
-        throw new IAE("Function[%s] needs 1 argument", name());
-      }
-
-      final String arg = args.get(0).eval(bindings).asString();
-      return ExprEval.of(Strings.nullToEmpty(arg).trim());
-    }
-  }
-
   class LowerFunc implements Function
   {
     @Override

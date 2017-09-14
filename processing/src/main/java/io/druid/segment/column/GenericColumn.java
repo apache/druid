@@ -22,9 +22,9 @@ package io.druid.segment.column;
 import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import io.druid.query.monomorphicprocessing.HotLoopCallee;
 import io.druid.segment.DoubleColumnSelector;
+import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.data.ReadableOffset;
-import io.druid.segment.historical.HistoricalFloatColumnSelector;
 
 import java.io.Closeable;
 
@@ -41,7 +41,7 @@ public interface GenericColumn extends HotLoopCallee, Closeable
 
   @CalledFromHotLoop
   float getFloatSingleValueRow(int rowNum);
-  HistoricalFloatColumnSelector makeFloatSingleValueRowSelector(ReadableOffset offset);
+  FloatColumnSelector makeFloatSingleValueRowSelector(ReadableOffset offset);
 
   @CalledFromHotLoop
   long getLongSingleValueRow(int rowNum);

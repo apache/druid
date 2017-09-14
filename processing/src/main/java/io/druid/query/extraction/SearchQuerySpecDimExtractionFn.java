@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import io.druid.query.search.search.SearchQuerySpec;
+import io.druid.query.search.SearchQuerySpec;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;

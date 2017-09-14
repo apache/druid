@@ -68,6 +68,11 @@ import io.druid.query.metadata.SegmentMetadataQueryConfig;
 import io.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
 import io.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
+import io.druid.query.scan.ScanQuery;
+import io.druid.query.scan.ScanQueryConfig;
+import io.druid.query.scan.ScanQueryEngine;
+import io.druid.query.scan.ScanQueryQueryToolChest;
+import io.druid.query.scan.ScanQueryRunnerFactory;
 import io.druid.query.select.SelectQuery;
 import io.druid.query.select.SelectQueryConfig;
 import io.druid.query.select.SelectQueryEngine;
@@ -155,6 +160,16 @@ public class CalciteTests
                       new SegmentMetadataQueryConfig("P1W")
                   ),
                   QueryRunnerTestHelper.NOOP_QUERYWATCHER
+              )
+          )
+          .put(
+              ScanQuery.class,
+              new ScanQueryRunnerFactory(
+                  new ScanQueryQueryToolChest(
+                      new ScanQueryConfig(),
+                      new DefaultGenericQueryMetricsFactory(TestHelper.getJsonMapper())
+                  ),
+                  new ScanQueryEngine()
               )
           )
           .put(

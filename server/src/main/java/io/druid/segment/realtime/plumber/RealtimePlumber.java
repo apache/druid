@@ -49,6 +49,7 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.io.Closer;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -79,6 +80,7 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -408,22 +410,33 @@ public class RealtimePlumber implements Plumber
               final long mergeThreadCpuTime = VMUtils.safeGetThreadCpuTime();
               mergeStopwatch = Stopwatch.createStarted();
 
+              final File mergedFile;
               List<QueryableIndex> indexes = Lists.newArrayList();
-              for (FireHydrant fireHydrant : sink) {
-                Segment segment = fireHydrant.getSegment();
-                final QueryableIndex queryableIndex = segment.asQueryableIndex();
-                log.info("Adding hydrant[%s]", fireHydrant);
-                indexes.add(queryableIndex);
-              }
+              Closer closer = Closer.create();
+              try {
+                for (FireHydrant fireHydrant : sink) {
+                  Pair<Segment, Closeable> segmentAndCloseable = fireHydrant.getAndIncrementSegment();
+                  final QueryableIndex queryableIndex = segmentAndCloseable.lhs.asQueryableIndex();
+                  log.info("Adding hydrant[%s]", fireHydrant);
+                  indexes.add(queryableIndex);
+                  closer.register(segmentAndCloseable.rhs);
+                }
 
-              final File mergedFile = indexMerger.mergeQueryableIndex(
-                  indexes,
-                  schema.getGranularitySpec().isRollup(),
-                  schema.getAggregators(),
-                  mergedTarget,
-                  config.getIndexSpec(),
-                  config.getOutputMediumFactory()
-              );
+                mergedFile = indexMerger.mergeQueryableIndex(
+                    indexes,
+                    schema.getGranularitySpec().isRollup(),
+                    schema.getAggregators(),
+                    mergedTarget,
+                    config.getIndexSpec(),
+                    config.getOutputMediumFactory()
+                );
+              }
+              catch (Throwable t) {
+                throw closer.rethrow(t);
+              }
+              finally {
+                closer.close();
+              }
 
               // emit merge metrics before publishing segment
               metrics.incrementMergeCpuTime(VMUtils.safeGetThreadCpuTime() - mergeThreadCpuTime);
@@ -858,7 +871,7 @@ public class RealtimePlumber implements Plumber
         );
         for (FireHydrant hydrant : sink) {
           cache.close(SinkQuerySegmentWalker.makeHydrantCacheIdentifier(hydrant));
-          hydrant.getSegment().close();
+          hydrant.swapSegment(null);
         }
         synchronized (handoffCondition) {
           handoffCondition.notifyAll();
@@ -938,7 +951,7 @@ public class RealtimePlumber implements Plumber
 
         indexToPersist.swapSegment(
             new QueryableIndexSegment(
-                indexToPersist.getSegment().getIdentifier(),
+                indexToPersist.getSegmentIdentifier(),
                 indexIO.loadIndex(persistedFile)
             )
         );
