@@ -25,7 +25,6 @@ import com.google.inject.Inject;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.annotations.Json;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.query.search.SearchQueryConfig;
 
 @LazySingleton
 public class DefaultGenericQueryMetricsFactory implements GenericQueryMetricsFactory
@@ -36,7 +35,7 @@ public class DefaultGenericQueryMetricsFactory implements GenericQueryMetricsFac
   /**
    * Should be used only in tests, directly or indirectly (e. g. in {@link
    * io.druid.query.search.SearchQueryQueryToolChest#SearchQueryQueryToolChest(
-   * SearchQueryConfig, IntervalChunkingQueryRunnerDecorator)}).
+   * io.druid.query.search.SearchQueryConfig, IntervalChunkingQueryRunnerDecorator)}).
    */
   @VisibleForTesting
   public static GenericQueryMetricsFactory instance()
