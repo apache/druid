@@ -41,7 +41,7 @@ import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.Offset;
 import io.druid.segment.historical.HistoricalCursor;
 import io.druid.segment.historical.HistoricalDimensionSelector;
-import io.druid.segment.historical.HistoricalFloatColumnSelector;
+import io.druid.segment.historical.HistoricalColumnSelector;
 import io.druid.segment.historical.SingleValueHistoricalDimensionSelector;
 
 import java.nio.ByteBuffer;
@@ -131,7 +131,7 @@ public class PooledTopNAlgorithm
           final Cursor cursor = params.getCursor();
           if (cursor instanceof HistoricalCursor && aggregator instanceof SimpleDoubleBufferAggregator) {
             if (params.getDimSelector() instanceof SingleValueHistoricalDimensionSelector &&
-                ((SimpleDoubleBufferAggregator) aggregator).getSelector() instanceof HistoricalFloatColumnSelector) {
+                ((SimpleDoubleBufferAggregator) aggregator).getSelector() instanceof HistoricalColumnSelector) {
               return scanAndAggregateHistorical1SimpleDoubleAgg(
                   params,
                   positions,
@@ -152,7 +152,7 @@ public class PooledTopNAlgorithm
           final Cursor cursor = params.getCursor();
           if (cursor instanceof HistoricalCursor && aggregator instanceof SimpleDoubleBufferAggregator) {
             if (params.getDimSelector() instanceof HistoricalDimensionSelector &&
-                ((SimpleDoubleBufferAggregator) aggregator).getSelector() instanceof HistoricalFloatColumnSelector) {
+                ((SimpleDoubleBufferAggregator) aggregator).getSelector() instanceof HistoricalColumnSelector) {
               return scanAndAggregateHistorical1SimpleDoubleAgg(
                   params,
                   positions,

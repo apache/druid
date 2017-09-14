@@ -25,7 +25,6 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.Multibinder;
-
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
@@ -40,6 +39,7 @@ import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.TLSServerConfig;
 import io.druid.server.metrics.DataSourceTaskIdHolder;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
 
 import java.util.Properties;
 
@@ -120,7 +120,12 @@ public class ChatHandlerServerModule implements Module
       @RemoteChatHandler TLSServerConfig TLSServerConfig
   )
   {
-    final Server server = JettyServerModule.makeJettyServer(node, config, TLSServerConfig);
+    final Server server = JettyServerModule.makeJettyServer(
+        node,
+        config,
+        TLSServerConfig,
+        injector.getExistingBinding(Key.get(SslContextFactory.class))
+    );
     JettyServerModule.initializeServer(injector, lifecycle, server);
     return server;
   }
