@@ -20,10 +20,10 @@
 package io.druid.segment.historical;
 
 import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
-import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.ColumnValueSelector;
 
-public interface HistoricalFloatColumnSelector extends FloatColumnSelector
+public interface HistoricalColumnSelector extends ColumnValueSelector
 {
   @CalledFromHotLoop
-  float get(int offset);
+  double getDouble(int offset);
 }
