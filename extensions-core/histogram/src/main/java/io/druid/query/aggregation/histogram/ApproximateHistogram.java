@@ -1183,11 +1183,7 @@ public class ApproximateHistogram
   public boolean canStoreCompact()
   {
     final long exactCount = getExactCount();
-    return (
-        size <= Short.MAX_VALUE
-        && exactCount <= Byte.MAX_VALUE
-        && (count - exactCount) <= Byte.MAX_VALUE
-    );
+    return (size <= Short.MAX_VALUE && exactCount <= Byte.MAX_VALUE && (count - exactCount) <= Byte.MAX_VALUE);
   }
 
   /**

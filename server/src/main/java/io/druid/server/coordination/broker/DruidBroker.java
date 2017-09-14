@@ -47,7 +47,7 @@ public class DruidBroker
       final FilteredServerInventoryView serverInventoryView,
       final @Self DruidNode self,
       final ServiceAnnouncer serviceAnnouncer
-      )
+  )
   {
     this.self = self;
     this.serviceAnnouncer = serviceAnnouncer;

@@ -19,7 +19,6 @@
 
 package io.druid.query.topn;
 
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -78,14 +77,7 @@ public class TopNUnionQueryTest
                 new TopNQueryRunnerFactory(
                     new StupidPool<ByteBuffer>(
                         "TopNQueryRunnerFactory-bufferPool",
-                        new Supplier<ByteBuffer>()
-                        {
-                          @Override
-                          public ByteBuffer get()
-                          {
-                            return ByteBuffer.allocate(2000);
-                          }
-                        }
+                        () -> ByteBuffer.allocate(2000)
                     ),
                     new TopNQueryQueryToolChest(
                         new TopNQueryConfig(),

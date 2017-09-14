@@ -45,9 +45,7 @@ public class KerberosJettyHttpClientProvider extends AbstractHttpClientProvider<
   private AuthenticationKerberosConfig config;
 
 
-  public KerberosJettyHttpClientProvider(
-    Provider<HttpClient> delegateProvider
-  )
+  public KerberosJettyHttpClientProvider(Provider<HttpClient> delegateProvider)
   {
     this.delegateProvider = delegateProvider;
   }
@@ -77,7 +75,10 @@ public class KerberosJettyHttpClientProvider extends AbstractHttpClientProvider<
 
       @Override
       public Result authenticate(
-        final Request request, ContentResponse response, Authentication.HeaderInfo headerInfo, Attributes context
+          final Request request,
+          ContentResponse response,
+          Authentication.HeaderInfo headerInfo,
+          Attributes context
       )
       {
         return new Result()
@@ -96,9 +97,9 @@ public class KerberosJettyHttpClientProvider extends AbstractHttpClientProvider<
               URI uri = request.getURI();
               if (DruidKerberosUtil.needToSendCredentials(httpClient.getCookieStore(), uri)) {
                 log.debug(
-                  "No Auth Cookie found for URI[%s]. Existing Cookies[%s] Authenticating... ",
-                  uri,
-                  httpClient.getCookieStore().getCookies()
+                    "No Auth Cookie found for URI[%s]. Existing Cookies[%s] Authenticating... ",
+                    uri,
+                    httpClient.getCookieStore().getCookies()
                 );
                 final String host = request.getHost();
                 DruidKerberosUtil.authenticateIfRequired(config);

@@ -74,9 +74,8 @@ public class SpnegoFilterHolder implements ServletFilterHolder
       }
 
       @Override
-      public void doFilter(
-        ServletRequest request, ServletResponse response, FilterChain filterChain
-      ) throws IOException, ServletException
+      public void doFilter(ServletRequest request, ServletResponse response, FilterChain filterChain)
+          throws IOException, ServletException
       {
         String path = ((HttpServletRequest) request).getRequestURI();
         if (isExcluded(path)) {
@@ -109,8 +108,8 @@ public class SpnegoFilterHolder implements ServletFilterHolder
     Map<String, String> params = new HashMap<String, String>();
     try {
       params.put(
-        "kerberos.principal",
-        SecurityUtil.getServerPrincipal(config.getPrincipal(), node.getHost())
+          "kerberos.principal",
+          SecurityUtil.getServerPrincipal(config.getPrincipal(), node.getHost())
       );
       params.put("kerberos.keytab", config.getKeytab());
       params.put(AuthenticationFilter.AUTH_TYPE, "kerberos");

@@ -30,9 +30,7 @@ public class KerberosHttpClientProvider extends AbstractHttpClientProvider<HttpC
   private final Provider<HttpClient> delegateProvider;
   private AuthenticationKerberosConfig config;
 
-  public KerberosHttpClientProvider(
-    Provider<HttpClient> delegateProvider
-  )
+  public KerberosHttpClientProvider(Provider<HttpClient> delegateProvider)
   {
     this.delegateProvider = delegateProvider;
   }

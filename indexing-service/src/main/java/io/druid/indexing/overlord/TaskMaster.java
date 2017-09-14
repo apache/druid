@@ -77,7 +77,7 @@ public class TaskMaster
       final SupervisorManager supervisorManager,
       final OverlordHelperManager overlordHelperManager,
       @IndexingService final DruidLeaderSelector overlordLeaderSelector
-      )
+  )
   {
     this.supervisorManager = supervisorManager;
     this.taskActionClientFactory = taskActionClientFactory;

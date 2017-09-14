@@ -58,6 +58,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.EnumSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -170,14 +171,13 @@ public class JettyTest extends BaseJettyTest
                         e.printStackTrace();
                       }
                       finally {
-                        System.out
-                            .println(
-                                "Response time client"
-                                + (System.currentTimeMillis() - startTime)
-                                + "time taken for getting future"
-                                + (System.currentTimeMillis() - startTime2)
-                                + "Counter " + count.incrementAndGet()
-                            );
+                        System.out.printf(
+                            Locale.ENGLISH,
+                            "Response time client%dtime taken for getting future%dCounter %d%n",
+                            System.currentTimeMillis() - startTime,
+                            System.currentTimeMillis() - startTime2,
+                            count.incrementAndGet()
+                        );
                         latch.countDown();
 
                       }

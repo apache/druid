@@ -172,9 +172,8 @@ public class TaskLifecycleTest
     this.taskStorageType = taskStorageType;
   }
 
-  public final
   @Rule
-  TemporaryFolder temporaryFolder = new TemporaryFolder();
+  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   private static final Ordering<DataSegment> byIntervalOrdering = new Ordering<DataSegment>()
   {
@@ -529,6 +528,14 @@ public class TaskLifecycleTest
     File tmpDir = temporaryFolder.newFolder();
     taskConfig = new TaskConfig(tmpDir.toString(), null, null, 50000, null, false, null, null);
 
+    SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
+    {
+      @Override
+      public List<StorageLocationConfig> getLocations()
+      {
+        return Lists.newArrayList();
+      }
+    };
     return new TaskToolboxFactory(
         taskConfig,
         tac,
@@ -590,17 +597,7 @@ public class TaskLifecycleTest
         MoreExecutors.sameThreadExecutor(), // query executor service
         monitorScheduler, // monitor scheduler
         new SegmentLoaderFactory(
-            new SegmentLoaderLocalCacheManager(
-                null,
-                new SegmentLoaderConfig()
-                {
-                  @Override
-                  public List<StorageLocationConfig> getLocations()
-                  {
-                    return Lists.newArrayList();
-                  }
-                }, new DefaultObjectMapper()
-            )
+            new SegmentLoaderLocalCacheManager(null, segmentLoaderConfig, new DefaultObjectMapper())
         ),
         MAPPER,
         INDEX_IO,

@@ -154,15 +154,15 @@ public class DruidJsonValidatorTest
             ),
             new RealtimeIOConfig(
                 new LocalFirehoseFactory(new File("lol"), "rofl", null), new PlumberSchool()
-            {
-              @Override
-              public Plumber findPlumber(
-                  DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
-              )
-              {
-                return null;
-              }
-            },
+                {
+                  @Override
+                  public Plumber findPlumber(
+                      DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
+                  )
+                  {
+                    return null;
+                  }
+                },
                 null
             ),
 

@@ -391,8 +391,7 @@ public class CachingQueryRunnerTest
     Assert.assertEquals(expectedResults.toString(), results.toString());
   }
 
-  private List<Result> makeTopNResults
-      (boolean cachedResults, Object... objects)
+  private List<Result> makeTopNResults(boolean cachedResults, Object... objects)
   {
     List<Result> retVal = Lists.newArrayList();
     int index = 0;

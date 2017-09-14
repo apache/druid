@@ -239,7 +239,7 @@ public class EventReceiverFirehoseTest
   {
     firehose.shutdown(DateTimes.nowUtc().plusMillis(100).toString());
     while (!firehose.isClosed()) {
-     Thread.sleep(50);
+      Thread.sleep(50);
     }
   }
 }

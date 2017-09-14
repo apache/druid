@@ -43,24 +43,24 @@ public class AuthenticationKerberosConfigTest
   public void testserde()
   {
     Injector injector = Guice.createInjector(
-      new Module()
-      {
-        @Override
-        public void configure(Binder binder)
+        new Module()
         {
-          binder.install(new PropertiesModule(Arrays.asList("test.runtime.properties")));
-          binder.install(new ConfigModule());
-          binder.install(new DruidGuiceExtensions());
-          JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", AuthenticationKerberosConfig.class);
-        }
+          @Override
+          public void configure(Binder binder)
+          {
+            binder.install(new PropertiesModule(Arrays.asList("test.runtime.properties")));
+            binder.install(new ConfigModule());
+            binder.install(new DruidGuiceExtensions());
+            JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", AuthenticationKerberosConfig.class);
+          }
 
-        @Provides
-        @LazySingleton
-        public ObjectMapper jsonMapper()
-        {
-          return new DefaultObjectMapper();
+          @Provides
+          @LazySingleton
+          public ObjectMapper jsonMapper()
+          {
+            return new DefaultObjectMapper();
+          }
         }
-      }
     );
 
     Properties props = injector.getInstance(Properties.class);

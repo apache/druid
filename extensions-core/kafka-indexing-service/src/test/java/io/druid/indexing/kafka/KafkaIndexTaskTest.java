@@ -1495,22 +1495,25 @@ public class KafkaIndexTaskTest
 
   private QueryRunnerFactoryConglomerate makeTimeseriesOnlyConglomerate()
   {
+    IntervalChunkingQueryRunnerDecorator queryRunnerDecorator = new IntervalChunkingQueryRunnerDecorator(
+        null,
+        null,
+        null
+    )
+    {
+      @Override
+      public <T> QueryRunner<T> decorate(
+          QueryRunner<T> delegate, QueryToolChest<T, ? extends Query<T>> toolChest
+      )
+      {
+        return delegate;
+      }
+    };
     return new DefaultQueryRunnerFactoryConglomerate(
         ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>of(
             TimeseriesQuery.class,
             new TimeseriesQueryRunnerFactory(
-                new TimeseriesQueryQueryToolChest(
-                    new IntervalChunkingQueryRunnerDecorator(null, null, null)
-                    {
-                      @Override
-                      public <T> QueryRunner<T> decorate(
-                          QueryRunner<T> delegate, QueryToolChest<T, ? extends Query<T>> toolChest
-                      )
-                      {
-                        return delegate;
-                      }
-                    }
-                ),
+                new TimeseriesQueryQueryToolChest(queryRunnerDecorator),
                 new TimeseriesQueryEngine(),
                 new QueryWatcher()
                 {
@@ -1612,6 +1615,14 @@ public class KafkaIndexTaskTest
     final LocalDataSegmentPusherConfig dataSegmentPusherConfig = new LocalDataSegmentPusherConfig();
     dataSegmentPusherConfig.storageDirectory = getSegmentDirectory();
     final DataSegmentPusher dataSegmentPusher = new LocalDataSegmentPusher(dataSegmentPusherConfig, objectMapper);
+    SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
+    {
+      @Override
+      public List<StorageLocationConfig> getLocations()
+      {
+        return Lists.newArrayList();
+      }
+    };
     toolboxFactory = new TaskToolboxFactory(
         taskConfig,
         taskActionClientFactory,
@@ -1627,17 +1638,7 @@ public class KafkaIndexTaskTest
         MoreExecutors.sameThreadExecutor(), // queryExecutorService
         EasyMock.createMock(MonitorScheduler.class),
         new SegmentLoaderFactory(
-            new SegmentLoaderLocalCacheManager(
-                null,
-                new SegmentLoaderConfig()
-                {
-                  @Override
-                  public List<StorageLocationConfig> getLocations()
-                  {
-                    return Lists.newArrayList();
-                  }
-                }, testUtils.getTestObjectMapper()
-            )
+            new SegmentLoaderLocalCacheManager(null, segmentLoaderConfig, testUtils.getTestObjectMapper())
         ),
         testUtils.getTestObjectMapper(),
         testUtils.getTestIndexIO(),

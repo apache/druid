@@ -56,7 +56,7 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
   public FloatLastAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") final String fieldName
-      )
+  )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
