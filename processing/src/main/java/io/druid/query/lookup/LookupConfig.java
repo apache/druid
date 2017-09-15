@@ -33,23 +33,23 @@ public class LookupConfig
   private int numLookupLoadingThreads = 10;
 
   @JsonProperty
-  private boolean disableLookupSyncOnStartup;
+  private boolean enableLookupSyncOnStartup;
 
   /**
    * @param snapshotWorkingDir working directory to store lookups snapshot file, passing null or empty string will disable the snapshot utility
    * @param numLookupLoadingThreads number of threads for loading the lookups as part of the synchronization process
-   * @param disableLookupSyncOnStartup decides whether the lookup synchronization process should be disabled at startup
+   * @param enableLookupSyncOnStartup decides whether the lookup synchronization process should be enabled at startup
    */
   @JsonCreator
   public LookupConfig(
       @JsonProperty("snapshotWorkingDir") String snapshotWorkingDir,
       @JsonProperty("numLookupLoadingThreads") int numLookupLoadingThreads,
-      @JsonProperty("disableLookupSyncOnStartup") Boolean disableLookupSyncOnStartup
+      @JsonProperty("enableLookupSyncOnStartup") Boolean enableLookupSyncOnStartup
   )
   {
     this.snapshotWorkingDir = Strings.nullToEmpty(snapshotWorkingDir);
     this.numLookupLoadingThreads = numLookupLoadingThreads;
-    this.disableLookupSyncOnStartup = disableLookupSyncOnStartup == null ? true : disableLookupSyncOnStartup;
+    this.enableLookupSyncOnStartup = enableLookupSyncOnStartup == null ? false : enableLookupSyncOnStartup;
   }
 
   public String getSnapshotWorkingDir()
@@ -62,9 +62,9 @@ public class LookupConfig
     return numLookupLoadingThreads;
   }
 
-  public boolean getDisableLookupSyncOnStartup()
+  public boolean getEnableLookupSyncOnStartup()
   {
-    return disableLookupSyncOnStartup;
+    return enableLookupSyncOnStartup;
   }
 
 
@@ -90,7 +90,7 @@ public class LookupConfig
     return "LookupConfig{" +
            "snapshotWorkingDir='" + getSnapshotWorkingDir() + '\'' +
            " numLookupLoadingThreads='" + getNumLookupLoadingThreads() + '\'' +
-           " disableLookupSync='" + getDisableLookupSyncOnStartup() + '\'' +
+           " disableLookupSync='" + getEnableLookupSyncOnStartup() + '\'' +
            '}';
   }
 }
