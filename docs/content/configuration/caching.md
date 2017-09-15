@@ -44,7 +44,7 @@ Below are the configuration options known to this module:
 
 |`runtime.properties`|Description|Default|
 |--------------------|-----------|-------|
-|`druid.cache.type`| Set this to `caffeine`|`caffeine`|
+|`druid.cache.type`| Set this to `caffeine`|`local`|
 |`druid.cache.sizeInBytes`|The maximum size of the cache in bytes on heap.|None (unlimited)|
 |`druid.cache.expireAfter`|The time (in ms) after an access for which a cache entry may be expired|None (no time limit)|
 |`druid.cache.cacheExecutorFactory`|The executor factory to use for Caffeine maintenance. One of `COMMON_FJP`, `SINGLE_THREAD`, or `SAME_THREAD`|ForkJoinPool common pool (`COMMON_FJP`)|
