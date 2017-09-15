@@ -324,7 +324,7 @@ It is possible to save the configuration across restarts such that a node will n
 |--------|-----------|-------|
 |`druid.lookup.snapshotWorkingDir`| Working path used to store snapshot of current lookup configuration, leaving this property null will disable snapshot/bootstrap utility|null|
 |`druid.lookup.numLookupLoadingThreads`| Number of threads for loading the lookups in parallel on startup.This threadpool is created only at the time of start and destroyed once startup is done. It is not kept during the lifetime of the JVM.|10|
-|`druid.lookup.disableLookupSyncOnStartup`|Disable the lookup synchronization process on startup.|false|
+|`druid.lookup.disableLookupSyncOnStartup`|Disable the lookup synchronization process on startup.|true|
 
 ## Introspect a Lookup
 
