@@ -25,7 +25,7 @@ public class NullableAggregator implements Aggregator
 {
   private final Aggregator delegate;
   private final ColumnValueSelector selector;
-  private boolean isNull;
+  private boolean isNull = true;
 
   public NullableAggregator(Aggregator delegate, ColumnValueSelector selector)
   {
