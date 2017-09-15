@@ -1150,6 +1150,12 @@
 
     <profiles>
         <profile>
+            <id>spark2</id>
+            <properties>
+                <jackson.version>2.6.5</jackson.version>
+            </properties>
+        </profile>
+        <profile>
             <id>strict</id>
             <build>
                 <plugins>
