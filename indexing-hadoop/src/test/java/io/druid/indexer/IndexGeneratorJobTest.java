@@ -167,32 +167,32 @@ public class IndexGeneratorJobTest
                     }
                 },
                 ImmutableList.of(
-                    "2014102200,a.example.com,100",
-                    "2014102201,b.exmaple.com,50",
-                    "2014102202,c.example.com,200",
-                    "2014102203,d.example.com,250",
-                    "2014102204,e.example.com,123",
-                    "2014102205,f.example.com,567",
-                    "2014102206,g.example.com,11",
-                    "2014102207,h.example.com,251",
-                    "2014102208,i.example.com,963",
-                    "2014102209,j.example.com,333",
-                    "2014102210,k.example.com,253",
-                    "2014102211,l.example.com,321",
-                    "2014102212,m.example.com,3125",
-                    "2014102213,n.example.com,234",
-                    "2014102214,o.example.com,325",
-                    "2014102215,p.example.com,3533",
-                    "2014102216,q.example.com,500",
-                    "2014102216,q.example.com,87"
+                    "a.example.com,100",
+                    "b.exmaple.com,50",
+                    "c.example.com,200",
+                    "d.example.com,250",
+                    "e.example.com,123",
+                    "f.example.com,567",
+                    "g.example.com,11",
+                    "h.example.com,251",
+                    "i.example.com,963",
+                    "j.example.com,333",
+                    "k.example.com,253",
+                    "l.example.com,321",
+                    "m.example.com,3125",
+                    "n.example.com,234",
+                    "o.example.com,325",
+                    "p.example.com,3533",
+                    "q.example.com,500",
+                    "q.example.com,87"
                 ),
                 null,
                 new HadoopyStringInputRowParser(
                     new CSVParseSpec(
-                        new TimestampSpec("timestamp", "yyyyMMddHH", null),
+                        new TimestampSpec("dt", "yyyyMMddHH", null),
                         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
                         null,
-                        ImmutableList.of("timestamp", "host", "visited_num"),
+                        ImmutableList.of("host", "visited_num"),
                         false,
                         0
                     )
@@ -468,7 +468,14 @@ public class IndexGeneratorJobTest
     mapper.registerSubtypes(new NamedType(HashBasedNumberedShardSpec.class, "hashed"));
     mapper.registerSubtypes(new NamedType(SingleDimensionShardSpec.class, "single"));
 
-    dataFile = temporaryFolder.newFile();
+    File tempRoot = temporaryFolder.newFolder();
+    /**
+     * dt=yyyyMMddHH is partition value.
+    */
+    File tempDir = tempRoot.toPath().resolve("dt=2014102200").toFile();
+    tempDir.mkdirs();
+    dataFile = tempDir.toPath().resolve("temp").toFile();
+    dataFile.createNewFile();
     tmpDir = temporaryFolder.newFolder();
 
     HashMap<String, Object> inputSpec = new HashMap<String, Object>();

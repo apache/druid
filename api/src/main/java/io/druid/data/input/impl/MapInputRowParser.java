@@ -35,13 +35,20 @@ import java.util.Map;
 public class MapInputRowParser implements InputRowParser<Map<String, Object>>
 {
   private final ParseSpec parseSpec;
+  private final ParseHandler<?, Map<String, Object>> parseHandler;
 
   @JsonCreator
   public MapInputRowParser(
-      @JsonProperty("parseSpec") ParseSpec parseSpec
+          @JsonProperty("parseSpec") ParseSpec parseSpec
   )
   {
+    this(parseSpec, ParseHandler.DEFAULT);
+  }
+
+  public MapInputRowParser(ParseSpec parseSpec, ParseHandler<?, Map<String, Object>> parseHandler)
+  {
     this.parseSpec = parseSpec;
+    this.parseHandler = parseHandler == null ? ParseHandler.DEFAULT : parseHandler;
   }
 
   @Override
@@ -57,11 +64,12 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
                                         )
                                     );
 
+    Map<String, Object> resolved = parseHandler.handle(theMap);
     final DateTime timestamp;
     try {
-      timestamp = parseSpec.getTimestampSpec().extractTimestamp(theMap);
+      timestamp = parseSpec.getTimestampSpec().extractTimestamp(resolved);
       if (timestamp == null) {
-        final String input = theMap.toString();
+        final String input = resolved.toString();
         throw new NullPointerException(
             StringUtils.format(
                 "Null timestamp in input: %s",
@@ -87,6 +95,6 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
   @Override
   public InputRowParser withParseSpec(ParseSpec parseSpec)
   {
-    return new MapInputRowParser(parseSpec);
+    return new MapInputRowParser(parseSpec, parseHandler);
   }
 }

@@ -28,9 +28,13 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 
 public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<Object, Object, KEYOUT, VALUEOUT>
 {
@@ -49,6 +53,21 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
     parser = config.getParser();
     granularitySpec = config.getGranularitySpec();
     reportParseExceptions = !config.isIgnoreInvalidRows();
+    try {
+      if (parser instanceof HadoopyStringInputRowParser) {
+        FileSplit fileSplit = getFileSplit(context);
+        ((HadoopyStringInputRowParser) parser).setup(fileSplit);
+      }
+    }
+    catch (NoSuchMethodException e) {
+      throw new RE(e, e.getMessage());
+    }
+    catch (InvocationTargetException e) {
+      throw new RE(e, e.getMessage());
+    }
+    catch (IllegalAccessException e) {
+      throw new RE(e, e.getMessage());
+    }
   }
 
   public HadoopDruidIndexerConfig getConfig()
@@ -78,7 +97,6 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
         log.debug(e, "Ignoring invalid row [%s] due to parsing error", value.toString());
         context.getCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER).increment(1);
         return; // we're ignoring this invalid row
-
       }
 
       if (!granularitySpec.bucketIntervals().isPresent()
@@ -104,6 +122,14 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
     } else {
       return parser.parse(value);
     }
+  }
+
+  private FileSplit getFileSplit(Context context) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException
+  {
+    InputSplit inputSplit = context.getInputSplit();
+    Method method = inputSplit.getClass().getMethod("getInputSplit");
+    method.setAccessible(true);
+    return (FileSplit) method.invoke(inputSplit);
   }
 
   abstract protected void innerMap(InputRow inputRow, Object value, Context context, boolean reportParseExceptions)

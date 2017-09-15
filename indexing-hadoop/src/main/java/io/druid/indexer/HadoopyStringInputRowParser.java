@@ -22,6 +22,7 @@ package io.druid.indexer;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
+import io.druid.data.input.impl.ParseHandler;
 import io.druid.data.input.impl.ParseSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.java.util.common.IAE;
@@ -30,16 +31,24 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 
 import java.nio.ByteBuffer;
+import java.util.Map;
+import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 
 /**
  */
 public class HadoopyStringInputRowParser implements InputRowParser<Object>
 {
   private final StringInputRowParser parser;
+  private final ParseHandler<FileSplit, Map<String, Object>> parseHandler = new HadoopConfHandler();
 
   public HadoopyStringInputRowParser(@JsonProperty("parseSpec") ParseSpec parseSpec)
   {
-    this.parser = new StringInputRowParser(parseSpec, null);
+    this.parser = new StringInputRowParser(parseSpec, null, parseHandler);
+  }
+
+  public void setup(FileSplit fileSplit)
+  {
+    parseHandler.setup(fileSplit);
   }
 
   @Override

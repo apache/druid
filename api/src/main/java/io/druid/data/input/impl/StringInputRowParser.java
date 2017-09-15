@@ -44,18 +44,29 @@ public class StringInputRowParser implements ByteBufferInputRowParser
   private final ParseSpec parseSpec;
   private final MapInputRowParser mapParser;
   private final Parser<String, Object> parser;
+  private final ParseHandler<?, Map<String, Object>> parseHandler;
   private final Charset charset;
 
   private CharBuffer chars = null;
 
+  public StringInputRowParser(
+          ParseSpec parseSpec,
+          String encoding
+  )
+  {
+    this(parseSpec, encoding, ParseHandler.DEFAULT);
+  }
+
   @JsonCreator
   public StringInputRowParser(
       @JsonProperty("parseSpec") ParseSpec parseSpec,
-      @JsonProperty("encoding") String encoding
+      @JsonProperty("encoding") String encoding,
+      @JsonProperty("parseHandler") ParseHandler<?, Map<String, Object>> parseHandler
   )
   {
     this.parseSpec = parseSpec;
-    this.mapParser = new MapInputRowParser(parseSpec);
+    this.parseHandler = parseHandler;
+    this.mapParser = new MapInputRowParser(parseSpec, parseHandler);
     this.parser = parseSpec.makeParser();
 
     if (encoding != null) {
@@ -68,7 +79,7 @@ public class StringInputRowParser implements ByteBufferInputRowParser
   @Deprecated
   public StringInputRowParser(ParseSpec parseSpec)
   {
-    this(parseSpec, null);
+    this(parseSpec, null, null);
   }
 
   @Override
@@ -93,7 +104,7 @@ public class StringInputRowParser implements ByteBufferInputRowParser
   @Override
   public StringInputRowParser withParseSpec(ParseSpec parseSpec)
   {
-    return new StringInputRowParser(parseSpec, getEncoding());
+    return new StringInputRowParser(parseSpec, getEncoding(), parseHandler);
   }
 
   private Map<String, Object> buildStringKeyMap(ByteBuffer input)
