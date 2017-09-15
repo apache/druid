@@ -28,6 +28,25 @@ public interface DruidFloatPredicate
 
   DruidFloatPredicate ALWAYS_TRUE = input -> true;
 
+  DruidFloatPredicate MATCH_NULL_ONLY = new DruidFloatPredicate()
+  {
+    @Override
+    public boolean applyFloat(float input)
+    {
+      return false;
+    }
+
+    @Override
+    public boolean applyNull()
+    {
+      return true;
+    }
+  };
 
   boolean applyFloat(float input);
+
+  default boolean applyNull()
+  {
+    return false;
+  }
 }

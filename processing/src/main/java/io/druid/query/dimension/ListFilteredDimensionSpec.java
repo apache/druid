@@ -23,11 +23,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.base.Strings;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.filter.DimFilterUtils;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.IdLookup;
+import io.druid.segment.NullHandlingHelper;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 
 import javax.annotation.Nullable;
@@ -106,7 +106,7 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
       }
     } else {
       for (int i = 0; i < selectorCardinality; i++) {
-        if (values.contains(Strings.nullToEmpty(selector.lookupName(i)))) {
+        if (values.contains(NullHandlingHelper.nullToDefault(selector.lookupName(i)))) {
           forwardMapping.put(i, count);
           reverseMapping[count++] = i;
         }
@@ -137,7 +137,7 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
     forwardMapping.defaultReturnValue(-1);
     final int[] reverseMapping = new int[maxPossibleFilteredCardinality];
     for (int i = 0; i < selectorCardinality; i++) {
-      if (!values.contains(Strings.nullToEmpty(selector.lookupName(i)))) {
+      if (!values.contains(NullHandlingHelper.nullToDefault(selector.lookupName(i)))) {
         forwardMapping.put(i, count);
         reverseMapping[count++] = i;
       }

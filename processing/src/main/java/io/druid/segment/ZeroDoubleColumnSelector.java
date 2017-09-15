@@ -42,6 +42,12 @@ public final class ZeroDoubleColumnSelector implements DoubleColumnSelector
   }
 
   @Override
+  public boolean isNull()
+  {
+    return false;
+  }
+
+  @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
     // nothing to inspect

@@ -31,6 +31,7 @@ import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.query.lookup.LookupReferencesManager;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
@@ -77,7 +78,7 @@ public class LookupDimensionSpec implements DimensionSpec
   {
     this.retainMissingValue = retainMissingValue;
     this.optimize = optimize == null ? true : optimize;
-    this.replaceMissingValueWith = Strings.emptyToNull(replaceMissingValueWith);
+    this.replaceMissingValueWith = NullHandlingHelper.defaultToNull(replaceMissingValueWith);
     this.dimension = Preconditions.checkNotNull(dimension, "dimension can not be Null");
     this.outputName = Preconditions.checkNotNull(outputName, "outputName can not be Null");
     this.lookupReferencesManager = lookupReferencesManager;
@@ -174,7 +175,7 @@ public class LookupDimensionSpec implements DimensionSpec
     byte[] replaceWithBytes = StringUtils.toUtf8(Strings.nullToEmpty(replaceMissingValueWith));
 
 
-    return ByteBuffer.allocate(6
+    return ByteBuffer.allocate(7
                                + dimensionBytes.length
                                + outputNameBytes.length
                                + dimExtractionFnBytes.length
@@ -189,6 +190,7 @@ public class LookupDimensionSpec implements DimensionSpec
                      .put(replaceWithBytes)
                      .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(retainMissingValue ? (byte) 1 : (byte) 0)
+                     .put(replaceMissingValueWith == null ? (byte) 0 : (byte) 1)
                      .array();
   }
 

@@ -33,6 +33,7 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.LongColumnSelector;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.virtual.ExpressionSelectors;
 
 import java.util.Set;
@@ -107,7 +108,8 @@ public class ExpressionFilter implements Filter
           value -> expr.eval(identifierName -> {
             // There's only one binding, and it must be the single column, so it can safely be ignored in production.
             assert column.equals(identifierName);
-            return value;
+            // convert null to Empty before passing to expressions if needed.
+            return NullHandlingHelper.nullToDefault(value);
           }).asBoolean()
       );
     }

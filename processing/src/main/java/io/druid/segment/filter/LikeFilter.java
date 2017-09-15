@@ -30,6 +30,7 @@ import io.druid.query.filter.LikeDimFilter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.data.Indexed;
 import it.unimi.dsi.fastutil.ints.AbstractIntIterator;
@@ -91,7 +92,10 @@ public class LikeFilter implements Filter
   {
     if (isSimpleEquals()) {
       // Verify that dimension equals prefix.
-      return ImmutableList.of(selector.getBitmapIndex(dimension, likeMatcher.getPrefix()));
+      return ImmutableList.of(selector.getBitmapIndex(
+          dimension,
+          NullHandlingHelper.defaultToNull(likeMatcher.getPrefix())
+      ));
     } else if (isSimplePrefix()) {
       // Verify that dimension startsWith prefix, and is accepted by likeMatcher.matchesSuffixOnly.
       final BitmapIndex bitmapIndex = selector.getBitmapIndex(dimension);

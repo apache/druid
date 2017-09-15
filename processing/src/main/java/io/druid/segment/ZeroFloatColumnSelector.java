@@ -48,6 +48,11 @@ public final class ZeroFloatColumnSelector implements FloatColumnSelector, Histo
     return 0.0;
   }
 
+  public boolean isNull()
+  {
+    return false;
+  }
+
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {

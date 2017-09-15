@@ -24,10 +24,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.js.JavaScriptConfig;
+import io.druid.segment.NullHandlingHelper;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.ScriptableObject;
@@ -119,14 +119,14 @@ public class JavaScriptExtractionFn implements ExtractionFn
       throw new ISE("JavaScript is disabled");
     }
 
-    return Strings.emptyToNull(fn.apply(value));
+    return NullHandlingHelper.defaultToNull(fn.apply(value));
   }
 
   @Override
   @Nullable
   public String apply(@Nullable String value)
   {
-    return this.apply((Object) Strings.emptyToNull(value));
+    return this.apply((Object) NullHandlingHelper.defaultToNull(value));
   }
 
   @Override

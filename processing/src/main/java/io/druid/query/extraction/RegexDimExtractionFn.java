@@ -22,9 +22,9 @@ package io.druid.query.extraction;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.primitives.Ints;
 import io.druid.java.util.common.StringUtils;
+import io.druid.segment.NullHandlingHelper;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -106,13 +106,14 @@ public class RegexDimExtractionFn extends DimExtractionFn
   public String apply(@Nullable String dimValue)
   {
     final String retVal;
-    final Matcher matcher = pattern.matcher(Strings.nullToEmpty(dimValue));
-    if (matcher.find()) {
+    String val = NullHandlingHelper.nullToDefault(dimValue);
+    final Matcher matcher = val == null ? null : pattern.matcher(val);
+    if (matcher != null && matcher.find()) {
       retVal = matcher.group(index);
     } else {
       retVal = replaceMissingValue ? replaceMissingValueWith : dimValue;
     }
-    return Strings.emptyToNull(retVal);
+    return NullHandlingHelper.defaultToNull(retVal);
   }
 
   @JsonProperty("expr")
