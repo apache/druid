@@ -199,7 +199,9 @@ public class ExpressionsTest
             timestampLiteral(DateTimes.of("2000-02-03T04:05:06Z")),
             rexBuilder.makeLiteral("PT1H")
         ),
-        DruidExpression.fromExpression("timestamp_floor(949550706000,'PT1H','','UTC')"),
+        DruidExpression.fromExpression("timestamp_floor(949550706000,'PT1H',"
+                                       + DruidExpression.nullLiteral()
+                                       + ",'UTC')"),
         DateTimes.of("2000-02-03T04:00:00").getMillis()
     );
 
@@ -222,7 +224,7 @@ public class ExpressionsTest
                     true
                 )
             ),
-            "timestamp_floor(\"t\",'P1D','','America/Los_Angeles')"
+            "timestamp_floor(\"t\",'P1D'," + DruidExpression.nullLiteral() + ",'America/Los_Angeles')"
         ),
         DateTimes.of("2000-02-02T08:00:00").getMillis()
     );
@@ -244,7 +246,7 @@ public class ExpressionsTest
                 "t",
                 new TimeFormatExtractionFn(null, null, null, Granularities.YEAR, true)
             ),
-            "timestamp_floor(\"t\",'P1Y','','UTC')"
+            "timestamp_floor(\"t\",'P1Y'," + DruidExpression.nullLiteral() + ",'UTC')"
         ),
         DateTimes.of("2000").getMillis()
     );
@@ -261,7 +263,7 @@ public class ExpressionsTest
             inputRef("t"),
             rexBuilder.makeFlag(TimeUnitRange.YEAR)
         ),
-        DruidExpression.fromExpression("timestamp_ceil(\"t\",'P1Y','','UTC')"),
+        DruidExpression.fromExpression("timestamp_ceil(\"t\",'P1Y'," + DruidExpression.nullLiteral() + ",'UTC')"),
         DateTimes.of("2001").getMillis()
     );
   }
@@ -581,7 +583,7 @@ public class ExpressionsTest
         ),
         DruidExpression.of(
             SimpleExtraction.of("t", new TimeFormatExtractionFn(null, null, null, Granularities.DAY, true)),
-            "timestamp_floor(\"t\",'P1D','','UTC')"
+            "timestamp_floor(\"t\",'P1D'," + DruidExpression.nullLiteral() + ",'UTC')"
         ),
         DateTimes.of("2000-02-03").getMillis()
     );
@@ -592,7 +594,7 @@ public class ExpressionsTest
             inputRef("dstr")
         ),
         DruidExpression.fromExpression(
-            "timestamp_floor(timestamp_parse(\"dstr\",'yyyy-MM-dd'),'P1D','','UTC')"
+            "timestamp_floor(timestamp_parse(\"dstr\",'yyyy-MM-dd'),'P1D'," + DruidExpression.nullLiteral() + ",'UTC')"
         ),
         DateTimes.of("2000-02-03").getMillis()
     );
@@ -610,7 +612,7 @@ public class ExpressionsTest
             )
         ),
         DruidExpression.fromExpression(
-            "timestamp_format(timestamp_floor(\"t\",'P1D','','UTC'),'yyyy-MM-dd')"
+            "timestamp_format(timestamp_floor(\"t\",'P1D'," + DruidExpression.nullLiteral() + ",'UTC'),'yyyy-MM-dd')"
         ),
         "2000-02-03"
     );
@@ -625,7 +627,7 @@ public class ExpressionsTest
         ),
         DruidExpression.of(
             SimpleExtraction.of("t", new TimeFormatExtractionFn(null, null, null, Granularities.DAY, true)),
-            "timestamp_floor(\"t\",'P1D','','UTC')"
+            "timestamp_floor(\"t\",'P1D'," + DruidExpression.nullLiteral() + ",'UTC')"
         ),
         DateTimes.of("2000-02-03").getMillis()
     );

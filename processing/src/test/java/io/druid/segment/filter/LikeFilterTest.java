@@ -33,6 +33,7 @@ import io.druid.java.util.common.Pair;
 import io.druid.query.extraction.SubstringDimExtractionFn;
 import io.druid.query.filter.LikeDimFilter;
 import io.druid.segment.IndexBuilder;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.StorageAdapter;
 import org.junit.AfterClass;
 import org.junit.Test;
@@ -156,10 +157,17 @@ public class LikeFilterTest extends BaseFilterTest
   @Test
   public void testMatchEmptyStringWithExtractionFn()
   {
-    assertFilterMatches(
-        new LikeDimFilter("dim1", "", null, new SubstringDimExtractionFn(100, 1)),
-        ImmutableList.of("0", "1", "2", "3", "4", "5")
-    );
+    if (NullHandlingHelper.useDefaultValuesForNull()) {
+      assertFilterMatches(
+          new LikeDimFilter("dim1", "", null, new SubstringDimExtractionFn(100, 1)),
+          ImmutableList.of("0", "1", "2", "3", "4", "5")
+      );
+    } else {
+      assertFilterMatches(
+          new LikeDimFilter("dim1", "", null, new SubstringDimExtractionFn(100, 1)),
+          ImmutableList.of()
+      );
+    }
   }
 
   @Test

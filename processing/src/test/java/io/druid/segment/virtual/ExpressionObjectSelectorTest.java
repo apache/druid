@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import io.druid.common.guava.SettableSupplier;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.ObjectColumnSelector;
 import org.junit.Assert;
 import org.junit.Test;
@@ -40,10 +41,10 @@ public class ExpressionObjectSelectorTest
     );
 
     Assert.assertNotNull(supplier);
-    Assert.assertEquals(null, supplier.get());
+    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? "" : null, supplier.get());
 
     settableSupplier.set(null);
-    Assert.assertEquals(null, supplier.get());
+    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? "" : null, supplier.get());
 
     settableSupplier.set("1234");
     Assert.assertEquals("1234", supplier.get());
@@ -58,7 +59,7 @@ public class ExpressionObjectSelectorTest
     );
 
     Assert.assertNotNull(supplier);
-    Assert.assertEquals(null, supplier.get());
+    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? "" : null, supplier.get());
 
     settableSupplier.set(1.1f);
     Assert.assertEquals(1.1f, supplier.get());
@@ -80,7 +81,6 @@ public class ExpressionObjectSelectorTest
     final Supplier<Object> supplier = ExpressionObjectSelector.supplierFromObjectSelector(
         objectSelectorFromSupplier(settableSupplier, Number.class)
     );
-
 
     Assert.assertNotNull(supplier);
     Assert.assertEquals(null, supplier.get());

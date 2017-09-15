@@ -405,6 +405,12 @@ public class VirtualColumnsTest
         {
           return selector.getFloat();
         }
+
+        @Override
+        public boolean isNull()
+        {
+          return selector.isNull();
+        }
       };
     }
 
@@ -420,6 +426,12 @@ public class VirtualColumnsTest
         public long getLong()
         {
           return theLong;
+        }
+
+        @Override
+        public boolean isNull()
+        {
+          return false;
         }
       };
     }

@@ -35,23 +35,50 @@ import io.druid.query.groupby.GroupByQueryRunnerTest;
 import io.druid.query.groupby.GroupByQueryRunnerTestHelper;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
+import io.druid.query.groupby.strategy.GroupByStrategySelector;
 import io.druid.segment.IncrementalIndexSegment;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.Segment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
+@RunWith(Parameterized.class)
 public class DistinctCountGroupByQueryTest
 {
+  @Parameterized.Parameters(name = "{0}")
+  public static Collection<?> constructorFeeder() throws IOException
+  {
+    final List<Object[]> constructors = Lists.newArrayList();
+    for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
+      constructors.add(new Object[]{config});
+    }
+
+    return constructors;
+  }
+
+  private GroupByQueryConfig config;
+
+  public DistinctCountGroupByQueryTest(
+      GroupByQueryConfig config
+  )
+  {
+    this.config = config;
+  }
 
   @Test
   public void testGroupByWithDistinctCountAgg() throws Exception
   {
-    final GroupByQueryConfig config = new GroupByQueryConfig();
+    // groupBy V2 skips adding null entries while doing serde.
+    boolean nullsInResult = config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2);
     config.setMaxIntermediateRows(10000);
     final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(config);
 
@@ -88,6 +115,36 @@ public class DistinctCountGroupByQueryTest
             timestamp + 2,
             Lists.newArrayList(visitor_id, client_type),
             ImmutableMap.<String, Object>of(visitor_id, "2", client_type, "android")
+        )
+    );
+    // Row with Null values
+    index.add(
+        new MapBasedInputRow(
+            timestamp + 2,
+            Lists.newArrayList(visitor_id, client_type),
+            ImmutableMap.<String, Object>of()
+        )
+    );
+    index.add(
+        new MapBasedInputRow(
+            timestamp + 2,
+            Lists.newArrayList(visitor_id, client_type),
+            ImmutableMap.<String, Object>of(visitor_id, "2")
+        )
+    );
+    // Row with empty values
+    index.add(
+        new MapBasedInputRow(
+            timestamp + 2,
+            Lists.newArrayList(visitor_id, client_type),
+            ImmutableMap.<String, Object>of(visitor_id, "", client_type, "")
+        )
+    );
+    index.add(
+        new MapBasedInputRow(
+            timestamp + 2,
+            Lists.newArrayList(visitor_id, client_type),
+            ImmutableMap.<String, Object>of(visitor_id, "4", client_type, "")
         )
     );
 
@@ -128,20 +185,70 @@ public class DistinctCountGroupByQueryTest
         query
     );
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "1970-01-01T00:00:00.000Z",
-            client_type, "iphone",
-            "UV", 2L,
-            "rows", 2L
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "1970-01-01T00:00:00.000Z",
-            client_type, "android",
-            "UV", 1L,
-            "rows", 1L
-        )
-    );
+    List<Row> expectedResults;
+    if (NullHandlingHelper.useDefaultValuesForNull()) {
+      expectedResults = Arrays.asList(
+          GroupByQueryRunnerTestHelper.createExpectedRow(
+              "1970-01-01T00:00:00.000Z",
+              client_type, "iphone",
+              "UV", 2L,
+              "rows", 2L
+          ),
+          GroupByQueryRunnerTestHelper.createExpectedRow(
+              "1970-01-01T00:00:00.000Z",
+              client_type, "android",
+              "UV", 1L,
+              "rows", 1L
+          ),
+          // Both rows with null and empty string gets rolled up so rowCount is 3
+          nullsInResult ?
+          GroupByQueryRunnerTestHelper.createExpectedRow(
+              "1970-01-01T00:00:00.000Z",
+              "UV", 3L,
+              "rows", 3L
+          ) :
+          GroupByQueryRunnerTestHelper.createExpectedRow(
+              "1970-01-01T00:00:00.000Z",
+              "client_type", null,
+              "UV", 3L,
+              "rows", 3L
+          )
+      );
+    } else {
+      expectedResults = Arrays.asList(
+          GroupByQueryRunnerTestHelper.createExpectedRow(
+              "1970-01-01T00:00:00.000Z",
+              client_type, "iphone",
+              "UV", 2L,
+              "rows", 2L
+          ),
+          GroupByQueryRunnerTestHelper.createExpectedRow(
+              "1970-01-01T00:00:00.000Z",
+              client_type, "android",
+              "UV", 1L,
+              "rows", 1L
+          ),
+          GroupByQueryRunnerTestHelper.createExpectedRow(
+              "1970-01-01T00:00:00.000Z",
+              client_type, "",
+              "UV", 2L,
+              "rows", 2L
+          ),
+          // client_type is null is this row
+          nullsInResult ?
+          GroupByQueryRunnerTestHelper.createExpectedRow(
+              "1970-01-01T00:00:00.000Z",
+              "UV", 1L,
+              "rows", 2L
+          ) :
+          GroupByQueryRunnerTestHelper.createExpectedRow(
+              "1970-01-01T00:00:00.000Z",
+              "client_type", null,
+              "UV", 1L,
+              "rows", 2L
+          )
+      );
+    }
     TestHelper.assertExpectedObjects(expectedResults, results, "distinct-count");
   }
 }

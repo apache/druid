@@ -37,6 +37,7 @@ import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.CloserRule;
+import io.druid.segment.NullHandlingHelper;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -224,10 +225,24 @@ public class IncrementalIndexTest
 
     Row row = index.iterator().next();
 
-    Assert.assertEquals(Arrays.asList(new String[]{"", "", "A"}), row.getRaw("string"));
-    Assert.assertEquals(Arrays.asList(new String[]{"", "", String.valueOf(Float.POSITIVE_INFINITY)}), row.getRaw("float"));
-    Assert.assertEquals(Arrays.asList(new String[]{"", "", String.valueOf(Long.MIN_VALUE)}), row.getRaw("long"));
-    Assert.assertEquals(0.0, row.getRaw("double"));
+
+    if (NullHandlingHelper.useDefaultValuesForNull()) {
+      Assert.assertEquals(Arrays.asList(null, null, "A"), row.getRaw("string"));
+      Assert.assertEquals(
+          Arrays.asList(null, null, String.valueOf(Float.POSITIVE_INFINITY)),
+          row.getRaw("float")
+      );
+      Assert.assertEquals(Arrays.asList(null, null, String.valueOf(Long.MIN_VALUE)), row.getRaw("long"));
+      Assert.assertEquals(NullHandlingHelper.nullToDefault((Double) null), row.getRaw("double"));
+    } else {
+      Assert.assertEquals(Arrays.asList(null, "", "A"), row.getRaw("string"));
+      Assert.assertEquals(
+          Arrays.asList(null, "", String.valueOf(Float.POSITIVE_INFINITY)),
+          row.getRaw("float")
+      );
+      Assert.assertEquals(Arrays.asList(null, "", String.valueOf(Long.MIN_VALUE)), row.getRaw("long"));
+      Assert.assertEquals(NullHandlingHelper.nullToDefault((Double) null), row.getRaw("double"));
+    }
   }
 
   @Test

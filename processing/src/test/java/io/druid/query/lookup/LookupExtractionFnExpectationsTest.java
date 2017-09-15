@@ -21,6 +21,7 @@ package io.druid.query.lookup;
 
 import com.google.common.collect.ImmutableMap;
 import io.druid.query.extraction.MapLookupExtractor;
+import io.druid.segment.NullHandlingHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -65,7 +66,11 @@ public class LookupExtractionFnExpectationsTest
         false,
         false
     );
-    Assert.assertEquals("bar", lookupExtractionFn.apply(null));
+    if (NullHandlingHelper.useDefaultValuesForNull()) {
+      Assert.assertEquals("bar", lookupExtractionFn.apply(null));
+    } else {
+      Assert.assertEquals("REPLACE", lookupExtractionFn.apply(null));
+    }
   }
 
   @Test

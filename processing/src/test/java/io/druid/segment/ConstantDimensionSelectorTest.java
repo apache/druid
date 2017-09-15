@@ -75,7 +75,7 @@ public class ConstantDimensionSelectorTest
   public void testLookupId() throws Exception
   {
     Assert.assertEquals(0, NULL_SELECTOR.idLookup().lookupId(null));
-    Assert.assertEquals(0, NULL_SELECTOR.idLookup().lookupId(""));
+    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? 0 : -1, NULL_SELECTOR.idLookup().lookupId(""));
     Assert.assertEquals(-1, NULL_SELECTOR.idLookup().lookupId("billy"));
     Assert.assertEquals(-1, NULL_SELECTOR.idLookup().lookupId("bob"));
 

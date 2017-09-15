@@ -26,6 +26,7 @@ import com.google.common.collect.Lists;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.js.JavaScriptConfig;
+import io.druid.segment.NullHandlingHelper;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -131,7 +132,11 @@ public class JavaScriptExtractionFnTest
 
     Assert.assertEquals("yes", extractionFn.apply((String) null));
     Assert.assertEquals("yes", extractionFn.apply((Object) null));
-    Assert.assertEquals("yes", extractionFn.apply(""));
+    if (NullHandlingHelper.useDefaultValuesForNull()) {
+      Assert.assertEquals("yes", extractionFn.apply(""));
+    } else {
+      Assert.assertEquals("no", extractionFn.apply(""));
+    }
     Assert.assertEquals("no", extractionFn.apply("abc"));
     Assert.assertEquals("no", extractionFn.apply(new Object()));
     Assert.assertEquals("no", extractionFn.apply(1));

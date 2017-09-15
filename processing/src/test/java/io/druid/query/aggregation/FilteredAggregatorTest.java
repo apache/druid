@@ -213,6 +213,12 @@ public class FilteredAggregatorTest
             }
 
             @Override
+            public boolean isNull()
+            {
+              return selector.isNull();
+            }
+
+            @Override
             public void inspectRuntimeShape(RuntimeShapeInspector inspector)
             {
 

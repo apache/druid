@@ -37,6 +37,7 @@ import io.druid.query.filter.JavaScriptDimFilter;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.segment.IndexBuilder;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.StorageAdapter;
 import org.junit.AfterClass;
 import org.junit.Test;
@@ -109,7 +110,12 @@ public class JavaScriptFilterTest extends BaseFilterTest
   @Test
   public void testSingleValueStringColumnWithNulls()
   {
-    assertFilterMatches(newJavaScriptDimFilter("dim1", jsNullFilter, null), ImmutableList.of("0"));
+    if (NullHandlingHelper.useDefaultValuesForNull()) {
+      assertFilterMatches(newJavaScriptDimFilter("dim1", jsNullFilter, null), ImmutableList.of("0"));
+    } else {
+      assertFilterMatches(newJavaScriptDimFilter("dim1", jsNullFilter, null), ImmutableList.of());
+      assertFilterMatches(newJavaScriptDimFilter("dim1", jsValueFilter(""), null), ImmutableList.of("0"));
+    }
     assertFilterMatches(newJavaScriptDimFilter("dim1", jsValueFilter("10"), null), ImmutableList.of("1"));
     assertFilterMatches(newJavaScriptDimFilter("dim1", jsValueFilter("2"), null), ImmutableList.of("2"));
     assertFilterMatches(newJavaScriptDimFilter("dim1", jsValueFilter("1"), null), ImmutableList.of("3"));
@@ -122,7 +128,12 @@ public class JavaScriptFilterTest extends BaseFilterTest
   public void testMultiValueStringColumn()
   {
     // multi-val null......
-    assertFilterMatches(newJavaScriptDimFilter("dim2", jsNullFilter, null), ImmutableList.of("1", "2", "5"));
+    if (NullHandlingHelper.useDefaultValuesForNull()) {
+      assertFilterMatches(newJavaScriptDimFilter("dim2", jsNullFilter, null), ImmutableList.of("1", "2", "5"));
+    } else {
+      assertFilterMatches(newJavaScriptDimFilter("dim2", jsNullFilter, null), ImmutableList.of("1", "5"));
+      assertFilterMatches(newJavaScriptDimFilter("dim2", jsValueFilter(""), null), ImmutableList.of("2"));
+    }
     assertFilterMatches(newJavaScriptDimFilter("dim2", jsValueFilter("a"), null), ImmutableList.of("0", "3"));
     assertFilterMatches(newJavaScriptDimFilter("dim2", jsValueFilter("b"), null), ImmutableList.of("0"));
     assertFilterMatches(newJavaScriptDimFilter("dim2", jsValueFilter("c"), null), ImmutableList.of("4"));

@@ -36,6 +36,7 @@ import io.druid.java.util.common.Pair;
 import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.filter.ExpressionDimFilter;
 import io.druid.segment.IndexBuilder;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.junit.AfterClass;
@@ -130,8 +131,12 @@ public class ExpressionFilterTest extends BaseFilterTest
   {
     // Expressions currently treat multi-valued arrays as nulls.
     // This test is just documenting the current behavior, not necessarily saying it makes sense.
-
-    assertFilterMatches(EDF("dim4 == ''"), ImmutableList.of("0", "1", "2", "4", "5", "6", "7", "8"));
+    if (NullHandlingHelper.useDefaultValuesForNull()) {
+      assertFilterMatches(EDF("dim4 == ''"), ImmutableList.of("0", "1", "2", "4", "5", "6", "7", "8"));
+    } else {
+      assertFilterMatches(EDF("dim4 == ''"), ImmutableList.of("2"));
+      assertFilterMatches(EDF("dim4 == null"), ImmutableList.of("0", "1", "4", "5", "6", "7", "8"));
+    }
     assertFilterMatches(EDF("dim4 == '1'"), ImmutableList.of());
     assertFilterMatches(EDF("dim4 == '3'"), ImmutableList.of("3"));
   }
@@ -188,7 +193,7 @@ public class ExpressionFilterTest extends BaseFilterTest
   @Test
   public void testMissingColumn()
   {
-    assertFilterMatches(EDF("missing == ''"), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
+    assertFilterMatches(EDF("missing == null"), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
     assertFilterMatches(EDF("missing == '1'"), ImmutableList.of());
     assertFilterMatches(EDF("missing == 2"), ImmutableList.of());
     assertFilterMatches(EDF("missing < '2'"), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));

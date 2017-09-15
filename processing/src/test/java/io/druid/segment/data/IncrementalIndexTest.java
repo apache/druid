@@ -388,22 +388,22 @@ public class IncrementalIndexTest
     Assert.assertEquals(Arrays.asList("1"), row.getDimension("dim1"));
     Assert.assertEquals(Arrays.asList("2"), row.getDimension("dim2"));
     Assert.assertEquals(Arrays.asList("a", "b"), row.getDimension("dim3"));
-    Assert.assertEquals(1L, row.getLongMetric("count"));
-    Assert.assertEquals(1L, row.getLongMetric("count_selector_filtered"));
-    Assert.assertEquals(1L, row.getLongMetric("count_bound_filtered"));
-    Assert.assertEquals(1L, row.getLongMetric("count_multivaldim_filtered"));
-    Assert.assertEquals(0L, row.getLongMetric("count_numeric_filtered"));
+    Assert.assertEquals(1L, row.getLongMetric("count").longValue());
+    Assert.assertEquals(1L, row.getLongMetric("count_selector_filtered").longValue());
+    Assert.assertEquals(1L, row.getLongMetric("count_bound_filtered").longValue());
+    Assert.assertEquals(1L, row.getLongMetric("count_multivaldim_filtered").longValue());
+    Assert.assertEquals(0L, row.getLongMetric("count_numeric_filtered").longValue());
 
     row = rows.next();
     Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
     Assert.assertEquals(Arrays.asList("3"), row.getDimension("dim1"));
     Assert.assertEquals(Arrays.asList("4"), row.getDimension("dim2"));
     Assert.assertEquals(Arrays.asList("c", "d"), row.getDimension("dim3"));
-    Assert.assertEquals(1L, row.getLongMetric("count"));
-    Assert.assertEquals(0L, row.getLongMetric("count_selector_filtered"));
-    Assert.assertEquals(0L, row.getLongMetric("count_bound_filtered"));
-    Assert.assertEquals(0L, row.getLongMetric("count_multivaldim_filtered"));
-    Assert.assertEquals(1L, row.getLongMetric("count_numeric_filtered"));
+    Assert.assertEquals(1L, row.getLongMetric("count").longValue());
+    Assert.assertEquals(0L, row.getLongMetric("count_selector_filtered").longValue());
+    Assert.assertEquals(0L, row.getLongMetric("count_bound_filtered").longValue());
+    Assert.assertEquals(0L, row.getLongMetric("count_multivaldim_filtered").longValue());
+    Assert.assertEquals(1L, row.getLongMetric("count_numeric_filtered").longValue());
   }
 
   @Test

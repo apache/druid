@@ -22,7 +22,9 @@ package io.druid.query.aggregation.last;
 import io.druid.collections.SerializablePair;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Pair;
+import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.TestDoubleColumnSelectorImpl;
 import io.druid.query.aggregation.TestLongColumnSelector;
 import io.druid.query.aggregation.TestObjectColumnSelector;
@@ -71,7 +73,7 @@ public class DoubleLastAggregationTest
   @Test
   public void testDoubleLastAggregator()
   {
-    DoubleLastAggregator agg = (DoubleLastAggregator) doubleLastAggFactory.factorize(colSelectorFactory);
+    Aggregator agg = doubleLastAggFactory.factorize(colSelectorFactory);
 
     aggregate(agg);
     aggregate(agg);
@@ -92,7 +94,7 @@ public class DoubleLastAggregationTest
   @Test
   public void testDoubleLastBufferAggregator()
   {
-    DoubleLastBufferAggregator agg = (DoubleLastBufferAggregator) doubleLastAggFactory.factorizeBuffered(
+    BufferAggregator agg = doubleLastAggFactory.factorizeBuffered(
         colSelectorFactory);
 
     ByteBuffer buffer = ByteBuffer.wrap(new byte[doubleLastAggFactory.getMaxIntermediateSize()]);
@@ -122,7 +124,7 @@ public class DoubleLastAggregationTest
   @Test
   public void testDoubleLastCombiningAggregator()
   {
-    DoubleLastAggregator agg = (DoubleLastAggregator) combiningAggFactory.factorize(colSelectorFactory);
+    Aggregator agg = combiningAggFactory.factorize(colSelectorFactory);
 
     aggregate(agg);
     aggregate(agg);
@@ -144,7 +146,7 @@ public class DoubleLastAggregationTest
   @Test
   public void testDoubleLastCombiningBufferAggregator()
   {
-    DoubleLastBufferAggregator agg = (DoubleLastBufferAggregator) combiningAggFactory.factorizeBuffered(
+    BufferAggregator agg = combiningAggFactory.factorizeBuffered(
         colSelectorFactory);
 
     ByteBuffer buffer = ByteBuffer.wrap(new byte[doubleLastAggFactory.getMaxIntermediateSize()]);
@@ -174,7 +176,7 @@ public class DoubleLastAggregationTest
   }
 
   private void aggregate(
-      DoubleLastAggregator agg
+      Aggregator agg
   )
   {
     agg.aggregate();
@@ -184,7 +186,7 @@ public class DoubleLastAggregationTest
   }
 
   private void aggregate(
-      DoubleLastBufferAggregator agg,
+      BufferAggregator agg,
       ByteBuffer buff,
       int position
   )

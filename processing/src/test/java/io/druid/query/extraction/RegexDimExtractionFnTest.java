@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.segment.NullHandlingHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -145,11 +146,11 @@ public class RegexDimExtractionFnTest
     String regex = "(.*)/.*/.*";
     ExtractionFn extractionFn = new RegexDimExtractionFn(regex, false, null);
     // no match, map empty input value to null
-    Assert.assertEquals(null, extractionFn.apply(""));
+    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? null : "", extractionFn.apply(""));
     // null value, returns null
     Assert.assertEquals(null, extractionFn.apply(null));
     // empty match, map empty result to null
-    Assert.assertEquals(null, extractionFn.apply("/a/b"));
+    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? null : "", extractionFn.apply("/a/b"));
   }
 
   @Test
@@ -168,8 +169,8 @@ public class RegexDimExtractionFnTest
   {
     String regex = "^()$";
     ExtractionFn extractionFn = new RegexDimExtractionFn(regex, true, "NO MATCH");
-    Assert.assertEquals(null, extractionFn.apply(""));
-    Assert.assertEquals(null, extractionFn.apply(null));
+    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? null : "", extractionFn.apply(""));
+    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? null : "NO MATCH", extractionFn.apply(null));
     Assert.assertEquals("NO MATCH", extractionFn.apply("abc"));
   }
 
@@ -178,10 +179,10 @@ public class RegexDimExtractionFnTest
   {
     String regex = "(bob)";
     ExtractionFn extractionFn = new RegexDimExtractionFn(regex, true, "");
-    Assert.assertEquals(null, extractionFn.apply(null));
-    Assert.assertEquals(null, extractionFn.apply(""));
-    Assert.assertEquals(null, extractionFn.apply("abc"));
-    Assert.assertEquals(null, extractionFn.apply("123"));
+    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? null : "", extractionFn.apply(null));
+    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? null : "", extractionFn.apply(""));
+    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? null : "", extractionFn.apply("abc"));
+    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? null : "", extractionFn.apply("123"));
     Assert.assertEquals("bob", extractionFn.apply("bobby"));
   }
 

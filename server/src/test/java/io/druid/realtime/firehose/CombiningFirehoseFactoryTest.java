@@ -92,19 +92,19 @@ public class CombiningFirehoseFactoryTest
       }
 
       @Override
-      public float getFloatMetric(String metric)
+      public Float getFloatMetric(String metric)
       {
         return metricValue;
       }
 
       @Override
-      public long getLongMetric(String metric)
+      public Long getLongMetric(String metric)
       {
         return new Float(metricValue).longValue();
       }
 
       @Override
-      public double getDoubleMetric(String metric)
+      public Double getDoubleMetric(String metric)
       {
         return new Float(metricValue).doubleValue();
       }

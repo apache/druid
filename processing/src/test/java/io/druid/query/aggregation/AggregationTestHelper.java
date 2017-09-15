@@ -525,22 +525,17 @@ public class AggregationTestHelper
                         MoreExecutors.sameThreadExecutor(),
                         Lists.transform(
                             segments,
-                            new Function<Segment, QueryRunner>()
-                            {
-                              @Override
-                              public QueryRunner apply(final Segment segment)
-                              {
-                                try {
-                                  return makeStringSerdeQueryRunner(
-                                      mapper,
-                                      toolChest,
-                                      query,
-                                      factory.createRunner(segment)
-                                  );
-                                }
-                                catch (Exception ex) {
-                                  throw Throwables.propagate(ex);
-                                }
+                            segment -> {
+                              try {
+                                return makeStringSerdeQueryRunner(
+                                    mapper,
+                                    toolChest,
+                                    query,
+                                    factory.createRunner(segment)
+                                );
+                              }
+                              catch (Exception ex) {
+                                throw Throwables.propagate(ex);
                               }
                             }
                         )

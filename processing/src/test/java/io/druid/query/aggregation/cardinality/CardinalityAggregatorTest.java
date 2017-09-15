@@ -47,6 +47,7 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.DimensionSelectorUtils;
 import io.druid.segment.IdLookup;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.data.IndexedInts;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterators;
@@ -430,8 +431,8 @@ public class CardinalityAggregatorTest
     for (int i = 0; i < values1.size(); ++i) {
       aggregate(selectorList, agg);
     }
-    Assert.assertEquals(7.0, (Double) valueAggregatorFactory.finalizeComputation(agg.get()), 0.05);
-    Assert.assertEquals(7L, rowAggregatorFactoryRounded.finalizeComputation(agg.get()));
+    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? 7.0 : 6.0, (Double) valueAggregatorFactory.finalizeComputation(agg.get()), 0.05);
+    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? 7L : 6L, rowAggregatorFactoryRounded.finalizeComputation(agg.get()));
   }
 
   @Test
@@ -474,8 +475,8 @@ public class CardinalityAggregatorTest
     for (int i = 0; i < values1.size(); ++i) {
       bufferAggregate(selectorList, agg, buf, pos);
     }
-    Assert.assertEquals(7.0, (Double) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos)), 0.05);
-    Assert.assertEquals(7L, rowAggregatorFactoryRounded.finalizeComputation(agg.get(buf, pos)));
+    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? 7.0 : 6.0, (Double) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos)), 0.05);
+    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? 7L : 6L, rowAggregatorFactoryRounded.finalizeComputation(agg.get(buf, pos)));
   }
 
   @Test
@@ -554,11 +555,11 @@ public class CardinalityAggregatorTest
       aggregate(selector2, agg2);
     }
 
-    Assert.assertEquals(4.0, (Double) valueAggregatorFactory.finalizeComputation(agg1.get()), 0.05);
-    Assert.assertEquals(7.0, (Double) valueAggregatorFactory.finalizeComputation(agg2.get()), 0.05);
+    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? 4.0 : 3.0, (Double) valueAggregatorFactory.finalizeComputation(agg1.get()), 0.05);
+    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? 7.0 : 6.0, (Double) valueAggregatorFactory.finalizeComputation(agg2.get()), 0.05);
 
     Assert.assertEquals(
-        7.0,
+        NullHandlingHelper.useDefaultValuesForNull() ? 7.0 : 6.0,
         (Double) rowAggregatorFactory.finalizeComputation(
             rowAggregatorFactory.combine(
                 agg1.get(),

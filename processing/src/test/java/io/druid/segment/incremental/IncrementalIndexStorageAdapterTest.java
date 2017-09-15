@@ -50,6 +50,7 @@ import io.druid.query.topn.TopNQueryEngine;
 import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.VirtualColumns;
 import io.druid.segment.data.IndexedInts;
@@ -608,9 +609,13 @@ public class IncrementalIndexStorageAdapterTest
                   // no null id, so should get empty dims array
                   Assert.assertEquals(0, rowD.size());
                   IndexedInts rowE = dimSelector3E.getRow();
-                  Assert.assertEquals(1, rowE.size());
-                  // the null id
-                  Assert.assertEquals(0, rowE.get(0));
+                  if (NullHandlingHelper.useDefaultValuesForNull()) {
+                    Assert.assertEquals(1, rowE.size());
+                    // the null id
+                    Assert.assertEquals(0, rowE.get(0));
+                  } else {
+                    Assert.assertEquals(0, rowE.size());
+                  }
                   cursor.advance();
                   rowNumInCursor++;
                 }

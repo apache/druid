@@ -243,8 +243,8 @@ public class AvroStreamInputRowParserTest
 
     // test metrics
     assertEquals(SOME_FLOAT_VALUE, inputRow.getFloatMetric("someFloat"), 0);
-    assertEquals(SOME_LONG_VALUE, inputRow.getLongMetric("someLong"));
-    assertEquals(SOME_INT_VALUE, inputRow.getLongMetric("someInt"));
+    assertEquals(SOME_LONG_VALUE, inputRow.getLongMetric("someLong").longValue());
+    assertEquals(SOME_INT_VALUE, inputRow.getLongMetric("someInt").longValue());
   }
 
   public static GenericRecord buildSomeAvroDatum() throws IOException

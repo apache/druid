@@ -220,11 +220,11 @@ public class IndexMergerTestBase
     Assert.assertArrayEquals(new int[][]{{0}, {1}}, boatList.get(0).getDims());
     Assert.assertArrayEquals(new int[][]{{1}, {0}}, boatList.get(1).getDims());
 
-    checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("dim1", ""));
+    checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("dim1", null));
     checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("dim1", "1"));
     checkBitmapIndex(Lists.newArrayList(1), adapter.getBitmapIndex("dim1", "3"));
 
-    checkBitmapIndex(Lists.newArrayList(1), adapter.getBitmapIndex("dim2", ""));
+    checkBitmapIndex(Lists.newArrayList(1), adapter.getBitmapIndex("dim2", null));
     checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("dim2", "2"));
   }
 
@@ -876,17 +876,17 @@ public class IndexMergerTestBase
     Assert.assertArrayEquals(new int[][]{{2}, {1}, {1}}, boatList.get(2).getDims());
     Assert.assertArrayEquals(new Object[]{3L}, boatList.get(2).getMetrics());
 
-    checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("d3", ""));
+    checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("d3", null));
     checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("d3", "30000"));
     checkBitmapIndex(Lists.newArrayList(1), adapter.getBitmapIndex("d3", "40000"));
     checkBitmapIndex(Lists.newArrayList(2), adapter.getBitmapIndex("d3", "50000"));
 
-    checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("d1", ""));
+    checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("d1", null));
     checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("d1", "100"));
     checkBitmapIndex(Lists.newArrayList(2), adapter.getBitmapIndex("d1", "200"));
     checkBitmapIndex(Lists.newArrayList(1), adapter.getBitmapIndex("d1", "300"));
 
-    checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("d2", ""));
+    checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("d2", null));
     checkBitmapIndex(Lists.newArrayList(1), adapter.getBitmapIndex("d2", "2000"));
     checkBitmapIndex(Lists.newArrayList(2), adapter.getBitmapIndex("d2", "3000"));
     checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("d2", "4000"));
@@ -985,13 +985,13 @@ public class IndexMergerTestBase
     Assert.assertArrayEquals(new int[][]{{2}, {0}}, boatList.get(3).getDims());
     Assert.assertArrayEquals(new Object[]{2L}, boatList.get(3).getMetrics());
 
-    checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("dimA", ""));
+    checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("dimA", null));
     checkBitmapIndex(Lists.newArrayList(2), adapter.getBitmapIndex("dimA", "1"));
     checkBitmapIndex(Lists.newArrayList(3), adapter.getBitmapIndex("dimA", "2"));
 
-    checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("dimB", ""));
+    checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("dimB", null));
 
-    checkBitmapIndex(Lists.newArrayList(2, 3), adapter.getBitmapIndex("dimC", ""));
+    checkBitmapIndex(Lists.newArrayList(2, 3), adapter.getBitmapIndex("dimC", null));
     checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("dimC", "1"));
     checkBitmapIndex(Lists.newArrayList(1), adapter.getBitmapIndex("dimC", "2"));
   }
@@ -1083,11 +1083,11 @@ public class IndexMergerTestBase
     Assert.assertArrayEquals(new int[][]{{2}, {0}}, boatList.get(4).getDims());
     Assert.assertArrayEquals(new Object[]{1L}, boatList.get(4).getMetrics());
 
-    checkBitmapIndex(Lists.newArrayList(0, 1, 2), adapter.getBitmapIndex("dimA", ""));
+    checkBitmapIndex(Lists.newArrayList(0, 1, 2), adapter.getBitmapIndex("dimA", null));
     checkBitmapIndex(Lists.newArrayList(3), adapter.getBitmapIndex("dimA", "1"));
     checkBitmapIndex(Lists.newArrayList(4), adapter.getBitmapIndex("dimA", "2"));
 
-    checkBitmapIndex(Lists.newArrayList(3, 4), adapter.getBitmapIndex("dimB", ""));
+    checkBitmapIndex(Lists.newArrayList(3, 4), adapter.getBitmapIndex("dimB", null));
     checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("dimB", "1"));
     checkBitmapIndex(Lists.newArrayList(1), adapter.getBitmapIndex("dimB", "2"));
     checkBitmapIndex(Lists.newArrayList(2), adapter.getBitmapIndex("dimB", "3"));
@@ -1105,11 +1105,11 @@ public class IndexMergerTestBase
     Assert.assertArrayEquals(new int[][]{{2}, {0}}, boatList2.get(4).getDims());
     Assert.assertArrayEquals(new Object[]{1L}, boatList2.get(4).getMetrics());
 
-    checkBitmapIndex(Lists.newArrayList(0, 1, 2), adapter2.getBitmapIndex("dimA", ""));
+    checkBitmapIndex(Lists.newArrayList(0, 1, 2), adapter2.getBitmapIndex("dimA", null));
     checkBitmapIndex(Lists.newArrayList(3), adapter2.getBitmapIndex("dimA", "1"));
     checkBitmapIndex(Lists.newArrayList(4), adapter2.getBitmapIndex("dimA", "2"));
 
-    checkBitmapIndex(Lists.newArrayList(3, 4), adapter2.getBitmapIndex("dimB", ""));
+    checkBitmapIndex(Lists.newArrayList(3, 4), adapter2.getBitmapIndex("dimB", null));
     checkBitmapIndex(Lists.newArrayList(0), adapter2.getBitmapIndex("dimB", "1"));
     checkBitmapIndex(Lists.newArrayList(1), adapter2.getBitmapIndex("dimB", "2"));
     checkBitmapIndex(Lists.newArrayList(2), adapter2.getBitmapIndex("dimB", "3"));
@@ -1213,40 +1213,60 @@ public class IndexMergerTestBase
     final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
     final List<Rowboat> boatList = ImmutableList.copyOf(adapter.getRows());
 
-    Assert.assertEquals(
-        ImmutableList.of("d2", "d3", "d5", "d6", "d7", "d8", "d9"),
-        ImmutableList.copyOf(adapter.getDimensionNames())
-    );
-    Assert.assertEquals(4, boatList.size());
-    Assert.assertArrayEquals(new int[][]{{0}, {1}, {0}, {0}, {0}, {0}, {0}}, boatList.get(0).getDims());
-    Assert.assertArrayEquals(new int[][]{{1}, {2}, {0}, {0}, {1}, {1}, {1}}, boatList.get(1).getDims());
-    Assert.assertArrayEquals(new int[][]{{0}, {0}, {1}, {1}, {2}, {2}, {2}}, boatList.get(2).getDims());
-    Assert.assertArrayEquals(new int[][]{{0}, {0}, {0}, {2}, {0}, {3}, {3}}, boatList.get(3).getDims());
+    if (NullHandlingHelper.useDefaultValuesForNull()) {
+      Assert.assertEquals(
+          ImmutableList.of("d2", "d3", "d5", "d6", "d7", "d8", "d9"),
+          ImmutableList.copyOf(adapter.getDimensionNames())
+      );
+      Assert.assertEquals(4, boatList.size());
+      Assert.assertArrayEquals(new int[][]{{0}, {1}, {0}, {0}, {0}, {0}, {0}}, boatList.get(0).getDims());
+      Assert.assertArrayEquals(new int[][]{{1}, {2}, {0}, {0}, {1}, {1}, {1}}, boatList.get(1).getDims());
+      Assert.assertArrayEquals(new int[][]{{0}, {0}, {1}, {1}, {2}, {2}, {2}}, boatList.get(2).getDims());
+      Assert.assertArrayEquals(new int[][]{{0}, {0}, {0}, {2}, {0}, {3}, {3}}, boatList.get(3).getDims());
+      checkBitmapIndex(Lists.newArrayList(0, 2, 3), adapter.getBitmapIndex("d2", null));
+      checkBitmapIndex(Lists.newArrayList(2, 3), adapter.getBitmapIndex("d3", null));
+      checkBitmapIndex(Lists.newArrayList(0, 1, 3), adapter.getBitmapIndex("d5", null));
+      checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("d6", null));
+      checkBitmapIndex(Lists.newArrayList(0, 3), adapter.getBitmapIndex("d7", null));
+      checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("d9", null));
+      checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("d8", null));
+    } else {
+      Assert.assertEquals(
+          ImmutableList.of("d1", "d2", "d3", "d5", "d6", "d7", "d8", "d9"),
+          ImmutableList.copyOf(adapter.getDimensionNames())
+      );
+      Assert.assertEquals(4, boatList.size());
+      Assert.assertArrayEquals(new int[][]{{1}, {1}, {1}, {0}, {0}, {0}, {0}, {0}}, boatList.get(0).getDims());
+      Assert.assertArrayEquals(new int[][]{{0}, {2}, {2}, {0}, {0}, {1}, {1}, {1}}, boatList.get(1).getDims());
+      Assert.assertArrayEquals(new int[][]{{0}, {0}, {0}, {2}, {1}, {2}, {2}, {2}}, boatList.get(2).getDims());
+      Assert.assertArrayEquals(new int[][]{{0}, {0}, {0}, {1}, {2}, {0}, {3}, {3}}, boatList.get(3).getDims());
+      checkBitmapIndex(Lists.newArrayList(1, 2, 3), adapter.getBitmapIndex("d1", null));
+      checkBitmapIndex(Lists.newArrayList(2, 3), adapter.getBitmapIndex("d2", null));
+      checkBitmapIndex(Lists.newArrayList(2, 3), adapter.getBitmapIndex("d3", null));
+      checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("d5", null));
+      checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("d6", null));
+      checkBitmapIndex(Lists.newArrayList(), adapter.getBitmapIndex("d7", null));
+      checkBitmapIndex(new ArrayList(), adapter.getBitmapIndex("d9", null));
+      checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("d8", null));
+    }
 
-    checkBitmapIndex(Lists.newArrayList(0, 2, 3), adapter.getBitmapIndex("d2", ""));
     checkBitmapIndex(Lists.newArrayList(1), adapter.getBitmapIndex("d2", "210"));
 
-    checkBitmapIndex(Lists.newArrayList(2, 3), adapter.getBitmapIndex("d3", ""));
     checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("d3", "310"));
     checkBitmapIndex(Lists.newArrayList(1), adapter.getBitmapIndex("d3", "311"));
 
-    checkBitmapIndex(Lists.newArrayList(0, 1, 3), adapter.getBitmapIndex("d5", ""));
     checkBitmapIndex(Lists.newArrayList(2), adapter.getBitmapIndex("d5", "520"));
 
-    checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("d6", ""));
     checkBitmapIndex(Lists.newArrayList(2), adapter.getBitmapIndex("d6", "620"));
     checkBitmapIndex(Lists.newArrayList(3), adapter.getBitmapIndex("d6", "621"));
 
-    checkBitmapIndex(Lists.newArrayList(0, 3), adapter.getBitmapIndex("d7", ""));
     checkBitmapIndex(Lists.newArrayList(1), adapter.getBitmapIndex("d7", "710"));
     checkBitmapIndex(Lists.newArrayList(2), adapter.getBitmapIndex("d7", "720"));
 
-    checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("d8", ""));
     checkBitmapIndex(Lists.newArrayList(1), adapter.getBitmapIndex("d8", "810"));
     checkBitmapIndex(Lists.newArrayList(2), adapter.getBitmapIndex("d8", "820"));
     checkBitmapIndex(Lists.newArrayList(3), adapter.getBitmapIndex("d8", "821"));
 
-    checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("d9", ""));
     checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("d9", "910"));
     checkBitmapIndex(Lists.newArrayList(1), adapter.getBitmapIndex("d9", "911"));
     checkBitmapIndex(Lists.newArrayList(2), adapter.getBitmapIndex("d9", "920"));
@@ -1355,40 +1375,64 @@ public class IndexMergerTestBase
     final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
     final List<Rowboat> boatList = ImmutableList.copyOf(adapter.getRows());
 
-    Assert.assertEquals(
-        ImmutableList.of("d2", "d3", "d5", "d6", "d7", "d8", "d9"),
-        ImmutableList.copyOf(adapter.getDimensionNames())
-    );
+    if (NullHandlingHelper.useDefaultValuesForNull()) {
+      Assert.assertEquals(
+          ImmutableList.of("d2", "d3", "d5", "d6", "d7", "d8", "d9"),
+          ImmutableList.copyOf(adapter.getDimensionNames())
+      );
+    } else {
+      Assert.assertEquals(
+          ImmutableList.of("d1", "d2", "d3", "d5", "d6", "d7", "d8", "d9"),
+          ImmutableList.copyOf(adapter.getDimensionNames())
+      );
+    }
     Assert.assertEquals(4, boatList.size());
-    Assert.assertArrayEquals(new int[][]{{0}, {1}, {0}, {0}, {0}, {0}, {0}}, boatList.get(0).getDims());
-    Assert.assertArrayEquals(new int[][]{{1}, {2}, {0}, {0}, {1}, {1}, {1}}, boatList.get(1).getDims());
-    Assert.assertArrayEquals(new int[][]{{0}, {0}, {1}, {1}, {2}, {2}, {2}}, boatList.get(2).getDims());
-    Assert.assertArrayEquals(new int[][]{{0}, {0}, {0}, {2}, {0}, {3}, {3}}, boatList.get(3).getDims());
+    if (NullHandlingHelper.useDefaultValuesForNull()) {
+      Assert.assertArrayEquals(new int[][]{{0}, {1}, {0}, {0}, {0}, {0}, {0}}, boatList.get(0).getDims());
+      Assert.assertArrayEquals(new int[][]{{1}, {2}, {0}, {0}, {1}, {1}, {1}}, boatList.get(1).getDims());
+      Assert.assertArrayEquals(new int[][]{{0}, {0}, {1}, {1}, {2}, {2}, {2}}, boatList.get(2).getDims());
+      Assert.assertArrayEquals(new int[][]{{0}, {0}, {0}, {2}, {0}, {3}, {3}}, boatList.get(3).getDims());
 
-    checkBitmapIndex(Lists.newArrayList(0, 2, 3), adapter.getBitmapIndex("d2", ""));
+      checkBitmapIndex(Lists.newArrayList(0, 2, 3), adapter.getBitmapIndex("d2", null));
+      checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("d6", null));
+      checkBitmapIndex(Lists.newArrayList(2, 3), adapter.getBitmapIndex("d3", null));
+      checkBitmapIndex(Lists.newArrayList(0, 3), adapter.getBitmapIndex("d7", null));
+      checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("d9", null));
+
+    } else {
+      // NULL and EMPTY Strings are considered different
+      Assert.assertArrayEquals(new int[][]{{1}, {1}, {1}, {0}, {0}, {0}, {0}, {0}}, boatList.get(0).getDims());
+      Assert.assertArrayEquals(new int[][]{{0}, {2}, {2}, {0}, {0}, {1}, {1}, {1}}, boatList.get(1).getDims());
+      Assert.assertArrayEquals(new int[][]{{0}, {0}, {0}, {2}, {1}, {2}, {2}, {2}}, boatList.get(2).getDims());
+      Assert.assertArrayEquals(new int[][]{{0}, {0}, {0}, {1}, {2}, {0}, {3}, {3}}, boatList.get(3).getDims());
+
+      checkBitmapIndex(Lists.newArrayList(2, 3), adapter.getBitmapIndex("d2", null));
+      checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("d6", null));
+      checkBitmapIndex(Lists.newArrayList(2, 3), adapter.getBitmapIndex("d3", null));
+      checkBitmapIndex(Lists.newArrayList(), adapter.getBitmapIndex("d7", null));
+      checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("d9", null));
+
+    }
+
+
     checkBitmapIndex(Lists.newArrayList(1), adapter.getBitmapIndex("d2", "210"));
 
-    checkBitmapIndex(Lists.newArrayList(2, 3), adapter.getBitmapIndex("d3", ""));
     checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("d3", "310"));
     checkBitmapIndex(Lists.newArrayList(1), adapter.getBitmapIndex("d3", "311"));
 
-    checkBitmapIndex(Lists.newArrayList(0, 1, 3), adapter.getBitmapIndex("d5", ""));
     checkBitmapIndex(Lists.newArrayList(2), adapter.getBitmapIndex("d5", "520"));
 
-    checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("d6", ""));
     checkBitmapIndex(Lists.newArrayList(2), adapter.getBitmapIndex("d6", "620"));
     checkBitmapIndex(Lists.newArrayList(3), adapter.getBitmapIndex("d6", "621"));
 
-    checkBitmapIndex(Lists.newArrayList(0, 3), adapter.getBitmapIndex("d7", ""));
     checkBitmapIndex(Lists.newArrayList(1), adapter.getBitmapIndex("d7", "710"));
     checkBitmapIndex(Lists.newArrayList(2), adapter.getBitmapIndex("d7", "720"));
 
-    checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("d8", ""));
+    checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("d8", null));
     checkBitmapIndex(Lists.newArrayList(1), adapter.getBitmapIndex("d8", "810"));
     checkBitmapIndex(Lists.newArrayList(2), adapter.getBitmapIndex("d8", "820"));
     checkBitmapIndex(Lists.newArrayList(3), adapter.getBitmapIndex("d8", "821"));
 
-    checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("d9", ""));
     checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("d9", "910"));
     checkBitmapIndex(Lists.newArrayList(1), adapter.getBitmapIndex("d9", "911"));
     checkBitmapIndex(Lists.newArrayList(2), adapter.getBitmapIndex("d9", "920"));
@@ -1420,7 +1464,7 @@ public class IndexMergerTestBase
             1,
             Arrays.asList("d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9"),
             ImmutableMap.<String, Object>of(
-                "d1", "", "d2", "", "d3", "310", "d7", "", "d9", "910"
+                "d3", "310", "d7", "", "d9", "910"
             )
         )
     );
@@ -1429,7 +1473,7 @@ public class IndexMergerTestBase
             1,
             Arrays.asList("d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9"),
             ImmutableMap.<String, Object>of(
-                "d1", "", "d2", "", "d3", "310", "d7", "", "d9", "910"
+                "d3", "310", "d7", "", "d9", "910"
             )
         )
     );
@@ -1444,7 +1488,7 @@ public class IndexMergerTestBase
             1,
             Arrays.asList("d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9"),
             ImmutableMap.<String, Object>of(
-                "d1", "", "d2", "", "d3", "310", "d7", "", "d9", "910"
+                "d3", "310", "d7", "", "d9", "910"
             )
         )
     );
@@ -1453,7 +1497,7 @@ public class IndexMergerTestBase
             4,
             Arrays.asList("d4", "d5", "d6", "d7", "d8", "d9"),
             ImmutableMap.<String, Object>of(
-                "d5", "", "d6", "621", "d7", "", "d8", "821", "d9", "921"
+                "d6", "621", "d7", "", "d8", "821", "d9", "921"
             )
         )
     );
@@ -1496,26 +1540,41 @@ public class IndexMergerTestBase
     final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
     final List<Rowboat> boatList = ImmutableList.copyOf(adapter.getRows());
 
-    Assert.assertEquals(
-        ImmutableList.of("d3", "d6", "d8", "d9"),
-        ImmutableList.copyOf(adapter.getDimensionNames())
-    );
-    Assert.assertEquals(4, boatList.size());
-    Assert.assertArrayEquals(new int[][]{{1}, {0}, {0}, {0}}, boatList.get(0).getDims());
-    Assert.assertArrayEquals(new int[][]{{1}, {0}, {0}, {0}}, boatList.get(1).getDims());
-    Assert.assertArrayEquals(new int[][]{{1}, {0}, {0}, {0}}, boatList.get(2).getDims());
-    Assert.assertArrayEquals(new int[][]{{0}, {1}, {1}, {1}}, boatList.get(3).getDims());
+    if (NullHandlingHelper.useDefaultValuesForNull()) {
+      Assert.assertEquals(
+          ImmutableList.of("d3", "d6", "d8", "d9"),
+          ImmutableList.copyOf(adapter.getDimensionNames())
+      );
+      Assert.assertEquals(4, boatList.size());
+      Assert.assertArrayEquals(new int[][]{{1}, {0}, {0}, {0}}, boatList.get(0).getDims());
+      Assert.assertArrayEquals(new int[][]{{1}, {0}, {0}, {0}}, boatList.get(1).getDims());
+      Assert.assertArrayEquals(new int[][]{{1}, {0}, {0}, {0}}, boatList.get(2).getDims());
+      Assert.assertArrayEquals(new int[][]{{0}, {1}, {1}, {1}}, boatList.get(3).getDims());
+    } else {
+      Assert.assertEquals(
+          ImmutableList.of("d3", "d6", "d7", "d8", "d9"),
+          ImmutableList.copyOf(adapter.getDimensionNames())
+      );
+      Assert.assertEquals(4, boatList.size());
+      Assert.assertArrayEquals(new int[][]{{1}, {0}, {0}, {0}, {0}}, boatList.get(0).getDims());
+      Assert.assertArrayEquals(new int[][]{{1}, {0}, {0}, {0}, {0}}, boatList.get(1).getDims());
+      Assert.assertArrayEquals(new int[][]{{1}, {0}, {0}, {0}, {0}}, boatList.get(2).getDims());
+      Assert.assertArrayEquals(new int[][]{{0}, {1}, {0}, {1}, {1}}, boatList.get(3).getDims());
+      checkBitmapIndex(Lists.newArrayList(), adapter.getBitmapIndex("d7", null));
+      checkBitmapIndex(Lists.newArrayList(0, 1, 2, 3), adapter.getBitmapIndex("d7", ""));
+    }
 
-    checkBitmapIndex(Lists.newArrayList(3), adapter.getBitmapIndex("d3", ""));
+
+    checkBitmapIndex(Lists.newArrayList(3), adapter.getBitmapIndex("d3", null));
     checkBitmapIndex(Lists.newArrayList(0, 1, 2), adapter.getBitmapIndex("d3", "310"));
 
-    checkBitmapIndex(Lists.newArrayList(0, 1, 2), adapter.getBitmapIndex("d6", ""));
+    checkBitmapIndex(Lists.newArrayList(0, 1, 2), adapter.getBitmapIndex("d6", null));
     checkBitmapIndex(Lists.newArrayList(3), adapter.getBitmapIndex("d6", "621"));
 
-    checkBitmapIndex(Lists.newArrayList(0, 1, 2), adapter.getBitmapIndex("d8", ""));
+    checkBitmapIndex(Lists.newArrayList(0, 1, 2), adapter.getBitmapIndex("d8", null));
     checkBitmapIndex(Lists.newArrayList(3), adapter.getBitmapIndex("d8", "821"));
 
-    checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("d9", ""));
+    checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("d9", null));
     checkBitmapIndex(Lists.newArrayList(0, 1, 2), adapter.getBitmapIndex("d9", "910"));
     checkBitmapIndex(Lists.newArrayList(3), adapter.getBitmapIndex("d9", "921"));
   }
@@ -1547,7 +1606,7 @@ public class IndexMergerTestBase
         new MapBasedInputRow(
             1,
             Arrays.asList("dimB", "dimA"),
-            ImmutableMap.<String, Object>of("dimB", "1", "dimA", "")
+            ImmutableMap.<String, Object>of("dimB", "1")
         )
     );
 
@@ -1555,7 +1614,7 @@ public class IndexMergerTestBase
         new MapBasedInputRow(
             1,
             Arrays.asList("dimB", "dimA"),
-            ImmutableMap.<String, Object>of("dimB", "", "dimA", "1")
+            ImmutableMap.<String, Object>of("dimA", "1")
         )
     );
 
@@ -1664,11 +1723,11 @@ public class IndexMergerTestBase
     Assert.assertArrayEquals(new int[][]{{3}, {0}}, boatList.get(4).getDims());
     Assert.assertArrayEquals(new Object[]{2L}, boatList.get(4).getMetrics());
 
-    checkBitmapIndex(Lists.newArrayList(2, 3, 4), adapter.getBitmapIndex("dimA", ""));
+    checkBitmapIndex(Lists.newArrayList(2, 3, 4), adapter.getBitmapIndex("dimA", null));
     checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("dimA", "1"));
     checkBitmapIndex(Lists.newArrayList(1), adapter.getBitmapIndex("dimA", "2"));
 
-    checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("dimB", ""));
+    checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("dimB", null));
     checkBitmapIndex(Lists.newArrayList(2), adapter.getBitmapIndex("dimB", "1"));
     checkBitmapIndex(Lists.newArrayList(3), adapter.getBitmapIndex("dimB", "2"));
     checkBitmapIndex(Lists.newArrayList(4), adapter.getBitmapIndex("dimB", "3"));
@@ -1704,16 +1763,16 @@ public class IndexMergerTestBase
     Assert.assertArrayEquals(new int[][]{{2}, {0}, {0}}, boatList2.get(11).getDims());
     Assert.assertArrayEquals(new Object[]{2L}, boatList2.get(11).getMetrics());
 
-    checkBitmapIndex(Lists.newArrayList(0, 1, 2, 3, 4, 5, 8, 9, 10), adapter2.getBitmapIndex("dimA", ""));
+    checkBitmapIndex(Lists.newArrayList(0, 1, 2, 3, 4, 5, 8, 9, 10), adapter2.getBitmapIndex("dimA", null));
     checkBitmapIndex(Lists.newArrayList(6), adapter2.getBitmapIndex("dimA", "1"));
     checkBitmapIndex(Lists.newArrayList(7, 11), adapter2.getBitmapIndex("dimA", "2"));
 
-    checkBitmapIndex(Lists.newArrayList(0, 1, 2, 6, 7, 11), adapter2.getBitmapIndex("dimB", ""));
+    checkBitmapIndex(Lists.newArrayList(0, 1, 2, 6, 7, 11), adapter2.getBitmapIndex("dimB", null));
     checkBitmapIndex(Lists.newArrayList(3, 8), adapter2.getBitmapIndex("dimB", "1"));
     checkBitmapIndex(Lists.newArrayList(4, 9), adapter2.getBitmapIndex("dimB", "2"));
     checkBitmapIndex(Lists.newArrayList(5, 10), adapter2.getBitmapIndex("dimB", "3"));
 
-    checkBitmapIndex(Lists.newArrayList(3, 4, 5, 6, 7, 8, 9, 10, 11), adapter2.getBitmapIndex("dimC", ""));
+    checkBitmapIndex(Lists.newArrayList(3, 4, 5, 6, 7, 8, 9, 10, 11), adapter2.getBitmapIndex("dimC", null));
     checkBitmapIndex(Lists.newArrayList(0), adapter2.getBitmapIndex("dimC", "1"));
     checkBitmapIndex(Lists.newArrayList(1), adapter2.getBitmapIndex("dimC", "2"));
     checkBitmapIndex(Lists.newArrayList(2), adapter2.getBitmapIndex("dimC", "3"));
@@ -2130,13 +2189,13 @@ public class IndexMergerTestBase
     });
     index1.add(new MapBasedInputRow(
         1L,
-        Lists.newArrayList("d1", "d2"),
+        Lists.newArrayList("d1", "d2", "d3"),
         ImmutableMap.<String, Object>of("d1", "a", "d2", "", "A", 1)
     ));
 
     index1.add(new MapBasedInputRow(
         1L,
-        Lists.newArrayList("d1", "d2"),
+        Lists.newArrayList("d1", "d2", "d3"),
         ImmutableMap.<String, Object>of("d1", "b", "d2", "", "A", 1)
     ));
 
@@ -2150,14 +2209,30 @@ public class IndexMergerTestBase
             )
         )
     );
-    List<String> expectedColumnNames = Arrays.asList("A", "d1");
+    List<String> expectedColumnNames = NullHandlingHelper.useDefaultValuesForNull()
+                                       ? Arrays.asList("A", "d1")
+                                       : Arrays.asList("A", "d1", "d2");
     List<String> actualColumnNames = Lists.newArrayList(index.getColumnNames());
     Collections.sort(expectedColumnNames);
     Collections.sort(actualColumnNames);
     Assert.assertEquals(expectedColumnNames, actualColumnNames);
 
     SmooshedFileMapper sfm = closer.closeLater(SmooshedFileMapper.load(tempDir));
-    List<String> expectedFilenames = Arrays.asList("A", "__time", "d1", "index.drd", "metadata.drd");
+    List<String> expectedFilenames = NullHandlingHelper.useDefaultValuesForNull() ? Arrays.asList(
+        "A",
+        "__time",
+        "d1",
+        "index.drd",
+        "metadata.drd"
+    )
+                                                                                  : Arrays.asList(
+                                                                                      "A",
+                                                                                      "__time",
+                                                                                      "d1",
+                                                                                      "d2",
+                                                                                      "index.drd",
+                                                                                      "metadata.drd"
+                                                                                  );
     List<String> actualFilenames = new ArrayList<>(sfm.getInternalFilenames());
     Collections.sort(expectedFilenames);
     Collections.sort(actualFilenames);
@@ -2341,7 +2416,7 @@ public class IndexMergerTestBase
     Assert.assertArrayEquals(new int[][]{{0, 1, 2}, {0, 1, 2}}, boatList.get(0).getDims());
     Assert.assertArrayEquals(new int[][]{{0, 0, 1, 2}, {0, 1, 2, 2}}, boatList.get(1).getDims());
 
-    checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("dim1", ""));
+    checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("dim1", null));
     checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("dim1", "a"));
     checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("dim1", "b"));
     checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("dim1", "x"));
@@ -2364,7 +2439,7 @@ public class IndexMergerTestBase
     Assert.assertEquals(1, boatList.size());
     Assert.assertArrayEquals(new int[][]{{0, 1, 2}, {0, 1, 2}}, boatList.get(0).getDims());
 
-    checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("dim1", ""));
+    checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("dim1", null));
     checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("dim1", "a"));
     checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("dim1", "b"));
     checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("dim1", "x"));
@@ -2388,7 +2463,7 @@ public class IndexMergerTestBase
     Assert.assertArrayEquals(new int[][]{{0, 1, 2}, {2, 0, 1}}, boatList.get(0).getDims());
     Assert.assertArrayEquals(new int[][]{{2, 0, 0, 1}, {0, 2, 1, 2}}, boatList.get(1).getDims());
 
-    checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("dim1", ""));
+    checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("dim1", null));
     checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("dim1", "a"));
     checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("dim1", "b"));
     checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("dim1", "x"));

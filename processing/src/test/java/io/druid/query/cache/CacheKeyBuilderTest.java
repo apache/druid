@@ -24,8 +24,8 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
-import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.Cacheable;
+import io.druid.java.util.common.StringUtils;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;

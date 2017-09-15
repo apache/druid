@@ -57,6 +57,12 @@ public class TestColumnSelectorFactory implements ColumnSelectorFactory
       {
         return row.get().getFloatMetric(columnName);
       }
+
+      @Override
+      public boolean isNull()
+      {
+        return false;
+      }
     };
   }
 
@@ -70,6 +76,12 @@ public class TestColumnSelectorFactory implements ColumnSelectorFactory
       {
         return row.get().getLongMetric(columnName);
       }
+
+      @Override
+      public boolean isNull()
+      {
+        return row.get().getLongMetric(columnName) == null;
+      }
     };
   }
 
@@ -78,6 +90,7 @@ public class TestColumnSelectorFactory implements ColumnSelectorFactory
   {
     return new ObjectColumnSelector()
     {
+
       @Override
       public Class classOfObject()
       {
@@ -106,7 +119,13 @@ public class TestColumnSelectorFactory implements ColumnSelectorFactory
       @Override
       public double getDouble()
       {
-        return row.get().getFloatMetric(columnName);
+        return row.get().getFloatMetric(columnName).doubleValue();
+      }
+
+      @Override
+      public boolean isNull()
+      {
+        return false;
       }
     };
   }

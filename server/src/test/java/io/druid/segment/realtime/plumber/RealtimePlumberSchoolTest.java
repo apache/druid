@@ -605,21 +605,21 @@ public class RealtimePlumberSchoolTest
       }
 
       @Override
-      public float getFloatMetric(String metric)
+      public Float getFloatMetric(String metric)
       {
-        return 0;
+        return 0F;
       }
 
       @Override
-      public long getLongMetric(String metric)
+      public Long getLongMetric(String metric)
       {
         return 0L;
       }
 
       @Override
-      public double getDoubleMetric(String metric)
+      public Double getDoubleMetric(String metric)
       {
-        return 0;
+        return 0D;
       }
 
       @Override
@@ -665,13 +665,13 @@ public class RealtimePlumberSchoolTest
       }
 
       @Override
-      public float getFloatMetric(String metric)
+      public Float getFloatMetric(String metric)
       {
-        return 0;
+        return 0F;
       }
 
       @Override
-      public long getLongMetric(String metric)
+      public Long getLongMetric(String metric)
       {
         return 0L;
       }
@@ -683,9 +683,9 @@ public class RealtimePlumberSchoolTest
       }
 
       @Override
-      public double getDoubleMetric(String metric)
+      public Double getDoubleMetric(String metric)
       {
-        return 0;
+        return 0D;
       }
 
       @Override
