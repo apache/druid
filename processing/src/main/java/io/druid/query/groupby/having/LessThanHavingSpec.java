@@ -55,6 +55,10 @@ public class LessThanHavingSpec extends BaseHavingSpec
   @Override
   public boolean eval(Row row)
   {
+    Object metricVal = row.getRaw(aggregationName);
+    if (metricVal == null || value == null) {
+      return false;
+    }
     return HavingSpecMetricComparator.compare(row, aggregationName, value) < 0;
   }
 

@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.data.IndexedInts;
 
 import java.nio.ByteBuffer;
@@ -48,7 +49,7 @@ public class StringGroupByColumnSelectorStrategy implements GroupByColumnSelecto
           ((DimensionSelector) selectorPlus.getSelector()).lookupName(id)
       );
     } else {
-      resultMap.put(selectorPlus.getOutputName(), "");
+      resultMap.put(selectorPlus.getOutputName(), NullHandlingHelper.nullToDefault((String) null));
     }
   }
 

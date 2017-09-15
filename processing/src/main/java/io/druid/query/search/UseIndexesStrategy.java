@@ -20,7 +20,6 @@
 package io.druid.query.search;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.BitmapFactory;
@@ -261,7 +260,7 @@ public class UseIndexesStrategy extends SearchStrategy
           extractionFn = IdentityExtractionFn.getInstance();
         }
         for (int i = 0; i < bitmapIndex.getCardinality(); ++i) {
-          String dimVal = Strings.nullToEmpty(extractionFn.apply(bitmapIndex.getValue(i)));
+          String dimVal = extractionFn.apply(bitmapIndex.getValue(i));
           if (!searchQuerySpec.accept(dimVal)) {
             continue;
           }
