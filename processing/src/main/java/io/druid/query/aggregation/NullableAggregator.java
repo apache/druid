@@ -17,72 +17,72 @@
  * under the License.
  */
 
-package io.druid.query.aggregation.distinctcount;
+package io.druid.query.aggregation;
 
-import io.druid.collections.bitmap.MutableBitmap;
-import io.druid.query.aggregation.Aggregator;
-import io.druid.segment.DimensionSelector;
-import io.druid.segment.NullHandlingHelper;
+import io.druid.segment.ColumnValueSelector;
 
-public class DistinctCountAggregator implements Aggregator
+public class NullableAggregator implements Aggregator
 {
+  private final Aggregator delegate;
+  private final ColumnValueSelector selector;
+  private boolean isNull;
 
-  private final DimensionSelector selector;
-  private final MutableBitmap mutableBitmap;
-
-  public DistinctCountAggregator(
-      DimensionSelector selector,
-      MutableBitmap mutableBitmap
-  )
+  public NullableAggregator(Aggregator delegate, ColumnValueSelector selector)
   {
+    this.delegate = delegate;
     this.selector = selector;
-    this.mutableBitmap = mutableBitmap;
+    reset();
   }
 
   @Override
   public void aggregate()
   {
-    boolean countNulls = NullHandlingHelper.useDefaultValuesForNull();
-    for (final Integer index : selector.getRow()) {
-      if (countNulls || selector.lookupName(index) != null) {
-        mutableBitmap.add(index);
-      }
+    if (isNull && !selector.isNull()) {
+      isNull = false;
     }
+    delegate.aggregate();
   }
 
   @Override
   public void reset()
   {
-    mutableBitmap.clear();
+    isNull = true;
+    delegate.reset();
   }
 
   @Override
   public Object get()
   {
-    return mutableBitmap.size();
+    return delegate.get();
   }
 
   @Override
   public float getFloat()
   {
-    return (float) mutableBitmap.size();
-  }
-
-  @Override
-  public void close()
-  {
-    mutableBitmap.clear();
+    return delegate.getFloat();
   }
 
   @Override
   public long getLong()
   {
-    return (long) mutableBitmap.size();
+    return delegate.getLong();
   }
 
   @Override
   public double getDouble()
   {
-    return (double) mutableBitmap.size();
+    return delegate.getDouble();
+  }
+
+  @Override
+  public boolean isNull()
+  {
+    return isNull;
+  }
+
+  @Override
+  public void close()
+  {
+    delegate.close();
   }
 }

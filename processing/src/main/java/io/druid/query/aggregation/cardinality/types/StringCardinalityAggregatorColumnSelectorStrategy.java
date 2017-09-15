@@ -23,12 +23,14 @@ import com.google.common.hash.Hasher;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.query.aggregation.cardinality.CardinalityAggregator;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.data.IndexedInts;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
 import java.util.Arrays;
 
-public class StringCardinalityAggregatorColumnSelectorStrategy implements CardinalityAggregatorColumnSelectorStrategy<DimensionSelector>
+public class StringCardinalityAggregatorColumnSelectorStrategy
+    implements CardinalityAggregatorColumnSelectorStrategy<DimensionSelector>
 {
   public static final String CARDINALITY_AGG_NULL_STRING = "\u0000";
   public static final char CARDINALITY_AGG_SEPARATOR = '\u0001';
@@ -41,20 +43,28 @@ public class StringCardinalityAggregatorColumnSelectorStrategy implements Cardin
     // nothing to add to hasher if size == 0, only handle size == 1 and size != 0 cases.
     if (size == 1) {
       final String value = dimSelector.lookupName(row.get(0));
-      hasher.putUnencodedChars(nullToSpecial(value));
+      if (NullHandlingHelper.useDefaultValuesForNull() || value != null) {
+        hasher.putUnencodedChars(nullToSpecial(value));
+      }
     } else if (size != 0) {
+      boolean hasNonNullValue = false;
       final String[] values = new String[size];
       for (int i = 0; i < size; ++i) {
         final String value = dimSelector.lookupName(row.get(i));
+        if (!NullHandlingHelper.useDefaultValuesForNull() && !hasNonNullValue && value != null) {
+          hasNonNullValue = true;
+        }
         values[i] = nullToSpecial(value);
       }
-      // Values need to be sorted to ensure consistent multi-value ordering across different segments
-      Arrays.sort(values);
-      for (int i = 0; i < size; ++i) {
-        if (i != 0) {
-          hasher.putChar(CARDINALITY_AGG_SEPARATOR);
+      if (NullHandlingHelper.useDefaultValuesForNull() || hasNonNullValue) {
+        // Values need to be sorted to ensure consistent multi-value ordering across different segments
+        Arrays.sort(values);
+        for (int i = 0; i < size; ++i) {
+          if (i != 0) {
+            hasher.putChar(CARDINALITY_AGG_SEPARATOR);
+          }
+          hasher.putUnencodedChars(values[i]);
         }
-        hasher.putUnencodedChars(values[i]);
       }
     }
   }
@@ -65,7 +75,9 @@ public class StringCardinalityAggregatorColumnSelectorStrategy implements Cardin
     for (IntIterator rowIt = dimSelector.getRow().iterator(); rowIt.hasNext(); ) {
       int index = rowIt.nextInt();
       final String value = dimSelector.lookupName(index);
-      collector.add(CardinalityAggregator.hashFn.hashUnencodedChars(nullToSpecial(value)).asBytes());
+      if (NullHandlingHelper.useDefaultValuesForNull() || value != null) {
+        collector.add(CardinalityAggregator.hashFn.hashUnencodedChars(nullToSpecial(value)).asBytes());
+      }
     }
   }
 

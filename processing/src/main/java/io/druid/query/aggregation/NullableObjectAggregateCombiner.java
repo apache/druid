@@ -19,16 +19,49 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.ColumnValueSelector;
 
-/**
- * Specialization of {@link AggregateCombiner} for object aggregations.
- */
-public abstract class ObjectAggregateCombiner<T> implements AggregateCombiner, ObjectColumnSelector<T>
+public class NullableObjectAggregateCombiner extends ObjectAggregateCombiner
 {
+  private boolean isNull;
+
+  private ObjectAggregateCombiner delegate;
+
+  public NullableObjectAggregateCombiner(ObjectAggregateCombiner delegate)
+  {
+    this.delegate = delegate;
+  }
+
+  @Override
+  public void reset(ColumnValueSelector selector)
+  {
+    isNull = true;
+  }
+
+  @Override
+  public void fold(ColumnValueSelector selector)
+  {
+    if (isNull && !selector.isNull()) {
+      isNull = true;
+    }
+    delegate.fold(selector);
+  }
+
+  @Override
+  public Class classOfObject()
+  {
+    return delegate.classOfObject();
+  }
+
+  @Override
+  public Object get()
+  {
+    return delegate.get();
+  }
+
   @Override
   public boolean isNull()
   {
-    return false;
+    return isNull;
   }
 }

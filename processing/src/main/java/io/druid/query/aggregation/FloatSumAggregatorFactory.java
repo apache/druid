@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.NullHandlingHelper;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -53,13 +55,18 @@ public class FloatSumAggregatorFactory extends SimpleFloatAggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new FloatSumAggregator(getFloatColumnSelector(metricFactory, 0.0f));
+    FloatColumnSelector floatColumnSelector = getFloatColumnSelector(metricFactory, 0.0f);
+    return NullHandlingHelper.getNullableAggregator(new FloatSumAggregator(floatColumnSelector), floatColumnSelector);
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new FloatSumBufferAggregator(getFloatColumnSelector(metricFactory, 0.0f));
+    FloatColumnSelector floatColumnSelector = getFloatColumnSelector(metricFactory, 0.0f);
+    return NullHandlingHelper.getNullableAggregator(
+        new FloatSumBufferAggregator(floatColumnSelector),
+        floatColumnSelector
+    );
   }
 
   @Override
@@ -71,7 +78,7 @@ public class FloatSumAggregatorFactory extends SimpleFloatAggregatorFactory
   @Override
   public AggregateCombiner makeAggregateCombiner()
   {
-    return new DoubleSumAggregateCombiner();
+    return NullHandlingHelper.getNullableCombiner(new DoubleSumAggregateCombiner());
   }
 
   @Override

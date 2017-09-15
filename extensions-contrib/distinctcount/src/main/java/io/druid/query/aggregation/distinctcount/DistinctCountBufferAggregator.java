@@ -24,6 +24,7 @@ import io.druid.collections.bitmap.WrappedRoaringBitmap;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.NullHandlingHelper;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
@@ -50,9 +51,12 @@ public class DistinctCountBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
+    boolean countNulls = NullHandlingHelper.useDefaultValuesForNull();
     MutableBitmap mutableBitmap = getMutableBitmap(buf, position);
     for (final Integer index : selector.getRow()) {
-      mutableBitmap.add(index);
+      if (countNulls || selector.lookupName(index) != null) {
+        mutableBitmap.add(index);
+      }
     }
     buf.putLong(position, mutableBitmap.size());
   }

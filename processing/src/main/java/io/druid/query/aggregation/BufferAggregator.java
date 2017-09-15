@@ -178,4 +178,27 @@ public interface BufferAggregator extends HotLoopCallee
   {
   }
 
+  /**
+   * Returns true if the aggregator is nullable and the aggregated value is null
+   * <p>
+   * <p>
+   * <b>Implementations must not change the position, limit or mark of the given buffer</b>
+   * <p>
+   * Implementations are only required to support this method if they the aggregator supports null values.
+   * If it doesn't support null always returning false is recommended.
+   * <p>
+   * The default implementation always returns false.
+   * This default method is added to enable smooth backward compatibility, please re-implement it if your aggregators
+   * support null values
+   *
+   * @param buf      byte buffer storing the byte array representation of the aggregate
+   * @param position offset within the byte buffer at which the aggregate value is stored
+   *
+   * @return true if the aggrgeated value is null otherwise false.
+   */
+  default boolean isNull(ByteBuffer buf, int position)
+  {
+    return false;
+  }
+
 }

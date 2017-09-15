@@ -26,16 +26,18 @@ import com.google.common.primitives.Longs;
 import com.metamx.common.StringUtils;
 import io.druid.collections.SerializablePair;
 import io.druid.java.util.common.UOE;
+import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
-import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.first.FloatFirstAggregatorFactory;
 import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.Column;
 
@@ -67,20 +69,23 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new FloatLastAggregator(
+
+    FloatColumnSelector floatColumnSelector = metricFactory.makeFloatColumnSelector(fieldName);
+    return NullHandlingHelper.getNullableAggregator(new FloatLastAggregator(
         name,
         metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME),
-        metricFactory.makeFloatColumnSelector(fieldName)
-    );
+        floatColumnSelector
+    ), floatColumnSelector);
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new FloatLastBufferAggregator(
+    FloatColumnSelector floatColumnSelector = metricFactory.makeFloatColumnSelector(fieldName);
+    return NullHandlingHelper.getNullableAggregator(new FloatLastBufferAggregator(
         metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME),
-        metricFactory.makeFloatColumnSelector(fieldName)
-    );
+        floatColumnSelector
+    ), floatColumnSelector);
   }
 
   @Override
@@ -110,7 +115,7 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
       public Aggregator factorize(ColumnSelectorFactory metricFactory)
       {
         final ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(name);
-        return new FloatLastAggregator(name, null, null)
+        return NullHandlingHelper.getNullableAggregator(new FloatLastAggregator(name, null, null)
         {
           @Override
           public void aggregate()
@@ -121,14 +126,14 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
               lastValue = pair.rhs;
             }
           }
-        };
+        }, selector);
       }
 
       @Override
       public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
       {
         final ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(name);
-        return new FloatLastBufferAggregator(null, null)
+        return NullHandlingHelper.getNullableAggregator(new FloatLastBufferAggregator(null, null)
         {
           @Override
           public void aggregate(ByteBuffer buf, int position)
@@ -146,7 +151,7 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
           {
             inspector.visit("selector", selector);
           }
-        };
+        }, selector);
       }
     };
   }
@@ -220,7 +225,7 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return Long.BYTES + Float.BYTES;
+    return Long.BYTES + Float.BYTES + (NullHandlingHelper.useDefaultValuesForNull() ? 0 : Byte.BYTES);
   }
 
   @Override

@@ -21,6 +21,7 @@ package io.druid.query.aggregation;
 
 import io.druid.guice.annotations.ExtensionPoint;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 
 /**
@@ -37,6 +38,8 @@ public interface Aggregator extends Closeable
 {
   void aggregate();
   void reset();
+
+  @Nullable
   Object get();
   float getFloat();
   long getLong();
@@ -49,6 +52,15 @@ public interface Aggregator extends Closeable
   default double getDouble()
   {
     return (double) getFloat();
+  }
+
+  /**
+   * returns true if the Aggregator support returning null values and the aggregated value is Null.
+   * The default implementation always return false to enable smooth backward compatibility. re-implement if your aggregator is nullable.
+   */
+  default boolean isNull()
+  {
+    return false;
   }
 
   @Override

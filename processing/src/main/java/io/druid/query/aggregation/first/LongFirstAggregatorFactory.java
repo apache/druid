@@ -26,14 +26,16 @@ import com.google.common.primitives.Longs;
 import com.metamx.common.StringUtils;
 import io.druid.collections.SerializablePair;
 import io.druid.java.util.common.UOE;
+import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
-import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.LongColumnSelector;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.Column;
 
@@ -69,20 +71,22 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new LongFirstAggregator(
+    LongColumnSelector longColumnSelector = metricFactory.makeLongColumnSelector(fieldName);
+    return NullHandlingHelper.getNullableAggregator(new LongFirstAggregator(
         name,
         metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME),
-        metricFactory.makeLongColumnSelector(fieldName)
-    );
+        longColumnSelector
+    ), longColumnSelector);
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new LongFirstBufferAggregator(
+    LongColumnSelector longColumnSelector = metricFactory.makeLongColumnSelector(fieldName);
+    return NullHandlingHelper.getNullableAggregator(new LongFirstBufferAggregator(
         metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME),
-        metricFactory.makeLongColumnSelector(fieldName)
-    );
+        longColumnSelector
+    ), longColumnSelector);
   }
 
   @Override
@@ -112,7 +116,7 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
       public Aggregator factorize(ColumnSelectorFactory metricFactory)
       {
         final ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(name);
-        return new LongFirstAggregator(name, null, null)
+        return NullHandlingHelper.getNullableAggregator(new LongFirstAggregator(name, null, null)
         {
           @Override
           public void aggregate()
@@ -123,14 +127,14 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
               firstValue = pair.rhs;
             }
           }
-        };
+        }, selector);
       }
 
       @Override
       public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
       {
         final ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(name);
-        return new LongFirstBufferAggregator(null, null)
+        return NullHandlingHelper.getNullableAggregator(new LongFirstBufferAggregator(null, null)
         {
           @Override
           public void aggregate(ByteBuffer buf, int position)
@@ -148,7 +152,7 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
           {
             inspector.visit("selector", selector);
           }
-        };
+        }, selector);
       }
     };
   }
@@ -221,7 +225,7 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return Long.BYTES * 2;
+    return Long.BYTES * 2 + (NullHandlingHelper.useDefaultValuesForNull() ? 0 : Byte.BYTES);
   }
 
   @Override

@@ -66,4 +66,10 @@ public interface AggregateCombiner extends ColumnValueSelector
    * @see AggregatorFactory#combine
    */
   void fold(ColumnValueSelector selector);
+
+  @Override
+  default boolean isNull()
+  {
+    return false;
+  }
 }

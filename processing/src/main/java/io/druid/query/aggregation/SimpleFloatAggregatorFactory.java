@@ -25,6 +25,7 @@ import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.NullHandlingHelper;
 
 import java.util.Collections;
 import java.util.Comparator;
@@ -80,7 +81,7 @@ public abstract class SimpleFloatAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return Float.BYTES;
+    return Float.BYTES + (NullHandlingHelper.useDefaultValuesForNull() ? 0 : Byte.BYTES);
   }
 
   @Override

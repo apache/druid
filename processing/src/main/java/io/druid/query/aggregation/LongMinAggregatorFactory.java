@@ -22,6 +22,7 @@ package io.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
 import io.druid.java.util.common.StringUtils;
@@ -30,6 +31,7 @@ import io.druid.math.expr.Parser;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.LongColumnSelector;
+import io.druid.segment.NullHandlingHelper;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -68,6 +70,7 @@ public class LongMinAggregatorFactory extends AggregatorFactory
     this.macroTable = macroTable;
   }
 
+  @VisibleForTesting
   public LongMinAggregatorFactory(String name, String fieldName)
   {
     this(name, fieldName, null, ExprMacroTable.nil());
@@ -76,13 +79,18 @@ public class LongMinAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new LongMinAggregator(getLongColumnSelector(metricFactory));
+    LongColumnSelector longColumnSelector = getLongColumnSelector(metricFactory);
+    return NullHandlingHelper.getNullableAggregator(new LongMinAggregator(longColumnSelector), longColumnSelector);
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new LongMinBufferAggregator(getLongColumnSelector(metricFactory));
+    LongColumnSelector longColumnSelector = getLongColumnSelector(metricFactory);
+    return NullHandlingHelper.getNullableAggregator(
+        new LongMinBufferAggregator(longColumnSelector),
+        longColumnSelector
+    );
   }
 
   private LongColumnSelector getLongColumnSelector(ColumnSelectorFactory metricFactory)
@@ -105,7 +113,7 @@ public class LongMinAggregatorFactory extends AggregatorFactory
   @Override
   public AggregateCombiner makeAggregateCombiner()
   {
-    return new LongAggregateCombiner()
+    return NullHandlingHelper.getNullableCombiner(new LongAggregateCombiner()
     {
       private long min;
 
@@ -126,7 +134,7 @@ public class LongMinAggregatorFactory extends AggregatorFactory
       {
         return min;
       }
-    };
+    });
   }
 
   @Override
@@ -213,7 +221,7 @@ public class LongMinAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return Longs.BYTES;
+    return Longs.BYTES + (NullHandlingHelper.useDefaultValuesForNull() ? 0 : Byte.BYTES);
   }
 
   @Override
