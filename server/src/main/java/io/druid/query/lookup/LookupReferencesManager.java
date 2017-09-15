@@ -345,7 +345,7 @@ public class LookupReferencesManager
   private void loadAllLookupsAndInitStateRef()
   {
     List<LookupBean> lookupBeanList = new ArrayList<>();
-    if (!lookupConfig.getDisableLookupSyncOnStartup()) {
+    if (lookupConfig.getEnableLookupSyncOnStartup()) {
       String tier = lookupListeningAnnouncerConfig.getLookupTier();
       lookupBeanList = getLookupListFromCoordinator(tier);
       if (lookupBeanList == null) {
