@@ -1523,9 +1523,8 @@ public class IndexMergerTestBase
   private void checkBitmapIndex(ArrayList<Integer> expected, IndexedInts real)
   {
     Assert.assertEquals(expected.size(), real.size());
-    int i = 0;
-    for (Object index : real) {
-      Assert.assertEquals(expected.get(i++), index);
+    for (int i = 0; i < real.size(); i++) {
+      Assert.assertEquals(expected.get(i), (Integer) real.get(i));
     }
   }
 

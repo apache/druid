@@ -22,8 +22,6 @@ package io.druid.segment.data;
 import com.google.common.collect.Ordering;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.IntIteratorUtils;
-import it.unimi.dsi.fastutil.ints.IntIterator;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -80,12 +78,6 @@ public class BitmapCompressedIndexedInts implements IndexedInts, Comparable<Immu
   public ImmutableBitmap getImmutableBitmap()
   {
     return immutableBitmap;
-  }
-
-  @Override
-  public IntIterator iterator()
-  {
-    return IntIteratorUtils.fromRoaringBitmapIntIterator(immutableBitmap.iterator());
   }
 
   @Override

@@ -29,7 +29,6 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DimensionHandler;
 import io.druid.segment.DimensionIndexer;
 import io.druid.segment.IndexableAdapter;
-import io.druid.segment.IntIteratorUtils;
 import io.druid.segment.Metadata;
 import io.druid.segment.Rowboat;
 import io.druid.segment.column.ColumnCapabilities;
@@ -37,7 +36,6 @@ import io.druid.segment.data.EmptyIndexedInts;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.ListIndexed;
-import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.joda.time.Interval;
 
 import java.io.IOException;
@@ -283,12 +281,6 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     {
       // Slow for concise bitmaps, but is fast with roaring bitmaps, so it's just not supported.
       throw new UnsupportedOperationException("Not supported.");
-    }
-
-    @Override
-    public IntIterator iterator()
-    {
-      return IntIteratorUtils.fromRoaringBitmapIntIterator(bitmapIndex.iterator());
     }
 
     @Override
