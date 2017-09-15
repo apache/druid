@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.StringUtils;
 import io.druid.query.QueryInterruptedException;
 import io.druid.server.DruidNode;
 import org.eclipse.jetty.server.Response;
@@ -75,9 +74,10 @@ public class PreResponseAuthorizationCheckFilter implements Filter
   ) throws IOException, ServletException
   {
     final HttpServletResponse response = (HttpServletResponse) servletResponse;
+    final HttpServletRequest request = (HttpServletRequest) servletRequest;
 
     if (servletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT) == null) {
-      handleUnauthenticatedRequest((HttpServletRequest) servletRequest, response);
+      handleUnauthenticatedRequest(response);
       return;
     }
 
@@ -85,22 +85,22 @@ public class PreResponseAuthorizationCheckFilter implements Filter
 
     Boolean authInfoChecked = (Boolean) servletRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED);
     if (authInfoChecked == null && !errorOverridesMissingAuth(response.getStatus())) {
-      String errorMsg = StringUtils.format(
-          "Request did not have an authorization check performed: %s",
-          ((HttpServletRequest) servletRequest).getRequestURI()
-      );
       // Note: rather than throwing an exception here, it would be nice to blank out the original response
       // since the request didn't have any authorization checks performed. However, this breaks proxying
       // (e.g. OverlordServletProxy), so this is not implemented for now.
-      handleAuthorizationCheckError(errorMsg, servletResponse);
+      handleAuthorizationCheckError(
+          "Request did not have an authorization check performed.",
+          request,
+          response
+      );
     }
 
     if (authInfoChecked != null && !authInfoChecked && response.getStatus() != Response.SC_FORBIDDEN) {
-      String errorMsg = StringUtils.format(
-          "Request's authorization check failed but status code was not 403: %s",
-          ((HttpServletRequest) servletRequest).getRequestURI()
+      handleAuthorizationCheckError(
+          "Request's authorization check failed but status code was not 403.",
+          request,
+          response
       );
-      handleAuthorizationCheckError(errorMsg, servletResponse);
     }
   }
 
@@ -111,7 +111,6 @@ public class PreResponseAuthorizationCheckFilter implements Filter
   }
 
   private void handleUnauthenticatedRequest(
-      final HttpServletRequest request,
       final HttpServletResponse response
   ) throws IOException
   {
@@ -141,16 +140,23 @@ public class PreResponseAuthorizationCheckFilter implements Filter
     return;
   }
 
-  private void handleAuthorizationCheckError(String errorMsg, ServletResponse servletResponse)
+  private void handleAuthorizationCheckError(
+      String errorMsg,
+      HttpServletRequest servletRequest,
+      HttpServletResponse servletResponse
+  )
   {
     // Send out an alert so there's a centralized collection point for seeing errors of this nature
-    log.makeAlert(errorMsg).emit();
+    log.makeAlert(errorMsg)
+       .addData("uri", servletRequest.getRequestURI())
+       .addData("method", servletRequest.getMethod())
+       .emit();
 
     if (servletResponse.isCommitted()) {
       throw new ISE(errorMsg);
     } else {
       try {
-        ((HttpServletResponse) servletResponse).sendError(Response.SC_FORBIDDEN);
+        servletResponse.sendError(Response.SC_FORBIDDEN);
       }
       catch (Exception e) {
         throw new RuntimeException(e);

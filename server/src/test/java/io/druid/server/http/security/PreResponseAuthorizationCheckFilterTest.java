@@ -101,7 +101,7 @@ public class PreResponseAuthorizationCheckFilterTest
     EmittingLogger.registerEmitter(EasyMock.createNiceMock(ServiceEmitter.class));
 
     expectedException.expect(ISE.class);
-    expectedException.expectMessage("Request did not have an authorization check performed: uri");
+    expectedException.expectMessage("Request did not have an authorization check performed.");
 
     AuthenticationResult authenticationResult = new AuthenticationResult("so-very-valid", "so-very-valid");
 
@@ -114,6 +114,7 @@ public class PreResponseAuthorizationCheckFilterTest
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
     EasyMock.expect(resp.getStatus()).andReturn(200).once();
     EasyMock.expect(req.getRequestURI()).andReturn("uri").once();
+    EasyMock.expect(req.getMethod()).andReturn("GET").once();
     EasyMock.expect(resp.isCommitted()).andReturn(true).once();
     resp.setStatus(403);
     EasyMock.expectLastCall().once();

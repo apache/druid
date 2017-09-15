@@ -23,7 +23,9 @@ For example, the following authentication chain definition enables the Kerberos 
 druid.auth.authenticationChain=["kerberos", "basic"]
 ```
 
-A request will pass through all Authenticators in the chain, unless one of the Authenticators sends an HTTP error response. If no Authenticator in the chain successfully authenticated a request, an HTTP error response will be sent.
+A request will pass through all Authenticators in the chain, until one of the Authenticators successfully authenticates the request or sends an HTTP error response. Authenticators later in the chain will be skipped after the first successful authentication or if the request is terminated with an error response.
+
+If no Authenticator in the chain successfully authenticated a request or sent an HTTP error response, an HTTP error response will be sent at the end of the chain.
 
 Druid includes a built-in Authenticator, used for the default unsecured configuration.
 
