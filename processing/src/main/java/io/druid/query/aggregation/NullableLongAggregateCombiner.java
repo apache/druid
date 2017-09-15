@@ -23,7 +23,7 @@ import io.druid.segment.ColumnValueSelector;
 
 public class NullableLongAggregateCombiner extends LongAggregateCombiner
 {
-  private boolean isNull;
+  private boolean isNull = true;
 
   private LongAggregateCombiner delegate;
 

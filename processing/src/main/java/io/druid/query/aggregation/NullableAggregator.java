@@ -31,7 +31,6 @@ public class NullableAggregator implements Aggregator
   {
     this.delegate = delegate;
     this.selector = selector;
-    reset();
   }
 
   @Override
