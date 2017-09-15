@@ -249,6 +249,7 @@ public class DatasourcesResource
 
   @DELETE
   @Path("/{dataSourceName}/intervals/{interval}")
+  @ResourceFilters(DatasourceResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
   public Response deleteDataSourceSpecificInterval(
       @PathParam("dataSourceName") final String dataSourceName,
