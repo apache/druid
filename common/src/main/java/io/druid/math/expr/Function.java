@@ -902,6 +902,9 @@ interface Function
           final String s = args.get(i).eval(bindings).asString();
           if (s != null) {
             builder.append(s);
+          } else {
+            // Result of concatenation is null if any of the Values is null.
+            return ExprEval.of(null);
           }
         }
         return ExprEval.of(builder.toString());
@@ -961,7 +964,7 @@ interface Function
           return ExprEval.of(arg.substring(index));
         }
       } else {
-        return ExprEval.of(null);
+        return ExprEval.of("");
       }
     }
   }
@@ -984,8 +987,11 @@ interface Function
       final String arg = args.get(0).eval(bindings).asString();
       final String pattern = args.get(1).eval(bindings).asString();
       final String replacement = args.get(2).eval(bindings).asString();
+      if (arg == null) {
+        return ExprEval.of(null);
+      }
       return ExprEval.of(
-          Strings.nullToEmpty(arg).replace(Strings.nullToEmpty(pattern), Strings.nullToEmpty(replacement))
+          arg.replace(Strings.nullToEmpty(pattern), Strings.nullToEmpty(replacement))
       );
     }
   }
@@ -1006,7 +1012,10 @@ interface Function
       }
 
       final String arg = args.get(0).eval(bindings).asString();
-      return ExprEval.of(StringUtils.toLowerCase(Strings.nullToEmpty(arg)));
+      if (arg == null) {
+        return ExprEval.of(null);
+      }
+      return ExprEval.of(StringUtils.toLowerCase(arg));
     }
   }
 
@@ -1026,7 +1035,10 @@ interface Function
       }
 
       final String arg = args.get(0).eval(bindings).asString();
-      return ExprEval.of(StringUtils.toUpperCase(Strings.nullToEmpty(arg)));
+      if (arg == null) {
+        return ExprEval.of(null);
+      }
+      return ExprEval.of(StringUtils.toUpperCase(arg));
     }
   }
 }

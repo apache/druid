@@ -20,7 +20,6 @@
 package io.druid.math.expr;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 import io.druid.common.guava.GuavaUtils;
@@ -230,7 +229,7 @@ public abstract class ExprEval<T>
   {
     private StringExprEval(String value)
     {
-      super(Strings.emptyToNull(value));
+      super(value);
     }
 
     @Override

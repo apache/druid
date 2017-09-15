@@ -29,6 +29,7 @@ import io.druid.math.expr.Parser;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
@@ -97,13 +98,13 @@ public class ExpressionObjectSelector implements ObjectColumnSelector<ExprEval>
       final IndexedInts row = selector.getRow();
       if (row.size() == 0) {
         // Treat empty multi-value rows as nulls.
-        return null;
+        return NullHandlingHelper.nullToDefault((String) null);
       } else if (row.size() == 1) {
-        return selector.lookupName(row.get(0));
+        return NullHandlingHelper.nullToDefault(selector.lookupName(row.get(0)));
       } else {
         // Can't handle multi-value rows in expressions.
         // Treat them as nulls until we think of something better to do.
-        return null;
+        return NullHandlingHelper.nullToDefault((String) null);
       }
     };
   }
@@ -124,10 +125,12 @@ public class ExpressionObjectSelector implements ObjectColumnSelector<ExprEval>
       // Might be Numbers and Strings. Use a selector that double-checks.
       return () -> {
         final Object val = selector.get();
-        if (val instanceof Number || val instanceof String) {
+        if (val instanceof String) {
+          return NullHandlingHelper.nullToDefault((String) val);
+        } else if (val instanceof Number) {
           return val;
         } else {
-          return null;
+          return NullHandlingHelper.nullToDefault((String) null);
         }
       };
     } else {

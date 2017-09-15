@@ -19,7 +19,6 @@
 
 package io.druid.sql.calcite.expression;
 
-import com.google.common.collect.ImmutableList;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.sql.calcite.planner.PlannerContext;
@@ -31,6 +30,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 
+import java.util.Arrays;
 import java.util.stream.Collectors;
 
 public class CeilOperatorConversion implements SqlOperatorConversion
@@ -76,7 +76,7 @@ public class CeilOperatorConversion implements SqlOperatorConversion
       // So there is no simple extraction for this operator.
       return DruidExpression.fromFunctionCall(
           "timestamp_ceil",
-          ImmutableList.of(
+          Arrays.asList(
               druidExpression.getExpression(),
               DruidExpression.stringLiteral(granularity.getPeriod().toString()),
               DruidExpression.numberLiteral(

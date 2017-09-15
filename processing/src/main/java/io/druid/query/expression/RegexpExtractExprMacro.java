@@ -19,11 +19,11 @@
 
 package io.druid.query.expression;
 
-import com.google.common.base.Strings;
 import io.druid.java.util.common.IAE;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprEval;
 import io.druid.math.expr.ExprMacroTable;
+import io.druid.segment.NullHandlingHelper;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -63,9 +63,10 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public ExprEval eval(final ObjectBinding bindings)
       {
-        final Matcher matcher = pattern.matcher(Strings.nullToEmpty(arg.eval(bindings).asString()));
+        String s = arg.eval(bindings).asString();
+        final Matcher matcher = pattern.matcher(NullHandlingHelper.nullToDefault(s));
         final String retVal = matcher.find() ? matcher.group(index) : null;
-        return ExprEval.of(Strings.emptyToNull(retVal));
+        return ExprEval.of(NullHandlingHelper.defaultToNull(retVal));
       }
 
       @Override

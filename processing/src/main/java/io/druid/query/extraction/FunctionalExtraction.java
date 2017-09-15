@@ -22,6 +22,7 @@ package io.druid.query.extraction;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import io.druid.segment.NullHandlingHelper;
 
 import javax.annotation.Nullable;
 
@@ -52,9 +53,9 @@ public abstract class FunctionalExtraction extends DimExtractionFn
   )
   {
     this.retainMissingValue = retainMissingValue;
-    this.replaceMissingValueWith = Strings.emptyToNull(replaceMissingValueWith);
+    this.replaceMissingValueWith = NullHandlingHelper.defaultToNull(replaceMissingValueWith);
     Preconditions.checkArgument(
-        !(this.retainMissingValue && !Strings.isNullOrEmpty(this.replaceMissingValueWith)),
+        !(this.retainMissingValue && !(this.replaceMissingValueWith == null)),
         "Cannot specify a [replaceMissingValueWith] and set [retainMissingValue] to true"
     );
 
@@ -79,8 +80,10 @@ public abstract class FunctionalExtraction extends DimExtractionFn
         @Override
         public String apply(@Nullable String dimValue)
         {
-          final String retval = extractionFunction.apply(dimValue);
-          return Strings.isNullOrEmpty(retval) ? FunctionalExtraction.this.replaceMissingValueWith : retval;
+          final String retval = NullHandlingHelper.defaultToNull(extractionFunction.apply(dimValue));
+          return retval == null
+                 ? FunctionalExtraction.this.replaceMissingValueWith
+                 : retval;
         }
       };
     }

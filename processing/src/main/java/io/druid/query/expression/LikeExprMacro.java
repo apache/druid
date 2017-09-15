@@ -19,13 +19,13 @@
 
 package io.druid.query.expression;
 
-import com.google.common.base.Strings;
 import io.druid.java.util.common.IAE;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprEval;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.ExprType;
 import io.druid.query.filter.LikeDimFilter;
+import io.druid.segment.NullHandlingHelper;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -63,7 +63,7 @@ public class LikeExprMacro implements ExprMacroTable.ExprMacro
     }
 
     final LikeDimFilter.LikeMatcher likeMatcher = LikeDimFilter.LikeMatcher.from(
-        Strings.nullToEmpty((String) patternExpr.getLiteralValue()),
+        NullHandlingHelper.nullToDefault((String) patternExpr.getLiteralValue()),
         escapeChar
     );
 

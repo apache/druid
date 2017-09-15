@@ -20,7 +20,6 @@
 package io.druid.math.expr;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.math.LongMath;
 import com.google.common.primitives.Ints;
 import io.druid.java.util.common.IAE;
@@ -124,7 +123,7 @@ class StringExpr extends ConstantExpr
 
   public StringExpr(String value)
   {
-    this.value = Strings.emptyToNull(value);
+    this.value = value;
   }
 
   @Nullable
@@ -491,7 +490,10 @@ class BinPlusExpr extends BinaryEvalOpExprBase
   @Override
   protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
-    return ExprEval.of(Strings.nullToEmpty(left) + Strings.nullToEmpty(right));
+    if (left == null || right == null) {
+      return ExprEval.of(null);
+    }
+    return ExprEval.of(left + right);
   }
 
   @Override

@@ -26,6 +26,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
 
@@ -55,7 +56,7 @@ public class DruidExpression
   private DruidExpression(final SimpleExtraction simpleExtraction, final String expression)
   {
     this.simpleExtraction = simpleExtraction;
-    this.expression = Preconditions.checkNotNull(expression);
+    this.expression = expression;
   }
 
   public static DruidExpression of(final SimpleExtraction simpleExtraction, final String expression)
@@ -90,7 +91,7 @@ public class DruidExpression
 
   public static String nullLiteral()
   {
-    return "''";
+    return NullHandlingHelper.useDefaultValuesForNull() ? "''" : null;
   }
 
   public static String functionCall(final String functionName, final List<DruidExpression> args)

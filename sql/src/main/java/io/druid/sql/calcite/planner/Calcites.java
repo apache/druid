@@ -28,6 +28,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
 import io.druid.segment.column.ValueType;
+import io.druid.sql.calcite.expression.DruidExpression;
 import io.druid.sql.calcite.schema.DruidSchema;
 import io.druid.sql.calcite.schema.InformationSchema;
 import org.apache.calcite.jdbc.CalciteSchema;
@@ -89,7 +90,7 @@ public class Calcites
   public static String escapeStringLiteral(final String s)
   {
     if (s == null) {
-      return "''";
+      return DruidExpression.nullLiteral();
     } else {
       boolean isPlainAscii = true;
       final StringBuilder builder = new StringBuilder("'");

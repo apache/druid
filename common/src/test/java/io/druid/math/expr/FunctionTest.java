@@ -55,7 +55,7 @@ public class FunctionTest
   public void testConcat()
   {
     assertExpr("concat(x,' ',y)", "foo 2");
-    assertExpr("concat(x,' ',nonexistent,' ',y)", "foo  2");
+    assertExpr("concat(x,' ',nonexistent,' ',y)", null);
     assertExpr("concat(z)", "3.1");
     assertExpr("concat()", null);
   }

@@ -35,6 +35,9 @@ import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.ExpressionDimFilter;
 import io.druid.query.filter.OrDimFilter;
+import io.druid.query.filter.SelectorDimFilter;
+import io.druid.segment.DimensionHandlerUtils;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.VirtualColumn;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
 import io.druid.sql.calcite.expression.DruidExpression;
@@ -287,7 +290,7 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
 
             for (int i : rightKeys) {
               final Object value = row[i];
-              final String stringValue = value != null ? String.valueOf(value) : "";
+              final String stringValue = DimensionHandlerUtils.convertObjectToString(value);
               values.add(stringValue);
               if (values.size() > maxSemiJoinRowsInMemory) {
                 throw new ResourceLimitExceededException(
@@ -301,11 +304,18 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
               for (int i = 0; i < values.size(); i++) {
                 final DruidExpression leftExpression = leftExpressions.get(i);
                 if (leftExpression.isSimpleExtraction()) {
+                  String valToFilter = values.get(i);
                   bounds.add(
+                      valToFilter == null ?
+                      new SelectorDimFilter(
+                          leftExpression.getSimpleExtraction().getColumn(),
+                          NullHandlingHelper.nullToDefault((String) null),
+                          leftExpression.getSimpleExtraction().getExtractionFn()
+                      ) :
                       new BoundDimFilter(
                           leftExpression.getSimpleExtraction().getColumn(),
-                          values.get(i),
-                          values.get(i),
+                          valToFilter,
+                          valToFilter,
                           false,
                           false,
                           null,

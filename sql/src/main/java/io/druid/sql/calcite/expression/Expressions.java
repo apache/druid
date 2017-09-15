@@ -33,14 +33,15 @@ import io.druid.math.expr.ExprType;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.query.filter.AndDimFilter;
-import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.ExpressionDimFilter;
 import io.druid.query.filter.LikeDimFilter;
 import io.druid.query.filter.NotDimFilter;
 import io.druid.query.filter.OrDimFilter;
+import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.filtration.BoundRefKey;
@@ -98,8 +99,8 @@ public class Expressions
       .build();
 
   private static final Map<SqlOperator, String> UNARY_SUFFIX_OPERATOR_MAP = ImmutableMap.<SqlOperator, String>builder()
-      .put(SqlStdOperatorTable.IS_NULL, "== ''")
-      .put(SqlStdOperatorTable.IS_NOT_NULL, "!= ''")
+      .put(SqlStdOperatorTable.IS_NULL, "== " + DruidExpression.nullLiteral())
+      .put(SqlStdOperatorTable.IS_NOT_NULL, "!= " + DruidExpression.nullLiteral())
       .put(SqlStdOperatorTable.IS_FALSE, "<= 0") // Matches Evals.asBoolean
       .put(SqlStdOperatorTable.IS_NOT_TRUE, "<= 0") // Matches Evals.asBoolean
       .put(SqlStdOperatorTable.IS_TRUE, "> 0") // Matches Evals.asBoolean
@@ -470,13 +471,10 @@ public class Expressions
         return null;
       }
 
-      final BoundDimFilter equalFilter = Bounds.equalTo(
-          new BoundRefKey(
-              druidExpression.getSimpleExtraction().getColumn(),
-              druidExpression.getSimpleExtraction().getExtractionFn(),
-              StringComparators.LEXICOGRAPHIC
-          ),
-          ""
+      final DimFilter equalFilter = new SelectorDimFilter(
+          druidExpression.getSimpleExtraction().getColumn(),
+          NullHandlingHelper.nullToDefault((String) null),
+          druidExpression.getSimpleExtraction().getExtractionFn()
       );
 
       return kind == SqlKind.IS_NOT_NULL ? new NotDimFilter(equalFilter) : equalFilter;

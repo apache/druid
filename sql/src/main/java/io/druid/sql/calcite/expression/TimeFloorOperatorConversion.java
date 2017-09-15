@@ -20,7 +20,6 @@
 package io.druid.sql.calcite.expression;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerContext;
@@ -38,6 +37,7 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -63,7 +63,7 @@ public class TimeFloorOperatorConversion implements SqlOperatorConversion
         simpleExtraction -> simpleExtraction.cascade(ExtractionFns.fromQueryGranularity(granularity)),
         expression -> DruidExpression.functionCall(
             "timestamp_floor",
-            ImmutableList.of(
+            Arrays.asList(
                 expression,
                 DruidExpression.stringLiteral(granularity.getPeriod().toString()),
                 DruidExpression.numberLiteral(
