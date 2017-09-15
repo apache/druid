@@ -1153,6 +1153,7 @@
             <id>spark2</id>
             <properties>
                 <jackson.version>2.6.5</jackson.version>
+                <aws.sdk.version>1.11.143</aws.sdk.version>
             </properties>
         </profile>
         <profile>
