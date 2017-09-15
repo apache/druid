@@ -24,7 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.RangeSet;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.search.search.SearchQuerySpec;
+import io.druid.query.search.SearchQuerySpec;
 import io.druid.segment.filter.SearchQueryFilter;
 
 import java.nio.ByteBuffer;

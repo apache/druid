@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.query.search.search;
+package io.druid.query.search;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;

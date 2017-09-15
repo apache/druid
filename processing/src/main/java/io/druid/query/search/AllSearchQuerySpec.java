@@ -17,19 +17,43 @@
  * under the License.
  */
 
-package io.druid.query.search.search;
+package io.druid.query.search;
 
-public abstract class SearchQueryDecisionHelper
+import javax.annotation.Nullable;
+
+/**
+ */
+public class AllSearchQuerySpec implements SearchQuerySpec
 {
-  private final double bitmapIntersectCost;
+  private static final byte CACHE_TYPE_ID = 0x7f;
 
-  protected SearchQueryDecisionHelper(final double bitmapIntersectCost)
+  @Override
+  public boolean accept(@Nullable String dimVal)
   {
-    this.bitmapIntersectCost = bitmapIntersectCost;
+    return true;
   }
 
-  public double getBitmapIntersectCost()
+  @Override
+  public byte[] getCacheKey()
   {
-    return bitmapIntersectCost;
+    return new byte[]{CACHE_TYPE_ID};
+  }
+
+  @Override
+  public boolean equals(Object object)
+  {
+    return object instanceof AllSearchQuerySpec;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return CACHE_TYPE_ID;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "AllSearchQuerySpec{}";
   }
 }

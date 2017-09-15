@@ -17,26 +17,24 @@
  * under the License.
  */
 
-package io.druid.query.search.search;
+package io.druid.server.emitter;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
 
-import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
+import java.util.List;
 
 /**
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "contains", value = ContainsSearchQuerySpec.class),
-    @JsonSubTypes.Type(name = "insensitive_contains", value = InsensitiveContainsSearchQuerySpec.class),
-    @JsonSubTypes.Type(name = "fragment", value = FragmentSearchQuerySpec.class),
-    @JsonSubTypes.Type(name = "regex", value = RegexSearchQuerySpec.class),
-    @JsonSubTypes.Type(name = "all", value = AllSearchQuerySpec.class)
-})
-public interface SearchQuerySpec
+public class ComposingEmitterConfig
 {
-  public boolean accept(@Nullable String dimVal);
+  @JsonProperty
+  @NotNull
+  private List<String> emitters = ImmutableList.of();
 
-  public byte[] getCacheKey();
+  public List<String> getEmitters()
+  {
+    return emitters;
+  }
 }

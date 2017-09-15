@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.server.initialization;
+package io.druid.server.emitter;
 
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
@@ -72,6 +72,7 @@ public class EmitterModule implements Module
     binder.install(new NoopEmitterModule());
     binder.install(new LogEmitterModule());
     binder.install(new HttpEmitterModule());
+    binder.install(new ParametrizedUriEmitterModule());
     binder.install(new ComposingEmitterModule());
 
     binder.bind(Emitter.class).toProvider(new EmitterProvider(emitterType)).in(LazySingleton.class);
@@ -87,6 +88,7 @@ public class EmitterModule implements Module
         "version",
         Strings.nullToEmpty(version) // Version is null during `mvn test`.
     );
+    log.info("Underlying emitter for ServiceEmitter: %s", emitter);
     final ServiceEmitter retVal = new ServiceEmitter(
         config.getServiceName(),
         config.getHostAndPortToUse(),

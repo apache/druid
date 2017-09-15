@@ -17,40 +17,20 @@
  * under the License.
  */
 
-package io.druid.query.search.search;
+package io.druid.server.emitter;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.joda.time.Period;
 
 /**
  */
-public class InsensitiveContainsSearchQuerySpec extends ContainsSearchQuerySpec
+public class HttpEmitterConfig extends com.metamx.emitter.core.HttpEmitterConfig
 {
-  @JsonCreator
-  public InsensitiveContainsSearchQuerySpec(
-      @JsonProperty("value") String value
-  )
-  {
-    super(value, false);
-  }
+  @JsonProperty
+  private Period readTimeout = new Period("PT5M");
 
-  @Override
-  public String toString()
+  public Period getReadTimeout()
   {
-    return "InsensitiveContainsSearchQuerySpec{" +
-           "value=" + getValue() +
-           "}";
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    return super.equals(o);
+    return readTimeout;
   }
 }

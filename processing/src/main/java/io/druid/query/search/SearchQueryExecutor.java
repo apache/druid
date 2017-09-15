@@ -17,22 +17,28 @@
  * under the License.
  */
 
-package io.druid.query.search.search;
+package io.druid.query.search;
 
-public class RoaringBitmapDecisionHelper extends SearchQueryDecisionHelper
+import io.druid.query.dimension.DimensionSpec;
+import io.druid.segment.Segment;
+import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
+
+import java.util.List;
+
+public abstract class SearchQueryExecutor
 {
-  // This value comes from an experiment.
-  // See the discussion at https://github.com/druid-io/druid/pull/3792#issuecomment-268331804.
-  private static final double BITMAP_INTERSECT_COST = 4.5;
-  private static final RoaringBitmapDecisionHelper INSTANCE = new RoaringBitmapDecisionHelper();
+  protected final SearchQuery query;
+  protected final SearchQuerySpec searchQuerySpec;
+  protected final Segment segment;
+  protected final List<DimensionSpec> dimsToSearch;
 
-  public static RoaringBitmapDecisionHelper instance()
+  public SearchQueryExecutor(SearchQuery query, Segment segment, List<DimensionSpec> dimensionSpecs)
   {
-    return INSTANCE;
+    this.query = query;
+    this.segment = segment;
+    this.searchQuerySpec = query.getQuery();
+    this.dimsToSearch = dimensionSpecs;
   }
 
-  private RoaringBitmapDecisionHelper()
-  {
-    super(BITMAP_INTERSECT_COST);
-  }
+  public abstract Object2IntRBTreeMap<SearchHit> execute(int limit);
 }
