@@ -71,8 +71,11 @@ public class ByteBufferWriter<T> implements Closeable
   public void write(T objectToWrite) throws IOException
   {
     byte[] bytesToWrite = strategy.toBytes(objectToWrite);
-    SerializerUtils.writeBigEndianIntToOutputStream(headerOut, bytesToWrite.length, helperBuffer);
-    valueOut.write(bytesToWrite);
+    int length = bytesToWrite == null ? -1 : bytesToWrite.length;
+    SerializerUtils.writeBigEndianIntToOutputStream(headerOut, length, helperBuffer);
+    if (bytesToWrite != null) {
+      valueOut.write(bytesToWrite);
+    }
   }
 
   private String makeFilename(String suffix)

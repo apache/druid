@@ -20,7 +20,6 @@
 package io.druid.segment;
 
 import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.IndexedInts;
@@ -37,7 +36,7 @@ public class ConstantDimensionSelector implements SingleValueHistoricalDimension
 
   public ConstantDimensionSelector(final String value)
   {
-    if (Strings.isNullOrEmpty(value)) {
+    if (NullHandlingHelper.isNullOrDefault(value)) {
       // There's an optimized implementation for nulls that callers should use instead.
       throw new IllegalArgumentException("Use NullDimensionSelector or DimensionSelectorUtils.constantSelector");
     }

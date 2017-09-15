@@ -80,4 +80,16 @@ public interface ObjectColumnSelector<T> extends ColumnValueSelector
     }
     return ((Number) value).longValue();
   }
+
+  /**
+   * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidential
+   * calling. "Polymorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
+  @Deprecated
+  default boolean isNull()
+  {
+    T value = get();
+    return value == null;
+  }
 }

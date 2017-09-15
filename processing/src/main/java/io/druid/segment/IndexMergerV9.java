@@ -34,11 +34,11 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.inject.Inject;
 import io.druid.collections.CombiningIterable;
-import io.druid.java.util.common.DateTimes;
-import io.druid.java.util.common.JodaUtils;
 import io.druid.io.ZeroCopyByteArrayOutputStream;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.guava.MergeIterable;
@@ -64,9 +64,9 @@ import io.druid.segment.loading.MMappedQueryableSegmentizerFactory;
 import io.druid.segment.serde.ComplexColumnPartSerde;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
-import io.druid.segment.serde.DoubleGenericColumnPartSerde;
-import io.druid.segment.serde.FloatGenericColumnPartSerde;
-import io.druid.segment.serde.LongGenericColumnPartSerde;
+import io.druid.segment.serde.DoubleGenericColumnPartSerdeV2;
+import io.druid.segment.serde.FloatGenericColumnPartSerdeV2;
+import io.druid.segment.serde.LongGenericColumnPartSerdeV2;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntSortedSet;
@@ -369,7 +369,7 @@ public class IndexMergerV9 implements IndexMerger
         case LONG:
           builder.setValueType(ValueType.LONG);
           builder.addSerde(
-              LongGenericColumnPartSerde
+              LongGenericColumnPartSerdeV2
                   .serializerBuilder()
                   .withByteOrder(IndexIO.BYTE_ORDER)
                   .withDelegate((LongColumnSerializer) writer)
@@ -379,7 +379,7 @@ public class IndexMergerV9 implements IndexMerger
         case FLOAT:
           builder.setValueType(ValueType.FLOAT);
           builder.addSerde(
-              FloatGenericColumnPartSerde
+              FloatGenericColumnPartSerdeV2
                   .serializerBuilder()
                   .withByteOrder(IndexIO.BYTE_ORDER)
                   .withDelegate((FloatColumnSerializer) writer)
@@ -389,7 +389,7 @@ public class IndexMergerV9 implements IndexMerger
         case DOUBLE:
           builder.setValueType(ValueType.DOUBLE);
           builder.addSerde(
-              DoubleGenericColumnPartSerde
+              DoubleGenericColumnPartSerdeV2
                   .serializerBuilder()
                   .withByteOrder(IndexIO.BYTE_ORDER)
                   .withDelegate((DoubleColumnSerializer) writer)
@@ -433,10 +433,10 @@ public class IndexMergerV9 implements IndexMerger
         .builder()
         .setValueType(ValueType.LONG)
         .addSerde(
-            LongGenericColumnPartSerde.serializerBuilder()
-                                      .withByteOrder(IndexIO.BYTE_ORDER)
-                                      .withDelegate(timeWriter)
-                                      .build()
+            LongGenericColumnPartSerdeV2.serializerBuilder()
+                                        .withByteOrder(IndexIO.BYTE_ORDER)
+                                        .withDelegate(timeWriter)
+                                        .build()
         )
         .build();
     makeColumn(v9Smoosher, Column.TIME_COLUMN_NAME, serdeficator);

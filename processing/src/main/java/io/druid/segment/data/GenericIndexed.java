@@ -19,6 +19,7 @@
 
 package io.druid.segment.data;
 
+import com.google.common.io.CountingOutputStream;
 import com.google.common.primitives.Ints;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.io.ZeroCopyByteArrayOutputStream;
@@ -28,7 +29,7 @@ import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import it.unimi.dsi.fastutil.bytes.ByteArrays;
+import io.druid.segment.NullHandlingHelper;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -86,15 +87,15 @@ public class GenericIndexed<T> implements Indexed<T>
     @Override
     public String fromByteBuffer(final ByteBuffer buffer, final int numBytes)
     {
-      return StringUtils.fromUtf8(buffer, numBytes);
+      if (numBytes < 0) {
+        return null;
+      }
+      return NullHandlingHelper.defaultToNull(StringUtils.fromUtf8(buffer, numBytes));
     }
 
     @Override
     public byte[] toBytes(String val)
     {
-      if (val == null) {
-        return ByteArrays.EMPTY_ARRAY;
-      }
       return StringUtils.toUtf8(val);
     }
 
@@ -279,8 +280,6 @@ public class GenericIndexed<T> implements Indexed<T>
       throw new UnsupportedOperationException("Reverse lookup not allowed.");
     }
 
-    value = (value != null && value.equals("")) ? null : value;
-
     int minIndex = 0;
     int maxIndex = size - 1;
     while (minIndex <= maxIndex) {
@@ -338,11 +337,8 @@ public class GenericIndexed<T> implements Indexed<T>
 
   private T copyBufferAndGet(ByteBuffer valueBuffer, int startOffset, int endOffset)
   {
-    final int size = endOffset - startOffset;
-    if (size == 0) {
-      return null;
-    }
     ByteBuffer copyValueBuffer = valueBuffer.asReadOnlyBuffer();
+    final int size = endOffset > startOffset ? endOffset - startOffset : copyValueBuffer.get(startOffset - Ints.BYTES);
     copyValueBuffer.position(startOffset);
     // fromByteBuffer must not modify the buffer limit
     return strategy.fromByteBuffer(copyValueBuffer, size);
@@ -381,11 +377,11 @@ public class GenericIndexed<T> implements Indexed<T>
 
     T bufferedIndexedGet(ByteBuffer copyValueBuffer, int startOffset, int endOffset)
     {
-      final int size = endOffset - startOffset;
+      final int size = endOffset > startOffset
+                       ? endOffset - startOffset
+                       : copyValueBuffer.get(startOffset - Ints.BYTES);
       lastReadSize = size;
-      if (size == 0) {
-        return null;
-      }
+
       // ObjectStrategy.fromByteBuffer() is allowed to reset the limit of the buffer. So if the limit is changed,
       // position() call in the next line could throw an exception, if the position is set beyond the new limit. clear()
       // sets the limit to the maximum possible, the capacity. It is safe to reset the limit to capacity, because the
@@ -451,9 +447,9 @@ public class GenericIndexed<T> implements Indexed<T>
 
     ZeroCopyByteArrayOutputStream headerBytes = new ZeroCopyByteArrayOutputStream();
     ZeroCopyByteArrayOutputStream valueBytes = new ZeroCopyByteArrayOutputStream();
+    CountingOutputStream valueCountingBytes = new CountingOutputStream(valueBytes);
     ByteBuffer helperBuffer = ByteBuffer.allocate(Ints.BYTES);
     try {
-      int offset = 0;
       T prevVal = null;
       do {
         count++;
@@ -463,10 +459,19 @@ public class GenericIndexed<T> implements Indexed<T>
         }
 
         final byte[] bytes = strategy.toBytes(next);
-        offset += Ints.BYTES + bytes.length;
-        SerializerUtils.writeBigEndianIntToOutputStream(headerBytes, offset, helperBuffer);
-        SerializerUtils.writeBigEndianIntToOutputStream(valueBytes, bytes.length, helperBuffer);
-        valueBytes.write(bytes);
+
+
+        int size = bytes == null ? -1 : bytes.length;
+        SerializerUtils.writeBigEndianIntToOutputStream(valueCountingBytes, size, helperBuffer);
+        if (bytes != null) {
+          valueCountingBytes.write(bytes);
+        }
+
+        SerializerUtils.writeBigEndianIntToOutputStream(
+            headerBytes,
+            Ints.checkedCast(valueCountingBytes.getCount()),
+            helperBuffer
+        );
 
         if (prevVal instanceof Closeable) {
           CloseQuietly.close((Closeable) prevVal);
@@ -532,7 +537,7 @@ public class GenericIndexed<T> implements Indexed<T>
         final int endOffset;
 
         if (index == 0) {
-          startOffset = 4;
+          startOffset = Ints.BYTES;
           endOffset = headerBuffer.getInt(0);
         } else {
           int headerPosition = (index - 1) * Ints.BYTES;

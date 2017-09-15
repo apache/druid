@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.DoubleColumnSerializer;
+import io.druid.segment.IndexIO;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.CompressedDoublesIndexedSupplier;
 
@@ -74,7 +75,11 @@ public class DoubleGenericColumnPartSerde implements ColumnPartSerde
         );
         builder.setType(ValueType.DOUBLE)
                .setHasMultipleValues(false)
-               .setGenericColumn(new DoubleGenericColumnSupplier(column));
+               .setGenericColumn(new DoubleGenericColumnSupplier(
+                   column,
+                   IndexIO.LEGACY_FACTORY.getBitmapFactory()
+                                         .makeEmptyImmutableBitmap()
+               ));
 
     };
   }

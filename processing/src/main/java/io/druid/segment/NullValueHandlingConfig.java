@@ -19,20 +19,27 @@
 
 package io.druid.segment;
 
-/**
- * Base type for interfaces that manage column value selection, e.g. DimensionSelector, LongColumnSelector
- *
- * This interface has methods to get the value in all primitive types, that have corresponding basic aggregators in
- * Druid: Sum, Min, Max, etc: {@link #getFloat()}, {@link #getDouble()} and {@link #getLong()} to support "polymorphic"
- * rollup aggregation during index merging.
- */
-public interface ColumnValueSelector
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+public class NullValueHandlingConfig
 {
-  float getFloat();
+  private static boolean DEFAULT_USE_DEFAULT_VALUES_FOR_NULL = true;
 
-  double getDouble();
+  @JsonProperty("useDefaultValueForNull")
+  private Boolean useDefaultValuesForNull = DEFAULT_USE_DEFAULT_VALUES_FOR_NULL;
 
-  long getLong();
+  @JsonCreator
+  public NullValueHandlingConfig(@JsonProperty("useDefaultValueForNull") Boolean useDefaultValuesForNull)
+  {
+    this.useDefaultValuesForNull = useDefaultValuesForNull == null
+                                   ? DEFAULT_USE_DEFAULT_VALUES_FOR_NULL
+                                   : useDefaultValuesForNull;
+  }
 
-  boolean isNull();
+
+  public boolean isUseDefaultValuesForNull()
+  {
+    return useDefaultValuesForNull;
+  }
 }

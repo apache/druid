@@ -19,6 +19,7 @@
 
 package io.druid.segment.data;
 
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
@@ -39,7 +40,7 @@ public interface IndexedLongs extends Closeable
   @Override
   void close();
 
-  default LongColumnSelector makeLongColumnSelector(ReadableOffset offset)
+  default LongColumnSelector makeLongColumnSelector(ReadableOffset offset, ImmutableBitmap nullValueBitmap)
   {
     class HistoricalLongColumnSelector implements LongColumnSelector, HistoricalColumnSelector
     {
@@ -56,6 +57,12 @@ public interface IndexedLongs extends Closeable
       }
 
       @Override
+      public boolean isNull()
+      {
+        return nullValueBitmap.get(offset.getOffset());
+      }
+
+      @Override
       public void inspectRuntimeShape(RuntimeShapeInspector inspector)
       {
         inspector.visit("indexed", IndexedLongs.this);
@@ -65,7 +72,7 @@ public interface IndexedLongs extends Closeable
     return new HistoricalLongColumnSelector();
   }
 
-  default FloatColumnSelector makeFloatColumnSelector(ReadableOffset offset)
+  default FloatColumnSelector makeFloatColumnSelector(ReadableOffset offset, ImmutableBitmap nullValueBitmap)
   {
     class HistoricalFloatColumnSelector implements FloatColumnSelector, HistoricalColumnSelector
     {
@@ -73,6 +80,12 @@ public interface IndexedLongs extends Closeable
       public float getFloat()
       {
         return (float) IndexedLongs.this.get(offset.getOffset());
+      }
+
+      @Override
+      public boolean isNull()
+      {
+        return nullValueBitmap.get(offset.getOffset());
       }
 
       @Override
@@ -91,7 +104,7 @@ public interface IndexedLongs extends Closeable
     return new HistoricalFloatColumnSelector();
   }
 
-  default DoubleColumnSelector makeDoubleColumnSelector(ReadableOffset offset)
+  default DoubleColumnSelector makeDoubleColumnSelector(ReadableOffset offset, ImmutableBitmap nullValueBitmap)
   {
     class HistoricalDoubleColumnSelector implements DoubleColumnSelector, HistoricalColumnSelector
     {
@@ -105,6 +118,12 @@ public interface IndexedLongs extends Closeable
       public double getDouble(int offset)
       {
         return IndexedLongs.this.get(offset);
+      }
+
+      @Override
+      public boolean isNull()
+      {
+        return nullValueBitmap.get(offset.getOffset());
       }
 
       @Override

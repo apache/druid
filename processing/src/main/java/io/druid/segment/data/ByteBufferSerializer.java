@@ -32,6 +32,9 @@ public class ByteBufferSerializer<T>
   public static <T> T read(ByteBuffer buffer, ObjectStrategy<T> strategy)
   {
     int size = buffer.getInt();
+    if (size < 0) {
+      return null;
+    }
     ByteBuffer bufferToUse = buffer.asReadOnlyBuffer();
     bufferToUse.limit(bufferToUse.position() + size);
     buffer.position(bufferToUse.limit());
@@ -43,7 +46,10 @@ public class ByteBufferSerializer<T>
       throws IOException
   {
     byte[] toWrite = strategy.toBytes(obj);
-    channel.write(ByteBuffer.allocate(Ints.BYTES).putInt(0, toWrite.length));
-    channel.write(ByteBuffer.wrap(toWrite));
+    int size = toWrite == null ? -1 : toWrite.length;
+    channel.write(ByteBuffer.allocate(Ints.BYTES).putInt(0, size));
+    if (size > 0) {
+      channel.write(ByteBuffer.wrap(toWrite));
+    }
   }
 }

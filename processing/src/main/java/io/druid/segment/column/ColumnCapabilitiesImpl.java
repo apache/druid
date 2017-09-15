@@ -32,6 +32,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   private boolean hasInvertedIndexes = false;
   private boolean hasSpatialIndexes = false;
   private boolean hasMultipleValues = false;
+  private boolean hasNullValues = false;
 
   @Override
   @JsonProperty
@@ -112,6 +113,19 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   }
 
   @Override
+  @JsonProperty("hasNullValues")
+  public boolean hasNullValues()
+  {
+    return hasNullValues;
+  }
+
+  public ColumnCapabilitiesImpl setHasNullValues(boolean hasNullValues)
+  {
+    this.hasNullValues = hasNullValues;
+    return this;
+  }
+
+  @Override
   public ColumnCapabilitiesImpl merge(ColumnCapabilities other)
   {
     if (other == null) {
@@ -131,6 +145,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     this.hasInvertedIndexes |= other.hasBitmapIndexes();
     this.hasSpatialIndexes |= other.hasSpatialIndexes();
     this.hasMultipleValues |= other.hasMultipleValues();
+    this.hasNullValues |= other.hasNullValues();
 
     return this;
   }

@@ -19,6 +19,7 @@
 
 package io.druid.segment.column;
 
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
@@ -31,10 +32,15 @@ import io.druid.segment.data.ReadableOffset;
 public class IndexedLongsGenericColumn implements GenericColumn
 {
   private final IndexedLongs column;
+  private final ImmutableBitmap nullValueBitmap;
 
-  public IndexedLongsGenericColumn(final IndexedLongs column)
+  public IndexedLongsGenericColumn(
+      final IndexedLongs column,
+      ImmutableBitmap nullValueBitmap
+  )
   {
     this.column = column;
+    this.nullValueBitmap = nullValueBitmap;
   }
 
   @Override
@@ -70,7 +76,7 @@ public class IndexedLongsGenericColumn implements GenericColumn
   @Override
   public FloatColumnSelector makeFloatSingleValueRowSelector(ReadableOffset offset)
   {
-    return column.makeFloatColumnSelector(offset);
+    return column.makeFloatColumnSelector(offset, nullValueBitmap);
   }
 
   @Override
@@ -82,7 +88,7 @@ public class IndexedLongsGenericColumn implements GenericColumn
   @Override
   public LongColumnSelector makeLongSingleValueRowSelector(ReadableOffset offset)
   {
-    return column.makeLongColumnSelector(offset);
+    return column.makeLongColumnSelector(offset, nullValueBitmap);
   }
 
   @Override
@@ -94,7 +100,7 @@ public class IndexedLongsGenericColumn implements GenericColumn
   @Override
   public DoubleColumnSelector makeDoubleSingleValueRowSelector(ReadableOffset offset)
   {
-    return column.makeDoubleColumnSelector(offset);
+    return column.makeDoubleColumnSelector(offset, nullValueBitmap);
   }
 
   @Override

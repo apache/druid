@@ -72,6 +72,20 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
     return retVal;
   }
 
+  public boolean isNUllRow(int[] row, Indexed<String> encodings)
+  {
+    if (row == null) {
+      return true;
+    }
+    for (int i : row) {
+      if (encodings.get(i) != null) {
+        // Non-Null value
+        return false;
+      }
+    }
+    return true;
+  }
+
   @Override
   public void validateSortedEncodedKeyComponents(
       int[] lhs,
@@ -81,7 +95,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   ) throws SegmentValidationException
   {
     if (lhs == null || rhs == null) {
-      if (lhs != null || rhs != null) {
+      if (!isNUllRow(lhs, lhsEncodings) || !isNUllRow(rhs, rhsEncodings)) {
         throw new SegmentValidationException(
             "Expected nulls, found %s and %s",
             Arrays.toString(lhs),

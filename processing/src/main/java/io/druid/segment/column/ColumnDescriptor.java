@@ -44,17 +44,20 @@ public class ColumnDescriptor
 
   private final ValueType valueType;
   private final boolean hasMultipleValues;
+  private final boolean hasNullValues;
   private final List<ColumnPartSerde> parts;
 
   @JsonCreator
   public ColumnDescriptor(
       @JsonProperty("valueType") ValueType valueType,
       @JsonProperty("hasMultipleValues") boolean hasMultipleValues,
+      @JsonProperty("hasNullValues") boolean hasNullValues,
       @JsonProperty("parts") List<ColumnPartSerde> parts
   )
   {
     this.valueType = valueType;
     this.hasMultipleValues = hasMultipleValues;
+    this.hasNullValues = hasNullValues;
     this.parts = parts;
   }
 
@@ -68,6 +71,12 @@ public class ColumnDescriptor
   public boolean isHasMultipleValues()
   {
     return hasMultipleValues;
+  }
+
+  @JsonProperty
+  public boolean isHasNullValues()
+  {
+    return hasNullValues;
   }
 
   @JsonProperty
@@ -99,6 +108,7 @@ public class ColumnDescriptor
     final ColumnBuilder builder = new ColumnBuilder()
         .setType(valueType)
         .setHasMultipleValues(hasMultipleValues)
+        .setHasNullValues(hasNullValues)
         .setFileMapper(smooshedFiles);
 
     for (ColumnPartSerde part : parts) {
@@ -112,6 +122,7 @@ public class ColumnDescriptor
   {
     private ValueType valueType = null;
     private Boolean hasMultipleValues = null;
+    private boolean hasNullValues = false;
 
     private final List<ColumnPartSerde> parts = Lists.newArrayList();
 
@@ -135,6 +146,12 @@ public class ColumnDescriptor
       return this;
     }
 
+    public Builder setHasNullValues(boolean hasNullValues)
+    {
+      this.hasNullValues = hasNullValues || this.hasNullValues;
+      return this;
+    }
+
     public Builder addSerde(ColumnPartSerde serde)
     {
       parts.add(serde);
@@ -144,7 +161,12 @@ public class ColumnDescriptor
     public ColumnDescriptor build()
     {
       Preconditions.checkNotNull(valueType, "must specify a valueType");
-      return new ColumnDescriptor(valueType, hasMultipleValues == null ? false : hasMultipleValues, parts);
+      return new ColumnDescriptor(
+          valueType,
+          hasMultipleValues == null ? false : hasMultipleValues,
+          hasNullValues,
+          parts
+      );
     }
   }
 }

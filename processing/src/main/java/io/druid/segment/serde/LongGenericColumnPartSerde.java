@@ -21,8 +21,8 @@ package io.druid.segment.serde;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
+import io.druid.segment.IndexIO;
 import io.druid.segment.LongColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
@@ -125,7 +125,11 @@ public class LongGenericColumnPartSerde implements ColumnPartSerde
         );
         builder.setType(ValueType.LONG)
                .setHasMultipleValues(false)
-               .setGenericColumn(new LongGenericColumnSupplier(column));
+               .setGenericColumn(new LongGenericColumnSupplier(
+                   column,
+                   IndexIO.LEGACY_FACTORY.getBitmapFactory()
+                                         .makeEmptyImmutableBitmap()
+               ));
       }
     };
   }

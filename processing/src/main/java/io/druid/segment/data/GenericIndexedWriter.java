@@ -138,10 +138,12 @@ public class GenericIndexedWriter<T> implements Closeable
     }
 
     byte[] bytesToWrite = strategy.toBytes(objectToWrite);
-
+    int size = bytesToWrite == null ? -1 : bytesToWrite.length;
     ++numWritten;
-    SerializerUtils.writeBigEndianIntToOutputStream(valuesOut, bytesToWrite.length, sizeHelperBuffer);
-    valuesOut.write(bytesToWrite);
+    SerializerUtils.writeBigEndianIntToOutputStream(valuesOut, size, sizeHelperBuffer);
+    if (bytesToWrite != null) {
+      valuesOut.write(bytesToWrite);
+    }
 
     if (!requireMultipleFiles) {
       SerializerUtils.writeBigEndianIntToOutputStream(headerOut, Ints.checkedCast(valuesOut.getCount()), buf);
