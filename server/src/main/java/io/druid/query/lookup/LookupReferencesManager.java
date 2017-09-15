@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
@@ -345,13 +344,17 @@ public class LookupReferencesManager
 
   private void loadAllLookupsAndInitStateRef()
   {
+    List<LookupBean> lookupBeanList = new ArrayList<>();
     if (!lookupConfig.getDisableLookupSyncOnStartup()) {
       String tier = lookupListeningAnnouncerConfig.getLookupTier();
-      List<LookupBean> lookupBeanList = getLookupListFromCoordinator(tier);
+      lookupBeanList = getLookupListFromCoordinator(tier);
       if (lookupBeanList == null) {
         LOG.info("Coordinator is unavailable. Loading saved snapshot instead");
         lookupBeanList = getLookupListFromSnapshot();
       }
+    } else {
+      lookupBeanList = getLookupListFromSnapshot();
+    }
       if (lookupBeanList != null) {
         ImmutableMap.Builder<String, LookupExtractorFactoryContainer> builder = ImmutableMap.builder();
         ListeningScheduledExecutorService executorService = MoreExecutors.listeningDecorator(
@@ -403,7 +406,7 @@ public class LookupReferencesManager
             stateRef.set(new LookupUpdateState(builder.build(), ImmutableList.of(), ImmutableList.of()));
 
             executorService.shutdownNow();
-            if (!executorService.awaitTermination(60, TimeUnit.SECONDS)){
+            if (!executorService.awaitTermination(60, TimeUnit.SECONDS)) {
               LOG.warn("Lookup loading didn't complete in 60 seconds!");
             }
           }
@@ -424,10 +427,6 @@ public class LookupReferencesManager
         LOG.info("No lookups to be loaded at this point");
         stateRef.set(new LookupUpdateState(ImmutableMap.of(), ImmutableList.of(), ImmutableList.of()));
       }
-    } else {
-      LOG.info("Lookup loading on startup is disabled");
-      stateRef.set(new LookupUpdateState(ImmutableMap.of(), ImmutableList.of(), ImmutableList.of()));
-    }
   }
 
   private List<LookupBean> getLookupListFromCoordinator(String tier)
@@ -461,10 +460,6 @@ public class LookupReferencesManager
         }
       }
       return lookupBeanList;
-    }
-    catch (ISE ise) {
-      LOG.error(ise, "Coordinator is unavailable");
-      return null;
     }
     catch (Exception e) {
       LOG.error(e, "Error while trying to get lookup list from coordinator for tier[%s]", tier);
