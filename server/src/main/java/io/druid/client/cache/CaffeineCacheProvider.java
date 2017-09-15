@@ -19,8 +19,6 @@
 
 package io.druid.client.cache;
 
-import com.fasterxml.jackson.annotation.JsonTypeName;
-
 public class CaffeineCacheProvider extends CaffeineCacheConfig implements CacheProvider
 {
   @Override
