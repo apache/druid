@@ -22,6 +22,7 @@ package io.druid.java.util.common;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 
+import javax.annotation.Nullable;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -66,8 +67,12 @@ public class StringUtils
     return string == null ? EMPTY_BYTES : toUtf8(string);
   }
 
+  @Nullable
   public static String fromUtf8(final byte[] bytes)
   {
+    if (bytes == null) {
+      return null;
+    }
     try {
       return new String(bytes, UTF8_STRING);
     }
@@ -89,8 +94,12 @@ public class StringUtils
     return StringUtils.fromUtf8(buffer, buffer.remaining());
   }
 
+  @Nullable
   public static byte[] toUtf8(final String string)
   {
+    if (string == null) {
+      return null;
+    }
     try {
       return string.getBytes(UTF8_STRING);
     }

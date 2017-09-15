@@ -42,12 +42,12 @@ public class MapBasedRowTest
           .build()
     );
     
-    Assert.assertEquals(-1, row.getLongMetric("k0"));
-    Assert.assertEquals(1, row.getLongMetric("k1"));
-    Assert.assertEquals(1, row.getLongMetric("k2"));
-    Assert.assertEquals(100000, row.getLongMetric("k3"));
-    Assert.assertEquals(9223372036854775806L, row.getLongMetric("k4"));
-    Assert.assertEquals(-9223372036854775807L, row.getLongMetric("k5"));
-    Assert.assertEquals(9223372036854775802L, row.getLongMetric("k6"));
+    Assert.assertEquals(-1, row.getLongMetric("k0").longValue());
+    Assert.assertEquals(1, row.getLongMetric("k1").longValue());
+    Assert.assertEquals(1, row.getLongMetric("k2").longValue());
+    Assert.assertEquals(100000, row.getLongMetric("k3").longValue());
+    Assert.assertEquals(9223372036854775806L, row.getLongMetric("k4").longValue());
+    Assert.assertEquals(-9223372036854775807L, row.getLongMetric("k5").longValue());
+    Assert.assertEquals(9223372036854775802L, row.getLongMetric("k6").longValue());
   }
 }

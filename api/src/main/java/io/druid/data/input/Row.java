@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.guice.annotations.PublicApi;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -71,7 +72,7 @@ public interface Row extends Comparable<Row>
    *
    * @return the value of the provided column name
    */
-  public Object getRaw(String dimension);
+  public @Nullable Object getRaw(String dimension);
 
   /**
    * Returns the float value of the given metric column.
@@ -81,7 +82,7 @@ public interface Row extends Comparable<Row>
    *
    * @return the float value for the provided column name.
    */
-  public float getFloatMetric(String metric);
+  public @Nullable Float getFloatMetric(String metric);
 
   /**
    * Returns the long value of the given metric column.
@@ -91,7 +92,7 @@ public interface Row extends Comparable<Row>
    *
    * @return the long value for the provided column name.
    */
-  public long getLongMetric(String metric);
+  public @Nullable Long getLongMetric(String metric);
 
   /**
    * Returns the double value of the given metric column.
@@ -101,5 +102,5 @@ public interface Row extends Comparable<Row>
    *
    * @return the double value for the provided column name.
    */
-  public double getDoubleMetric(String metric);
+  public @Nullable Double getDoubleMetric(String metric);
 }

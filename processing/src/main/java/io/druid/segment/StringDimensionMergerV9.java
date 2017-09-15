@@ -57,6 +57,7 @@ import io.druid.segment.serde.DictionaryEncodedColumnPartSerde;
 import it.unimi.dsi.fastutil.ints.AbstractIntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterable;
 import it.unimi.dsi.fastutil.ints.IntIterator;
+import org.apache.logging.log4j.util.Strings;
 
 import java.io.Closeable;
 import java.io.File;
@@ -71,8 +72,11 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
 {
   private static final Logger log = new Logger(StringDimensionMergerV9.class);
 
-  protected static final Indexed<String> EMPTY_STR_DIM_VAL = new ArrayIndexed<>(new String[]{""}, String.class);
-  protected static final int[] EMPTY_STR_DIM_ARRAY = new int[]{0};
+  protected static final Indexed<String> NULL_STR_DIM_VAL = new ArrayIndexed<>(
+      new String[]{(String) null},
+      String.class
+  );
+  protected static final int[] NULL_STR_DIM_ARRAY = new int[]{0};
   protected static final Splitter SPLITTER = Splitter.on(",");
 
   private IndexedIntsWriter encodedValueWriter;
@@ -146,7 +150,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     convertMissingValues = dimHasValues && dimAbsentFromSomeIndex;
 
     /*
-     * Ensure the empty str is always in the dictionary if the dimension was missing from one index but
+     * Ensure the null str is always in the dictionary if the dimension was missing from one index but
      * has non-null values in another index.
      * This is done so that MMappedIndexRowIterable can convert null columns to empty strings
      * later on, to allow rows from indexes without a particular dimension to merge correctly with
@@ -154,7 +158,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
      */
     if (convertMissingValues && !hasNull) {
       hasNull = true;
-      dimValueLookups[adapters.size()] = dimValueLookup = EMPTY_STR_DIM_VAL;
+      dimValueLookups[adapters.size()] = dimValueLookup = NULL_STR_DIM_VAL;
       numMergeIndex++;
     }
 
@@ -233,7 +237,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     // For strings, convert missing values to null/empty if conversion flag is set
     // But if bitmap/dictionary is not used, always convert missing to 0
     if (dimVals == null) {
-      return convertMissingValues ? EMPTY_STR_DIM_ARRAY : null;
+      return convertMissingValues ? NULL_STR_DIM_ARRAY : null;
     }
 
     int[] newDimVals = new int[dimVals.length];
@@ -401,7 +405,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
       prevRow = row;
     }
 
-    if ((dictId == 0) && (Iterables.getFirst(dimVals, "") == null)) {
+    if ((dictId == 0) && Iterables.getFirst(dimVals, null) == null) {
       mergedIndexes.or(nullRowsBitmap);
     }
 
@@ -409,7 +413,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
 
     if (hasSpatial) {
       String dimVal = dimVals.get(dictId);
-      if (dimVal != null) {
+      if (Strings.isNotEmpty(dimVal)) {
         List<String> stringCoords = Lists.newArrayList(SPLITTER.split(dimVal));
         float[] coords = new float[stringCoords.size()];
         for (int j = 0; j < coords.length; j++) {

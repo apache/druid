@@ -19,14 +19,19 @@
 
 package io.druid.segment;
 
+import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.collections.bitmap.MutableBitmap;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.Closer;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
+import io.druid.segment.data.ByteBufferWriter;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.IOPeon;
-import io.druid.segment.serde.DoubleGenericColumnPartSerde;
+import io.druid.segment.serde.DoubleGenericColumnPartSerdeV2;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.IntBuffer;
@@ -41,6 +46,10 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
   protected final File outDir;
   protected IOPeon ioPeon;
   private DoubleColumnSerializer serializer;
+  private MutableBitmap nullRowsBitmap;
+  private int rowCount = 0;
+  private ByteBufferWriter<ImmutableBitmap> nullValueBitmapWriter;
+
 
   public DoubleDimensionMergerV9(
       String dimensionName,
@@ -57,6 +66,7 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
     this.outDir = outDir;
     this.ioPeon = ioPeon;
     this.progress = progress;
+    this.nullRowsBitmap = indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap();
 
     try {
       setupEncodedValueWriter();
@@ -79,11 +89,14 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
     serializer.close();
     final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
     builder.setValueType(ValueType.DOUBLE);
+    builder.setHasNullValues(!nullRowsBitmap.isEmpty());
     builder.addSerde(
-        DoubleGenericColumnPartSerde.serializerBuilder()
-                                    .withByteOrder(IndexIO.BYTE_ORDER)
-                                    .withDelegate(serializer)
-                                    .build()
+        DoubleGenericColumnPartSerdeV2.serializerBuilder()
+                                      .withByteOrder(IndexIO.BYTE_ORDER)
+                                      .withDelegate(serializer)
+                                      .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
+                                      .withNullValueBitmapWriter(nullValueBitmapWriter)
+                                      .build()
     );
     return builder.build();
   }
@@ -103,19 +116,35 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
   @Override
   public void processMergedRow(Double rowValues) throws IOException
   {
+    if (rowValues == null) {
+      nullRowsBitmap.add(rowCount);
+    }
     serializer.serialize(rowValues);
+    rowCount++;
   }
 
   @Override
   public void writeIndexes(List<IntBuffer> segmentRowNumConversions, Closer closer) throws IOException
   {
-    // double columns do not have indexes
+    boolean hasNullValues = !nullRowsBitmap.isEmpty();
+    if (hasNullValues) {
+      nullValueBitmapWriter = new ByteBufferWriter<>(
+          ioPeon,
+          StringUtils.format("%s.nullBitmap", dimensionName),
+          indexSpec.getBitmapSerdeFactory().getObjectStrategy()
+      );
+      try (Closeable bitmapWriter = nullValueBitmapWriter) {
+        nullValueBitmapWriter.open();
+        nullValueBitmapWriter.write(indexSpec.getBitmapSerdeFactory()
+                                             .getBitmapFactory()
+                                             .makeImmutableBitmap(nullRowsBitmap));
+      }
+    }
   }
 
   @Override
   public boolean canSkip()
   {
-    // a double column can never be all null
     return false;
   }
 }

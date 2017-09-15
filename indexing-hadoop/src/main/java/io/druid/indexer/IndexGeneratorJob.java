@@ -426,19 +426,19 @@ public class IndexGeneratorJob implements Jobby
         }
 
         @Override
-        public float getFloatMetric(String metric)
+        public Float getFloatMetric(String metric)
         {
           return row.getFloatMetric(metric);
         }
 
         @Override
-        public long getLongMetric(String metric)
+        public Long getLongMetric(String metric)
         {
           return row.getLongMetric(metric);
         }
 
         @Override
-        public double getDoubleMetric(String metric)
+        public Double getDoubleMetric(String metric)
         {
           return row.getDoubleMetric(metric);
         }

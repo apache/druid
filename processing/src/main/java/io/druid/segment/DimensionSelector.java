@@ -94,6 +94,7 @@ public interface DimensionSelector extends ColumnValueSelector, HotLoopCallee
    * @return the field name for the given id
    */
   @CalledFromHotLoop
+  @Nullable
   public String lookupName(int id);
 
   /**
@@ -144,6 +145,16 @@ public interface DimensionSelector extends ColumnValueSelector, HotLoopCallee
   @Deprecated
   @Override
   default long getLong()
+  {
+    throw new UnsupportedOperationException("DimensionSelector cannot be operated as numeric ColumnValueSelector");
+  }
+
+  /**
+   * @deprecated always throws {@link UnsupportedOperationException}
+   */
+  @Deprecated
+  @Override
+  default boolean isNull()
   {
     throw new UnsupportedOperationException("DimensionSelector cannot be operated as numeric ColumnValueSelector");
   }

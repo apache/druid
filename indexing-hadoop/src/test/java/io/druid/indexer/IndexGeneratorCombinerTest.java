@@ -186,7 +186,7 @@ public class IndexGeneratorCombinerTest
     Assert.assertEquals(Arrays.asList("host", "keywords"), capturedRow.getDimensions());
     Assert.assertEquals(ImmutableList.of(), capturedRow.getDimension("host"));
     Assert.assertEquals(Arrays.asList("bar", "foo"), capturedRow.getDimension("keywords"));
-    Assert.assertEquals(15, capturedRow.getLongMetric("visited_sum"));
+    Assert.assertEquals(15, capturedRow.getLongMetric("visited_sum").longValue());
     Assert.assertEquals(
         2.0,
         (Double) HyperUniquesAggregatorFactory.estimateCardinality(
@@ -256,7 +256,7 @@ public class IndexGeneratorCombinerTest
     Assert.assertEquals(Arrays.asList("host", "keywords"), capturedRow1.getDimensions());
     Assert.assertEquals(Collections.singletonList("host1"), capturedRow1.getDimension("host"));
     Assert.assertEquals(Arrays.asList("bar", "foo"), capturedRow1.getDimension("keywords"));
-    Assert.assertEquals(10, capturedRow1.getLongMetric("visited_sum"));
+    Assert.assertEquals(10, capturedRow1.getLongMetric("visited_sum").longValue());
     Assert.assertEquals(
         1.0,
         (Double) HyperUniquesAggregatorFactory.estimateCardinality(capturedRow1.getRaw("unique_hosts"), false),
@@ -267,7 +267,7 @@ public class IndexGeneratorCombinerTest
     Assert.assertEquals(Arrays.asList("host", "keywords"), capturedRow2.getDimensions());
     Assert.assertEquals(Collections.singletonList("host2"), capturedRow2.getDimension("host"));
     Assert.assertEquals(Arrays.asList("bar", "foo"), capturedRow2.getDimension("keywords"));
-    Assert.assertEquals(5, capturedRow2.getLongMetric("visited_sum"));
+    Assert.assertEquals(5, capturedRow2.getLongMetric("visited_sum").longValue());
     Assert.assertEquals(
         1.0,
         (Double) HyperUniquesAggregatorFactory.estimateCardinality(capturedRow2.getRaw("unique_hosts"), false),

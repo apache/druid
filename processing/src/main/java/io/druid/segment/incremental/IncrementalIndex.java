@@ -55,6 +55,7 @@ import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.Metadata;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
@@ -449,6 +450,9 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
   protected abstract double getMetricDoubleValue(int rowOffset, int aggOffset);
 
+  protected abstract boolean isNull(int rowOffset, int aggOffset);
+
+
   @Override
   public void close()
   {
@@ -551,13 +555,18 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
           DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dimension, capabilities, null);
           desc = addNewDimension(dimension, capabilities, handler);
         }
+        Object raw = row.getRaw(dimension);
         DimensionHandler handler = desc.getHandler();
         DimensionIndexer indexer = desc.getIndexer();
-        Object dimsKey = indexer.processRowValsToUnsortedEncodedKeyComponent(row.getRaw(dimension));
+        Object dimsKey = indexer.processRowValsToUnsortedEncodedKeyComponent(raw);
 
         // Set column capabilities as data is coming in
         if (!capabilities.hasMultipleValues() && dimsKey != null && handler.getLengthOfEncodedKeyComponent(dimsKey) > 1) {
           capabilities.setHasMultipleValues(true);
+        }
+
+        if (!NullHandlingHelper.useDefaultValuesForNull() && !capabilities.hasNullValues() && raw == null) {
+          capabilities.setHasNullValues(true);
         }
 
         if (wasNewDim) {

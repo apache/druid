@@ -145,6 +145,12 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory
       }
 
       @Override
+      public boolean isNull()
+      {
+        return index.isNull(timeAndDimsHolder.getValue(), metricIndex);
+      }
+
+      @Override
       public void inspectRuntimeShape(RuntimeShapeInspector inspector)
       {
         inspector.visit("index", index);
@@ -185,6 +191,12 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory
       {
         inspector.visit("index", index);
       }
+
+      @Override
+      public boolean isNull()
+      {
+        return index.isNull(timeAndDimsHolder.getValue(), metricIndex);
+      }
     };
   }
 
@@ -208,6 +220,12 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
           // nothing to inspect
+        }
+
+        @Override
+        public boolean isNull()
+        {
+          return false;
         }
       }
       return new TimeLongColumnSelector();
@@ -233,6 +251,12 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory
       public long getLong()
       {
         return index.getMetricLongValue(timeAndDimsHolder.getValue(), metricIndex);
+      }
+
+      @Override
+      public boolean isNull()
+      {
+        return index.isNull(timeAndDimsHolder.getValue(), metricIndex);
       }
 
       @Override

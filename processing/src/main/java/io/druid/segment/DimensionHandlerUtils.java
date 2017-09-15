@@ -237,10 +237,20 @@ public final class DimensionHandlerUtils
     return strategyFactory.makeColumnSelectorStrategy(capabilities, selector);
   }
 
-  public static Long convertObjectToLong(@Nullable Object valObj)
+  public static @Nullable
+  String convertObjectToString(@Nullable Object valObj)
   {
     if (valObj == null) {
-      return ZERO_LONG;
+      return null;
+    }
+    return valObj.toString();
+  }
+
+  public static @Nullable
+  Long convertObjectToLong(@Nullable Object valObj)
+  {
+    if (valObj == null) {
+      return null;
     }
 
     if (valObj instanceof Long) {
@@ -254,10 +264,11 @@ public final class DimensionHandlerUtils
     }
   }
 
-  public static Float convertObjectToFloat(@Nullable Object valObj)
+  public static @Nullable
+  Float convertObjectToFloat(@Nullable Object valObj)
   {
     if (valObj == null) {
-      return ZERO_FLOAT;
+      return null;
     }
 
     if (valObj instanceof Float) {
@@ -271,10 +282,11 @@ public final class DimensionHandlerUtils
     }
   }
 
-  public static Double convertObjectToDouble(@Nullable Object valObj)
+  public static @Nullable
+  Double convertObjectToDouble(@Nullable Object valObj)
   {
     if (valObj == null) {
-      return ZERO_DOUBLE;
+      return null;
     }
 
     if (valObj instanceof Double) {
@@ -282,8 +294,8 @@ public final class DimensionHandlerUtils
     } else if (valObj instanceof Number) {
       return ((Number) valObj).doubleValue();
     } else if (valObj instanceof String) {
-      Double doubleValue = Doubles.tryParse((String) valObj);
-      return doubleValue == null ? ZERO_DOUBLE : doubleValue;
+      Double doubleVal = Doubles.tryParse((String) valObj);
+      return NullHandlingHelper.nullToDefault(doubleVal);
     } else {
       throw new ParseException("Unknown type[%s]", valObj.getClass());
     }
@@ -327,16 +339,16 @@ public final class DimensionHandlerUtils
 
   public static Double nullToZero(@Nullable Double number)
   {
-    return number == null ? ZERO_DOUBLE : number;
+    return number == null ? NullHandlingHelper.ZERO_DOUBLE : number;
   }
 
   public static Long nullToZero(@Nullable Long number)
   {
-    return number == null ? ZERO_LONG : number;
+    return number == null ? NullHandlingHelper.ZERO_LONG : number;
   }
 
   public static Float nullToZero(@Nullable Float number)
   {
-    return number == null ? ZERO_FLOAT : number;
+    return number == null ? NullHandlingHelper.ZERO_FLOAT : number;
   }
 }

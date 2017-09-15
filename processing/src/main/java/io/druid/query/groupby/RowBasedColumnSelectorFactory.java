@@ -20,7 +20,6 @@
 package io.druid.query.groupby;
 
 import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import io.druid.data.input.Row;
@@ -29,11 +28,13 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.IdLookup;
 import io.druid.segment.LongColumnSelector;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.SingleValueDimensionSelector;
 import io.druid.segment.column.Column;
@@ -215,13 +216,14 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
               @Override
               public boolean matches()
               {
-                final List<String> dimensionValues = row.get().getDimension(dimension);
+                Row row = RowBasedColumnSelectorFactory.this.row.get();
+                final List<String> dimensionValues = row.getDimension(dimension);
                 if (dimensionValues == null || dimensionValues.isEmpty()) {
                   return value == null;
                 }
 
                 for (String dimensionValue : dimensionValues) {
-                  if (Objects.equals(Strings.emptyToNull(dimensionValue), value)) {
+                  if (Objects.equals(NullHandlingHelper.defaultToNull(dimensionValue), value)) {
                     return true;
                   }
                 }
@@ -246,7 +248,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
                 }
 
                 for (String dimensionValue : dimensionValues) {
-                  if (Objects.equals(extractionFn.apply(Strings.emptyToNull(dimensionValue)), value)) {
+                  if (Objects.equals(extractionFn.apply(NullHandlingHelper.defaultToNull(dimensionValue)), value)) {
                     return true;
                   }
                 }
@@ -279,7 +281,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
                 }
 
                 for (String dimensionValue : dimensionValues) {
-                  if (predicate.apply(Strings.emptyToNull(dimensionValue))) {
+                  if (predicate.apply(NullHandlingHelper.defaultToNull(dimensionValue))) {
                     return true;
                   }
                 }
@@ -305,7 +307,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
                 }
 
                 for (String dimensionValue : dimensionValues) {
-                  if (predicate.apply(extractionFn.apply(Strings.emptyToNull(dimensionValue)))) {
+                  if (predicate.apply(extractionFn.apply(NullHandlingHelper.defaultToNull(dimensionValue)))) {
                     return true;
                   }
                 }
@@ -331,7 +333,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         @Override
         public String lookupName(int id)
         {
-          final String value = Strings.emptyToNull(row.get().getDimension(dimension).get(id));
+          final String value = NullHandlingHelper.defaultToNull(row.get().getDimension(dimension).get(id));
           return extractionFn == null ? value : extractionFn.apply(value);
         }
 
@@ -377,6 +379,13 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         {
           return (float) row.get().getTimestampFromEpoch();
         }
+
+        @Override
+        public boolean isNull()
+        {
+          // Time column never has null values
+          return false;
+        }
       }
       return new TimeFloatColumnSelector();
     } else {
@@ -385,7 +394,13 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         @Override
         public float getFloat()
         {
-          return row.get().getFloatMetric(columnName);
+          return DimensionHandlerUtils.nullToZero(row.get().getFloatMetric(columnName));
+        }
+
+        @Override
+        public boolean isNull()
+        {
+          return row.get().getFloatMetric(columnName) == null;
         }
       };
     }
@@ -410,6 +425,13 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         {
           return row.get().getTimestampFromEpoch();
         }
+
+        @Override
+        public boolean isNull()
+        {
+          // Time column never has null values
+          return false;
+        }
       }
       return new TimeLongColumnSelector();
     } else {
@@ -418,7 +440,13 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         @Override
         public long getLong()
         {
-          return row.get().getLongMetric(columnName);
+          return DimensionHandlerUtils.nullToZero(row.get().getLongMetric(columnName));
+        }
+
+        @Override
+        public boolean isNull()
+        {
+          return row.get().getLongMetric(columnName) == null;
         }
       };
     }
@@ -479,6 +507,14 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         {
           return (double) row.get().getTimestampFromEpoch();
         }
+
+        @Override
+        public boolean isNull()
+        {
+          // Time column never has null values
+          // Time column never has null values
+          return false;
+        }
       }
       return new TimeDoubleColumnSelector();
     } else {
@@ -487,7 +523,13 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         @Override
         public double getDouble()
         {
-          return row.get().getDoubleMetric(columnName);
+          return DimensionHandlerUtils.nullToZero(row.get().getDoubleMetric(columnName));
+        }
+
+        @Override
+        public boolean isNull()
+        {
+          return row.get().getDoubleMetric(columnName) == null;
         }
       };
     }

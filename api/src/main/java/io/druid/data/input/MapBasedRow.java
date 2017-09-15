@@ -101,12 +101,12 @@ public class MapBasedRow implements Row
   }
 
   @Override
-  public float getFloatMetric(String metric)
+  public Float getFloatMetric(String metric)
   {
     Object metricValue = event.get(metric);
 
     if (metricValue == null) {
-      return 0.0f;
+      return null;
     }
 
     if (metricValue instanceof Number) {
@@ -124,12 +124,12 @@ public class MapBasedRow implements Row
   }
 
   @Override
-  public long getLongMetric(String metric)
+  public Long getLongMetric(String metric)
   {
     Object metricValue = event.get(metric);
 
     if (metricValue == null) {
-      return 0L;
+      return null;
     }
 
     if (metricValue instanceof Number) {
@@ -148,12 +148,12 @@ public class MapBasedRow implements Row
   }
 
   @Override
-  public double getDoubleMetric(String metric)
+  public Double getDoubleMetric(String metric)
   {
     Object metricValue = event.get(metric);
 
     if (metricValue == null) {
-      return 0.0d;
+      return null;
     }
 
     if (metricValue instanceof Number) {

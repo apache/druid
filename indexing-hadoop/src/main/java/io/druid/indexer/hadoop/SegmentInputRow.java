@@ -71,19 +71,19 @@ public class SegmentInputRow implements InputRow
   }
 
   @Override
-  public float getFloatMetric(String metric)
+  public Float getFloatMetric(String metric)
   {
     return delegate.getFloatMetric(metric);
   }
 
   @Override
-  public long getLongMetric(String metric)
+  public Long getLongMetric(String metric)
   {
     return delegate.getLongMetric(metric);
   }
 
   @Override
-  public double getDoubleMetric(String metric)
+  public Double getDoubleMetric(String metric)
   {
     return delegate.getDoubleMetric(metric);
   }

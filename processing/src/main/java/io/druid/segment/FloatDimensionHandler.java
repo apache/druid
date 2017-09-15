@@ -21,8 +21,8 @@ package io.druid.segment;
 
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
-import io.druid.segment.column.GenericColumn;
 import io.druid.segment.column.FloatColumn;
+import io.druid.segment.column.GenericColumn;
 import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.Indexed;
 

@@ -527,7 +527,7 @@ public class IngestSegmentFirehoseFactoryTest
         InputRow row = firehose.nextRow();
         Assert.assertArrayEquals(new String[]{DIM_NAME}, row.getDimensions().toArray());
         Assert.assertArrayEquals(new String[]{DIM_VALUE}, row.getDimension(DIM_NAME).toArray());
-        Assert.assertEquals(METRIC_LONG_VALUE.longValue(), row.getLongMetric(METRIC_LONG_NAME));
+        Assert.assertEquals(METRIC_LONG_VALUE.longValue(), row.getLongMetric(METRIC_LONG_NAME).longValue());
         Assert.assertEquals(METRIC_FLOAT_VALUE, row.getFloatMetric(METRIC_FLOAT_NAME), METRIC_FLOAT_VALUE * 0.0001);
         ++rowcount;
       }
