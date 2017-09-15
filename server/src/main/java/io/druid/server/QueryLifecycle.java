@@ -111,20 +111,16 @@ public class QueryLifecycle
    * is unauthorized, an IllegalStateException will be thrown. Logs and metrics are emitted when the Sequence is
    * either fully iterated or throws an exception.
    *
-   * @param query             the query
-   * @param user              authentication token from the request
-   * @param namespace         authentication namespace of the request
-   * @param remoteAddress     remote address, for logging; or null if unknown
-   * @param needsAuth         if false, skip the authorization check. This is useful when the authorization check has
-   *                          already been performed (e.g. in SQL handling, where authorization takes place in the
-   *                          planning step)
+   * @param query                   the query
+   * @param authenticationResult    authentication result indicating identity of the requester
+   * @param remoteAddress           remote address, for logging; or null if unknown
    *
    * @return results
    */
   @SuppressWarnings("unchecked")
   public <T> Sequence<T> runSimple(
       final Query<T> query,
-      @Nullable final AuthenticationResult authenticationResult,
+      final AuthenticationResult authenticationResult,
       @Nullable final String remoteAddress
   )
   {
@@ -186,15 +182,13 @@ public class QueryLifecycle
   /**
    * Authorize the query. Will return an Access object denoting whether the query is authorized or not.
    *
-   * @param token authentication token from the request
-   * @param namespace namespace of the authentication token
-   * @param authenticationResult authentication result of the request
+   * @param authenticationResult authentication result indicating the identity of the requester
    *
    * @return authorization result
    *
    * */
   public Access authorize(
-      @Nullable final AuthenticationResult authenticationResult
+      final AuthenticationResult authenticationResult
   )
   {
     transition(State.INITIALIZED, State.AUTHORIZING);

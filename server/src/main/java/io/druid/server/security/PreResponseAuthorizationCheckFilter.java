@@ -76,30 +76,8 @@ public class PreResponseAuthorizationCheckFilter implements Filter
   {
     final HttpServletResponse response = (HttpServletResponse) servletResponse;
 
-    // Since this is the last filter in the chain, some previous authentication filter
-    // should have placed an authentication result in the request.
-    // If not, send an authentication challenge.
     if (servletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT) == null) {
-      Set<String> supportedAuthSchemes = Sets.newHashSet();
-      for (Authenticator authenticator : authenticators) {
-        String challengeHeader = authenticator.getAuthChallengeHeader();
-        if (challengeHeader != null) {
-          supportedAuthSchemes.add(challengeHeader);
-        }
-      }
-      for (String authScheme : supportedAuthSchemes) {
-        response.addHeader("WWW-Authenticate", authScheme);
-      }
-      QueryInterruptedException unauthorizedError = new QueryInterruptedException(
-          QueryInterruptedException.UNAUTHORIZED,
-          null,
-          null,
-          DruidNode.getDefaultHost()
-      );
-      unauthorizedError.setStackTrace(new StackTraceElement[0]);
-      OutputStream out = servletResponse.getOutputStream();
-      sendJsonError(response, Response.SC_UNAUTHORIZED, jsonMapper.writeValueAsString(unauthorizedError), out);
-      out.close();
+      handleUnauthenticatedRequest((HttpServletRequest) servletRequest, response);
       return;
     }
 
@@ -132,12 +110,41 @@ public class PreResponseAuthorizationCheckFilter implements Filter
 
   }
 
+  private void handleUnauthenticatedRequest(
+      final HttpServletRequest request,
+      final HttpServletResponse response
+  ) throws IOException
+  {
+    // Since this is the last filter in the chain, some previous authentication filter
+    // should have placed an authentication result in the request.
+    // If not, send an authentication challenge.
+    Set<String> supportedAuthSchemes = Sets.newHashSet();
+    for (Authenticator authenticator : authenticators) {
+      String challengeHeader = authenticator.getAuthChallengeHeader();
+      if (challengeHeader != null) {
+        supportedAuthSchemes.add(challengeHeader);
+      }
+    }
+    for (String authScheme : supportedAuthSchemes) {
+      response.addHeader("WWW-Authenticate", authScheme);
+    }
+    QueryInterruptedException unauthorizedError = new QueryInterruptedException(
+        QueryInterruptedException.UNAUTHORIZED,
+        null,
+        null,
+        DruidNode.getDefaultHost()
+    );
+    unauthorizedError.setStackTrace(new StackTraceElement[0]);
+    OutputStream out = response.getOutputStream();
+    sendJsonError(response, Response.SC_UNAUTHORIZED, jsonMapper.writeValueAsString(unauthorizedError), out);
+    out.close();
+    return;
+  }
+
   private void handleAuthorizationCheckError(String errorMsg, ServletResponse servletResponse)
   {
-    log.error(errorMsg);
-
     // Send out an alert so there's a centralized collection point for seeing errors of this nature
-    log.makeAlert(errorMsg);
+    log.makeAlert(errorMsg).emit();
 
     if (servletResponse.isCommitted()) {
       throw new ISE(errorMsg);

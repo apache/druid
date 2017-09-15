@@ -72,27 +72,27 @@ public class PreResponseAuthorizationCheckFilterTest
   @Test
   public void testAuthenticationFailedRequest() throws Exception
   {
-      HttpServletRequest req = EasyMock.createStrictMock(HttpServletRequest.class);
-      HttpServletResponse resp = EasyMock.createStrictMock(HttpServletResponse.class);
-      FilterChain filterChain = EasyMock.createNiceMock(FilterChain.class);
-      ServletOutputStream outputStream = EasyMock.createNiceMock(ServletOutputStream.class);
+    HttpServletRequest req = EasyMock.createStrictMock(HttpServletRequest.class);
+    HttpServletResponse resp = EasyMock.createStrictMock(HttpServletResponse.class);
+    FilterChain filterChain = EasyMock.createNiceMock(FilterChain.class);
+    ServletOutputStream outputStream = EasyMock.createNiceMock(ServletOutputStream.class);
 
-      EasyMock.expect(resp.getOutputStream()).andReturn(outputStream).once();
-      EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(null).once();
-      resp.setStatus(401);
-      EasyMock.expectLastCall().once();
-      resp.setContentType("application/json");
-      EasyMock.expectLastCall().once();
-      resp.setCharacterEncoding("UTF-8");
-      EasyMock.expectLastCall().once();
-      EasyMock.replay(req, resp, filterChain, outputStream);
+    EasyMock.expect(resp.getOutputStream()).andReturn(outputStream).once();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(null).once();
+    resp.setStatus(401);
+    EasyMock.expectLastCall().once();
+    resp.setContentType("application/json");
+    EasyMock.expectLastCall().once();
+    resp.setCharacterEncoding("UTF-8");
+    EasyMock.expectLastCall().once();
+    EasyMock.replay(req, resp, filterChain, outputStream);
 
-      PreResponseAuthorizationCheckFilter filter = new PreResponseAuthorizationCheckFilter(
-          authenticators,
-          new DefaultObjectMapper()
-      );
-      filter.doFilter(req, resp, filterChain);
-      EasyMock.verify(req, resp, filterChain, outputStream);
+    PreResponseAuthorizationCheckFilter filter = new PreResponseAuthorizationCheckFilter(
+        authenticators,
+        new DefaultObjectMapper()
+    );
+    filter.doFilter(req, resp, filterChain);
+    EasyMock.verify(req, resp, filterChain, outputStream);
   }
 
   @Test

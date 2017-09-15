@@ -23,7 +23,7 @@ package io.druid.server.security;
  * Throw this when a request is unauthorized and we want to send a 403 response back, Jersey exception mapper will
  * take care of sending the response.
  */
-public class ForbiddenException extends SecurityException
+public class ForbiddenException extends RuntimeException
 {
   public ForbiddenException()
   {

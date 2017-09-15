@@ -65,7 +65,7 @@ public class DruidKerberosAuthenticationHandler extends KerberosAuthenticationHa
         loginContext.logout();
       }
       catch (LoginException ex) {
-        log.warn(ex.getMessage(), ex);
+        log.warn(ex, ex.getMessage());
       }
     }
     loginContexts.clear();
@@ -117,7 +117,7 @@ public class DruidKerberosAuthenticationHandler extends KerberosAuthenticationHa
           loginContext.login();
         }
         catch (LoginException le) {
-          log.warn("Failed to login as [{}]", spnegoPrincipal, le);
+          log.warn(le, "Failed to login as [{}]", spnegoPrincipal);
           throw new AuthenticationException(le);
         }
         loginContexts.add(loginContext);

@@ -33,7 +33,9 @@ public class AuthenticationUtils
   )
   {
     for (Authenticator authenticator : authenticators) {
-      FilterHolder holder = new FilterHolder(authenticator.getFilter());
+      FilterHolder holder = new FilterHolder(
+          new AuthenticationWrappingFilter(authenticator.getFilter())
+      );
       if (authenticator.getInitParameters() != null) {
         holder.setInitParameters(authenticator.getInitParameters());
       }

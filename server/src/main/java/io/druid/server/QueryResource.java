@@ -275,8 +275,7 @@ public class QueryResource implements QueryCountStatsProvider
     catch (ForbiddenException e) {
       // don't do anything for an authorization failure, ForbiddenExceptionMapper will catch this later and
       // send an error response if this is thrown.
-      Throwables.propagate(e);
-      return context.gotError(e);
+      throw e;
     }
     catch (Exception e) {
       failedQueryCount.incrementAndGet();
