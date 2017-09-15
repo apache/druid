@@ -49,12 +49,6 @@ import io.druid.query.ResultMergeQueryRunner;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
-import io.druid.query.search.DefaultSearchQueryMetricsFactory;
-import io.druid.query.search.SearchHit;
-import io.druid.query.search.SearchQuery;
-import io.druid.query.search.SearchQueryConfig;
-import io.druid.query.search.SearchQueryMetrics;
-import io.druid.query.search.SearchQueryMetricsFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;

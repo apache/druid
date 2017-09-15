@@ -17,20 +17,15 @@
  * under the License.
  */
 
-package io.druid.query.search.search;
+package io.druid.query.search;
 
-/**
- * Implementations could be injected using
- *
- * PolyBind
- *    .optionBinder(binder, Key.get(SearchQueryMetricsFactory.class))
- *    .addBinding("myCustomSearchQueryMetricsFactory")
- *    .to(MyCustomSearchQueryMetricsFactory.class);
- *
- * And then setting property:
- * druid.query.search.queryMetricsFactory=myCustomSearchQueryMetricsFactory
- */
-public interface SearchQueryMetricsFactory
+import io.druid.query.QueryMetrics;
+
+public interface SearchQueryMetrics extends QueryMetrics<SearchQuery>
 {
-  SearchQueryMetrics makeMetrics(SearchQuery searchQuery);
+  /**
+   * Sets the granularity of {@link SearchQuery#getGranularity()} of the given query as dimension.
+   */
+  void granularity(SearchQuery query);
+
 }
