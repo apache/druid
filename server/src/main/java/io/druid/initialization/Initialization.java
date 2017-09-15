@@ -66,7 +66,7 @@ import io.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
 import io.druid.server.initialization.AuthenticatorHttpClientWrapperModule;
 import io.druid.server.initialization.AuthenticatorMapperModule;
 import io.druid.server.initialization.AuthorizerMapperModule;
-import io.druid.server.initialization.EmitterModule;
+import io.druid.server.emitter.EmitterModule;
 import io.druid.server.initialization.jetty.JettyServerModule;
 import io.druid.server.metrics.MetricsModule;
 import org.apache.commons.io.FileUtils;

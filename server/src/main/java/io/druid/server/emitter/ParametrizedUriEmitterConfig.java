@@ -17,20 +17,18 @@
  * under the License.
  */
 
-package io.druid.server.initialization;
+package io.druid.server.emitter;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.Period;
 
-/**
- */
-public class HttpEmitterConfig extends com.metamx.emitter.core.HttpEmitterConfig
+public class ParametrizedUriEmitterConfig extends com.metamx.emitter.core.ParametrizedUriEmitterConfig
 {
   @JsonProperty
-  private Period timeOut = new Period("PT5M");
+  private Period readTimeout = new Period("PT5M");
 
   public Period getReadTimeout()
   {
-    return timeOut;
+    return readTimeout;
   }
 }

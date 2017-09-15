@@ -17,28 +17,26 @@
  * under the License.
  */
 
-package io.druid.query.search.search;
+package io.druid.query.search;
 
-import io.druid.query.dimension.DimensionSpec;
-import io.druid.segment.Segment;
-import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
-import java.util.List;
+import javax.annotation.Nullable;
 
-public abstract class SearchQueryExecutor
+/**
+ */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "contains", value = ContainsSearchQuerySpec.class),
+    @JsonSubTypes.Type(name = "insensitive_contains", value = InsensitiveContainsSearchQuerySpec.class),
+    @JsonSubTypes.Type(name = "fragment", value = FragmentSearchQuerySpec.class),
+    @JsonSubTypes.Type(name = "regex", value = RegexSearchQuerySpec.class),
+    @JsonSubTypes.Type(name = "all", value = AllSearchQuerySpec.class)
+})
+public interface SearchQuerySpec
 {
-  protected final SearchQuery query;
-  protected final SearchQuerySpec searchQuerySpec;
-  protected final Segment segment;
-  protected final List<DimensionSpec> dimsToSearch;
+  public boolean accept(@Nullable String dimVal);
 
-  public SearchQueryExecutor(SearchQuery query, Segment segment, List<DimensionSpec> dimensionSpecs)
-  {
-    this.query = query;
-    this.segment = segment;
-    this.searchQuerySpec = query.getQuery();
-    this.dimsToSearch = dimensionSpecs;
-  }
-
-  public abstract Object2IntRBTreeMap<SearchHit> execute(int limit);
+  public byte[] getCacheKey();
 }

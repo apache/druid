@@ -81,7 +81,7 @@ public class RetryUtils
     return retry(f, shouldRetry, 0, maxTries);
   }
 
-  private static void awaitNextRetry(Throwable e, final int nTry, final boolean quiet) throws InterruptedException
+  private static void awaitNextRetry(final Throwable e, final int nTry, final boolean quiet) throws InterruptedException
   {
 
     final long sleepMillis = nextRetrySleepMillis(nTry);
@@ -95,7 +95,7 @@ public class RetryUtils
     Thread.sleep(sleepMillis);
   }
 
-  public static long nextRetrySleepMillis(final int nTry) throws InterruptedException
+  public static long nextRetrySleepMillis(final int nTry)
   {
     final long baseSleepMillis = 1000;
     final long maxSleepMillis = 60000;

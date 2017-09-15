@@ -17,13 +17,32 @@
  * under the License.
  */
 
-package io.druid.segment.historical;
+package io.druid.server.emitter;
 
-import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
-import io.druid.segment.FloatColumnSelector;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import com.google.inject.Provides;
+import com.google.inject.name.Named;
+import com.metamx.emitter.core.Emitter;
+import com.metamx.emitter.core.NoopEmitter;
+import io.druid.guice.ManageLifecycle;
 
-public interface HistoricalFloatColumnSelector extends FloatColumnSelector
+/**
+ */
+public class NoopEmitterModule implements Module
 {
-  @CalledFromHotLoop
-  float get(int offset);
+  public static final String EMITTER_TYPE = "noop";
+
+  @Override
+  public void configure(Binder binder)
+  {
+  }
+
+  @Provides
+  @ManageLifecycle
+  @Named(EMITTER_TYPE)
+  public Emitter makeEmitter()
+  {
+    return new NoopEmitter();
+  }
 }

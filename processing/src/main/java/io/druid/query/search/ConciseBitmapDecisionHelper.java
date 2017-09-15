@@ -17,24 +17,22 @@
  * under the License.
  */
 
-package io.druid.server.initialization;
+package io.druid.query.search;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
-
-import javax.validation.constraints.NotNull;
-import java.util.List;
-
-/**
- */
-public class ComposingEmitterConfig
+public class ConciseBitmapDecisionHelper extends SearchQueryDecisionHelper
 {
-  @JsonProperty
-  @NotNull
-  private List<String> emitters = ImmutableList.of();
+  // This value comes from an experiment.
+  // See the discussion at https://github.com/druid-io/druid/pull/3792#issuecomment-268331804.
+  private static final double BITMAP_INTERSECT_COST = 7.425;
+  private static final ConciseBitmapDecisionHelper INSTANCE = new ConciseBitmapDecisionHelper();
 
-  public List<String> getEmitters()
+  public static ConciseBitmapDecisionHelper instance()
   {
-    return emitters;
+    return INSTANCE;
+  }
+
+  private ConciseBitmapDecisionHelper()
+  {
+    super(BITMAP_INTERSECT_COST);
   }
 }

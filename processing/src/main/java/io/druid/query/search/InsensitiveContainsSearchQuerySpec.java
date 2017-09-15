@@ -17,43 +17,40 @@
  * under the License.
  */
 
-package io.druid.query.search.search;
+package io.druid.query.search;
 
-import javax.annotation.Nullable;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  */
-public class AllSearchQuerySpec implements SearchQuerySpec
+public class InsensitiveContainsSearchQuerySpec extends ContainsSearchQuerySpec
 {
-  private static final byte CACHE_TYPE_ID = 0x7f;
-
-  @Override
-  public boolean accept(@Nullable String dimVal)
+  @JsonCreator
+  public InsensitiveContainsSearchQuerySpec(
+      @JsonProperty("value") String value
+  )
   {
-    return true;
-  }
-
-  @Override
-  public byte[] getCacheKey()
-  {
-    return new byte[]{CACHE_TYPE_ID};
-  }
-
-  @Override
-  public boolean equals(Object object)
-  {
-    return object instanceof AllSearchQuerySpec;
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return CACHE_TYPE_ID;
+    super(value, false);
   }
 
   @Override
   public String toString()
   {
-    return "AllSearchQuerySpec{}";
+    return "InsensitiveContainsSearchQuerySpec{" +
+           "value=" + getValue() +
+           "}";
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    return super.equals(o);
   }
 }

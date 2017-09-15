@@ -17,21 +17,21 @@
  * under the License.
  */
 
-package io.druid.query.search.search;
+package io.druid.query.search;
 
-public class ConciseBitmapDecisionHelper extends SearchQueryDecisionHelper
+public class RoaringBitmapDecisionHelper extends SearchQueryDecisionHelper
 {
   // This value comes from an experiment.
   // See the discussion at https://github.com/druid-io/druid/pull/3792#issuecomment-268331804.
-  private static final double BITMAP_INTERSECT_COST = 7.425;
-  private static final ConciseBitmapDecisionHelper INSTANCE = new ConciseBitmapDecisionHelper();
+  private static final double BITMAP_INTERSECT_COST = 4.5;
+  private static final RoaringBitmapDecisionHelper INSTANCE = new RoaringBitmapDecisionHelper();
 
-  public static ConciseBitmapDecisionHelper instance()
+  public static RoaringBitmapDecisionHelper instance()
   {
     return INSTANCE;
   }
 
-  private ConciseBitmapDecisionHelper()
+  private RoaringBitmapDecisionHelper()
   {
     super(BITMAP_INTERSECT_COST);
   }

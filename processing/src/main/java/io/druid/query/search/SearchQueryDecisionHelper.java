@@ -17,32 +17,19 @@
  * under the License.
  */
 
-package io.druid.server.initialization;
+package io.druid.query.search;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import com.google.inject.Provides;
-import com.google.inject.name.Named;
-import com.metamx.emitter.core.Emitter;
-import com.metamx.emitter.core.NoopEmitter;
-import io.druid.guice.ManageLifecycle;
-
-/**
- */
-public class NoopEmitterModule implements Module
+public abstract class SearchQueryDecisionHelper
 {
-  public static final String EMITTER_TYPE = "noop";
+  private final double bitmapIntersectCost;
 
-  @Override
-  public void configure(Binder binder)
+  protected SearchQueryDecisionHelper(final double bitmapIntersectCost)
   {
+    this.bitmapIntersectCost = bitmapIntersectCost;
   }
 
-  @Provides
-  @ManageLifecycle
-  @Named(EMITTER_TYPE)
-  public Emitter makeEmitter()
+  public double getBitmapIntersectCost()
   {
-    return new NoopEmitter();
+    return bitmapIntersectCost;
   }
 }

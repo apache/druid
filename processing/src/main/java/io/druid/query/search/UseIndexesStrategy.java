@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.query.search.search;
+package io.druid.query.search;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
@@ -32,7 +32,7 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.IdentityExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
-import io.druid.query.search.search.CursorOnlyStrategy.CursorBasedExecutor;
+import io.druid.query.search.CursorOnlyStrategy.CursorBasedExecutor;
 import io.druid.segment.ColumnSelectorBitmapIndexSelector;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.Segment;

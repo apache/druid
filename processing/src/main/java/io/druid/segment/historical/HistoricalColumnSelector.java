@@ -17,40 +17,13 @@
  * under the License.
  */
 
-package io.druid.segment;
+package io.druid.segment.historical;
 
-import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.historical.HistoricalColumnSelector;
+import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
+import io.druid.segment.ColumnValueSelector;
 
-public final class ZeroFloatColumnSelector implements FloatColumnSelector, HistoricalColumnSelector
+public interface HistoricalColumnSelector extends ColumnValueSelector
 {
-  private static final ZeroFloatColumnSelector INSTANCE = new ZeroFloatColumnSelector();
-
-  private ZeroFloatColumnSelector()
-  {
-    // No instantiation.
-  }
-
-  public static ZeroFloatColumnSelector instance()
-  {
-    return INSTANCE;
-  }
-
-  @Override
-  public float getFloat()
-  {
-    return 0.0f;
-  }
-
-  @Override
-  public double getDouble(int offset)
-  {
-    return 0.0;
-  }
-
-  @Override
-  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-  {
-    // nothing to inspect
-  }
+  @CalledFromHotLoop
+  double getDouble(int offset);
 }
