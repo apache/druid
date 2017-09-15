@@ -20,6 +20,8 @@
 package io.druid.server.http.security;
 
 import com.google.common.collect.Lists;
+import com.metamx.emitter.EmittingLogger;
+import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.server.security.AllowAllAuthenticator;
@@ -96,6 +98,8 @@ public class PreResponseAuthorizationCheckFilterTest
   @Test
   public void testMissingAuthorizationCheck() throws Exception
   {
+    EmittingLogger.registerEmitter(EasyMock.createNiceMock(ServiceEmitter.class));
+
     expectedException.expect(ISE.class);
     expectedException.expectMessage("Request did not have an authorization check performed: uri");
 
@@ -110,6 +114,7 @@ public class PreResponseAuthorizationCheckFilterTest
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
     EasyMock.expect(resp.getStatus()).andReturn(200).once();
     EasyMock.expect(req.getRequestURI()).andReturn("uri").once();
+    EasyMock.expect(resp.isCommitted()).andReturn(true).once();
     resp.setStatus(403);
     EasyMock.expectLastCall().once();
     resp.setContentType("application/json");
