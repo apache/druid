@@ -39,7 +39,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
 
 /**
