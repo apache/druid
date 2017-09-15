@@ -79,6 +79,7 @@
         <!-- Cannot update to AWS SDK 1.11+ because of Jackson incompatibility.
         Need to update Druid to use Jackson 2.6+ -->
         <aws.sdk.version>1.10.77</aws.sdk.version>
+	<druid.null.handling.useDefaultValueForNull>true</druid.null.handling.useDefaultValueForNull>
     </properties>
 
     <modules>
@@ -1027,6 +1028,7 @@
                         <!-- set heap size to work around https://github.com/travis-ci/travis-ci/issues/3396 -->
                         <argLine>-Xmx3000m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
                             -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+			    -Ddruid.null.handling.useDefaultValueForNull=${druid.null.handling.useDefaultValueForNull}
                         </argLine>
                         <!-- our tests are very verbose, let's keep the volume down -->
                         <redirectTestOutputToFile>true</redirectTestOutputToFile>
