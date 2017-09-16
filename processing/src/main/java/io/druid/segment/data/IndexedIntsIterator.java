@@ -19,48 +19,43 @@
 
 package io.druid.segment.data;
 
-import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.ints.IntIterators;
 
-import java.io.IOException;
+import io.druid.segment.IntIteratorUtils;
+import it.unimi.dsi.fastutil.ints.AbstractIntIterator;
 
 /**
  */
-public class EmptyIndexedInts implements IndexedInts
+public class IndexedIntsIterator extends AbstractIntIterator
 {
-  public static final EmptyIndexedInts EMPTY_INDEXED_INTS = new EmptyIndexedInts();
+  private final IndexedInts baseInts;
+  private final int size;
 
-  private EmptyIndexedInts()
+  private int currIndex = 0;
+
+  public IndexedIntsIterator(
+      IndexedInts baseInts
+  )
   {
+    this.baseInts = baseInts;
+
+    size = baseInts.size();
   }
 
   @Override
-  public int size()
+  public boolean hasNext()
   {
-    return 0;
+    return currIndex < size;
   }
 
   @Override
-  public int get(int index)
+  public int nextInt()
   {
-    throw new UnsupportedOperationException();
+    return baseInts.get(currIndex++);
   }
 
   @Override
-  public IntIterator iterator()
+  public int skip(int n)
   {
-    return IntIterators.EMPTY_ITERATOR;
-  }
-
-  @Override
-  public void close() throws IOException
-  {
-  }
-
-  @Override
-  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-  {
-    // nothing to inspect
+    return IntIteratorUtils.skip(this, n);
   }
 }

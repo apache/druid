@@ -164,6 +164,39 @@ public final class IntIteratorUtils
     }
   }
 
+  public static IntIterator fromRoaringBitmapIntIterator(org.roaringbitmap.IntIterator iterator)
+  {
+    return new RoaringBitmapDelegatingIntIterator(iterator);
+  }
+
+  private static class RoaringBitmapDelegatingIntIterator extends AbstractIntIterator
+  {
+    private final org.roaringbitmap.IntIterator delegate;
+
+    private RoaringBitmapDelegatingIntIterator(org.roaringbitmap.IntIterator delegate)
+    {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public boolean hasNext()
+    {
+      return delegate.hasNext();
+    }
+
+    @Override
+    public int nextInt()
+    {
+      return delegate.next();
+    }
+
+    @Override
+    public int skip(int n)
+    {
+      return IntIteratorUtils.skip(this, n);
+    }
+  }
+
   public static IntList toIntList(IntIterator iterator)
   {
     final IntList integers = new IntArrayList();

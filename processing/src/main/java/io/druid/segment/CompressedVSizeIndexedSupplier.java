@@ -25,9 +25,11 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressedVSizeIntsIndexedSupplier;
 import io.druid.segment.data.IndexedInts;
+import io.druid.segment.data.IndexedIntsIterator;
 import io.druid.segment.data.IndexedIterable;
 import io.druid.segment.data.IndexedMultivalue;
 import io.druid.segment.data.WritableSupplier;
+import it.unimi.dsi.fastutil.ints.IntIterator;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -202,6 +204,12 @@ public class CompressedVSizeIndexedSupplier implements WritableSupplier<IndexedM
         public void close() throws IOException
         {
           // no-op
+        }
+
+        @Override
+        public IntIterator iterator()
+        {
+          return new IndexedIntsIterator(this);
         }
 
         @Override

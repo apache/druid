@@ -57,6 +57,7 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
+import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -1523,8 +1524,10 @@ public class IndexMergerTestBase
   private void checkBitmapIndex(ArrayList<Integer> expected, IndexedInts real)
   {
     Assert.assertEquals(expected.size(), real.size());
-    for (int i = 0; i < real.size(); i++) {
-      Assert.assertEquals(expected.get(i), (Integer) real.get(i));
+    int i = 0;
+    for (IntIterator iterator = real.iterator(); iterator.hasNext(); ) {
+      int index = iterator.nextInt();
+      Assert.assertEquals(expected.get(i++), (Integer) index);
     }
   }
 

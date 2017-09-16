@@ -115,8 +115,11 @@ public class CompressedVSizeIndexedSupplierTest
       final IndexedInts vSizeIndexedInts = iterator.next();
 
       Assert.assertEquals(ints.length, vSizeIndexedInts.size());
-      for (int i = 0; i < vSizeIndexedInts.size(); i++) {
-        Assert.assertEquals(ints[i], vSizeIndexedInts.get(i));
+      Iterator<Integer> valsIterator = vSizeIndexedInts.iterator();
+      int j = 0;
+      while (valsIterator.hasNext()) {
+        Assert.assertEquals((Integer) ints[j], valsIterator.next());
+        j++;
       }
       row++;
     }

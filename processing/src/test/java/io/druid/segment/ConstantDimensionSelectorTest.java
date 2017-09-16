@@ -25,6 +25,8 @@ import io.druid.segment.data.IndexedInts;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Iterator;
+
 public class ConstantDimensionSelectorTest
 {
   private final DimensionSelector NULL_SELECTOR = DimensionSelectorUtils.constantSelector(null);
@@ -44,6 +46,11 @@ public class ConstantDimensionSelectorTest
     IndexedInts row = NULL_SELECTOR.getRow();
     Assert.assertEquals(1, row.size());
     Assert.assertEquals(0, row.get(0));
+
+    Iterator<Integer> iter = row.iterator();
+    Assert.assertEquals(true, iter.hasNext());
+    Assert.assertEquals(0, iter.next().intValue());
+    Assert.assertEquals(false, iter.hasNext());
   }
 
   @Test

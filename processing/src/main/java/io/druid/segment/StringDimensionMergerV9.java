@@ -31,7 +31,6 @@ import io.druid.collections.spatial.ImmutableRTree;
 import io.druid.collections.spatial.RTree;
 import io.druid.collections.spatial.split.LinearGutmanSplitStrategy;
 import io.druid.java.util.common.ByteBufferUtils;
-import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.Closer;
@@ -566,38 +565,25 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     @Override
     public IntIterator iterator()
     {
+      final IntIterator baseIterator = baseIndex.iterator();
       return new AbstractIntIterator()
       {
-        final int limit = baseIndex.size();
-        int i = 0;
-
         @Override
         public boolean hasNext()
         {
-          return i < limit;
+          return baseIterator.hasNext();
         }
 
         @Override
         public int nextInt()
         {
-          return conversionBuffer.get(baseIndex.get(i++));
+          return conversionBuffer.get(baseIterator.nextInt());
         }
 
         @Override
         public int skip(int n)
         {
-          if (n < 0) {
-            throw new IAE("n: " + n);
-          }
-          // overflow-aware code
-          int remaining = limit - i;
-          if (remaining <= n) {
-            i = n;
-            return remaining;
-          } else {
-            i += n;
-            return n;
-          }
+          return IntIteratorUtils.skip(baseIterator, n);
         }
       };
     }

@@ -20,6 +20,8 @@
 package io.druid.segment.data;
 
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntIterators;
 
 import java.io.IOException;
 
@@ -45,6 +47,12 @@ public final class SingleIndexedInt implements IndexedInts
       throw new IllegalArgumentException(i + " != 0");
     }
     return value;
+  }
+
+  @Override
+  public IntIterator iterator()
+  {
+    return IntIterators.singleton(value);
   }
 
   @Override
