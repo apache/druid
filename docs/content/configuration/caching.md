@@ -24,7 +24,9 @@ for both broker and historical nodes, when defined in the common properties file
 
 #### Local Cache
 
-(*DEPRECATED: Use caffeine instead*)
+<div class="note caution">
+DEPRECATED: Use caffeine instead
+</div>
 
 A simple in-memory LRU cache. Local cache resides in JVM heap memory, so if you enable it, make sure you increase heap size accordingly.
 
@@ -54,9 +56,9 @@ Below are the configuration options known to this module:
 
 Here are the possible values for `druid.cache.cacheExecutorFactory`, which controls how maintenance tasks are run
 
-* `COMMON_FJP` (default) use the common ForkJoinPool. Do NOT use this option unless you are running 8u60 or higher
-* `SINGLE_THREAD` Use a single-threaded executor
-* `SAME_THREAD` Cache maintenance is done eagerly
+* `COMMON_FJP` (default) use the common ForkJoinPool. Should use with [JRE 8u60 or higher](https://github.com/druid-io/druid/pull/4810#issuecomment-329922810). Older versions of the JRE may have worse performance than newer JRE versions.
+* `SINGLE_THREAD` Use a single-threaded executor.
+* `SAME_THREAD` Cache maintenance is done eagerly.
 
 #### Metrics
 In addition to the normal cache metrics, the caffeine cache implementation also reports the following in both `total` and `delta`
