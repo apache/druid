@@ -151,9 +151,9 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     public synchronized boolean doProvision()
     {
       Collection<Task> pendingTasks = runner.getPendingTaskPayloads();
-      log.info("Pending tasks: %d %s", pendingTasks.size(), pendingTasks);
+      log.debug("Pending tasks: %d %s", pendingTasks.size(), pendingTasks);
       Collection<ImmutableWorkerInfo> workers = runner.getWorkers();
-      log.info("Workers: %d %s", workers.size(), workers);
+      log.debug("Workers: %d %s", workers.size(), workers);
       boolean didProvision = false;
       final WorkerBehaviorConfig workerConfig = getWorkerBehaviorConfig(workerConfigRef, "provision", log);
       if (workerConfig == null) {
@@ -176,7 +176,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       );
       log.info("Currently provisioning: %d %s", currentlyProvisioning.size(), currentlyProvisioning);
       currentlyProvisioning.removeAll(workerNodeIds);
-      log.info(
+      log.debug(
           "Currently provisioning without WorkerNodeIds: %d %s",
           currentlyProvisioning.size(),
           currentlyProvisioning
@@ -252,7 +252,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
           pendingTasks,
           workers
       );
-      log.info("More workers needed: %d", moreWorkersNeeded);
+      log.debug("More workers needed: %d", moreWorkersNeeded);
 
       int want = Math.max(
           minWorkerCount - currValidWorkers,
@@ -285,7 +285,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
           workers,
           ProvisioningUtil.createValidWorkerPredicate(config)
       );
-      log.info("Valid workers: %d %s", validWorkers.size(), validWorkers);
+      log.debug("Valid workers: %d %s", validWorkers.size(), validWorkers);
 
       Map<String, ImmutableWorkerInfo> workersMap = Maps.newHashMap();
       for (ImmutableWorkerInfo worker : validWorkers) {
@@ -307,7 +307,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
         final ImmutableWorkerInfo workerRunningTask;
         if (selectedWorker != null) {
           workerRunningTask = selectedWorker;
-          log.info("Worker[%s] able to take the task[%s]", task, workerRunningTask);
+          log.debug("Worker[%s] able to take the task[%s]", task, workerRunningTask);
         } else {
           // None of the existing worker can run this task, we need to provision one worker for it.
           // create a dummy worker and try to simulate assigning task to it.
@@ -317,7 +317,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
               capacity,
               workerTaskRunnerConfig.getMinWorkerVersion()
           );
-          log.info("Need more workers, creating a dummy worker[%s]", workerRunningTask);
+          log.debug("Need more workers, creating a dummy worker[%s]", workerRunningTask);
           need++;
         }
         // Update map with worker running task
@@ -330,7 +330,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     public synchronized boolean doTerminate()
     {
       Collection<ImmutableWorkerInfo> zkWorkers = runner.getWorkers();
-      log.info("Workers: %d [%s]", zkWorkers.size(), zkWorkers);
+      log.debug("Workers: %d [%s]", zkWorkers.size(), zkWorkers);
       final WorkerBehaviorConfig workerConfig = getWorkerBehaviorConfig(workerConfigRef, "terminate", log);
       if (workerConfig == null) {
         return false;
@@ -344,9 +344,9 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
 
       boolean didTerminate = false;
       final Collection<String> workerNodeIds = getWorkerNodeIDs(runner.getLazyWorkers(), workerConfig);
-      log.info("Currently terminating: %d %s", currentlyTerminating.size(), currentlyTerminating);
+      log.debug("Currently terminating: %d %s", currentlyTerminating.size(), currentlyTerminating);
       currentlyTerminating.retainAll(workerNodeIds);
-      log.info(
+      log.debug(
           "Currently terminating among WorkerNodeIds: %d %s",
           currentlyTerminating.size(),
           currentlyTerminating
@@ -435,7 +435,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
   {
     final Predicate<ImmutableWorkerInfo> isValidWorker = ProvisioningUtil.createValidWorkerPredicate(config);
     final int currValidWorkers = Collections2.filter(workers, isValidWorker).size();
-    log.info("Current valid workers: %d", currValidWorkers);
+    log.debug("Current valid workers: %d", currValidWorkers);
     return currValidWorkers;
   }
 
