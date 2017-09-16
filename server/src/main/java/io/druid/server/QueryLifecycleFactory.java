@@ -28,6 +28,7 @@ import io.druid.query.QueryToolChestWarehouse;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthorizerMapper;
 
 @LazySingleton
 public class QueryLifecycleFactory
@@ -38,7 +39,7 @@ public class QueryLifecycleFactory
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
   private final ServerConfig serverConfig;
-  private final AuthConfig authConfig;
+  private final AuthorizerMapper authorizerMapper;
 
   @Inject
   public QueryLifecycleFactory(
@@ -48,7 +49,8 @@ public class QueryLifecycleFactory
       final ServiceEmitter emitter,
       final RequestLogger requestLogger,
       final ServerConfig serverConfig,
-      final AuthConfig authConfig
+      final AuthConfig authConfig,
+      final AuthorizerMapper authorizerMapper
   )
   {
     this.warehouse = warehouse;
@@ -57,7 +59,7 @@ public class QueryLifecycleFactory
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.serverConfig = serverConfig;
-    this.authConfig = authConfig;
+    this.authorizerMapper = authorizerMapper;
   }
 
   public QueryLifecycle factorize()
@@ -69,7 +71,7 @@ public class QueryLifecycleFactory
         emitter,
         requestLogger,
         serverConfig,
-        authConfig,
+        authorizerMapper,
         System.currentTimeMillis(),
         System.nanoTime()
     );

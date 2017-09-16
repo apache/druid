@@ -415,7 +415,13 @@ public class ClientInfoResourceTest
       SegmentMetadataQueryConfig segmentMetadataQueryConfig
   )
   {
-    return new ClientInfoResource(serverInventoryView, timelineServerView, segmentMetadataQueryConfig, new AuthConfig())
+    return new ClientInfoResource(
+        serverInventoryView,
+        timelineServerView,
+        segmentMetadataQueryConfig,
+        new AuthConfig(),
+        null
+    )
     {
       @Override
       protected DateTime getCurrentTime()

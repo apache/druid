@@ -19,22 +19,31 @@
 
 package io.druid.server.security;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class Resource
 {
   private final String name;
   private final ResourceType type;
 
-  public Resource(String name, ResourceType type)
+  @JsonCreator
+  public Resource(
+      @JsonProperty("name") String name,
+      @JsonProperty("type") ResourceType type
+  )
   {
     this.name = name;
     this.type = type;
   }
 
+  @JsonProperty
   public String getName()
   {
     return name;
   }
 
+  @JsonProperty
   public ResourceType getType()
   {
     return type;
@@ -65,5 +74,14 @@ public class Resource
     int result = name.hashCode();
     result = 31 * result + type.hashCode();
     return result;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "Resource{" +
+           "name='" + name + '\'' +
+           ", type=" + type +
+           '}';
   }
 }

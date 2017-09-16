@@ -51,6 +51,10 @@ import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.router.QueryHostFinder;
+import io.druid.server.security.AllowAllAuthorizer;
+import io.druid.server.security.AuthTestUtils;
+import io.druid.server.security.Authorizer;
+import io.druid.server.security.AuthorizerMapper;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
@@ -112,6 +116,16 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                     new DruidNode("test", "localhost", null, null, new ServerConfig())
                 );
                 binder.bind(JettyServerInitializer.class).to(ProxyJettyServerInit.class).in(LazySingleton.class);
+                binder.bind(AuthorizerMapper.class).toInstance(
+                    new AuthorizerMapper(null) {
+
+                      @Override
+                      public Authorizer getAuthorizer(String name)
+                      {
+                        return new AllowAllAuthorizer();
+                      }
+                    }
+                );
                 Jerseys.addResource(binder, SlowResource.class);
                 Jerseys.addResource(binder, ExceptionResource.class);
                 Jerseys.addResource(binder, DefaultResource.class);
@@ -238,7 +252,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                   // noop
                 }
               },
-              new DefaultGenericQueryMetricsFactory(jsonMapper)
+              new DefaultGenericQueryMetricsFactory(jsonMapper),
+              AuthTestUtils.TEST_AUTHENTICATOR_MAPPER
           )
           {
             @Override

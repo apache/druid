@@ -29,6 +29,9 @@ import io.druid.java.util.common.Pair;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.ResourceLimitExceededException;
+import io.druid.server.security.AllowAllAuthenticator;
+import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
@@ -41,6 +44,7 @@ import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import io.druid.sql.http.SqlQuery;
 import io.druid.sql.http.SqlResource;
 import org.apache.calcite.tools.ValidationException;
+import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -48,6 +52,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.ByteArrayOutputStream;
@@ -68,15 +73,32 @@ public class SqlResourceTest
 
   private SqlResource resource;
 
+  private HttpServletRequest req;
+
   @Before
   public void setUp() throws Exception
   {
     Calcites.setSystemProperties();
     walker = CalciteTests.createMockWalker(temporaryFolder.newFolder());
+
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
+    req = EasyMock.createStrictMock(HttpServletRequest.class);
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
+            .andReturn(null)
+            .anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
+            .anyTimes();
+    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    EasyMock.expectLastCall().anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
+            .anyTimes();
+    EasyMock.replay(req);
+
     resource = new SqlResource(
         JSON_MAPPER,
         new PlannerFactory(
@@ -85,6 +107,9 @@ public class SqlResourceTest
             operatorTable,
             macroTable,
             plannerConfig,
+            new AuthConfig(),
+            AuthTestUtils.TEST_AUTHENTICATOR_MAPPER,
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             CalciteTests.getJsonMapper()
         )
     );
@@ -209,13 +234,18 @@ public class SqlResourceTest
   @Test
   public void testCannotConvert() throws Exception
   {
-    // TRIM unsupported
-    final QueryInterruptedException exception = doPost(new SqlQuery("SELECT TRIM(dim1) FROM druid.foo", null)).lhs;
+    // SELECT + ORDER unsupported
+    final QueryInterruptedException exception = doPost(
+        new SqlQuery("SELECT dim1 FROM druid.foo ORDER BY dim1", null)
+    ).lhs;
 
     Assert.assertNotNull(exception);
     Assert.assertEquals(QueryInterruptedException.UNKNOWN_EXCEPTION, exception.getErrorCode());
     Assert.assertEquals(ISE.class.getName(), exception.getErrorClass());
-    Assert.assertTrue(exception.getMessage().contains("Cannot build plan for query: SELECT TRIM(dim1) FROM druid.foo"));
+    Assert.assertTrue(
+        exception.getMessage()
+                 .contains("Cannot build plan for query: SELECT dim1 FROM druid.foo ORDER BY dim1")
+    );
   }
 
   @Test
@@ -238,7 +268,7 @@ public class SqlResourceTest
   // Returns either an error or a result.
   private Pair<QueryInterruptedException, List<Map<String, Object>>> doPost(final SqlQuery query) throws Exception
   {
-    final Response response = resource.doPost(query);
+    final Response response = resource.doPost(query, req);
     if (response.getStatus() == 200) {
       final StreamingOutput output = (StreamingOutput) response.getEntity();
       final ByteArrayOutputStream baos = new ByteArrayOutputStream();

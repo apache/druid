@@ -60,6 +60,8 @@ import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthTestUtils;
+import io.druid.server.security.AuthenticationResult;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryOneTime;
@@ -126,7 +128,13 @@ public class OverlordTest
   @Before
   public void setUp() throws Exception
   {
-    req = EasyMock.createStrictMock(HttpServletRequest.class);
+    req = EasyMock.createMock(HttpServletRequest.class);
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
+        new AuthenticationResult("druid", "druid")
+    ).anyTimes();
+    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    EasyMock.expectLastCall().anyTimes();
     supervisorManager = EasyMock.createMock(SupervisorManager.class);
     taskLockbox = EasyMock.createStrictMock(TaskLockbox.class);
     taskLockbox.syncFromStorage();
@@ -145,7 +153,7 @@ public class OverlordTest
     taskActionClientFactory = EasyMock.createStrictMock(TaskActionClientFactory.class);
     EasyMock.expect(taskActionClientFactory.create(EasyMock.<Task>anyObject()))
             .andReturn(null).anyTimes();
-    EasyMock.replay(taskLockbox, taskActionClientFactory);
+    EasyMock.replay(taskLockbox, taskActionClientFactory, req);
 
     taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
     runTaskCountDownLatches = new CountDownLatch[2];
@@ -203,6 +211,7 @@ public class OverlordTest
       Thread.sleep(10);
     }
     Assert.assertEquals(taskMaster.getCurrentLeader(), druidNode.getHostAndPort());
+
     // Test Overlord resource stuff
     overlordResource = new OverlordResource(
         taskMaster,
@@ -210,7 +219,7 @@ public class OverlordTest
         null,
         null,
         null,
-        new AuthConfig()
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER
     );
     Response response = overlordResource.getLeader();
     Assert.assertEquals(druidNode.getHostAndPort(), response.getEntity());

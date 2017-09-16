@@ -47,7 +47,7 @@ import io.druid.common.config.JacksonConfigManager;
 import io.druid.concurrent.Execs;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
-import io.druid.guice.annotations.Global;
+import io.druid.guice.annotations.EscalatedGlobal;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.IOE;
@@ -133,7 +133,7 @@ public class LookupCoordinatorManager
 
   @Inject
   public LookupCoordinatorManager(
-      final @Global HttpClient httpClient,
+      final @EscalatedGlobal HttpClient httpClient,
       final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       final @Smile ObjectMapper smileMapper,
       final JacksonConfigManager configManager,
@@ -144,7 +144,11 @@ public class LookupCoordinatorManager
         druidNodeDiscoveryProvider,
         configManager,
         lookupCoordinatorManagerConfig,
-        new LookupsCommunicator(httpClient, lookupCoordinatorManagerConfig, smileMapper),
+        new LookupsCommunicator(
+            httpClient,
+            lookupCoordinatorManagerConfig,
+            smileMapper
+        ),
         null
     );
   }
