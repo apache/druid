@@ -26,7 +26,8 @@ import io.druid.java.util.common.StringUtils;
 public enum JSONPathFieldType
 {
   ROOT,
-  PATH;
+  PATH,
+  JQ;
 
   @JsonValue
   @Override

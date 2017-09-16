@@ -42,10 +42,12 @@ Also, the following built-in functions are supported.
 |regexp_extract|regexp_extract(expr, pattern[, index]) applies a regular expression pattern and extracts a capture group index, or null if there is no match. If index is unspecified or zero, returns the substring that matched the pattern.|
 |replace|replace(expr, pattern, replacement) replaces pattern with replacement|
 |substring|substring(expr, index, length) behaves like java.lang.String's substring|
-|strlen|returns length of a string in UTF-16 code units|
-|trim|remove leading and trailing whitespace from a string|
-|lower|convert a string to lowercase|
-|upper|convert a string to uppercase|
+|strlen|strlen(expr) returns length of a string in UTF-16 code units|
+|trim|trim(expr[, chars]) remove leading and trailing characters from `expr` if they are present in `chars`. `chars` defaults to ' ' (space) if not provided.|
+|ltrim|ltrim(expr[, chars]) remove leading characters from `expr` if they are present in `chars`. `chars` defaults to ' ' (space) if not provided.|
+|rtrim|rtrim(expr[, chars]) remove trailing characters from `expr` if they are present in `chars`. `chars` defaults to ' ' (space) if not provided.|
+|lower|lower(expr) converts a string to lowercase|
+|upper|upper(expr) converts a string to uppercase|
 
 ## Time functions
 

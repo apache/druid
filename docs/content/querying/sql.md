@@ -126,7 +126,10 @@ String functions accept strings, and return a type appropriate to the function.
 |`REGEXP_EXTRACT(expr, pattern, [index])`|Apply regular expression pattern and extract a capture group, or null if there is no match. If index is unspecified or zero, returns the substring that matched the pattern.|
 |`REPLACE(expr, pattern, replacement)`|Replaces pattern with replacement in expr, and returns the result.|
 |`SUBSTRING(expr, index, [length])`|Returns a substring of expr starting at index, with a max length, both measured in UTF-16 code units.|
-|`TRIM(expr)`|Returns expr with leading and trailing whitespace removed.|
+|`TRIM([BOTH | LEADING | TRAILING] [<chars> FROM] expr)`|Returns expr with characters removed from the leading, trailing, or both ends of "expr" if they are in "chars". If "chars" is not provided, it defaults to " " (a space). If the directional argument is not provided, it defaults to "BOTH".|
+|`BTRIM(expr[, chars])`|Alternate form of `TRIM(BOTH <chars> FROM <expr>`).|
+|`LTRIM(expr[, chars])`|Alternate form of `TRIM(LEADING <chars> FROM <expr>`).|
+|`RTRIM(expr[, chars])`|Alternate form of `TRIM(TRAILING <chars> FROM <expr>`).|
 |`UPPER(expr)`|Returns expr in all uppercase.|
 
 ### Time functions
@@ -253,7 +256,9 @@ converted to zeroes).
 
 ## Query execution
 
-Queries without aggregations will use Druid's [Select](select-query.html) native query type.
+Queries without aggregations will use Druid's [Scan](scan-query.html) or [Select](select-query.html) native query types.
+Scan is used whenever possible, as it is generally higher performance and more efficient than Select. However, Select
+is used in one case: when the query includes an `ORDER BY __time`, since Scan does not have a sorting feature.
 
 Aggregation queries (using GROUP BY, DISTINCT, or any aggregation functions) will use one of Druid's three native
 aggregation query types. Two (Timeseries and TopN) are specialized for specific types of aggregations, whereas the other

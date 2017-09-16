@@ -46,6 +46,7 @@ import io.druid.query.SegmentDescriptor;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.QueryableIndex;
+import io.druid.segment.ReferenceCountingSegment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
@@ -470,17 +471,17 @@ public class RealtimePlumberSchoolTest
     Assert.assertEquals(0, hydrants.get(0).getCount());
     Assert.assertEquals(
         expectedInterval,
-        hydrants.get(0).getSegment().getDataInterval()
+        hydrants.get(0).getSegmentDataInterval()
     );
     Assert.assertEquals(2, hydrants.get(1).getCount());
     Assert.assertEquals(
         expectedInterval,
-        hydrants.get(1).getSegment().getDataInterval()
+        hydrants.get(1).getSegmentDataInterval()
     );
     Assert.assertEquals(4, hydrants.get(2).getCount());
     Assert.assertEquals(
         expectedInterval,
-        hydrants.get(2).getSegment().getDataInterval()
+        hydrants.get(2).getSegmentDataInterval()
     );
 
     /* Delete all the hydrants and reload, no sink should be created */
@@ -627,9 +628,15 @@ public class RealtimePlumberSchoolTest
 
     for (int i = 0; i < hydrants.size(); i++) {
       hydrant = hydrants.get(i);
-      qindex = hydrant.getSegment().asQueryableIndex();
-      Assert.assertEquals(i, hydrant.getCount());
-      Assert.assertEquals(expectedDims.get(i), ImmutableList.copyOf(qindex.getAvailableDimensions()));
+      ReferenceCountingSegment segment = hydrant.getIncrementedSegment();
+      try {
+        qindex = segment.asQueryableIndex();
+        Assert.assertEquals(i, hydrant.getCount());
+        Assert.assertEquals(expectedDims.get(i), ImmutableList.copyOf(qindex.getAvailableDimensions()));
+      }
+      finally {
+        segment.decrement();
+      }
     }
   }
 

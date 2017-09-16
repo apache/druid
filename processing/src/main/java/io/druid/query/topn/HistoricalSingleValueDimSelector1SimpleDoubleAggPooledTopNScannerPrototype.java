@@ -22,7 +22,7 @@ package io.druid.query.topn;
 import io.druid.query.aggregation.SimpleDoubleBufferAggregator;
 import io.druid.segment.data.Offset;
 import io.druid.segment.historical.HistoricalCursor;
-import io.druid.segment.historical.HistoricalFloatColumnSelector;
+import io.druid.segment.historical.HistoricalColumnSelector;
 import io.druid.segment.historical.SingleValueHistoricalDimensionSelector;
 
 import java.nio.ByteBuffer;
@@ -30,14 +30,14 @@ import java.nio.ByteBuffer;
 public class HistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopNScannerPrototype
     implements Historical1AggPooledTopNScanner<
         SingleValueHistoricalDimensionSelector,
-        HistoricalFloatColumnSelector,
+        HistoricalColumnSelector,
         SimpleDoubleBufferAggregator
     >
 {
   @Override
   public long scanAndAggregate(
       SingleValueHistoricalDimensionSelector dimensionSelector,
-      HistoricalFloatColumnSelector metricSelector,
+      HistoricalColumnSelector metricSelector,
       SimpleDoubleBufferAggregator aggregator,
       int aggregatorSize,
       HistoricalCursor cursor,
@@ -54,10 +54,10 @@ public class HistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopNScannerPr
       int dimIndex = dimensionSelector.getRowValue(rowNum);
       int position = positions[dimIndex];
       if (position >= 0) {
-        aggregator.aggregate(resultsBuffer, position, metricSelector.get(rowNum));
+        aggregator.aggregate(resultsBuffer, position, metricSelector.getDouble(rowNum));
       } else if (position == TopNAlgorithm.INIT_POSITION_VALUE) {
         positions[dimIndex] = positionToAllocate;
-        aggregator.putFirst(resultsBuffer, positionToAllocate, metricSelector.get(rowNum));
+        aggregator.putFirst(resultsBuffer, positionToAllocate, metricSelector.getDouble(rowNum));
         positionToAllocate += aggregatorSize;
       }
       processedRows++;

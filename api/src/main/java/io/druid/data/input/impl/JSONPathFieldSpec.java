@@ -69,6 +69,11 @@ public class JSONPathFieldSpec
     return new JSONPathFieldSpec(JSONPathFieldType.PATH, name, expr);
   }
 
+  public static JSONPathFieldSpec createJqField(String name, String expr)
+  {
+    return new JSONPathFieldSpec(JSONPathFieldType.JQ, name, expr);
+  }
+
   public static JSONPathFieldSpec createRootField(String name)
   {
     return new JSONPathFieldSpec(JSONPathFieldType.ROOT, name, null);
