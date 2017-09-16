@@ -232,6 +232,7 @@ Except `readTimeout` and `recipientBaseUrl`. E. g. `druid.emitter.parametrized.h
 `druid.emitter.parametrized.httpEmitting.flushCount`, etc.
 
 The additional configs are:
+
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.emitter.parametrized.readTimeout`|The timeout for data reads.|PT5M|
