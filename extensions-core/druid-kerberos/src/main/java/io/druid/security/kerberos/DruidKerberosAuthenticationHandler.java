@@ -106,9 +106,7 @@ public class DruidKerberosAuthenticationHandler extends KerberosAuthenticationHa
       }
 
       for (String spnegoPrincipal : spnegoPrincipals) {
-        log.info("Login using keytab {}, for principal {}",
-                 keytab, spnegoPrincipal
-        );
+        log.info("Login using keytab %s, for principal %s", keytab, spnegoPrincipal);
         final KerberosAuthenticator.DruidKerberosConfiguration kerberosConfiguration =
             new KerberosAuthenticator.DruidKerberosConfiguration(keytab, spnegoPrincipal);
         final LoginContext loginContext =
@@ -117,7 +115,7 @@ public class DruidKerberosAuthenticationHandler extends KerberosAuthenticationHa
           loginContext.login();
         }
         catch (LoginException le) {
-          log.warn(le, "Failed to login as [{}]", spnegoPrincipal);
+          log.warn(le, "Failed to login as [%s]", spnegoPrincipal);
           throw new AuthenticationException(le);
         }
         loginContexts.add(loginContext);
@@ -201,7 +199,7 @@ public class DruidKerberosAuthenticationHandler extends KerberosAuthenticationHa
                 String userName = kerberosName.getShortName();
                 token = new AuthenticationToken(userName, clientPrincipal, getType());
                 response.setStatus(HttpServletResponse.SC_OK);
-                log.trace("SPNEGO completed for principal [{}]", clientPrincipal);
+                log.trace("SPNEGO completed for principal [%s]", clientPrincipal);
               }
             }
             finally {
