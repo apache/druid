@@ -99,9 +99,6 @@ public class EventReceiverFirehoseTest
   @Test
   public void testSingleThread() throws IOException
   {
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
-            .andReturn(null)
-            .anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
             .anyTimes();
@@ -149,9 +146,6 @@ public class EventReceiverFirehoseTest
   @Test
   public void testMultipleThreads() throws InterruptedException, IOException, TimeoutException, ExecutionException
   {
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
-            .andReturn(null)
-            .anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
             .anyTimes();
@@ -250,9 +244,6 @@ public class EventReceiverFirehoseTest
   @Test(timeout = 40_000L)
   public void testShutdownWithPrevTime() throws Exception
   {
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
-            .andReturn(null)
-            .anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
             .anyTimes();
@@ -269,9 +260,6 @@ public class EventReceiverFirehoseTest
   @Test(timeout = 40_000L)
   public void testShutdown() throws Exception
   {
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
-            .andReturn(null)
-            .anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
             .anyTimes();

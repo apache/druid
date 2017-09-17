@@ -114,7 +114,6 @@ public class OverlordResourceTest
   {
     AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid");
 
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(authenticationResult)
             .anyTimes();
