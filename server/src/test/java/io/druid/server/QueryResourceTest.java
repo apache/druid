@@ -177,10 +177,6 @@ public class QueryResourceTest
   @Test
   public void testGoodQuery() throws IOException
   {
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
-            .andReturn(null)
-            .anyTimes();
-
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(authenticationResult)
             .anyTimes();
@@ -213,10 +209,6 @@ public class QueryResourceTest
   @Test
   public void testSecuredQuery() throws Exception
   {
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
-            .andReturn(null)
-            .anyTimes();
-
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(authenticationResult)
             .anyTimes();
@@ -297,10 +289,6 @@ public class QueryResourceTest
     final CountDownLatch waitFinishLatch = new CountDownLatch(2);
     final CountDownLatch startAwaitLatch = new CountDownLatch(1);
     final CountDownLatch cancelledCountDownLatch = new CountDownLatch(1);
-
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
-            .andReturn(null)
-            .anyTimes();
 
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(authenticationResult)
@@ -421,10 +409,6 @@ public class QueryResourceTest
     final CountDownLatch waitForCancellationLatch = new CountDownLatch(1);
     final CountDownLatch waitFinishLatch = new CountDownLatch(2);
     final CountDownLatch startAwaitLatch = new CountDownLatch(1);
-
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
-            .andReturn(null)
-            .anyTimes();
 
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(authenticationResult)

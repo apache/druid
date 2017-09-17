@@ -131,10 +131,6 @@ public class AuthorizationUtils
       final AuthorizerMapper authorizerMapper
   )
   {
-    if (request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED) != null) {
-      throw new ISE("Request already had authorization check.");
-    }
-
     final AuthenticationResult authenticationResult = (AuthenticationResult) request.getAttribute(
         AuthConfig.DRUID_AUTHENTICATION_RESULT
     );
