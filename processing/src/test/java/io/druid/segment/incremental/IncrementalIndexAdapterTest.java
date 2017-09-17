@@ -55,7 +55,7 @@ public class IncrementalIndexAdapterTest
     );
     String dimension = "dim1";
     for (int i = 0; i < adapter.getDimValueLookup(dimension).size(); i++) {
-      IndexedInts indexedInts = adapter.getBitmapIndex(dimension, i);
+      IndexedInts indexedInts = adapter.getBitmapValues(dimension, i);
       Assert.assertEquals(1, indexedInts.size());
     }
   }

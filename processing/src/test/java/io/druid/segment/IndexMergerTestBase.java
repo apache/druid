@@ -49,10 +49,10 @@ import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.SimpleDictionaryEncodedColumn;
 import io.druid.segment.data.BitmapSerdeFactory;
+import io.druid.segment.data.BitmapValues;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.IncrementalIndexTest;
-import io.druid.segment.data.IndexedInts;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
 import io.druid.segment.incremental.IncrementalIndexSchema;
@@ -1521,7 +1521,7 @@ public class IndexMergerTestBase
     checkBitmapIndex(Lists.newArrayList(3), adapter.getBitmapIndex("d9", "921"));
   }
 
-  private void checkBitmapIndex(ArrayList<Integer> expected, IndexedInts real)
+  private void checkBitmapIndex(ArrayList<Integer> expected, BitmapValues real)
   {
     Assert.assertEquals(expected.size(), real.size());
     int i = 0;

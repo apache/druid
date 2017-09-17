@@ -21,7 +21,6 @@ package io.druid.segment.data;
 
 import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import io.druid.query.monomorphicprocessing.HotLoopCallee;
-import it.unimi.dsi.fastutil.ints.IntIterator;
 
 import java.io.Closeable;
 import java.util.function.IntConsumer;
@@ -38,8 +37,6 @@ public interface IndexedInts extends Closeable, HotLoopCallee
   int size();
   @CalledFromHotLoop
   int get(int index);
-
-  IntIterator iterator();
 
   default void forEach(IntConsumer action)
   {
