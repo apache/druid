@@ -37,6 +37,7 @@ import io.druid.server.http.MetadataResource;
 import io.druid.server.http.RulesResource;
 import io.druid.server.http.ServersResource;
 import io.druid.server.http.TiersResource;
+import io.druid.server.security.ForbiddenException;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -44,8 +45,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.Response;
 import java.util.Collection;
 
 @RunWith(Parameterized.class)
@@ -56,20 +55,20 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
   {
     return ImmutableList.copyOf(
         Iterables.concat(
-            getRequestPaths(CoordinatorResource.class),
-            getRequestPaths(DatasourcesResource.class),
-            getRequestPaths(BrokerResource.class),
-            getRequestPaths(HistoricalResource.class),
-            getRequestPaths(IntervalsResource.class),
-            getRequestPaths(MetadataResource.class),
-            getRequestPaths(RulesResource.class),
-            getRequestPaths(ServersResource.class),
-            getRequestPaths(TiersResource.class),
-            getRequestPaths(ClientInfoResource.class),
-            getRequestPaths(CoordinatorDynamicConfigsResource.class),
-            getRequestPaths(QueryResource.class),
-            getRequestPaths(StatusResource.class),
-            getRequestPaths(BrokerQueryResource.class)
+            getRequestPathsWithAuthorizer(CoordinatorResource.class),
+            getRequestPathsWithAuthorizer(DatasourcesResource.class),
+            getRequestPathsWithAuthorizer(BrokerResource.class),
+            getRequestPathsWithAuthorizer(HistoricalResource.class),
+            getRequestPathsWithAuthorizer(IntervalsResource.class),
+            getRequestPathsWithAuthorizer(MetadataResource.class),
+            getRequestPathsWithAuthorizer(RulesResource.class),
+            getRequestPathsWithAuthorizer(ServersResource.class),
+            getRequestPathsWithAuthorizer(TiersResource.class),
+            getRequestPathsWithAuthorizer(ClientInfoResource.class),
+            getRequestPathsWithAuthorizer(CoordinatorDynamicConfigsResource.class),
+            getRequestPathsWithAuthorizer(QueryResource.class),
+            getRequestPathsWithAuthorizer(StatusResource.class),
+            getRequestPathsWithAuthorizer(BrokerQueryResource.class)
         )
     );
   }
@@ -102,35 +101,34 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
   public void testResourcesFilteringAccess()
   {
     setUpMockExpectations(requestPath, true, requestMethod);
-    EasyMock.replay(req, request, authorizationInfo);
+    EasyMock.replay(req, request, authorizerMapper);
     Assert.assertTrue(((AbstractResourceFilter) resourceFilter.getRequestFilter()).isApplicable(requestPath));
     resourceFilter.getRequestFilter().filter(request);
-    EasyMock.verify(req, request, authorizationInfo);
+    EasyMock.verify(req, request, authorizerMapper);
   }
 
-  @Test(expected = WebApplicationException.class)
+  @Test(expected = ForbiddenException.class)
   public void testResourcesFilteringNoAccess()
   {
     setUpMockExpectations(requestPath, false, requestMethod);
-    EasyMock.replay(req, request, authorizationInfo);
+    EasyMock.replay(req, request, authorizerMapper);
     Assert.assertTrue(((AbstractResourceFilter) resourceFilter.getRequestFilter()).isApplicable(requestPath));
     try {
       resourceFilter.getRequestFilter().filter(request);
+      Assert.fail();
     }
-    catch (WebApplicationException e) {
-      Assert.assertEquals(Response.Status.FORBIDDEN.getStatusCode(), e.getResponse().getStatus());
+    catch (ForbiddenException e) {
       throw e;
     }
-    EasyMock.verify(req, request, authorizationInfo);
+    EasyMock.verify(req, request, authorizerMapper);
   }
 
   @Test
   public void testResourcesFilteringBadPath()
   {
-    EasyMock.replay(req, request, authorizationInfo);
+    EasyMock.replay(req, request, authorizerMapper);
     final String badRequestPath = requestPath.replaceAll("\\w+", "droid");
     Assert.assertFalse(((AbstractResourceFilter) resourceFilter.getRequestFilter()).isApplicable(badRequestPath));
-    EasyMock.verify(req, request, authorizationInfo);
+    EasyMock.verify(req, request, authorizerMapper);
   }
-
 }

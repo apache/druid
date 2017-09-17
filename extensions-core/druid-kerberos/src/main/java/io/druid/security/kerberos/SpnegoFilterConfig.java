@@ -47,11 +47,11 @@ public class SpnegoFilterConfig
 
   @JsonCreator
   public SpnegoFilterConfig(
-    @JsonProperty("principal") String principal,
-    @JsonProperty("keytab") String keytab,
-    @JsonProperty("authToLocal") String authToLocal,
-    @JsonProperty("excludedPaths") List<String> excludedPaths,
-    @JsonProperty("cookieSignatureSecret") String cookieSignatureSecret
+      @JsonProperty("principal") String principal,
+      @JsonProperty("keytab") String keytab,
+      @JsonProperty("authToLocal") String authToLocal,
+      @JsonProperty("excludedPaths") List<String> excludedPaths,
+      @JsonProperty("cookieSignatureSecret") String cookieSignatureSecret
   )
   {
     this.principal = principal;

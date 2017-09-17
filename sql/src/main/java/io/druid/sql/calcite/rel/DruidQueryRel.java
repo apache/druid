@@ -36,6 +36,7 @@ import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 
+import java.util.List;
 import javax.annotation.Nullable;
 import java.io.IOException;
 
@@ -132,6 +133,12 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
         getQueryMaker(),
         queryBuilder
     );
+  }
+
+  @Override
+  public List<String> getDatasourceNames()
+  {
+    return druidTable.getDataSource().getNames();
   }
 
   @Override
