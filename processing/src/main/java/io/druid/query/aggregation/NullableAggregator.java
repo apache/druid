@@ -61,7 +61,7 @@ public class NullableAggregator implements Aggregator
   @Override
   public Object get()
   {
-    if(isNullResult){
+    if (isNullResult) {
       return null;
     }
     return delegate.get();

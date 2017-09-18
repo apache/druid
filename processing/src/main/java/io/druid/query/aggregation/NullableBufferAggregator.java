@@ -66,7 +66,7 @@ public class NullableBufferAggregator implements BufferAggregator
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    if(buf.get(position) == IS_NULL_BYTE){
+    if (buf.get(position) == IS_NULL_BYTE) {
       return null;
     }
     return delegate.get(buf, position + Byte.BYTES);

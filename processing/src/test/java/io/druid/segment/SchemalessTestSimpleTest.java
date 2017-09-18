@@ -41,9 +41,9 @@ import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
-import io.druid.query.search.SearchResultValue;
 import io.druid.query.search.SearchHit;
 import io.druid.query.search.SearchQuery;
+import io.druid.query.search.SearchResultValue;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
@@ -156,13 +156,13 @@ public class SchemalessTestSimpleTest
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 11L)
-                            .put("index", 900.0)
-                            .put("addRowsIndexConstant", 912.0)
-                            .put("uniques", 2.000977198748901D)
-                            .put("maxIndex", 100.0)
-                            .put("minIndex", 0.0)
-                            .build()
+                    .put("rows", 11L)
+                    .put("index", 900.0)
+                    .put("addRowsIndexConstant", 912.0)
+                    .put("uniques", 2.000977198748901D)
+                    .put("maxIndex", 100.0)
+                    .put("minIndex", 0.0)
+                    .build()
             )
         )
     );
@@ -204,36 +204,36 @@ public class SchemalessTestSimpleTest
                 Arrays.<DimensionAndMetricValueExtractor>asList(
                     new DimensionAndMetricValueExtractor(
                         ImmutableMap.<String, Object>builder()
-                                    .put("market", "spot")
-                                    .put("rows", 4L)
-                                    .put("index", 400.0D)
-                                    .put("addRowsIndexConstant", 405.0D)
-                                    .put("uniques", 1.0002442201269182D)
-                                    .put("maxIndex", 100.0)
-                                    .put("minIndex", 100.0)
-                                    .build()
+                            .put("market", "spot")
+                            .put("rows", 4L)
+                            .put("index", 400.0D)
+                            .put("addRowsIndexConstant", 405.0D)
+                            .put("uniques", 1.0002442201269182D)
+                            .put("maxIndex", 100.0)
+                            .put("minIndex", 100.0)
+                            .build()
                     ),
                     new DimensionAndMetricValueExtractor(
                         ImmutableMap.<String, Object>builder()
-                                    .put("market", "")
-                                    .put("rows", 2L)
-                                    .put("index", 200.0D)
-                                    .put("addRowsIndexConstant", 203.0D)
-                                    .put("uniques", 0.0)
-                                    .put("maxIndex", 100.0D)
-                                    .put("minIndex", 100.0D)
-                                    .build()
+                            .put("market", "")
+                            .put("rows", 2L)
+                            .put("index", 200.0D)
+                            .put("addRowsIndexConstant", 203.0D)
+                            .put("uniques", 0.0)
+                            .put("maxIndex", 100.0D)
+                            .put("minIndex", 100.0D)
+                            .build()
                     ),
                     new DimensionAndMetricValueExtractor(
                         ImmutableMap.<String, Object>builder()
-                                    .put("market", "total_market")
-                                    .put("rows", 2L)
-                                    .put("index", 200.0D)
-                                    .put("addRowsIndexConstant", 203.0D)
-                                    .put("uniques", 1.0002442201269182D)
-                                    .put("maxIndex", 100.0D)
-                                    .put("minIndex", 100.0D)
-                                    .build()
+                            .put("market", "total_market")
+                            .put("rows", 2L)
+                            .put("index", 200.0D)
+                            .put("addRowsIndexConstant", 203.0D)
+                            .put("uniques", 1.0002442201269182D)
+                            .put("maxIndex", 100.0D)
+                            .put("minIndex", 100.0D)
+                            .build()
                     )
                 )
             )
