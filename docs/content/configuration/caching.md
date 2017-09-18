@@ -38,7 +38,7 @@ A simple in-memory LRU cache. Local cache resides in JVM heap memory, so if you 
 
 ### Caffeine Cache
 
-A highly performant local cache implementation for Druid based on [Caffeine](https://github.com/ben-manes/caffeine). Requires a JRE8u60 or higher
+A highly performant local cache implementation for Druid based on [Caffeine](https://github.com/ben-manes/caffeine). Requires a JRE8u60 or higher if using `COMMON_FJP`.
 
 ##### Configuration
 
