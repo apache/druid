@@ -25,7 +25,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
@@ -319,34 +318,25 @@ public class SupervisorResource
   {
     final Set<String> authorizedSupervisorIds = Sets.newHashSet();
 
-    // If there were no supervisorIds, go ahead and authorize the request.
-    if (supervisorIds.size() == 0) {
-      AuthorizationUtils.authorizeAllResourceActions(
-          req,
-          Lists.newArrayList(),
-          authorizerMapper
-      );
-    } else {
-      Function<String, Iterable<ResourceAction>> raGenerator = supervisorId -> {
-        Optional<SupervisorSpec> supervisorSpecOptional = manager.getSupervisorSpec(supervisorId);
-        if (supervisorSpecOptional.isPresent()) {
-          return Iterables.transform(
-              supervisorSpecOptional.get().getDataSources(),
-              AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR
-          );
-        } else {
-          return null;
-        }
-      };
+    Function<String, Iterable<ResourceAction>> raGenerator = supervisorId -> {
+      Optional<SupervisorSpec> supervisorSpecOptional = manager.getSupervisorSpec(supervisorId);
+      if (supervisorSpecOptional.isPresent()) {
+        return Iterables.transform(
+            supervisorSpecOptional.get().getDataSources(),
+            AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR
+        );
+      } else {
+        return null;
+      }
+    };
 
-      AuthorizationUtils.filterAuthorizedResources(
-          req,
-          supervisorIds,
-          raGenerator,
-          authorizerMapper,
-          authorizedSupervisorIds
-      );
-    }
+    AuthorizationUtils.filterAuthorizedResources(
+        req,
+        supervisorIds,
+        raGenerator,
+        authorizerMapper,
+        authorizedSupervisorIds
+    );
 
     return authorizedSupervisorIds;
   }
