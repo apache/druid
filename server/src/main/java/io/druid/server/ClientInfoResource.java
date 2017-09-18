@@ -121,20 +121,16 @@ public class ClientInfoResource
   @Produces(MediaType.APPLICATION_JSON)
   public Iterable<String> getDataSources(@Context final HttpServletRequest request)
   {
-    Set<String> authorizedDatasources = Sets.newHashSet();
     Function<String, Iterable<ResourceAction>> raGenerator = datasourceName -> {
       return Lists.newArrayList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(datasourceName));
     };
 
-    AuthorizationUtils.filterAuthorizedResources(
+    return AuthorizationUtils.filterAuthorizedResources(
         request,
         getSegmentsForDatasources().keySet(),
         raGenerator,
-        authorizerMapper,
-        authorizedDatasources
+        authorizerMapper
     );
-
-    return authorizedDatasources;
   }
 
   @GET

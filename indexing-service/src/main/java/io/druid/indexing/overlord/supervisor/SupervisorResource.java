@@ -316,8 +316,6 @@ public class SupervisorResource
       Collection<String> supervisorIds
   )
   {
-    final Set<String> authorizedSupervisorIds = Sets.newHashSet();
-
     Function<String, Iterable<ResourceAction>> raGenerator = supervisorId -> {
       Optional<SupervisorSpec> supervisorSpecOptional = manager.getSupervisorSpec(supervisorId);
       if (supervisorSpecOptional.isPresent()) {
@@ -330,14 +328,13 @@ public class SupervisorResource
       }
     };
 
-    AuthorizationUtils.filterAuthorizedResources(
-        req,
-        supervisorIds,
-        raGenerator,
-        authorizerMapper,
-        authorizedSupervisorIds
+    return Sets.newHashSet(
+        AuthorizationUtils.filterAuthorizedResources(
+            req,
+            supervisorIds,
+            raGenerator,
+            authorizerMapper
+        )
     );
-
-    return authorizedSupervisorIds;
   }
 }

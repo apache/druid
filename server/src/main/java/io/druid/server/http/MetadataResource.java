@@ -109,12 +109,14 @@ public class MetadataResource
       return Lists.newArrayList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(datasourceName));
     };
 
-    AuthorizationUtils.filterAuthorizedResources(
-        req,
-        dataSourceNamesPreAuth,
-        raGenerator,
-        authorizerMapper,
-        dataSourceNamesPostAuth
+    Iterables.addAll(
+        dataSourceNamesPostAuth,
+        AuthorizationUtils.filterAuthorizedResources(
+            req,
+            dataSourceNamesPreAuth,
+            raGenerator,
+            authorizerMapper
+        )
     );
 
     // Cannot do both includeDisabled and full, let includeDisabled take priority

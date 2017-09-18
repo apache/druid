@@ -20,13 +20,13 @@
 package io.druid.server.security;
 
 import com.google.common.base.Function;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import io.druid.java.util.common.ISE;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
@@ -151,17 +151,18 @@ public class AuthorizationUtils
   }
 
   /**
-   * Filter a collection of resources by applying the resourceActionGenerator to each resource, adding
-   * the filtered resources to a caller provided Collection, filteredResources.
+   * Filter a collection of resources by applying the resourceActionGenerator to each resource, return an iterable
+   * containing the filtered resources.
    *
    * The resourceActionGenerator returns an Iterable<ResourceAction> for each resource.
    *
-   * If every resource-action in the iterable is authorized, the resource will be added to filteredResources.
+   * If every resource-action in the iterable is authorized, the resource will be added to the filtered resources.
    *
    * If there is an authorization failure for one of the resource-actions, the resource will not be
-   * added to filteredResources..
+   * added to the returned filtered resources..
    *
-   * If the resourceActionGenerator returns null for a resource, that resource will not be added to filteredResources.
+   * If the resourceActionGenerator returns null for a resource, that resource will not be added to the filtered
+   * resources.
    *
    * This function will set the DRUID_AUTHORIZATION_CHECKED attribute in the request.
    *
@@ -171,14 +172,14 @@ public class AuthorizationUtils
    * @param resources resources to be processed into resource-actions
    * @param resourceActionGenerator Function that creates an iterable of resource-actions from a resource
    * @param authorizerMapper authorizer mapper
-   * @param filteredResources caller provided collection, resources that pass filtering will be added to this
+   * @return Iterable containing resources that were authorized
+   *
    */
-  public static <ResType> void filterAuthorizedResources(
+  public static <ResType> Iterable<ResType> filterAuthorizedResources(
       final HttpServletRequest request,
-      final Collection<ResType> resources,
+      final Iterable<ResType> resources,
       final Function<? super ResType, Iterable<ResourceAction>> resourceActionGenerator,
-      final AuthorizerMapper authorizerMapper,
-      final Collection<? super ResType> filteredResources
+      final AuthorizerMapper authorizerMapper
   )
   {
     if (request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED) != null) {
@@ -198,34 +199,35 @@ public class AuthorizationUtils
     }
 
     final Map<ResourceAction, Access> resultCache = Maps.newHashMap();
-    for (ResType resource : resources) {
-      final Iterable<ResourceAction> resourceActions = resourceActionGenerator.apply(resource);
-      if (resourceActions == null) {
-        continue;
-      }
-      boolean authorized = true;
-      for (ResourceAction resourceAction : resourceActions) {
-        Access access = resultCache.computeIfAbsent(
-            resourceAction,
-            ra -> authorizer.authorize(
-                authenticationResult,
-                ra.getResource(),
-                ra.getAction()
-            )
-        );
-        if (!access.isAllowed()) {
-          authorized = false;
-          break;
+    final Iterable<ResType> filteredResources = Iterables.filter(
+        resources,
+        resource -> {
+          final Iterable<ResourceAction> resourceActions = resourceActionGenerator.apply(resource);
+          if (resourceActions == null) {
+            return false;
+          }
+          for (ResourceAction resourceAction : resourceActions) {
+            Access access = resultCache.computeIfAbsent(
+                resourceAction,
+                ra -> authorizer.authorize(
+                    authenticationResult,
+                    ra.getResource(),
+                    ra.getAction()
+                )
+            );
+            if (!access.isAllowed()) {
+              return false;
+            }
+          }
+          return true;
         }
-      }
-      if (authorized) {
-        filteredResources.add(resource);
-      }
-    }
+    );
 
     // We're filtering, so having access to none of the objects isn't an authorization failure (in terms of whether
     // to send an error response or not.)
     request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+
+    return filteredResources;
   }
 
 

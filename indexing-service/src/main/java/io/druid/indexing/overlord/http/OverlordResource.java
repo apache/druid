@@ -365,7 +365,6 @@ public class OverlordResource
             // A bit roundabout, but works as a way of figuring out what tasks haven't been handed
             // off to the runner yet:
             final List<Task> allActiveTasks = taskStorageQueryAdapter.getActiveTasks();
-            final List<Task> activeTasks = Lists.newArrayList();
             Function<Task, Iterable<ResourceAction>> raGenerator = task -> {
               return Lists.newArrayList(
                   new ResourceAction(
@@ -375,12 +374,13 @@ public class OverlordResource
               );
             };
 
-            AuthorizationUtils.filterAuthorizedResources(
-                req,
-                allActiveTasks,
-                raGenerator,
-                authorizerMapper,
-                activeTasks
+            final List<Task> activeTasks = Lists.newArrayList(
+                AuthorizationUtils.filterAuthorizedResources(
+                    req,
+                    allActiveTasks,
+                    raGenerator,
+                    authorizerMapper
+                )
             );
 
             final Set<String> runnersKnownTasks = Sets.newHashSet(
@@ -462,7 +462,6 @@ public class OverlordResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getCompleteTasks(@Context final HttpServletRequest req)
   {
-    final List<TaskStatus> recentlyFinishedTasks = Lists.newArrayList();
     Function<TaskStatus, Iterable<ResourceAction>> raGenerator = taskStatus -> {
       final String taskId = taskStatus.getId();
       final Optional<Task> optionalTask = taskStorageQueryAdapter.getTask(taskId);
@@ -482,12 +481,13 @@ public class OverlordResource
       );
     };
 
-    AuthorizationUtils.filterAuthorizedResources(
-        req,
-        taskStorageQueryAdapter.getRecentlyFinishedTaskStatuses(),
-        raGenerator,
-        authorizerMapper,
-        recentlyFinishedTasks
+    final List<TaskStatus> recentlyFinishedTasks = Lists.newArrayList(
+        AuthorizationUtils.filterAuthorizedResources(
+            req,
+            taskStorageQueryAdapter.getRecentlyFinishedTaskStatuses(),
+            raGenerator,
+            authorizerMapper
+        )
     );
 
     final List<TaskResponseObject> completeTasks = Lists.transform(
@@ -644,7 +644,6 @@ public class OverlordResource
       HttpServletRequest req
   )
   {
-    List<TaskRunnerWorkItem> taskRunnerWorkItems = Lists.newArrayList();
     Function<TaskRunnerWorkItem, Iterable<ResourceAction>> raGenerator = taskRunnerWorkItem -> {
       final String taskId = taskRunnerWorkItem.getTaskId();
       final Optional<Task> optionalTask = taskStorageQueryAdapter.getTask(taskId);
@@ -664,15 +663,14 @@ public class OverlordResource
       );
     };
 
-    AuthorizationUtils.filterAuthorizedResources(
-        req,
-        collectionToFilter,
-        raGenerator,
-        authorizerMapper,
-        taskRunnerWorkItems
+    return Lists.newArrayList(
+        AuthorizationUtils.filterAuthorizedResources(
+            req,
+            collectionToFilter,
+            raGenerator,
+            authorizerMapper
+        )
     );
-
-    return taskRunnerWorkItems;
   }
 
   static class TaskResponseObject
