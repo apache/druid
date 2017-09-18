@@ -51,6 +51,9 @@ public interface GenericColumn extends HotLoopCallee, Closeable
   double getDoubleSingleValueRow(int rowNum);
   DoubleColumnSelector makeDoubleSingleValueRowSelector(ReadableOffset offset);
 
+  @CalledFromHotLoop
+  boolean isNull(int rowNum);
+
   @Override
   void close();
 }

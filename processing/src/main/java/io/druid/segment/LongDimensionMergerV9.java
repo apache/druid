@@ -22,7 +22,6 @@ package io.druid.segment;
 import com.google.common.base.Throwables;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.bitmap.MutableBitmap;
-import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.column.ColumnCapabilities;
@@ -34,7 +33,6 @@ import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.IOPeon;
 import io.druid.segment.serde.LongGenericColumnPartSerdeV2;
 
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.IntBuffer;
@@ -113,20 +111,12 @@ public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
   @Override
   public void writeIndexes(List<IntBuffer> segmentRowNumConversions, Closer closer) throws IOException
   {
-    boolean hasNullValues = !nullRowsBitmap.isEmpty();
-    if (hasNullValues) {
-      nullValueBitmapWriter = new ByteBufferWriter<>(
-          ioPeon,
-          StringUtils.format("%s.nullBitmap", dimensionName),
-          indexSpec.getBitmapSerdeFactory().getObjectStrategy()
-      );
-      try (Closeable bitmapWriter = nullValueBitmapWriter) {
-        nullValueBitmapWriter.open();
-        nullValueBitmapWriter.write(indexSpec.getBitmapSerdeFactory()
-                                             .getBitmapFactory()
-                                             .makeImmutableBitmap(nullRowsBitmap));
-      }
-    }
+    this.nullValueBitmapWriter = IndexMergerV9.createNullRowsBitmapWriter(
+        ioPeon,
+        dimensionName,
+        nullRowsBitmap,
+        indexSpec
+    );
   }
 
   @Override

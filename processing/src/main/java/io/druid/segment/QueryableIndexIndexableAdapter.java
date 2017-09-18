@@ -271,11 +271,14 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
             Object[] metricArray = new Object[numMetrics];
             for (int i = 0; i < metricArray.length; ++i) {
               if (metrics[i] instanceof IndexedFloatsGenericColumn) {
-                metricArray[i] = ((GenericColumn) metrics[i]).getFloatSingleValueRow(currRow);
+                GenericColumn genericColumn = (GenericColumn) metrics[i];
+                metricArray[i] = genericColumn.isNull(currRow) ? null : genericColumn.getFloatSingleValueRow(currRow);
               } else if (metrics[i] instanceof IndexedDoublesGenericColumn) {
-                metricArray[i] = ((GenericColumn) metrics[i]).getDoubleSingleValueRow(currRow);
+                GenericColumn genericColumn = (GenericColumn) metrics[i];
+                metricArray[i] = genericColumn.isNull(currRow) ? null : genericColumn.getDoubleSingleValueRow(currRow);
               } else if (metrics[i] instanceof IndexedLongsGenericColumn) {
-                metricArray[i] = ((GenericColumn) metrics[i]).getLongSingleValueRow(currRow);
+                GenericColumn genericColumn = (GenericColumn) metrics[i];
+                metricArray[i] = genericColumn.isNull(currRow) ? null : genericColumn.getLongSingleValueRow(currRow);
               } else if (metrics[i] instanceof ComplexColumn) {
                 metricArray[i] = ((ComplexColumn) metrics[i]).getRowValue(currRow);
               }

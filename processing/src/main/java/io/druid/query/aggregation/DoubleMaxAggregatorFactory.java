@@ -28,6 +28,7 @@ import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.NullHandlingHelper;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
@@ -74,8 +75,15 @@ public class DoubleMaxAggregatorFactory extends SimpleDoubleAggregatorFactory
   }
 
   @Override
-  public Object combine(Object lhs, Object rhs)
+  @Nullable
+  public Object combine(@Nullable Object lhs, @Nullable Object rhs)
   {
+    if (rhs == null) {
+      return lhs;
+    }
+    if (lhs == null) {
+      return rhs;
+    }
     return DoubleMaxAggregator.combineValues(lhs, rhs);
   }
 

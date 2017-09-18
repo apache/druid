@@ -29,6 +29,7 @@ import io.druid.query.aggregation.TestDoubleColumnSelectorImpl;
 import io.druid.query.aggregation.TestLongColumnSelector;
 import io.druid.query.aggregation.TestObjectColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.column.Column;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -88,7 +89,11 @@ public class DoubleFirstAggregationTest
     Assert.assertEquals(doubleValues[1], agg.getDouble(), 0.0001);
 
     agg.reset();
-    Assert.assertEquals(0, ((Pair<Long, Double>) agg.get()).rhs, 0.0001);
+    if (NullHandlingHelper.useDefaultValuesForNull()) {
+      Assert.assertEquals(0, ((Pair<Long, Double>) agg.get()).rhs, 0.0001);
+    } else {
+      Assert.assertNull(agg.get());
+    }
   }
 
   @Test
@@ -140,7 +145,11 @@ public class DoubleFirstAggregationTest
     Assert.assertEquals(expected.rhs, agg.getDouble(), 0.0001);
 
     agg.reset();
-    Assert.assertEquals(0, ((Pair<Long, Double>) agg.get()).rhs, 0.0001);
+    if (NullHandlingHelper.useDefaultValuesForNull()) {
+      Assert.assertEquals(0, ((Pair<Long, Double>) agg.get()).rhs, 0.0001);
+    } else {
+      Assert.assertNull(agg.get());
+    }
   }
 
   @Test

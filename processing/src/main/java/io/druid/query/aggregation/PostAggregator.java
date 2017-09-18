@@ -22,6 +22,7 @@ package io.druid.query.aggregation;
 import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.java.util.common.Cacheable;
 
+import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
@@ -36,6 +37,7 @@ public interface PostAggregator extends Cacheable
 
   Comparator getComparator();
 
+  @Nullable
   Object compute(Map<String, Object> combinedAggregators);
 
   String getName();

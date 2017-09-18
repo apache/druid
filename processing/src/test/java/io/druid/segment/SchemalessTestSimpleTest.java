@@ -161,7 +161,7 @@ public class SchemalessTestSimpleTest
                     .put("addRowsIndexConstant", 912.0)
                     .put("uniques", 2.000977198748901D)
                     .put("maxIndex", 100.0)
-                    .put("minIndex", 0.0)
+                    .put("minIndex", NullHandlingHelper.useDefaultValuesForNull() ? 0.0 : 100.0)
                     .build()
             )
         )

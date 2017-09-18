@@ -27,6 +27,7 @@ import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.DoubleSupplierSerializer;
 import io.druid.segment.data.IOPeon;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
@@ -74,7 +75,7 @@ public class DoubleColumnSerializer implements GenericColumnSerializer
   }
 
   @Override
-  public void serialize(Object obj) throws IOException
+  public void serialize(@Nullable Object obj) throws IOException
   {
     double val = (obj == null) ? 0 : ((Number) obj).doubleValue();
     writer.add(val);

@@ -29,6 +29,7 @@ import io.druid.query.Queries;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.cache.CacheKeyBuilder;
+import io.druid.segment.NullHandlingHelper;
 
 import java.util.Comparator;
 import java.util.Iterator;
@@ -110,11 +111,21 @@ public class ArithmeticPostAggregator implements PostAggregator
   public Object compute(Map<String, Object> values)
   {
     Iterator<PostAggregator> fieldsIter = fields.iterator();
-    double retVal = 0.0;
+    Double retVal = NullHandlingHelper.useDefaultValuesForNull() ? 0.0D : null;
     if (fieldsIter.hasNext()) {
-      retVal = ((Number) fieldsIter.next().compute(values)).doubleValue();
+      Number nextVal = (Number) fieldsIter.next().compute(values);
+      if (nextVal == null) {
+        // As per SQL standard if any of the value is null, arithmetic operators will return null.
+        return null;
+      }
+      retVal = nextVal.doubleValue();
       while (fieldsIter.hasNext()) {
-        retVal = op.compute(retVal, ((Number) fieldsIter.next().compute(values)).doubleValue());
+        nextVal = (Number) fieldsIter.next().compute(values);
+        if (nextVal == null) {
+          // As per SQL standard if any of the value is null, arithmetic operators will return null.
+          return null;
+        }
+        retVal = op.compute(retVal, (nextVal).doubleValue());
       }
     }
     return retVal;

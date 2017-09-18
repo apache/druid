@@ -21,6 +21,8 @@ package io.druid.query.aggregation;
 
 import io.druid.segment.ColumnValueSelector;
 
+import javax.annotation.Nullable;
+
 /**
  * The result of a NullableAggregator will be null if all the values to be aggregated are null values or no values are aggregated at all.
  * If any of the value is non-null, the result would be the aggregated value of the delegate aggregator.
@@ -59,6 +61,7 @@ public class NullableAggregator implements Aggregator
   }
 
   @Override
+  @Nullable
   public Object get()
   {
     if (isNullResult) {

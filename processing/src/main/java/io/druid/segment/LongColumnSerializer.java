@@ -26,6 +26,7 @@ import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.LongSupplierSerializer;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
@@ -81,7 +82,7 @@ public class LongColumnSerializer implements GenericColumnSerializer
   }
 
   @Override
-  public void serialize(Object obj) throws IOException
+  public void serialize(@Nullable Object obj) throws IOException
   {
     long val = (obj == null) ? 0 : ((Number) obj).longValue();
     writer.add(val);

@@ -7098,25 +7098,137 @@ public class GroupByQueryRunnerTest
                                      .setGranularity(QueryRunnerTestHelper.dayGran)
                                      .build();
     List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 0L, "idx", 0L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 0L, "idx", 0L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 0L, "idx", 0L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health", "rows", 0L, "idx", 0L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "alias",
+            "automotive",
+            "rows",
+            0L,
+            "idx",
+            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "alias",
+            "business",
+            "rows",
+            0L,
+            "idx",
+            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "alias",
+            "entertainment",
+            "rows",
+            0L,
+            "idx",
+            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "alias",
+            "health",
+            "rows",
+            0L,
+            "idx",
+            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null
+        ),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 0L, "idx", 0L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "rows", 0L, "idx", 0L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 0L, "idx", 0L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "alias",
+            "premium",
+            "rows",
+            0L,
+            "idx",
+            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "alias",
+            "technology",
+            "rows",
+            0L,
+            "idx",
+            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "alias",
+            "travel",
+            "rows",
+            0L,
+            "idx",
+            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null
+        ),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive", "rows", 0L, "idx", 0L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "business", "rows", 0L, "idx", 0L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "entertainment", "rows", 0L, "idx", 0L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health", "rows", 0L, "idx", 0L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-02",
+            "alias",
+            "automotive",
+            "rows",
+            0L,
+            "idx",
+            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-02",
+            "alias",
+            "business",
+            "rows",
+            0L,
+            "idx",
+            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-02",
+            "alias",
+            "entertainment",
+            "rows",
+            0L,
+            "idx",
+            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-02",
+            "alias",
+            "health",
+            "rows",
+            0L,
+            "idx",
+            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null
+        ),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "rows", 0L, "idx", 0L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology", "rows", 0L, "idx", 0L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 0L, "idx", 0L)
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-02",
+            "alias",
+            "premium",
+            "rows",
+            0L,
+            "idx",
+            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-02",
+            "alias",
+            "technology",
+            "rows",
+            0L,
+            "idx",
+            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-02",
+            "alias",
+            "travel",
+            "rows",
+            0L,
+            "idx",
+            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null
+        )
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);

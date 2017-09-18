@@ -48,8 +48,10 @@ import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.IndexBuilder;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
+import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.junit.After;
 import org.junit.Assert;
@@ -356,7 +358,14 @@ public class SchemaEvolutionTest
 
     // Only nonexistent(4)
     Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("a", 0L, "b", 0.0, "c", 0L)),
+        timeseriesResult(TestHelper.createExpectedMap(
+            "a",
+            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null,
+            "b",
+            NullHandlingHelper.useDefaultValuesForNull() ? 0.0 : null,
+            "c",
+            0L
+        )),
         runQuery(query, factory, ImmutableList.of(index4))
     );
 

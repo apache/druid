@@ -41,6 +41,7 @@ import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.Column;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -95,8 +96,15 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Object combine(Object lhs, Object rhs)
+  @Nullable
+  public Object combine(@Nullable Object lhs, @Nullable Object rhs)
   {
+    if (rhs == null) {
+      return lhs;
+    }
+    if (lhs == null) {
+      return rhs;
+    }
     return FloatFirstAggregatorFactory.TIME_COMPARATOR.compare(lhs, rhs) > 0 ? lhs : rhs;
   }
 
@@ -180,9 +188,10 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  @Nullable
   public Object finalizeComputation(Object object)
   {
-    return ((SerializablePair<Long, Float>) object).rhs;
+    return object == null ? null : ((SerializablePair<Long, Float>) object).rhs;
   }
 
   @Override

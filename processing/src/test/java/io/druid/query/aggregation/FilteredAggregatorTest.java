@@ -47,6 +47,7 @@ import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.IdLookup;
 import io.druid.segment.LongColumnSelector;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
@@ -257,9 +258,9 @@ public class FilteredAggregatorTest
 
   private void assertValues(FilteredAggregator agg, TestFloatColumnSelector selector, double... expectedVals)
   {
-    Assert.assertEquals(0.0d, agg.get());
-    Assert.assertEquals(0.0d, agg.get());
-    Assert.assertEquals(0.0d, agg.get());
+    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? 0.0d : null, agg.get());
+    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? 0.0d : null, agg.get());
+    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? 0.0d : null, agg.get());
     for (double expectedVal : expectedVals) {
       aggregate(selector, agg);
       Assert.assertEquals(expectedVal, agg.get());

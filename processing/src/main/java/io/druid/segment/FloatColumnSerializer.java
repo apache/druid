@@ -26,6 +26,7 @@ import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.FloatSupplierSerializer;
 import io.druid.segment.data.IOPeon;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
@@ -73,7 +74,7 @@ public class FloatColumnSerializer implements GenericColumnSerializer
   }
 
   @Override
-  public void serialize(Object obj) throws IOException
+  public void serialize(@Nullable Object obj) throws IOException
   {
     float val = (obj == null) ? 0 : ((Number) obj).floatValue();
     writer.add(val);

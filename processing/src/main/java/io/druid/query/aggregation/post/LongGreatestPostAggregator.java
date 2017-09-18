@@ -23,11 +23,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
-import com.google.common.primitives.Longs;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.query.Queries;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.cache.CacheKeyBuilder;
+import io.druid.segment.NullHandlingHelper;
 
 import java.util.Comparator;
 import java.util.Iterator;
@@ -38,14 +39,7 @@ import java.util.Set;
 
 public class LongGreatestPostAggregator implements PostAggregator
 {
-  private static final Comparator COMPARATOR = new Comparator()
-  {
-    @Override
-    public int compare(Object o, Object o1)
-    {
-      return Longs.compare(((Number) o).longValue(), ((Number) o1).longValue());
-    }
-  };
+  private static final Comparator COMPARATOR = Comparators.naturalNullsFirst();
 
   private final String name;
   private final List<PostAggregator> fields;
@@ -82,14 +76,12 @@ public class LongGreatestPostAggregator implements PostAggregator
   public Object compute(Map<String, Object> values)
   {
     Iterator<PostAggregator> fieldsIter = fields.iterator();
-    long retVal = Long.MIN_VALUE;
-    if (fieldsIter.hasNext()) {
-      retVal = ((Number) fieldsIter.next().compute(values)).longValue();
-      while (fieldsIter.hasNext()) {
-        long other = ((Number) fieldsIter.next().compute(values)).longValue();
-        if (other > retVal) {
-          retVal = other;
-        }
+    Long retVal = NullHandlingHelper.useDefaultValuesForNull() ? Long.MIN_VALUE : null;
+    while (fieldsIter.hasNext()) {
+      Number nextVal = ((Number) fieldsIter.next().compute(values));
+      // Ignore NULL values and return the greatest out of non-null values.
+      if (nextVal != null && COMPARATOR.compare(nextVal.longValue(), retVal) > 0) {
+        retVal = nextVal.longValue();
       }
     }
     return retVal;

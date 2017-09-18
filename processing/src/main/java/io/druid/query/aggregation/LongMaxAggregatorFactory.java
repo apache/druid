@@ -32,6 +32,7 @@ import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.NullHandlingHelper;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
@@ -102,8 +103,15 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Object combine(Object lhs, Object rhs)
+  @Nullable
+  public Object combine(@Nullable Object lhs, @Nullable Object rhs)
   {
+    if (rhs == null) {
+      return lhs;
+    }
+    if (lhs == null) {
+      return rhs;
+    }
     return LongMaxAggregator.combineValues(lhs, rhs);
   }
 

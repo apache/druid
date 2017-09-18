@@ -104,6 +104,12 @@ public class IndexedLongsGenericColumn implements GenericColumn
   }
 
   @Override
+  public boolean isNull(int rowNum)
+  {
+    return nullValueBitmap.get(rowNum);
+  }
+
+  @Override
   public void close()
   {
     column.close();

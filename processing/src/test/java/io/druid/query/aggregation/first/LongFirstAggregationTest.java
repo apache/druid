@@ -28,6 +28,7 @@ import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.TestLongColumnSelector;
 import io.druid.query.aggregation.TestObjectColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.column.Column;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -87,7 +88,11 @@ public class LongFirstAggregationTest
     Assert.assertEquals(longValues[3], agg.getFloat(), 0.0001);
 
     agg.reset();
-    Assert.assertEquals(0, ((Pair<Long, Long>) agg.get()).rhs, 0.0001);
+    if (NullHandlingHelper.useDefaultValuesForNull()) {
+      Assert.assertEquals(0, ((Pair<Long, Long>) agg.get()).rhs, 0.0001);
+    } else {
+      Assert.assertNull(agg.get());
+    }
   }
 
   @Test
@@ -139,7 +144,11 @@ public class LongFirstAggregationTest
     Assert.assertEquals(expected.rhs, agg.getFloat(), 0.0001);
 
     agg.reset();
-    Assert.assertEquals(0, ((Pair<Long, Long>) agg.get()).rhs, 0.0001);
+    if (NullHandlingHelper.useDefaultValuesForNull()) {
+      Assert.assertEquals(0, ((Pair<Long, Long>) agg.get()).rhs, 0.0001);
+    } else {
+      Assert.assertNull(agg.get());
+    }
   }
 
   @Test

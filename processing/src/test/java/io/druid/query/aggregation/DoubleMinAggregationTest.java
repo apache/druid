@@ -21,6 +21,7 @@ package io.druid.query.aggregation;
 
 import com.google.common.primitives.Doubles;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.TestHelper;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -69,7 +70,11 @@ public class DoubleMinAggregationTest
     Assert.assertEquals(values[2], agg.getFloat(), 0.0001);
 
     agg.reset();
-    Assert.assertEquals(Double.POSITIVE_INFINITY, (Double) agg.get(), 0.0001);
+    if (NullHandlingHelper.useDefaultValuesForNull()) {
+      Assert.assertEquals(Double.POSITIVE_INFINITY, (Double) agg.get(), 0.0001);
+    } else {
+      Assert.assertNull(agg.get());
+    }
   }
 
   @Test

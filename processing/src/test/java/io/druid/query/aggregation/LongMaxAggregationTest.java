@@ -21,6 +21,7 @@ package io.druid.query.aggregation;
 
 import com.google.common.primitives.Longs;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.TestHelper;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -69,7 +70,11 @@ public class LongMaxAggregationTest
     Assert.assertEquals((float) values[2], agg.getFloat(), 0.0001);
 
     agg.reset();
-    Assert.assertEquals(Long.MIN_VALUE, agg.getLong());
+    if (NullHandlingHelper.useDefaultValuesForNull()) {
+      Assert.assertEquals(Long.MIN_VALUE, ((Long) agg.get()).longValue());
+    } else {
+      Assert.assertNull(agg.get());
+    }
   }
 
   @Test

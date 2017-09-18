@@ -21,6 +21,7 @@ package io.druid.query.aggregation;
 
 import io.druid.segment.ColumnValueSelector;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 /**
@@ -64,6 +65,7 @@ public class NullableBufferAggregator implements BufferAggregator
   }
 
   @Override
+  @Nullable
   public Object get(ByteBuffer buf, int position)
   {
     if (buf.get(position) == IS_NULL_BYTE) {

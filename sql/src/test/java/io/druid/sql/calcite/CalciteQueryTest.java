@@ -5018,7 +5018,7 @@ public class CalciteQueryTest
   public void testTimeseriesDontSkipEmptyBuckets() throws Exception
   {
     // Tests that query context parameters are passed through to the underlying query engine.
-
+    Long defaultVal = NullHandlingHelper.useDefaultValuesForNull() ? 0L : null;
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS,
@@ -5039,29 +5039,29 @@ public class CalciteQueryTest
         ),
         ImmutableList.<Object[]>builder()
             .add(new Object[]{1L, T("2000-01-01")})
-            .add(new Object[]{0L, T("2000-01-01T01")})
-            .add(new Object[]{0L, T("2000-01-01T02")})
-            .add(new Object[]{0L, T("2000-01-01T03")})
-            .add(new Object[]{0L, T("2000-01-01T04")})
-            .add(new Object[]{0L, T("2000-01-01T05")})
-            .add(new Object[]{0L, T("2000-01-01T06")})
-            .add(new Object[]{0L, T("2000-01-01T07")})
-            .add(new Object[]{0L, T("2000-01-01T08")})
-            .add(new Object[]{0L, T("2000-01-01T09")})
-            .add(new Object[]{0L, T("2000-01-01T10")})
-            .add(new Object[]{0L, T("2000-01-01T11")})
-            .add(new Object[]{0L, T("2000-01-01T12")})
-            .add(new Object[]{0L, T("2000-01-01T13")})
-            .add(new Object[]{0L, T("2000-01-01T14")})
-            .add(new Object[]{0L, T("2000-01-01T15")})
-            .add(new Object[]{0L, T("2000-01-01T16")})
-            .add(new Object[]{0L, T("2000-01-01T17")})
-            .add(new Object[]{0L, T("2000-01-01T18")})
-            .add(new Object[]{0L, T("2000-01-01T19")})
-            .add(new Object[]{0L, T("2000-01-01T20")})
-            .add(new Object[]{0L, T("2000-01-01T21")})
-            .add(new Object[]{0L, T("2000-01-01T22")})
-            .add(new Object[]{0L, T("2000-01-01T23")})
+            .add(new Object[]{defaultVal, T("2000-01-01T01")})
+            .add(new Object[]{defaultVal, T("2000-01-01T02")})
+            .add(new Object[]{defaultVal, T("2000-01-01T03")})
+            .add(new Object[]{defaultVal, T("2000-01-01T04")})
+            .add(new Object[]{defaultVal, T("2000-01-01T05")})
+            .add(new Object[]{defaultVal, T("2000-01-01T06")})
+            .add(new Object[]{defaultVal, T("2000-01-01T07")})
+            .add(new Object[]{defaultVal, T("2000-01-01T08")})
+            .add(new Object[]{defaultVal, T("2000-01-01T09")})
+            .add(new Object[]{defaultVal, T("2000-01-01T10")})
+            .add(new Object[]{defaultVal, T("2000-01-01T11")})
+            .add(new Object[]{defaultVal, T("2000-01-01T12")})
+            .add(new Object[]{defaultVal, T("2000-01-01T13")})
+            .add(new Object[]{defaultVal, T("2000-01-01T14")})
+            .add(new Object[]{defaultVal, T("2000-01-01T15")})
+            .add(new Object[]{defaultVal, T("2000-01-01T16")})
+            .add(new Object[]{defaultVal, T("2000-01-01T17")})
+            .add(new Object[]{defaultVal, T("2000-01-01T18")})
+            .add(new Object[]{defaultVal, T("2000-01-01T19")})
+            .add(new Object[]{defaultVal, T("2000-01-01T20")})
+            .add(new Object[]{defaultVal, T("2000-01-01T21")})
+            .add(new Object[]{defaultVal, T("2000-01-01T22")})
+            .add(new Object[]{defaultVal, T("2000-01-01T23")})
             .build()
     );
   }
