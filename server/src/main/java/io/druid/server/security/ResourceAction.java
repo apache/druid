@@ -17,36 +17,36 @@
  * under the License.
  */
 
-package io.druid.security.kerberos;
-
+package io.druid.server.security;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class AuthenticationKerberosConfig
+public class ResourceAction
 {
-  @JsonProperty
-  private final String principal;
-  @JsonProperty
-  private final String keytab;
+  private final Resource resource;
+  private final Action action;
 
   @JsonCreator
-  public AuthenticationKerberosConfig(@JsonProperty("principal") String principal, @JsonProperty("keytab") String keytab)
+  public ResourceAction(
+      @JsonProperty("resource") Resource resource,
+      @JsonProperty("action") Action action
+  )
   {
-    this.principal = principal;
-    this.keytab = keytab;
+    this.resource = resource;
+    this.action = action;
   }
 
   @JsonProperty
-  public String getPrincipal()
+  public Resource getResource()
   {
-    return principal;
+    return resource;
   }
 
   @JsonProperty
-  public String getKeytab()
+  public Action getAction()
   {
-    return keytab;
+    return action;
   }
 
   @Override
@@ -55,24 +55,24 @@ public class AuthenticationKerberosConfig
     if (this == o) {
       return true;
     }
-    if (!(o instanceof AuthenticationKerberosConfig)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
 
-    AuthenticationKerberosConfig that = (AuthenticationKerberosConfig) o;
+    ResourceAction that = (ResourceAction) o;
 
-    if (getPrincipal() != null ? !getPrincipal().equals(that.getPrincipal()) : that.getPrincipal() != null) {
+    if (!getResource().equals(that.getResource())) {
       return false;
     }
-    return getKeytab() != null ? getKeytab().equals(that.getKeytab()) : that.getKeytab() == null;
+    return getAction() == that.getAction();
 
   }
 
   @Override
   public int hashCode()
   {
-    int result = getPrincipal() != null ? getPrincipal().hashCode() : 0;
-    result = 31 * result + (getKeytab() != null ? getKeytab().hashCode() : 0);
+    int result = getResource().hashCode();
+    result = 31 * result + getAction().hashCode();
     return result;
   }
 }
