@@ -269,7 +269,7 @@ public class UseIndexesStrategy extends SearchStrategy
           if (timeFilteredBitmap != null) {
             bitmap = bitmapFactory.intersection(Arrays.asList(timeFilteredBitmap, bitmap));
           }
-          if (bitmap.size() > 0) {
+          if (!bitmap.isEmpty()) {
             retVal.addTo(new SearchHit(dimension.getOutputName(), dimVal), bitmap.size());
             if (retVal.size() >= limit) {
               return retVal;
