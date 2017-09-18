@@ -232,7 +232,7 @@ public class FloatFirstAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return Long.BYTES + Float.BYTES + (NullHandlingHelper.useDefaultValuesForNull() ? 0 : Byte.BYTES);
+    return Long.BYTES + Float.BYTES + NullHandlingHelper.extraAggregatorBytes();
   }
 
   @Override

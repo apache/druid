@@ -63,10 +63,10 @@ public class FloatMaxAggregatorFactory extends SimpleFloatAggregatorFactory
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     FloatColumnSelector floatColumnSelector = getFloatColumnSelector(metricFactory, Float.NEGATIVE_INFINITY);
-    return NullHandlingHelper.getNullableAggregator(new FloatMaxBufferAggregator(getFloatColumnSelector(
-        metricFactory,
-        Float.NEGATIVE_INFINITY
-    )), floatColumnSelector);
+    return NullHandlingHelper.getNullableAggregator(
+        new FloatMaxBufferAggregator(floatColumnSelector),
+        floatColumnSelector
+    );
   }
 
   @Override

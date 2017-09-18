@@ -30,7 +30,6 @@ public class ColumnBuilder
 {
   private ValueType type = null;
   private boolean hasMultipleValues = false;
-  private boolean hasNullValues = false;
 
   private Supplier<DictionaryEncodedColumn> dictionaryEncodedColumn = null;
   private Supplier<RunLengthColumn> runLengthColumn = null;
@@ -100,17 +99,6 @@ public class ColumnBuilder
     return this;
   }
 
-  public ColumnBuilder setHasNullValues(boolean hasNullValues)
-  {
-    this.hasNullValues = hasNullValues;
-    return this;
-  }
-
-  public boolean isHasNullValues()
-  {
-    return hasNullValues;
-  }
-
   public ColumnBuilder setNullValueBitmap(Supplier<ImmutableBitmap> nullValueBitmap)
   {
     this.nullValueBitmap = nullValueBitmap;
@@ -128,8 +116,7 @@ public class ColumnBuilder
             .setHasBitmapIndexes(bitmapIndex != null)
             .setHasSpatialIndexes(spatialIndex != null)
             .setRunLengthEncoded(runLengthColumn != null)
-            .setHasMultipleValues(hasMultipleValues)
-            .setHasNullValues(hasNullValues),
+            .setHasMultipleValues(hasMultipleValues),
         dictionaryEncodedColumn,
         runLengthColumn,
         genericColumn,

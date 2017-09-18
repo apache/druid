@@ -90,13 +90,13 @@ public class GenericIndexed<T> implements Indexed<T>
       if (numBytes < 0) {
         return null;
       }
-      return NullHandlingHelper.defaultToNull(StringUtils.fromUtf8(buffer, numBytes));
+      return NullHandlingHelper.defaultToNull(StringUtils.fromUtf8Nullable(buffer, numBytes));
     }
 
     @Override
     public byte[] toBytes(String val)
     {
-      return StringUtils.toUtf8(val);
+      return StringUtils.toUtf8Nullable(val);
     }
 
     @Override

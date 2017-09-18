@@ -30,9 +30,6 @@ public class DoubleColumn extends AbstractColumn
   private static final ColumnCapabilitiesImpl CAPABILITIES = new ColumnCapabilitiesImpl()
       .setType(ValueType.DOUBLE);
 
-  private static final ColumnCapabilitiesImpl CAPABILITIES_WITH_NULL = new ColumnCapabilitiesImpl()
-      .setType(ValueType.DOUBLE).setHasNullValues(true);
-
   private final CompressedDoublesIndexedSupplier column;
   private final ImmutableBitmap nullValueBitmap;
 
@@ -52,7 +49,7 @@ public class DoubleColumn extends AbstractColumn
   @Override
   public ColumnCapabilities getCapabilities()
   {
-    return nullValueBitmap.isEmpty() ? CAPABILITIES : CAPABILITIES_WITH_NULL;
+    return CAPABILITIES;
   }
 
   @Override

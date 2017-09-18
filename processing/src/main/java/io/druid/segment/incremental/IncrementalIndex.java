@@ -55,7 +55,6 @@ import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.Metadata;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
@@ -563,10 +562,6 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         // Set column capabilities as data is coming in
         if (!capabilities.hasMultipleValues() && dimsKey != null && handler.getLengthOfEncodedKeyComponent(dimsKey) > 1) {
           capabilities.setHasMultipleValues(true);
-        }
-
-        if (!NullHandlingHelper.useDefaultValuesForNull() && !capabilities.hasNullValues() && raw == null) {
-          capabilities.setHasNullValues(true);
         }
 
         if (wasNewDim) {

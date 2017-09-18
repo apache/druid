@@ -109,7 +109,6 @@ public class CombiningFirehoseFactoryTest
         return new Float(metricValue).doubleValue();
       }
 
-
       @Override
       public Object getRaw(String dimension)
       {

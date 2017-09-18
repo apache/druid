@@ -23,6 +23,13 @@ import io.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
+/**
+ * The result of a NullableBufferAggregator will be null if all the values to be aggregated are null values or no values are aggregated at all.
+ * If any of the value is non-null, the result would be the aggregated value of the delegate aggregator.
+ * Note that the delegate aggregator is not required to perform check for isNull on the columnValueSelector as only non-null values
+ * will be passed to the delegate aggregator.
+ */
+
 public class NullableBufferAggregator implements BufferAggregator
 {
   public static final byte IS_NULL_BYTE = (byte) 1;
@@ -47,15 +54,21 @@ public class NullableBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    if (buf.get(position) == IS_NULL_BYTE && !selector.isNull()) {
-      buf.put(position, IS_NOT_NULL_BYTE);
+    boolean isCurrentValNull = selector.isNull();
+    if (!isCurrentValNull) {
+      if (buf.get(position) == IS_NULL_BYTE) {
+        buf.put(position, IS_NOT_NULL_BYTE);
+      }
+      delegate.aggregate(buf, position + Byte.BYTES);
     }
-    delegate.aggregate(buf, position + Byte.BYTES);
   }
 
   @Override
   public Object get(ByteBuffer buf, int position)
   {
+    if(buf.get(position) == IS_NULL_BYTE){
+      return null;
+    }
     return delegate.get(buf, position + Byte.BYTES);
   }
 
@@ -80,12 +93,12 @@ public class NullableBufferAggregator implements BufferAggregator
   @Override
   public boolean isNull(ByteBuffer buf, int position)
   {
-    return buf.get() == IS_NULL_BYTE;
+    return buf.get(position) == IS_NULL_BYTE;
   }
 
   @Override
   public void close()
   {
-
+    // Nothing to close.
   }
 }

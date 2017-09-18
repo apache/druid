@@ -67,12 +67,8 @@ public class StringUtils
     return string == null ? EMPTY_BYTES : toUtf8(string);
   }
 
-  @Nullable
   public static String fromUtf8(final byte[] bytes)
   {
-    if (bytes == null) {
-      return null;
-    }
     try {
       return new String(bytes, UTF8_STRING);
     }
@@ -82,6 +78,15 @@ public class StringUtils
     }
   }
 
+  @Nullable
+  public static String fromUtf8Nullable(final byte[] bytes)
+  {
+    if (bytes == null) {
+      return null;
+    }
+    return fromUtf8(bytes);
+  }
+
   public static String fromUtf8(final ByteBuffer buffer, final int numBytes)
   {
     final byte[] bytes = new byte[numBytes];
@@ -89,17 +94,21 @@ public class StringUtils
     return StringUtils.fromUtf8(bytes);
   }
 
+  @Nullable
+  public static String fromUtf8Nullable(final ByteBuffer buffer, final int numBytes)
+  {
+    final byte[] bytes = new byte[numBytes];
+    buffer.get(bytes);
+    return StringUtils.fromUtf8Nullable(bytes);
+  }
+
   public static String fromUtf8(final ByteBuffer buffer)
   {
     return StringUtils.fromUtf8(buffer, buffer.remaining());
   }
 
-  @Nullable
   public static byte[] toUtf8(final String string)
   {
-    if (string == null) {
-      return null;
-    }
     try {
       return string.getBytes(UTF8_STRING);
     }
@@ -107,6 +116,15 @@ public class StringUtils
       // Should never happen
       throw Throwables.propagate(e);
     }
+  }
+
+  @Nullable
+  public static byte[] toUtf8Nullable(@Nullable final String string)
+  {
+    if (string == null) {
+      return null;
+    }
+    return toUtf8(string);
   }
 
   /**

@@ -72,7 +72,7 @@ public interface Row extends Comparable<Row>
    *
    * @return the value of the provided column name
    */
-  public @Nullable Object getRaw(String dimension);
+  @Nullable public Object getRaw(String dimension);
 
   /**
    * Returns the float value of the given metric column.
@@ -82,7 +82,7 @@ public interface Row extends Comparable<Row>
    *
    * @return the float value for the provided column name.
    */
-  public @Nullable Float getFloatMetric(String metric);
+  @Nullable public Float getFloatMetric(String metric);
 
   /**
    * Returns the long value of the given metric column.
@@ -92,7 +92,7 @@ public interface Row extends Comparable<Row>
    *
    * @return the long value for the provided column name.
    */
-  public @Nullable Long getLongMetric(String metric);
+  @Nullable public Long getLongMetric(String metric);
 
   /**
    * Returns the double value of the given metric column.
@@ -102,5 +102,5 @@ public interface Row extends Comparable<Row>
    *
    * @return the double value for the provided column name.
    */
-  public @Nullable Double getDoubleMetric(String metric);
+  @Nullable public Double getDoubleMetric(String metric);
 }

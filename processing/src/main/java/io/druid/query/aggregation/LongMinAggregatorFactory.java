@@ -113,7 +113,7 @@ public class LongMinAggregatorFactory extends AggregatorFactory
   @Override
   public AggregateCombiner makeAggregateCombiner()
   {
-    return NullHandlingHelper.getNullableCombiner(new LongAggregateCombiner()
+    LongAggregateCombiner combiner = new LongAggregateCombiner()
     {
       private long min;
 
@@ -134,7 +134,8 @@ public class LongMinAggregatorFactory extends AggregatorFactory
       {
         return min;
       }
-    });
+    };
+    return NullHandlingHelper.getNullableCombiner(combiner);
   }
 
   @Override
@@ -221,7 +222,7 @@ public class LongMinAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return Longs.BYTES + (NullHandlingHelper.useDefaultValuesForNull() ? 0 : Byte.BYTES);
+    return Longs.BYTES + NullHandlingHelper.extraAggregatorBytes();
   }
 
   @Override

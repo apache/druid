@@ -21,13 +21,20 @@ package io.druid.query.aggregation;
 
 import io.druid.segment.ColumnValueSelector;
 
-public class NullableLongAggregateCombiner extends LongAggregateCombiner
+/**
+ * The result of a NullableAggregateCombiner will be null if all the values to be combined are null values or no values are combined at all.
+ * If any of the value is non-null, the result would be the value of the delegate combiner.
+ * Note that the delegate combiner is not required to perform check for isNull on the columnValueSelector as only non-null values
+ * will be passed to the delegate combiner.
+ */
+
+public class NullableAggregateCombiner implements AggregateCombiner
 {
-  private boolean isNull = true;
+  private boolean isNullResult = true;
 
-  private LongAggregateCombiner delegate;
+  private final AggregateCombiner delegate;
 
-  public NullableLongAggregateCombiner(LongAggregateCombiner delegate)
+  public NullableAggregateCombiner(AggregateCombiner delegate)
   {
     this.delegate = delegate;
   }
@@ -35,16 +42,32 @@ public class NullableLongAggregateCombiner extends LongAggregateCombiner
   @Override
   public void reset(ColumnValueSelector selector)
   {
-    isNull = true;
+    isNullResult = true;
+    delegate.reset(selector);
   }
 
   @Override
   public void fold(ColumnValueSelector selector)
   {
-    if (isNull && !selector.isNull()) {
-      isNull = true;
+    boolean isCurrentValNull = selector.isNull();
+    if (!isCurrentValNull) {
+      if (isNullResult) {
+        isNullResult = false;
+      }
+      delegate.fold(selector);
     }
-    delegate.fold(selector);
+  }
+
+  @Override
+  public float getFloat()
+  {
+    return delegate.getFloat();
+  }
+
+  @Override
+  public double getDouble()
+  {
+    return delegate.getDouble();
   }
 
   @Override
@@ -56,6 +79,6 @@ public class NullableLongAggregateCombiner extends LongAggregateCombiner
   @Override
   public boolean isNull()
   {
-    return isNull;
+    return isNullResult;
   }
 }

@@ -225,7 +225,7 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return Long.BYTES * 2 + (NullHandlingHelper.useDefaultValuesForNull() ? 0 : Byte.BYTES);
+    return Long.BYTES * 2 + NullHandlingHelper.extraAggregatorBytes();
   }
 
   @Override

@@ -24,15 +24,30 @@ package io.druid.segment;
  *
  * This interface has methods to get the value in all primitive types, that have corresponding basic aggregators in
  * Druid: Sum, Min, Max, etc: {@link #getFloat()}, {@link #getDouble()} and {@link #getLong()} to support "polymorphic"
- * rollup aggregation during index merging.
+ * rollup aggregation during index merging. Additionally, it also has a {@link #isNull()} method which can be used to
+ * check whether the column has null value or not.
  */
 public interface ColumnValueSelector
 {
+  /**
+   * @return float column value, 0.0F if the value is null.
+   */
   float getFloat();
 
+  /**
+   * @return double column value, 0.0D if the value is null.
+   */
   double getDouble();
 
+  /**
+   * @return long column value, 0L if the value is null.
+   */
   long getLong();
 
+  /**
+   * checks if the column value is null.
+   *
+   * @return true if the column value for is null
+   */
   boolean isNull();
 }

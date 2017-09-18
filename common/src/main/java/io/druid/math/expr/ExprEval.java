@@ -25,6 +25,8 @@ import com.google.common.primitives.Ints;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.IAE;
 
+import javax.annotation.Nullable;
+
 /**
  */
 public abstract class ExprEval<T>
@@ -107,6 +109,7 @@ public abstract class ExprEval<T>
 
   public abstract double asDouble();
 
+  @Nullable
   public String asString()
   {
     return value == null ? null : String.valueOf(value);

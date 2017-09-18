@@ -82,7 +82,7 @@ public abstract class SimpleDoubleAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return Double.BYTES + (NullHandlingHelper.useDefaultValuesForNull() ? 0 : Byte.BYTES);
+    return Double.BYTES + NullHandlingHelper.extraAggregatorBytes();
   }
 
   @Override

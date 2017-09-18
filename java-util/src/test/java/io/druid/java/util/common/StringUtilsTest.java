@@ -85,10 +85,10 @@ public class StringUtilsTest
     StringUtils.fromUtf8((ByteBuffer) null);
   }
 
-  @Test
-  public void testNullByteArray()
+  @Test(expected = NullPointerException.class)
+  public void testNullPointerByteArray()
   {
-    Assert.assertNull(StringUtils.fromUtf8((byte[]) null));
+    StringUtils.fromUtf8((byte[]) null);
   }
 
   @Test

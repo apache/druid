@@ -287,7 +287,7 @@ class WikipediaIrcDecoder implements IrcDecoder
       @Override
       public Double getDoubleMetric(String metric)
       {
-        return new Double(metrics.get(metric)).doubleValue();
+        return new Double(metrics.get(metric));
       }
 
       @Override

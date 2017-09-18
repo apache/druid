@@ -21,16 +21,12 @@ package io.druid.segment;
 
 import com.google.common.base.Strings;
 import com.google.inject.Inject;
+import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.BufferAggregator;
-import io.druid.query.aggregation.DoubleAggregateCombiner;
-import io.druid.query.aggregation.LongAggregateCombiner;
+import io.druid.query.aggregation.NullableAggregateCombiner;
 import io.druid.query.aggregation.NullableAggregator;
 import io.druid.query.aggregation.NullableBufferAggregator;
-import io.druid.query.aggregation.NullableDoubleAggregateCombiner;
-import io.druid.query.aggregation.NullableLongAggregateCombiner;
-import io.druid.query.aggregation.NullableObjectAggregateCombiner;
-import io.druid.query.aggregation.ObjectAggregateCombiner;
 
 public class NullHandlingHelper
 {
@@ -89,18 +85,13 @@ public class NullHandlingHelper
     return INSTANCE.isUseDefaultValuesForNull() ? aggregator : new NullableBufferAggregator(aggregator, selector);
   }
 
-  public static DoubleAggregateCombiner getNullableCombiner(DoubleAggregateCombiner combiner)
+  public static AggregateCombiner getNullableCombiner(AggregateCombiner combiner)
   {
-    return INSTANCE.isUseDefaultValuesForNull() ? combiner : new NullableDoubleAggregateCombiner(combiner);
+    return INSTANCE.isUseDefaultValuesForNull() ? combiner : new NullableAggregateCombiner(combiner);
   }
 
-  public static LongAggregateCombiner getNullableCombiner(LongAggregateCombiner combiner)
+  public static int extraAggregatorBytes()
   {
-    return INSTANCE.isUseDefaultValuesForNull() ? combiner : new NullableLongAggregateCombiner(combiner);
-  }
-
-  public static ObjectAggregateCombiner getNullableCombiner(ObjectAggregateCombiner combiner)
-  {
-    return INSTANCE.isUseDefaultValuesForNull() ? combiner : new NullableObjectAggregateCombiner(combiner);
+    return NullHandlingHelper.useDefaultValuesForNull() ? 0 : Byte.BYTES;
   }
 }

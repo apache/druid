@@ -27,6 +27,7 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.parsers.ParseException;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -95,12 +96,14 @@ public class MapBasedRow implements Row
   }
 
   @Override
+  @Nullable
   public Object getRaw(String dimension)
   {
     return event.get(dimension);
   }
 
   @Override
+  @Nullable
   public Float getFloatMetric(String metric)
   {
     Object metricValue = event.get(metric);
@@ -124,6 +127,7 @@ public class MapBasedRow implements Row
   }
 
   @Override
+  @Nullable
   public Long getLongMetric(String metric)
   {
     Object metricValue = event.get(metric);
@@ -148,6 +152,7 @@ public class MapBasedRow implements Row
   }
 
   @Override
+  @Nullable
   public Double getDoubleMetric(String metric)
   {
     Object metricValue = event.get(metric);

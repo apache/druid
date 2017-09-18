@@ -81,7 +81,7 @@ public abstract class SimpleFloatAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return Float.BYTES + (NullHandlingHelper.useDefaultValuesForNull() ? 0 : Byte.BYTES);
+    return Float.BYTES + NullHandlingHelper.extraAggregatorBytes();
   }
 
   @Override

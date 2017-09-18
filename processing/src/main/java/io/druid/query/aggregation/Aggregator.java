@@ -55,8 +55,8 @@ public interface Aggregator extends Closeable
   }
 
   /**
-   * returns true if the Aggregator support returning null values and the aggregated value is Null.
-   * The default implementation always return false to enable smooth backward compatibility. re-implement if your aggregator is nullable.
+   * returns true if the Aggregator supports returning null values and the aggregated value is Null.
+   * The default implementation always return false to enable smooth backward compatibility, re-implement if your aggregator is nullable.
    */
   default boolean isNull()
   {

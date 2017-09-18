@@ -85,6 +85,7 @@ public class SimpleDictionaryEncodedColumn
   }
 
   @Override
+  @Nullable
   public String lookupName(int id)
   {
     return cachedLookups.get(id);
