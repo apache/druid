@@ -25,7 +25,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
@@ -38,6 +37,7 @@ import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
 import io.druid.server.security.ForbiddenException;
+import io.druid.server.security.ResourceAction;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -49,6 +49,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -119,36 +120,12 @@ public class SupervisorResource
           @Override
           public Response apply(final SupervisorManager manager)
           {
-            final Set<String> supervisorIds;
-            supervisorIds = Sets.newHashSet();
-            for (String supervisorId : manager.getSupervisorIds()) {
-              Optional<SupervisorSpec> supervisorSpecOptional = manager.getSupervisorSpec(supervisorId);
-              if (supervisorSpecOptional.isPresent()) {
-                Access accessResult = AuthorizationUtils.authorizeAllResourceActions(
-                    req,
-                    Iterables.transform(
-                        supervisorSpecOptional.get().getDataSources(),
-                        AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR
-                    ),
-                    authorizerMapper
-                );
-
-                if (accessResult.isAllowed()) {
-                  supervisorIds.add(supervisorId);
-                }
-              }
-            }
-
-            // If there were no supervisorIds, go ahead and authorize the request.
-            if (manager.getSupervisorIds().size() == 0) {
-              AuthorizationUtils.authorizeAllResourceActions(
-                  req,
-                  Lists.newArrayList(),
-                  authorizerMapper
-              );
-            }
-
-            return Response.ok(supervisorIds).build();
+            Set<String> authorizedSupervisorIds = filterAuthorizedSupervisorIds(
+                req,
+                manager,
+                manager.getSupervisorIds()
+            );
+            return Response.ok(authorizedSupervisorIds).build();
           }
         }
     );
@@ -239,27 +216,22 @@ public class SupervisorResource
           @Override
           public Response apply(final SupervisorManager manager)
           {
-            final Map<String, List<VersionedSupervisorSpec>> supervisorHistory;
-            supervisorHistory = Maps.filterKeys(
-                manager.getSupervisorHistory(),
+            final Map<String, List<VersionedSupervisorSpec>> supervisorHistory = manager.getSupervisorHistory();
+
+            final Set<String> authorizedSupervisorIds = filterAuthorizedSupervisorIds(
+                req,
+                manager,
+                supervisorHistory.keySet()
+            );
+
+            final Map<String, List<VersionedSupervisorSpec>> authorizedSupervisorHistory = Maps.filterKeys(
+                supervisorHistory,
                 new Predicate<String>()
                 {
                   @Override
                   public boolean apply(String id)
                   {
-                    Optional<SupervisorSpec> supervisorSpecOptional = manager.getSupervisorSpec(id);
-                    if (!supervisorSpecOptional.isPresent()) {
-                      return false;
-                    }
-                    Access accessResult = AuthorizationUtils.authorizeAllResourceActions(
-                        req,
-                        Iterables.transform(
-                            supervisorSpecOptional.get().getDataSources(),
-                            AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR
-                        ),
-                        authorizerMapper
-                    );
-                    return accessResult.isAllowed();
+                    return authorizedSupervisorIds.contains(id);
                   }
                 }
             );
@@ -336,5 +308,33 @@ public class SupervisorResource
       // Encourage client to try again soon, when we'll likely have a redirect set up
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
     }
+  }
+
+  private Set<String> filterAuthorizedSupervisorIds(
+      final HttpServletRequest req,
+      SupervisorManager manager,
+      Collection<String> supervisorIds
+  )
+  {
+    Function<String, Iterable<ResourceAction>> raGenerator = supervisorId -> {
+      Optional<SupervisorSpec> supervisorSpecOptional = manager.getSupervisorSpec(supervisorId);
+      if (supervisorSpecOptional.isPresent()) {
+        return Iterables.transform(
+            supervisorSpecOptional.get().getDataSources(),
+            AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR
+        );
+      } else {
+        return null;
+      }
+    };
+
+    return Sets.newHashSet(
+        AuthorizationUtils.filterAuthorizedResources(
+            req,
+            supervisorIds,
+            raGenerator,
+            authorizerMapper
+        )
+    );
   }
 }
