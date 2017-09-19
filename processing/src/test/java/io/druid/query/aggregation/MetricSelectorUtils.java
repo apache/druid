@@ -36,7 +36,7 @@ public class MetricSelectorUtils
       }
 
       @Override
-      public Float get()
+      public Float getObject()
       {
         return selector.getFloat();
       }
@@ -54,7 +54,7 @@ public class MetricSelectorUtils
       }
 
       @Override
-      public Double get()
+      public Double getObject()
       {
         return selector.getDouble();
       }

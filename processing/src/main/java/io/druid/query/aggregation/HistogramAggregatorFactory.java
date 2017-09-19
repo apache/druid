@@ -104,7 +104,7 @@ public class HistogramAggregatorFactory extends AggregatorFactory
       public void reset(ColumnValueSelector selector)
       {
         @SuppressWarnings("unchecked")
-        Histogram first = ((ObjectColumnSelector<Histogram>) selector).get();
+        Histogram first = ((ObjectColumnSelector<Histogram>) selector).getObject();
         if (combined == null) {
           combined = new Histogram(first);
         } else {
@@ -116,7 +116,7 @@ public class HistogramAggregatorFactory extends AggregatorFactory
       public void fold(ColumnValueSelector selector)
       {
         @SuppressWarnings("unchecked")
-        Histogram other = ((ObjectColumnSelector<Histogram>) selector).get();
+        Histogram other = ((ObjectColumnSelector<Histogram>) selector).getObject();
         combined.fold(other);
       }
 
@@ -128,7 +128,7 @@ public class HistogramAggregatorFactory extends AggregatorFactory
 
       @Nullable
       @Override
-      public Histogram get()
+      public Histogram getObject()
       {
         return combined;
       }

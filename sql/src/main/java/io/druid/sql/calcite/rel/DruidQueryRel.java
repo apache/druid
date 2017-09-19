@@ -36,6 +36,7 @@ import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 
+import java.util.List;
 import javax.annotation.Nullable;
 import java.io.IOException;
 
@@ -135,6 +136,12 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   }
 
   @Override
+  public List<String> getDatasourceNames()
+  {
+    return druidTable.getDataSource().getNames();
+  }
+
+  @Override
   public RowSignature getSourceRowSignature()
   {
     return druidTable.getRowSignature();
@@ -220,7 +227,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
       cost += COST_PER_COLUMN * queryBuilder.getGrouping().getPostAggregators().size();
     }
 
-    if (queryBuilder.getLimitSpec() != null && queryBuilder.getLimitSpec().getLimit() < Integer.MAX_VALUE) {
+    if (queryBuilder.getLimitSpec() != null && queryBuilder.getLimitSpec().isLimited()) {
       cost *= COST_LIMIT_MULTIPLIER;
     }
 

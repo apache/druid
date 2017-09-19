@@ -35,6 +35,7 @@ import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.AbstractRelNode;
 
+import java.util.List;
 import javax.annotation.Nullable;
 
 public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode implements BindableRel
@@ -92,6 +93,11 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode imple
   }
 
   public abstract T asDruidConvention();
+
+  /**
+   * Get a list of names of datasources read by this DruidRel
+   */
+  public abstract List<String> getDatasourceNames();
 
   @Override
   public Class<Object[]> getElementType()

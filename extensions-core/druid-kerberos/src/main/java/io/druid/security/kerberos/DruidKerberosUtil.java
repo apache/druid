@@ -73,7 +73,7 @@ public class DruidKerberosUtil
       // Create a GSSContext for authentication with the service.
       // We're passing client credentials as null since we want them to be read from the Subject.
       GSSContext gssContext =
-        manager.createContext(serverName.canonicalize(mechOid), mechOid, null, GSSContext.DEFAULT_LIFETIME);
+          manager.createContext(serverName.canonicalize(mechOid), mechOid, null, GSSContext.DEFAULT_LIFETIME);
       gssContext.requestMutualAuth(true);
       gssContext.requestCredDeleg(true);
       // Establish context
@@ -91,24 +91,27 @@ public class DruidKerberosUtil
     }
   }
 
-  public static void authenticateIfRequired(AuthenticationKerberosConfig config)
-    throws IOException
+  public static void authenticateIfRequired(String internalClientPrincipal, String internalClientKeytab)
+      throws IOException
   {
-    String principal = config.getPrincipal();
-    String keytab = config.getKeytab();
-    if (!Strings.isNullOrEmpty(principal) && !Strings.isNullOrEmpty(keytab)) {
+    if (!Strings.isNullOrEmpty(internalClientPrincipal) && !Strings.isNullOrEmpty(internalClientKeytab)) {
       Configuration conf = new Configuration();
       conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
       UserGroupInformation.setConfiguration(conf);
       try {
         if (UserGroupInformation.getCurrentUser().hasKerberosCredentials() == false
-            || !UserGroupInformation.getCurrentUser().getUserName().equals(principal)) {
-          log.info("trying to authenticate user [%s] with keytab [%s]", principal, keytab);
-          UserGroupInformation.loginUserFromKeytab(principal, keytab);
+            || !UserGroupInformation.getCurrentUser().getUserName().equals(internalClientPrincipal)) {
+          log.info("trying to authenticate user [%s] with keytab [%s]", internalClientPrincipal, internalClientKeytab);
+          UserGroupInformation.loginUserFromKeytab(internalClientPrincipal, internalClientKeytab);
         }
       }
       catch (IOException e) {
-        throw new ISE(e, "Failed to authenticate user principal [%s] with keytab [%s]", principal, keytab);
+        throw new ISE(
+            e,
+            "Failed to authenticate user principal [%s] with keytab [%s]",
+            internalClientPrincipal,
+            internalClientKeytab
+        );
       }
     }
   }

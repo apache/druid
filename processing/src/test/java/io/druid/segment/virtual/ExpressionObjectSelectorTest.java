@@ -156,7 +156,7 @@ public class ExpressionObjectSelectorTest
       }
 
       @Override
-      public T get()
+      public T getObject()
       {
         return supplier.get();
       }

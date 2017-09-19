@@ -66,7 +66,8 @@ public class VarianceAggregatorTest
   {
     selector = new TestFloatColumnSelector(values);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
-    EasyMock.expect(colSelectorFactory.makeObjectColumnSelector("nilly")).andReturn(new TestObjectColumnSelector(0.0f));
+    EasyMock.expect(colSelectorFactory.makeObjectColumnSelector("nilly"))
+            .andReturn(new TestObjectColumnSelector<>(new Object[] {0.0f}));
     EasyMock.expect(colSelectorFactory.makeFloatColumnSelector("nilly")).andReturn(selector);
     EasyMock.replay(colSelectorFactory);
   }

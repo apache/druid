@@ -53,7 +53,7 @@ public class TimestampSpec
   private final Function<Object, DateTime> timestampConverter;
 
   // remember last value parsed
-  private transient ParseCtx parseCtx = new ParseCtx();
+  private static final ThreadLocal<ParseCtx> parseCtx = ThreadLocal.withInitial(ParseCtx::new);
 
   @JsonCreator
   public TimestampSpec(
@@ -98,15 +98,16 @@ public class TimestampSpec
   {
     DateTime extracted = missingValue;
     if (input != null) {
+      ParseCtx ctx = parseCtx.get();
       // Check if the input is equal to the last input, so we don't need to parse it again
-      if (input.equals(parseCtx.lastTimeObject)) {
-        extracted = parseCtx.lastDateTime;
+      if (input.equals(ctx.lastTimeObject)) {
+        extracted = ctx.lastDateTime;
       } else {
+        extracted = timestampConverter.apply(input);
         ParseCtx newCtx = new ParseCtx();
         newCtx.lastTimeObject = input;
-        extracted = timestampConverter.apply(input);
         newCtx.lastDateTime = extracted;
-        parseCtx = newCtx;
+        parseCtx.set(newCtx);
       }
     }
     return extracted;

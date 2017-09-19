@@ -24,8 +24,6 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.Result;
 import io.druid.query.ordering.StringComparators;
-import io.druid.query.search.search.SearchHit;
-import io.druid.query.search.search.SearchSortSpec;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
