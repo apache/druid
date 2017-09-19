@@ -32,6 +32,7 @@ import io.druid.java.util.common.CloseableIterators;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.query.AbstractPrioritizedCallable;
+import io.druid.query.QueryContexts;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
@@ -142,7 +143,8 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
         executor,
         sortHasNonGroupingFields,
         concurrencyHint,
-        priority
+        priority,
+        queryTimeoutAt
     );
     this.maxDictionarySizeForCombiner = combineKeySerdeFactory.getMaxDictionarySize();
   }

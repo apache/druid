@@ -19,13 +19,13 @@
 
 package io.druid.query.groupby.epinephelinae;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.CloseableIterator;
+import io.druid.query.QueryContexts;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.ColumnSelectorFactory;
@@ -33,6 +33,7 @@ import io.druid.segment.ColumnSelectorFactory;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.NoSuchElementException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
@@ -45,9 +46,11 @@ import java.util.concurrent.TimeoutException;
 public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
 {
   private static final Logger LOG = new Logger(StreamingMergeSortedGrouper.class);
-  // Timeout for waiting for a slot to be available for read/write. This is required to prevent the processing
-  // thread from being blocked if the iterator of this grouper is not consumed due to some failures.
-  private static final long DEFAULT_TIMEOUT_MS = 5000L;
+  private static final long DEFAULT_TIMEOUT_NS = 5_000_000_000L; // 5 seconds
+
+  // Threashold time for spin locks in increaseWriteIndex() and increaseReadIndex(). Thread.yield() is called for the
+  // waiting thread after this threadhold time.
+  private static final long SPIN_FOR_TIMEOUT_THRESHOLD_NS = 1000L;
 
   private final Supplier<ByteBuffer> bufferSupplier;
   private final KeySerde<KeyType> keySerde;
@@ -55,7 +58,10 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
   private final int[] aggregatorOffsets;
   private final int keySize;
   private final int recordSize; // size of (key + all aggregates)
-  private final long timeoutMs;
+
+  // Timeout for waiting for a slot to be available for read/write. This is required to prevent the processing
+  // thread from being blocked if the iterator of this grouper is not consumed due to some failures.
+  private final long queryTimeoutAtNs;
 
   // Below variables are initialized when init() is called
   private ByteBuffer buffer;
@@ -99,23 +105,12 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
     return recordSize * 3;
   }
 
-  public StreamingMergeSortedGrouper(
-      final Supplier<ByteBuffer> bufferSupplier,
-      final KeySerde<KeyType> keySerde,
-      final ColumnSelectorFactory columnSelectorFactory,
-      final AggregatorFactory[] aggregatorFactories
-  )
-  {
-    this(bufferSupplier, keySerde, columnSelectorFactory, aggregatorFactories, DEFAULT_TIMEOUT_MS);
-  }
-
-  @VisibleForTesting
   StreamingMergeSortedGrouper(
       final Supplier<ByteBuffer> bufferSupplier,
       final KeySerde<KeyType> keySerde,
       final ColumnSelectorFactory columnSelectorFactory,
       final AggregatorFactory[] aggregatorFactories,
-      final long timeoutMs
+      final long queryTimeoutAtMs
   )
   {
     this.bufferSupplier = bufferSupplier;
@@ -131,7 +126,11 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
       offset += aggregatorFactories[i].getMaxIntermediateSize();
     }
     this.recordSize = offset;
-    this.timeoutMs = timeoutMs;
+    final long timeoutNs = queryTimeoutAtMs == QueryContexts.NO_TIMEOUT ?
+                           DEFAULT_TIMEOUT_NS :
+                           TimeUnit.MILLISECONDS.toNanos(queryTimeoutAtMs - System.currentTimeMillis());
+
+    this.queryTimeoutAtNs = System.nanoTime() + timeoutNs;
   }
 
   @Override
@@ -240,23 +239,32 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
    */
   private void increaseWriteIndex()
   {
+    final long startAt = System.nanoTime();
+    final long spinTimeoutAt = startAt + SPIN_FOR_TIMEOUT_THRESHOLD_NS;
+    long now = startAt;
+
     if (curWriteIndex == maxNumSlots - 1) {
-      final long startLoopAt = System.currentTimeMillis();
+      // Should wait for the reading thread to start reading only if the writing thread should overwrite the first slot.
       while ((nextReadIndex == -1 || nextReadIndex == 0) && !Thread.currentThread().isInterrupted()) {
-        if (System.currentTimeMillis() - startLoopAt > timeoutMs) {
+        if (now >= queryTimeoutAtNs) {
           throw new RuntimeException(new TimeoutException());
         }
-        Thread.yield();
+        if (now >= spinTimeoutAt) {
+          Thread.yield();
+        }
+        now = System.nanoTime();
       }
       curWriteIndex = 0;
     } else {
       final int nextWriteIndex = curWriteIndex + 1;
-      final long startLoopAt = System.currentTimeMillis();
       while ((nextWriteIndex == nextReadIndex) && !Thread.currentThread().isInterrupted()) {
-        if (System.currentTimeMillis() - startLoopAt > timeoutMs) {
+        if (now >= queryTimeoutAtNs) {
           throw new RuntimeException(new TimeoutException());
         }
-        Thread.yield();
+        if (now >= spinTimeoutAt) {
+          Thread.yield();
+        }
+        now = System.nanoTime();
       }
       curWriteIndex = nextWriteIndex;
     }
@@ -350,13 +358,18 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
 
       private void increaseReadIndex(int increaseTo)
       {
-        final long startLoopAt = System.currentTimeMillis();
+        final long startAt = System.nanoTime();
+        final long spinTimeoutAt = startAt + SPIN_FOR_TIMEOUT_THRESHOLD_NS;
+        long now = startAt;
+
         while ((!isReady() || increaseTo == curWriteIndex) && !finished && !Thread.currentThread().isInterrupted()) {
-          if (System.currentTimeMillis() - startLoopAt > timeoutMs) {
+          if (now >= queryTimeoutAtNs) {
             throw new RuntimeException(new TimeoutException());
           }
-
-          Thread.yield();
+          if (now >= spinTimeoutAt) {
+            Thread.yield();
+          }
+          now = System.nanoTime();
         }
 
         nextReadIndex = increaseTo;

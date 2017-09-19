@@ -34,6 +34,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import io.druid.collections.ResourceHolder;
+import io.druid.common.utils.IntArrayUtils;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.IAE;
@@ -77,7 +78,6 @@ import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.BitSet;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -1045,44 +1045,7 @@ public class RowBasedGrouperHelper
           }
       );
 
-      inverse(rankOfDictionaryIds);
-    }
-
-    /**
-     * Inverses the values of the given array with their indexes.
-     * For example, the result for [2, 0, 1] is [1, 2, 0] because
-     *
-     * a[0]: 2 => a[2]: 0
-     * a[1]: 0 => a[0]: 1
-     * a[2]: 1 => a[1]: 2
-     */
-    private static void inverse(int[] a)
-    {
-      final BitSet visited = new BitSet(a.length);
-      for (int i = 0; i < a.length; i++) {
-        if (!visited.get(i)) {
-          inverseLoop(a, i, visited);
-        }
-      }
-    }
-
-    private static void inverseLoop(int[] a, int startValue, BitSet visited)
-    {
-      final int startIndex = a[startValue];
-
-      int nextIndex = startIndex;
-      int nextValue = startValue;
-
-      do {
-        final int curIndex = nextIndex;
-        final int curValue = nextValue;
-
-        nextValue = nextIndex;
-        nextIndex = a[curIndex];
-
-        visited.set(curIndex);
-        a[curIndex] = curValue;
-      } while (nextIndex != startIndex);
+      IntArrayUtils.inverse(rankOfDictionaryIds);
     }
 
     @Override

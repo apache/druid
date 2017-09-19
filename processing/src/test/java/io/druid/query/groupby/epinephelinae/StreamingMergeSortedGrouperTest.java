@@ -41,7 +41,9 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
 
 public class StreamingMergeSortedGrouperTest
@@ -90,18 +92,18 @@ public class StreamingMergeSortedGrouperTest
   }
 
   @Test(timeout = 5000L)
-  public void testStreamingAggregateWithLargeBuffer()
+  public void testStreamingAggregateWithLargeBuffer() throws ExecutionException, InterruptedException
   {
     testStreamingAggregate(1024);
   }
 
   @Test(timeout = 5000L)
-  public void testStreamingAggregateWithMinimumBuffer()
+  public void testStreamingAggregateWithMinimumBuffer() throws ExecutionException, InterruptedException
   {
     testStreamingAggregate(60);
   }
 
-  private void testStreamingAggregate(int bufferSize)
+  private void testStreamingAggregate(int bufferSize) throws ExecutionException, InterruptedException
   {
     final ExecutorService exec = Execs.multiThreaded(2, "merge-sorted-grouper-test-%d");
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
@@ -113,7 +115,7 @@ public class StreamingMergeSortedGrouperTest
     }
 
     try {
-      exec.submit(() -> {
+      final Future future = exec.submit(() -> {
         columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
 
         for (int i = 0; i < 1024; i++) {
@@ -126,12 +128,13 @@ public class StreamingMergeSortedGrouperTest
       });
 
       final List<Entry<Integer>> unsortedEntries = Lists.newArrayList(grouper.iterator(true));
+      final List<Entry<Integer>> actual = Ordering.from((Comparator<Entry<Integer>>) (o1, o2) -> Ints.compare(o1.getKey(), o2.getKey()))
+                                                  .sortedCopy(unsortedEntries);
 
-      Assert.assertEquals(
-          expected,
-          Ordering.from((Comparator<Entry<Integer>>) (o1, o2) -> Ints.compare(o1.getKey(), o2.getKey()))
-                  .sortedCopy(unsortedEntries)
-      );
+      if (!actual.equals(expected)) {
+        future.get(); // Check there is an exception occured
+        Assert.fail();
+      }
     }
     finally {
       exec.shutdownNow();
@@ -177,7 +180,7 @@ public class StreamingMergeSortedGrouperTest
             new LongSumAggregatorFactory("valueSum", "value"),
             new CountAggregatorFactory("count")
         },
-        1000
+        System.currentTimeMillis() + 1000L
     );
     grouper.init();
     return grouper;

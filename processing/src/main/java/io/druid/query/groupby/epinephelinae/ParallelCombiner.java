@@ -73,6 +73,7 @@ public class ParallelCombiner<KeyType>
   private final Comparator<Entry<KeyType>> keyObjComparator;
   private final int concurrencyHint;
   private final int priority;
+  private final long queryTimeoutAt;
 
   public ParallelCombiner(
       Supplier<ResourceHolder<ByteBuffer>> combineBufferSupplier,
@@ -81,7 +82,8 @@ public class ParallelCombiner<KeyType>
       ListeningExecutorService executor,
       boolean sortHasNonGroupingFields,
       int concurrencyHint,
-      int priority
+      int priority,
+      long queryTimeoutAt
   )
   {
     this.combineBufferSupplier = combineBufferSupplier;
@@ -91,6 +93,7 @@ public class ParallelCombiner<KeyType>
     this.keyObjComparator = combineKeySerdeFactory.objectComparator(sortHasNonGroupingFields);
     this.concurrencyHint = concurrencyHint;
     this.priority = priority;
+    this.queryTimeoutAt = queryTimeoutAt;
   }
 
   /**
@@ -336,7 +339,8 @@ public class ParallelCombiner<KeyType>
         Suppliers.ofInstance(combineBuffer),
         combineKeySerdeFactory.factorizeWithDictionary(dictionary),
         settableColumnSelectorFactory,
-        combiningFactories
+        combiningFactories,
+        queryTimeoutAt
     );
     grouper.init(); // init() must be called before iterator(), so cannot be called inside the below callable.
 
