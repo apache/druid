@@ -1488,6 +1488,7 @@ public class KafkaIndexTaskTest
         tuningConfig,
         ioConfig,
         null,
+        null,
         null
     );
     task.setPollRetryMs(POLL_RETRY_MS);

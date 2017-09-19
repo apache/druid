@@ -49,6 +49,7 @@ import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.column.Column;
 import io.druid.server.QueryLifecycleFactory;
+import io.druid.server.security.AuthenticationResult;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerContext;
 import org.apache.calcite.avatica.ColumnMetaData;
@@ -267,10 +268,8 @@ public class QueryMaker
   private <T> Sequence<T> runQuery(final Query<T> query)
   {
     Hook.QUERY_PLAN.run(query);
-
-    // Authorization really should be applied in planning. At this point the query has already begun to execute.
-    // So, use "null" authorizationInfo to force the query to fail if security is enabled.
-    return queryLifecycleFactory.factorize().runSimple(query, null, null);
+    final AuthenticationResult authenticationResult = plannerContext.getAuthenticationResult();
+    return queryLifecycleFactory.factorize().runSimple(query, authenticationResult, null);
   }
 
   private Sequence<Object[]> executeTimeseries(

@@ -34,7 +34,7 @@ import com.metamx.http.client.auth.BasicCredentials;
 import io.druid.curator.CuratorConfig;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.ManageLifecycle;
-import io.druid.guice.annotations.Client;
+import io.druid.guice.annotations.EscalatedClient;
 import io.druid.guice.annotations.Self;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.ServerConfig;
@@ -67,7 +67,7 @@ public class DruidTestModule implements Module
   public HttpClient getHttpClient(
     IntegrationTestingConfig config,
     Lifecycle lifecycle,
-    @Client HttpClient delegate
+    @EscalatedClient HttpClient delegate
   )
     throws Exception
   {

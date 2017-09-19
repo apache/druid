@@ -94,6 +94,7 @@ import io.druid.server.QueryLifecycleFactory;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.NoopRequestLogger;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.aggregation.SqlAggregator;
 import io.druid.sql.calcite.expression.SqlOperatorConversion;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
@@ -328,7 +329,8 @@ public class CalciteTests
         new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
         new NoopRequestLogger(),
         new ServerConfig(),
-        new AuthConfig()
+        new AuthConfig(),
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER
     );
   }
 
@@ -421,7 +423,8 @@ public class CalciteTests
         CalciteTests.createMockQueryLifecycleFactory(walker),
         new TestServerInventoryView(walker.getSegments()),
         plannerConfig,
-        viewManager
+        viewManager,
+        AuthTestUtils.TEST_AUTHENTICATOR_MAPPER
     );
 
     schema.start();

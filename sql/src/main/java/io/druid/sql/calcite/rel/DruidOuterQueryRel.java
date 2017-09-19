@@ -182,6 +182,12 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
   }
 
   @Override
+  public List<String> getDatasourceNames()
+  {
+    return ((DruidRel) sourceRel).getDatasourceNames();
+  }
+
+  @Override
   public RelWriter explainTerms(RelWriter pw)
   {
     final TableDataSource dummyDataSource = new TableDataSource("__subquery__");

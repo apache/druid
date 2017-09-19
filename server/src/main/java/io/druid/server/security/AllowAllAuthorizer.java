@@ -19,21 +19,11 @@
 
 package io.druid.server.security;
 
-/**
- * An AuthorizationInfo that is useful for actions generated internally by the system. It allows everything.
- */
-public class SystemAuthorizationInfo implements AuthorizationInfo
+public class AllowAllAuthorizer implements Authorizer
 {
-  public static final SystemAuthorizationInfo INSTANCE = new SystemAuthorizationInfo();
-
-  private SystemAuthorizationInfo()
-  {
-    // Singleton.
-  }
-
   @Override
-  public Access isAuthorized(final Resource resource, final Action action)
+  public Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action)
   {
-    return new Access(true);
+    return Access.OK;
   }
 }
