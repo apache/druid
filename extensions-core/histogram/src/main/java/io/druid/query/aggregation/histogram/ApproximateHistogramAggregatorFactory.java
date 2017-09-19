@@ -128,7 +128,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
       public void reset(ColumnValueSelector selector)
       {
         @SuppressWarnings("unchecked")
-        ApproximateHistogram first = ((ObjectColumnSelector<ApproximateHistogram>) selector).get();
+        ApproximateHistogram first = ((ObjectColumnSelector<ApproximateHistogram>) selector).getObject();
         combined.copy(first);
       }
 
@@ -136,7 +136,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
       public void fold(ColumnValueSelector selector)
       {
         @SuppressWarnings("unchecked")
-        ApproximateHistogram other = ((ObjectColumnSelector<ApproximateHistogram>) selector).get();
+        ApproximateHistogram other = ((ObjectColumnSelector<ApproximateHistogram>) selector).getObject();
         combined.foldFast(other);
       }
 
@@ -148,7 +148,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
 
       @Nullable
       @Override
-      public ApproximateHistogram get()
+      public ApproximateHistogram getObject()
       {
         return combined;
       }

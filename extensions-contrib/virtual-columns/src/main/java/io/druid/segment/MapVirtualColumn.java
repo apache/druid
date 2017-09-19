@@ -81,7 +81,7 @@ public class MapVirtualColumn implements VirtualColumn
         }
 
         @Override
-        public Map get()
+        public Map getObject()
         {
           final IndexedInts keyIndices = keySelector.getRow();
           final IndexedInts valueIndices = valueSelector.getRow();
@@ -116,7 +116,7 @@ public class MapVirtualColumn implements VirtualColumn
         }
 
         @Override
-        public String get()
+        public String getObject()
         {
           final IndexedInts keyIndices = keySelector.getRow();
           final IndexedInts valueIndices = valueSelector.getRow();
@@ -142,7 +142,7 @@ public class MapVirtualColumn implements VirtualColumn
         }
 
         @Override
-        public String get()
+        public String getObject()
         {
           final IndexedInts keyIndices = keySelector.getRow();
           final IndexedInts valueIndices = valueSelector.getRow();
