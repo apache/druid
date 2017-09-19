@@ -48,7 +48,7 @@ public class TestServerView implements FilteredServerInventoryView, ServerView.S
   }
 
   @Override
-  public void registerServerCallback(Executor exec, ServerView.ServerCallback callback)
+  public void registerServerRemovedCallback(Executor exec, ServerView.ServerRemovedCallback callback)
   {
     // No-op
   }
@@ -60,7 +60,7 @@ public class TestServerView implements FilteredServerInventoryView, ServerView.S
   )
   {
     for (final Map.Entry<ServerView.SegmentCallback, Pair<Predicate<Pair<DruidServerMetadata, DataSegment>>, Executor>> entry : callbacks.entrySet()) {
-      if (entry.getValue().lhs.apply(Pair.of(server,segment))) {
+      if (entry.getValue().lhs.apply(Pair.of(server, segment))) {
         entry.getValue().rhs.execute(
             new Runnable()
             {
@@ -130,5 +130,17 @@ public class TestServerView implements FilteredServerInventoryView, ServerView.S
   public Iterable<DruidServer> getInventory()
   {
     return null;
+  }
+
+  @Override
+  public boolean isStarted()
+  {
+    return true;
+  }
+
+  @Override
+  public boolean isSegmentLoadedByServer(String serverKey, DataSegment segment)
+  {
+    return false;
   }
 }

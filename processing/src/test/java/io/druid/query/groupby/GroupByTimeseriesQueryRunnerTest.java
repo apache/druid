@@ -25,12 +25,14 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
-import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.QueryToolChest;
@@ -57,7 +59,7 @@ import java.util.Map;
 public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
 {
   @SuppressWarnings("unchecked")
-  @Parameterized.Parameters(name="{0}")
+  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     GroupByQueryConfig config = new GroupByQueryConfig();
@@ -76,9 +78,9 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
                 return new QueryRunner()
                 {
                   @Override
-                  public Sequence run(Query query, Map responseContext)
+                  public Sequence run(QueryPlus queryPlus, Map responseContext)
                   {
-                    TimeseriesQuery tsQuery = (TimeseriesQuery) query;
+                    TimeseriesQuery tsQuery = (TimeseriesQuery) queryPlus.getQuery();
                     QueryRunner<Row> newRunner = factory.mergeRunners(
                         MoreExecutors.sameThreadExecutor(), ImmutableList.<QueryRunner<Row>>of(input)
                     );
@@ -89,19 +91,20 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
                         toolChest
                     );
 
+                    GroupByQuery newQuery = GroupByQuery
+                        .builder()
+                        .setDataSource(tsQuery.getDataSource())
+                        .setQuerySegmentSpec(tsQuery.getQuerySegmentSpec())
+                        .setGranularity(tsQuery.getGranularity())
+                        .setDimFilter(tsQuery.getDimensionsFilter())
+                        .setAggregatorSpecs(tsQuery.getAggregatorSpecs())
+                        .setPostAggregatorSpecs(tsQuery.getPostAggregatorSpecs())
+                        .setVirtualColumns(tsQuery.getVirtualColumns())
+                        .setContext(tsQuery.getContext())
+                        .build();
+
                     return Sequences.map(
-                        newRunner.run(
-                            GroupByQuery.builder()
-                                        .setDataSource(tsQuery.getDataSource())
-                                        .setQuerySegmentSpec(tsQuery.getQuerySegmentSpec())
-                                        .setGranularity(tsQuery.getGranularity())
-                                        .setDimFilter(tsQuery.getDimensionsFilter())
-                                        .setAggregatorSpecs(tsQuery.getAggregatorSpecs())
-                                        .setPostAggregatorSpecs(tsQuery.getPostAggregatorSpecs())
-                                        .setVirtualColumns(tsQuery.getVirtualColumns())
-                                        .build(),
-                            responseContext
-                        ),
+                        newRunner.run(queryPlus.withQuery(newQuery), responseContext),
                         new Function<Row, Result<TimeseriesResultValue>>()
                         {
                           @Override
@@ -131,10 +134,11 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
 
   public GroupByTimeseriesQueryRunnerTest(QueryRunner runner)
   {
-    super(runner, false);
+    super(runner, false, QueryRunnerTestHelper.commonDoubleAggregators);
   }
 
   // GroupBy handles timestamps differently when granularity is ALL
+  @Override
   @Test
   public void testFullOnTimeseriesMaxMin()
   {
@@ -151,25 +155,25 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
                                   .descending(descending)
                                   .build();
 
-    DateTime expectedEarliest = new DateTime("1970-01-01");
-    DateTime expectedLast = new DateTime("2011-04-15");
+    DateTime expectedEarliest = DateTimes.of("1970-01-01");
+    DateTime expectedLast = DateTimes.of("2011-04-15");
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query, CONTEXT),
+        runner.run(QueryPlus.wrap(query), CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     Result<TimeseriesResultValue> result = results.iterator().next();
 
     Assert.assertEquals(expectedEarliest, result.getTimestamp());
     Assert.assertFalse(
-        String.format("Timestamp[%s] > expectedLast[%s]", result.getTimestamp(), expectedLast),
+        StringUtils.format("Timestamp[%s] > expectedLast[%s]", result.getTimestamp(), expectedLast),
         result.getTimestamp().isAfter(expectedLast)
     );
 
     final TimeseriesResultValue value = result.getValue();
 
-    Assert.assertEquals(result.toString(), 1870.06103515625, value.getDoubleMetric("maxIndex"), 0.0);
-    Assert.assertEquals(result.toString(), 59.02102279663086, value.getDoubleMetric("minIndex"), 0.0);
+    Assert.assertEquals(result.toString(), 1870.061029, value.getDoubleMetric("maxIndex"), 0.0);
+    Assert.assertEquals(result.toString(), 59.021022, value.getDoubleMetric("minIndex"), 0.0);
   }
 
 

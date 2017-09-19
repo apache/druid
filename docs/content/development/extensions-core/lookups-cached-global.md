@@ -56,7 +56,8 @@ Globally cached lookups can be specified as part of the [cluster wide config for
        },
        "table": "lookupTable",
        "keyColumn": "mykeyColumn",
-       "valueColumn": "MyValueColumn",
+       "valueColumn": "myValueColumn",
+       "filter" : "myFilterSQL (Where clause statement  e.g LOOKUPTYPE=1)",
        "tsColumn": "timeColumn"
     },
     "firstCacheTimeout": 120000,
@@ -94,9 +95,10 @@ In a simple case where only one [tier](../../querying/lookups.html#dynamic-confi
            "user": "druid",
            "password": "diurd"
          },
-         "table": "lookupTable",
-         "keyColumn": "country_id",
-         "valueColumn": "country_name",
+         "table": "lookupValues",
+         "keyColumn": "value_id",
+         "valueColumn": "value_text",
+         "filter": "value_type='country'",
          "tsColumn": "timeColumn"
       },
       "firstCacheTimeout": 120000,
@@ -195,12 +197,17 @@ The `namespaceParseSpec` can be one of a number of values. Each of the examples 
 Only ONE file which matches the search will be used. For most implementations, the discriminator for choosing the URIs is by whichever one reports the most recent timestamp for its modification time.
 
 ### csv lookupParseSpec
-
 |Parameter|Description|Required|Default|
 |---------|-----------|--------|-------|
-|`columns`|The list of columns in the csv file|yes|`null`|
+|`columns`|The list of columns in the csv file|no if `hasHeaderRow` is set|`null`|
 |`keyColumn`|The name of the column containing the key|no|The first column|
 |`valueColumn`|The name of the column containing the value|no|The second column|
+|`hasHeaderRow`|A flag to indicate that column information can be extracted from the input files' header row|no|false|
+|`skipHeaderRows`|Number of header rows to be skipped|no|0|
+
+If both `skipHeaderRows` and `hasHeaderRow` options are set, `skipHeaderRows` is first applied. For example, if you set
+`skipHeaderRows` to 2 and `hasHeaderRow` to true, Druid will skip the first two lines and then extract column information
+from the third line.
 
 *example input*
 
@@ -222,15 +229,19 @@ truck,something3,buck
 ```
 
 ### tsv lookupParseSpec
-
 |Parameter|Description|Required|Default|
 |---------|-----------|--------|-------|
-|`columns`|The list of columns in the csv file|yes|`null`|
+|`columns`|The list of columns in the tsv file|yes|`null`|
 |`keyColumn`|The name of the column containing the key|no|The first column|
 |`valueColumn`|The name of the column containing the value|no|The second column|
 |`delimiter`|The delimiter in the file|no|tab (`\t`)|
 |`listDelimiter`|The list delimiter in the file|no| (`\u0001`)|
+|`hasHeaderRow`|A flag to indicate that column information can be extracted from the input files' header row|no|false|
+|`skipHeaderRows`|Number of header rows to be skipped|no|0|
 
+If both `skipHeaderRows` and `hasHeaderRow` options are set, `skipHeaderRows` is first applied. For example, if you set
+`skipHeaderRows` to 2 and `hasHeaderRow` to true, Druid will skip the first two lines and then extract column information
+from the third line.
 
 *example input*
 
@@ -310,6 +321,7 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
 |`table`|The table which contains the key value pairs|Yes||
 |`keyColumn`|The column in `table` which contains the keys|Yes||
 |`valueColumn`|The column in `table` which contains the values|Yes||
+|`filter`|The filter to use when selecting lookups, this is used to create a where clause on lookup population|No|No Filter|
 |`tsColumn`| The column in `table` which contains when the key was updated|No|Not used|
 |`pollPeriod`|How often to poll the DB|No|0 (only once)|
 

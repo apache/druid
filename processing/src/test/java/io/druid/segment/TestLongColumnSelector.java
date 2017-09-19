@@ -23,11 +23,9 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 public abstract class TestLongColumnSelector implements LongColumnSelector
 {
-  /**
-   * Don't care about runtime shape in tests
-   */
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
+    // Don't care about runtime shape in tests
   }
 }

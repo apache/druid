@@ -22,16 +22,18 @@ package io.druid.guice;
 import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.multibindings.MapBinder;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentFinder;
-import io.druid.segment.loading.DataSegmentMover;
 import io.druid.segment.loading.DataSegmentKiller;
+import io.druid.segment.loading.DataSegmentMover;
 import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.tasklogs.TaskLogs;
 
 /**
  */
+@PublicApi
 public class Binders
 {
   public static MapBinder<String, DataSegmentPuller> dataSegmentPullerBinder(Binder binder)

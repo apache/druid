@@ -30,7 +30,8 @@ import org.junit.Test;
  */
 public class RowboatTest
 {
-  private static DimensionHandler[] getDefaultHandlers(int size) {
+  private static DimensionHandler[] getDefaultHandlers(int size)
+  {
     DimensionHandler[] handlers = new DimensionHandler[size];
     for (int i = 0; i < size; i++) {
       handlers[i] = new StringDimensionHandler(String.valueOf(i), null);

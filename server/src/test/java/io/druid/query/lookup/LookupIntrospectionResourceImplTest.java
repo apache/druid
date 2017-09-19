@@ -42,6 +42,7 @@ public class LookupIntrospectionResourceImplTest extends JerseyTest
    static LookupReferencesManager lookupReferencesManager = EasyMock.createMock(LookupReferencesManager.class);
 
 
+  @Override
   @Before
   public void setUp() throws Exception
   {
@@ -53,7 +54,12 @@ public class LookupIntrospectionResourceImplTest extends JerseyTest
         "key2",
         "value2"
     ), false);
-    EasyMock.expect(lookupReferencesManager.get("lookupId1")).andReturn(lookupExtractorFactory1).anyTimes();
+    EasyMock.expect(lookupReferencesManager.get("lookupId1")).andReturn(
+        new LookupExtractorFactoryContainer(
+            "v0",
+            lookupExtractorFactory1
+        )
+    ).anyTimes();
     EasyMock.replay(lookupReferencesManager);
   }
 

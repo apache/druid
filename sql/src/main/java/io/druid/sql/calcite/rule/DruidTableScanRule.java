@@ -31,9 +31,7 @@ public class DruidTableScanRule extends RelOptRule
 {
   private final QueryMaker queryMaker;
 
-  public DruidTableScanRule(
-      final QueryMaker queryMaker
-  )
+  public DruidTableScanRule(final QueryMaker queryMaker)
   {
     super(operand(LogicalTableScan.class, any()));
     this.queryMaker = queryMaker;

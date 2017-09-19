@@ -32,7 +32,7 @@ import java.util.List;
 import java.util.concurrent.Executor;
 
 /**
- * Interface for handing off tasks. Managed by a {@link io.druid.indexing.overlord.TaskQueue}.
+ * Interface for handing off tasks. Managed by a {@link TaskQueue}.
  * Holds state
  */
 public interface TaskRunner

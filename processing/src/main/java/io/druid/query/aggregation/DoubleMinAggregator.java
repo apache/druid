@@ -19,26 +19,22 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.FloatColumnSelector;
-
-import java.util.Comparator;
+import io.druid.segment.DoubleColumnSelector;
 
 /**
  */
 public class DoubleMinAggregator implements Aggregator
 {
-  static final Comparator COMPARATOR = DoubleSumAggregator.COMPARATOR;
-
   static double combineValues(Object lhs, Object rhs)
   {
     return Math.min(((Number) lhs).doubleValue(), ((Number) rhs).doubleValue());
   }
 
-  private final FloatColumnSelector selector;
+  private final DoubleColumnSelector selector;
 
   private double min;
 
-  public DoubleMinAggregator(FloatColumnSelector selector)
+  public DoubleMinAggregator(DoubleColumnSelector selector)
   {
     this.selector = selector;
 
@@ -48,7 +44,7 @@ public class DoubleMinAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    min = Math.min(min, (double) selector.get());
+    min = Math.min(min, selector.getDouble());
   }
 
   @Override
@@ -73,6 +69,12 @@ public class DoubleMinAggregator implements Aggregator
   public long getLong()
   {
     return (long) min;
+  }
+
+  @Override
+  public double getDouble()
+  {
+    return min;
   }
 
   @Override

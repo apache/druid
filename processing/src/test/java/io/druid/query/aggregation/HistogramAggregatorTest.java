@@ -19,14 +19,14 @@
 
 package io.druid.query.aggregation;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import io.druid.jackson.DefaultObjectMapper;
+import com.google.common.primitives.Floats;
+import io.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Arrays;
 
 public class HistogramAggregatorTest
@@ -40,7 +40,7 @@ public class HistogramAggregatorTest
   @Test
   public void testSerde() throws Exception
   {
-    final DefaultObjectMapper objectMapper = new DefaultObjectMapper();
+    final ObjectMapper objectMapper = TestHelper.getJsonMapper();
     String json0 = "{\"type\": \"histogram\", \"name\": \"billy\", \"fieldName\": \"nilly\"}";
     HistogramAggregatorFactory agg0 = objectMapper.readValue(json0, HistogramAggregatorFactory.class);
     Assert.assertEquals(ImmutableList.of(), agg0.getBreaks());
@@ -53,7 +53,8 @@ public class HistogramAggregatorTest
   }
 
   @Test
-  public void testAggregate() throws Exception {
+  public void testAggregate() throws Exception
+  {
     final float[] values = {0.55f, 0.27f, -0.3f, -.1f, -0.8f, -.7f, -.5f, 0.25f, 0.1f, 2f, -3f};
     final float[] breaks = {-1f, -0.5f, 0.0f, 0.5f, 1f};
 
@@ -61,9 +62,9 @@ public class HistogramAggregatorTest
 
     HistogramAggregator agg = new HistogramAggregator(selector, breaks);
 
-    Assert.assertArrayEquals(new long[]{0,0,0,0,0,0}, ((Histogram)agg.get()).bins);
-    Assert.assertArrayEquals(new long[]{0,0,0,0,0,0}, ((Histogram)agg.get()).bins);
-    Assert.assertArrayEquals(new long[]{0,0,0,0,0,0}, ((Histogram)agg.get()).bins);
+    Assert.assertArrayEquals(new long[]{0, 0, 0, 0, 0, 0}, ((Histogram) agg.get()).bins);
+    Assert.assertArrayEquals(new long[]{0, 0, 0, 0, 0, 0}, ((Histogram) agg.get()).bins);
+    Assert.assertArrayEquals(new long[]{0, 0, 0, 0, 0, 0}, ((Histogram) agg.get()).bins);
     aggregate(selector, agg);
     Assert.assertArrayEquals(new long[]{0, 0, 0, 0, 1, 0}, ((Histogram) agg.get()).bins);
     Assert.assertArrayEquals(new long[]{0, 0, 0, 0, 1, 0}, ((Histogram) agg.get()).bins);
@@ -89,7 +90,7 @@ public class HistogramAggregatorTest
     aggregate(selector, agg);
     Assert.assertArrayEquals(new long[]{0, 3, 2, 3, 1, 1}, ((Histogram) agg.get()).bins);
     aggregate(selector, agg);
-    Assert.assertArrayEquals(new long[]{1,3,2,3,1,1}, ((Histogram)agg.get()).bins);
+    Assert.assertArrayEquals(new long[]{1, 3, 2, 3, 1, 1}, ((Histogram) agg.get()).bins);
   }
 
   private void aggregateBuffer(TestFloatColumnSelector selector, BufferAggregator agg, ByteBuffer buf, int position)
@@ -99,20 +100,17 @@ public class HistogramAggregatorTest
   }
 
   @Test
-  public void testBufferAggregate() throws Exception {
+  public void testBufferAggregate() throws Exception
+  {
     final float[] values = {0.55f, 0.27f, -0.3f, -.1f, -0.8f, -.7f, -.5f, 0.25f, 0.1f, 2f, -3f};
     final float[] breaks = {-1f, -0.5f, 0.0f, 0.5f, 1f};
 
     final TestFloatColumnSelector selector = new TestFloatColumnSelector(values);
 
-    ArrayList<Float> b = Lists.newArrayList();
-    for (int i = 0; i < breaks.length; ++i) {
-      b.add(breaks[i]);
-    }
     HistogramAggregatorFactory factory = new HistogramAggregatorFactory(
         "billy",
         "billy",
-        b
+        Floats.asList(breaks)
     );
     HistogramBufferAggregator agg = new HistogramBufferAggregator(selector, breaks);
 
@@ -159,6 +157,6 @@ public class HistogramAggregatorTest
     Assert.assertArrayEquals(new long[]{0, 3, 2, 3, 1, 1}, ((Histogram) agg.get(buf, position)).bins);
 
     aggregateBuffer(selector, agg, buf, position);
-    Assert.assertArrayEquals(new long[]{1,3,2,3,1,1}, ((Histogram)agg.get(buf, position)).bins);
+    Assert.assertArrayEquals(new long[]{1, 3, 2, 3, 1, 1}, ((Histogram) agg.get(buf, position)).bins);
   }
 }

@@ -23,6 +23,7 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
+import io.druid.java.util.common.StringUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.easymock.EasyMockSupport;
@@ -37,7 +38,8 @@ import java.io.StringWriter;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.expectLastCall;
 
-public class AzureTaskLogsTest extends EasyMockSupport {
+public class AzureTaskLogsTest extends EasyMockSupport
+{
 
   private static final String container = "test";
   private static final String prefix = "test/log";
@@ -48,14 +50,16 @@ public class AzureTaskLogsTest extends EasyMockSupport {
   private AzureTaskLogs azureTaskLogs;
 
   @Before
-  public void before() {
+  public void before()
+  {
     azureStorage = createMock(AzureStorage.class);
     azureTaskLogs = new AzureTaskLogs(azureTaskLogsConfig, azureStorage);
   }
 
 
   @Test
-  public void testPushTaskLog() throws Exception {
+  public void testPushTaskLog() throws Exception
+  {
     final File tmpDir = Files.createTempDir();
 
     try {
@@ -69,13 +73,15 @@ public class AzureTaskLogsTest extends EasyMockSupport {
       azureTaskLogs.pushTaskLog(taskid, logFile);
 
       verifyAll();
-    } finally {
+    }
+    finally {
       FileUtils.deleteDirectory(tmpDir);
     }
   }
 
   @Test
-  public void testStreamTaskLogWithoutOffset() throws Exception {
+  public void testStreamTaskLogWithoutOffset() throws Exception
+  {
     final String testLog = "hello this is a log";
 
     final String blobPath = prefix + "/" + taskid + "/log";
@@ -97,7 +103,8 @@ public class AzureTaskLogsTest extends EasyMockSupport {
   }
 
   @Test
-  public void testStreamTaskLogWithPositiveOffset() throws Exception {
+  public void testStreamTaskLogWithPositiveOffset() throws Exception
+  {
     final String testLog = "hello this is a log";
 
     final String blobPath = prefix + "/" + taskid + "/log";
@@ -119,14 +126,15 @@ public class AzureTaskLogsTest extends EasyMockSupport {
   }
 
   @Test
-  public void testStreamTaskLogWithNegative() throws Exception {
+  public void testStreamTaskLogWithNegative() throws Exception
+  {
     final String testLog = "hello this is a log";
 
     final String blobPath = prefix + "/" + taskid + "/log";
     expect(azureStorage.getBlobExists(container, blobPath)).andReturn(true);
     expect(azureStorage.getBlobLength(container, blobPath)).andReturn((long) testLog.length());
     expect(azureStorage.getBlobInputStream(container, blobPath)).andReturn(
-        new ByteArrayInputStream(testLog.getBytes(Charsets.UTF_8)));
+        new ByteArrayInputStream(StringUtils.toUtf8(testLog)));
 
 
     replayAll();

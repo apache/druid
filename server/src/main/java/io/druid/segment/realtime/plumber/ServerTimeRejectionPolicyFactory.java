@@ -19,6 +19,8 @@
 
 package io.druid.segment.realtime.plumber;
 
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
 
@@ -34,7 +36,7 @@ public class ServerTimeRejectionPolicyFactory implements RejectionPolicyFactory
       @Override
       public DateTime getCurrMaxTime()
       {
-        return new DateTime();
+        return DateTimes.nowUtc();
       }
 
       @Override
@@ -51,7 +53,7 @@ public class ServerTimeRejectionPolicyFactory implements RejectionPolicyFactory
       @Override
       public String toString()
       {
-        return String.format("serverTime-%s", windowPeriod);
+        return StringUtils.format("serverTime-%s", windowPeriod);
       }
     };
   }

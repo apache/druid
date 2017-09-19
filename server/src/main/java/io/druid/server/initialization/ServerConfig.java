@@ -24,6 +24,7 @@ import org.joda.time.Period;
 
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import java.util.Objects;
 
 /**
  */
@@ -37,6 +38,20 @@ public class ServerConfig
   @NotNull
   private Period maxIdleTime = new Period("PT5m");
 
+  @JsonProperty
+  @Min(0)
+  private long defaultQueryTimeout = 300_000; // 5 minutes
+
+  @JsonProperty
+  @Min(1)
+  private long maxScatterGatherBytes = Long.MAX_VALUE;
+
+  @JsonProperty
+  private boolean plaintext = true;
+
+  @JsonProperty
+  private boolean tls = false;
+
   public int getNumThreads()
   {
     return numThreads;
@@ -47,12 +62,60 @@ public class ServerConfig
     return maxIdleTime;
   }
 
+  public long getDefaultQueryTimeout()
+  {
+    return defaultQueryTimeout;
+  }
+
+  public long getMaxScatterGatherBytes()
+  {
+    return maxScatterGatherBytes;
+  }
+
+  public boolean isPlaintext()
+  {
+    return plaintext;
+  }
+
+  public boolean isTls()
+  {
+    return tls;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ServerConfig that = (ServerConfig) o;
+    return numThreads == that.numThreads &&
+           defaultQueryTimeout == that.defaultQueryTimeout &&
+           maxScatterGatherBytes == that.maxScatterGatherBytes &&
+           plaintext == that.plaintext &&
+           tls == that.tls &&
+           Objects.equals(maxIdleTime, that.maxIdleTime);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(numThreads, maxIdleTime, defaultQueryTimeout, maxScatterGatherBytes, plaintext, tls);
+  }
+
   @Override
   public String toString()
   {
     return "ServerConfig{" +
-        "numThreads=" + numThreads +
-        ", maxIdleTime=" + maxIdleTime +
-        '}';
+           "numThreads=" + numThreads +
+           ", maxIdleTime=" + maxIdleTime +
+           ", defaultQueryTimeout=" + defaultQueryTimeout +
+           ", maxScatterGatherBytes=" + maxScatterGatherBytes +
+           ", plaintext=" + plaintext +
+           ", tls=" + tls +
+           '}';
   }
 }

@@ -40,11 +40,26 @@ public class CoordinatorRedirectInfoTest
   }
 
   @Test
-  public void testDoLocal()
+  public void testDoLocalWhenLeading()
   {
     EasyMock.expect(druidCoordinator.isLeader()).andReturn(true).anyTimes();
     EasyMock.replay(druidCoordinator);
     Assert.assertTrue(coordinatorRedirectInfo.doLocal(null));
+    Assert.assertTrue(coordinatorRedirectInfo.doLocal("/druid/coordinator/v1/leader"));
+    Assert.assertTrue(coordinatorRedirectInfo.doLocal("/druid/coordinator/v1/isLeader"));
+    Assert.assertTrue(coordinatorRedirectInfo.doLocal("/druid/coordinator/v1/other/path"));
+    EasyMock.verify(druidCoordinator);
+  }
+
+  @Test
+  public void testDoLocalWhenNotLeading()
+  {
+    EasyMock.expect(druidCoordinator.isLeader()).andReturn(false).anyTimes();
+    EasyMock.replay(druidCoordinator);
+    Assert.assertFalse(coordinatorRedirectInfo.doLocal(null));
+    Assert.assertTrue(coordinatorRedirectInfo.doLocal("/druid/coordinator/v1/leader"));
+    Assert.assertTrue(coordinatorRedirectInfo.doLocal("/druid/coordinator/v1/isLeader"));
+    Assert.assertFalse(coordinatorRedirectInfo.doLocal("/druid/coordinator/v1/other/path"));
     EasyMock.verify(druidCoordinator);
   }
 
@@ -53,7 +68,7 @@ public class CoordinatorRedirectInfoTest
   {
     EasyMock.expect(druidCoordinator.getCurrentLeader()).andReturn(null).anyTimes();
     EasyMock.replay(druidCoordinator);
-    URL url = coordinatorRedirectInfo.getRedirectURL("query", "/request");
+    URL url = coordinatorRedirectInfo.getRedirectURL("http", "query", "/request");
     Assert.assertNull(url);
     EasyMock.verify(druidCoordinator);
   }
@@ -66,7 +81,7 @@ public class CoordinatorRedirectInfoTest
     String request = "/request";
     EasyMock.expect(druidCoordinator.getCurrentLeader()).andReturn(host).anyTimes();
     EasyMock.replay(druidCoordinator);
-    URL url = coordinatorRedirectInfo.getRedirectURL(query, request);
+    URL url = coordinatorRedirectInfo.getRedirectURL("http", query, request);
     Assert.assertEquals("http://localhost/request?foo=bar&x=y", url.toString());
     EasyMock.verify(druidCoordinator);
   }

@@ -19,7 +19,6 @@
 
 package io.druid.query.lookup;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.InjectableValues;
@@ -31,19 +30,20 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Self;
 import io.druid.initialization.Initialization;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.ISE;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
-import io.druid.query.lookup.namespace.URIExtractionNamespace;
+import io.druid.query.lookup.namespace.UriExtractionNamespace;
 import io.druid.server.DruidNode;
-import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.server.lookup.namespace.cache.CacheScheduler;
+import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import org.easymock.EasyMock;
 import org.easymock.IExpectationSetters;
 import org.joda.time.Period;
@@ -95,10 +95,13 @@ public class NamespaceLookupExtractorFactoryTest
               Object valueId, DeserializationContext ctxt, BeanProperty forProperty, Object beanInstance
           )
           {
-            if ("io.druid.server.lookup.namespace.cache.CacheScheduler".equals(valueId)) {
+            if (CacheScheduler.class.getName().equals(valueId)) {
               return scheduler;
+            } else if (ObjectMapper.class.getName().equals(valueId)) {
+              return mapper;
+            } else {
+              return null;
             }
-            return null;
           }
         }
     );
@@ -107,10 +110,10 @@ public class NamespaceLookupExtractorFactoryTest
   @Test
   public void testSimpleSerde() throws Exception
   {
-    final URIExtractionNamespace uriExtractionNamespace = new URIExtractionNamespace(
+    final UriExtractionNamespace uriExtractionNamespace = new UriExtractionNamespace(
         temporaryFolder.newFolder().toURI(),
         null, null,
-        new URIExtractionNamespace.ObjectMapperFlatDataParser(mapper),
+        new UriExtractionNamespace.ObjectMapperFlatDataParser(mapper),
 
         Period.millis(0),
         null
@@ -440,21 +443,7 @@ public class NamespaceLookupExtractorFactoryTest
   @Test
   public void testSerDe() throws Exception
   {
-    final Injector injector = Initialization.makeInjectorWithModules(
-        GuiceInjectors.makeStartupInjector(),
-        ImmutableList.of(
-            new Module()
-            {
-              @Override
-              public void configure(Binder binder)
-              {
-                JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null)
-                );
-              }
-            }
-        )
-    );
+    final Injector injector = makeInjector();
     final ObjectMapper mapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
     mapper.registerSubtypes(NamespaceLookupExtractorFactory.class);
     final String str = "{ \"type\": \"cachedNamespace\", \"extractionNamespace\": { \"type\": \"uri\", \"uriPrefix\": \"s3://bucket/prefix/\", \"fileRegex\": \"foo.*\\\\.gz\", \"namespaceParseSpec\": { \"format\": \"customJson\", \"keyFieldName\": \"someKey\", \"valueFieldName\": \"someVal\" }, \"pollPeriod\": \"PT5M\" } } }";
@@ -467,15 +456,13 @@ public class NamespaceLookupExtractorFactoryTest
         LookupExtractorFactory.class
     )));
     Assert.assertEquals(
-        URIExtractionNamespace.class,
+        UriExtractionNamespace.class,
         namespaceLookupExtractorFactory.getExtractionNamespace().getClass()
     );
     Assert.assertFalse(namespaceLookupExtractorFactory.replaces(mapper.readValue(str, LookupExtractorFactory.class)));
     final Map<String, Object> map = new HashMap<>(mapper.<Map<String, Object>>readValue(
         str,
-        new TypeReference<Map<String, Object>>()
-        {
-        }
+        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     ));
     map.put("firstCacheTimeout", "1");
     Assert.assertTrue(namespaceLookupExtractorFactory.replaces(mapper.convertValue(map, LookupExtractorFactory.class)));
@@ -484,21 +471,7 @@ public class NamespaceLookupExtractorFactoryTest
   @Test
   public void testSimpleIntrospectionHandler() throws Exception
   {
-    final Injector injector = Initialization.makeInjectorWithModules(
-        GuiceInjectors.makeStartupInjector(),
-        ImmutableList.of(
-            new Module()
-            {
-              @Override
-              public void configure(Binder binder)
-              {
-                JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null)
-                );
-              }
-            }
-        )
-    );
+    final Injector injector = makeInjector();
     final ObjectMapper mapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
     mapper.registerSubtypes(NamespaceLookupExtractorFactory.class);
     final String str = "{ \"type\": \"cachedNamespace\", \"extractionNamespace\": { \"type\": \"staticMap\", \"map\": {\"foo\":\"bar\"} }, \"firstCacheTimeout\":10000 }";
@@ -522,6 +495,40 @@ public class NamespaceLookupExtractorFactoryTest
     finally {
       Assert.assertTrue(lookupExtractorFactory.close());
     }
+  }
+
+  @Test
+  public void testSingletonCacheScheduler() throws Exception
+  {
+    final Injector injector = makeInjector();
+    final ObjectMapper mapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
+    mapper.registerSubtypes(NamespaceLookupExtractorFactory.class);
+    final String str1 = "{ \"type\": \"cachedNamespace\", \"extractionNamespace\": { \"type\": \"staticMap\", \"map\": {\"foo\":\"bar\"} }, \"firstCacheTimeout\":10000 }";
+    final NamespaceLookupExtractorFactory factory1 =
+        (NamespaceLookupExtractorFactory) mapper.readValue(str1, LookupExtractorFactory.class);
+    final String str2 = "{ \"type\": \"cachedNamespace\", \"extractionNamespace\": { \"type\": \"uri\", \"uriPrefix\": \"s3://bucket/prefix/\", \"fileRegex\": \"foo.*\\\\.gz\", \"namespaceParseSpec\": { \"format\": \"customJson\", \"keyFieldName\": \"someKey\", \"valueFieldName\": \"someVal\" }, \"pollPeriod\": \"PT5M\" } } }";
+    final NamespaceLookupExtractorFactory factory2 =
+        (NamespaceLookupExtractorFactory) mapper.readValue(str2, LookupExtractorFactory.class);
+    Assert.assertTrue(factory1.getCacheScheduler() == factory2.getCacheScheduler());
+  }
+
+  private Injector makeInjector()
+  {
+    return Initialization.makeInjectorWithModules(
+        GuiceInjectors.makeStartupInjector(),
+        ImmutableList.of(
+            new Module()
+            {
+              @Override
+              public void configure(Binder binder)
+              {
+                JsonConfigProvider.bindInstance(
+                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null, null, new ServerConfig())
+                );
+              }
+            }
+        )
+    );
   }
 
   @Test

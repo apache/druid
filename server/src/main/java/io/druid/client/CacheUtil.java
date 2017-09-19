@@ -24,9 +24,10 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
-import io.druid.query.BaseQuery;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Query;
+import io.druid.query.QueryContexts;
 import io.druid.query.SegmentDescriptor;
 import org.joda.time.Interval;
 
@@ -43,7 +44,7 @@ public class CacheUtil
   )
   {
     final Interval segmentQueryInterval = descriptor.getInterval();
-    final byte[] versionBytes = io.druid.java.util.common.StringUtils.toUtf8(descriptor.getVersion());
+    final byte[] versionBytes = StringUtils.toUtf8(descriptor.getVersion());
 
     return new Cache.NamedKey(
         segmentIdentifier, ByteBuffer
@@ -123,7 +124,7 @@ public class CacheUtil
       CacheConfig cacheConfig
   )
   {
-    return BaseQuery.getContextUseCache(query, true)
+    return QueryContexts.isUseCache(query)
            && strategy != null
            && cacheConfig.isUseCache()
            && cacheConfig.isQueryCacheable(query);
@@ -135,7 +136,7 @@ public class CacheUtil
       CacheConfig cacheConfig
   )
   {
-    return BaseQuery.getContextPopulateCache(query, true)
+    return QueryContexts.isPopulateCache(query)
            && strategy != null
            && cacheConfig.isPopulateCache()
            && cacheConfig.isQueryCacheable(query);

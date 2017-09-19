@@ -23,6 +23,7 @@ import junit.framework.Assert;
 import org.junit.Test;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 
 /**
@@ -70,7 +71,7 @@ public class StringUtilsTest
   }
 
 
-  @Test(expected = java.nio.BufferUnderflowException.class)
+  @Test(expected = BufferUnderflowException.class)
   public void testOutOfBounds()
   {
     ByteBuffer bytes = ByteBuffer.wrap(new byte[]{'a', 'b', 'c', 'd'});
@@ -78,13 +79,13 @@ public class StringUtilsTest
     StringUtils.fromUtf8(bytes, 3);
   }
 
-  @Test(expected = java.lang.NullPointerException.class)
+  @Test(expected = NullPointerException.class)
   public void testNullPointerByteBuffer()
   {
     StringUtils.fromUtf8((ByteBuffer) null);
   }
 
-  @Test(expected = java.lang.NullPointerException.class)
+  @Test(expected = NullPointerException.class)
   public void testNullPointerByteArray()
   {
     StringUtils.fromUtf8((byte[]) null);
@@ -108,10 +109,11 @@ public class StringUtilsTest
     Assert.assertNotNull(StringUtils.UTF8_CHARSET);
   }
 
+  @SuppressWarnings("MalformedFormatString")
   @Test
-  public void testSafeFormat()
+  public void testNonStrictFormat()
   {
-    Assert.assertEquals("test%d; format", StringUtils.safeFormat("test%d", "format"));
-    Assert.assertEquals("test%s%s; format", StringUtils.safeFormat("test%s%s", "format"));
+    Assert.assertEquals("test%d; format", StringUtils.nonStrictFormat("test%d", "format"));
+    Assert.assertEquals("test%s%s; format", StringUtils.nonStrictFormat("test%s%s", "format"));
   }
 }

@@ -22,8 +22,7 @@ package io.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-
-import java.util.Comparator;
+import com.google.common.collect.Ordering;
 
 public class TimestampMaxAggregatorFactory extends TimestampAggregatorFactory
 {
@@ -34,12 +33,7 @@ public class TimestampMaxAggregatorFactory extends TimestampAggregatorFactory
       @JsonProperty("timeFormat") String timeFormat
   )
   {
-    super(name, fieldName, timeFormat, new Comparator<Long>() {
-      @Override
-      public int compare(Long o1, Long o2) {
-        return Long.compare(o1, o2);
-      }
-    }, Long.MIN_VALUE);
+    super(name, fieldName, timeFormat, Ordering.natural(), Long.MIN_VALUE);
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
   }

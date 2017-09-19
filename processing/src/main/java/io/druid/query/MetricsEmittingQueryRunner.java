@@ -19,7 +19,6 @@
 
 package io.druid.query;
 
-import com.google.common.base.Supplier;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.java.util.common.guava.LazySequence;
 import io.druid.java.util.common.guava.Sequence;
@@ -35,19 +34,19 @@ import java.util.function.ObjLongConsumer;
 public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
 {
   private final ServiceEmitter emitter;
-  private final QueryToolChest<?, ? super Query<T>> queryToolChest;
+  private final QueryToolChest<T, ? extends Query<T>> queryToolChest;
   private final QueryRunner<T> queryRunner;
   private final long creationTimeNs;
-  private final ObjLongConsumer<? super QueryMetrics<? super Query<T>>> reportMetric;
-  private final Consumer<QueryMetrics<? super Query<T>>> applyCustomDimensions;
+  private final ObjLongConsumer<? super QueryMetrics<?>> reportMetric;
+  private final Consumer<QueryMetrics<?>> applyCustomDimensions;
 
   private MetricsEmittingQueryRunner(
       ServiceEmitter emitter,
-      QueryToolChest<?, ? super Query<T>> queryToolChest,
+      QueryToolChest<T, ? extends Query<T>> queryToolChest,
       QueryRunner<T> queryRunner,
       long creationTimeNs,
-      ObjLongConsumer<? super QueryMetrics<? super Query<T>>> reportMetric,
-      Consumer<QueryMetrics<? super Query<T>>> applyCustomDimensions
+      ObjLongConsumer<? super QueryMetrics<?>> reportMetric,
+      Consumer<QueryMetrics<?>> applyCustomDimensions
   )
   {
     this.emitter = emitter;
@@ -60,10 +59,10 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
 
   public MetricsEmittingQueryRunner(
       ServiceEmitter emitter,
-      QueryToolChest<?, ? super Query<T>> queryToolChest,
+      QueryToolChest<T, ? extends Query<T>> queryToolChest,
       QueryRunner<T> queryRunner,
-      ObjLongConsumer<? super QueryMetrics<? super Query<T>>> reportMetric,
-      Consumer<QueryMetrics<? super Query<T>>> applyCustomDimensions
+      ObjLongConsumer<? super QueryMetrics<?>> reportMetric,
+      Consumer<QueryMetrics<?>> applyCustomDimensions
   )
   {
     this(emitter, queryToolChest, queryRunner, -1, reportMetric, applyCustomDimensions);
@@ -82,24 +81,18 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
   {
-    final QueryMetrics<? super Query<T>> queryMetrics = queryToolChest.makeMetrics(query);
+    QueryPlus<T> queryWithMetrics = queryPlus.withQueryMetrics(queryToolChest);
+    final QueryMetrics<?> queryMetrics = queryWithMetrics.getQueryMetrics();
 
     applyCustomDimensions.accept(queryMetrics);
 
     return Sequences.wrap(
         // Use LazySequence because want to account execution time of queryRunner.run() (it prepares the underlying
         // Sequence) as part of the reported query time, i. e. we want to execute queryRunner.run() after
-        // `startTime = System.currentTimeMillis();` (see below).
-        new LazySequence<>(new Supplier<Sequence<T>>()
-        {
-          @Override
-          public Sequence<T> get()
-          {
-            return queryRunner.run(query, responseContext);
-          }
-        }),
+        // `startTime = System.nanoTime();` (see below).
+        new LazySequence<>(() -> queryRunner.run(queryWithMetrics, responseContext)),
         new SequenceWrapper()
         {
           private long startTimeNs;

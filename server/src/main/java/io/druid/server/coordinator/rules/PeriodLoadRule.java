@@ -88,7 +88,6 @@ public class PeriodLoadRule extends LoadRule
   @Override
   public boolean appliesTo(Interval interval, DateTime referenceTimestamp)
   {
-    final Interval currInterval = new Interval(period, referenceTimestamp);
-    return currInterval.overlaps(interval) && interval.getStartMillis() >= currInterval.getStartMillis();
+    return Rules.eligibleForLoad(period, interval, referenceTimestamp);
   }
 }

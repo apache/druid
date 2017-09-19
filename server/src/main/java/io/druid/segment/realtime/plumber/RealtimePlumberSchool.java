@@ -29,7 +29,6 @@ import io.druid.client.cache.CacheConfig;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
@@ -51,7 +50,6 @@ public class RealtimePlumberSchool implements PlumberSchool
   private final SegmentPublisher segmentPublisher;
   private final SegmentHandoffNotifierFactory handoffNotifierFactory;
   private final ExecutorService queryExecutorService;
-  private final IndexMerger indexMerger;
   private final IndexMergerV9 indexMergerV9;
   private final IndexIO indexIO;
   private final Cache cache;
@@ -67,7 +65,6 @@ public class RealtimePlumberSchool implements PlumberSchool
       @JacksonInject SegmentPublisher segmentPublisher,
       @JacksonInject SegmentHandoffNotifierFactory handoffNotifierFactory,
       @JacksonInject @Processing ExecutorService executorService,
-      @JacksonInject IndexMerger indexMerger,
       @JacksonInject IndexMergerV9 indexMergerV9,
       @JacksonInject IndexIO indexIO,
       @JacksonInject Cache cache,
@@ -82,7 +79,6 @@ public class RealtimePlumberSchool implements PlumberSchool
     this.segmentPublisher = segmentPublisher;
     this.handoffNotifierFactory = handoffNotifierFactory;
     this.queryExecutorService = executorService;
-    this.indexMerger = Preconditions.checkNotNull(indexMerger, "Null IndexMerger");
     this.indexMergerV9 = Preconditions.checkNotNull(indexMergerV9, "Null IndexMergerV9");
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
 
@@ -111,7 +107,7 @@ public class RealtimePlumberSchool implements PlumberSchool
         dataSegmentPusher,
         segmentPublisher,
         handoffNotifierFactory.createSegmentHandoffNotifier(schema.getDataSource()),
-        config.getBuildV9Directly() ? indexMergerV9 : indexMerger,
+        indexMergerV9,
         indexIO,
         cache,
         cacheConfig,

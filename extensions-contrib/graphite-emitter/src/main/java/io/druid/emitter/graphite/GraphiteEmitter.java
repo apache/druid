@@ -19,6 +19,8 @@
 
 package io.druid.emitter.graphite;
 
+import com.codahale.metrics.graphite.Graphite;
+import com.codahale.metrics.graphite.GraphiteSender;
 import com.codahale.metrics.graphite.PickledGraphite;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.emitter.core.Emitter;
@@ -136,17 +138,32 @@ public class GraphiteEmitter implements Emitter
 
   private class ConsumerRunnable implements Runnable
   {
-    @Override
-    public void run()
+    private final GraphiteSender graphite;
+
+    public ConsumerRunnable()
     {
-      try (PickledGraphite pickledGraphite = new PickledGraphite(
+      if (graphiteEmitterConfig.getProtocol().equals(GraphiteEmitterConfig.PLAINTEXT_PROTOCOL)) {
+        graphite = new Graphite(
+          graphiteEmitterConfig.getHostname(),
+          graphiteEmitterConfig.getPort()
+        );
+      } else {
+        graphite = new PickledGraphite(
           graphiteEmitterConfig.getHostname(),
           graphiteEmitterConfig.getPort(),
           graphiteEmitterConfig.getBatchSize()
-      )) {
-        if (!pickledGraphite.isConnected()) {
+        );
+      }
+      log.info("Using %s protocol.", graphiteEmitterConfig.getProtocol());
+    }
+
+    @Override
+    public void run()
+    {
+      try {
+        if (!graphite.isConnected()) {
           log.info("trying to connect to graphite server");
-          pickledGraphite.connect();
+          graphite.connect();
         }
         while (eventsQueue.size() > 0 && !exec.isShutdown()) {
           try {
@@ -161,7 +178,7 @@ public class GraphiteEmitter implements Emitter
                   graphiteEvent.getValue(),
                   graphiteEvent.getTimestamp()
               );
-              pickledGraphite.send(
+              graphite.send(
                   graphiteEvent.getEventPath(),
                   graphiteEvent.getValue(),
                   graphiteEvent.getTimestamp()
@@ -176,9 +193,9 @@ public class GraphiteEmitter implements Emitter
             } else if (e instanceof SocketException) {
               // This is antagonistic to general Closeable contract in Java,
               // it is needed to allow re-connection in case of the socket is closed due long period of inactivity
-              pickledGraphite.close();
+              graphite.close();
               log.warn("Trying to re-connect to graphite server");
-              pickledGraphite.connect();
+              graphite.connect();
             }
           }
         }
@@ -220,7 +237,16 @@ public class GraphiteEmitter implements Emitter
 
   protected static String sanitize(String namespace)
   {
+    return sanitize(namespace, false);
+  }
+
+  protected static String sanitize(String namespace, Boolean replaceSlashToDot)
+  {
     Pattern DOT_OR_WHITESPACE = Pattern.compile("[\\s]+|[.]+");
-    return DOT_OR_WHITESPACE.matcher(namespace).replaceAll("_");
+    String sanitizedNamespace = DOT_OR_WHITESPACE.matcher(namespace).replaceAll("_");
+    if (replaceSlashToDot) {
+      sanitizedNamespace = sanitizedNamespace.replace("/", ".");
+    }
+    return sanitizedNamespace;
   }
 }

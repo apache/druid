@@ -31,6 +31,7 @@ import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -60,9 +61,7 @@ import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.commons.io.FileUtils;
-import org.joda.time.DateTime;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -113,24 +112,19 @@ public class MultiValuedDimensionTest
   @BeforeClass
   public static void setupClass() throws Exception
   {
-    incrementalIndex = new OnheapIncrementalIndex(
-        0,
-        Granularities.NONE,
-        new AggregatorFactory[]{
-            new CountAggregatorFactory("count")
-        },
-        true,
-        true,
-        true,
-        5000
-    );
+    incrementalIndex = new IncrementalIndex.Builder()
+        .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
+        .setMaxRowCount(5000)
+        .buildOnheap();
 
     StringInputRowParser parser = new StringInputRowParser(
         new CSVParseSpec(
             new TimestampSpec("timestamp", "iso", null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("product", "tags")), null, null),
             "\t",
-            ImmutableList.of("timestamp", "product", "tags")
+            ImmutableList.of("timestamp", "product", "tags"),
+            false,
+            0
         ),
         "UTF-8"
     );
@@ -147,7 +141,7 @@ public class MultiValuedDimensionTest
     }
 
     persistedSegmentDir = Files.createTempDir();
-    TestHelper.getTestIndexMerger()
+    TestHelper.getTestIndexMergerV9()
               .persist(incrementalIndex, persistedSegmentDir, new IndexSpec());
 
     queryableIndex = TestHelper.getTestIndexIO().loadIndex(persistedSegmentDir);
@@ -316,10 +310,10 @@ public class MultiValuedDimensionTest
         null
     );
     Map<String, Object> context = Maps.newHashMap();
-    Sequence<Result<TopNResultValue>> result = runner.run(query, context);
+    Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), context);
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(

@@ -86,7 +86,7 @@ public class CompressionUtils
   public static long zip(File directory, OutputStream out) throws IOException
   {
     if (!directory.isDirectory()) {
-      throw new IOException(String.format("directory[%s] is not a directory", directory));
+      throw new IOE("directory[%s] is not a directory", directory);
     }
     final File[] files = directory.listFiles();
 
@@ -96,7 +96,7 @@ public class CompressionUtils
         log.info("Adding file[%s] with size[%,d].  Total size so far[%,d]", file, file.length(), totalSize);
         if (file.length() >= Integer.MAX_VALUE) {
           zipOut.finish();
-          throw new IOException(String.format("file[%s] too large [%,d]", file, file.length()));
+          throw new IOE("file[%s] too large [%,d]", file, file.length());
         }
         zipOut.putNextEntry(new ZipEntry(file.getName()));
         totalSize += Files.asByteSource(file).copyTo(zipOut);
@@ -324,7 +324,7 @@ public class CompressionUtils
   public static long gunzip(InputStream in, OutputStream out) throws IOException
   {
     try (GZIPInputStream gzipInputStream = gzipInputStream(in)) {
-      final long result =  ByteStreams.copy(gzipInputStream, out);
+      final long result = ByteStreams.copy(gzipInputStream, out);
       out.flush();
       return result;
     }
@@ -489,7 +489,7 @@ public class CompressionUtils
    *
    * @return fname without the ".gz" extension
    *
-   * @throws io.druid.java.util.common.IAE if fname is not a valid "*.gz" file name
+   * @throws IAE if fname is not a valid "*.gz" file name
    */
   public static String getGzBaseName(String fname)
   {

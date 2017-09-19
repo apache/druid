@@ -22,13 +22,15 @@ package io.druid.query.aggregation.last;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Longs;
 import com.metamx.common.StringUtils;
 import io.druid.collections.SerializablePair;
+import io.druid.java.util.common.UOE;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
+import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
 import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -41,11 +43,10 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class LongLastAggregatorFactory extends AggregatorFactory
 {
-  private static final byte CACHE_TYPE_ID = 19;
-
   private final String fieldName;
   private final String name;
 
@@ -92,6 +93,11 @@ public class LongLastAggregatorFactory extends AggregatorFactory
     return DoubleFirstAggregatorFactory.TIME_COMPARATOR.compare(lhs, rhs) > 0 ? lhs : rhs;
   }
 
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    throw new UOE("LongLastAggregatorFactory is not supported during ingestion for rollup");
+  }
 
   @Override
   public AggregatorFactory getCombiningFactory()
@@ -107,7 +113,7 @@ public class LongLastAggregatorFactory extends AggregatorFactory
           @Override
           public void aggregate()
           {
-            SerializablePair<Long, Long> pair = (SerializablePair<Long, Long>) selector.get();
+            SerializablePair<Long, Long> pair = (SerializablePair<Long, Long>) selector.getObject();
             if (pair.lhs >= lastTime) {
               lastTime = pair.lhs;
               lastValue = pair.rhs;
@@ -125,11 +131,11 @@ public class LongLastAggregatorFactory extends AggregatorFactory
           @Override
           public void aggregate(ByteBuffer buf, int position)
           {
-            SerializablePair<Long, Long> pair = (SerializablePair<Long, Long>) selector.get();
+            SerializablePair<Long, Long> pair = (SerializablePair<Long, Long>) selector.getObject();
             long lastTime = buf.getLong(position);
             if (pair.lhs >= lastTime) {
               buf.putLong(position, pair.lhs);
-              buf.putLong(position + Longs.BYTES, pair.rhs);
+              buf.putLong(position + Long.BYTES, pair.rhs);
             }
           }
 
@@ -196,10 +202,9 @@ public class LongLastAggregatorFactory extends AggregatorFactory
   {
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
 
-    return ByteBuffer.allocate(2 + fieldNameBytes.length)
-                     .put(CACHE_TYPE_ID)
+    return ByteBuffer.allocate(1 + fieldNameBytes.length)
+                     .put(AggregatorUtil.LONG_LAST_CACHE_TYPE_ID)
                      .put(fieldNameBytes)
-                     .put((byte)0xff)
                      .array();
   }
 
@@ -212,7 +217,7 @@ public class LongLastAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return Longs.BYTES * 2;
+    return Long.BYTES * 2;
   }
 
   @Override
@@ -233,9 +238,7 @@ public class LongLastAggregatorFactory extends AggregatorFactory
   @Override
   public int hashCode()
   {
-    int result = name.hashCode();
-    result = 31 * result + fieldName.hashCode();
-    return result;
+    return Objects.hash(name, fieldName);
   }
 
   @Override

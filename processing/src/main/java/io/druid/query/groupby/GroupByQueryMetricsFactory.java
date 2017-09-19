@@ -19,6 +19,17 @@
 
 package io.druid.query.groupby;
 
+/**
+ * Implementations could be injected using
+ *
+ * PolyBind
+ *    .optionBinder(binder, Key.get(GroupByQueryMetricsFactory.class))
+ *    .addBinding("myCustomGroupByQueryMetricsFactory")
+ *    .to(MyCustomGroupByQueryMetricsFactory.class);
+ *
+ * And then setting property:
+ * druid.query.groupBy.queryMetricsFactory=myCustomGroupByQueryMetricsFactory
+ */
 public interface GroupByQueryMetricsFactory
 {
 

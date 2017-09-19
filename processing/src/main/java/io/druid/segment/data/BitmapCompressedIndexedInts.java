@@ -21,6 +21,7 @@ package io.druid.segment.data;
 
 import com.google.common.collect.Ordering;
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.IntIteratorUtils;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
@@ -31,20 +32,20 @@ import java.io.IOException;
  */
 public class BitmapCompressedIndexedInts implements IndexedInts, Comparable<ImmutableBitmap>
 {
-  private static Ordering<ImmutableBitmap> comparator = new Ordering<ImmutableBitmap>()
+  private static final Ordering<ImmutableBitmap> COMPARATOR = new Ordering<ImmutableBitmap>()
   {
     @Override
     public int compare(
         ImmutableBitmap set, ImmutableBitmap set1
     )
     {
-      if (set.size() == 0 && set1.size() == 0) {
+      if (set.isEmpty() && set1.isEmpty()) {
         return 0;
       }
-      if (set.size() == 0) {
+      if (set.isEmpty()) {
         return -1;
       }
-      if (set1.size() == 0) {
+      if (set1.isEmpty()) {
         return 1;
       }
       return set.compareTo(set1);
@@ -61,7 +62,7 @@ public class BitmapCompressedIndexedInts implements IndexedInts, Comparable<Immu
   @Override
   public int compareTo(@Nullable ImmutableBitmap otherBitmap)
   {
-    return comparator.compare(immutableBitmap, otherBitmap);
+    return COMPARATOR.compare(immutableBitmap, otherBitmap);
   }
 
   @Override
@@ -88,14 +89,13 @@ public class BitmapCompressedIndexedInts implements IndexedInts, Comparable<Immu
   }
 
   @Override
-  public void fill(int index, int[] toFill)
+  public void close() throws IOException
   {
-    throw new UnsupportedOperationException("fill not supported");
   }
 
   @Override
-  public void close() throws IOException
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
-
+    inspector.visit("immutableBitmap", immutableBitmap);
   }
 }

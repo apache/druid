@@ -38,7 +38,6 @@ import java.util.Map;
  */
 public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<TopNResultValue>, Result<TopNResultValue>>
 {
-  private final TopNResultMerger merger;
   private final DimensionSpec dimSpec;
   private final Granularity gran;
   private final String dimension;
@@ -49,7 +48,6 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
   private final Comparator comparator;
 
   public TopNBinaryFn(
-      final TopNResultMerger merger,
       final Granularity granularity,
       final DimensionSpec dimSpec,
       final TopNMetricSpec topNMetricSpec,
@@ -58,7 +56,6 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
       final List<PostAggregator> postAggregatorSpecs
   )
   {
-    this.merger = merger;
     this.dimSpec = dimSpec;
     this.gran = granularity;
     this.topNMetricSpec = topNMetricSpec;
@@ -78,10 +75,10 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
   public Result<TopNResultValue> apply(Result<TopNResultValue> arg1, Result<TopNResultValue> arg2)
   {
     if (arg1 == null) {
-      return merger.getResult(arg2, comparator);
+      return arg2;
     }
     if (arg2 == null) {
-      return merger.getResult(arg1, comparator);
+      return arg1;
     }
 
     Map<Object, DimensionAndMetricValueExtractor> retVals = new LinkedHashMap<>();

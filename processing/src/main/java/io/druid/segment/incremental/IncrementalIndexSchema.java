@@ -109,7 +109,7 @@ public class IncrementalIndexSchema
       this.minTimestamp = 0L;
       this.gran = Granularities.NONE;
       this.virtualColumns = VirtualColumns.EMPTY;
-      this.dimensionsSpec = new DimensionsSpec(null, null, null);
+      this.dimensionsSpec = DimensionsSpec.EMPTY;
       this.metrics = new AggregatorFactory[]{};
       this.rollup = true;
     }
@@ -152,7 +152,7 @@ public class IncrementalIndexSchema
 
     public Builder withDimensionsSpec(DimensionsSpec dimensionsSpec)
     {
-      this.dimensionsSpec = dimensionsSpec == null ? DimensionsSpec.ofEmpty() : dimensionsSpec;
+      this.dimensionsSpec = dimensionsSpec == null ? DimensionsSpec.EMPTY : dimensionsSpec;
       return this;
     }
 
@@ -169,7 +169,7 @@ public class IncrementalIndexSchema
       return this;
     }
 
-    public Builder withMetrics(AggregatorFactory[] metrics)
+    public Builder withMetrics(AggregatorFactory... metrics)
     {
       this.metrics = metrics;
       return this;

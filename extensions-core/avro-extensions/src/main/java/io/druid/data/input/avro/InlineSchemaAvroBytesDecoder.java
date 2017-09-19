@@ -48,6 +48,7 @@ public class InlineSchemaAvroBytesDecoder implements AvroBytesDecoder
 
   private final Schema schemaObj;
   private final Map<String, Object> schema;
+  private final DatumReader<GenericRecord> reader;
 
   @JsonCreator
   public InlineSchemaAvroBytesDecoder(
@@ -60,8 +61,9 @@ public class InlineSchemaAvroBytesDecoder implements AvroBytesDecoder
     this.schema = schema;
     String schemaStr = mapper.writeValueAsString(schema);
 
-    LOGGER.info("Schema string [%s]", schemaStr);
-    schemaObj = new Schema.Parser().parse(schemaStr);
+    LOGGER.debug("Schema string [%s]", schemaStr);
+    this.schemaObj = new Schema.Parser().parse(schemaStr);
+    this.reader = new GenericDatumReader<>(this.schemaObj);
   }
 
   //For UT only
@@ -69,6 +71,7 @@ public class InlineSchemaAvroBytesDecoder implements AvroBytesDecoder
   InlineSchemaAvroBytesDecoder(Schema schemaObj)
   {
     this.schemaObj = schemaObj;
+    this.reader = new GenericDatumReader<>(schemaObj);
     this.schema = null;
   }
 
@@ -81,9 +84,7 @@ public class InlineSchemaAvroBytesDecoder implements AvroBytesDecoder
   @Override
   public GenericRecord parse(ByteBuffer bytes)
   {
-    DatumReader<GenericRecord> reader = new GenericDatumReader<GenericRecord>(schemaObj);
-    ByteBufferInputStream inputStream = new ByteBufferInputStream(Collections.singletonList(bytes));
-    try {
+    try (ByteBufferInputStream inputStream = new ByteBufferInputStream(Collections.singletonList(bytes))) {
       return reader.read(null, DecoderFactory.get().binaryDecoder(inputStream, null));
     }
     catch (EOFException eof) {

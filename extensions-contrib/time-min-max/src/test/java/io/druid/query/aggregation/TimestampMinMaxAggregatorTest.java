@@ -66,7 +66,7 @@ public class TimestampMinMaxAggregatorTest
       Timestamp.valueOf("2014-01-02 02:00:00")
   };
 
-  @Parameterized.Parameters(name="{index}: Test for {0}")
+  @Parameterized.Parameters(name = "{index}: Test for {0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return Iterables.transform(
@@ -102,7 +102,7 @@ public class TimestampMinMaxAggregatorTest
   @Before
   public void setup() throws Exception
   {
-    injector =  Initialization.makeInjectorWithModules(
+    injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
         ImmutableList.of(
             new Module()
@@ -112,6 +112,7 @@ public class TimestampMinMaxAggregatorTest
               {
                 binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
                 binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+                binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
               }
             },
             new TimestampMinMaxModule()
@@ -122,7 +123,7 @@ public class TimestampMinMaxAggregatorTest
     String json = "{\"type\":\"" + aggType + "\",\"name\":\"" + aggType + "\",\"fieldName\":\"test\"}";
 
     aggregatorFactory = mapper.readValue(json, aggClass);
-    selector = new TestObjectColumnSelector(values);
+    selector = new TestObjectColumnSelector<>(values);
     selectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
     EasyMock.expect(selectorFactory.makeObjectColumnSelector("test")).andReturn(selector);
     EasyMock.replay(selectorFactory);

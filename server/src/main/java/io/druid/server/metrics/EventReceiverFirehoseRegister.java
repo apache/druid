@@ -50,7 +50,7 @@ public class EventReceiverFirehoseRegister
   {
     log.info("Unregistering EventReceiverFirehoseMetric for service [%s]", serviceName);
     if (metrics.remove(serviceName) == null) {
-      log.warn("Unregistering a non-exist service. Service [%s] never exists.");
+      log.warn("Unregistering a non-exist service. Service [%s] never exists.", serviceName);
     }
   }
 }

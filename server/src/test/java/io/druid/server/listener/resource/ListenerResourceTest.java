@@ -29,8 +29,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteSource;
 
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.StringUtils;
 
+import io.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
@@ -494,5 +494,11 @@ class ExceptionalAbstractListenerHandler extends AbstractListenerHandler<SomeBea
   public Object post(@NotNull Map<String, SomeBeanClass> inputObject) throws Exception
   {
     throw new UnsupportedOperationException("should not have called post");
+  }
+
+  @Override
+  public Response handleUpdates(InputStream inputStream, ObjectMapper mapper)
+  {
+    throw new UnsupportedOperationException("should not have called handleUpdates");
   }
 }

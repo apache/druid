@@ -34,9 +34,9 @@ import java.io.File;
 
 public class QueryableIndexIndexableAdapterTest
 {
-  private final static IndexMerger INDEX_MERGER = TestHelper.getTestIndexMerger();
+  private final static IndexMerger INDEX_MERGER = TestHelper.getTestIndexMergerV9();
   private final static IndexIO INDEX_IO = TestHelper.getTestIndexIO();
-  private static final IndexSpec INDEX_SPEC = IndexMergerTest.makeIndexSpec(
+  private static final IndexSpec INDEX_SPEC = IndexMergerTestBase.makeIndexSpec(
       new ConciseBitmapSerdeFactory(),
       CompressedObjectStrategy.CompressionStrategy.LZ4,
       CompressedObjectStrategy.CompressionStrategy.LZ4,

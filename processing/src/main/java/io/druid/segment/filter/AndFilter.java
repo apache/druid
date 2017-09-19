@@ -23,11 +23,14 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.java.util.common.StringUtils;
+import io.druid.query.BitmapResultFactory;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BooleanFilter;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.RowOffsetMatcherFactory;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 
@@ -39,51 +42,60 @@ import java.util.List;
 public class AndFilter implements BooleanFilter
 {
   private static final Joiner AND_JOINER = Joiner.on(" && ");
+  static final ValueMatcher[] EMPTY_VALUE_MATCHER_ARRAY = new ValueMatcher[0];
 
   private final List<Filter> filters;
 
-  public AndFilter(
-      List<Filter> filters
-  )
+  public AndFilter(List<Filter> filters)
   {
+    Preconditions.checkArgument(filters.size() > 0, "Can't construct empty AndFilter");
     this.filters = filters;
   }
 
-  public static ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector, List<Filter> filters)
+  public static <T> ImmutableBitmap getBitmapIndex(
+      BitmapIndexSelector selector,
+      BitmapResultFactory<T> bitmapResultFactory,
+      List<Filter> filters
+  )
+  {
+    return bitmapResultFactory.toImmutableBitmap(getBitmapResult(selector, bitmapResultFactory, filters));
+  }
+
+  private static <T> T getBitmapResult(
+      BitmapIndexSelector selector,
+      BitmapResultFactory<T> bitmapResultFactory,
+      List<Filter> filters
+  )
   {
     if (filters.size() == 1) {
-      return filters.get(0).getBitmapIndex(selector);
+      return filters.get(0).getBitmapResult(selector, bitmapResultFactory);
     }
 
-    final List<ImmutableBitmap> bitmaps = Lists.newArrayListWithCapacity(filters.size());
+    final List<T> bitmapResults = Lists.newArrayListWithCapacity(filters.size());
     for (final Filter filter : filters) {
       Preconditions.checkArgument(filter.supportsBitmapIndex(selector),
                                   "Filter[%s] does not support bitmap index", filter
       );
-      final ImmutableBitmap bitmapIndex = filter.getBitmapIndex(selector);
-      if (bitmapIndex.isEmpty()) {
+      final T bitmapResult = filter.getBitmapResult(selector, bitmapResultFactory);
+      if (bitmapResultFactory.isEmpty(bitmapResult)) {
         // Short-circuit.
-        return Filters.allFalse(selector);
+        return bitmapResultFactory.wrapAllFalse(Filters.allFalse(selector));
       }
-      bitmaps.add(bitmapIndex);
+      bitmapResults.add(bitmapResult);
     }
 
-    return selector.getBitmapFactory().intersection(bitmaps);
+    return bitmapResultFactory.intersection(bitmapResults);
   }
 
   @Override
-  public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
+  public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
   {
-    return getBitmapIndex(selector, filters);
+    return getBitmapResult(selector, bitmapResultFactory, filters);
   }
 
   @Override
   public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
   {
-    if (filters.size() == 0) {
-      return BooleanValueMatcher.of(false);
-    }
-
     final ValueMatcher[] matchers = new ValueMatcher[filters.size()];
 
     for (int i = 0; i < filters.size(); i++) {
@@ -117,19 +129,7 @@ public class AndFilter implements BooleanFilter
       matchers.add(0, offsetMatcher);
     }
 
-    return new ValueMatcher()
-    {
-      @Override
-      public boolean matches()
-      {
-        for (ValueMatcher valueMatcher : matchers) {
-          if (!valueMatcher.matches()) {
-            return false;
-          }
-        }
-        return true;
-      }
-    };
+    return makeMatcher(matchers.toArray(EMPTY_VALUE_MATCHER_ARRAY));
   }
 
   @Override
@@ -176,11 +176,12 @@ public class AndFilter implements BooleanFilter
   @Override
   public String toString()
   {
-    return String.format("(%s)", AND_JOINER.join(filters));
+    return StringUtils.format("(%s)", AND_JOINER.join(filters));
   }
 
   private ValueMatcher makeMatcher(final ValueMatcher[] baseMatchers)
   {
+    Preconditions.checkState(baseMatchers.length > 0);
     if (baseMatchers.length == 1) {
       return baseMatchers[0];
     }
@@ -196,6 +197,15 @@ public class AndFilter implements BooleanFilter
           }
         }
         return true;
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("firstBaseMatcher", baseMatchers[0]);
+        inspector.visit("secondBaseMatcher", baseMatchers[1]);
+        // Don't inspect the 3rd and all consequent baseMatchers, cut runtime shape combinations at this point.
+        // Anyway if the filter is so complex, Hotspot won't inline all calls because of the inline limit.
       }
     };
   }

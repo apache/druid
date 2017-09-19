@@ -175,7 +175,7 @@ public class ScheduledExecutors
               log.debug("Running %s (period %s)", callable, rate);
               prevSignal = callable.call();
             }
-            catch(Throwable e) {
+            catch (Throwable e) {
               log.error(e, "Uncaught exception.");
             }
           }
@@ -192,13 +192,7 @@ public class ScheduledExecutors
 
   public static ScheduledExecutorFactory createFactory(final Lifecycle lifecycle)
   {
-    return new ScheduledExecutorFactory()
-    {
-      public ScheduledExecutorService create(int corePoolSize, String nameFormat)
-      {
-        return ExecutorServices.manageLifecycle(lifecycle, fixed(corePoolSize, nameFormat));
-      }
-    };
+    return (corePoolSize, nameFormat) -> ExecutorServices.manageLifecycle(lifecycle, fixed(corePoolSize, nameFormat));
   }
 
   public static ScheduledExecutorService fixed(int corePoolSize, String nameFormat)

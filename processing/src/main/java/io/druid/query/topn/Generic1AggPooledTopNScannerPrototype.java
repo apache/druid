@@ -38,7 +38,7 @@ public final class Generic1AggPooledTopNScannerPrototype implements Generic1AggP
       ByteBuffer resultsBuffer
   )
   {
-    long scannedRows = 0;
+    long processedRows = 0;
     int positionToAllocate = 0;
     while (!cursor.isDoneOrInterrupted()) {
       final IndexedInts dimValues = dimensionSelector.getRow();
@@ -56,9 +56,9 @@ public final class Generic1AggPooledTopNScannerPrototype implements Generic1AggP
           positionToAllocate += aggregatorSize;
         }
       }
-      scannedRows++;
+      processedRows++;
       cursor.advanceUninterruptibly();
     }
-    return scannedRows;
+    return processedRows;
   }
 }

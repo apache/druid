@@ -25,8 +25,9 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Longs;
-import io.druid.common.utils.StringUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
@@ -49,6 +50,7 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -113,6 +115,9 @@ public class SegmentAnalyzer
         case FLOAT:
           analysis = analyzeNumericColumn(capabilities, length, NUM_BYTES_IN_TEXT_FLOAT);
           break;
+        case DOUBLE:
+          analysis = analyzeNumericColumn(capabilities, length, Doubles.BYTES);
+          break;
         case STRING:
           if (index != null) {
             analysis = analyzeStringColumn(capabilities, column);
@@ -125,7 +130,7 @@ public class SegmentAnalyzer
           break;
         default:
           log.warn("Unknown column type[%s].", type);
-          analysis = ColumnAnalysis.error(String.format("unknown_type_%s", type));
+          analysis = ColumnAnalysis.error(StringUtils.format("unknown_type_%s", type));
       }
 
       columns.put(columnName, analysis);
@@ -245,8 +250,8 @@ public class SegmentAnalyzer
     }
 
     if (analyzingSize()) {
-      final long start = storageAdapter.getMinTime().getMillis();
-      final long end = storageAdapter.getMaxTime().getMillis();
+      final DateTime start = storageAdapter.getMinTime();
+      final DateTime end = storageAdapter.getMaxTime();
 
       final Sequence<Cursor> cursors =
           storageAdapter.makeCursors(
@@ -254,7 +259,8 @@ public class SegmentAnalyzer
               new Interval(start, end),
               VirtualColumns.EMPTY,
               Granularities.ALL,
-              false
+              false,
+              null
           );
 
       size = cursors.accumulate(
@@ -264,12 +270,9 @@ public class SegmentAnalyzer
             @Override
             public Long accumulate(Long accumulated, Cursor cursor)
             {
-              DimensionSelector selector = cursor.makeDimensionSelector(
-                  new DefaultDimensionSpec(
-                      columnName,
-                      columnName
-                  )
-              );
+              DimensionSelector selector = cursor
+                  .getColumnSelectorFactory()
+                  .makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName));
               if (selector == null) {
                 return accumulated;
               }
@@ -320,7 +323,7 @@ public class SegmentAnalyzer
       if (analyzingSize() && complexColumn != null) {
         final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
         if (serde == null) {
-          return ColumnAnalysis.error(String.format("unknown_complex_%s", typeName));
+          return ColumnAnalysis.error(StringUtils.format("unknown_complex_%s", typeName));
         }
 
         final Function<Object, Long> inputSizeFn = serde.inputSizeFn();

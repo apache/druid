@@ -60,7 +60,7 @@ public class TimestampAggregationSelectTest
 
   private Timestamp[] values = new Timestamp[10];
 
-  @Parameterized.Parameters(name="{index}: Test for {0}")
+  @Parameterized.Parameters(name = "{index}: Test for {0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return Iterables.transform(
@@ -101,7 +101,7 @@ public class TimestampAggregationSelectTest
         temporaryFolder
     );
 
-    selector = new TestObjectColumnSelector(values);
+    selector = new TestObjectColumnSelector<>(values);
     selectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
     EasyMock.expect(selectorFactory.makeObjectColumnSelector("test")).andReturn(selector);
     EasyMock.replay(selectorFactory);
@@ -144,7 +144,7 @@ public class TimestampAggregationSelectTest
         "  }\n" +
         "]";
     ZipFile zip = new ZipFile(new File(this.getClass().getClassLoader().getResource("druid.sample.tsv.zip").toURI()));
-    Sequence seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<?> seq = helper.createIndexAndRunQueryOnSegment(
         zip.getInputStream(zip.getEntry("druid.sample.tsv")),
         recordParser,
         aggregator,

@@ -28,6 +28,7 @@ import io.druid.TestUtil;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 
 import org.joda.time.DateTime;
@@ -143,7 +144,7 @@ public class HashBasedNumberedShardSpecTest
         ImmutableList.of("visitor_id"),
         TestUtil.MAPPER
     );
-    final DateTime time = new DateTime();
+    final DateTime time = DateTimes.nowUtc();
     final InputRow inputRow = new MapBasedInputRow(
         time,
         ImmutableList.of("visitor_id", "cnt"),
@@ -220,7 +221,7 @@ public class HashBasedNumberedShardSpecTest
     @Override
     public DateTime getTimestamp()
     {
-      return new DateTime(0);
+      return DateTimes.EPOCH;
     }
 
     @Override
@@ -245,6 +246,12 @@ public class HashBasedNumberedShardSpecTest
     public long getLongMetric(String s)
     {
       return 0L;
+    }
+
+    @Override
+    public double getDoubleMetric(String metric)
+    {
+      return 0.0d;
     }
 
     @Override

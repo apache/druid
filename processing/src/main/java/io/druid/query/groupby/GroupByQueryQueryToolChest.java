@@ -38,12 +38,12 @@ import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.MappedSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.query.BaseQuery;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DataSource;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
-import io.druid.query.Query;
+import io.druid.query.QueryContexts;
 import io.druid.query.QueryDataSource;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SubqueryQueryRunner;
@@ -113,13 +113,13 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     return new QueryRunner<Row>()
     {
       @Override
-      public Sequence<Row> run(Query<Row> query, Map<String, Object> responseContext)
+      public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
       {
-        if (BaseQuery.getContextBySegment(query, false)) {
-          return runner.run(query, responseContext);
+        if (QueryContexts.isBySegment(queryPlus.getQuery())) {
+          return runner.run(queryPlus, responseContext);
         }
 
-        final GroupByQuery groupByQuery = (GroupByQuery) query;
+        final GroupByQuery groupByQuery = (GroupByQuery) queryPlus.getQuery();
         if (strategySelector.strategize(groupByQuery).doMergeResults(groupByQuery)) {
           return initAndMergeGroupByResults(
               groupByQuery,
@@ -127,7 +127,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
               responseContext
           );
         }
-        return runner.run(query, responseContext);
+        return runner.run(queryPlus, responseContext);
       }
     };
   }
@@ -204,13 +204,13 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       );
 
       final Sequence<Row> finalizingResults;
-      if (GroupByQuery.getContextFinalize(subquery, false)) {
+      if (QueryContexts.isFinalize(subquery, false)) {
         finalizingResults = new MappedSequence<>(
             subqueryResult,
             makePreComputeManipulatorFn(
                 subquery,
                 MetricManipulatorFns.finalizing()
-            )
+            )::apply
         );
       } else {
         finalizingResults = subqueryResult;
@@ -327,9 +327,9 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(Query<Row> query, Map<String, Object> responseContext)
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
           {
-            GroupByQuery groupByQuery = (GroupByQuery) query;
+            GroupByQuery groupByQuery = (GroupByQuery) queryPlus.getQuery();
             if (groupByQuery.getDimFilter() != null) {
               groupByQuery = groupByQuery.withDimFilter(groupByQuery.getDimFilter().optimize());
             }
@@ -365,7 +365,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
                                        GroupByQueryQueryToolChest.this
                                    )
                                    .run(
-                                       delegateGroupByQuery.withDimensionSpecs(dimensionSpecs),
+                                       queryPlus.withQuery(delegateGroupByQuery.withDimensionSpecs(dimensionSpecs)),
                                        responseContext
                                    );
           }

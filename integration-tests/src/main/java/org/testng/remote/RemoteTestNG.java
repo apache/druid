@@ -31,6 +31,7 @@ import org.testng.TestNGException;
 import org.testng.TestRunner;
 import org.testng.collections.Lists;
 import org.testng.internal.ClassHelper;
+import org.testng.log4testng.Logger;
 import org.testng.remote.strprotocol.GenericMessage;
 import org.testng.remote.strprotocol.IMessageSender;
 import org.testng.remote.strprotocol.MessageHelper;
@@ -59,6 +60,8 @@ import static org.testng.internal.Utils.defaultIfStringEmpty;
  */
 public class RemoteTestNG extends TestNG
 {
+  private static final Logger LOGGER = Logger.getLogger(TestNG.class);
+
   // The following constants are referenced by the Eclipse plug-in, make sure you
   // modify the plug-in as well if you change any of them.
   public static final String DEBUG_PORT = "12345";
@@ -86,7 +89,7 @@ public class RemoteTestNG extends TestNG
   {
     CommandLineArgs cla = new CommandLineArgs();
     RemoteArgs ra = new RemoteArgs();
-    new JCommander(Arrays.asList(cla, ra), args);
+    m_jCommander = new JCommander(Arrays.asList(cla, ra), args);
     m_dontExit = ra.dontExit;
     if (cla.port != null && ra.serPort != null) {
       throw new TestNGException(
@@ -97,9 +100,7 @@ public class RemoteTestNG extends TestNG
     m_debug = cla.debug;
     m_ack = ra.ack;
     if (m_debug) {
-//      while (true) {
       initAndRun(args, cla, ra);
-//      }
     } else {
       initAndRun(args, cla, ra);
     }
@@ -128,28 +129,15 @@ public class RemoteTestNG extends TestNG
         sb.append(s).append(" ");
       }
       p(sb.toString());
-//      remoteTestNg.setVerbose(1);
-//    } else {
-//      remoteTestNg.setVerbose(0);
     }
     validateCommandLineParameters(cla);
     remoteTestNg.run();
-//    if (m_debug) {
-//      // Run in a loop if in debug mode so it is possible to run several launches
-//      // without having to relauch RemoteTestNG.
-//      while (true) {
-//        remoteTestNg.run();
-//        remoteTestNg.configure(cla);
-//      }
-//    } else {
-//      remoteTestNg.run();
-//    }
   }
 
   private static void p(String s)
   {
     if (isVerbose()) {
-      System.out.println("[RemoteTestNG] " + s);
+      LOGGER.info("[RemoteTestNG] " + s);
     }
   }
 
@@ -168,7 +156,6 @@ public class RemoteTestNG extends TestNG
   {
     for (XmlSuite s : suites) {
       outSuites.add(s);
-//      calculateAllSuites(s.getChildSuites(), outSuites);
     }
   }
 
@@ -189,14 +176,12 @@ public class RemoteTestNG extends TestNG
 
       List<XmlSuite> suites = Lists.newArrayList();
       calculateAllSuites(m_suites, suites);
-//      System.out.println("Suites: " + m_suites.get(0).getChildSuites().size()
-//          + " and:" + suites.get(0).getChildSuites().size());
       if (suites.size() > 0) {
 
         int testCount = 0;
 
-        for (int i = 0; i < suites.size(); i++) {
-          testCount += (suites.get(i)).getTests().size();
+        for (XmlSuite suite : suites) {
+          testCount += suite.getTests().size();
         }
 
         GenericMessage gm = new GenericMessage(MessageHelper.GENERIC_SUITE_COUNT);
@@ -207,17 +192,15 @@ public class RemoteTestNG extends TestNG
         addListener(new RemoteSuiteListener(msh));
         setTestRunnerFactory(new DelegatingTestRunnerFactory(buildTestRunnerFactory(), msh));
 
-//        System.out.println("RemoteTestNG starting");
         super.run();
       } else {
-        System.err.println("No test suite found. Nothing to run");
+        LOGGER.error("No test suite found. Nothing to run");
       }
     }
     catch (Throwable cause) {
-      cause.printStackTrace(System.err);
+      LOGGER.error("", cause);
     }
     finally {
-//      System.out.println("RemoteTestNG finishing: " + (getEnd() - getStart()) + " ms");
       msh.shutDown();
       if (!m_debug && !m_dontExit) {
         System.exit(0);

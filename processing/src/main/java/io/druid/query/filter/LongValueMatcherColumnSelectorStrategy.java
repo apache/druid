@@ -19,6 +19,7 @@
 
 package io.druid.query.filter;
 
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.filter.BooleanValueMatcher;
@@ -38,7 +39,13 @@ public class LongValueMatcherColumnSelectorStrategy implements ValueMatcherColum
       @Override
       public boolean matches()
       {
-        return selector.get() == matchValLong;
+        return selector.getLong() == matchValLong;
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("selector", selector);
       }
     };
   }
@@ -54,7 +61,14 @@ public class LongValueMatcherColumnSelectorStrategy implements ValueMatcherColum
       @Override
       public boolean matches()
       {
-        return predicate.applyLong(selector.get());
+        return predicate.applyLong(selector.getLong());
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("selector", selector);
+        inspector.visit("predicate", predicate);
       }
     };
   }
@@ -67,7 +81,7 @@ public class LongValueMatcherColumnSelectorStrategy implements ValueMatcherColum
       @Override
       public String[] get()
       {
-        return new String[]{ Long.toString(selector.get()) };
+        return new String[]{Long.toString(selector.getLong())};
       }
     };
   }

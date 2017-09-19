@@ -58,7 +58,7 @@ public class SketchBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    Object update = selector.get();
+    Object update = selector.getObject();
     if (update == null) {
       return;
     }
@@ -113,6 +113,12 @@ public class SketchBufferAggregator implements BufferAggregator
 
   @Override
   public long getLong(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
   {
     throw new UnsupportedOperationException("Not implemented");
   }

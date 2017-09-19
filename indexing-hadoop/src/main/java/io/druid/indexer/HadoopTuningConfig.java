@@ -23,12 +23,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.indexer.partitions.HashedPartitionsSpec;
 import io.druid.indexer.partitions.PartitionsSpec;
+import io.druid.java.util.common.DateTimes;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.TuningConfig;
-import org.joda.time.DateTime;
 
 import java.util.List;
 import java.util.Map;
@@ -43,14 +44,13 @@ public class HadoopTuningConfig implements TuningConfig
   private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
   private static final int DEFAULT_ROW_FLUSH_BOUNDARY = 75000;
   private static final boolean DEFAULT_USE_COMBINER = false;
-  private static final Boolean DEFAULT_BUILD_V9_DIRECTLY = Boolean.TRUE;
   private static final int DEFAULT_NUM_BACKGROUND_PERSIST_THREADS = 0;
 
   public static HadoopTuningConfig makeDefaultTuningConfig()
   {
     return new HadoopTuningConfig(
         null,
-        new DateTime().toString(),
+        DateTimes.nowUtc().toString(),
         DEFAULT_PARTITIONS_SPEC,
         DEFAULT_SHARD_SPECS,
         DEFAULT_INDEX_SPEC,
@@ -63,10 +63,11 @@ public class HadoopTuningConfig implements TuningConfig
         false,
         false,
         null,
-        DEFAULT_BUILD_V9_DIRECTLY,
+        true,
         DEFAULT_NUM_BACKGROUND_PERSIST_THREADS,
         false,
-        false
+        false,
+        null
     );
   }
 
@@ -83,10 +84,10 @@ public class HadoopTuningConfig implements TuningConfig
   private final Map<String, String> jobProperties;
   private final boolean combineText;
   private final boolean useCombiner;
-  private final Boolean buildV9Directly;
   private final int numBackgroundPersistThreads;
   private final boolean forceExtendableShardSpecs;
   private final boolean useExplicitVersion;
+  private final List<String> allowedHadoopPrefix;
 
   @JsonCreator
   public HadoopTuningConfig(
@@ -105,14 +106,16 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("useCombiner") Boolean useCombiner,
       // See https://github.com/druid-io/druid/pull/1922
       final @JsonProperty("rowFlushBoundary") Integer maxRowsInMemoryCOMPAT,
+      // This parameter is left for compatibility when reading existing configs, to be removed in Druid 0.12.
       final @JsonProperty("buildV9Directly") Boolean buildV9Directly,
       final @JsonProperty("numBackgroundPersistThreads") Integer numBackgroundPersistThreads,
       final @JsonProperty("forceExtendableShardSpecs") boolean forceExtendableShardSpecs,
-      final @JsonProperty("useExplicitVersion") boolean useExplicitVersion
+      final @JsonProperty("useExplicitVersion") boolean useExplicitVersion,
+      final @JsonProperty("allowedHadoopPrefix") List<String> allowedHadoopPrefix
   )
   {
     this.workingPath = workingPath;
-    this.version = version == null ? new DateTime().toString() : version;
+    this.version = version == null ? DateTimes.nowUtc().toString() : version;
     this.partitionsSpec = partitionsSpec == null ? DEFAULT_PARTITIONS_SPEC : partitionsSpec;
     this.shardSpecs = shardSpecs == null ? DEFAULT_SHARD_SPECS : shardSpecs;
     this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
@@ -128,13 +131,13 @@ public class HadoopTuningConfig implements TuningConfig
                           : ImmutableMap.copyOf(jobProperties));
     this.combineText = combineText;
     this.useCombiner = useCombiner == null ? DEFAULT_USE_COMBINER : useCombiner.booleanValue();
-    this.buildV9Directly = buildV9Directly == null ? DEFAULT_BUILD_V9_DIRECTLY : buildV9Directly;
     this.numBackgroundPersistThreads = numBackgroundPersistThreads == null
                                        ? DEFAULT_NUM_BACKGROUND_PERSIST_THREADS
                                        : numBackgroundPersistThreads;
     this.forceExtendableShardSpecs = forceExtendableShardSpecs;
     Preconditions.checkArgument(this.numBackgroundPersistThreads >= 0, "Not support persistBackgroundCount < 0");
     this.useExplicitVersion = useExplicitVersion;
+    this.allowedHadoopPrefix = allowedHadoopPrefix == null ? ImmutableList.of() : allowedHadoopPrefix;
   }
 
   @JsonProperty
@@ -215,10 +218,14 @@ public class HadoopTuningConfig implements TuningConfig
     return useCombiner;
   }
 
+  /**
+   * Always returns true, doesn't affect the version being built.
+   */
+  @Deprecated
   @JsonProperty
   public Boolean getBuildV9Directly()
   {
-    return buildV9Directly;
+    return true;
   }
 
   @JsonProperty
@@ -239,6 +246,13 @@ public class HadoopTuningConfig implements TuningConfig
     return useExplicitVersion;
   }
 
+  @JsonProperty("allowedHadoopPrefix")
+  public List<String> getUserAllowedHadoopPrefix()
+  {
+    // Just the user-specified list. More are added in HadoopDruidIndexerConfig.
+    return allowedHadoopPrefix;
+  }
+
   public HadoopTuningConfig withWorkingPath(String path)
   {
     return new HadoopTuningConfig(
@@ -256,10 +270,11 @@ public class HadoopTuningConfig implements TuningConfig
         combineText,
         useCombiner,
         null,
-        buildV9Directly,
+        true,
         numBackgroundPersistThreads,
         forceExtendableShardSpecs,
-        useExplicitVersion
+        useExplicitVersion,
+        allowedHadoopPrefix
     );
   }
 
@@ -280,10 +295,11 @@ public class HadoopTuningConfig implements TuningConfig
         combineText,
         useCombiner,
         null,
-        buildV9Directly,
+        true,
         numBackgroundPersistThreads,
         forceExtendableShardSpecs,
-        useExplicitVersion
+        useExplicitVersion,
+        allowedHadoopPrefix
     );
   }
 
@@ -304,10 +320,11 @@ public class HadoopTuningConfig implements TuningConfig
         combineText,
         useCombiner,
         null,
-        buildV9Directly,
+        true,
         numBackgroundPersistThreads,
         forceExtendableShardSpecs,
-        useExplicitVersion
+        useExplicitVersion,
+        allowedHadoopPrefix
     );
   }
 }

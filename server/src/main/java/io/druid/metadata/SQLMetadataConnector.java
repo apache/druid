@@ -25,6 +25,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.RetryUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.Batch;
@@ -112,7 +113,10 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    */
   public abstract String getQuoteString();
 
-  public String getValidationQuery() { return "SELECT 1"; }
+  public String getValidationQuery()
+  {
+    return "SELECT 1";
+  }
 
   public abstract boolean tableExists(Handle handle, final String tableName);
 
@@ -211,7 +215,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     createTable(
         tableName,
         ImmutableList.of(
-            String.format(
+            StringUtils.format(
                 "CREATE TABLE %1$s (\n"
                 + "  id VARCHAR(255) NOT NULL,\n"
                 + "  dataSource VARCHAR(255) NOT NULL,\n"
@@ -236,7 +240,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     createTable(
         tableName,
         ImmutableList.of(
-            String.format(
+            StringUtils.format(
                 "CREATE TABLE %1$s (\n"
                 + "  dataSource VARCHAR(255) NOT NULL,\n"
                 + "  created_date VARCHAR(255) NOT NULL,\n"
@@ -255,7 +259,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     createTable(
         tableName,
         ImmutableList.of(
-            String.format(
+            StringUtils.format(
                 "CREATE TABLE %1$s (\n"
                 + "  id VARCHAR(255) NOT NULL,\n"
                 + "  dataSource VARCHAR(255) NOT NULL,\n"
@@ -270,8 +274,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + ")",
                 tableName, getPayloadType(), getQuoteString()
             ),
-            String.format("CREATE INDEX idx_%1$s_datasource ON %1$s(dataSource)", tableName),
-            String.format("CREATE INDEX idx_%1$s_used ON %1$s(used)", tableName)
+            StringUtils.format("CREATE INDEX idx_%1$s_datasource ON %1$s(dataSource)", tableName),
+            StringUtils.format("CREATE INDEX idx_%1$s_used ON %1$s(used)", tableName)
         )
     );
   }
@@ -281,7 +285,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     createTable(
         tableName,
         ImmutableList.of(
-            String.format(
+            StringUtils.format(
                 "CREATE TABLE %1$s (\n"
                 + "  id VARCHAR(255) NOT NULL,\n"
                 + "  dataSource VARCHAR(255) NOT NULL,\n"
@@ -291,7 +295,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + ")",
                 tableName, getPayloadType()
             ),
-            String.format("CREATE INDEX idx_%1$s_datasource ON %1$s(dataSource)", tableName)
+            StringUtils.format("CREATE INDEX idx_%1$s_datasource ON %1$s(dataSource)", tableName)
         )
     );
   }
@@ -301,7 +305,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     createTable(
         tableName,
         ImmutableList.of(
-            String.format(
+            StringUtils.format(
                 "CREATE TABLE %1$s (\n"
                 + "  name VARCHAR(255) NOT NULL,\n"
                 + "  payload %2$s NOT NULL,\n"
@@ -318,7 +322,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     createTable(
         tableName,
         ImmutableList.of(
-            String.format(
+            StringUtils.format(
                 "CREATE TABLE %1$s (\n"
                 + "  id VARCHAR(255) NOT NULL,\n"
                 + "  created_date VARCHAR(255) NOT NULL,\n"
@@ -330,7 +334,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + ")",
                 tableName, getPayloadType()
             ),
-            String.format("CREATE INDEX idx_%1$s_active_created_date ON %1$s(active, created_date)", tableName)
+            StringUtils.format("CREATE INDEX idx_%1$s_active_created_date ON %1$s(active, created_date)", tableName)
         )
     );
   }
@@ -340,7 +344,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     createTable(
         tableName,
         ImmutableList.of(
-            String.format(
+            StringUtils.format(
                 "CREATE TABLE %1$s (\n"
                 + "  id %2$s NOT NULL,\n"
                 + "  %4$s_id VARCHAR(255) DEFAULT NULL,\n"
@@ -349,7 +353,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + ")",
                 tableName, getSerialType(), getPayloadType(), entryTypeName
             ),
-            String.format("CREATE INDEX idx_%1$s_%2$s_id ON %1$s(%2$s_id)", tableName, entryTypeName)
+            StringUtils.format("CREATE INDEX idx_%1$s_%2$s_id ON %1$s(%2$s_id)", tableName, entryTypeName)
         )
     );
   }
@@ -359,7 +363,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     createTable(
         tableName,
         ImmutableList.of(
-            String.format(
+            StringUtils.format(
                 "CREATE TABLE %1$s (\n"
                 + "  id %2$s NOT NULL,\n"
                 + "  %4$s_id VARCHAR(255) DEFAULT NULL,\n"
@@ -368,7 +372,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + ")",
                 tableName, getSerialType(), getPayloadType(), entryTypeName
             ),
-            String.format("CREATE INDEX idx_%1$s_%2$s_id ON %1$s(%2$s_id)", tableName, entryTypeName)
+            StringUtils.format("CREATE INDEX idx_%1$s_%2$s_id ON %1$s(%2$s_id)", tableName, entryTypeName)
         )
     );
   }
@@ -378,7 +382,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     createTable(
         tableName,
         ImmutableList.of(
-            String.format(
+            StringUtils.format(
                 "CREATE TABLE %1$s (\n"
                 + "  id %2$s NOT NULL,\n"
                 + "  spec_id VARCHAR(255) NOT NULL,\n"
@@ -388,7 +392,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + ")",
                 tableName, getSerialType(), getPayloadType()
             ),
-            String.format("CREATE INDEX idx_%1$s_spec_id ON %1$s(spec_id)", tableName)
+            StringUtils.format("CREATE INDEX idx_%1$s_spec_id ON %1$s(spec_id)", tableName)
         )
     );
   }
@@ -410,14 +414,14 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
           {
             int count = handle
                 .createQuery(
-                    String.format("SELECT COUNT(*) FROM %1$s WHERE %2$s = :key", tableName, keyColumn)
+                    StringUtils.format("SELECT COUNT(*) FROM %1$s WHERE %2$s = :key", tableName, keyColumn)
                 )
                 .bind("key", key)
                 .map(IntegerMapper.FIRST)
                 .first();
             if (count == 0) {
               handle.createStatement(
-                  String.format(
+                  StringUtils.format(
                       "INSERT INTO %1$s (%2$s, %3$s) VALUES (:key, :value)",
                       tableName, keyColumn, valueColumn
                   )
@@ -427,7 +431,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                     .execute();
             } else {
               handle.createStatement(
-                  String.format(
+                  StringUtils.format(
                       "UPDATE %1$s SET %3$s=:value WHERE %2$s=:key",
                       tableName, keyColumn, valueColumn
                   )
@@ -444,6 +448,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   public abstract DBI getDBI();
 
+  @Override
   public void createDataSourceTable()
   {
     if (config.get().isCreateTables()) {
@@ -531,7 +536,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       final String key
   )
   {
-    final String selectStatement = String.format(
+    final String selectStatement = StringUtils.format(
         "SELECT %s FROM %s WHERE %s = :key", valueColumn,
         tableName, keyColumn
     );
@@ -552,7 +557,10 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     return matched.get(0);
   }
 
-  public MetadataStorageConnectorConfig getConfig() { return config.get(); }
+  public MetadataStorageConnectorConfig getConfig()
+  {
+    return config.get();
+  }
 
   protected BasicDataSource getDatasource()
   {
@@ -605,7 +613,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     createTable(
         tableName,
         ImmutableList.of(
-            String.format(
+            StringUtils.format(
                 "CREATE TABLE %1$s (\n"
                 + "  id %2$s NOT NULL,\n"
                 + "  audit_key VARCHAR(255) NOT NULL,\n"
@@ -618,9 +626,9 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + ")",
                 tableName, getSerialType(), getPayloadType()
             ),
-            String.format("CREATE INDEX idx_%1$s_key_time ON %1$s(audit_key, created_date)", tableName),
-            String.format("CREATE INDEX idx_%1$s_type_time ON %1$s(type, created_date)", tableName),
-            String.format("CREATE INDEX idx_%1$s_audit_time ON %1$s(created_date)", tableName)
+            StringUtils.format("CREATE INDEX idx_%1$s_key_time ON %1$s(audit_key, created_date)", tableName),
+            StringUtils.format("CREATE INDEX idx_%1$s_type_time ON %1$s(type, created_date)", tableName),
+            StringUtils.format("CREATE INDEX idx_%1$s_audit_time ON %1$s(created_date)", tableName)
         )
     );
   }
@@ -633,6 +641,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     }
   }
 
+  @Override
   public void deleteAllRecords(final String tableName)
   {
     try {

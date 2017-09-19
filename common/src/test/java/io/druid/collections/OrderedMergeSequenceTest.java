@@ -19,24 +19,21 @@
 
 package io.druid.collections;
 
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.MergeSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.SequenceTestHelper;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.TestSequence;
-
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -287,19 +284,7 @@ public class OrderedMergeSequenceTest
   {
     return new OrderedMergeSequence<T>(
         ordering,
-        Sequences.simple(
-            Lists.transform( // OMG WTF, the java type system really annoys me at times...
-                             seqs,
-                             new Function<TestSequence<T>, Sequence<T>>()
-                             {
-                               @Override
-                               public Sequence<T> apply(@Nullable TestSequence<T> input)
-                               {
-                                 return input;
-                               }
-                             }
-            )
-        )
+        Sequences.simple((List<Sequence<T>>) (List) seqs)
     );
   }
 
@@ -308,22 +293,7 @@ public class OrderedMergeSequenceTest
       List<TestSequence<T>> seqs
   )
   {
-    return new MergeSequence<T>(
-        ordering,
-        Sequences.simple(
-            Lists.transform( // OMG WTF, the java type system really annoys me at times...
-                             seqs,
-                             new Function<TestSequence<T>, Sequence<T>>()
-                             {
-                               @Override
-                               public Sequence<T> apply(@Nullable TestSequence<T> input)
-                               {
-                                 return input;
-                               }
-                             }
-            )
-        )
-    );
+    return new MergeSequence<T>(ordering, Sequences.simple(seqs));
   }
 
   @Test
@@ -367,7 +337,7 @@ public class OrderedMergeSequenceTest
         )
     );
 
-    SequenceTestHelper.testAll(finalMerged, Arrays.asList(1));
+    SequenceTestHelper.testAll(finalMerged, Collections.singletonList(1));
   }
 
   @Test
@@ -379,6 +349,6 @@ public class OrderedMergeSequenceTest
         )
     );
 
-    SequenceTestHelper.testAll(seq1, Arrays.asList(1));
+    SequenceTestHelper.testAll(seq1, Collections.singletonList(1));
   }
 }

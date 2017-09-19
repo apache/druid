@@ -195,41 +195,41 @@ public class ArithmeticPostAggregator implements PostAggregator
 
   private static enum Ops
   {
-    PLUS("+")
-        {
-          public double compute(double lhs, double rhs)
-          {
-            return lhs + rhs;
-          }
-        },
-    MINUS("-")
-        {
-          public double compute(double lhs, double rhs)
-          {
-            return lhs - rhs;
-          }
-        },
-    MULT("*")
-        {
-          public double compute(double lhs, double rhs)
-          {
-            return lhs * rhs;
-          }
-        },
-    DIV("/")
-        {
-          public double compute(double lhs, double rhs)
-          {
-            return (rhs == 0.0) ? 0 : (lhs / rhs);
-          }
-        },
-    QUOTIENT("quotient")
-        {
-          public double compute(double lhs, double rhs)
-          {
-            return lhs / rhs;
-          }
-        };
+    PLUS("+") {
+      @Override
+      public double compute(double lhs, double rhs)
+      {
+        return lhs + rhs;
+      }
+    },
+    MINUS("-") {
+      @Override
+      public double compute(double lhs, double rhs)
+      {
+        return lhs - rhs;
+      }
+    },
+    MULT("*") {
+      @Override
+      public double compute(double lhs, double rhs)
+      {
+        return lhs * rhs;
+      }
+    },
+    DIV("/") {
+      @Override
+      public double compute(double lhs, double rhs)
+      {
+        return (rhs == 0.0) ? 0 : (lhs / rhs);
+      }
+    },
+    QUOTIENT("quotient") {
+      @Override
+      public double compute(double lhs, double rhs)
+      {
+        return lhs / rhs;
+      }
+    };
 
     private static final Map<String, Ops> lookupMap = Maps.newHashMap();
 
@@ -264,22 +264,21 @@ public class ArithmeticPostAggregator implements PostAggregator
     }
   }
 
-  public static enum Ordering implements Comparator<Double> {
+  public static enum Ordering implements Comparator<Double>
+  {
     // ensures the following order: numeric > NaN > Infinite
+    // The name may be referenced via Ordering.valueOf(ordering) in the constructor.
     numericFirst {
-      public int compare(Double lhs, Double rhs) {
-        if(isFinite(lhs) && !isFinite(rhs)) {
+      @Override
+      public int compare(Double lhs, Double rhs)
+      {
+        if (Double.isFinite(lhs) && !Double.isFinite(rhs)) {
           return 1;
         }
-        if(!isFinite(lhs) && isFinite(rhs)) {
+        if (!Double.isFinite(lhs) && Double.isFinite(rhs)) {
           return -1;
         }
         return Double.compare(lhs, rhs);
-      }
-
-      // Double.isFinite only exist in JDK8
-      private boolean isFinite(double value) {
-        return !Double.isInfinite(value) && !Double.isNaN(value);
       }
     }
   }

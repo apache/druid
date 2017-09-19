@@ -26,6 +26,7 @@ import io.druid.data.input.Row;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
@@ -68,12 +69,13 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
     return new QueryRunner<Row>()
     {
       @Override
-      public Sequence<Row> run(Query<Row> query, Map<String, Object> responseContext)
+      public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
       {
-        return strategySelector.strategize((GroupByQuery) query).mergeRunners(queryExecutor, queryRunners).run(
-            query,
-            responseContext
+        QueryRunner<Row> rowQueryRunner = strategySelector.strategize((GroupByQuery) queryPlus.getQuery()).mergeRunners(
+            queryExecutor,
+            queryRunners
         );
+        return rowQueryRunner.run(queryPlus, responseContext);
       }
     };
   }
@@ -96,13 +98,14 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
     }
 
     @Override
-    public Sequence<Row> run(Query<Row> input, Map<String, Object> responseContext)
+    public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
     {
-      if (!(input instanceof GroupByQuery)) {
-        throw new ISE("Got a [%s] which isn't a %s", input.getClass(), GroupByQuery.class);
+      Query<Row> query = queryPlus.getQuery();
+      if (!(query instanceof GroupByQuery)) {
+        throw new ISE("Got a [%s] which isn't a %s", query.getClass(), GroupByQuery.class);
       }
 
-      return strategySelector.strategize((GroupByQuery) input).process((GroupByQuery) input, adapter);
+      return strategySelector.strategize((GroupByQuery) query).process((GroupByQuery) query, adapter);
     }
   }
 }

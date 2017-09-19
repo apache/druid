@@ -41,6 +41,7 @@ import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.ManageLifecycle;
 import io.druid.initialization.Initialization;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import net.spy.memcached.BroadcastOpFactory;
@@ -82,8 +83,8 @@ import java.util.concurrent.TimeoutException;
 public class MemcachedCacheTest
 {
   private static final Logger log = new Logger(MemcachedCacheTest.class);
-  private static final byte[] HI = "hiiiiiiiiiiiiiiiiiii".getBytes();
-  private static final byte[] HO = "hooooooooooooooooooo".getBytes();
+  private static final byte[] HI = StringUtils.toUtf8("hiiiiiiiiiiiiiiiiiii");
+  private static final byte[] HO = StringUtils.toUtf8("hooooooooooooooooooo");
   protected static final AbstractMonitor NOOP_MONITOR = new AbstractMonitor()
   {
     @Override
@@ -152,6 +153,7 @@ public class MemcachedCacheTest
               {
                 binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/memcached");
                 binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+                binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
 
                 binder.bind(MemcachedCacheConfig.class).toInstance(config);
                 binder.bind(Cache.class).toProvider(MemcachedProviderWithConfig.class).in(ManageLifecycle.class);
@@ -185,6 +187,7 @@ public class MemcachedCacheTest
               {
                 binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/memcached");
                 binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+                binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
 
                 binder.bind(Cache.class).toProvider(CacheProvider.class);
                 JsonConfigProvider.bind(binder, uuid, CacheProvider.class);

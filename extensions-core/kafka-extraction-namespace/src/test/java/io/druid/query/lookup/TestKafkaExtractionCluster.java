@@ -42,6 +42,7 @@ import kafka.server.KafkaServer;
 import kafka.utils.Time;
 import kafka.utils.ZKStringSerializer$;
 import org.I0Itec.zkclient.ZkClient;
+import org.I0Itec.zkclient.exception.ZkException;
 import org.apache.curator.test.TestingServer;
 import org.apache.zookeeper.CreateMode;
 import org.joda.time.DateTime;
@@ -59,6 +60,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  *
@@ -128,6 +130,7 @@ public class TestKafkaExtractionCluster
     serverProperties.put("zookeeper.connect", zkTestServer.getConnectString() + zkKafkaPath);
     serverProperties.put("zookeeper.session.timeout.ms", "10000");
     serverProperties.put("zookeeper.sync.time.ms", "200");
+    serverProperties.put("port", String.valueOf(ThreadLocalRandom.current().nextInt(9999) + 10000));
 
     kafkaConfig = new KafkaConfig(serverProperties);
 
@@ -197,7 +200,7 @@ public class TestKafkaExtractionCluster
           try {
             zkClient.deleteRecursive(zkKafkaPath);
           }
-          catch (org.I0Itec.zkclient.exception.ZkException ex) {
+          catch (ZkException ex) {
             log.warn(ex, "error deleting %s zk node", zkKafkaPath);
           }
         }
@@ -246,6 +249,7 @@ public class TestKafkaExtractionCluster
               {
                 binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
                 binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+                binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
               }
             },
             // These injections fail under IntelliJ but are required for maven
@@ -297,7 +301,7 @@ public class TestKafkaExtractionCluster
     kafkaProducerProperties.putAll(kafkaProperties);
     kafkaProducerProperties.put(
         "metadata.broker.list",
-        String.format("127.0.0.1:%d", kafkaServer.socketServer().port())
+        StringUtils.format("127.0.0.1:%d", kafkaServer.socketServer().port())
     );
     kafkaProperties.put("request.required.acks", "1");
     return kafkaProducerProperties;

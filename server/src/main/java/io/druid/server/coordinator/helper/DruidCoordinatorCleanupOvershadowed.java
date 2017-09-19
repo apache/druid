@@ -55,7 +55,7 @@ public class DruidCoordinatorCleanupOvershadowed implements DruidCoordinatorHelp
       DruidCluster cluster = params.getDruidCluster();
       Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = Maps.newHashMap();
 
-      for (MinMaxPriorityQueue<ServerHolder> serverHolders : cluster.getSortedServersByTier()) {
+      for (MinMaxPriorityQueue<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
         for (ServerHolder serverHolder : serverHolders) {
           ImmutableDruidServer server = serverHolder.getServer();
 

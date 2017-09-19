@@ -19,18 +19,18 @@
 
 package io.druid.java.util.common.guava;
 
-import com.google.common.base.Function;
+import java.util.function.Function;
 
 /**
  */
 public class MappedSequence<T, Out> implements Sequence<Out>
 {
   private final Sequence<T> baseSequence;
-  private final Function<T, Out> fn;
+  private final Function<? super T, ? extends Out> fn;
 
   public MappedSequence(
       Sequence<T> baseSequence,
-      Function<T, Out> fn
+      Function<? super T, ? extends Out> fn
   )
   {
     this.baseSequence = baseSequence;

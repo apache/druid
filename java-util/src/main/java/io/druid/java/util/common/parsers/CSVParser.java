@@ -19,107 +19,49 @@
 
 package io.druid.java.util.common.parsers;
 
-import com.google.common.base.Function;
-import com.google.common.base.Optional;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import io.druid.java.util.common.collect.Utils;
+import com.google.common.annotations.VisibleForTesting;
 
-import java.util.ArrayList;
+import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
-public class CSVParser implements Parser<String, Object>
+public class CSVParser extends AbstractFlatTextFormatParser
 {
-  private final String listDelimiter;
-  private final Splitter listSplitter;
-  private final Function<String, Object> valueFunction;
-
   private final au.com.bytecode.opencsv.CSVParser parser = new au.com.bytecode.opencsv.CSVParser();
 
-  private ArrayList<String> fieldNames = null;
-
-  public CSVParser(final Optional<String> listDelimiter)
+  public CSVParser(
+      @Nullable final String listDelimiter,
+      final boolean hasHeaderRow,
+      final int maxSkipHeaderRows
+  )
   {
-    this.listDelimiter = listDelimiter.isPresent() ? listDelimiter.get() : Parsers.DEFAULT_LIST_DELIMITER;
-    this.listSplitter = Splitter.on(this.listDelimiter);
-    this.valueFunction = new Function<String, Object>()
-    {
-      @Override
-      public Object apply(String input)
-      {
-        if (input.contains(CSVParser.this.listDelimiter)) {
-          return Lists.newArrayList(
-              Iterables.transform(
-                  listSplitter.split(input),
-                  ParserUtils.nullEmptyStringFunction
-              )
-          );
-        } else {
-          return ParserUtils.nullEmptyStringFunction.apply(input);
-        }
-      }
-    };
+    super(listDelimiter, hasHeaderRow, maxSkipHeaderRows);
   }
 
-  public CSVParser(final Optional<String> listDelimiter, final Iterable<String> fieldNames)
+  public CSVParser(
+      @Nullable final String listDelimiter,
+      final Iterable<String> fieldNames,
+      final boolean hasHeaderRow,
+      final int maxSkipHeaderRows
+  )
   {
-    this(listDelimiter);
+    this(listDelimiter, hasHeaderRow, maxSkipHeaderRows);
 
     setFieldNames(fieldNames);
   }
 
-  public CSVParser(final Optional<String> listDelimiter, final String header)
+  @Override
+  protected List<String> parseLine(String input) throws IOException
   {
-    this(listDelimiter);
+    return Arrays.asList(parser.parseLine(input));
+  }
+
+  @VisibleForTesting
+  CSVParser(@Nullable final String listDelimiter, final String header)
+  {
+    this(listDelimiter, false, 0);
 
     setFieldNames(header);
-  }
-
-  public String getListDelimiter()
-  {
-    return listDelimiter;
-  }
-
-  @Override
-  public List<String> getFieldNames()
-  {
-    return fieldNames;
-  }
-
-  @Override
-  public void setFieldNames(final Iterable<String> fieldNames)
-  {
-    ParserUtils.validateFields(fieldNames);
-    this.fieldNames = Lists.newArrayList(fieldNames);
-  }
-
-  public void setFieldNames(final String header)
-  {
-    try {
-      setFieldNames(Arrays.asList(parser.parseLine(header)));
-    }
-    catch (Exception e) {
-      throw new ParseException(e, "Unable to parse header [%s]", header);
-    }
-  }
-
-  @Override
-  public Map<String, Object> parse(final String input)
-  {
-    try {
-      String[] values = parser.parseLine(input);
-
-      if (fieldNames == null) {
-        setFieldNames(ParserUtils.generateFieldNames(values.length));
-      }
-
-      return Utils.zipMapPartial(fieldNames, Iterables.transform(Lists.newArrayList(values), valueFunction));
-    }
-    catch (Exception e) {
-      throw new ParseException(e, "Unable to parse row [%s]", input);
-    }
   }
 }

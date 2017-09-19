@@ -19,6 +19,7 @@
 
 package io.druid.sql.avatica;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
@@ -28,25 +29,32 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
-import io.druid.java.util.common.io.Closer;
+import com.google.inject.Injector;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthenticationResult;
+import io.druid.server.security.Authenticator;
+import io.druid.server.security.AuthenticatorMapper;
+import io.druid.server.security.ForbiddenException;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.calcite.avatica.MetaImpl;
 import org.apache.calcite.avatica.MissingResultsException;
+import org.apache.calcite.avatica.NoSuchConnectionException;
 import org.apache.calcite.avatica.NoSuchStatementException;
 import org.apache.calcite.avatica.QueryState;
 import org.apache.calcite.avatica.remote.TypedValue;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import java.io.IOException;
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -55,31 +63,41 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class DruidMeta extends MetaImpl
 {
   private static final Logger log = new Logger(DruidMeta.class);
-  private static final Set<String> SKIP_PROPERTIES = ImmutableSet.of("user", "password");
 
   private final PlannerFactory plannerFactory;
   private final ScheduledExecutorService exec;
   private final AvaticaServerConfig config;
+  private final AuthConfig authConfig;
+  private final List<Authenticator> authenticators;
 
-  // Used to track statements for a connection. Connection id -> statement id -> statement.
-  // Not concurrent; synchronize on it when reading or writing.
-  private final Map<String, DruidConnection> connections = new HashMap<>();
+  // Used to track logical connections.
+  private final Map<String, DruidConnection> connections = new ConcurrentHashMap<>();
 
-  // Used to generate statement ids.
-  private final AtomicInteger statementCounter = new AtomicInteger();
+  // Number of connections reserved in "connections". May be higher than the actual number of connections at times,
+  // such as when we're reserving space to open a new one.
+  private final AtomicInteger connectionCount = new AtomicInteger();
 
   @Inject
-  public DruidMeta(final PlannerFactory plannerFactory, final AvaticaServerConfig config)
+  public DruidMeta(
+      final PlannerFactory plannerFactory,
+      final AvaticaServerConfig config,
+      final AuthConfig authConfig,
+      final Injector injector
+  )
   {
     super(null);
     this.plannerFactory = Preconditions.checkNotNull(plannerFactory, "plannerFactory");
     this.config = config;
+    this.authConfig = authConfig;
     this.exec = Executors.newSingleThreadScheduledExecutor(
         new ThreadFactoryBuilder()
-            .setNameFormat(String.format("DruidMeta@%s-ScheduledExecutor", Integer.toHexString(hashCode())))
+            .setNameFormat(StringUtils.format("DruidMeta@%s-ScheduledExecutor", Integer.toHexString(hashCode())))
             .setDaemon(true)
             .build()
     );
+
+    final AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
+    this.authenticators = authenticatorMapper.getAuthenticatorChain();
   }
 
   @Override
@@ -88,9 +106,7 @@ public class DruidMeta extends MetaImpl
     // Build connection context.
     final ImmutableMap.Builder<String, Object> context = ImmutableMap.builder();
     for (Map.Entry<String, String> entry : info.entrySet()) {
-      if (!SKIP_PROPERTIES.contains(entry.getKey())) {
-        context.put(entry);
-      }
+      context.put(entry);
     }
     openDruidConnection(ch.id, context.build());
   }
@@ -98,26 +114,10 @@ public class DruidMeta extends MetaImpl
   @Override
   public void closeConnection(final ConnectionHandle ch)
   {
-    final List<DruidStatement> statements = new ArrayList<>();
-
-    synchronized (connections) {
-      final DruidConnection connection = connections.remove(ch.id);
-      if (connection != null) {
-        connection.sync(null);
-        statements.addAll(connection.statements().values());
-        log.debug("Connection[%s] closed, closing %,d statements.", ch.id, statements.size());
-      }
-    }
-
-    final Closer closer = Closer.create();
-    for (final DruidStatement statement : statements) {
-      closer.register(statement);
-    }
-    try {
-      closer.close();
-    }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
+    final DruidConnection druidConnection = connections.remove(ch.id);
+    if (druidConnection != null) {
+      connectionCount.decrementAndGet();
+      druidConnection.close();
     }
   }
 
@@ -132,24 +132,8 @@ public class DruidMeta extends MetaImpl
   @Override
   public StatementHandle createStatement(final ConnectionHandle ch)
   {
-    synchronized (connections) {
-      final DruidConnection connection = getDruidConnection(ch.id);
-      final StatementHandle statement = new StatementHandle(ch.id, statementCounter.incrementAndGet(), null);
-
-      if (connection.statements().containsKey(statement.id)) {
-        // Will only happen if statementCounter rolls over before old statements are cleaned up. If this
-        // ever happens then something fishy is going on, because we shouldn't have billions of statements.
-        throw new ISE("Uh oh, too many statements");
-      }
-
-      if (connection.statements().size() >= config.getMaxStatementsPerConnection()) {
-        throw new ISE("Too many open statements, limit is[%,d]", config.getMaxStatementsPerConnection());
-      }
-
-      connection.statements().put(statement.id, new DruidStatement(ch.id, statement.id, connection.context()));
-      log.debug("Connection[%s] opened statement[%s].", ch.id, statement.id);
-      return statement;
-    }
+    final DruidStatement druidStatement = getDruidConnection(ch.id).createStatement();
+    return new StatementHandle(ch.id, druidStatement.getStatementId(), null);
   }
 
   @Override
@@ -161,7 +145,12 @@ public class DruidMeta extends MetaImpl
   {
     final StatementHandle statement = createStatement(ch);
     final DruidStatement druidStatement = getDruidStatement(statement);
-    statement.signature = druidStatement.prepare(plannerFactory, sql, maxRowCount).getSignature();
+    final DruidConnection druidConnection = getDruidConnection(statement.connectionId);
+    AuthenticationResult authenticationResult = authenticateConnection(druidConnection);
+    if (authenticationResult == null) {
+      throw new ForbiddenException("Authentication failed.");
+    }
+    statement.signature = druidStatement.prepare(plannerFactory, sql, maxRowCount, authenticationResult).getSignature();
     return statement;
   }
 
@@ -189,8 +178,17 @@ public class DruidMeta extends MetaImpl
   {
     // Ignore "callback", this class is designed for use with LocalService which doesn't use it.
     final DruidStatement druidStatement = getDruidStatement(statement);
-    final Signature signature = druidStatement.prepare(plannerFactory, sql, maxRowCount).getSignature();
-    final Frame firstFrame = druidStatement.execute().nextFrame(DruidStatement.START_OFFSET, maxRowsInFirstFrame);
+    final DruidConnection druidConnection = getDruidConnection(statement.connectionId);
+    AuthenticationResult authenticationResult = authenticateConnection(druidConnection);
+    if (authenticationResult == null) {
+      throw new ForbiddenException("Authentication failed.");
+    }
+    final Signature signature = druidStatement.prepare(plannerFactory, sql, maxRowCount, authenticationResult).getSignature();
+    final Frame firstFrame = druidStatement.execute()
+                                           .nextFrame(
+                                               DruidStatement.START_OFFSET,
+                                               getEffectiveMaxRowsPerFrame(maxRowsInFirstFrame)
+                                           );
 
     return new ExecuteResult(
         ImmutableList.of(
@@ -232,7 +230,7 @@ public class DruidMeta extends MetaImpl
       final int fetchMaxRowCount
   ) throws NoSuchStatementException, MissingResultsException
   {
-    return getDruidStatement(statement).nextFrame(offset, fetchMaxRowCount);
+    return getDruidStatement(statement).nextFrame(offset, getEffectiveMaxRowsPerFrame(fetchMaxRowCount));
   }
 
   @Deprecated
@@ -258,7 +256,11 @@ public class DruidMeta extends MetaImpl
 
     final DruidStatement druidStatement = getDruidStatement(statement);
     final Signature signature = druidStatement.getSignature();
-    final Frame firstFrame = druidStatement.execute().nextFrame(DruidStatement.START_OFFSET, maxRowsInFirstFrame);
+    final Frame firstFrame = druidStatement.execute()
+                                           .nextFrame(
+                                               DruidStatement.START_OFFSET,
+                                               getEffectiveMaxRowsPerFrame(maxRowsInFirstFrame)
+                                           );
 
     return new ExecuteResult(
         ImmutableList.of(
@@ -289,7 +291,14 @@ public class DruidMeta extends MetaImpl
   @Override
   public void closeStatement(final StatementHandle h)
   {
-    closeDruidStatement(getDruidStatement(h));
+    // connections.get, not getDruidConnection, since we want to silently ignore nonexistent statements
+    final DruidConnection druidConnection = connections.get(h.connectionId);
+    if (druidConnection != null) {
+      final DruidStatement druidStatement = druidConnection.getStatement(h.id);
+      if (druidStatement != null) {
+        druidStatement.close();
+      }
+    }
   }
 
   @Override
@@ -493,95 +502,104 @@ public class DruidMeta extends MetaImpl
     return sqlResultSet(ch, sql);
   }
 
-  private DruidConnection openDruidConnection(final String connectionId, final Map<String, Object> context)
+  @VisibleForTesting
+  void closeAllConnections()
   {
-    synchronized (connections) {
-      if (connections.containsKey(connectionId)) {
-        throw new ISE("Connection[%s] already open.", connectionId);
-      }
-
-      if (connections.size() >= config.getMaxConnections()) {
-        throw new ISE("Too many connections, limit is[%,d]", config.getMaxConnections());
-      }
-
-      connections.put(connectionId, new DruidConnection(context));
-      log.debug("Connection[%s] opened.", connectionId);
-
-      // Call getDruidConnection to start the timeout timer.
-      return getDruidConnection(connectionId);
+    for (String connectionId : ImmutableSet.copyOf(connections.keySet())) {
+      closeConnection(new ConnectionHandle(connectionId));
     }
   }
 
+  private AuthenticationResult authenticateConnection(final DruidConnection connection)
+  {
+    Map<String, Object> context = connection.context();
+    for (Authenticator authenticator : authenticators) {
+      AuthenticationResult authenticationResult = authenticator.authenticateJDBCContext(context);
+      if (authenticationResult != null) {
+        return authenticationResult;
+      }
+    }
+    return null;
+  }
+
+  private DruidConnection openDruidConnection(final String connectionId, final Map<String, Object> context)
+  {
+    if (connectionCount.incrementAndGet() > config.getMaxConnections()) {
+      // O(connections) but we don't expect this to happen often (it's a last-ditch effort to clear out
+      // abandoned connections) or to have too many connections.
+      final Iterator<Map.Entry<String, DruidConnection>> entryIterator = connections.entrySet().iterator();
+      while (entryIterator.hasNext()) {
+        final Map.Entry<String, DruidConnection> entry = entryIterator.next();
+        if (entry.getValue().closeIfEmpty()) {
+          entryIterator.remove();
+
+          // Removed a connection, decrement the counter.
+          connectionCount.decrementAndGet();
+          break;
+        }
+      }
+
+      if (connectionCount.get() > config.getMaxConnections()) {
+        // We aren't going to make a connection after all.
+        connectionCount.decrementAndGet();
+        throw new ISE("Too many connections, limit is[%,d]", config.getMaxConnections());
+      }
+    }
+
+    final DruidConnection putResult = connections.putIfAbsent(
+        connectionId,
+        new DruidConnection(connectionId, config.getMaxStatementsPerConnection(), context)
+    );
+
+    if (putResult != null) {
+      // Didn't actually insert the connection.
+      connectionCount.decrementAndGet();
+      throw new ISE("Connection[%s] already open.", connectionId);
+    }
+
+    log.debug("Connection[%s] opened.", connectionId);
+
+    // Call getDruidConnection to start the timeout timer.
+    return getDruidConnection(connectionId);
+  }
+
+  /**
+   * Get a connection, or throw an exception if it doesn't exist. Also refreshes the timeout timer.
+   *
+   * @param connectionId connection id
+   *
+   * @return the connection
+   *
+   * @throws NoSuchConnectionException if the connection id doesn't exist
+   */
+  @Nonnull
   private DruidConnection getDruidConnection(final String connectionId)
   {
-    final DruidConnection connection;
+    final DruidConnection connection = connections.get(connectionId);
 
-    synchronized (connections) {
-      connection = connections.get(connectionId);
-
-      if (connection == null) {
-        throw new ISE("Connection[%s] not open", connectionId);
-      }
+    if (connection == null) {
+      throw new NoSuchConnectionException(connectionId);
     }
 
     return connection.sync(
         exec.schedule(
-            new Runnable()
-            {
-              @Override
-              public void run()
-              {
-                final List<DruidStatement> statements = new ArrayList<>();
-
-                synchronized (connections) {
-                  if (connections.remove(connectionId) == connection) {
-                    statements.addAll(connection.statements().values());
-                    log.debug("Connection[%s] timed out, closing %,d statements.", connectionId, statements.size());
-                  }
-                }
-
-                final Closer closer = Closer.create();
-                for (final DruidStatement statement : statements) {
-                  closer.register(statement);
-                }
-                try {
-                  closer.close();
-                }
-                catch (IOException e) {
-                  throw Throwables.propagate(e);
-                }
-              }
+            () -> {
+              log.debug("Connection[%s] timed out.", connectionId);
+              closeConnection(new ConnectionHandle(connectionId));
             },
-            new Interval(new DateTime(), config.getConnectionIdleTimeout()).toDurationMillis(),
+            new Interval(DateTimes.nowUtc(), config.getConnectionIdleTimeout()).toDurationMillis(),
             TimeUnit.MILLISECONDS
         )
     );
   }
 
+  @Nonnull
   private DruidStatement getDruidStatement(final StatementHandle statement)
   {
-    synchronized (connections) {
-      final DruidConnection connection = getDruidConnection(statement.connectionId);
-      final DruidStatement druidStatement = connection.statements().get(statement.id);
-      Preconditions.checkState(druidStatement != null, "Statement[%s] does not exist", statement.id);
-      return druidStatement;
-    }
-  }
-
-  private void closeDruidStatement(final DruidStatement statement)
-  {
-    synchronized (connections) {
-      final DruidConnection connection = getDruidConnection(statement.getConnectionId());
-      if (connection.statements().get(statement.getStatementId()) == statement) {
-        connection.statements().remove(statement.getStatementId());
-      } else {
-        // "statement" is not actually in the set of open statements for this connection
-        throw new ISE("Statement[%s] not open", statement.getStatementId());
-      }
-    }
-
-    log.debug("Connection[%s] closed statement[%s].", statement.getConnectionId(), statement.getStatementId());
-    statement.close();
+    final DruidConnection connection = getDruidConnection(statement.connectionId);
+    final DruidStatement druidStatement = connection.getStatement(statement.id);
+    Preconditions.checkState(druidStatement != null, "Statement[%s] does not exist", statement.id);
+    return druidStatement;
   }
 
   private MetaResultSet sqlResultSet(final ConnectionHandle ch, final String sql)
@@ -601,5 +619,18 @@ public class DruidMeta extends MetaImpl
     finally {
       closeStatement(statement);
     }
+  }
+
+  private int getEffectiveMaxRowsPerFrame(int clientMaxRowsPerFrame)
+  {
+    // no configured row limit, use the client provided limit
+    if (config.getMaxRowsPerFrame() < 0) {
+      return clientMaxRowsPerFrame;
+    }
+    // client provided no row limit, use the configured row limit
+    if (clientMaxRowsPerFrame < 0) {
+      return config.getMaxRowsPerFrame();
+    }
+    return Math.min(clientMaxRowsPerFrame, config.getMaxRowsPerFrame());
   }
 }

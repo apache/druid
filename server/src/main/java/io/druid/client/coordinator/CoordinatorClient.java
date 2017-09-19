@@ -21,66 +21,48 @@ package io.druid.client.coordinator;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.Request;
-import com.metamx.http.client.response.StatusResponseHandler;
-import com.metamx.http.client.response.StatusResponseHolder;
+import com.metamx.http.client.response.FullResponseHolder;
 import io.druid.client.ImmutableSegmentLoadInfo;
-import io.druid.client.selector.Server;
-import io.druid.curator.discovery.ServerDiscoverySelector;
-import io.druid.guice.annotations.Global;
+import io.druid.discovery.DruidLeaderClient;
 import io.druid.java.util.common.ISE;
-
+import io.druid.java.util.common.StringUtils;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Interval;
 
-import java.net.URI;
-import java.net.URL;
 import java.util.List;
 
 public class CoordinatorClient
 {
-  private static final StatusResponseHandler RESPONSE_HANDLER = new StatusResponseHandler(Charsets.UTF_8);
-
-  private final HttpClient client;
+  private final DruidLeaderClient druidLeaderClient;
   private final ObjectMapper jsonMapper;
-  private final ServerDiscoverySelector selector;
 
   @Inject
   public CoordinatorClient(
-      @Global HttpClient client,
       ObjectMapper jsonMapper,
-      @Coordinator ServerDiscoverySelector selector
+      @Coordinator DruidLeaderClient druidLeaderClient
   )
   {
-    this.client = client;
     this.jsonMapper = jsonMapper;
-    this.selector = selector;
+    this.druidLeaderClient = druidLeaderClient;
   }
 
 
   public List<ImmutableSegmentLoadInfo> fetchServerView(String dataSource, Interval interval, boolean incompleteOk)
   {
     try {
-      StatusResponseHolder response = client.go(
-          new Request(
-              HttpMethod.GET,
-              new URL(
-                  String.format(
-                      "%s/datasources/%s/intervals/%s/serverview?partial=%s",
-                      baseUrl(),
-                      dataSource,
-                      interval.toString().replace("/", "_"),
-                      incompleteOk
-                  )
-              )
-          ),
-          RESPONSE_HANDLER
-      ).get();
+      FullResponseHolder response = druidLeaderClient.go(
+          druidLeaderClient.makeRequest(HttpMethod.GET,
+                                        StringUtils.format(
+                                           "/druid/coordinator/v1/datasources/%s/intervals/%s/serverview?partial=%s",
+                                           dataSource,
+                                           interval.toString().replace("/", "_"),
+                                           incompleteOk
+                                       ))
+      );
+
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE(
             "Error while fetching serverView status[%s] content[%s]",
@@ -94,30 +76,6 @@ public class CoordinatorClient
 
           }
       );
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-  }
-
-
-  private String baseUrl()
-  {
-    try {
-      final Server instance = selector.pick();
-      if (instance == null) {
-        throw new ISE("Cannot find instance of coordinator.. Did you set `druid.selectors.coordinator.serviceName`?");
-      }
-
-      return new URI(
-          instance.getScheme(),
-          null,
-          instance.getAddress(),
-          instance.getPort(),
-          "/druid/coordinator/v1",
-          null,
-          null
-      ).toString();
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

@@ -21,12 +21,7 @@ package io.druid.query.groupby.having;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.primitives.Bytes;
 import io.druid.data.input.Row;
-import io.druid.java.util.common.StringUtils;
-
-import java.nio.ByteBuffer;
-import java.util.Arrays;
 
 /**
  * The "=" operator in a "having" clause. This is similar to SQL's "having aggregation = value",
@@ -34,10 +29,8 @@ import java.util.Arrays;
  */
 public class EqualToHavingSpec extends BaseHavingSpec
 {
-  private static final byte CACHE_KEY = 0x3;
-
-  private String aggregationName;
-  private Number value;
+  private final String aggregationName;
+  private final Number value;
 
   @JsonCreator
   public EqualToHavingSpec(
@@ -65,18 +58,6 @@ public class EqualToHavingSpec extends BaseHavingSpec
   public boolean eval(Row row)
   {
     return HavingSpecMetricComparator.compare(row, aggregationName, value) == 0;
-  }
-
-  @Override
-  public byte[] getCacheKey()
-  {
-    final byte[] aggBytes = StringUtils.toUtf8(aggregationName);
-    final byte[] valBytes = Bytes.toArray(Arrays.asList(value));
-    return ByteBuffer.allocate(1 + aggBytes.length + valBytes.length)
-                     .put(CACHE_KEY)
-                     .put(aggBytes)
-                     .put(valBytes)
-                     .array();
   }
 
   /**

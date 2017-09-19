@@ -45,12 +45,15 @@ public class FlattenJSONBenchmark
 
   List<String> flatInputs;
   List<String> nestedInputs;
+  List<String> jqInputs;
   Parser flatParser;
   Parser nestedParser;
+  Parser jqParser;
   Parser fieldDiscoveryParser;
   Parser forcedPathParser;
   int flatCounter = 0;
   int nestedCounter = 0;
+  int jqCounter = 0;
 
   @Setup
   public void prepare() throws Exception
@@ -64,9 +67,14 @@ public class FlattenJSONBenchmark
     for (int i = 0; i < numEvents; i++) {
       nestedInputs.add(gen.generateNestedEvent());
     }
+    jqInputs = new ArrayList<String>();
+    for (int i = 0; i < numEvents; i++) {
+      jqInputs.add(gen.generateNestedEvent()); // reuse the same event as "nested"
+    }
 
     flatParser = gen.getFlatParser();
     nestedParser = gen.getNestedParser();
+    jqParser = gen.getJqParser();
     fieldDiscoveryParser = gen.getFieldDiscoveryParser();
     forcedPathParser = gen.getForcedPathParser();
   }
@@ -94,6 +102,16 @@ public class FlattenJSONBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public Map<String, Object> jqflatten()
+  {
+    Map<String, Object> parsed = jqParser.parse(jqInputs.get(jqCounter));
+    jqCounter = (jqCounter + 1) % numEvents;
+    return parsed;
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public Map<String, Object> preflattenNestedParser()
   {
     Map<String, Object> parsed = fieldDiscoveryParser.parse(flatInputs.get(nestedCounter));
@@ -111,7 +129,8 @@ public class FlattenJSONBenchmark
     return parsed;
   }
 
-  public static void main(String[] args) throws RunnerException {
+  public static void main(String[] args) throws RunnerException
+  {
     Options opt = new OptionsBuilder()
         .include(FlattenJSONBenchmark.class.getSimpleName())
         .warmupIterations(1)

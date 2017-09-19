@@ -24,6 +24,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.Smoosh;
@@ -180,7 +181,7 @@ public class CompressedIntsIndexedWriterTest
 
   private void checkV2SerializedSizeAndData(int chunkFactor) throws Exception
   {
-    File tmpDirectory = Files.createTempDirectory(String.format(
+    File tmpDirectory = Files.createTempDirectory(StringUtils.format(
         "CompressedIntsIndexedWriterTest_%d",
         chunkFactor
     )).toFile();

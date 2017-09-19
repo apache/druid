@@ -30,6 +30,7 @@ import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.Query;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.guice.TestClient;
@@ -62,7 +63,7 @@ public class QueryResourceTestClient
 
   private String getBrokerURL()
   {
-    return String.format(
+    return StringUtils.format(
         "%s/druid/v2/",
         routerUrl
     );

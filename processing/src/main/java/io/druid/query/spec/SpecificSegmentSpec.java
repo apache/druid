@@ -25,7 +25,7 @@ import io.druid.query.QuerySegmentWalker;
 import io.druid.query.SegmentDescriptor;
 import org.joda.time.Interval;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -34,25 +34,27 @@ public class SpecificSegmentSpec implements QuerySegmentSpec
 {
   private final SegmentDescriptor descriptor;
 
-  public SpecificSegmentSpec(
-      SegmentDescriptor descriptor
-  ) {
+  public SpecificSegmentSpec(SegmentDescriptor descriptor)
+  {
     this.descriptor = descriptor;
   }
 
   @Override
   public List<Interval> getIntervals()
   {
-    return Arrays.asList(descriptor.getInterval());
+    return Collections.singletonList(descriptor.getInterval());
   }
 
   @Override
   public <T> QueryRunner<T> lookup(Query<T> query, QuerySegmentWalker walker)
   {
-    return walker.getQueryRunnerForSegments(query, Arrays.asList(descriptor));
+    return walker.getQueryRunnerForSegments(query, Collections.singletonList(descriptor));
   }
 
-  public SegmentDescriptor getDescriptor() { return descriptor; }
+  public SegmentDescriptor getDescriptor()
+  {
+    return descriptor;
+  }
 
   @Override
   public boolean equals(Object o)

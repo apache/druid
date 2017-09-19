@@ -21,6 +21,7 @@ package io.druid.sql.calcite.planner;
 
 import com.google.common.collect.ImmutableList;
 import io.druid.sql.calcite.rel.QueryMaker;
+import io.druid.sql.calcite.rule.CaseFilteredAggregatorRule;
 import io.druid.sql.calcite.rule.DruidFilterRule;
 import io.druid.sql.calcite.rule.DruidRelToBindableRule;
 import io.druid.sql.calcite.rule.DruidRelToDruidRule;
@@ -159,42 +160,42 @@ public class Rules
     // No instantiation.
   }
 
-  public static List<Program> programs(final QueryMaker queryMaker, final DruidOperatorTable operatorTable)
+  public static List<Program> programs(final PlannerContext plannerContext, final QueryMaker queryMaker)
   {
     return ImmutableList.of(
-        Programs.ofRules(druidConventionRuleSet(queryMaker, operatorTable)),
-        Programs.ofRules(bindableConventionRuleSet(queryMaker, operatorTable))
+        Programs.ofRules(druidConventionRuleSet(plannerContext, queryMaker)),
+        Programs.ofRules(bindableConventionRuleSet(plannerContext, queryMaker))
     );
   }
 
   private static List<RelOptRule> druidConventionRuleSet(
-      final QueryMaker queryMaker,
-      final DruidOperatorTable operatorTable
+      final PlannerContext plannerContext,
+      final QueryMaker queryMaker
   )
   {
     return ImmutableList.<RelOptRule>builder()
-        .addAll(baseRuleSet(queryMaker, operatorTable))
+        .addAll(baseRuleSet(plannerContext, queryMaker))
         .add(DruidRelToDruidRule.instance())
         .build();
   }
 
   private static List<RelOptRule> bindableConventionRuleSet(
-      final QueryMaker queryMaker,
-      final DruidOperatorTable operatorTable
+      final PlannerContext plannerContext,
+      final QueryMaker queryMaker
   )
   {
     return ImmutableList.<RelOptRule>builder()
-        .addAll(baseRuleSet(queryMaker, operatorTable))
+        .addAll(baseRuleSet(plannerContext, queryMaker))
         .addAll(Bindables.RULES)
         .build();
   }
 
   private static List<RelOptRule> baseRuleSet(
-      final QueryMaker queryMaker,
-      final DruidOperatorTable operatorTable
+      final PlannerContext plannerContext,
+      final QueryMaker queryMaker
   )
   {
-    final PlannerConfig plannerConfig = queryMaker.getPlannerContext().getPlannerConfig();
+    final PlannerConfig plannerConfig = plannerContext.getPlannerConfig();
     final ImmutableList.Builder<RelOptRule> rules = ImmutableList.builder();
 
     // Calcite rules.
@@ -215,17 +216,18 @@ public class Rules
     }
 
     rules.add(SortCollapseRule.instance());
+    rules.add(CaseFilteredAggregatorRule.instance());
 
     // Druid-specific rules.
     rules.add(new DruidTableScanRule(queryMaker));
-    rules.add(new DruidFilterRule(operatorTable));
+    rules.add(new DruidFilterRule());
 
     if (plannerConfig.getMaxSemiJoinRowsInMemory() > 0) {
       rules.add(DruidSemiJoinRule.instance());
     }
 
-    rules.addAll(SelectRules.rules(operatorTable));
-    rules.addAll(GroupByRules.rules(operatorTable));
+    rules.addAll(SelectRules.rules());
+    rules.addAll(GroupByRules.rules());
 
     return rules.build();
   }

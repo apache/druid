@@ -34,6 +34,7 @@ layout: toc
   * [DataSource Metadata](/docs/VERSION/querying/datasourcemetadataquery.html)
   * [Search](/docs/VERSION/querying/searchquery.html)
   * [Select](/docs/VERSION/querying/select-query.html)
+  * [Scan](/docs/VERSION/querying/scan-query.html)
   * Components
     * [Datasources](/docs/VERSION/querying/datasource.html)
     * [Filters](/docs/VERSION/querying/filters.html)
@@ -78,6 +79,8 @@ layout: toc
   * [Insert Segment Tool](/docs/VERSION/operations/insert-segment-to-db.html)
   * [Pull Dependencies Tool](/docs/VERSION/operations/pull-deps.html)
   * [Recommendations](/docs/VERSION/operations/recommendations.html)
+  * [TLS Support](/docs/VERSION/operations/tls-support.html)
+  * [Password Provider](/docs/VERSION/operations/password-provider.html)
 
 ## Configuration
   * [Common Configuration](/docs/VERSION/configuration/index.html)

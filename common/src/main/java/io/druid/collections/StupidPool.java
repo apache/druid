@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
-public class StupidPool<T>
+public class StupidPool<T> implements NonBlockingPool<T>
 {
   private static final Logger log = new Logger(StupidPool.class);
 
@@ -95,6 +95,7 @@ public class StupidPool<T>
            "}";
   }
 
+  @Override
   public ResourceHolder<T> take()
   {
     ObjectResourceHolder resourceHolder = objects.poll();
@@ -117,7 +118,8 @@ public class StupidPool<T>
   }
 
   @VisibleForTesting
-  long poolSize() {
+  long poolSize()
+  {
     return poolSize.get();
   }
 
@@ -162,7 +164,7 @@ public class StupidPool<T>
     cleaner.clean();
     log.error(
         new ISE("Queue offer failed"),
-        "Could not offer object [%s] back into the queue in [%s], objectId [%s]",
+        "Could not offer object [%s] back into the queue, objectId [%s]",
         object,
         objectId
     );
@@ -233,7 +235,7 @@ public class StupidPool<T>
 
     ObjectLeakNotifier(StupidPool<?> pool)
     {
-      poolReference = new WeakReference<StupidPool<?>>(pool);
+      poolReference = new WeakReference<>(pool);
       leakedObjectsCounter = pool.leakedObjectsCounter;
     }
 

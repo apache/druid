@@ -2,6 +2,7 @@
 layout: doc_page
 ---
 # Select Queries
+
 Select queries return raw Druid rows and support pagination.
 
 ```json
@@ -19,6 +20,13 @@ Select queries return raw Druid rows and support pagination.
  }
 ```
 
+<div class="note info">
+Consider using the [Scan query](scan-query.html) instead of the Select query if you don't need pagination, and you
+don't need the strict time-ascending or time-descending ordering offered by the Select query. The Scan query returns
+results without pagination, and offers "looser" ordering than Select, but is significantly more efficient in terms of
+both processing time and memory requirements. It is also capable of returning a virtually unlimited number of results.
+</div>
+
 There are several main parts to a select query:
 
 |property|description|required?|
@@ -30,6 +38,7 @@ There are several main parts to a select query:
 |filter|See [Filters](../querying/filters.html)|no|
 |dimensions|A JSON list of dimensions to select; or see [DimensionSpec](../querying/dimensionspecs.html) for ways to extract dimensions. If left empty, all dimensions are returned.|no|
 |metrics|A String array of metrics to select. If left empty, all metrics are returned.|no|
+|granularity|Defines the granularity of the query. See [Granularities](../querying/granularities.html)|yes|
 |pagingSpec|A JSON object indicating offsets into different scanned segments. Query results will return a `pagingIdentifiers` value that can be reused in the next query for pagination.|yes|
 |context|An additional JSON Object which can be used to specify certain flags.|no|
 

@@ -98,7 +98,7 @@ public class SketchAggregationTest
         readFileFromClasspathAsString("sketch_test_data_aggregators.json"),
         0,
         Granularities.NONE,
-        5,
+        1000,
         readFileFromClasspathAsString("sketch_test_data_group_by_query.json")
     );
 
@@ -139,7 +139,7 @@ public class SketchAggregationTest
         + "]",
         0,
         Granularities.NONE,
-        5,
+        1000,
         readFileFromClasspathAsString("simple_test_data_group_by_query.json")
     );
 
@@ -370,7 +370,7 @@ public class SketchAggregationTest
     Comparator<Object> comparator = SketchHolder.COMPARATOR;
     Assert.assertEquals(0, comparator.compare(null, null));
 
-    Union union1 = (Union) SetOperation.builder().build(1<<4, Family.UNION);
+    Union union1 = (Union) SetOperation.builder().build(1 << 4, Family.UNION);
     union1.update("a");
     union1.update("b");
     Sketch sketch1 = union1.getResult();
@@ -378,7 +378,7 @@ public class SketchAggregationTest
     Assert.assertEquals(-1, comparator.compare(null, SketchHolder.of(sketch1)));
     Assert.assertEquals(1, comparator.compare(SketchHolder.of(sketch1), null));
 
-    Union union2 = (Union) SetOperation.builder().build(1<<4, Family.UNION);
+    Union union2 = (Union) SetOperation.builder().build(1 << 4, Family.UNION);
     union2.update("a");
     union2.update("b");
     union2.update("c");

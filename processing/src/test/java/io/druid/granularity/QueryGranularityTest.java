@@ -25,9 +25,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.DurationGranularity;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.granularity.GranularityType;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -54,7 +58,7 @@ public class QueryGranularityTest
   @Test
   public void testIterableNone() throws Exception
   {
-    final Iterator<Interval> iterator = Granularities.NONE.getIterable(new Interval(0, 1000)).iterator();
+    final Iterator<Interval> iterator = Granularities.NONE.getIterable(Intervals.utc(0, 1000)).iterator();
     int count = 0;
     while (iterator.hasNext()) {
       Assert.assertEquals(count, iterator.next().getStartMillis());
@@ -65,249 +69,246 @@ public class QueryGranularityTest
   @Test
   public void testIterableMinuteSimple() throws Exception
   {
-    final DateTime baseTime = new DateTime("2011-01-01T09:38:00.000Z");
+    final DateTime baseTime = DateTimes.of("2011-01-01T09:38:00.000Z");
 
     assertSameInterval(
         Lists.newArrayList(
-            new DateTime("2011-01-01T09:38:00.000Z"),
-            new DateTime("2011-01-01T09:39:00.000Z"),
-            new DateTime("2011-01-01T09:40:00.000Z")
+            DateTimes.of("2011-01-01T09:38:00.000Z"),
+            DateTimes.of("2011-01-01T09:39:00.000Z"),
+            DateTimes.of("2011-01-01T09:40:00.000Z")
         ),
-        Granularities.MINUTE.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Minutes.THREE).getMillis()))
+        Granularities.MINUTE.getIterable(new Interval(baseTime, baseTime.plus(Minutes.THREE)))
     );
   }
 
   @Test
   public void testIterableMinuteComplex() throws Exception
   {
-    final DateTime baseTime = new DateTime("2011-01-01T09:38:02.992Z");
+    final DateTime baseTime = DateTimes.of("2011-01-01T09:38:02.992Z");
 
     assertSameInterval(
         Lists.newArrayList(
-            new DateTime("2011-01-01T09:38:00.000Z"),
-            new DateTime("2011-01-01T09:39:00.000Z"),
-            new DateTime("2011-01-01T09:40:00.000Z"),
-            new DateTime("2011-01-01T09:41:00.000Z")
+            DateTimes.of("2011-01-01T09:38:00.000Z"),
+            DateTimes.of("2011-01-01T09:39:00.000Z"),
+            DateTimes.of("2011-01-01T09:40:00.000Z"),
+            DateTimes.of("2011-01-01T09:41:00.000Z")
         ),
-        Granularities.MINUTE.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Minutes.THREE).getMillis()))
+        Granularities.MINUTE.getIterable(new Interval(baseTime, baseTime.plus(Minutes.THREE)))
     );
   }
 
   @Test
   public void testIterable15MinuteSimple() throws Exception
   {
-    final DateTime baseTime = new DateTime("2011-01-01T09:30:00.000Z");
+    final DateTime baseTime = DateTimes.of("2011-01-01T09:30:00.000Z");
 
     assertSameInterval(
         Lists.newArrayList(
-            new DateTime("2011-01-01T09:30:00.000Z"),
-            new DateTime("2011-01-01T09:45:00.000Z"),
-            new DateTime("2011-01-01T10:00:00.000Z")
+            DateTimes.of("2011-01-01T09:30:00.000Z"),
+            DateTimes.of("2011-01-01T09:45:00.000Z"),
+            DateTimes.of("2011-01-01T10:00:00.000Z")
         ),
-            Granularities.FIFTEEN_MINUTE.getIterable(
-            new Interval(
-                baseTime.getMillis(), baseTime.plus(Minutes.minutes(45)).getMillis()
-            ))
+        Granularities.FIFTEEN_MINUTE.getIterable(new Interval(baseTime, baseTime.plus(Minutes.minutes(45))))
     );
   }
 
   @Test
   public void testIterable15MinuteComplex() throws Exception
   {
-    final DateTime baseTime = new DateTime("2011-01-01T09:38:02.992Z");
+    final DateTime baseTime = DateTimes.of("2011-01-01T09:38:02.992Z");
 
     assertSameInterval(
         Lists.newArrayList(
-            new DateTime("2011-01-01T09:30:00.000Z"),
-            new DateTime("2011-01-01T09:45:00.000Z"),
-            new DateTime("2011-01-01T10:00:00.000Z"),
-            new DateTime("2011-01-01T10:15:00.000Z")
+            DateTimes.of("2011-01-01T09:30:00.000Z"),
+            DateTimes.of("2011-01-01T09:45:00.000Z"),
+            DateTimes.of("2011-01-01T10:00:00.000Z"),
+            DateTimes.of("2011-01-01T10:15:00.000Z")
         ),
-        Granularities.FIFTEEN_MINUTE.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Minutes.minutes(45)).getMillis()))
+        Granularities.FIFTEEN_MINUTE.getIterable(new Interval(baseTime, baseTime.plus(Minutes.minutes(45))))
     );
   }
 
   @Test
   public void testIterableHourSimple() throws Exception
   {
-    final DateTime baseTime = new DateTime("2011-01-01T09:00:00.000Z");
+    final DateTime baseTime = DateTimes.of("2011-01-01T09:00:00.000Z");
 
     assertSameInterval(
         Lists.newArrayList(
-            new DateTime("2011-01-01T09:00:00.000Z"),
-            new DateTime("2011-01-01T10:00:00.000Z"),
-            new DateTime("2011-01-01T11:00:00.000Z")
-        ), Granularities.HOUR.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Hours.hours(3)).getMillis()))
+            DateTimes.of("2011-01-01T09:00:00.000Z"),
+            DateTimes.of("2011-01-01T10:00:00.000Z"),
+            DateTimes.of("2011-01-01T11:00:00.000Z")
+        ), Granularities.HOUR.getIterable(new Interval(baseTime, baseTime.plus(Hours.hours(3))))
     );
   }
 
   @Test
   public void testIterableHourComplex() throws Exception
   {
-    final DateTime baseTime = new DateTime("2011-01-01T09:38:02.992Z");
+    final DateTime baseTime = DateTimes.of("2011-01-01T09:38:02.992Z");
 
     assertSameInterval(
         Lists.newArrayList(
-            new DateTime("2011-01-01T09:00:00.000Z"),
-            new DateTime("2011-01-01T10:00:00.000Z"),
-            new DateTime("2011-01-01T11:00:00.000Z"),
-            new DateTime("2011-01-01T12:00:00.000Z")
-        ), Granularities.HOUR.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Hours.hours(3)).getMillis()))
+            DateTimes.of("2011-01-01T09:00:00.000Z"),
+            DateTimes.of("2011-01-01T10:00:00.000Z"),
+            DateTimes.of("2011-01-01T11:00:00.000Z"),
+            DateTimes.of("2011-01-01T12:00:00.000Z")
+        ), Granularities.HOUR.getIterable(new Interval(baseTime, baseTime.plus(Hours.hours(3))))
     );
   }
 
   @Test
   public void testIterableDaySimple() throws Exception
   {
-    final DateTime baseTime = new DateTime("2011-01-01T00:00:00.000Z");
+    final DateTime baseTime = DateTimes.of("2011-01-01T00:00:00.000Z");
 
     assertSameInterval(
         Lists.newArrayList(
-            new DateTime("2011-01-01T00:00:00.000Z"),
-            new DateTime("2011-01-02T00:00:00.000Z"),
-            new DateTime("2011-01-03T00:00:00.000Z")
+            DateTimes.of("2011-01-01T00:00:00.000Z"),
+            DateTimes.of("2011-01-02T00:00:00.000Z"),
+            DateTimes.of("2011-01-03T00:00:00.000Z")
         ),
-        Granularities.DAY.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Days.days(3)).getMillis()))
+        Granularities.DAY.getIterable(new Interval(baseTime, baseTime.plus(Days.days(3))))
     );
   }
 
   @Test
   public void testIterableDayComplex() throws Exception
   {
-    final DateTime baseTime = new DateTime("2011-01-01T09:38:02.992Z");
+    final DateTime baseTime = DateTimes.of("2011-01-01T09:38:02.992Z");
 
     assertSameInterval(
         Lists.newArrayList(
-            new DateTime("2011-01-01T00:00:00.000Z"),
-            new DateTime("2011-01-02T00:00:00.000Z"),
-            new DateTime("2011-01-03T00:00:00.000Z"),
-            new DateTime("2011-01-04T00:00:00.000Z")
+            DateTimes.of("2011-01-01T00:00:00.000Z"),
+            DateTimes.of("2011-01-02T00:00:00.000Z"),
+            DateTimes.of("2011-01-03T00:00:00.000Z"),
+            DateTimes.of("2011-01-04T00:00:00.000Z")
         ),
-        Granularities.DAY.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Days.days(3)).getMillis()))
+        Granularities.DAY.getIterable(new Interval(baseTime, baseTime.plus(Days.days(3))))
     );
   }
 
   @Test
   public void testIterableWeekSimple()
   {
-    final DateTime baseTime = new DateTime("2011-01-03T00:00:00.000Z");
+    final DateTime baseTime = DateTimes.of("2011-01-03T00:00:00.000Z");
 
     assertSameInterval(
         Lists.newArrayList(
-            new DateTime("2011-01-03T00:00:00.000Z"),
-            new DateTime("2011-01-10T00:00:00.000Z"),
-            new DateTime("2011-01-17T00:00:00.000Z")
+            DateTimes.of("2011-01-03T00:00:00.000Z"),
+            DateTimes.of("2011-01-10T00:00:00.000Z"),
+            DateTimes.of("2011-01-17T00:00:00.000Z")
         ),
-        Granularities.WEEK.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Weeks.THREE).getMillis()))
+        Granularities.WEEK.getIterable(new Interval(baseTime, baseTime.plus(Weeks.THREE)))
     );
   }
 
   @Test
   public void testIterableWeekComplex()
   {
-    final DateTime baseTime = new DateTime("2011-01-01T09:38:02.992Z");
+    final DateTime baseTime = DateTimes.of("2011-01-01T09:38:02.992Z");
 
     assertSameInterval(
         Lists.newArrayList(
-            new DateTime("2010-12-27T00:00:00.000Z"),
-            new DateTime("2011-01-03T00:00:00.000Z"),
-            new DateTime("2011-01-10T00:00:00.000Z"),
-            new DateTime("2011-01-17T00:00:00.000Z")
+            DateTimes.of("2010-12-27T00:00:00.000Z"),
+            DateTimes.of("2011-01-03T00:00:00.000Z"),
+            DateTimes.of("2011-01-10T00:00:00.000Z"),
+            DateTimes.of("2011-01-17T00:00:00.000Z")
         ),
-        Granularities.WEEK.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Weeks.THREE).getMillis()))
+        Granularities.WEEK.getIterable(new Interval(baseTime, baseTime.plus(Weeks.THREE)))
     );
   }
 
   @Test
   public void testIterableMonthSimple()
   {
-    final DateTime baseTime = new DateTime("2011-01-01T00:00:00.000Z");
+    final DateTime baseTime = DateTimes.of("2011-01-01T00:00:00.000Z");
 
     assertSameInterval(
         Lists.newArrayList(
-            new DateTime("2011-01-01T00:00:00.000Z"),
-            new DateTime("2011-02-01T00:00:00.000Z"),
-            new DateTime("2011-03-01T00:00:00.000Z")
+            DateTimes.of("2011-01-01T00:00:00.000Z"),
+            DateTimes.of("2011-02-01T00:00:00.000Z"),
+            DateTimes.of("2011-03-01T00:00:00.000Z")
         ),
-        Granularities.MONTH.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Months.THREE).getMillis()))
+        Granularities.MONTH.getIterable(new Interval(baseTime, baseTime.plus(Months.THREE)))
     );
   }
 
   @Test
   public void testIterableMonthComplex()
   {
-    final DateTime baseTime = new DateTime("2011-01-01T09:38:00.000Z");
+    final DateTime baseTime = DateTimes.of("2011-01-01T09:38:00.000Z");
 
     assertSameInterval(
         Lists.newArrayList(
-            new DateTime("2011-01-01T00:00:00.000Z"),
-            new DateTime("2011-02-01T00:00:00.000Z"),
-            new DateTime("2011-03-01T00:00:00.000Z"),
-            new DateTime("2011-04-01T00:00:00.000Z")
+            DateTimes.of("2011-01-01T00:00:00.000Z"),
+            DateTimes.of("2011-02-01T00:00:00.000Z"),
+            DateTimes.of("2011-03-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z")
         ),
-        Granularities.MONTH.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Months.THREE).getMillis()))
+        Granularities.MONTH.getIterable(new Interval(baseTime, baseTime.plus(Months.THREE)))
     );
   }
 
   @Test
   public void testIterableQuarterSimple()
   {
-    final DateTime baseTime = new DateTime("2011-01-01T00:00:00.000Z");
+    final DateTime baseTime = DateTimes.of("2011-01-01T00:00:00.000Z");
 
     assertSameInterval(
         Lists.newArrayList(
-            new DateTime("2011-01-01T00:00:00.000Z"),
-            new DateTime("2011-04-01T00:00:00.000Z"),
-            new DateTime("2011-07-01T00:00:00.000Z")
+            DateTimes.of("2011-01-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-07-01T00:00:00.000Z")
         ),
-        Granularities.QUARTER.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Months.NINE).getMillis()))
+        Granularities.QUARTER.getIterable(new Interval(baseTime, baseTime.plus(Months.NINE)))
     );
   }
 
   @Test
   public void testIterableQuarterComplex()
   {
-    final DateTime baseTime = new DateTime("2011-01-01T09:38:00.000Z");
+    final DateTime baseTime = DateTimes.of("2011-01-01T09:38:00.000Z");
 
     assertSameInterval(
         Lists.newArrayList(
-            new DateTime("2011-01-01T00:00:00.000Z"),
-            new DateTime("2011-04-01T00:00:00.000Z"),
-            new DateTime("2011-07-01T00:00:00.000Z"),
-            new DateTime("2011-10-01T00:00:00.000Z")
+            DateTimes.of("2011-01-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-07-01T00:00:00.000Z"),
+            DateTimes.of("2011-10-01T00:00:00.000Z")
         ),
-        Granularities.QUARTER.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Months.NINE).getMillis()))
+        Granularities.QUARTER.getIterable(new Interval(baseTime, baseTime.plus(Months.NINE)))
     );
   }
 
   @Test
   public void testIterableYearSimple()
   {
-    final DateTime baseTime = new DateTime("2011-01-01T00:00:00.000Z");
+    final DateTime baseTime = DateTimes.of("2011-01-01T00:00:00.000Z");
 
     assertSameInterval(
         Lists.newArrayList(
-            new DateTime("2011-01-01T00:00:00.000Z"),
-            new DateTime("2012-01-01T00:00:00.000Z"),
-            new DateTime("2013-01-01T00:00:00.000Z")
+            DateTimes.of("2011-01-01T00:00:00.000Z"),
+            DateTimes.of("2012-01-01T00:00:00.000Z"),
+            DateTimes.of("2013-01-01T00:00:00.000Z")
         ),
-        Granularities.YEAR.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Years.THREE).getMillis()))
+        Granularities.YEAR.getIterable(new Interval(baseTime, baseTime.plus(Years.THREE)))
     );
   }
 
   @Test
   public void testIterableYearComplex()
   {
-    final DateTime baseTime = new DateTime("2011-01-01T09:38:00.000Z");
+    final DateTime baseTime = DateTimes.of("2011-01-01T09:38:00.000Z");
 
     assertSameInterval(
         Lists.newArrayList(
-            new DateTime("2011-01-01T00:00:00.000Z"),
-            new DateTime("2012-01-01T00:00:00.000Z"),
-            new DateTime("2013-01-01T00:00:00.000Z"),
-            new DateTime("2014-01-01T00:00:00.000Z")
+            DateTimes.of("2011-01-01T00:00:00.000Z"),
+            DateTimes.of("2012-01-01T00:00:00.000Z"),
+            DateTimes.of("2013-01-01T00:00:00.000Z"),
+            DateTimes.of("2014-01-01T00:00:00.000Z")
         ),
-        Granularities.YEAR.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Years.THREE).getMillis()))
+        Granularities.YEAR.getIterable(new Interval(baseTime, baseTime.plus(Years.THREE)))
     );
   }
 
@@ -318,41 +319,41 @@ public class QueryGranularityTest
     final DateTime baseTime = new DateTime("2012-11-04T00:00:00", tz);
     assertSameInterval(
         Lists.newArrayList(
-            new DateTime("2012-11-04T00:00:00.000-07:00"),
-            new DateTime("2012-11-05T00:00:00.000-08:00"),
-            new DateTime("2012-11-06T00:00:00.000-08:00")
+            new DateTime("2012-11-04T00:00:00.000-07:00", tz),
+            new DateTime("2012-11-05T00:00:00.000-08:00", tz),
+            new DateTime("2012-11-06T00:00:00.000-08:00", tz)
         ),
         new PeriodGranularity(new Period("P1D"), null, tz)
-            .getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Days.days(3)).getMillis()))
+            .getIterable(new Interval(baseTime, baseTime.plus(Days.days(3))))
     );
 
     assertSameInterval(
         Lists.newArrayList(
-            new DateTime("2012-11-04T00:00:00.000-07:00"),
-            new DateTime("2012-11-04T01:00:00.000-07:00"),
-            new DateTime("2012-11-04T01:00:00.000-08:00"),
-            new DateTime("2012-11-04T02:00:00.000-08:00"),
-            new DateTime("2012-11-04T03:00:00.000-08:00")
+            new DateTime("2012-11-04T00:00:00.000-07:00", tz),
+            new DateTime("2012-11-04T01:00:00.000-07:00", tz),
+            new DateTime("2012-11-04T01:00:00.000-08:00", tz),
+            new DateTime("2012-11-04T02:00:00.000-08:00", tz),
+            new DateTime("2012-11-04T03:00:00.000-08:00", tz)
         ),
         new PeriodGranularity(new Period("PT1H"), null, tz)
-            .getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Hours.hours(5)).getMillis()))
+            .getIterable(new Interval(baseTime, baseTime.plus(Hours.hours(5))))
     );
 
     final PeriodGranularity hour = new PeriodGranularity(new Period("PT1H"), null, tz);
     assertSameDateTime(
         Lists.newArrayList(
-            new DateTime("2012-11-04T00:00:00.000-07:00"),
-            new DateTime("2012-11-04T01:00:00.000-07:00"),
-            new DateTime("2012-11-04T01:00:00.000-08:00"),
-            new DateTime("2012-11-04T02:00:00.000-08:00"),
-            new DateTime("2012-11-04T03:00:00.000-08:00")
+            new DateTime("2012-11-04T00:00:00.000-07:00", tz),
+            new DateTime("2012-11-04T01:00:00.000-07:00", tz),
+            new DateTime("2012-11-04T01:00:00.000-08:00", tz),
+            new DateTime("2012-11-04T02:00:00.000-08:00", tz),
+            new DateTime("2012-11-04T03:00:00.000-08:00", tz)
         ),
         Lists.newArrayList(
-          hour.bucketStart(new DateTime("2012-11-04T00:30:00-07:00")),
-          hour.bucketStart(new DateTime("2012-11-04T01:30:00-07:00")),
-          hour.bucketStart(new DateTime("2012-11-04T01:30:00-08:00")),
-          hour.bucketStart(new DateTime("2012-11-04T02:30:00-08:00")),
-          hour.bucketStart(new DateTime("2012-11-04T03:30:00-08:00"))
+            hour.bucketStart(DateTimes.of("2012-11-04T00:30:00-07:00")),
+            hour.bucketStart(DateTimes.of("2012-11-04T01:30:00-07:00")),
+            hour.bucketStart(DateTimes.of("2012-11-04T01:30:00-08:00")),
+            hour.bucketStart(DateTimes.of("2012-11-04T02:30:00-08:00")),
+            hour.bucketStart(DateTimes.of("2012-11-04T03:30:00-08:00"))
         )
     );
   }
@@ -364,13 +365,13 @@ public class QueryGranularityTest
     final DateTime baseTime = new DateTime("2012-11-03T10:00:00", tz);
     assertSameInterval(
         Lists.newArrayList(
-            new DateTime("2012-11-01T00:00:00.000-07:00"),
-            new DateTime("2012-12-01T00:00:00.000-08:00"),
-            new DateTime("2013-01-01T00:00:00.000-08:00"),
-            new DateTime("2013-02-01T00:00:00.000-08:00")
+            new DateTime("2012-11-01T00:00:00.000-07:00", tz),
+            new DateTime("2012-12-01T00:00:00.000-08:00", tz),
+            new DateTime("2013-01-01T00:00:00.000-08:00", tz),
+            new DateTime("2013-02-01T00:00:00.000-08:00", tz)
         ),
         new PeriodGranularity(new Period("P1M"), null, tz)
-            .getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Months.months(3)).getMillis()))
+            .getIterable(new Interval(baseTime, baseTime.plus(Months.months(3))))
     );
   }
 
@@ -381,60 +382,65 @@ public class QueryGranularityTest
     final DateTime baseTime = new DateTime("2012-11-03T10:00:00", tz);
     assertSameInterval(
         Lists.newArrayList(
-            new DateTime("2012-10-29T00:00:00.000-07:00"),
-            new DateTime("2012-11-05T00:00:00.000-08:00"),
-            new DateTime("2012-11-12T00:00:00.000-08:00"),
-            new DateTime("2012-11-19T00:00:00.000-08:00")
+            new DateTime("2012-10-29T00:00:00.000-07:00", tz),
+            new DateTime("2012-11-05T00:00:00.000-08:00", tz),
+            new DateTime("2012-11-12T00:00:00.000-08:00", tz),
+            new DateTime("2012-11-19T00:00:00.000-08:00", tz)
         ),
         new PeriodGranularity(new Period("P1W"), null, tz)
-            .getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Weeks.weeks(3)).getMillis()))
+            .getIterable(new Interval(baseTime, baseTime.plus(Weeks.weeks(3))))
     );
 
     assertSameInterval(
         Lists.newArrayList(
-            new DateTime("2012-11-03T10:00:00.000-07:00"),
-            new DateTime("2012-11-10T10:00:00.000-08:00"),
-            new DateTime("2012-11-17T10:00:00.000-08:00")
+            new DateTime("2012-11-03T10:00:00.000-07:00", tz),
+            new DateTime("2012-11-10T10:00:00.000-08:00", tz),
+            new DateTime("2012-11-17T10:00:00.000-08:00", tz)
         ),
         new PeriodGranularity(new Period("P1W"), baseTime, tz)
-            .getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Weeks.weeks(3)).getMillis()))
+            .getIterable(new Interval(baseTime, baseTime.plus(Weeks.weeks(3))))
     );
   }
 
   @Test
   public void testPeriodTruncateDays() throws Exception
   {
-    final DateTime origin = new DateTime("2012-01-02T05:00:00.000-08:00");
-    PeriodGranularity periodOrigin = new PeriodGranularity(new Period("P2D"),
-                                                          origin,
-                                                          DateTimeZone.forID("America/Los_Angeles"));
+    final DateTimeZone tz = DateTimeZone.forID("America/Los_Angeles");
+    final DateTime origin = DateTimes.of("2012-01-02T05:00:00.000-08:00");
+    PeriodGranularity periodOrigin = new PeriodGranularity(
+        new Period("P2D"),
+        origin,
+        tz
+    );
     assertSameDateTime(
         Lists.newArrayList(
-            new DateTime("2011-12-31T05:00:00.000-08:00"),
-            new DateTime("2012-01-02T05:00:00.000-08:00"),
-            new DateTime("2012-01-04T05:00:00.000-08:00")
+            new DateTime("2011-12-31T05:00:00.000-08:00", tz),
+            new DateTime("2012-01-02T05:00:00.000-08:00", tz),
+            new DateTime("2012-01-04T05:00:00.000-08:00", tz)
         ),
         Lists.newArrayList(
-            periodOrigin.bucketStart(new DateTime("2012-01-01T05:00:04.123-08:00")),
-            periodOrigin.bucketStart(new DateTime("2012-01-02T07:00:04.123-08:00")),
-            periodOrigin.bucketStart(new DateTime("2012-01-04T07:20:04.123-08:00"))
+            periodOrigin.bucketStart(DateTimes.of("2012-01-01T05:00:04.123-08:00")),
+            periodOrigin.bucketStart(DateTimes.of("2012-01-02T07:00:04.123-08:00")),
+            periodOrigin.bucketStart(DateTimes.of("2012-01-04T07:20:04.123-08:00"))
 
         )
     );
 
-    PeriodGranularity periodNoOrigin = new PeriodGranularity(new Period("P2D"),
-                                                            null,
-                                                            DateTimeZone.forID("America/Los_Angeles"));
+    PeriodGranularity periodNoOrigin = new PeriodGranularity(
+        new Period("P2D"),
+        null,
+        tz
+    );
     assertSameDateTime(
         Lists.newArrayList(
-            new DateTime("2012-01-01T00:00:00.000-08:00"),
-            new DateTime("2012-01-01T00:00:00.000-08:00"),
-            new DateTime("2012-01-03T00:00:00.000-08:00")
+            new DateTime("2012-01-01T00:00:00.000-08:00", tz),
+            new DateTime("2012-01-01T00:00:00.000-08:00", tz),
+            new DateTime("2012-01-03T00:00:00.000-08:00", tz)
         ),
         Lists.newArrayList(
-            periodNoOrigin.bucketStart(new DateTime("2012-01-01T05:00:04.123-08:00")),
-            periodNoOrigin.bucketStart(new DateTime("2012-01-02T07:00:04.123-08:00")),
-            periodNoOrigin.bucketStart(new DateTime("2012-01-04T07:20:04.123-08:00"))
+            periodNoOrigin.bucketStart(DateTimes.of("2012-01-01T05:00:04.123-08:00")),
+            periodNoOrigin.bucketStart(DateTimes.of("2012-01-02T07:00:04.123-08:00")),
+            periodNoOrigin.bucketStart(DateTimes.of("2012-01-04T07:20:04.123-08:00"))
 
         )
     );
@@ -443,18 +449,18 @@ public class QueryGranularityTest
   @Test
   public void testPeriodTruncateMinutes() throws Exception
   {
-    final DateTime origin = new DateTime("2012-01-02T00:05:00.000Z");
+    final DateTime origin = DateTimes.of("2012-01-02T00:05:00.000Z");
     PeriodGranularity periodOrigin = new PeriodGranularity(new Period("PT15M"), origin, null);
     assertSameDateTime(
         Lists.newArrayList(
-            new DateTime("2012-01-01T04:50:00.000Z"),
-            new DateTime("2012-01-02T07:05:00.000Z"),
-            new DateTime("2012-01-04T00:20:00.000Z")
+            DateTimes.of("2012-01-01T04:50:00.000Z"),
+            DateTimes.of("2012-01-02T07:05:00.000Z"),
+            DateTimes.of("2012-01-04T00:20:00.000Z")
         ),
         Lists.newArrayList(
-            periodOrigin.bucketStart(new DateTime("2012-01-01T05:00:04.123Z")),
-            periodOrigin.bucketStart(new DateTime("2012-01-02T07:08:04.123Z")),
-            periodOrigin.bucketStart(new DateTime("2012-01-04T00:20:04.123Z"))
+            periodOrigin.bucketStart(DateTimes.of("2012-01-01T05:00:04.123Z")),
+            periodOrigin.bucketStart(DateTimes.of("2012-01-02T07:08:04.123Z")),
+            periodOrigin.bucketStart(DateTimes.of("2012-01-04T00:20:04.123Z"))
 
         )
     );
@@ -462,14 +468,14 @@ public class QueryGranularityTest
     PeriodGranularity periodNoOrigin = new PeriodGranularity(new Period("PT15M"), null, null);
     assertSameDateTime(
         Lists.newArrayList(
-            new DateTime("2012-01-01T05:00:00.000Z"),
-            new DateTime("2012-01-02T07:00:00.000Z"),
-            new DateTime("2012-01-04T00:15:00.000Z")
+            DateTimes.of("2012-01-01T05:00:00.000Z"),
+            DateTimes.of("2012-01-02T07:00:00.000Z"),
+            DateTimes.of("2012-01-04T00:15:00.000Z")
         ),
         Lists.newArrayList(
-            periodNoOrigin.bucketStart(new DateTime("2012-01-01T05:00:04.123Z")),
-            periodNoOrigin.bucketStart(new DateTime("2012-01-02T07:00:04.123Z")),
-            periodNoOrigin.bucketStart(new DateTime("2012-01-04T00:20:04.123Z"))
+            periodNoOrigin.bucketStart(DateTimes.of("2012-01-01T05:00:04.123Z")),
+            periodNoOrigin.bucketStart(DateTimes.of("2012-01-02T07:00:04.123Z")),
+            periodNoOrigin.bucketStart(DateTimes.of("2012-01-04T00:20:04.123Z"))
 
         )
     );
@@ -479,68 +485,70 @@ public class QueryGranularityTest
   public void testCompoundPeriodTruncate() throws Exception
   {
     {
-      final DateTime origin = new DateTime("2012-01-02T05:00:00.000-08:00");
+      final DateTimeZone tz = DateTimeZone.forID("America/Los_Angeles");
+      final DateTime origin = DateTimes.of("2012-01-02T05:00:00.000-08:00");
       PeriodGranularity periodOrigin = new PeriodGranularity(
           new Period("P1M2D"),
           origin,
-          DateTimeZone.forID("America/Los_Angeles")
+          tz
       );
       assertSameDateTime(
           Lists.newArrayList(
-              new DateTime("2011-11-30T05:00:00.000-08:00"),
-              new DateTime("2012-01-02T05:00:00.000-08:00"),
-              new DateTime("2012-02-04T05:00:00.000-08:00"),
-              new DateTime("2012-02-04T05:00:00.000-08:00")
+              new DateTime("2011-11-30T05:00:00.000-08:00", tz),
+              new DateTime("2012-01-02T05:00:00.000-08:00", tz),
+              new DateTime("2012-02-04T05:00:00.000-08:00", tz),
+              new DateTime("2012-02-04T05:00:00.000-08:00", tz)
           ),
           Lists.newArrayList(
-              periodOrigin.bucketStart(new DateTime("2012-01-01T05:00:04.123-08:00")),
-              periodOrigin.bucketStart(new DateTime("2012-01-02T07:00:04.123-08:00")),
-              periodOrigin.bucketStart(new DateTime("2012-03-01T07:20:04.123-08:00")),
-              periodOrigin.bucketStart(new DateTime("2012-02-04T05:00:00.000-08:00"))
+              periodOrigin.bucketStart(DateTimes.of("2012-01-01T05:00:04.123-08:00")),
+              periodOrigin.bucketStart(DateTimes.of("2012-01-02T07:00:04.123-08:00")),
+              periodOrigin.bucketStart(DateTimes.of("2012-03-01T07:20:04.123-08:00")),
+              periodOrigin.bucketStart(DateTimes.of("2012-02-04T05:00:00.000-08:00"))
           )
       );
 
       PeriodGranularity periodNoOrigin = new PeriodGranularity(
           new Period("P1M2D"),
           null,
-          DateTimeZone.forID("America/Los_Angeles")
+          tz
       );
       assertSameDateTime(
           Lists.newArrayList(
-              new DateTime("1970-01-01T00:00:00.000-08:00"),
-              new DateTime("2011-12-12T00:00:00.000-08:00"),
-              new DateTime("2012-01-14T00:00:00.000-08:00"),
-              new DateTime("2012-02-16T00:00:00.000-08:00")
+              new DateTime("1970-01-01T00:00:00.000-08:00", tz),
+              new DateTime("2011-12-12T00:00:00.000-08:00", tz),
+              new DateTime("2012-01-14T00:00:00.000-08:00", tz),
+              new DateTime("2012-02-16T00:00:00.000-08:00", tz)
           ),
           Lists.newArrayList(
-              periodNoOrigin.bucketStart(new DateTime("1970-01-01T05:02:04.123-08:00")),
-              periodNoOrigin.bucketStart(new DateTime("2012-01-01T05:02:04.123-08:00")),
-              periodNoOrigin.bucketStart(new DateTime("2012-01-15T07:01:04.123-08:00")),
-              periodNoOrigin.bucketStart(new DateTime("2012-02-16T00:00:00.000-08:00"))
+              periodNoOrigin.bucketStart(DateTimes.of("1970-01-01T05:02:04.123-08:00")),
+              periodNoOrigin.bucketStart(DateTimes.of("2012-01-01T05:02:04.123-08:00")),
+              periodNoOrigin.bucketStart(DateTimes.of("2012-01-15T07:01:04.123-08:00")),
+              periodNoOrigin.bucketStart(DateTimes.of("2012-02-16T00:00:00.000-08:00"))
 
           )
       );
     }
 
     {
-      final DateTime origin = new DateTime("2012-01-02T05:00:00.000-08:00");
+      final DateTimeZone tz = DateTimeZone.forID("America/Los_Angeles");
+      final DateTime origin = DateTimes.of("2012-01-02T05:00:00.000-08:00");
       PeriodGranularity periodOrigin = new PeriodGranularity(
           new Period("PT12H5M"),
           origin,
-          DateTimeZone.forID("America/Los_Angeles")
+          tz
       );
       assertSameDateTime(
           Lists.newArrayList(
-              new DateTime("2012-01-01T04:50:00.000-08:00"),
-              new DateTime("2012-01-02T05:00:00.000-08:00"),
-              new DateTime("2012-01-02T17:05:00.000-08:00"),
-              new DateTime("2012-02-03T22:25:00.000-08:00")
+              new DateTime("2012-01-01T04:50:00.000-08:00", tz),
+              new DateTime("2012-01-02T05:00:00.000-08:00", tz),
+              new DateTime("2012-01-02T17:05:00.000-08:00", tz),
+              new DateTime("2012-02-03T22:25:00.000-08:00", tz)
           ),
           Lists.newArrayList(
-              periodOrigin.bucketStart(new DateTime("2012-01-01T05:00:04.123-08:00")),
-              periodOrigin.bucketStart(new DateTime("2012-01-02T07:00:04.123-08:00")),
-              periodOrigin.bucketStart(new DateTime("2012-01-03T00:20:04.123-08:00")),
-              periodOrigin.bucketStart(new DateTime("2012-02-03T22:25:00.000-08:00"))
+              periodOrigin.bucketStart(DateTimes.of("2012-01-01T05:00:04.123-08:00")),
+              periodOrigin.bucketStart(DateTimes.of("2012-01-02T07:00:04.123-08:00")),
+              periodOrigin.bucketStart(DateTimes.of("2012-01-03T00:20:04.123-08:00")),
+              periodOrigin.bucketStart(DateTimes.of("2012-02-03T22:25:00.000-08:00"))
           )
       );
     }
@@ -550,7 +558,7 @@ public class QueryGranularityTest
   public void testCompoundPeriodMillisTruncate() throws Exception
   {
     {
-      final DateTime origin = new DateTime("2012-01-02T05:00:00.000-08:00");
+      final DateTime origin = DateTimes.of("2012-01-02T05:00:00.000-08:00");
       PeriodGranularity periodOrigin = new PeriodGranularity(
           new Period("PT12H5M"),
           origin,
@@ -558,16 +566,16 @@ public class QueryGranularityTest
       );
       assertSameDateTime(
           Lists.newArrayList(
-              new DateTime("2012-01-01T04:50:00.000-08:00"),
-              new DateTime("2012-01-02T05:00:00.000-08:00"),
-              new DateTime("2012-01-02T17:05:00.000-08:00"),
-              new DateTime("2012-02-03T22:25:00.000-08:00")
+              DateTimes.of("2012-01-01T04:50:00.000-08:00"),
+              DateTimes.of("2012-01-02T05:00:00.000-08:00"),
+              DateTimes.of("2012-01-02T17:05:00.000-08:00"),
+              DateTimes.of("2012-02-03T22:25:00.000-08:00")
           ),
           Lists.newArrayList(
-              periodOrigin.bucketStart(new DateTime("2012-01-01T05:00:04.123-08:00")),
-              periodOrigin.bucketStart(new DateTime("2012-01-02T07:00:04.123-08:00")),
-              periodOrigin.bucketStart(new DateTime("2012-01-03T00:20:04.123-08:00")),
-              periodOrigin.bucketStart(new DateTime("2012-02-03T22:25:00.000-08:00"))
+              periodOrigin.bucketStart(DateTimes.of("2012-01-01T05:00:04.123-08:00")),
+              periodOrigin.bucketStart(DateTimes.of("2012-01-02T07:00:04.123-08:00")),
+              periodOrigin.bucketStart(DateTimes.of("2012-01-03T00:20:04.123-08:00")),
+              periodOrigin.bucketStart(DateTimes.of("2012-02-03T22:25:00.000-08:00"))
           )
       );
     }
@@ -577,23 +585,23 @@ public class QueryGranularityTest
   public void testDurationTruncate() throws Exception
   {
     {
-      final DateTime origin = new DateTime("2012-01-02T05:00:00.000-08:00");
+      final DateTime origin = DateTimes.of("2012-01-02T05:00:00.000-08:00");
       Granularity gran = new DurationGranularity(
           new Period("PT12H5M").toStandardDuration().getMillis(),
           origin
       );
       assertSameDateTime(
           Lists.newArrayList(
-              new DateTime("2012-01-01T04:50:00.000-08:00"),
-              new DateTime("2012-01-02T05:00:00.000-08:00"),
-              new DateTime("2012-01-02T17:05:00.000-08:00"),
-              new DateTime("2012-02-03T22:25:00.000-08:00")
+              DateTimes.of("2012-01-01T04:50:00.000-08:00"),
+              DateTimes.of("2012-01-02T05:00:00.000-08:00"),
+              DateTimes.of("2012-01-02T17:05:00.000-08:00"),
+              DateTimes.of("2012-02-03T22:25:00.000-08:00")
           ),
           Lists.newArrayList(
-              gran.bucketStart(new DateTime("2012-01-01T05:00:04.123-08:00")),
-              gran.bucketStart(new DateTime("2012-01-02T07:00:04.123-08:00")),
-              gran.bucketStart(new DateTime("2012-01-03T00:20:04.123-08:00")),
-              gran.bucketStart(new DateTime("2012-02-03T22:25:00.000-08:00"))
+              gran.bucketStart(DateTimes.of("2012-01-01T05:00:04.123-08:00")),
+              gran.bucketStart(DateTimes.of("2012-01-02T07:00:04.123-08:00")),
+              gran.bucketStart(DateTimes.of("2012-01-03T00:20:04.123-08:00")),
+              gran.bucketStart(DateTimes.of("2012-02-03T22:25:00.000-08:00"))
           )
       );
     }
@@ -602,15 +610,15 @@ public class QueryGranularityTest
   @Test
   public void testDurationToDateTime() throws Exception
   {
-    final DateTime origin = new DateTime("2012-01-02T05:00:00.000-08:00");
+    final DateTime origin = DateTimes.of("2012-01-02T05:00:00.000-08:00");
     Granularity gran = new DurationGranularity(
         new Period("PT12H5M").toStandardDuration().getMillis(),
         origin
     );
 
     Assert.assertEquals(
-        new DateTime("2012-01-01T05:00:04.123-08:00"),
-        gran.toDateTime(new DateTime("2012-01-01T05:00:04.123-08:00").getMillis())
+        DateTimes.of("2012-01-01T05:00:04.123-08:00"),
+        gran.toDateTime(DateTimes.of("2012-01-01T05:00:04.123-08:00").getMillis())
     );
   }
 
@@ -618,42 +626,52 @@ public class QueryGranularityTest
   @Test
   public void testIterableAllSimple() throws Exception
   {
-    final DateTime baseTime = new DateTime("2011-01-01T00:00:00.000Z");
+    final DateTime baseTime = DateTimes.of("2011-01-01T00:00:00.000Z");
 
     assertSameInterval(
         Lists.newArrayList(baseTime),
-        Granularities.ALL.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Days.days(3)).getMillis()))
+        Granularities.ALL.getIterable(new Interval(baseTime, baseTime.plus(Days.days(3))))
     );
   }
 
   @Test
   public void testIterableAllComplex() throws Exception
   {
-    final DateTime baseTime = new DateTime("2011-01-01T09:38:02.992Z");
+    final DateTime baseTime = DateTimes.of("2011-01-01T09:38:02.992Z");
 
     assertSameInterval(
         Lists.newArrayList(baseTime),
-        Granularities.ALL.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Days.days(3)).getMillis()))
+        Granularities.ALL.getIterable(new Interval(baseTime, baseTime.plus(Days.days(3))))
     );
   }
 
   @Test
   public void testSerializePeriod() throws Exception
   {
-    ObjectMapper mapper = new DefaultObjectMapper();
+    final ObjectMapper mapper = new DefaultObjectMapper();
 
     String json = "{ \"type\": \"period\", \"period\": \"P1D\" }";
     Granularity gran = mapper.readValue(json, Granularity.class);
     Assert.assertEquals(new PeriodGranularity(new Period("P1D"), null, null), gran);
 
-    json =   "{ \"type\": \"period\", \"period\": \"P1D\","
+    // Nonstandard period
+    json = "{ \"type\": \"period\", \"period\": \"P2D\" }";
+    gran = mapper.readValue(json, Granularity.class);
+    Assert.assertEquals(new PeriodGranularity(new Period("P2D"), null, null), gran);
+
+    // Set timeZone, origin
+    json = "{ \"type\": \"period\", \"period\": \"P1D\","
            + "\"timeZone\": \"America/Los_Angeles\", \"origin\": \"1970-01-01T00:00:00Z\"}";
     gran = mapper.readValue(json, Granularity.class);
-    Assert.assertEquals(new PeriodGranularity(new Period("P1D"), new DateTime(0L), DateTimeZone.forID("America/Los_Angeles")), gran);
+    Assert.assertEquals(new PeriodGranularity(
+        new Period("P1D"),
+        DateTimes.EPOCH,
+        DateTimeZone.forID("America/Los_Angeles")
+    ), gran);
 
     PeriodGranularity expected = new PeriodGranularity(
         new Period("P1D"),
-        new DateTime("2012-01-01"),
+        DateTimes.of("2012-01-01"),
         DateTimeZone.forID("America/Los_Angeles")
     );
 
@@ -695,46 +713,40 @@ public class QueryGranularityTest
   }
 
   @Test
-  public void testSerializeSimple() throws Exception
+  public void testStandardGranularitiesSerde() throws Exception
   {
     ObjectMapper mapper = new DefaultObjectMapper();
 
-    Assert.assertEquals(
-        Granularities.ALL,
-        mapper.readValue(
-        mapper.writeValueAsString(Granularities.ALL),
-        Granularity.class
-      )
-    );
+    for (GranularityType granularityType : GranularityType.values()) {
+      final Granularity granularity = granularityType.getDefaultGranularity();
 
-    Assert.assertEquals(
-        Granularities.NONE,
-        mapper.readValue(
-        mapper.writeValueAsString(Granularities.NONE),
-        Granularity.class
-      )
-    );
-  }
+      Assert.assertEquals(
+          granularity,
+          mapper.readValue("\"" + StringUtils.toUpperCase(granularityType.name()) + "\"", Granularity.class)
+      );
 
-  @Test
-  public void testDeserializeSimple() throws Exception
-  {
-    ObjectMapper mapper = new DefaultObjectMapper();
+      Assert.assertEquals(
+          granularity,
+          mapper.readValue("\"" + StringUtils.toLowerCase(granularityType.name()) + "\"", Granularity.class)
+      );
 
-    Assert.assertEquals(Granularities.ALL, mapper.readValue("\"all\"", Granularity.class));
-    Assert.assertEquals(Granularities.ALL, mapper.readValue("\"ALL\"", Granularity.class));
-    Assert.assertEquals(Granularities.NONE, mapper.readValue("\"none\"", Granularity.class));
-    Assert.assertEquals(Granularities.NONE, mapper.readValue("\"NONE\"", Granularity.class));
+      Assert.assertEquals(
+          granularity,
+          mapper.readValue(mapper.writeValueAsString(granularity), Granularity.class)
+      );
 
-    Assert.assertEquals(Granularities.DAY, mapper.readValue("\"day\"", Granularity.class));
-    Assert.assertEquals(Granularities.HOUR, mapper.readValue("\"hour\"", Granularity.class));
-    Assert.assertEquals(Granularities.MINUTE, mapper.readValue("\"minute\"", Granularity.class));
-    Assert.assertEquals(Granularities.FIFTEEN_MINUTE, mapper.readValue("\"fifteen_minute\"", Granularity.class));
-
-    Assert.assertEquals(Granularities.WEEK, mapper.readValue("\"week\"", Granularity.class));
-    Assert.assertEquals(Granularities.QUARTER, mapper.readValue("\"quarter\"", Granularity.class));
-    Assert.assertEquals(Granularities.MONTH, mapper.readValue("\"month\"", Granularity.class));
-    Assert.assertEquals(Granularities.YEAR, mapper.readValue("\"year\"", Granularity.class));
+      if (granularityType == GranularityType.ALL || granularityType == GranularityType.NONE) {
+        Assert.assertEquals(
+            "{\"type\":\"" + StringUtils.toLowerCase(granularityType.name()) + "\"}",
+            mapper.writeValueAsString(granularity)
+        );
+      } else {
+        Assert.assertEquals(
+            "\"" + StringUtils.toUpperCase(granularityType.name()) + "\"",
+            mapper.writeValueAsString(granularity)
+        );
+      }
+    }
   }
 
   @Test
@@ -745,7 +757,7 @@ public class QueryGranularityTest
     Assert.assertNull(Granularity.mergeGranularities(Lists.newArrayList(null, Granularities.DAY)));
     Assert.assertNull(Granularity.mergeGranularities(Lists.newArrayList(Granularities.DAY, null)));
     Assert.assertNull(
-            Granularity.mergeGranularities(
+        Granularity.mergeGranularities(
             Lists.newArrayList(
                 Granularities.DAY,
                 null,
@@ -754,7 +766,7 @@ public class QueryGranularityTest
         )
     );
     Assert.assertNull(
-            Granularity.mergeGranularities(ImmutableList.of(Granularities.ALL, Granularities.DAY))
+        Granularity.mergeGranularities(ImmutableList.of(Granularities.ALL, Granularities.DAY))
     );
 
     Assert.assertEquals(
@@ -789,12 +801,12 @@ public class QueryGranularityTest
     Assert.assertFalse("expectedIter not exhausted!?", expectedIter.hasNext());
   }
 
-  @Test(timeout = 10_000L)
+  @Test(timeout = 60_000L)
   public void testDeadLock() throws Exception
   {
-    final URL[] urls = ((URLClassLoader)Granularity.class.getClassLoader()).getURLs();
+    final URL[] urls = ((URLClassLoader) Granularity.class.getClassLoader()).getURLs();
     final String className = Granularity.class.getCanonicalName();
-    for(int i = 0; i < 1000; ++i) {
+    for (int i = 0; i < 1000; ++i) {
       final ClassLoader loader = new URLClassLoader(urls, null);
       Assert.assertNotNull(String.valueOf(i), Class.forName(className, true, loader));
     }

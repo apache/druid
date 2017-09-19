@@ -21,9 +21,11 @@ package io.druid.query.timeboundary;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 /**
@@ -46,6 +48,7 @@ public class TimeBoundaryResultValue
     return value;
   }
 
+  @Nullable
   public DateTime getMaxTime()
   {
     if (value instanceof Map) {
@@ -55,6 +58,7 @@ public class TimeBoundaryResultValue
     }
   }
 
+  @Nullable
   public DateTime getMinTime()
   {
     if (value instanceof Map) {
@@ -97,7 +101,8 @@ public class TimeBoundaryResultValue
            '}';
   }
 
-  private DateTime getDateTimeValue(Object val)
+  @Nullable
+  private DateTime getDateTimeValue(@Nullable Object val)
   {
     if (val == null) {
       return null;
@@ -106,7 +111,9 @@ public class TimeBoundaryResultValue
     if (val instanceof DateTime) {
       return (DateTime) val;
     } else if (val instanceof String) {
-      return new DateTime(val);
+      return DateTimes.of((String) val);
+    } else if (val instanceof Long) {
+      return DateTimes.utc((Long) val);
     } else {
       throw new IAE("Cannot get time from type[%s]", val.getClass());
     }

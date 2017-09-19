@@ -19,9 +19,25 @@
 
 package io.druid.segment;
 
+import javax.annotation.Nullable;
+
 /**
  * Base type for interfaces that manage column value selection, e.g. DimensionSelector, LongColumnSelector
+ *
+ * This interface has methods to get the value in all primitive types, that have corresponding basic aggregators in
+ * Druid: Sum, Min, Max, etc: {@link #getFloat()}, {@link #getDouble()} and {@link #getLong()} to support "polymorphic"
+ * rollup aggregation during index merging.
  */
-public interface ColumnValueSelector
+public interface ColumnValueSelector<T>
 {
+  float getFloat();
+
+  double getDouble();
+
+  long getLong();
+
+  @Nullable
+  T getObject();
+
+  Class<T> classOfObject();
 }

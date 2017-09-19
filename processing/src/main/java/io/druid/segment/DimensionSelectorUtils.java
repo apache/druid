@@ -21,11 +21,15 @@ package io.druid.segment;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Strings;
 import io.druid.java.util.common.IAE;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.BooleanValueMatcher;
 
+import javax.annotation.Nullable;
 import java.util.BitSet;
 import java.util.Objects;
 
@@ -81,6 +85,12 @@ public final class DimensionSelectorUtils
             return false;
           }
         }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("selector", selector);
+        }
       };
     } else {
       if (matchNull) {
@@ -92,6 +102,12 @@ public final class DimensionSelectorUtils
             final IndexedInts row = selector.getRow();
             final int size = row.size();
             return size == 0;
+          }
+
+          @Override
+          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+          {
+            inspector.visit("selector", selector);
           }
         };
       } else {
@@ -123,6 +139,12 @@ public final class DimensionSelectorUtils
           }
           return false;
         }
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("selector", selector);
       }
     };
   }
@@ -169,6 +191,12 @@ public final class DimensionSelectorUtils
           return false;
         }
       }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("selector", selector);
+      }
     };
   }
 
@@ -197,6 +225,13 @@ public final class DimensionSelectorUtils
           return false;
         }
       }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("selector", selector);
+        inspector.visit("predicate", predicate);
+      }
     };
   }
 
@@ -213,5 +248,26 @@ public final class DimensionSelectorUtils
       }
     }
     return valueIds;
+  }
+
+  public static DimensionSelector constantSelector(@Nullable final String value)
+  {
+    if (Strings.isNullOrEmpty(value)) {
+      return NullDimensionSelector.instance();
+    } else {
+      return new ConstantDimensionSelector(value);
+    }
+  }
+
+  public static DimensionSelector constantSelector(
+      @Nullable final String value,
+      @Nullable final ExtractionFn extractionFn
+  )
+  {
+    if (extractionFn == null) {
+      return constantSelector(value);
+    } else {
+      return constantSelector(extractionFn.apply(value));
+    }
   }
 }

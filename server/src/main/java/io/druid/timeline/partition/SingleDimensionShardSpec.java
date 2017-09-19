@@ -92,6 +92,7 @@ public class SingleDimensionShardSpec implements ShardSpec
     this.end = end;
   }
 
+  @Override
   @JsonProperty("partitionNum")
   public int getPartitionNum()
   {

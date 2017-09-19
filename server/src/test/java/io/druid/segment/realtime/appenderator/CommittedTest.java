@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.timeline.partition.LinearShardSpec;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -36,21 +36,21 @@ public class CommittedTest
 
   private static final SegmentIdentifier IDENTIFIER_OBJECT1 = new SegmentIdentifier(
       "foo",
-      new Interval("2000/2001"),
+      Intervals.of("2000/2001"),
       "2000",
       new LinearShardSpec(1)
   );
 
   private static final SegmentIdentifier IDENTIFIER_OBJECT2 = new SegmentIdentifier(
       "foo",
-      new Interval("2001/2002"),
+      Intervals.of("2001/2002"),
       "2001",
       new LinearShardSpec(1)
   );
 
   private static final SegmentIdentifier IDENTIFIER_OBJECT3 = new SegmentIdentifier(
       "foo",
-      new Interval("2001/2002"),
+      Intervals.of("2001/2002"),
       "2001",
       new LinearShardSpec(2)
   );

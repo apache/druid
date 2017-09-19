@@ -19,6 +19,8 @@
 
 package io.druid.segment.serde;
 
+import io.druid.guice.annotations.PublicApi;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.data.GenericIndexedWriter;
@@ -45,6 +47,7 @@ public class ComplexColumnSerializer implements GenericColumnSerializer
     this.strategy = strategy;
   }
 
+  @PublicApi
   public static ComplexColumnSerializer create(
       IOPeon ioPeon,
       String filenameBase,
@@ -59,7 +62,7 @@ public class ComplexColumnSerializer implements GenericColumnSerializer
   public void open() throws IOException
   {
     writer = new GenericIndexedWriter(
-        ioPeon, String.format("%s.complex_column", filenameBase), strategy
+        ioPeon, StringUtils.format("%s.complex_column", filenameBase), strategy
     );
     writer.open();
   }

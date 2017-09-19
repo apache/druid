@@ -165,6 +165,7 @@ public class MapCache implements Cache
     return retVal;
   }
 
+  @Override
   public boolean isLocal()
   {
     return true;

@@ -18,6 +18,7 @@
  */
 package io.druid.data.input.avro;
 
+import io.druid.java.util.common.logger.Logger;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.mapreduce.AvroJob;
@@ -30,8 +31,6 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-
-import io.druid.java.util.common.logger.Logger;
 
 import java.io.IOException;
 
@@ -55,12 +54,9 @@ public class AvroValueInputFormat extends FileInputFormat<NullWritable, GenericR
       String schemaFilePath = context.getConfiguration().get(CONF_INPUT_VALUE_SCHEMA_PATH);
       if (StringUtils.isNotBlank(schemaFilePath)) {
         log.info("Using file: %s as reader schema.", schemaFilePath);
-        FSDataInputStream inputStream = FileSystem.get(context.getConfiguration()).open(new Path(schemaFilePath));
-        try {
+        try (FSDataInputStream inputStream =
+            FileSystem.get(context.getConfiguration()).open(new Path(schemaFilePath))) {
           readerSchema = new Schema.Parser().parse(inputStream);
-        }
-        finally {
-          inputStream.close();
         }
       }
     }

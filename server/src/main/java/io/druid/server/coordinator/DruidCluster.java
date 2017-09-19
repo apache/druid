@@ -19,12 +19,20 @@
 
 package io.druid.server.coordinator;
 
-import com.google.common.collect.Maps;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Ordering;
 import io.druid.client.ImmutableDruidServer;
+import io.druid.java.util.common.IAE;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Contains a representation of the current state of the cluster by tier.
@@ -32,62 +40,113 @@ import java.util.Map;
  */
 public class DruidCluster
 {
-  private final Map<String, MinMaxPriorityQueue<ServerHolder>> cluster;
+  private final Set<ServerHolder> realtimes;
+  private final Map<String, MinMaxPriorityQueue<ServerHolder>> historicals;
 
   public DruidCluster()
   {
-    this.cluster = Maps.newHashMap();
+    this.realtimes = new HashSet<>();
+    this.historicals = new HashMap<>();
   }
 
-  public DruidCluster(Map<String, MinMaxPriorityQueue<ServerHolder>> cluster)
+  @VisibleForTesting
+  public DruidCluster(
+      @Nullable Set<ServerHolder> realtimes,
+      Map<String, MinMaxPriorityQueue<ServerHolder>> historicals
+  )
   {
-    this.cluster = cluster;
+    this.realtimes = realtimes == null ? new HashSet<>() : new HashSet<>(realtimes);
+    this.historicals = historicals;
   }
 
   public void add(ServerHolder serverHolder)
   {
-    ImmutableDruidServer server = serverHolder.getServer();
-    MinMaxPriorityQueue<ServerHolder> tierServers = cluster.get(server.getTier());
-    if (tierServers == null) {
-      tierServers = MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create();
-      cluster.put(server.getTier(), tierServers);
+    switch (serverHolder.getServer().getType()) {
+      case HISTORICAL:
+        addHistorical(serverHolder);
+        break;
+      case REALTIME:
+        addRealtime(serverHolder);
+        break;
+      case BRIDGE:
+        addHistorical(serverHolder);
+        break;
+      case INDEXER_EXECUTOR:
+        throw new IAE("unsupported server type[%s]", serverHolder.getServer().getType());
+      default:
+        throw new IAE("unknown server type[%s]", serverHolder.getServer().getType());
     }
+  }
+
+  private void addRealtime(ServerHolder serverHolder)
+  {
+    realtimes.add(serverHolder);
+  }
+
+  private void addHistorical(ServerHolder serverHolder)
+  {
+    final ImmutableDruidServer server = serverHolder.getServer();
+    final MinMaxPriorityQueue<ServerHolder> tierServers = historicals.computeIfAbsent(
+        server.getTier(),
+        k -> MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create()
+    );
     tierServers.add(serverHolder);
   }
 
-  public Map<String, MinMaxPriorityQueue<ServerHolder>> getCluster()
+  public Set<ServerHolder> getRealtimes()
   {
-    return cluster;
+    return realtimes;
+  }
+
+  public Map<String, MinMaxPriorityQueue<ServerHolder>> getHistoricals()
+  {
+    return historicals;
   }
 
   public Iterable<String> getTierNames()
   {
-    return cluster.keySet();
+    return historicals.keySet();
   }
 
-  public MinMaxPriorityQueue<ServerHolder> getServersByTier(String tier)
+  public MinMaxPriorityQueue<ServerHolder> getHistoricalsByTier(String tier)
   {
-    return cluster.get(tier);
+    return historicals.get(tier);
   }
 
-  public Iterable<MinMaxPriorityQueue<ServerHolder>> getSortedServersByTier()
+  public Collection<ServerHolder> getAllServers()
   {
-    return cluster.values();
+    final int historicalSize = historicals.values().stream().mapToInt(Collection::size).sum();
+    final int realtimeSize = realtimes.size();
+    final List<ServerHolder> allServers = new ArrayList<>(historicalSize + realtimeSize);
+
+    historicals.values().forEach(allServers::addAll);
+    allServers.addAll(realtimes);
+    return allServers;
+  }
+
+  public Iterable<MinMaxPriorityQueue<ServerHolder>> getSortedHistoricalsByTier()
+  {
+    return historicals.values();
   }
 
   public boolean isEmpty()
   {
-    return cluster.isEmpty();
+    return historicals.isEmpty() && realtimes.isEmpty();
+  }
+
+  public boolean hasHistoricals()
+  {
+    return !historicals.isEmpty();
+  }
+
+  public boolean hasRealtimes()
+  {
+    return !realtimes.isEmpty();
   }
 
   public boolean hasTier(String tier)
   {
-    MinMaxPriorityQueue<ServerHolder> servers = cluster.get(tier);
+    MinMaxPriorityQueue<ServerHolder> servers = historicals.get(tier);
     return (servers == null) || servers.isEmpty();
-  }
-
-  public MinMaxPriorityQueue<ServerHolder> get(String tier)
-  {
-    return cluster.get(tier);
   }
 }

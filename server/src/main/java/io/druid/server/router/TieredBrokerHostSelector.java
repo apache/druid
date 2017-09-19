@@ -19,14 +19,18 @@
 
 package io.druid.server.router;
 
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
-import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.client.selector.HostSelector;
-import io.druid.curator.discovery.ServerDiscoveryFactory;
-import io.druid.curator.discovery.ServerDiscoverySelector;
+import io.druid.client.selector.Server;
+import io.druid.discovery.DiscoveryDruidNode;
+import io.druid.discovery.DruidNodeDiscovery;
+import io.druid.discovery.DruidNodeDiscoveryProvider;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
@@ -36,38 +40,75 @@ import io.druid.server.coordinator.rules.Rule;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  */
-public class TieredBrokerHostSelector<T> implements HostSelector<T>
+public class TieredBrokerHostSelector<T>
 {
   private static EmittingLogger log = new EmittingLogger(TieredBrokerHostSelector.class);
 
   private final CoordinatorRuleManager ruleManager;
   private final TieredBrokerConfig tierConfig;
-  private final ServerDiscoveryFactory serverDiscoveryFactory;
-  private final ConcurrentHashMap<String, ServerDiscoverySelector> selectorMap = new ConcurrentHashMap<>();
   private final List<TieredBrokerSelectorStrategy> strategies;
+
+  // brokerService -> broker-nodes-holder
+  private final ConcurrentHashMap<String, NodesHolder> servers = new ConcurrentHashMap<>();
+
+  private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
 
   private final Object lock = new Object();
 
   private volatile boolean started = false;
 
+  private static final Function<DiscoveryDruidNode, Server> TO_SERVER = new Function<DiscoveryDruidNode, Server>()
+  {
+    @Override
+    public Server apply(final DiscoveryDruidNode instance)
+    {
+      return new Server()
+      {
+        @Override
+        public String getHost()
+        {
+          return instance.getDruidNode().getHostAndPortToUse();
+        }
+
+        @Override
+        public String getAddress()
+        {
+          return instance.getDruidNode().getHost();
+        }
+
+        @Override
+        public int getPort()
+        {
+          return instance.getDruidNode().getPortToUse();
+        }
+
+        @Override
+        public String getScheme()
+        {
+          return instance.getDruidNode().getServiceScheme();
+        }
+      };
+    }
+  };
+
   @Inject
   public TieredBrokerHostSelector(
       CoordinatorRuleManager ruleManager,
       TieredBrokerConfig tierConfig,
-      ServerDiscoveryFactory serverDiscoveryFactory,
+      DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       List<TieredBrokerSelectorStrategy> strategies
   )
   {
     this.ruleManager = ruleManager;
     this.tierConfig = tierConfig;
-    this.serverDiscoveryFactory = serverDiscoveryFactory;
+    this.druidNodeDiscoveryProvider = druidNodeDiscoveryProvider;
     this.strategies = strategies;
   }
 
@@ -79,16 +120,41 @@ public class TieredBrokerHostSelector<T> implements HostSelector<T>
         return;
       }
 
-      try {
-        for (Map.Entry<String, String> entry : tierConfig.getTierToBrokerMap().entrySet()) {
-          ServerDiscoverySelector selector = serverDiscoveryFactory.createSelector(entry.getValue());
-          selector.start();
-          selectorMap.put(entry.getValue(), selector);
-        }
+      for (Map.Entry<String, String> entry : tierConfig.getTierToBrokerMap().entrySet()) {
+        servers.put(entry.getValue(), new NodesHolder());
       }
-      catch (Exception e) {
-        throw Throwables.propagate(e);
-      }
+
+      DruidNodeDiscovery druidNodeDiscovery = druidNodeDiscoveryProvider.getForNodeType(DruidNodeDiscoveryProvider.NODE_TYPE_BROKER);
+      druidNodeDiscovery.registerListener(
+          new DruidNodeDiscovery.Listener()
+          {
+            @Override
+            public void nodesAdded(List<DiscoveryDruidNode> nodes)
+            {
+              nodes.forEach(
+                  (node) -> {
+                    NodesHolder nodesHolder = servers.get(node.getDruidNode().getServiceName());
+                    if (nodesHolder != null) {
+                      nodesHolder.add(node.getDruidNode().getHostAndPortToUse(), TO_SERVER.apply(node));
+                    }
+                  }
+              );
+            }
+
+            @Override
+            public void nodesRemoved(List<DiscoveryDruidNode> nodes)
+            {
+              nodes.forEach(
+                  (node) -> {
+                    NodesHolder nodesHolder = servers.get(node.getDruidNode().getServiceName());
+                    if (nodesHolder != null) {
+                      nodesHolder.remove(node.getDruidNode().getHostAndPortToUse());
+                    }
+                  }
+              );
+            }
+          }
+      );
 
       started = true;
     }
@@ -103,26 +169,16 @@ public class TieredBrokerHostSelector<T> implements HostSelector<T>
         return;
       }
 
-      try {
-        for (ServerDiscoverySelector selector : selectorMap.values()) {
-          selector.stop();
-        }
-      }
-      catch (Exception e) {
-        throw Throwables.propagate(e);
-      }
-
       started = false;
     }
   }
 
-  @Override
   public String getDefaultServiceName()
   {
     return tierConfig.getDefaultBrokerServiceName();
   }
 
-  public Pair<String, ServerDiscoverySelector> select(final Query<T> query)
+  public Pair<String, Server> select(final Query<T> query)
   {
     synchronized (lock) {
       if (!ruleManager.isStarted() || !started) {
@@ -145,7 +201,7 @@ public class TieredBrokerHostSelector<T> implements HostSelector<T>
       List<Rule> rules = ruleManager.getRulesWithDefault(Iterables.getFirst(query.getDataSource().getNames(), null));
 
       // find the rule that can apply to the entire set of intervals
-      DateTime now = new DateTime();
+      DateTime now = DateTimes.nowUtc();
       int lastRulePosition = -1;
       LoadRule baseRule = null;
 
@@ -184,29 +240,83 @@ public class TieredBrokerHostSelector<T> implements HostSelector<T>
       brokerServiceName = tierConfig.getDefaultBrokerServiceName();
     }
 
-    ServerDiscoverySelector retVal = selectorMap.get(brokerServiceName);
+    NodesHolder nodesHolder = servers.get(brokerServiceName);
 
-    if (retVal == null) {
+    if (nodesHolder == null) {
       log.error(
-          "WTF?! No selector found for brokerServiceName[%s]. Using default selector for[%s]",
+          "WTF?! No nodesHolder found for brokerServiceName[%s]. Using default selector for[%s]",
           brokerServiceName,
           tierConfig.getDefaultBrokerServiceName()
       );
-      retVal = selectorMap.get(tierConfig.getDefaultBrokerServiceName());
+      nodesHolder = servers.get(tierConfig.getDefaultBrokerServiceName());
     }
 
-    return new Pair<>(brokerServiceName, retVal);
+    return new Pair<>(brokerServiceName, nodesHolder.pick());
   }
 
-  public Pair<String, ServerDiscoverySelector> getDefaultLookup()
+  public Pair<String, Server> getDefaultLookup()
   {
     final String brokerServiceName = tierConfig.getDefaultBrokerServiceName();
-    final ServerDiscoverySelector retVal = selectorMap.get(brokerServiceName);
-    return new Pair<>(brokerServiceName, retVal);
+    return new Pair<>(brokerServiceName, servers.get(brokerServiceName).pick());
   }
 
-  public Map<String, ServerDiscoverySelector> getAllBrokers()
+  public Map<String, List<Server>> getAllBrokers()
   {
-    return Collections.unmodifiableMap(selectorMap);
+    return Maps.transformValues(
+        servers,
+        new Function<NodesHolder, List<Server>>()
+        {
+          @Override
+          public List<Server> apply(NodesHolder input)
+          {
+            return input.getAll();
+          }
+        }
+    );
+  }
+
+  private static class NodesHolder
+  {
+    private int roundRobinIndex = 0;
+
+    private Map<String, Server> nodesMap = new HashMap<>();
+    private ImmutableList<Server> nodes = ImmutableList.of();
+
+    void add(String id, Server node)
+    {
+      synchronized (this) {
+        nodesMap.put(id, node);
+        nodes = ImmutableList.copyOf(nodesMap.values());
+      }
+    }
+
+    void remove(String id)
+    {
+      synchronized (this) {
+        if (nodesMap.remove(id) != null) {
+          nodes = ImmutableList.copyOf(nodesMap.values());
+        }
+      }
+    }
+
+    List<Server> getAll()
+    {
+      return nodes;
+    }
+
+    Server pick()
+    {
+      ImmutableList<Server> currNodes = nodes;
+
+      if (currNodes.size() == 0) {
+        return null;
+      }
+
+      if (roundRobinIndex >= currNodes.size()) {
+        roundRobinIndex %= currNodes.size();
+      }
+
+      return currNodes.get(roundRobinIndex++);
+    }
   }
 }

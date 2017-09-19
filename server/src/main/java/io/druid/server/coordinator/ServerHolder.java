@@ -23,6 +23,8 @@ import io.druid.client.ImmutableDruidServer;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 
+import java.util.Objects;
+
 /**
  */
 public class ServerHolder implements Comparable<ServerHolder>
@@ -104,6 +106,11 @@ public class ServerHolder implements Comparable<ServerHolder>
     return peon.getSegmentsToLoad().contains(segment);
   }
 
+  public int getNumberOfSegmentsInQueue()
+  {
+    return peon.getNumberOfSegmentsInQueue();
+  }
+
   @Override
   public int compareTo(ServerHolder serverHolder)
   {
@@ -122,21 +129,20 @@ public class ServerHolder implements Comparable<ServerHolder>
 
     ServerHolder that = (ServerHolder) o;
 
-    if (peon != null ? !peon.equals(that.peon) : that.peon != null) {
-      return false;
-    }
-    if (server != null ? !server.equals(that.server) : that.server != null) {
+    if (!this.server.getHost().equals(that.server.getHost())) {
       return false;
     }
 
-    return true;
+    if (!this.server.getTier().equals(that.getServer().getTier())) {
+      return false;
+    }
+
+    return this.server.getType().equals(that.getServer().getType());
   }
 
   @Override
   public int hashCode()
   {
-    int result = server != null ? server.hashCode() : 0;
-    result = 31 * result + (peon != null ? peon.hashCode() : 0);
-    return result;
+    return Objects.hash(server.getHost(), server.getTier(), server.getType());
   }
 }

@@ -20,8 +20,9 @@
 package io.druid.segment;
 
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.historical.HistoricalColumnSelector;
 
-public final class ZeroFloatColumnSelector implements FloatColumnSelector
+public final class ZeroFloatColumnSelector implements FloatColumnSelector, HistoricalColumnSelector<Float>
 {
   private static final ZeroFloatColumnSelector INSTANCE = new ZeroFloatColumnSelector();
 
@@ -36,13 +37,20 @@ public final class ZeroFloatColumnSelector implements FloatColumnSelector
   }
 
   @Override
-  public float get()
+  public float getFloat()
   {
     return 0.0f;
   }
 
   @Override
+  public double getDouble(int offset)
+  {
+    return 0.0;
+  }
+
+  @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
+    // nothing to inspect
   }
 }

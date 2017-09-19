@@ -25,10 +25,13 @@ import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.metamx.emitter.EmittingLogger;
+import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
@@ -37,8 +40,10 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import io.druid.timeline.partition.NumberedShardSpec;
 import io.druid.timeline.partition.SingleDimensionShardSpec;
+import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -52,8 +57,16 @@ public class SegmentAllocateActionTest
   public TaskActionTestKit taskActionTestKit = new TaskActionTestKit();
 
   private static final String DATA_SOURCE = "none";
-  private static final DateTime PARTY_TIME = new DateTime("1999");
-  private static final DateTime THE_DISTANT_FUTURE = new DateTime("3000");
+  private static final DateTime PARTY_TIME = DateTimes.of("1999");
+  private static final DateTime THE_DISTANT_FUTURE = DateTimes.of("3000");
+
+  @Before
+  public void setUp()
+  {
+    ServiceEmitter emitter = EasyMock.createMock(ServiceEmitter.class);
+    EmittingLogger.registerEmitter(emitter);
+    EasyMock.replay(emitter);
+  }
 
   @Test
   public void testGranularitiesFinerThanDay() throws Exception

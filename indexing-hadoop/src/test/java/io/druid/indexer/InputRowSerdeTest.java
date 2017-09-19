@@ -26,10 +26,14 @@ import io.druid.data.input.MapBasedInputRow;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.jackson.AggregatorsModule;
 import io.druid.java.util.common.parsers.ParseException;
+import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.DoubleSumAggregator;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import io.druid.segment.ColumnSelectorFactory;
+import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -65,7 +69,14 @@ public class InputRowSerdeTest
   @Test
   public void testSerde()
   {
-
+    // Prepare the mocks & set close() call count expectation to 1
+    final Aggregator mockedAggregator = EasyMock.createMock(DoubleSumAggregator.class);
+    EasyMock.expect(mockedAggregator.getDouble()).andReturn(0d).times(1);
+    mockedAggregator.aggregate();
+    EasyMock.expectLastCall().times(1);
+    mockedAggregator.close();
+    EasyMock.expectLastCall().times(1);
+    EasyMock.replay(mockedAggregator);
 
     InputRow in = new MapBasedInputRow(
         timestamp,
@@ -78,7 +89,14 @@ public class InputRowSerdeTest
         new DoubleSumAggregatorFactory("m1out", "m1"),
         new LongSumAggregatorFactory("m2out", "m2"),
         new HyperUniquesAggregatorFactory("m3out", "m3"),
-        new LongSumAggregatorFactory("unparseable", "m3") // Unparseable from String to Long
+        new LongSumAggregatorFactory("unparseable", "m3"), // Unparseable from String to Long
+        new DoubleSumAggregatorFactory("mockedAggregator", "m4") {
+          @Override
+          public Aggregator factorize(ColumnSelectorFactory metricFactory)
+          {
+            return mockedAggregator;
+          }
+        }
     };
 
     byte[] data = InputRowSerde.toBytes(in, aggregatorFactories, false); // Ignore Unparseable aggregator
@@ -96,6 +114,7 @@ public class InputRowSerdeTest
     Assert.assertEquals(1, ((HyperLogLogCollector) out.getRaw("m3out")).estimateCardinality(), 0.001);
     Assert.assertEquals(0L, out.getLongMetric("unparseable"));
 
+    EasyMock.verify(mockedAggregator);
   }
 
   @Test(expected = ParseException.class)

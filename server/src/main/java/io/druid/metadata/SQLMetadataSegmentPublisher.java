@@ -22,11 +22,11 @@ package io.druid.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
-
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
-import org.joda.time.DateTime;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
@@ -54,7 +54,7 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
     this.jsonMapper = jsonMapper;
     this.config = config;
     this.connector = connector;
-    this.statement = String.format(
+    this.statement = StringUtils.format(
         "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
         + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
         config.getSegmentsTable(), connector.getQuoteString()
@@ -67,7 +67,7 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
     publishSegment(
         segment.getIdentifier(),
         segment.getDataSource(),
-        new DateTime().toString(),
+        DateTimes.nowUtc().toString(),
         segment.getInterval().getStart().toString(),
         segment.getInterval().getEnd().toString(),
         (segment.getShardSpec() instanceof NoneShardSpec) ? false : true,
@@ -99,7 +99,7 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
             public List<Map<String, Object>> withHandle(Handle handle) throws Exception
             {
               return handle.createQuery(
-                  String.format("SELECT id FROM %s WHERE id=:id", config.getSegmentsTable())
+                  StringUtils.format("SELECT id FROM %s WHERE id=:id", config.getSegmentsTable())
               )
                            .bind("id", identifier)
                            .list();

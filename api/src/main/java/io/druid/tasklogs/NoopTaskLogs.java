@@ -21,7 +21,6 @@ package io.druid.tasklogs;
 
 import com.google.common.base.Optional;
 import com.google.common.io.ByteSource;
-
 import io.druid.java.util.common.logger.Logger;
 
 import java.io.File;

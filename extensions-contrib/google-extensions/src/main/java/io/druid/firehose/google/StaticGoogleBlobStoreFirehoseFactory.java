@@ -22,102 +22,64 @@ package io.druid.firehose.google;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Charsets;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import io.druid.data.input.Firehose;
-import io.druid.data.input.FirehoseFactory;
-import io.druid.data.input.impl.FileIteratingFirehose;
-import io.druid.data.input.impl.StringInputRowParser;
+import io.druid.data.input.impl.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
-import io.druid.java.util.common.logger.Logger;
 import io.druid.storage.google.GoogleByteSource;
 import io.druid.storage.google.GoogleStorage;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.LineIterator;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.Iterator;
-import java.util.LinkedList;
+import java.util.Collection;
 import java.util.List;
 
-public class StaticGoogleBlobStoreFirehoseFactory implements FirehoseFactory<StringInputRowParser> {
-  private static final Logger LOG = new Logger(StaticGoogleBlobStoreFirehoseFactory.class);
-
+public class StaticGoogleBlobStoreFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<GoogleBlob>
+{
   private final GoogleStorage storage;
   private final List<GoogleBlob> blobs;
 
   @JsonCreator
   public StaticGoogleBlobStoreFirehoseFactory(
       @JacksonInject GoogleStorage storage,
-      @JsonProperty("blobs") GoogleBlob[] blobs
-  ) {
+      @JsonProperty("blobs") List<GoogleBlob> blobs,
+      @JsonProperty("maxCacheCapacityBytes") Long maxCacheCapacityBytes,
+      @JsonProperty("maxFetchCapacityBytes") Long maxFetchCapacityBytes,
+      @JsonProperty("prefetchTriggerBytes") Long prefetchTriggerBytes,
+      @JsonProperty("fetchTimeout") Long fetchTimeout,
+      @JsonProperty("maxFetchRetry") Integer maxFetchRetry
+  )
+  {
+    super(maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
     this.storage = storage;
-    this.blobs = ImmutableList.copyOf(blobs);
+    this.blobs = blobs;
   }
 
   @JsonProperty
-  public List<GoogleBlob> getBlobs() {
+  public List<GoogleBlob> getBlobs()
+  {
     return blobs;
   }
 
   @Override
-  public Firehose connect(StringInputRowParser stringInputRowParser) throws IOException {
-    Preconditions.checkNotNull(storage, "null storage");
+  protected Collection<GoogleBlob> initObjects()
+  {
+    return blobs;
+  }
 
-    final LinkedList<GoogleBlob> objectQueue = Lists.newLinkedList(blobs);
+  @Override
+  protected InputStream openObjectStream(GoogleBlob object) throws IOException
+  {
+    final String bucket = object.getBucket();
+    final String path = object.getPath().startsWith("/")
+                        ? object.getPath().substring(1)
+                        : object.getPath();
 
-    return new FileIteratingFirehose(
-        new Iterator<LineIterator>() {
-          @Override
-          public boolean hasNext() {
-            return !objectQueue.isEmpty();
-          }
+    return new GoogleByteSource(storage, bucket, path).openStream();
+  }
 
-          @Override
-          public LineIterator next() {
-            final GoogleBlob nextURI = objectQueue.poll();
-
-            final String bucket = nextURI.getBucket();
-            final String path = nextURI.getPath().startsWith("/")
-                ? nextURI.getPath().substring(1)
-                : nextURI.getPath();
-
-            try {
-              final InputStream innerInputStream = new GoogleByteSource(storage, bucket, path).openStream();
-
-              final InputStream outerInputStream = path.endsWith(".gz")
-                  ? CompressionUtils.gzipInputStream(innerInputStream)
-                  : innerInputStream;
-
-              return IOUtils.lineIterator(
-                  new BufferedReader(
-                      new InputStreamReader(outerInputStream, Charsets.UTF_8)
-                  )
-              );
-            } catch (Exception e) {
-              LOG.error(e,
-                  "Exception opening bucket[%s] blob[%s]",
-                  bucket,
-                  path
-              );
-
-              throw Throwables.propagate(e);
-            }
-          }
-
-          @Override
-          public void remove() {
-            throw new UnsupportedOperationException();
-          }
-        },
-        stringInputRowParser
-    );
+  @Override
+  protected InputStream wrapObjectStream(GoogleBlob object, InputStream stream) throws IOException
+  {
+    return object.getPath().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
   }
 }
 

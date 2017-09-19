@@ -20,6 +20,7 @@
 package io.druid.data.input.impl;
 
 import com.google.common.collect.ImmutableMap;
+import io.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 import org.joda.time.format.ISODateTimeFormat;
 import org.junit.Assert;
@@ -32,7 +33,7 @@ public class TimestampSpecTest
   {
     TimestampSpec spec = new TimestampSpec("TIMEstamp", "yyyy-MM-dd", null);
     Assert.assertEquals(
-        new DateTime("2014-03-01"),
+        DateTimes.of("2014-03-01"),
         spec.extractTimestamp(ImmutableMap.<String, Object>of("TIMEstamp", "2014-03-01"))
     );
   }
@@ -40,9 +41,9 @@ public class TimestampSpecTest
   @Test
   public void testExtractTimestampWithMissingTimestampColumn() throws Exception
   {
-    TimestampSpec spec = new TimestampSpec(null, null, new DateTime(0));
+    TimestampSpec spec = new TimestampSpec(null, null, DateTimes.EPOCH);
     Assert.assertEquals(
-        new DateTime("1970-01-01"),
+        DateTimes.of("1970-01-01"),
         spec.extractTimestamp(ImmutableMap.<String, Object>of("dim", "foo"))
     );
   }
@@ -60,8 +61,7 @@ public class TimestampSpecTest
         };
     TimestampSpec spec = new TimestampSpec("TIMEstamp", DATE_FORMAT, null);
 
-    for (int i = 0; i < dates.length; ++i) {
-      String date = dates[i];
+    for (String date : dates) {
       DateTime dateTime = spec.extractTimestamp(ImmutableMap.<String, Object>of("TIMEstamp", date));
       DateTime expectedDateTime = ISODateTimeFormat.dateHourMinuteSecond().parseDateTime(date);
       Assert.assertEquals(expectedDateTime, dateTime);

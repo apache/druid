@@ -23,7 +23,6 @@ import com.google.common.collect.Lists;
 import com.google.inject.Key;
 import com.google.inject.Provider;
 import com.google.inject.Scope;
-
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 
@@ -71,8 +70,7 @@ public class LifecycleScope implements Scope
           synchronized (instances) {
             if (lifecycle == null) {
               instances.add(retVal);
-            }
-            else {
+            } else {
               try {
                 lifecycle.addMaybeStartManagedInstance(retVal, stage);
               }

@@ -22,9 +22,8 @@ package io.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
-
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.parsers.TimestampParser;
-
 import org.joda.time.DateTime;
 
 import java.util.List;
@@ -33,6 +32,7 @@ import java.util.Objects;
 
 /**
  */
+@PublicApi
 public class TimestampSpec
 {
   private static class ParseCtx
@@ -47,12 +47,13 @@ public class TimestampSpec
 
   private final String timestampColumn;
   private final String timestampFormat;
-  private final Function<Object, DateTime> timestampConverter;
   // this value should never be set for production data
   private final DateTime missingValue;
+  /** This field is a derivative of {@link #timestampFormat}; not checked in {@link #equals} and {@link #hashCode} */
+  private final Function<Object, DateTime> timestampConverter;
 
   // remember last value parsed
-  private ParseCtx parseCtx = new ParseCtx();
+  private static final ThreadLocal<ParseCtx> parseCtx = ThreadLocal.withInitial(ParseCtx::new);
 
   @JsonCreator
   public TimestampSpec(
@@ -97,14 +98,16 @@ public class TimestampSpec
   {
     DateTime extracted = missingValue;
     if (input != null) {
-      if (input.equals(parseCtx.lastTimeObject)) {
-        extracted = parseCtx.lastDateTime;
+      ParseCtx ctx = parseCtx.get();
+      // Check if the input is equal to the last input, so we don't need to parse it again
+      if (input.equals(ctx.lastTimeObject)) {
+        extracted = ctx.lastDateTime;
       } else {
+        extracted = timestampConverter.apply(input);
         ParseCtx newCtx = new ParseCtx();
         newCtx.lastTimeObject = input;
-        extracted = timestampConverter.apply(input);
         newCtx.lastDateTime = extracted;
-        parseCtx = newCtx;
+        parseCtx.set(newCtx);
       }
     }
     return extracted;
@@ -141,9 +144,20 @@ public class TimestampSpec
     return result;
   }
 
+  @Override
+  public String toString()
+  {
+    return "TimestampSpec{" +
+           "timestampColumn='" + timestampColumn + '\'' +
+           ", timestampFormat='" + timestampFormat + '\'' +
+           ", missingValue=" + missingValue +
+           '}';
+  }
+
   //simple merge strategy on timestampSpec that checks if all are equal or else
   //returns null. this can be improved in future but is good enough for most use-cases.
-  public static TimestampSpec mergeTimestampSpec(List<TimestampSpec> toMerge) {
+  public static TimestampSpec mergeTimestampSpec(List<TimestampSpec> toMerge)
+  {
     if (toMerge == null || toMerge.size() == 0) {
       return null;
     }

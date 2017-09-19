@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.server.lookup.DataFetcher;
@@ -75,19 +76,19 @@ public class JdbcDataFetcher implements DataFetcher<String, String>
     this.keyColumn = Preconditions.checkNotNull(keyColumn, "keyColumn");
     this.valueColumn = Preconditions.checkNotNull(valueColumn, "valueColumn");
 
-    this.fetchAllQuery = String.format(
+    this.fetchAllQuery = StringUtils.format(
         "SELECT %s, %s FROM %s",
         this.keyColumn,
         this.valueColumn,
         this.table
     );
-    this.fetchQuery = String.format(
+    this.fetchQuery = StringUtils.format(
         "SELECT %s FROM %s WHERE %s = :val",
         this.valueColumn,
         this.table,
         this.keyColumn
     );
-    this.reverseFetchQuery = String.format(
+    this.reverseFetchQuery = StringUtils.format(
         "SELECT %s FROM %s WHERE %s = :val",
         this.keyColumn,
         this.table,
@@ -191,6 +192,16 @@ public class JdbcDataFetcher implements DataFetcher<String, String>
     }
     return valueColumn.equals(that.valueColumn);
 
+  }
+
+  @Override
+  public String toString()
+  {
+    return "JdbcDataFetcher{" +
+           "table='" + table + '\'' +
+           ", keyColumn='" + keyColumn + '\'' +
+           ", valueColumn='" + valueColumn + '\'' +
+           '}';
   }
 
   private DBI getDbi()

@@ -27,6 +27,7 @@ import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.testing.IntegrationTestingConfig;
@@ -103,7 +104,7 @@ public class DruidTestRunnerFactory implements ITestRunnerFactory
         runTests();
       }
       catch (Exception e) {
-        e.printStackTrace();
+        LOG.error(e, "");
         throw Throwables.propagate(e);
       }
       finally {
@@ -131,7 +132,7 @@ public class DruidTestRunnerFactory implements ITestRunnerFactory
                 new Request(
                   HttpMethod.GET,
                   new URL(
-                    String.format(
+                    StringUtils.format(
                       "%s/status",
                       host
                     )
@@ -140,7 +141,7 @@ public class DruidTestRunnerFactory implements ITestRunnerFactory
                 handler
               ).get();
 
-              System.out.println(response.getStatus() + response.getContent());
+              LOG.info("%s %s", response.getStatus(), response.getContent());
               if (response.getStatus().equals(HttpResponseStatus.OK)) {
                 return true;
               } else {
@@ -148,7 +149,7 @@ public class DruidTestRunnerFactory implements ITestRunnerFactory
               }
             }
             catch (Throwable e) {
-              e.printStackTrace();
+              LOG.error(e, "");
               return false;
             }
           }

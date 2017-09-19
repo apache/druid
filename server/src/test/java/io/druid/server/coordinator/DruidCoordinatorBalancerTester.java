@@ -20,6 +20,7 @@
 package io.druid.server.coordinator;
 
 import io.druid.client.ImmutableDruidServer;
+import io.druid.java.util.common.StringUtils;
 import io.druid.server.coordinator.helper.DruidCoordinatorBalancer;
 import io.druid.timeline.DataSegment;
 
@@ -45,8 +46,7 @@ public class DruidCoordinatorBalancerTester extends DruidCoordinatorBalancer
     final String segmentName = segmentToMove.getIdentifier();
 
     if (!toPeon.getSegmentsToLoad().contains(segmentToMove) &&
-        !currentlyMovingSegments.get("normal").containsKey(segmentName) &&
-        !toServer.getSegments().containsKey(segmentName) &&
+        (toServer.getSegment(segmentName) == null) &&
         new ServerHolder(toServer, toPeon).getAvailableSize() > segmentToMove.getSize()) {
       log.info(
           "Moving [%s] from [%s] to [%s]",
@@ -65,13 +65,14 @@ public class DruidCoordinatorBalancerTester extends DruidCoordinatorBalancer
           }
         });
 
+        final LoadQueuePeon dropPeon = params.getLoadManagementPeons().get(fromServerName);
+        dropPeon.markSegmentToDrop(segment.getSegment());
+
         currentlyMovingSegments.get("normal").put(segmentName, segment);
       }
       catch (Exception e) {
-        log.info(e, String.format("[%s] : Moving exception", segmentName));
+        log.info(e, StringUtils.format("[%s] : Moving exception", segmentName));
       }
-    } else {
-      currentlyMovingSegments.get("normal").remove(segment);
     }
   }
 }

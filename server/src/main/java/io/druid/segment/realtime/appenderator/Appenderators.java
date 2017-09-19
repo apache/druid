@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
@@ -31,6 +32,8 @@ import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
+import io.druid.timeline.partition.ShardSpec;
+import org.joda.time.Interval;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
@@ -112,12 +115,6 @@ public class Appenderators
           {
             // Do nothing
           }
-
-          @Override
-          public boolean isAnnounced(DataSegment segment)
-          {
-            return false;
-          }
         },
         null,
         null,
@@ -128,4 +125,8 @@ public class Appenderators
     );
   }
 
+  public static String getSequenceName(Interval interval, String version, ShardSpec shardSpec)
+  {
+    return StringUtils.format("index_%s_%s_%d", interval, version, shardSpec.getPartitionNum());
+  }
 }

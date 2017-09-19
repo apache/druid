@@ -28,7 +28,10 @@ public class KafkaLookupExtractorIntrospectionHandler implements LookupIntrospec
 {
   private KafkaLookupExtractorFactory kafkaLookupExtractorFactory;
 
-  public KafkaLookupExtractorIntrospectionHandler(KafkaLookupExtractorFactory kafkaLookupExtractorFactory) {this.kafkaLookupExtractorFactory = kafkaLookupExtractorFactory;}
+  public KafkaLookupExtractorIntrospectionHandler(KafkaLookupExtractorFactory kafkaLookupExtractorFactory)
+  {
+    this.kafkaLookupExtractorFactory = kafkaLookupExtractorFactory;
+  }
 
   @GET
   public Response getActive()

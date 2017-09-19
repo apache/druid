@@ -71,19 +71,32 @@ public class ByteCountingLRUMapTest
 
     Iterator<ByteBuffer> it = map.keySet().iterator();
     List<ByteBuffer> toRemove = Lists.newLinkedList();
-    while(it.hasNext()) {
+    while (it.hasNext()) {
       ByteBuffer buf = it.next();
-      if(buf.remaining() == 10) {
+      if (buf.remaining() == 10) {
         toRemove.add(buf);
       }
     }
-    for(ByteBuffer buf : toRemove) {
+    for (ByteBuffer buf : toRemove) {
       map.remove(buf);
     }
     assertMapValues(1, 3, 3);
 
     map.remove(twoByte);
     assertMapValues(0, 0, 3);
+  }
+
+  @Test
+  public void testSameKeyUpdate() throws Exception
+  {
+    final ByteBuffer k = ByteBuffer.allocate(1);
+
+    assertMapValues(0, 0, 0);
+    map.put(k, new byte[1]);
+    map.put(k, new byte[2]);
+    map.put(k, new byte[5]);
+    map.put(k, new byte[3]);
+    assertMapValues(1, 4, 0);
   }
 
   private void assertMapValues(final int size, final int numBytes, final int evictionCount)

@@ -22,6 +22,7 @@ package io.druid.indexing.overlord.http;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.indexing.common.TaskLocation;
@@ -38,13 +39,18 @@ import io.druid.indexing.overlord.TaskStorageQueryAdapter;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationInfo;
+import io.druid.server.security.AuthenticationResult;
+import io.druid.server.security.Authorizer;
+import io.druid.server.security.AuthorizerMapper;
+import io.druid.server.security.ForbiddenException;
 import io.druid.server.security.Resource;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
@@ -59,6 +65,9 @@ public class OverlordResourceTest
   private HttpServletRequest req;
   private TaskRunner taskRunner;
 
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   @Before
   public void setUp() throws Exception
   {
@@ -71,22 +80,14 @@ public class OverlordResourceTest
         Optional.of(taskRunner)
     ).anyTimes();
 
-    overlordResource = new OverlordResource(
-        taskMaster,
-        tsqa,
-        null,
-        null,
-        null,
-        new AuthConfig(true)
-    );
-
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)).andReturn(
-        new AuthorizationInfo()
+    AuthorizerMapper authMapper = new AuthorizerMapper(null) {
+      @Override
+      public Authorizer getAuthorizer(String name)
+      {
+        return new Authorizer()
         {
           @Override
-          public Access isAuthorized(
-              Resource resource, Action action
-          )
+          public Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action)
           {
             if (resource.getName().equals("allow")) {
               return new Access(true);
@@ -94,13 +95,71 @@ public class OverlordResourceTest
               return new Access(false);
             }
           }
-        }
+
+        };
+      }
+    };
+
+    overlordResource = new OverlordResource(
+        taskMaster,
+        tsqa,
+        null,
+        null,
+        null,
+        authMapper
     );
+  }
+
+  public void expectAuthorizationTokenCheck()
+  {
+    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid");
+
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(authenticationResult)
+            .anyTimes();
+
+    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, false);
+    EasyMock.expectLastCall().anyTimes();
+
+    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    EasyMock.expectLastCall().anyTimes();
+  }
+
+  @Test
+  public void testLeader()
+  {
+    EasyMock.expect(taskMaster.getCurrentLeader()).andReturn("boz").once();
+    EasyMock.replay(taskRunner, taskMaster, tsqa, req);
+
+    final Response response = overlordResource.getLeader();
+    Assert.assertEquals("boz", response.getEntity());
+    Assert.assertEquals(200, response.getStatus());
+  }
+
+  @Test
+  public void testIsLeader()
+  {
+    EasyMock.expect(taskMaster.isLeader()).andReturn(true).once();
+    EasyMock.expect(taskMaster.isLeader()).andReturn(false).once();
+    EasyMock.replay(taskRunner, taskMaster, tsqa, req);
+
+    // true
+    final Response response1 = overlordResource.isLeader();
+    Assert.assertEquals(ImmutableMap.of("leader", true), response1.getEntity());
+    Assert.assertEquals(200, response1.getStatus());
+
+    // false
+    final Response response2 = overlordResource.isLeader();
+    Assert.assertEquals(ImmutableMap.of("leader", false), response2.getEntity());
+    Assert.assertEquals(404, response2.getStatus());
   }
 
   @Test
   public void testSecuredGetWaitingTask() throws Exception
   {
+    expectAuthorizationTokenCheck();
+
     EasyMock.expect(tsqa.getActiveTasks()).andReturn(
         ImmutableList.of(
             getTaskWithIdAndDatasource("id_1", "allow"),
@@ -128,6 +187,8 @@ public class OverlordResourceTest
   @Test
   public void testSecuredGetCompleteTasks()
   {
+    expectAuthorizationTokenCheck();
+
     List<String> tasksIds = ImmutableList.of("id_1", "id_2", "id_3");
     EasyMock.expect(tsqa.getRecentlyFinishedTaskStatuses()).andReturn(
         Lists.transform(
@@ -165,6 +226,8 @@ public class OverlordResourceTest
   @Test
   public void testSecuredGetRunningTasks()
   {
+    expectAuthorizationTokenCheck();
+
     List<String> tasksIds = ImmutableList.of("id_1", "id_2");
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getRunningTasks()).andReturn(
         ImmutableList.of(
@@ -191,10 +254,13 @@ public class OverlordResourceTest
   @Test
   public void testSecuredTaskPost()
   {
+    expectedException.expect(ForbiddenException.class);
+    expectedException.expectMessage("Allowed:false, Message:");
+    expectAuthorizationTokenCheck();
+
     EasyMock.replay(taskRunner, taskMaster, tsqa, req);
     Task task = NoopTask.create();
-    Response response = overlordResource.taskPost(task, req);
-    Assert.assertEquals(Response.Status.FORBIDDEN.getStatusCode(), response.getStatus());
+    overlordResource.taskPost(task, req);
   }
 
   @After

@@ -29,7 +29,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.collections.StupidPool;
+import io.druid.collections.NonBlockingPool;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
@@ -60,13 +60,13 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
   private final ListeningExecutorService exec;
   private final Supplier<GroupByQueryConfig> configSupplier;
   private final QueryWatcher queryWatcher;
-  private final StupidPool<ByteBuffer> bufferPool;
+  private final NonBlockingPool<ByteBuffer> bufferPool;
 
   public GroupByMergedQueryRunner(
       ExecutorService exec,
       Supplier<GroupByQueryConfig> configSupplier,
       QueryWatcher queryWatcher,
-      StupidPool<ByteBuffer> bufferPool,
+      NonBlockingPool<ByteBuffer> bufferPool,
       Iterable<QueryRunner<T>> queryables
   )
   {
@@ -78,9 +78,9 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> queryParam, final Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
   {
-    final GroupByQuery query = (GroupByQuery) queryParam;
+    final GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
     final GroupByQueryConfig querySpecificConfig = configSupplier.get().withOverrides(query);
     final boolean isSingleThreaded = querySpecificConfig.isSingleThreaded();
     final Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> indexAccumulatorPair = GroupByQueryHelper.createIndexAccumulatorPair(
@@ -90,10 +90,10 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
         true
     );
     final Pair<Queue, Accumulator<Queue, T>> bySegmentAccumulatorPair = GroupByQueryHelper.createBySegmentAccumulatorPair();
-    final boolean bySegment = BaseQuery.getContextBySegment(query, false);
-    final int priority = BaseQuery.getContextPriority(query, 0);
-
-    ListenableFuture<List<Void>> futures = Futures.allAsList(
+    final boolean bySegment = QueryContexts.isBySegment(query);
+    final int priority = QueryContexts.getPriority(query);
+    final QueryPlus<T> threadSafeQueryPlus = queryPlus.withoutThreadUnsafeState();
+    final ListenableFuture<List<Void>> futures = Futures.allAsList(
         Lists.newArrayList(
             Iterables.transform(
                 queryables,
@@ -114,10 +114,10 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
                           {
                             try {
                               if (bySegment) {
-                                input.run(queryParam, responseContext)
+                                input.run(threadSafeQueryPlus, responseContext)
                                      .accumulate(bySegmentAccumulatorPair.lhs, bySegmentAccumulatorPair.rhs);
                               } else {
-                                input.run(queryParam, responseContext)
+                                input.run(threadSafeQueryPlus, responseContext)
                                      .accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
                               }
 
@@ -178,11 +178,10 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
   {
     try {
       queryWatcher.registerQuery(query, future);
-      final Number timeout = query.getContextValue(QueryContextKeys.TIMEOUT, (Number) null);
-      if (timeout == null) {
-        future.get();
+      if (QueryContexts.hasTimeout(query)) {
+        future.get(QueryContexts.getTimeout(query), TimeUnit.MILLISECONDS);
       } else {
-        future.get(timeout.longValue(), TimeUnit.MILLISECONDS);
+        future.get();
       }
     }
     catch (InterruptedException e) {

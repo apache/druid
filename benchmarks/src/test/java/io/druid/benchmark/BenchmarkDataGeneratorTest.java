@@ -22,8 +22,8 @@ package io.druid.benchmark;
 import io.druid.benchmark.datagen.BenchmarkColumnSchema;
 import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.Intervals;
 import io.druid.segment.column.ValueType;
-import org.joda.time.Interval;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -37,7 +37,8 @@ import java.util.Map;
 public class BenchmarkDataGeneratorTest
 {
   @Test
-  public void testSequential() throws Exception {
+  public void testSequential() throws Exception
+  {
     List<BenchmarkColumnSchema> schemas = new ArrayList<>();
     RowValueTracker tracker = new RowValueTracker();
 
@@ -86,7 +87,8 @@ public class BenchmarkDataGeneratorTest
   }
 
   @Test
-  public void testDiscreteUniform() throws Exception {
+  public void testDiscreteUniform() throws Exception
+  {
     List<BenchmarkColumnSchema> schemas = new ArrayList<>();
     RowValueTracker tracker = new RowValueTracker();
 
@@ -150,7 +152,8 @@ public class BenchmarkDataGeneratorTest
 
 
   @Test
-  public void testRoundedNormal() throws Exception {
+  public void testRoundedNormal() throws Exception
+  {
     List<BenchmarkColumnSchema> schemas = new ArrayList<>();
     RowValueTracker tracker = new RowValueTracker();
 
@@ -192,7 +195,8 @@ public class BenchmarkDataGeneratorTest
   }
 
   @Test
-  public void testZipf() throws Exception {
+  public void testZipf() throws Exception
+  {
     List<BenchmarkColumnSchema> schemas = new ArrayList<>();
     RowValueTracker tracker = new RowValueTracker();
 
@@ -246,7 +250,8 @@ public class BenchmarkDataGeneratorTest
   }
 
   @Test
-  public void testEnumerated() throws Exception {
+  public void testEnumerated() throws Exception
+  {
     List<BenchmarkColumnSchema> schemas = new ArrayList<>();
     RowValueTracker tracker = new RowValueTracker();
 
@@ -274,7 +279,8 @@ public class BenchmarkDataGeneratorTest
   }
 
   @Test
-  public void testNormal() throws Exception {
+  public void testNormal() throws Exception
+  {
     List<BenchmarkColumnSchema> schemas = new ArrayList<>();
     RowValueTracker tracker = new RowValueTracker();
 
@@ -316,7 +322,8 @@ public class BenchmarkDataGeneratorTest
   }
 
   @Test
-  public void testRealUniform() throws Exception {
+  public void testRealUniform() throws Exception
+  {
     List<BenchmarkColumnSchema> schemas = new ArrayList<>();
     RowValueTracker tracker = new RowValueTracker();
 
@@ -356,7 +363,8 @@ public class BenchmarkDataGeneratorTest
   }
 
   @Test
-  public void testIntervalBasedTimeGeneration() throws Exception {
+  public void testIntervalBasedTimeGeneration() throws Exception
+  {
     List<BenchmarkColumnSchema> schemas = new ArrayList<>();
 
     schemas.add(
@@ -370,13 +378,13 @@ public class BenchmarkDataGeneratorTest
         )
     );
 
-    BenchmarkDataGenerator dataGenerator = new BenchmarkDataGenerator(schemas, 9999, new Interval(50000, 600000), 100);
+    BenchmarkDataGenerator dataGenerator = new BenchmarkDataGenerator(schemas, 9999, Intervals.utc(50000, 600000), 100);
     for (int i = 0; i < 100; i++) {
       InputRow row = dataGenerator.nextRow();
       //System.out.println("S-ROW: " + row);
     }
 
-    BenchmarkDataGenerator dataGenerator2 = new BenchmarkDataGenerator(schemas, 9999, new Interval(50000, 50001), 100);
+    BenchmarkDataGenerator dataGenerator2 = new BenchmarkDataGenerator(schemas, 9999, Intervals.utc(50000, 50001), 100);
     for (int i = 0; i < 100; i++) {
       InputRow row = dataGenerator2.nextRow();
       //System.out.println("S2-ROW: " + row);
@@ -384,15 +392,17 @@ public class BenchmarkDataGeneratorTest
   }
 
 
-  private class RowValueTracker
+  private static class RowValueTracker
   {
     private Map<String, Map<Object, Integer>> dimensionMap;
 
-    public RowValueTracker() {
+    public RowValueTracker()
+    {
       dimensionMap = new HashMap<>();
     }
 
-    public void addRow(InputRow row) {
+    public void addRow(InputRow row)
+    {
       for (String dim : row.getDimensions()) {
         if (dimensionMap.get(dim) == null) {
           dimensionMap.put(dim, new HashMap<Object, Integer>());

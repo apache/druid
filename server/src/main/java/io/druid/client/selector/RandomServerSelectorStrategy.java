@@ -19,19 +19,32 @@
 
 package io.druid.client.selector;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
 import io.druid.timeline.DataSegment;
 
-import java.util.Random;
+import java.util.Collections;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class RandomServerSelectorStrategy implements ServerSelectorStrategy
 {
-  private static final Random random = new Random();
-
   @Override
   public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
   {
-    return Iterators.get(servers.iterator(), random.nextInt(servers.size()));
+    return Iterators.get(servers.iterator(), ThreadLocalRandom.current().nextInt(servers.size()));
+  }
+
+  @Override
+  public List<QueryableDruidServer> pick(Set<QueryableDruidServer> servers, DataSegment segment, int numServersToPick)
+  {
+    if (servers.size() <= numServersToPick) {
+      return ImmutableList.copyOf(servers);
+    }
+    List<QueryableDruidServer> list = Lists.newArrayList(servers);
+    Collections.shuffle(list, ThreadLocalRandom.current());
+    return ImmutableList.copyOf(list.subList(0, numServersToPick));
   }
 }

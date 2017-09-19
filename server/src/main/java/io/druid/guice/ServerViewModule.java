@@ -23,6 +23,7 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import io.druid.client.FilteredServerInventoryView;
 import io.druid.client.FilteredServerInventoryViewProvider;
+import io.druid.client.HttpServerInventoryViewConfig;
 import io.druid.client.InventoryView;
 import io.druid.client.ServerInventoryView;
 import io.druid.client.ServerInventoryViewProvider;
@@ -37,6 +38,7 @@ public class ServerViewModule implements Module
   {
     JsonConfigProvider.bind(binder, "druid.announcer", ServerInventoryViewProvider.class);
     JsonConfigProvider.bind(binder, "druid.announcer", FilteredServerInventoryViewProvider.class);
+    JsonConfigProvider.bind(binder, "druid.announcer.http", HttpServerInventoryViewConfig.class);
     binder.bind(InventoryView.class).to(ServerInventoryView.class);
     binder.bind(ServerView.class).to(ServerInventoryView.class);
     binder.bind(ServerInventoryView.class).toProvider(ServerInventoryViewProvider.class).in(ManageLifecycle.class);

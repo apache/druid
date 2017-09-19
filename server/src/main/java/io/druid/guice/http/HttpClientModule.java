@@ -19,16 +19,24 @@
 
 package io.druid.guice.http;
 
+import com.google.common.collect.Sets;
 import com.google.inject.Binder;
+import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.HttpClientConfig;
 import com.metamx.http.client.HttpClientInit;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
+import io.druid.guice.annotations.EscalatedClient;
+import io.druid.guice.annotations.EscalatedGlobal;
 import io.druid.guice.annotations.Global;
+import io.druid.java.util.common.StringUtils;
+import io.druid.server.security.Authenticator;
+import io.druid.server.security.AuthenticatorMapper;
 
 import java.lang.annotation.Annotation;
+import java.util.Set;
 
 /**
  */
@@ -39,9 +47,19 @@ public class HttpClientModule implements Module
     return new HttpClientModule("druid.global.http", Global.class);
   }
 
+  public static HttpClientModule escalatedGlobal()
+  {
+    return new HttpClientModule("druid.global.http", EscalatedGlobal.class);
+  }
+
+  private static Set<Class<? extends Annotation>> ESCALATING_ANNOTATIONS = Sets.newHashSet(
+      EscalatedGlobal.class, EscalatedClient.class
+  );
+
   private final String propertyPrefix;
   private Annotation annotation = null;
   private Class<? extends Annotation> annotationClazz = null;
+  private boolean isEscalated = false;
 
   public HttpClientModule(String propertyPrefix)
   {
@@ -52,6 +70,8 @@ public class HttpClientModule implements Module
   {
     this.propertyPrefix = propertyPrefix;
     this.annotationClazz = annotation;
+
+    isEscalated = ESCALATING_ANNOTATIONS.contains(annotationClazz);
   }
 
   public HttpClientModule(String propertyPrefix, Annotation annotation)
@@ -67,36 +87,48 @@ public class HttpClientModule implements Module
       JsonConfigProvider.bind(binder, propertyPrefix, DruidHttpClientConfig.class, annotation);
       binder.bind(HttpClient.class)
             .annotatedWith(annotation)
-            .toProvider(new HttpClientProvider(annotation))
+            .toProvider(new HttpClientProvider(annotation, isEscalated))
             .in(LazySingleton.class);
     } else if (annotationClazz != null) {
       JsonConfigProvider.bind(binder, propertyPrefix, DruidHttpClientConfig.class, annotationClazz);
       binder.bind(HttpClient.class)
             .annotatedWith(annotationClazz)
-            .toProvider(new HttpClientProvider(annotationClazz))
+            .toProvider(new HttpClientProvider(annotationClazz, isEscalated))
             .in(LazySingleton.class);
     } else {
       JsonConfigProvider.bind(binder, propertyPrefix, DruidHttpClientConfig.class);
       binder.bind(HttpClient.class)
-            .toProvider(new HttpClientProvider())
+            .toProvider(new HttpClientProvider(isEscalated))
             .in(LazySingleton.class);
     }
   }
 
   public static class HttpClientProvider extends AbstractHttpClientProvider<HttpClient>
   {
-    public HttpClientProvider()
+    private boolean isEscalated;
+    private Authenticator escalatingAuthenticator;
+
+    public HttpClientProvider(boolean isEscalated)
     {
+      this.isEscalated = isEscalated;
     }
 
-    public HttpClientProvider(Annotation annotation)
+    public HttpClientProvider(Annotation annotation, boolean isEscalated)
     {
       super(annotation);
+      this.isEscalated = isEscalated;
     }
 
-    public HttpClientProvider(Class<? extends Annotation> annotationClazz)
+    public HttpClientProvider(Class<? extends Annotation> annotationClazz, boolean isEscalated)
     {
       super(annotationClazz);
+      this.isEscalated = isEscalated;
+    }
+
+    @Inject
+    public void inject(AuthenticatorMapper authenticatorMapper)
+    {
+      this.escalatingAuthenticator = authenticatorMapper.getEscalatingAuthenticator();
     }
 
     @Override
@@ -109,12 +141,24 @@ public class HttpClientModule implements Module
           .withNumConnections(config.getNumConnections())
           .withReadTimeout(config.getReadTimeout())
           .withWorkerCount(config.getNumMaxThreads())
-          .withCompressionCodec(HttpClientConfig.CompressionCodec.valueOf(config.getCompressionCodec().toUpperCase()));
+          .withCompressionCodec(
+              HttpClientConfig.CompressionCodec.valueOf(StringUtils.toUpperCase(config.getCompressionCodec()))
+          );
 
       if (getSslContextBinding() != null) {
         builder.withSslContext(getSslContextBinding().getProvider().get());
       }
-      return HttpClientInit.createClient(builder.build(), LifecycleUtils.asMmxLifecycle(getLifecycleProvider().get()));
+
+      HttpClient client = HttpClientInit.createClient(
+          builder.build(),
+          LifecycleUtils.asMmxLifecycle(getLifecycleProvider().get())
+      );
+
+      if (isEscalated) {
+        return escalatingAuthenticator.createEscalatedClient(client);
+      } else {
+        return client;
+      }
     }
   }
 }

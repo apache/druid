@@ -21,12 +21,14 @@ package io.druid.query;
 
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Longs;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.granularity.Granularity;
 
 import java.util.Comparator;
 
 /**
  */
+@PublicApi
 public class ResultGranularTimestampComparator<T> implements Comparator<Result<T>>
 {
   private final Granularity gran;
@@ -45,7 +47,8 @@ public class ResultGranularTimestampComparator<T> implements Comparator<Result<T
     );
   }
 
-  public static <T> Ordering<Result<T>> create(Granularity granularity, boolean descending) {
+  public static <T> Ordering<Result<T>> create(Granularity granularity, boolean descending)
+  {
     Comparator<Result<T>> comparator = new ResultGranularTimestampComparator<>(granularity);
     return descending ? Ordering.from(comparator).reverse() : Ordering.from(comparator);
   }

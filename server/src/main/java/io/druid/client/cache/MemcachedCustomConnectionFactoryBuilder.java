@@ -56,9 +56,11 @@ class MemcachedCustomConnectionFactoryBuilder extends ConnectionFactoryBuilder
   @Override
   public ConnectionFactory build()
   {
-    return new DefaultConnectionFactory() {
+    return new DefaultConnectionFactory()
+    {
       @Override
-      public NodeLocator createLocator(List<MemcachedNode> nodes) {
+      public NodeLocator createLocator(List<MemcachedNode> nodes)
+      {
         switch (locator) {
           case ARRAY_MOD:
             return new ArrayModNodeLocator(nodes, getHashAlg());
@@ -81,115 +83,134 @@ class MemcachedCustomConnectionFactoryBuilder extends ConnectionFactoryBuilder
       }
 
       @Override
-      public BlockingQueue<Operation> createOperationQueue() {
-        return opQueueFactory == null ? super.createOperationQueue()
-                                      : opQueueFactory.create();
+      public BlockingQueue<Operation> createOperationQueue()
+      {
+        return opQueueFactory == null ? super.createOperationQueue() : opQueueFactory.create();
       }
 
       @Override
-      public BlockingQueue<Operation> createReadOperationQueue() {
-        return readQueueFactory == null ? super.createReadOperationQueue()
-                                        : readQueueFactory.create();
+      public BlockingQueue<Operation> createReadOperationQueue()
+      {
+        return readQueueFactory == null ? super.createReadOperationQueue() : readQueueFactory.create();
       }
 
       @Override
-      public BlockingQueue<Operation> createWriteOperationQueue() {
-        return writeQueueFactory == null ? super.createReadOperationQueue()
-                                         : writeQueueFactory.create();
+      public BlockingQueue<Operation> createWriteOperationQueue()
+      {
+        return writeQueueFactory == null ? super.createReadOperationQueue() : writeQueueFactory.create();
       }
 
       @Override
-      public Transcoder<Object> getDefaultTranscoder() {
+      public Transcoder<Object> getDefaultTranscoder()
+      {
         return transcoder == null ? super.getDefaultTranscoder() : transcoder;
       }
 
       @Override
-      public FailureMode getFailureMode() {
+      public FailureMode getFailureMode()
+      {
         return failureMode == null ? super.getFailureMode() : failureMode;
       }
 
       @Override
-      public HashAlgorithm getHashAlg() {
+      public HashAlgorithm getHashAlg()
+      {
         return hashAlg == null ? super.getHashAlg() : hashAlg;
       }
 
-      public Collection<ConnectionObserver> getInitialObservers() {
+      @Override
+      public Collection<ConnectionObserver> getInitialObservers()
+      {
         return initialObservers;
       }
 
       @Override
-      public OperationFactory getOperationFactory() {
+      public OperationFactory getOperationFactory()
+      {
         return opFact == null ? super.getOperationFactory() : opFact;
       }
 
       @Override
-      public long getOperationTimeout() {
+      public long getOperationTimeout()
+      {
         return opTimeout == -1 ? super.getOperationTimeout() : opTimeout;
       }
 
       @Override
-      public int getReadBufSize() {
+      public int getReadBufSize()
+      {
         return readBufSize == -1 ? super.getReadBufSize() : readBufSize;
       }
 
       @Override
-      public boolean isDaemon() {
+      public boolean isDaemon()
+      {
         return isDaemon;
       }
 
       @Override
-      public boolean shouldOptimize() {
+      public boolean shouldOptimize()
+      {
         return shouldOptimize;
       }
 
       @Override
-      public boolean useNagleAlgorithm() {
+      public boolean useNagleAlgorithm()
+      {
         return useNagle;
       }
 
       @Override
-      public long getMaxReconnectDelay() {
+      public long getMaxReconnectDelay()
+      {
         return maxReconnectDelay;
       }
 
       @Override
-      public AuthDescriptor getAuthDescriptor() {
+      public AuthDescriptor getAuthDescriptor()
+      {
         return authDescriptor;
       }
 
       @Override
-      public long getOpQueueMaxBlockTime() {
-        return opQueueMaxBlockTime > -1 ? opQueueMaxBlockTime
-                                        : super.getOpQueueMaxBlockTime();
+      public long getOpQueueMaxBlockTime()
+      {
+        return opQueueMaxBlockTime > -1 ? opQueueMaxBlockTime : super.getOpQueueMaxBlockTime();
       }
 
       @Override
-      public int getTimeoutExceptionThreshold() {
+      public int getTimeoutExceptionThreshold()
+      {
         return timeoutExceptionThreshold;
       }
 
       @Override
-      public MetricType enableMetrics() {
+      public MetricType enableMetrics()
+      {
         return metricType == null ? super.enableMetrics() : metricType;
       }
 
       @Override
-      public MetricCollector getMetricCollector() {
+      public MetricCollector getMetricCollector()
+      {
         return collector == null ? super.getMetricCollector() : collector;
       }
 
       @Override
-      public ExecutorService getListenerExecutorService() {
+      public ExecutorService getListenerExecutorService()
+      {
         return executorService == null ? super.getListenerExecutorService() : executorService;
       }
 
       @Override
-      public boolean isDefaultExecutorService() {
+      public boolean isDefaultExecutorService()
+      {
         return executorService == null;
       }
 
       @Override
-      public long getAuthWaitTime() {
+      public long getAuthWaitTime()
+      {
         return authWaitTime;
       }
     };

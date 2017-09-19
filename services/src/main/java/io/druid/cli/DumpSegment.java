@@ -41,9 +41,13 @@ import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ConciseBitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.bitmap.RoaringBitmapFactory;
+import io.druid.guice.DruidProcessingModule;
+import io.druid.guice.QueryRunnerFactoryModule;
+import io.druid.guice.QueryableModule;
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
@@ -51,6 +55,7 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -168,7 +173,7 @@ public class DumpSegment extends GuiceRunnable
     final DumpType dumpType;
 
     try {
-      dumpType = DumpType.valueOf(dumpTypeString.toUpperCase());
+      dumpType = DumpType.valueOf(StringUtils.toUpperCase(dumpTypeString));
     }
     catch (Exception e) {
       throw new IAE("Not a valid dump type: %s", dumpTypeString);
@@ -253,7 +258,8 @@ public class DumpSegment extends GuiceRunnable
         index.getDataInterval().withChronology(ISOChronology.getInstanceUTC()),
         VirtualColumns.EMPTY,
         Granularities.ALL,
-        false
+        false,
+        null
     );
 
     withOutputStream(
@@ -272,7 +278,9 @@ public class DumpSegment extends GuiceRunnable
                     final List<ObjectColumnSelector> selectors = Lists.newArrayList();
 
                     for (String columnName : columnNames) {
-                      selectors.add(makeSelector(columnName, index.getColumn(columnName), cursor));
+                      selectors.add(
+                          makeSelector(columnName, index.getColumn(columnName), cursor.getColumnSelectorFactory())
+                      );
                     }
 
                     while (!cursor.isDone()) {
@@ -280,7 +288,7 @@ public class DumpSegment extends GuiceRunnable
 
                       for (int i = 0; i < columnNames.size(); i++) {
                         final String columnName = columnNames.get(i);
-                        final Object value = selectors.get(i).get();
+                        final Object value = selectors.get(i).getObject();
 
                         if (timeISO8601 && columnNames.get(i).equals(Column.TIME_COLUMN_NAME)) {
                           row.put(columnName, new DateTime(value, DateTimeZone.UTC).toString());
@@ -423,6 +431,9 @@ public class DumpSegment extends GuiceRunnable
   protected List<? extends Module> getModules()
   {
     return ImmutableList.of(
+        new DruidProcessingModule(),
+        new QueryableModule(),
+        new QueryRunnerFactoryModule(),
         new Module()
         {
           @Override
@@ -430,6 +441,7 @@ public class DumpSegment extends GuiceRunnable
           {
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/tool");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(9999);
+            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
             binder.bind(DruidProcessingConfig.class).toInstance(
                 new DruidProcessingConfig()
                 {
@@ -471,7 +483,7 @@ public class DumpSegment extends GuiceRunnable
     final QueryRunner<T> runner = factory.createRunner(new QueryableIndexSegment("segment", index));
     final Sequence results = factory.getToolchest().mergeResults(
         factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.<QueryRunner>of(runner))
-    ).run(query, Maps.<String, Object>newHashMap());
+    ).run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap());
     return (Sequence<T>) results;
   }
 
@@ -513,7 +525,7 @@ public class DumpSegment extends GuiceRunnable
           }
 
           @Override
-          public List<String> get()
+          public List<String> getObject()
           {
             final IndexedInts row = dimensionSelector.getRow();
             if (row.size() == 0) {
@@ -537,7 +549,7 @@ public class DumpSegment extends GuiceRunnable
           }
 
           @Override
-          public String get()
+          public String getObject()
           {
             final IndexedInts row = dimensionSelector.getRow();
             return row.size() == 0 ? null : dimensionSelector.lookupName(row.get(0));
@@ -560,7 +572,7 @@ public class DumpSegment extends GuiceRunnable
           }
 
           @Override
-          public Object get()
+          public Object getObject()
           {
             return null;
           }

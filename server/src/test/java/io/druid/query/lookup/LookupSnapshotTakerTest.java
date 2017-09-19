@@ -23,10 +23,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
-
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.segment.TestHelper;
+import org.apache.commons.io.FileUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -43,7 +43,7 @@ public class LookupSnapshotTakerTest
 {
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
-  private final ObjectMapper mapper = TestHelper.JSON_MAPPER;
+  private final ObjectMapper mapper = TestHelper.getJsonMapper();
 
 
   private LookupSnapshotTaker lookupSnapshotTaker;
@@ -61,12 +61,54 @@ public class LookupSnapshotTakerTest
   public void testTakeSnapshotAndPullExisting() throws IOException
   {
 
-    LookupBean lookupBean = new LookupBean();
-    lookupBean.name = "name";
-    lookupBean.factory = new MapLookupExtractorFactory(ImmutableMap.of("key", "value"), true);
+    LookupBean lookupBean = new LookupBean(
+        "name",
+        null,
+        new LookupExtractorFactoryContainer(
+            "v1",
+            new MapLookupExtractorFactory(
+                ImmutableMap.of(
+                    "key",
+                    "value"
+                ), true
+            )
+        )
+    );
     List<LookupBean> lookupBeanList = Lists.newArrayList(lookupBean);
     lookupSnapshotTaker.takeSnapshot(lookupBeanList);
     List<LookupBean> actualList = lookupSnapshotTaker.pullExistingSnapshot();
+    Assert.assertEquals(lookupBeanList, actualList);
+  }
+
+  //test backward compatibility with snapshots stored using 0.9.x code
+  @Test
+  public void testBackwardCompatibility() throws IOException
+  {
+    File directory = temporaryFolder.newFolder();
+    File snapshotFile = new File(directory, LookupSnapshotTaker.PERSIST_FILE_NAME);
+    Assert.assertFalse(snapshotFile.exists());
+    FileUtils.write(
+        snapshotFile,
+        "[{\"factory\":{\"type\":\"map\",\"map\":{\"key\":\"value\"},\"isOneToOne\":true},\"name\":\"name\"}]"
+    );
+    Assert.assertTrue(snapshotFile.exists());
+    List<LookupBean> actualList = new LookupSnapshotTaker(mapper, directory.getAbsolutePath()).pullExistingSnapshot();
+
+    LookupBean lookupBean = new LookupBean(
+        "name",
+        null,
+        new LookupExtractorFactoryContainer(
+            null,
+            new MapLookupExtractorFactory(
+                ImmutableMap.of(
+                    "key",
+                    "value"
+                ), true
+            )
+        )
+    );
+    List<LookupBean> lookupBeanList = Lists.newArrayList(lookupBean);
+
     Assert.assertEquals(lookupBeanList, actualList);
   }
 
@@ -79,9 +121,19 @@ public class LookupSnapshotTakerTest
     Assert.assertTrue(snapshotFile.createNewFile());
     Assert.assertTrue(snapshotFile.setReadOnly());
     LookupSnapshotTaker lookupSnapshotTaker = new LookupSnapshotTaker(mapper, directory.getAbsolutePath());
-    LookupBean lookupBean = new LookupBean();
-    lookupBean.name = "name";
-    lookupBean.factory = new MapLookupExtractorFactory(ImmutableMap.of("key", "value"), true);
+    LookupBean lookupBean = new LookupBean(
+        "name",
+        null,
+        new LookupExtractorFactoryContainer(
+            "v1",
+            new MapLookupExtractorFactory(
+                ImmutableMap.of(
+                    "key",
+                    "value"
+                ), true
+            )
+        )
+    );
     List<LookupBean> lookupBeanList = Lists.newArrayList(lookupBean);
     lookupSnapshotTaker.takeSnapshot(lookupBeanList);
   }

@@ -20,13 +20,17 @@
 package io.druid.segment.filter;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.java.util.common.StringUtils;
+import io.druid.query.BitmapResultFactory;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BooleanFilter;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.RowOffsetMatcherFactory;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 
@@ -41,30 +45,26 @@ public class OrFilter implements BooleanFilter
 
   private final List<Filter> filters;
 
-  public OrFilter(
-      List<Filter> filters
-  )
+  public OrFilter(List<Filter> filters)
   {
-    if (filters.size() == 0) {
-      throw new IllegalArgumentException("Can't construct empty OrFilter (the universe does not exist)");
-    }
+    Preconditions.checkArgument(filters.size() > 0, "Can't construct empty OrFilter (the universe does not exist)");
 
     this.filters = filters;
   }
 
   @Override
-  public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
+  public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
   {
     if (filters.size() == 1) {
-      return filters.get(0).getBitmapIndex(selector);
+      return filters.get(0).getBitmapResult(selector, bitmapResultFactory);
     }
 
-    List<ImmutableBitmap> bitmaps = Lists.newArrayList();
-    for (int i = 0; i < filters.size(); i++) {
-      bitmaps.add(filters.get(i).getBitmapIndex(selector));
+    List<T> bitmapResults = Lists.newArrayList();
+    for (Filter filter : filters) {
+      bitmapResults.add(filter.getBitmapResult(selector, bitmapResultFactory));
     }
 
-    return selector.getBitmapFactory().union(bitmaps);
+    return bitmapResultFactory.union(bitmapResults);
   }
 
   @Override
@@ -103,23 +103,14 @@ public class OrFilter implements BooleanFilter
       matchers.add(0, offsetMatcher);
     }
 
-    return new ValueMatcher()
-    {
-      @Override
-      public boolean matches()
-      {
-        for (ValueMatcher valueMatcher : matchers) {
-          if (valueMatcher.matches()) {
-            return true;
-          }
-        }
-        return false;
-      }
-    };
+    return makeMatcher(matchers.toArray(AndFilter.EMPTY_VALUE_MATCHER_ARRAY));
   }
 
 
-  private ValueMatcher makeMatcher(final ValueMatcher[] baseMatchers){
+  private ValueMatcher makeMatcher(final ValueMatcher[] baseMatchers)
+  {
+    Preconditions.checkState(baseMatchers.length > 0);
+
     if (baseMatchers.length == 1) {
       return baseMatchers[0];
     }
@@ -136,6 +127,15 @@ public class OrFilter implements BooleanFilter
         }
         return false;
       }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("firstBaseMatcher", baseMatchers[0]);
+        inspector.visit("secondBaseMatcher", baseMatchers[1]);
+        // Don't inspect the 3rd and all consequent baseMatchers, cut runtime shape combinations at this point.
+        // Anyway if the filter is so complex, Hotspot won't inline all calls because of the inline limit.
+      }
     };
   }
 
@@ -149,7 +149,7 @@ public class OrFilter implements BooleanFilter
   public boolean supportsBitmapIndex(BitmapIndexSelector selector)
   {
     for (Filter filter : filters) {
-      if(!filter.supportsBitmapIndex(selector)) {
+      if (!filter.supportsBitmapIndex(selector)) {
         return false;
       }
     }
@@ -162,7 +162,7 @@ public class OrFilter implements BooleanFilter
   )
   {
     for (Filter filter : filters) {
-      if(!filter.supportsSelectivityEstimation(columnSelector, indexSelector)) {
+      if (!filter.supportsSelectivityEstimation(columnSelector, indexSelector)) {
         return false;
       }
     }
@@ -180,8 +180,9 @@ public class OrFilter implements BooleanFilter
     return Math.min(selectivity, 1.);
   }
 
+  @Override
   public String toString()
   {
-    return String.format("(%s)", OR_JOINER.join(filters));
+    return StringUtils.format("(%s)", OR_JOINER.join(filters));
   }
 }

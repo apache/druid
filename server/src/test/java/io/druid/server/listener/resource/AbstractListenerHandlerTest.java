@@ -24,8 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.StringUtils;
 
+import io.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -61,6 +61,12 @@ public class AbstractListenerHandlerTest
   final AbstractListenerHandler<SomeBeanClass> abstractListenerHandler =
       new AbstractListenerHandler<SomeBeanClass>(SomeBeanClass.TYPE_REFERENCE)
       {
+        @Override
+        public Response handleUpdates(InputStream inputStream, ObjectMapper mapper)
+        {
+          return null;
+        }
+
         @Nullable
         @Override
         public Object post(@NotNull Map<String, SomeBeanClass> inputObject) throws Exception

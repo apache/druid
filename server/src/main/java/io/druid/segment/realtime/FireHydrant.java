@@ -19,46 +19,39 @@
 
 package io.druid.segment.realtime;
 
-import com.google.common.base.Throwables;
-
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.ReferenceCountingSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.incremental.IncrementalIndex;
+import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.io.IOException;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
 public class FireHydrant
 {
   private final int count;
-  private final Object swapLock = new Object();
-
+  private final AtomicReference<ReferenceCountingSegment> adapter;
   private volatile IncrementalIndex index;
-  private volatile ReferenceCountingSegment adapter;
 
-  public FireHydrant(
-      IncrementalIndex index,
-      int count,
-      String segmentIdentifier
-  )
+  public FireHydrant(IncrementalIndex index, int count, String segmentIdentifier)
   {
     this.index = index;
-    this.adapter = new ReferenceCountingSegment(new IncrementalIndexSegment(index, segmentIdentifier));
+    this.adapter = new AtomicReference<>(
+        new ReferenceCountingSegment(new IncrementalIndexSegment(index, segmentIdentifier))
+    );
     this.count = count;
   }
 
-  public FireHydrant(
-      Segment adapter,
-      int count
-  )
+  public FireHydrant(Segment adapter, int count)
   {
     this.index = null;
-    this.adapter = new ReferenceCountingSegment(adapter);
+    this.adapter = new AtomicReference<>(new ReferenceCountingSegment(adapter));
     this.count = count;
   }
 
@@ -67,9 +60,35 @@ public class FireHydrant
     return index;
   }
 
-  public Segment getSegment()
+  public String getSegmentIdentifier()
   {
-    return adapter;
+    return adapter.get().getIdentifier();
+  }
+
+  public Interval getSegmentDataInterval()
+  {
+    return adapter.get().getDataInterval();
+  }
+
+  public ReferenceCountingSegment getIncrementedSegment()
+  {
+    ReferenceCountingSegment segment = adapter.get();
+    while (true) {
+      if (segment.increment()) {
+        return segment;
+      }
+      // segment.increment() returned false, means it is closed. Since close() in swapSegment() happens after segment
+      // swap, the new segment should already be visible.
+      ReferenceCountingSegment newSegment = adapter.get();
+      if (segment == newSegment) {
+        throw new ISE("segment.close() is called somewhere outside FireHydrant.swapSegment()");
+      }
+      if (newSegment == null) {
+        throw new ISE("FireHydrant was 'closed' by swapping segment to null while acquiring a segment");
+      }
+      segment = newSegment;
+      // Spin loop.
+    }
   }
 
   public int getCount()
@@ -82,37 +101,41 @@ public class FireHydrant
     return index == null;
   }
 
-  public void swapSegment(Segment newAdapter)
+  public void swapSegment(@Nullable Segment newSegment)
   {
-    synchronized (swapLock) {
-      if (adapter != null && newAdapter != null && !newAdapter.getIdentifier().equals(adapter.getIdentifier())) {
+    while (true) {
+      ReferenceCountingSegment currentSegment = adapter.get();
+      if (currentSegment == null && newSegment == null) {
+        return;
+      }
+      if (currentSegment != null && newSegment != null &&
+          !newSegment.getIdentifier().equals(currentSegment.getIdentifier())) {
         // Sanity check: identifier should not change
         throw new ISE(
             "WTF?! Cannot swap identifier[%s] -> [%s]!",
-            adapter.getIdentifier(),
-            newAdapter.getIdentifier()
+            currentSegment.getIdentifier(),
+            newSegment.getIdentifier()
         );
       }
-      if (this.adapter != null) {
-        try {
-          this.adapter.close();
-        }
-        catch (IOException e) {
-          throw Throwables.propagate(e);
-        }
+      if (currentSegment == newSegment) {
+        throw new ISE("Cannot swap to the same segment");
       }
-      this.adapter = new ReferenceCountingSegment(newAdapter);
-      this.index = null;
+      ReferenceCountingSegment newReferenceCountingSegment =
+          newSegment != null ? new ReferenceCountingSegment(newSegment) : null;
+      if (adapter.compareAndSet(currentSegment, newReferenceCountingSegment)) {
+        if (currentSegment != null) {
+          currentSegment.close();
+        }
+        index = null;
+        return;
+      }
     }
   }
 
   public Pair<Segment, Closeable> getAndIncrementSegment()
   {
-    // Prevent swapping of index before increment is called
-    synchronized (swapLock) {
-      Closeable closeable = adapter.increment();
-      return new Pair<Segment, Closeable>(adapter, closeable);
-    }
+    ReferenceCountingSegment segment = getIncrementedSegment();
+    return new Pair<>(segment, segment.decrementOnceCloseable());
   }
 
   @Override
@@ -120,7 +143,7 @@ public class FireHydrant
   {
     return "FireHydrant{" +
            "index=" + index +
-           ", queryable=" + adapter +
+           ", queryable=" + adapter.get().getIdentifier() +
            ", count=" + count +
            '}';
   }

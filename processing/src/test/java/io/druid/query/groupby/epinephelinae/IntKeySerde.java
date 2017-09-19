@@ -20,6 +20,7 @@
 package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.primitives.Ints;
+import io.druid.query.aggregation.AggregatorFactory;
 
 import java.nio.ByteBuffer;
 import java.util.Comparator;
@@ -33,7 +34,7 @@ public class IntKeySerde implements Grouper.KeySerde<Integer>
     // No instantiation
   }
 
-  private static final Grouper.KeyComparator KEY_COMPARATOR = new Grouper.KeyComparator()
+  private static final Grouper.BufferComparator KEY_COMPARATOR = new Grouper.BufferComparator()
   {
     @Override
     public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
@@ -80,7 +81,15 @@ public class IntKeySerde implements Grouper.KeySerde<Integer>
   }
 
   @Override
-  public Grouper.KeyComparator bufferComparator()
+  public Grouper.BufferComparator bufferComparator()
+  {
+    return KEY_COMPARATOR;
+  }
+
+  @Override
+  public Grouper.BufferComparator bufferComparatorWithAggregators(
+      AggregatorFactory[] aggregatorFactories, int[] aggregatorOffsets
+  )
   {
     return KEY_COMPARATOR;
   }

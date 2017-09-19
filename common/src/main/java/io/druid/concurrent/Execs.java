@@ -19,6 +19,8 @@
 
 package io.druid.concurrent;
 
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import javax.annotation.Nullable;
@@ -39,6 +41,13 @@ import java.util.concurrent.TimeUnit;
  */
 public class Execs
 {
+  /**
+   * Returns an ExecutorService which is terminated and shutdown from the beginning and not able to accept any tasks.
+   */
+  public static ExecutorService dummy()
+  {
+    return DummyExecutorService.INSTANCE;
+  }
 
   public static ExecutorService singleThreaded(@NotNull String nameFormat)
   {
@@ -83,7 +92,19 @@ public class Execs
     if (priority != null) {
       builder.setPriority(priority);
     }
+
     return builder.build();
+  }
+
+  public static Thread makeThread(String name, Runnable runnable, boolean isDaemon)
+  {
+    Preconditions.checkArgument(!Strings.isNullOrEmpty(name), "name null/empty");
+    Preconditions.checkNotNull(runnable, "null runnable");
+
+    Thread t = new Thread(runnable);
+    t.setName(name);
+    t.setDaemon(isDaemon);
+    return t;
   }
 
   /**

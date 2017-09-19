@@ -25,5 +25,6 @@ import com.google.inject.Provider;
  */
 public interface MetadataSegmentManagerProvider extends Provider<MetadataSegmentManager>
 {
+  @Override
   public MetadataSegmentManager get();
 }

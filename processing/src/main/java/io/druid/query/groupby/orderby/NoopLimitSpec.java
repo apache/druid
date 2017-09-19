@@ -19,6 +19,7 @@
 
 package io.druid.query.groupby.orderby;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import io.druid.data.input.Row;
@@ -31,13 +32,27 @@ import java.util.List;
 
 /**
  */
-public class NoopLimitSpec implements LimitSpec
+public final class NoopLimitSpec implements LimitSpec
 {
   private static final byte CACHE_KEY = 0x0;
 
+  public static final NoopLimitSpec INSTANCE = new NoopLimitSpec();
+
+  @JsonCreator
+  public static NoopLimitSpec instance()
+  {
+    return INSTANCE;
+  }
+
+  private NoopLimitSpec()
+  {
+  }
+
   @Override
   public Function<Sequence<Row>, Sequence<Row>> build(
-      List<DimensionSpec> dimensions, List<AggregatorFactory> aggs, List<PostAggregator> postAggs
+      List<DimensionSpec> dimensions,
+      List<AggregatorFactory> aggs,
+      List<PostAggregator> postAggs
   )
   {
     return Functions.identity();
@@ -62,7 +77,8 @@ public class NoopLimitSpec implements LimitSpec
   }
 
   @Override
-  public int hashCode() {
+  public int hashCode()
+  {
     return 0;
   }
 

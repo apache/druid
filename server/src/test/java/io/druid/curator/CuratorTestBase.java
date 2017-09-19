@@ -156,9 +156,9 @@ public class CuratorTestBase
     try {
       curator.close();
       server.close();
-    } catch(IOException ex)
-    {
-      throw Throwables.propagate(ex);
+    }
+    catch (IOException ex) {
+      throw new RuntimeException(ex);
     }
   }
 

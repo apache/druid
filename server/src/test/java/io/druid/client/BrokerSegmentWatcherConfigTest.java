@@ -29,7 +29,7 @@ import org.junit.Test;
  */
 public class BrokerSegmentWatcherConfigTest
 {
-  private static final ObjectMapper MAPPER = TestHelper.getObjectMapper();
+  private static final ObjectMapper MAPPER = TestHelper.getJsonMapper();
 
   @Test
   public void testSerde() throws Exception

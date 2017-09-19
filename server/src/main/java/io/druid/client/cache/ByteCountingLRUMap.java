@@ -19,6 +19,8 @@
 
 package io.druid.client.cache;
 
+import io.druid.java.util.common.logger.Logger;
+
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -28,8 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
-
-import io.druid.java.util.common.logger.Logger;
 
 /**
 */
@@ -88,7 +88,7 @@ class ByteCountingLRUMap extends LinkedHashMap<ByteBuffer, byte[]>
       if (logEvictions && evictionCount.get() % logEvictionCount == 0) {
         log.info(
             "Evicting %,dth element.  Size[%,d], numBytes[%,d], averageSize[%,d]",
-            evictionCount,
+            evictionCount.get(),
             size(),
             numBytes.get(),
             numBytes.get() / size()
@@ -104,15 +104,19 @@ class ByteCountingLRUMap extends LinkedHashMap<ByteBuffer, byte[]>
       remove(keyToRemove);
     }
 
-    return super.put(key, value);
+    byte[] old = super.put(key, value);
+    if (old != null) {
+      numBytes.addAndGet(-key.remaining() - old.length);
+    }
+    return old;
   }
 
   @Override
   public byte[] remove(Object key)
   {
     byte[] value = super.remove(key);
-    if(value != null) {
-      long delta = -((ByteBuffer)key).remaining() - value.length;
+    if (value != null) {
+      long delta = -((ByteBuffer) key).remaining() - value.length;
       numBytes.addAndGet(delta);
     }
     return value;

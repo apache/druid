@@ -88,9 +88,9 @@ public class CoordinatorServerView implements InventoryView
         }
     );
 
-    baseView.registerServerCallback(
+    baseView.registerServerRemovedCallback(
         exec,
-        new ServerView.ServerCallback()
+        new ServerView.ServerRemovedCallback()
         {
           @Override
           public ServerView.CallbackAction serverRemoved(DruidServer server)
@@ -206,5 +206,17 @@ public class CoordinatorServerView implements InventoryView
   public Iterable<DruidServer> getInventory()
   {
     return baseView.getInventory();
+  }
+
+  @Override
+  public boolean isStarted()
+  {
+    return baseView.isStarted();
+  }
+
+  @Override
+  public boolean isSegmentLoadedByServer(String serverKey, DataSegment segment)
+  {
+    return baseView.isSegmentLoadedByServer(serverKey, segment);
   }
 }

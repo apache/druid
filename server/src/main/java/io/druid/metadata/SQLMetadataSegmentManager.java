@@ -37,7 +37,10 @@ import com.metamx.emitter.EmittingLogger;
 import io.druid.client.DruidDataSource;
 import io.druid.concurrent.Execs;
 import io.druid.guice.ManageLifecycle;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.MapUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.timeline.DataSegment;
@@ -111,6 +114,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     this.connector = connector;
   }
 
+  @Override
   @LifecycleStart
   public void start()
   {
@@ -145,6 +149,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     }
   }
 
+  @Override
   @LifecycleStop
   public void stop()
   {
@@ -176,7 +181,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
             ) throws Exception
             {
               return handle
-                  .createQuery(String.format(
+                  .createQuery(StringUtils.format(
                       "SELECT payload FROM %s WHERE dataSource = :dataSource",
                       getSegmentsTable()
                   ))
@@ -220,11 +225,10 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       );
 
       final List<DataSegment> segments = Lists.newArrayList();
-      for (TimelineObjectHolder<String, DataSegment> objectHolder : segmentTimeline.lookup(
-          new Interval(
-              "0000-01-01/3000-01-01"
-          )
-      )) {
+      List<TimelineObjectHolder<String, DataSegment>> timelineObjectHolders = segmentTimeline.lookup(
+          Intervals.of("0000-01-01/3000-01-01")
+      );
+      for (TimelineObjectHolder<String, DataSegment> objectHolder : timelineObjectHolders) {
         for (PartitionChunk<DataSegment> partitionChunk : objectHolder.getObject()) {
           segments.add(partitionChunk.getObject());
         }
@@ -245,7 +249,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
 
               for (DataSegment segment : segments) {
                 batch.add(
-                    String.format(
+                    StringUtils.format(
                         "UPDATE %s SET used=true WHERE id = '%s'",
                         getSegmentsTable(),
                         segment.getIdentifier()
@@ -278,7 +282,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
             public Void withHandle(Handle handle) throws Exception
             {
               handle.createStatement(
-                  String.format("UPDATE %s SET used=true WHERE id = :id", getSegmentsTable())
+                  StringUtils.format("UPDATE %s SET used=true WHERE id = :id", getSegmentsTable())
               )
                     .bind("id", segmentId)
                     .execute();
@@ -313,7 +317,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
             public Void withHandle(Handle handle) throws Exception
             {
               handle.createStatement(
-                  String.format("UPDATE %s SET used=false WHERE dataSource = :dataSource", getSegmentsTable())
+                  StringUtils.format("UPDATE %s SET used=false WHERE dataSource = :dataSource", getSegmentsTable())
               )
                     .bind("dataSource", ds)
                     .execute();
@@ -344,7 +348,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
             public Void withHandle(Handle handle) throws Exception
             {
               handle.createStatement(
-                  String.format("UPDATE %s SET used=false WHERE id = :segmentID", getSegmentsTable())
+                  StringUtils.format("UPDATE %s SET used=false WHERE id = :segmentID", getSegmentsTable())
               ).bind("segmentID", segmentID)
                     .execute();
 
@@ -404,7 +408,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
             public List<String> withHandle(Handle handle) throws Exception
             {
               return handle.createQuery(
-                  String.format("SELECT DISTINCT(datasource) FROM %s", getSegmentsTable())
+                  StringUtils.format("SELECT DISTINCT(datasource) FROM %s", getSegmentsTable())
               )
                            .fold(
                                Lists.<String>newArrayList(),
@@ -456,7 +460,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
             public List<DataSegment> inTransaction(Handle handle, TransactionStatus status) throws Exception
             {
               return handle
-                  .createQuery(String.format("SELECT payload FROM %s WHERE used=true", getSegmentsTable()))
+                  .createQuery(StringUtils.format("SELECT payload FROM %s WHERE used=true", getSegmentsTable()))
                   .setFetchSize(connector.getStreamingFetchSize())
                   .map(
                       new ResultSetMapper<DataSegment>()
@@ -501,7 +505,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
         if (dataSource == null) {
           dataSource = new DruidDataSource(
               datasourceName,
-              ImmutableMap.of("created", new DateTime().toString())
+              ImmutableMap.of("created", DateTimes.nowUtc().toString())
           );
 
           Object shouldBeNull = newDataSources.put(
@@ -553,7 +557,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
           {
             Iterator<Interval> iter = handle
                 .createQuery(
-                    String.format(
+                    StringUtils.format(
                         "SELECT start, %2$send%2$s FROM %1$s WHERE dataSource = :dataSource and start >= :start and %2$send%2$s <= :end and used = false ORDER BY start, %2$send%2$s",
                         getSegmentsTable(), connector.getQuoteString()
                     )

@@ -30,15 +30,15 @@ import com.ircclouds.irc.api.domain.IRCServer;
 import com.ircclouds.irc.api.domain.messages.ChannelPrivMsg;
 import com.ircclouds.irc.api.listeners.VariousMessageListenerAdapter;
 import com.ircclouds.irc.api.state.IIRCState;
-
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.logger.Logger;
-
 import org.joda.time.DateTime;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
@@ -101,7 +101,7 @@ public class IrcFirehoseFactory implements FirehoseFactory<IrcInputRowParser>
   }
 
   @Override
-  public Firehose connect(final IrcInputRowParser firehoseParser) throws IOException
+  public Firehose connect(final IrcInputRowParser firehoseParser, File temporaryDirectory) throws IOException
   {
     final IRCApi irc = new IRCApiImpl(false);
     final LinkedBlockingQueue<Pair<DateTime, ChannelPrivMsg>> queue = new LinkedBlockingQueue<Pair<DateTime, ChannelPrivMsg>>();
@@ -113,7 +113,7 @@ public class IrcFirehoseFactory implements FirehoseFactory<IrcInputRowParser>
           public void onChannelMessage(ChannelPrivMsg aMsg)
           {
             try {
-              queue.put(Pair.of(DateTime.now(), aMsg));
+              queue.put(Pair.of(DateTimes.nowUtc(), aMsg));
             }
             catch (InterruptedException e) {
               throw new RuntimeException("interrupted adding message to queue", e);

@@ -25,6 +25,8 @@ import io.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
+
 /**
  */
 public class ExtensionsConfigTest
@@ -33,7 +35,7 @@ public class ExtensionsConfigTest
   public void testSerdeWithDefaults() throws Exception
   {
     String json = "{}";
-    ObjectMapper mapper = TestHelper.getObjectMapper();
+    ObjectMapper mapper = TestHelper.getJsonMapper();
 
     ExtensionsConfig config = mapper.readValue(
         mapper.writeValueAsString(
@@ -57,9 +59,9 @@ public class ExtensionsConfigTest
                   + "  \"directory\": \"testExtensions\",\n"
                   + "  \"hadoopDependenciesDir\": \"testHadoopDependenciesDir\",\n"
                   + "  \"hadoopContainerDruidClasspath\": \"testHadoopContainerClasspath\",\n"
-                  + "  \"loadList\": [\"a\",\"b\"]\n"
+                  + "  \"loadList\": [\"b\",\"a\"]\n"
                   + "}";
-    ObjectMapper mapper = TestHelper.getObjectMapper();
+    ObjectMapper mapper = TestHelper.getJsonMapper();
 
     ExtensionsConfig config = mapper.readValue(
         mapper.writeValueAsString(
@@ -74,9 +76,34 @@ public class ExtensionsConfigTest
     Assert.assertEquals("testHadoopContainerClasspath", config.getHadoopContainerDruidClasspath());
     Assert.assertEquals(
         ImmutableList.of(
-            "a", "b"
+            "b", "a"
         ),
-        config.getLoadList()
+            new ArrayList<>(config.getLoadList())
+    );
+  }
+  @Test
+  public void testLoadList() throws Exception
+  {
+    String json = "{\n"
+            + "  \"searchCurrentClassloader\": false,\n"
+            + "  \"directory\": \"testExtensions\",\n"
+            + "  \"hadoopDependenciesDir\": \"testHadoopDependenciesDir\",\n"
+            + "  \"hadoopContainerDruidClasspath\": \"testHadoopContainerClasspath\",\n"
+            + "  \"loadList\": [\"b\",\"b\",\"a\",\"c\",\"d\",\"a\"]\n"
+            + "}";
+    ObjectMapper mapper = TestHelper.getJsonMapper();
+
+    ExtensionsConfig config = mapper.readValue(
+            mapper.writeValueAsString(
+                    mapper.readValue(json, ExtensionsConfig.class)
+            ),
+            ExtensionsConfig.class
+    );
+
+    Assert.assertEquals(
+            ImmutableList.of("b", "a", "c", "d"),
+            new ArrayList<>(config.getLoadList())
     );
   }
 }
+

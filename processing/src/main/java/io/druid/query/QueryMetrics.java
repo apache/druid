@@ -20,7 +20,11 @@
 package io.druid.query;
 
 import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.collections.bitmap.BitmapFactory;
+import io.druid.query.filter.Filter;
 import org.joda.time.Interval;
+
+import java.util.List;
 
 /**
  * Abstraction wrapping {@link com.metamx.emitter.service.ServiceMetricEvent.Builder} and allowing to control what
@@ -74,6 +78,9 @@ import org.joda.time.Interval;
  * dimension or metric is useful and not very expensive to process and store then emit, skip (see above Goals, 1.)
  * otherwise.
  *
+ * <p>This interface can be extended, but is not marked as an {@code ExtensionPoint}, because it may change in breaking
+ * ways even in minor releases.
+ *
  * <p>If implementors of custom QueryMetrics don't want to fix builds on every Druid release (e. g. if they want to add
  * a single dimension to emitted events and don't want to alter other dimensions and emitted metrics), they could
  * inherit their custom QueryMetrics from {@link DefaultQueryMetrics} or query-specific default implementation class,
@@ -103,7 +110,7 @@ import org.joda.time.Interval;
  *
  * Making subinterfaces of QueryMetrics for emitting custom dimensions and/or metrics for specific query types
  * -----------------------------------------------------------------------------------------------------------
- * If a query type (e. g. {@link io.druid.query.search.search.SearchQuery} (it's runners) needs to emit custom
+ * If a query type (e. g. {@link io.druid.query.search.SearchQuery} (it's runners) needs to emit custom
  * dimensions and/or metrics which doesn't make sense for all other query types, the following steps should be executed:
  *  1. Create `interface SearchQueryMetrics extends QueryMetrics` (here and below "Search" is the query type) with
  *  additional methods (see "Adding new methods" section above).
@@ -122,9 +129,13 @@ import org.joda.time.Interval;
  *  5. Inject and use SearchQueryMetricsFactory instead of {@link GenericQueryMetricsFactory} in {@link
  *  io.druid.query.search.SearchQueryQueryToolChest}.
  *
- *  6. Specify `binder.bind(SearchQueryMetricsFactory.class).to(DefaultSearchQueryMetricsFactory.class)` in
- *  QueryToolChestModule (if the query type belongs to the core druid-processing, e. g. SearchQuery) or in some
- *  extension-specific Guice module otherwise, if the query type is defined in an extension, e. g. ScanQuery.
+ *  6. Establish injection of SearchQueryMetricsFactory using config and provider method in QueryToolChestModule
+ *  (see how it is done in QueryToolChestModule for existing query types with custom metrics, e. g. {@link
+ *  io.druid.query.topn.TopNQueryMetricsFactory}), if the query type belongs to the core druid-processing, e. g.
+ *  SearchQuery. If the query type defined in an extension, you can specify
+ *  `binder.bind(ScanQueryMetricsFactory.class).to(DefaultScanQueryMetricsFactory.class)` in the extension's
+ *  Guice module, if the query type is defined in an extension, e. g. ScanQuery. Or establish similar configuration,
+ *  as for the core query types.
  *
  * This complex procedure is needed to ensure custom {@link GenericQueryMetricsFactory} specified by users still works
  * for the query type when query type decides to create their custom QueryMetrics subclass.
@@ -192,6 +203,18 @@ public interface QueryMetrics<QueryType extends Query<?>>
 
   void chunkInterval(Interval interval);
 
+  void preFilters(List<Filter> preFilters);
+
+  void postFilters(List<Filter> postFilters);
+
+  /**
+   * Creates a {@link BitmapResultFactory} which may record some information along bitmap construction from {@link
+   * #preFilters(List)}. The returned BitmapResultFactory may add some dimensions to this QueryMetrics from it's {@link
+   * BitmapResultFactory#toImmutableBitmap(Object)} method. See {@link BitmapResultFactory} Javadoc for more
+   * information.
+   */
+  BitmapResultFactory<?> makeBitmapResultFactory(BitmapFactory factory);
+
   /**
    * Registers "query time" metric.
    */
@@ -241,6 +264,23 @@ public interface QueryMetrics<QueryType extends Query<?>>
    * Registers "node bytes" metric.
    */
   QueryMetrics<QueryType> reportNodeBytes(long byteCount);
+
+  /**
+   * Reports the time spent constructing bitmap from {@link #preFilters(List)} of the query. Not reported, if there are
+   * no preFilters.
+   */
+  QueryMetrics<QueryType> reportBitmapConstructionTime(long timeNs);
+
+  /**
+   * Reports the total number of rows in the processed segment.
+   */
+  QueryMetrics<QueryType> reportSegmentRows(long numRows);
+
+  /**
+   * Reports the number of rows to scan in the segment after applying {@link #preFilters(List)}. If the are no
+   * preFilters, this metric is equal to {@link #reportSegmentRows(long)}.
+   */
+  QueryMetrics<QueryType> reportPreFilteredRows(long numRows);
 
   /**
    * Emits all metrics, registered since the last {@code emit()} call on this QueryMetrics object.

@@ -19,19 +19,17 @@
 
 package io.druid.java.util.common.guava;
 
-import com.google.common.base.Function;
+import java.util.function.Function;
 
 /**
 */
 public class MappingAccumulator<OutType, InType, MappedType> implements Accumulator<OutType, InType>
 {
-  private final Function<InType, MappedType> fn;
+  private final Function<? super InType, ? extends MappedType> fn;
   private final Accumulator<OutType, MappedType> accumulator;
 
-  public MappingAccumulator(
-      Function<InType, MappedType> fn,
-      Accumulator<OutType, MappedType> accumulator
-  ) {
+  MappingAccumulator(Function<? super InType, ? extends MappedType> fn, Accumulator<OutType, MappedType> accumulator)
+  {
     this.fn = fn;
     this.accumulator = accumulator;
   }

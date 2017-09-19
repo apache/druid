@@ -19,19 +19,16 @@
 
 package io.druid.query;
 
+import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.java.util.common.guava.Sequence;
 
 import java.util.Map;
 
-/**
- */
+@ExtensionPoint
 public interface QueryRunner<T>
 {
   /**
-   * Runs the given query and returns results in a time-ordered sequence
-   * @param query
-   * @param responseContext
-   * @return
+   * Runs the given query and returns results in a time-ordered sequence.
    */
-  Sequence<T> run(Query<T> query, Map<String, Object> responseContext);
+  Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext);
 }

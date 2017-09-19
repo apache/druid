@@ -21,30 +21,23 @@ package io.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Throwables;
-import com.google.common.collect.Lists;
+import com.google.common.base.Preconditions;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.data.input.Firehose;
-import io.druid.data.input.FirehoseFactory;
-import io.druid.data.input.impl.FileIteratingFirehose;
+import io.druid.data.input.impl.AbstractTextFilesFirehoseFactory;
 import io.druid.data.input.impl.StringInputRowParser;
-import io.druid.java.util.common.IAE;
-import io.druid.java.util.common.ISE;
-
+import io.druid.java.util.common.CompressionUtils;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.LineIterator;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Collection;
-import java.util.Iterator;
-import java.util.LinkedList;
 
 /**
  */
-public class LocalFirehoseFactory implements FirehoseFactory<StringInputRowParser>
+public class LocalFirehoseFactory extends AbstractTextFilesFirehoseFactory<File>
 {
   private static final EmittingLogger log = new EmittingLogger(LocalFirehoseFactory.class);
 
@@ -84,55 +77,26 @@ public class LocalFirehoseFactory implements FirehoseFactory<StringInputRowParse
   }
 
   @Override
-  public Firehose connect(StringInputRowParser firehoseParser) throws IOException
+  protected Collection<File> initObjects()
   {
-    if (baseDir == null) {
-      throw new IAE("baseDir is null");
-    }
-    log.info("Searching for all [%s] in and beneath [%s]", filter, baseDir.getAbsoluteFile());
-
-    Collection<File> foundFiles = FileUtils.listFiles(
-        baseDir.getAbsoluteFile(),
+    final Collection<File> files = FileUtils.listFiles(
+        Preconditions.checkNotNull(baseDir).getAbsoluteFile(),
         new WildcardFileFilter(filter),
         TrueFileFilter.INSTANCE
     );
+    log.info("Initialized with " + files + " files");
+    return files;
+  }
 
-    if (foundFiles == null || foundFiles.isEmpty()) {
-      throw new ISE("Found no files to ingest! Check your schema.");
-    }
-    log.info ("Found files: " + foundFiles);
+  @Override
+  protected InputStream openObjectStream(File object) throws IOException
+  {
+    return FileUtils.openInputStream(object);
+  }
 
-    final LinkedList<File> files = Lists.newLinkedList(
-        foundFiles
-    );
-
-    return new FileIteratingFirehose(
-        new Iterator<LineIterator>()
-        {
-          @Override
-          public boolean hasNext()
-          {
-            return !files.isEmpty();
-          }
-
-          @Override
-          public LineIterator next()
-          {
-            try {
-              return FileUtils.lineIterator(files.poll());
-            }
-            catch (Exception e) {
-              throw Throwables.propagate(e);
-            }
-          }
-
-          @Override
-          public void remove()
-          {
-            throw new UnsupportedOperationException();
-          }
-        },
-        firehoseParser
-    );
+  @Override
+  protected InputStream wrapObjectStream(File object, InputStream stream) throws IOException
+  {
+    return object.getPath().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
   }
 }

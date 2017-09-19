@@ -21,6 +21,7 @@ package io.druid.data.input;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Closeables;
 import com.google.common.io.Files;
+import io.druid.java.util.common.StringUtils;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.file.FileReader;
@@ -105,7 +106,7 @@ public class AvroHadoopInputRowParserTest
       // 1. read avro files into Pig
       pigServer = new PigServer(ExecType.LOCAL);
       pigServer.registerQuery(
-          String.format(
+          StringUtils.format(
               "A = LOAD '%s' USING %s;",
               someAvroDatumFile,
               inputStorage

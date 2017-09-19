@@ -23,13 +23,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.java.util.common.Intervals;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.segment.realtime.appenderator.UsedSegmentChecker;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
-import org.junit.Assert;
 import org.easymock.EasyMock;
-import org.joda.time.Interval;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -43,19 +43,19 @@ public class ActionBasedUsedSegmentCheckerTest
     final TaskActionClient taskActionClient = EasyMock.createMock(TaskActionClient.class);
     EasyMock.expect(
         taskActionClient.submit(
-            new SegmentListUsedAction("bar", null, ImmutableList.of(new Interval("2002/P1D")))
+            new SegmentListUsedAction("bar", null, ImmutableList.of(Intervals.of("2002/P1D")))
         )
     ).andReturn(
         ImmutableList.of(
             DataSegment.builder()
                        .dataSource("bar")
-                       .interval(new Interval("2002/P1D"))
+                       .interval(Intervals.of("2002/P1D"))
                        .shardSpec(new LinearShardSpec(0))
                        .version("b")
                        .build(),
             DataSegment.builder()
                        .dataSource("bar")
-                       .interval(new Interval("2002/P1D"))
+                       .interval(Intervals.of("2002/P1D"))
                        .shardSpec(new LinearShardSpec(1))
                        .version("b")
                        .build()
@@ -63,31 +63,31 @@ public class ActionBasedUsedSegmentCheckerTest
     );
     EasyMock.expect(
         taskActionClient.submit(
-            new SegmentListUsedAction("foo", null, ImmutableList.of(new Interval("2000/P1D"), new Interval("2001/P1D")))
+            new SegmentListUsedAction("foo", null, ImmutableList.of(Intervals.of("2000/P1D"), Intervals.of("2001/P1D")))
         )
     ).andReturn(
         ImmutableList.of(
             DataSegment.builder()
                        .dataSource("foo")
-                       .interval(new Interval("2000/P1D"))
+                       .interval(Intervals.of("2000/P1D"))
                        .shardSpec(new LinearShardSpec(0))
                        .version("a")
                        .build(),
             DataSegment.builder()
                        .dataSource("foo")
-                       .interval(new Interval("2000/P1D"))
+                       .interval(Intervals.of("2000/P1D"))
                        .shardSpec(new LinearShardSpec(1))
                        .version("a")
                        .build(),
             DataSegment.builder()
                        .dataSource("foo")
-                       .interval(new Interval("2001/P1D"))
+                       .interval(Intervals.of("2001/P1D"))
                        .shardSpec(new LinearShardSpec(1))
                        .version("b")
                        .build(),
             DataSegment.builder()
                        .dataSource("foo")
-                       .interval(new Interval("2002/P1D"))
+                       .interval(Intervals.of("2002/P1D"))
                        .shardSpec(new LinearShardSpec(1))
                        .version("b")
                        .build()
@@ -98,9 +98,9 @@ public class ActionBasedUsedSegmentCheckerTest
     final UsedSegmentChecker checker = new ActionBasedUsedSegmentChecker(taskActionClient);
     final Set<DataSegment> segments = checker.findUsedSegments(
         ImmutableSet.of(
-            new SegmentIdentifier("foo", new Interval("2000/P1D"), "a", new LinearShardSpec(1)),
-            new SegmentIdentifier("foo", new Interval("2001/P1D"), "b", new LinearShardSpec(0)),
-            new SegmentIdentifier("bar", new Interval("2002/P1D"), "b", new LinearShardSpec(0))
+            new SegmentIdentifier("foo", Intervals.of("2000/P1D"), "a", new LinearShardSpec(1)),
+            new SegmentIdentifier("foo", Intervals.of("2001/P1D"), "b", new LinearShardSpec(0)),
+            new SegmentIdentifier("bar", Intervals.of("2002/P1D"), "b", new LinearShardSpec(0))
         )
     );
 
@@ -108,13 +108,13 @@ public class ActionBasedUsedSegmentCheckerTest
         ImmutableSet.of(
             DataSegment.builder()
                        .dataSource("foo")
-                       .interval(new Interval("2000/P1D"))
+                       .interval(Intervals.of("2000/P1D"))
                        .shardSpec(new LinearShardSpec(1))
                        .version("a")
                        .build(),
             DataSegment.builder()
                        .dataSource("bar")
-                       .interval(new Interval("2002/P1D"))
+                       .interval(Intervals.of("2002/P1D"))
                        .shardSpec(new LinearShardSpec(0))
                        .version("b")
                        .build()

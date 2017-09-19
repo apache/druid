@@ -43,9 +43,13 @@ import com.google.common.collect.Ordering;
 import io.druid.client.DruidServer;
 import io.druid.client.FilteredServerInventoryView;
 import io.druid.client.TimelineServerView;
+import io.druid.client.selector.HighestPriorityTierSelectorStrategy;
+import io.druid.client.selector.RandomServerSelectorStrategy;
 import io.druid.client.selector.ServerSelector;
+import io.druid.java.util.common.Intervals;
 import io.druid.query.TableDataSource;
 import io.druid.query.metadata.SegmentMetadataQueryConfig;
+import io.druid.server.coordination.ServerType;
 import io.druid.server.security.AuthConfig;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
@@ -54,7 +58,7 @@ import io.druid.timeline.partition.ShardSpec;
 import io.druid.timeline.partition.SingleElementPartitionChunk;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
+import org.joda.time.chrono.ISOChronology;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -66,7 +70,7 @@ public class ClientInfoResourceTest
 {
   private static final String KEY_DIMENSIONS = "dimensions";
   private static final String KEY_METRICS = "metrics";
-  private static final DateTime FIXED_TEST_TIME = new DateTime(2015, 9, 14, 0, 0); /* always use the same current time for unit tests */
+  private static final DateTime FIXED_TEST_TIME = new DateTime(2015, 9, 14, 0, 0, ISOChronology.getInstanceUTC()); /* always use the same current time for unit tests */
 
 
   private final String dataSource = "test-data-source";
@@ -79,7 +83,7 @@ public class ClientInfoResourceTest
   public void setup()
   {
     VersionedIntervalTimeline<String, ServerSelector> timeline = new VersionedIntervalTimeline<>(Ordering.<String>natural());
-    DruidServer server = new DruidServer("name", "host", 1234, "type", "tier", 0);
+    DruidServer server = new DruidServer("name", "host", null, 1234, ServerType.HISTORICAL, "tier", 0);
 
     addSegment(timeline, server, "1960-02-13/1961-02-14", ImmutableList.of("d5"), ImmutableList.of("m5"), "v0");
 
@@ -255,7 +259,7 @@ public class ClientInfoResourceTest
   @Test
   public void testGetDatasourceFullWithOvershadowedSegments2()
   {
-    Map<String, Object> actual= resource.getDatasource(
+    Map<String, Object> actual = resource.getDatasource(
         dataSource,
         "2015-02-09T09:00:00.000Z/2015-02-13T23:00:00.000Z",
         "true"
@@ -370,15 +374,15 @@ public class ClientInfoResourceTest
   {
     DataSegment segment = DataSegment.builder()
                                      .dataSource(dataSource)
-                                     .interval(new Interval(interval))
+                                     .interval(Intervals.of(interval))
                                      .version(version)
                                      .dimensions(dims)
                                      .metrics(metrics)
                                      .size(1)
                                      .build();
     server.addDataSegment(segment.getIdentifier(), segment);
-    ServerSelector ss = new ServerSelector(segment, null);
-    timeline.add(new Interval(interval), version, new SingleElementPartitionChunk<ServerSelector>(ss));
+    ServerSelector ss = new ServerSelector(segment, new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()));
+    timeline.add(Intervals.of(interval), version, new SingleElementPartitionChunk<ServerSelector>(ss));
   }
 
   private void addSegmentWithShardSpec(
@@ -393,7 +397,7 @@ public class ClientInfoResourceTest
   {
     DataSegment segment = DataSegment.builder()
                                      .dataSource(dataSource)
-                                     .interval(new Interval(interval))
+                                     .interval(Intervals.of(interval))
                                      .version(version)
                                      .dimensions(dims)
                                      .metrics(metrics)
@@ -401,8 +405,8 @@ public class ClientInfoResourceTest
                                      .size(1)
                                      .build();
     server.addDataSegment(segment.getIdentifier(), segment);
-    ServerSelector ss = new ServerSelector(segment, null);
-    timeline.add(new Interval(interval), version, shardSpec.createChunk(ss));
+    ServerSelector ss = new ServerSelector(segment, new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()));
+    timeline.add(Intervals.of(interval), version, shardSpec.createChunk(ss));
   }
 
   private ClientInfoResource getResourceTestHelper(
@@ -411,7 +415,13 @@ public class ClientInfoResourceTest
       SegmentMetadataQueryConfig segmentMetadataQueryConfig
   )
   {
-    return new ClientInfoResource(serverInventoryView, timelineServerView, segmentMetadataQueryConfig, new AuthConfig())
+    return new ClientInfoResource(
+        serverInventoryView,
+        timelineServerView,
+        segmentMetadataQueryConfig,
+        new AuthConfig(),
+        null
+    )
     {
       @Override
       protected DateTime getCurrentTime()

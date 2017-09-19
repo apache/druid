@@ -22,43 +22,29 @@ package io.druid.client.indexing;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.Request;
-import com.metamx.http.client.response.InputStreamResponseHandler;
-import io.druid.client.selector.Server;
-import io.druid.curator.discovery.ServerDiscoverySelector;
-import io.druid.guice.annotations.Global;
+import io.druid.discovery.DruidLeaderClient;
 import io.druid.java.util.common.IAE;
-import io.druid.java.util.common.ISE;
 import io.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
 
 import javax.ws.rs.core.MediaType;
-import java.io.InputStream;
-import java.net.URI;
-import java.net.URL;
 import java.util.Iterator;
 import java.util.List;
 
 public class IndexingServiceClient
 {
-  private static final InputStreamResponseHandler RESPONSE_HANDLER = new InputStreamResponseHandler();
-
-  private final HttpClient client;
+  private final DruidLeaderClient druidLeaderClient;
   private final ObjectMapper jsonMapper;
-  private final ServerDiscoverySelector selector;
 
   @Inject
   public IndexingServiceClient(
-      @Global HttpClient client,
       ObjectMapper jsonMapper,
-      @IndexingService ServerDiscoverySelector selector
+      @IndexingService DruidLeaderClient druidLeaderClient
   )
   {
-    this.client = client;
     this.jsonMapper = jsonMapper;
-    this.selector = selector;
+    this.druidLeaderClient = druidLeaderClient;
   }
 
   public void mergeSegments(List<DataSegment> segments)
@@ -94,39 +80,15 @@ public class IndexingServiceClient
     runQuery(new ClientConversionQuery(dataSource, interval));
   }
 
-  private InputStream runQuery(Object queryObject)
+  private void runQuery(Object queryObject)
   {
     try {
-      return client.go(
-          new Request(
+      druidLeaderClient.go(
+          druidLeaderClient.makeRequest(
               HttpMethod.POST,
-              new URL(String.format("%s/task", baseUrl()))
-          ).setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(queryObject)),
-          RESPONSE_HANDLER
-      ).get();
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-  }
-
-  private String baseUrl()
-  {
-    try {
-      final Server instance = selector.pick();
-      if (instance == null) {
-        throw new ISE("Cannot find instance of indexingService");
-      }
-
-      return new URI(
-          instance.getScheme(),
-          null,
-          instance.getAddress(),
-          instance.getPort(),
-          "/druid/indexer/v1",
-          null,
-          null
-      ).toString();
+              "/druid/indexer/v1/task"
+          ).setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(queryObject))
+      );
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

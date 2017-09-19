@@ -25,8 +25,10 @@ import com.google.inject.Provides;
 import io.druid.concurrent.Execs;
 import io.druid.curator.announcement.Announcer;
 import io.druid.server.coordination.BatchDataSegmentAnnouncer;
+import io.druid.server.coordination.CuratorDataSegmentServerAnnouncer;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.server.coordination.DataSegmentAnnouncerProvider;
+import io.druid.server.coordination.DataSegmentServerAnnouncer;
 import io.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
 import org.apache.curator.framework.CuratorFramework;
 
@@ -40,7 +42,8 @@ public class AnnouncerModule implements Module
     JsonConfigProvider.bind(binder, "druid.announcer", BatchDataSegmentAnnouncerConfig.class);
     JsonConfigProvider.bind(binder, "druid.announcer", DataSegmentAnnouncerProvider.class);
     binder.bind(DataSegmentAnnouncer.class).toProvider(DataSegmentAnnouncerProvider.class);
-    binder.bind(BatchDataSegmentAnnouncer.class).in(ManageLifecycleLast.class);
+    binder.bind(BatchDataSegmentAnnouncer.class).in(LazySingleton.class);
+    binder.bind(DataSegmentServerAnnouncer.class).to(CuratorDataSegmentServerAnnouncer.class).in(LazySingleton.class);
   }
 
   @Provides

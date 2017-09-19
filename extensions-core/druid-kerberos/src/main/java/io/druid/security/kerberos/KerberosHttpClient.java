@@ -47,15 +47,17 @@ public class KerberosHttpClient extends AbstractHttpClient
   private static final Logger log = new Logger(KerberosHttpClient.class);
 
   private final HttpClient delegate;
-  private final AuthenticationKerberosConfig config;
   private final CookieManager cookieManager;
   private final Executor exec = Execs.singleThreaded("test-%s");
+  private final String internalClientPrincipal;
+  private final String internalClientKeytab;
 
-  public KerberosHttpClient(HttpClient delegate, AuthenticationKerberosConfig config)
+  public KerberosHttpClient(HttpClient delegate, String internalClientPrincipal, String internalClientKeytab)
   {
     this.delegate = delegate;
-    this.config = config;
     this.cookieManager = new CookieManager();
+    this.internalClientPrincipal = internalClientPrincipal;
+    this.internalClientKeytab = internalClientKeytab;
   }
 
   @Override
@@ -94,7 +96,7 @@ public class KerberosHttpClient extends AbstractHttpClient
           uri,
           cookieManager.getCookieStore().getCookies()
         );
-        DruidKerberosUtil.authenticateIfRequired(config);
+        DruidKerberosUtil.authenticateIfRequired(internalClientPrincipal, internalClientKeytab);
         UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
         String challenge = currentUser.doAs(new PrivilegedExceptionAction<String>()
         {

@@ -54,10 +54,10 @@ public class TimestampBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    Long newTime = TimestampAggregatorFactory.convertLong(timestampSpec, selector.get());
+    Long newTime = TimestampAggregatorFactory.convertLong(timestampSpec, selector.getObject());
     if (newTime != null) {
-      Long prev = buf.getLong(position);
-      buf.putLong(position, comparator.compare(prev, newTime) > 0 ? prev: newTime);
+      long prev = buf.getLong(position);
+      buf.putLong(position, comparator.compare(prev, newTime) > 0 ? prev : newTime);
     }
   }
 
@@ -70,13 +70,19 @@ public class TimestampBufferAggregator implements BufferAggregator
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    return (float)buf.getLong(position);
+    return (float) buf.getLong(position);
   }
 
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
     return buf.getLong(position);
+  }
+
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return (double) buf.getLong(position);
   }
 
   @Override

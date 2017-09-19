@@ -21,11 +21,11 @@ package io.druid.sql.calcite.filtration;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
-import io.druid.common.utils.JodaUtils;
 import io.druid.java.util.common.ISE;
-import io.druid.js.JavaScriptConfig;
+import io.druid.java.util.common.Intervals;
+import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.filter.DimFilter;
-import io.druid.query.filter.JavaScriptDimFilter;
+import io.druid.query.filter.ExpressionDimFilter;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.sql.calcite.table.RowSignature;
@@ -35,12 +35,11 @@ import java.util.List;
 
 public class Filtration
 {
-  private static final Interval ETERNITY = new Interval(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT);
-  private static final DimFilter MATCH_NOTHING = new JavaScriptDimFilter(
-      "dummy", "function(x){return false;}", null, JavaScriptConfig.getEnabledInstance()
+  private static final DimFilter MATCH_NOTHING = new ExpressionDimFilter(
+      "1 == 2", ExprMacroTable.nil()
   );
-  private static final DimFilter MATCH_EVERYTHING = new JavaScriptDimFilter(
-      "dummy", "function(x){return true;}", null, JavaScriptConfig.getEnabledInstance()
+  private static final DimFilter MATCH_EVERYTHING = new ExpressionDimFilter(
+      "1 == 1", ExprMacroTable.nil()
   );
 
   // 1) If "dimFilter" is null, it should be ignored and not affect filtration.
@@ -51,13 +50,13 @@ public class Filtration
 
   private Filtration(final DimFilter dimFilter, final List<Interval> intervals)
   {
-    this.intervals = intervals != null ? intervals : ImmutableList.of(ETERNITY);
+    this.intervals = intervals != null ? intervals : Intervals.ONLY_ETERNITY;
     this.dimFilter = dimFilter;
   }
 
   public static Interval eternity()
   {
-    return ETERNITY;
+    return Intervals.ETERNITY;
   }
 
   public static DimFilter matchNothing()

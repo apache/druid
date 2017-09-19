@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
+import com.metamx.common.parsers.ParseException;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.Committer;
@@ -31,6 +32,7 @@ import io.druid.data.input.FirehoseFactoryV2;
 import io.druid.data.input.FirehoseV2;
 import io.druid.data.input.InputRow;
 import io.druid.firehose.kafka.KafkaSimpleConsumer.BytesMessageWithOffset;
+import io.druid.java.util.common.StringUtils;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -182,7 +184,6 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
       @Override
       public void start() throws Exception
       {
-        nextMessage();
       }
 
       @Override
@@ -223,6 +224,15 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
       {
         if (stopped) {
           return null;
+        }
+        // currRow will be called before the first advance
+        if (row == null) {
+          try {
+            nextMessage();
+          }
+          catch (ParseException e) {
+            return null;
+          }
         }
         return row;
       }
@@ -314,7 +324,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
         }
       };
       thread.setDaemon(true);
-      thread.setName(String.format("kafka-%s-%s", topic, partitionId));
+      thread.setName(StringUtils.format("kafka-%s-%s", topic, partitionId));
       thread.start();
     }
 

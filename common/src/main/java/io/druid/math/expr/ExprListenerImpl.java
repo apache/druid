@@ -19,6 +19,7 @@
 
 package io.druid.math.expr;
 
+import io.druid.java.util.common.RE;
 import io.druid.math.expr.antlr.ExprBaseListener;
 import io.druid.math.expr.antlr.ExprParser;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -36,11 +37,13 @@ import java.util.Map;
 public class ExprListenerImpl extends ExprBaseListener
 {
   private final Map<ParseTree, Object> nodes;
+  private final ExprMacroTable macroTable;
   private final ParseTree rootNodeKey;
 
-  ExprListenerImpl(ParseTree rootNodeKey)
+  ExprListenerImpl(ParseTree rootNodeKey, ExprMacroTable macroTable)
   {
     this.rootNodeKey = rootNodeKey;
+    this.macroTable = macroTable;
     this.nodes = new HashMap<>();
   }
 
@@ -285,15 +288,22 @@ public class ExprListenerImpl extends ExprBaseListener
   public void exitFunctionExpr(ExprParser.FunctionExprContext ctx)
   {
     String fnName = ctx.getChild(0).getText();
-    if (!Parser.hasFunction(fnName)) {
-      throw new RuntimeException("function " + fnName + " is not defined.");
+    final List<Expr> args = ctx.getChildCount() > 3
+                            ? (List<Expr>) nodes.get(ctx.getChild(2))
+                            : Collections.emptyList();
+
+    Expr expr = macroTable.get(fnName, args);
+
+    if (expr == null) {
+      // Built-in functions.
+      final Function function = Parser.getFunction(fnName);
+      if (function == null) {
+        throw new RE("function '%s' is not defined.", fnName);
+      }
+      expr = new FunctionExpr(function, fnName, args);
     }
 
-    List<Expr> args = ctx.getChildCount() > 3 ? (List<Expr>) nodes.get(ctx.getChild(2)) : Collections.<Expr>emptyList();
-    nodes.put(
-        ctx,
-        new FunctionExpr(fnName, args)
-    );
+    nodes.put(ctx, expr);
   }
 
   @Override

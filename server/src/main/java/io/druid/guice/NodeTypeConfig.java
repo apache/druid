@@ -19,20 +19,22 @@
 
 package io.druid.guice;
 
+import io.druid.server.coordination.ServerType;
+
 /**
  */
 public class NodeTypeConfig
 {
-  private final String nodeType;
+  private final ServerType nodeType;
 
   public NodeTypeConfig(
-      String nodeType
+      ServerType nodeType
   )
   {
     this.nodeType = nodeType;
   }
 
-  public String getNodeType()
+  public ServerType getNodeType()
   {
     return nodeType;
   }

@@ -53,6 +53,8 @@ public class ValueMatcherColumnSelectorStrategyFactory
         return new LongValueMatcherColumnSelectorStrategy();
       case FLOAT:
         return new FloatValueMatcherColumnSelectorStrategy();
+      case DOUBLE:
+        return new DoubleValueMatcherColumnSelectorStrategy();
       default:
         throw new IAE("Cannot create column selector strategy from invalid type [%s]", type);
     }

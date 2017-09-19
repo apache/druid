@@ -54,7 +54,7 @@ public class ApproximateHistogramFoldingAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    ApproximateHistogram h = selector.get();
+    ApproximateHistogram h = selector.getObject();
     if (h == null) {
       return;
     }
@@ -88,6 +88,12 @@ public class ApproximateHistogramFoldingAggregator implements Aggregator
   public long getLong()
   {
     throw new UnsupportedOperationException("ApproximateHistogramFoldingAggregator does not support getLong()");
+  }
+
+  @Override
+  public double getDouble()
+  {
+    throw new UnsupportedOperationException("ApproximateHistogramFoldingAggregator does not support getDouble()");
   }
 
   @Override

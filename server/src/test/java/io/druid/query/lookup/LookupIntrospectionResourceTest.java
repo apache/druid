@@ -44,7 +44,12 @@ public class LookupIntrospectionResourceTest
   @Before
   public void setUp()
   {
-    EasyMock.expect(lookupReferencesManager.get("lookupId")).andReturn(lookupExtractorFactory).anyTimes();
+    EasyMock.expect(lookupReferencesManager.get("lookupId")).andReturn(
+        new LookupExtractorFactoryContainer(
+            "v0",
+            lookupExtractorFactory
+        )
+    ).anyTimes();
     EasyMock.expect(lookupReferencesManager.get(EasyMock.anyString())).andReturn(null).anyTimes();
     EasyMock.replay(lookupReferencesManager);
   }
@@ -79,7 +84,8 @@ public class LookupIntrospectionResourceTest
     LookupIntrospectHandler lookupIntrospectHandler = new LookupIntrospectHandler()
     {
       @POST
-      public Response postMock(InputStream inputStream){
+      public Response postMock(InputStream inputStream)
+      {
         return Response.ok().build();
       }
     };
@@ -121,7 +127,12 @@ public class LookupIntrospectionResourceTest
     };
 
     LookupIntrospectionResource lookupIntrospectionResource = new LookupIntrospectionResource(lookupReferencesManager);
-    EasyMock.expect(lookupReferencesManager.get("lookupId1")).andReturn(lookupExtractorFactory1).anyTimes();
+    EasyMock.expect(lookupReferencesManager.get("lookupId1")).andReturn(
+        new LookupExtractorFactoryContainer(
+            "v0",
+            lookupExtractorFactory1
+        )
+    ).anyTimes();
     EasyMock.replay(lookupReferencesManager);
 
   }

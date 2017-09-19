@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.query.SegmentDescriptor;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -44,7 +44,7 @@ public class QuerySegmentSpecTest
     );
     Assert.assertTrue(spec instanceof LegacySegmentSpec);
     Assert.assertEquals(
-        ImmutableList.of(new Interval("2011-10-01/2011-10-10"), new Interval("2011-11-01/2011-11-10")),
+        ImmutableList.of(Intervals.of("2011-10-01/2011-10-10"), Intervals.of("2011-11-01/2011-11-10")),
         spec.getIntervals()
     );
   }
@@ -57,7 +57,7 @@ public class QuerySegmentSpecTest
     );
     Assert.assertTrue(spec instanceof LegacySegmentSpec);
     Assert.assertEquals(
-        ImmutableList.of(new Interval("2011-09-01/2011-10-10"), new Interval("2011-11-01/2011-11-10")),
+        ImmutableList.of(Intervals.of("2011-09-01/2011-10-10"), Intervals.of("2011-11-01/2011-11-10")),
         spec.getIntervals()
     );
   }
@@ -71,7 +71,7 @@ public class QuerySegmentSpecTest
     );
     Assert.assertTrue(spec instanceof MultipleIntervalSegmentSpec);
     Assert.assertEquals(
-        ImmutableList.of(new Interval("2011-08-01/2011-10-10"), new Interval("2011-11-01/2011-11-10")),
+        ImmutableList.of(Intervals.of("2011-08-01/2011-10-10"), Intervals.of("2011-11-01/2011-11-10")),
         spec.getIntervals()
     );
   }
@@ -106,14 +106,14 @@ public class QuerySegmentSpecTest
     );
     Assert.assertTrue(spec instanceof MultipleSpecificSegmentSpec);
     Assert.assertEquals(
-        ImmutableList.of(new Interval("2011-07-01/2011-10-10"), new Interval("2011-11-01/2011-11-10")),
+        ImmutableList.of(Intervals.of("2011-07-01/2011-10-10"), Intervals.of("2011-11-01/2011-11-10")),
         spec.getIntervals()
     );
     Assert.assertEquals(
         ImmutableList.of(
-            new SegmentDescriptor(new Interval("2011-07-01/2011-10-10"), "1", 0),
-            new SegmentDescriptor(new Interval("2011-07-01/2011-10-10"), "1", 1),
-            new SegmentDescriptor(new Interval("2011-11-01/2011-11-10"), "2", 10)
+            new SegmentDescriptor(Intervals.of("2011-07-01/2011-10-10"), "1", 0),
+            new SegmentDescriptor(Intervals.of("2011-07-01/2011-10-10"), "1", 1),
+            new SegmentDescriptor(Intervals.of("2011-11-01/2011-11-10"), "2", 10)
         ),
         ((MultipleSpecificSegmentSpec) spec).getDescriptors()
     );

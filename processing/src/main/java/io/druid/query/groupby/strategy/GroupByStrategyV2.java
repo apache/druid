@@ -22,21 +22,20 @@ package io.druid.query.groupby.strategy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.inject.Inject;
 import io.druid.collections.BlockingPool;
+import io.druid.collections.NonBlockingPool;
 import io.druid.collections.ResourceHolder;
-import io.druid.collections.StupidPool;
-import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Merging;
 import io.druid.guice.annotations.Smile;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
@@ -47,8 +46,9 @@ import io.druid.query.DruidProcessingConfig;
 import io.druid.query.InsufficientResourcesException;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
-import io.druid.query.QueryContextKeys;
+import io.druid.query.QueryContexts;
 import io.druid.query.QueryDataSource;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryWatcher;
 import io.druid.query.ResourceLimitExceededException;
@@ -81,7 +81,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
 
   private final DruidProcessingConfig processingConfig;
   private final Supplier<GroupByQueryConfig> configSupplier;
-  private final StupidPool<ByteBuffer> bufferPool;
+  private final NonBlockingPool<ByteBuffer> bufferPool;
   private final BlockingPool<ByteBuffer> mergeBufferPool;
   private final ObjectMapper spillMapper;
   private final QueryWatcher queryWatcher;
@@ -90,7 +90,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
   public GroupByStrategyV2(
       DruidProcessingConfig processingConfig,
       Supplier<GroupByQueryConfig> configSupplier,
-      @Global StupidPool<ByteBuffer> bufferPool,
+      @Global NonBlockingPool<ByteBuffer> bufferPool,
       @Merging BlockingPool<ByteBuffer> mergeBufferPool,
       @Smile ObjectMapper spillMapper,
       QueryWatcher queryWatcher
@@ -118,10 +118,10 @@ public class GroupByStrategyV2 implements GroupByStrategy
     final String timestampStringFromContext = query.getContextValue(CTX_KEY_FUDGE_TIMESTAMP, "");
 
     if (!timestampStringFromContext.isEmpty()) {
-      return new DateTime(Long.parseLong(timestampStringFromContext));
+      return DateTimes.utc(Long.parseLong(timestampStringFromContext));
     } else if (Granularities.ALL.equals(gran)) {
-      final long timeStart = query.getIntervals().get(0).getStartMillis();
-      return gran.getIterable(new Interval(timeStart, timeStart + 1)).iterator().next().getStart();
+      final DateTime timeStart = query.getIntervals().get(0).getStart();
+      return gran.getIterable(new Interval(timeStart, timeStart.plus(1))).iterator().next().getStart();
     } else {
       return null;
     }
@@ -141,10 +141,12 @@ public class GroupByStrategyV2 implements GroupByStrategy
       } else if (requiredMergeBufferNum == 0) {
         return new GroupByQueryResource();
       } else {
-        final Number timeout = query.getContextValue(QueryContextKeys.TIMEOUT, JodaUtils.MAX_INSTANT);
-        final ResourceHolder<List<ByteBuffer>> mergeBufferHolders = mergeBufferPool.takeBatch(
-            requiredMergeBufferNum, timeout.longValue()
-        );
+        final ResourceHolder<List<ByteBuffer>> mergeBufferHolders;
+        if (QueryContexts.hasTimeout(query)) {
+          mergeBufferHolders = mergeBufferPool.takeBatch(requiredMergeBufferNum, QueryContexts.getTimeout(query));
+        } else {
+          mergeBufferHolders = mergeBufferPool.takeBatch(requiredMergeBufferNum);
+        }
         if (mergeBufferHolders == null) {
           throw new InsufficientResourcesException("Cannot acquire enough merge buffers");
         } else {
@@ -209,7 +211,6 @@ public class GroupByStrategyV2 implements GroupByStrategy
   {
     // Merge streams using ResultMergeQueryRunner, then apply postaggregators, then apply limit (which may
     // involve materialization)
-
     final ResultMergeQueryRunner<Row> mergingQueryRunner = new ResultMergeQueryRunner<Row>(baseRunner)
     {
       @Override
@@ -228,65 +229,73 @@ public class GroupByStrategyV2 implements GroupByStrategy
     // Fudge timestamp, maybe.
     final DateTime fudgeTimestamp = getUniversalTimestamp(query);
 
-    return query.applyLimit(
-        Sequences.map(
-            mergingQueryRunner.run(
-                new GroupByQuery(
-                    query.getDataSource(),
-                    query.getQuerySegmentSpec(),
-                    query.getVirtualColumns(),
-                    query.getDimFilter(),
-                    query.getGranularity(),
-                    query.getDimensions(),
-                    query.getAggregatorSpecs(),
-                    // Don't do post aggs until the end of this method.
-                    ImmutableList.<PostAggregator>of(),
-                    // Don't do "having" clause until the end of this method.
-                    null,
-                    null,
-                    query.getContext()
-                ).withOverriddenContext(
-                    ImmutableMap.<String, Object>of(
-                        "finalize", false,
-                        GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V2,
-                        CTX_KEY_FUDGE_TIMESTAMP, fudgeTimestamp == null ? "" : String.valueOf(fudgeTimestamp.getMillis()),
-                        CTX_KEY_OUTERMOST, false
-                    )
-                ),
-                responseContext
-            ),
-            new Function<Row, Row>()
-            {
-              @Override
-              public Row apply(final Row row)
-              {
-                // Apply postAggregators and fudgeTimestamp if present and if this is the outermost mergeResults.
-
-                if (!query.getContextBoolean(CTX_KEY_OUTERMOST, true)) {
-                  return row;
-                }
-
-                if (query.getPostAggregatorSpecs().isEmpty() && fudgeTimestamp == null) {
-                  return row;
-                }
-
-                final Map<String, Object> newMap;
-
-                if (query.getPostAggregatorSpecs().isEmpty()) {
-                  newMap = ((MapBasedRow) row).getEvent();
-                } else {
-                  newMap = Maps.newLinkedHashMap(((MapBasedRow) row).getEvent());
-
-                  for (PostAggregator postAggregator : query.getPostAggregatorSpecs()) {
-                    newMap.put(postAggregator.getName(), postAggregator.compute(newMap));
-                  }
-                }
-
-                return new MapBasedRow(fudgeTimestamp != null ? fudgeTimestamp : row.getTimestamp(), newMap);
-              }
-            }
+    final GroupByQuery newQuery = new GroupByQuery(
+        query.getDataSource(),
+        query.getQuerySegmentSpec(),
+        query.getVirtualColumns(),
+        query.getDimFilter(),
+        query.getGranularity(),
+        query.getDimensions(),
+        query.getAggregatorSpecs(),
+        query.getPostAggregatorSpecs(),
+        // Don't do "having" clause until the end of this method.
+        null,
+        query.getLimitSpec(),
+        query.getContext()
+    ).withOverriddenContext(
+        ImmutableMap.<String, Object>of(
+            "finalize", false,
+            GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V2,
+            CTX_KEY_FUDGE_TIMESTAMP, fudgeTimestamp == null ? "" : String.valueOf(fudgeTimestamp.getMillis()),
+            CTX_KEY_OUTERMOST, false,
+            // the having spec shouldn't be passed down, so we need to convey the existing limit push down status
+            GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, query.isApplyLimitPushDown()
         )
     );
+
+    Sequence<Row> rowSequence = Sequences.map(
+        mergingQueryRunner.run(
+            QueryPlus.wrap(newQuery),
+            responseContext
+        ),
+        new Function<Row, Row>()
+        {
+          @Override
+          public Row apply(final Row row)
+          {
+            // Apply postAggregators and fudgeTimestamp if present and if this is the outermost mergeResults.
+
+            if (!query.getContextBoolean(CTX_KEY_OUTERMOST, true)) {
+              return row;
+            }
+
+            if (query.getPostAggregatorSpecs().isEmpty() && fudgeTimestamp == null) {
+              return row;
+            }
+
+            final Map<String, Object> newMap;
+
+            if (query.getPostAggregatorSpecs().isEmpty()) {
+              newMap = ((MapBasedRow) row).getEvent();
+            } else {
+              newMap = Maps.newLinkedHashMap(((MapBasedRow) row).getEvent());
+
+              for (PostAggregator postAggregator : query.getPostAggregatorSpecs()) {
+                newMap.put(postAggregator.getName(), postAggregator.compute(newMap));
+              }
+            }
+
+            return new MapBasedRow(fudgeTimestamp != null ? fudgeTimestamp : row.getTimestamp(), newMap);
+          }
+        }
+    );
+
+    // Don't apply limit here for inner results, that will be pushed down to the BufferHashGrouper
+    if (query.getContextBoolean(CTX_KEY_OUTERMOST, true)) {
+      return query.postProcess(rowSequence);
+    } else {
+      return rowSequence;
+    }
   }
 
   @Override
@@ -304,12 +313,13 @@ public class GroupByStrategyV2 implements GroupByStrategy
         configSupplier.get(),
         resource,
         spillMapper,
-        processingConfig.getTmpDir()
+        processingConfig.getTmpDir(),
+        processingConfig.intermediateComputeSizeBytes()
     );
     return mergeResults(new QueryRunner<Row>()
     {
       @Override
-      public Sequence<Row> run(Query<Row> query, Map<String, Object> responseContext)
+      public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
       {
         return results;
       }
@@ -329,6 +339,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
         queryRunners,
         processingConfig.getNumThreads(),
         mergeBufferPool,
+        processingConfig.intermediateComputeSizeBytes(),
         spillMapper,
         processingConfig.getTmpDir()
     );

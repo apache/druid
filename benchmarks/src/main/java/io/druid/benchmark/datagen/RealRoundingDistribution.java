@@ -22,7 +22,7 @@ package io.druid.benchmark.datagen;
 import org.apache.commons.math3.distribution.AbstractIntegerDistribution;
 import org.apache.commons.math3.distribution.AbstractRealDistribution;
 
-/*
+/**
  * Rounds the output values from the sample() function of an AbstractRealDistribution.
  */
 public class RealRoundingDistribution extends AbstractIntegerDistribution
@@ -86,7 +86,7 @@ public class RealRoundingDistribution extends AbstractIntegerDistribution
   public int sample()
   {
     double randomVal = realDist.sample();
-    Long longVal = Math.round(randomVal);
-    return longVal.intValue();
+    long longVal = Math.round(randomVal);
+    return (int) longVal;
   }
 }

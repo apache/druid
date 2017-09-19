@@ -19,10 +19,10 @@
 
 package io.druid.query.lookup;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.query.extraction.MapLookupExtractor;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -123,11 +123,8 @@ public class RegisteredLookupExtractionFnTest
     );
     EasyMock.verify(manager);
 
-    final TypeReference<Map<String, Object>> typeReference = new TypeReference<Map<String, Object>>()
-    {
-    };
-    final Map<String, Object> result = mapper.readValue(mapper.writeValueAsString(fn), typeReference);
-    Assert.assertEquals(mapper.convertValue(fn, typeReference), result);
+    final Map<String, Object> result = mapper.readValue(mapper.writeValueAsString(fn), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
+    Assert.assertEquals(mapper.convertValue(fn, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT), result);
     Assert.assertEquals(LOOKUP_NAME, result.get("lookup"));
     Assert.assertEquals(true, result.get("retainMissingValue"));
     Assert.assertEquals(true, result.get("injective"));
@@ -226,38 +223,42 @@ public class RegisteredLookupExtractionFnTest
 
   private void managerReturnsMap(LookupReferencesManager manager)
   {
-    EasyMock.expect(manager.get(EasyMock.eq(LOOKUP_NAME))).andReturn(new LookupExtractorFactory()
-    {
-      @Override
-      public boolean start()
-      {
-        return false;
-      }
+    EasyMock.expect(manager.get(EasyMock.eq(LOOKUP_NAME))).andReturn(
+        new LookupExtractorFactoryContainer(
+            "v0", new LookupExtractorFactory()
+        {
+          @Override
+          public boolean start()
+          {
+            return false;
+          }
 
-      @Override
-      public boolean close()
-      {
-        return false;
-      }
+          @Override
+          public boolean replaces(@Nullable LookupExtractorFactory other)
+          {
+            return false;
+          }
 
-      @Override
-      public boolean replaces(@Nullable LookupExtractorFactory other)
-      {
-        return false;
-      }
+          @Override
+          public boolean close()
+          {
+            return false;
+          }
 
-      @Nullable
-      @Override
-      public LookupIntrospectHandler getIntrospectHandler()
-      {
-        return null;
-      }
+          @Nullable
+          @Override
+          public LookupIntrospectHandler getIntrospectHandler()
+          {
+            return null;
+          }
 
-      @Override
-      public LookupExtractor get()
-      {
-        return LOOKUP_EXTRACTOR;
-      }
-    }).anyTimes();
+          @Override
+          public LookupExtractor get()
+          {
+            return LOOKUP_EXTRACTOR;
+          }
+        }
+        )
+    ).anyTimes();
   }
 }

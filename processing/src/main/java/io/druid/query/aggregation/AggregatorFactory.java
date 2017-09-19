@@ -19,25 +19,24 @@
 
 package io.druid.query.aggregation;
 
+import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.java.util.common.Cacheable;
+import io.druid.java.util.common.UOE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.ColumnSelectorFactory;
 
+import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Processing related interface
- *
- * An AggregatorFactory is an object that knows how to generate an Aggregator using a ColumnSelectorFactory.
- *
- * This is useful as an abstraction to allow Aggregator classes to be written in terms of MetricSelector objects
- * without making any assumptions about how they are pulling values out of the base data.  That is, the data is
- * provided to the Aggregator through the MetricSelector object, so whatever creates that object gets to choose how
- * the data is actually stored and accessed.
+ * AggregatorFactory is a strategy (in the terms of Design Patterns) that represents column aggregation, e. g. min,
+ * max, sum of metric columns, or cardinality of dimension columns (see {@link
+ * io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory}).
  */
+@ExtensionPoint
 public abstract class AggregatorFactory implements Cacheable
 {
   private static final Logger log = new Logger(AggregatorFactory.class);
@@ -49,10 +48,10 @@ public abstract class AggregatorFactory implements Cacheable
   public abstract Comparator getComparator();
 
   /**
-   * A method that knows how to combine the outputs of the getIntermediate() method from the Aggregators
-   * produced via factorize().  Note, even though this is called combine, this method's contract *does*
-   * allow for mutation of the input objects.  Thus, any use of lhs or rhs after calling this method is
-   * highly discouraged.
+   * A method that knows how to combine the outputs of {@link Aggregator#get} produced via {@link #factorize} or {@link
+   * BufferAggregator#get} produced via {@link #factorizeBuffered}. Note, even though this method is called "combine",
+   * this method's contract *does* allow for mutation of the input objects. Thus, any use of lhs or rhs after calling
+   * this method is highly discouraged.
    *
    * @param lhs The left hand side of the combine
    * @param rhs The right hand side of the combine
@@ -60,6 +59,20 @@ public abstract class AggregatorFactory implements Cacheable
    * @return an object representing the combination of lhs and rhs, this can be a new object or a mutation of the inputs
    */
   public abstract Object combine(Object lhs, Object rhs);
+
+  /**
+   * Creates an AggregateCombiner to fold rollup aggregation results from serveral "rows" of different indexes during
+   * index merging. AggregateCombiner implements the same logic as {@link #combine}, with the difference that it uses
+   * {@link io.druid.segment.ColumnValueSelector} and it's subinterfaces to get inputs and implements {@code
+   * ColumnValueSelector} to provide output.
+   *
+   * @see AggregateCombiner
+   * @see io.druid.segment.IndexMerger
+   */
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    throw new UOE("[%s] does not implement makeAggregateCombiner()", this.getClass().getName());
+  }
 
   /**
    * Returns an AggregatorFactory that can be used to combine the output of aggregators from this factory.  This
@@ -79,10 +92,7 @@ public abstract class AggregatorFactory implements Cacheable
    */
   public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
   {
-    throw new UnsupportedOperationException(String.format(
-        "[%s] does not implement getMergingFactory(..)",
-        this.getClass().getName()
-    ));
+    throw new UOE("[%s] does not implement getMergingFactory(..)", this.getClass().getName());
   }
 
   /**
@@ -136,6 +146,7 @@ public abstract class AggregatorFactory implements Cacheable
    *
    * @return merged AggregatorFactory[] or Null if merging is not possible.
    */
+  @Nullable
   public static AggregatorFactory[] mergeAggregators(List<AggregatorFactory[]> aggregatorsList)
   {
     if (aggregatorsList == null || aggregatorsList.isEmpty()) {

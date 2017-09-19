@@ -54,7 +54,8 @@ public class AmbariMetricsEmitterModule implements DruidModule
   @Provides
   @ManageLifecycle
   @Named(EMITTER_TYPE)
-  public Emitter getEmitter(AmbariMetricsEmitterConfig emitterConfig, final Injector injector){
+  public Emitter getEmitter(AmbariMetricsEmitterConfig emitterConfig, final Injector injector)
+  {
     List<Emitter> emitters = Lists.transform(
         emitterConfig.getAlertEmitters(),
         new Function<String, Emitter>()

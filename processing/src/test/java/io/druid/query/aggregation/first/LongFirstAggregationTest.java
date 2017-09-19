@@ -59,7 +59,7 @@ public class LongFirstAggregationTest
     combiningAggFactory = (LongFirstAggregatorFactory) longFirstAggFactory.getCombiningFactory();
     timeSelector = new TestLongColumnSelector(times);
     valueSelector = new TestLongColumnSelector(longValues);
-    objectSelector = new TestObjectColumnSelector(pairs);
+    objectSelector = new TestObjectColumnSelector<>(pairs);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
     EasyMock.expect(colSelectorFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME)).andReturn(timeSelector);
     EasyMock.expect(colSelectorFactory.makeLongColumnSelector("nilly")).andReturn(valueSelector);
@@ -129,7 +129,7 @@ public class LongFirstAggregationTest
     aggregate(agg);
 
     Pair<Long, Long> result = (Pair<Long, Long>) agg.get();
-    Pair<Long, Long> expected = (Pair<Long, Long>)pairs[0];
+    Pair<Long, Long> expected = (Pair<Long, Long>) pairs[0];
 
     Assert.assertEquals(expected.lhs, result.lhs);
     Assert.assertEquals(expected.rhs, result.rhs);
@@ -155,7 +155,7 @@ public class LongFirstAggregationTest
     aggregate(agg, buffer, 0);
 
     Pair<Long, Long> result = (Pair<Long, Long>) agg.get(buffer, 0);
-    Pair<Long, Long> expected = (Pair<Long, Long>)pairs[0];
+    Pair<Long, Long> expected = (Pair<Long, Long>) pairs[0];
 
     Assert.assertEquals(expected.lhs, result.lhs);
     Assert.assertEquals(expected.rhs, result.rhs);

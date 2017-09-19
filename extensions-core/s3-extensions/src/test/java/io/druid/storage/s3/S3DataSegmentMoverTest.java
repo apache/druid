@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.MapUtils;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
@@ -33,7 +33,6 @@ import org.jets3t.service.ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.S3Object;
 import org.jets3t.service.model.StorageObject;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -44,7 +43,7 @@ public class S3DataSegmentMoverTest
 {
   private static final DataSegment sourceSegment = new DataSegment(
       "test",
-      new Interval("2013-01-01/2013-01-02"),
+      Intervals.of("2013-01-01/2013-01-02"),
       "1",
       ImmutableMap.<String, Object>of(
           "key",
@@ -119,7 +118,7 @@ public class S3DataSegmentMoverTest
     S3DataSegmentMover mover = new S3DataSegmentMover(mockS3Client, new S3DataSegmentPusherConfig());
     mover.move(new DataSegment(
         "test",
-        new Interval("2013-01-01/2013-01-02"),
+        Intervals.of("2013-01-01/2013-01-02"),
         "1",
         ImmutableMap.<String, Object>of(
             "key",
@@ -142,7 +141,7 @@ public class S3DataSegmentMoverTest
     S3DataSegmentMover mover = new S3DataSegmentMover(mockS3Client, new S3DataSegmentPusherConfig());
     mover.move(new DataSegment(
         "test",
-        new Interval("2013-01-01/2013-01-02"),
+        Intervals.of("2013-01-01/2013-01-02"),
         "1",
         ImmutableMap.<String, Object>of(
             "key",
@@ -158,17 +157,20 @@ public class S3DataSegmentMoverTest
     ), ImmutableMap.<String, Object>of("bucket", "DOES NOT EXIST", "baseKey", "baseKey2"));
   }
 
-  private class MockStorageService extends RestS3Service {
+  private static class MockStorageService extends RestS3Service
+  {
     Map<String, Set<String>> storage = Maps.newHashMap();
-    boolean moved = false;
+    boolean copied = false;
+    boolean deletedOld = false;
 
     private MockStorageService() throws S3ServiceException
     {
       super(null);
     }
 
-    public boolean didMove() {
-      return moved;
+    public boolean didMove()
+    {
+      return copied && deletedOld;
     }
 
     @Override
@@ -187,14 +189,15 @@ public class S3DataSegmentMoverTest
           object.setStorageClass(S3Object.STORAGE_CLASS_STANDARD);
           return new S3Object[]{object};
         }
-      } catch (ServiceException e) {
+      }
+      catch (ServiceException e) {
         // return empty list
       }
       return new S3Object[]{};
     }
 
     @Override
-    public Map<String, Object> moveObject(
+    public Map<String, Object> copyObject(
         String sourceBucketName,
         String sourceObjectKey,
         String destinationBucketName,
@@ -202,19 +205,25 @@ public class S3DataSegmentMoverTest
         boolean replaceMetadata
     ) throws ServiceException
     {
-      moved = true;
-      if(isObjectInBucket(sourceBucketName, sourceObjectKey)) {
+      copied = true;
+      if (isObjectInBucket(sourceBucketName, sourceObjectKey)) {
         this.putObject(destinationBucketName, new S3Object(destinationObject.getKey()));
-        storage.get(sourceBucketName).remove(sourceObjectKey);
       }
       return null;
+    }
+
+    @Override
+    public void deleteObject(String bucket, String objectKey) throws S3ServiceException
+    {
+      deletedOld = true;
+      storage.get(bucket).remove(objectKey);
     }
 
     @Override
     public S3Object putObject(String bucketName, S3Object object) throws S3ServiceException
     {
       if (!storage.containsKey(bucketName)) {
-        storage.put(bucketName, Sets.<String>newHashSet());
+        storage.put(bucketName, Sets.newHashSet());
       }
       storage.get(bucketName).add(object.getKey());
       return object;

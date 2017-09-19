@@ -109,12 +109,11 @@ public class FireDepartmentTest
                 null,
                 null,
                 null,
-                TestHelper.getTestIndexMerger(),
                 TestHelper.getTestIndexMergerV9(),
                 TestHelper.getTestIndexIO(),
                 MapCache.create(0),
                 NO_CACHE_CONFIG,
-                TestHelper.getObjectMapper()
+                TestHelper.getJsonMapper()
 
             ),
             null
