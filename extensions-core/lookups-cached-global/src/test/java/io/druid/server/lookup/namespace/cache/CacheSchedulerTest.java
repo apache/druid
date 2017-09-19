@@ -32,6 +32,7 @@ import io.druid.query.lookup.namespace.CacheGenerator;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.UriExtractionNamespace;
 import io.druid.query.lookup.namespace.UriExtractionNamespaceTest;
+import io.druid.server.lookup.namespace.NamespaceExtractionConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import org.joda.time.Period;
 import org.junit.After;
@@ -75,7 +76,11 @@ public class CacheSchedulerTest
         @Override
         public NamespaceExtractionCacheManager apply(@Nullable Lifecycle lifecycle)
         {
-          return new OnHeapNamespaceExtractionCacheManager(lifecycle, new NoopServiceEmitter());
+          return new OnHeapNamespaceExtractionCacheManager(
+              lifecycle,
+              new NoopServiceEmitter(),
+              new NamespaceExtractionConfig()
+          );
         }
       };
   public static final Function<Lifecycle, NamespaceExtractionCacheManager> CREATE_OFF_HEAP_CACHE_MANAGER =
@@ -85,7 +90,11 @@ public class CacheSchedulerTest
         @Override
         public NamespaceExtractionCacheManager apply(@Nullable Lifecycle lifecycle)
         {
-          return new OffHeapNamespaceExtractionCacheManager(lifecycle, new NoopServiceEmitter());
+          return new OffHeapNamespaceExtractionCacheManager(
+              lifecycle,
+              new NoopServiceEmitter(),
+              new NamespaceExtractionConfig()
+          );
         }
       };
 
