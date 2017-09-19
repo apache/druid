@@ -484,7 +484,7 @@ public class ParallelCombiner<KeyType>
         }
 
         @Override
-        public Object get()
+        public Object getObject()
         {
           return values[checkAndGetColumnIndex(columnName)];
         }
