@@ -103,7 +103,7 @@ public class VirtualColumnsTest
     final FloatColumnSelector floatSelector = virtualColumns.makeFloatColumnSelector("expr", null);
     final LongColumnSelector longSelector = virtualColumns.makeLongColumnSelector("expr", null);
 
-    Assert.assertEquals(1L, objectSelector.get());
+    Assert.assertEquals(1L, objectSelector.getObject());
     Assert.assertEquals("1", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
     Assert.assertEquals("0.5", extractionDimensionSelector.lookupName(extractionDimensionSelector.getRow().get(0)));
     Assert.assertEquals(1.0f, floatSelector.getFloat(), 0.0f);
@@ -122,7 +122,7 @@ public class VirtualColumnsTest
     final FloatColumnSelector floatSelector = virtualColumns.makeFloatColumnSelector("foo.5", null);
     final LongColumnSelector longSelector = virtualColumns.makeLongColumnSelector("foo.5", null);
 
-    Assert.assertEquals(5L, objectSelector.get());
+    Assert.assertEquals(5L, objectSelector.getObject());
     Assert.assertEquals("5", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
     Assert.assertEquals(5.0f, floatSelector.getFloat(), 0.0f);
     Assert.assertEquals(5L, longSelector.getLong());
@@ -140,7 +140,7 @@ public class VirtualColumnsTest
     final FloatColumnSelector floatSelector = virtualColumns.makeFloatColumnSelector("foo", null);
     final LongColumnSelector longSelector = virtualColumns.makeLongColumnSelector("foo", null);
 
-    Assert.assertEquals(-1L, objectSelector.get());
+    Assert.assertEquals(-1L, objectSelector.getObject());
     Assert.assertEquals("-1", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
     Assert.assertEquals(-1.0f, floatSelector.getFloat(), 0.0f);
     Assert.assertEquals(-1L, longSelector.getLong());
@@ -319,7 +319,7 @@ public class VirtualColumnsTest
         }
 
         @Override
-        public Object get()
+        public Object getObject()
         {
           return selector.getLong();
         }

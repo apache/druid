@@ -19,6 +19,7 @@
 
 package io.druid.server;
 
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -43,6 +44,7 @@ import io.druid.server.http.security.DatasourceResourceFilter;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
+import io.druid.server.security.ResourceAction;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
@@ -119,10 +121,14 @@ public class ClientInfoResource
   @Produces(MediaType.APPLICATION_JSON)
   public Iterable<String> getDataSources(@Context final HttpServletRequest request)
   {
+    Function<String, Iterable<ResourceAction>> raGenerator = datasourceName -> {
+      return Lists.newArrayList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(datasourceName));
+    };
+
     return AuthorizationUtils.filterAuthorizedResources(
         request,
         getSegmentsForDatasources().keySet(),
-        AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
+        raGenerator,
         authorizerMapper
     );
   }
