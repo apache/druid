@@ -94,9 +94,10 @@ public abstract class LoadRule implements Rule
 
       final String tier = primaryHolderToLoad.getServer().getTier();
       // assign replicas for the rest of the tier
-      final int numAssigned = 1 /* primary */ + assignReplicasForTier(
+      final int numAssigned = 1 /* for primary replica */ + assignReplicasForTier(
           tier,
           targetReplicants.getOrDefault(tier, 0),
+          // note: adding 1 to currentReplicantsInTier to account for the one assigned as primary replica
           currentReplicants.getOrDefault(tier, 0) + 1,
           params,
           getFilteredHolders(
@@ -108,7 +109,8 @@ public abstract class LoadRule implements Rule
       );
       stats.addToTieredStat(ASSIGNED_COUNT, tier, numAssigned);
 
-      assignReplicas(targetReplicants, currentReplicants, params, segment, stats, tier);
+      // do assign replicas for the other tiers.
+      assignReplicas(targetReplicants, currentReplicants, params, segment, stats, tier /* to skip */);
     }
   }
 
