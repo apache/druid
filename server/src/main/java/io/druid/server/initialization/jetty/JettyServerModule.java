@@ -100,6 +100,7 @@ public class JettyServerModule extends JerseyServletModule
     binder.bind(GuiceContainer.class).to(DruidGuiceContainer.class);
     binder.bind(DruidGuiceContainer.class).in(Scopes.SINGLETON);
     binder.bind(CustomExceptionMapper.class).in(Singleton.class);
+    binder.bind(ForbiddenExceptionMapper.class).in(Singleton.class);
 
     serve("/*").with(DruidGuiceContainer.class);
 

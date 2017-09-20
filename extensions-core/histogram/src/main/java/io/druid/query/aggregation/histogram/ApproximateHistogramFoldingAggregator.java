@@ -54,7 +54,7 @@ public class ApproximateHistogramFoldingAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    ApproximateHistogram h = selector.get();
+    ApproximateHistogram h = selector.getObject();
     if (h == null) {
       return;
     }

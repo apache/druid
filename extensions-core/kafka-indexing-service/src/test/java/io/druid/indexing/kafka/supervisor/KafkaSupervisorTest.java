@@ -1819,7 +1819,10 @@ public class KafkaSupervisorTest extends EasyMockSupport
         skipOffsetGaps
     );
 
-    KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(null, null)
+    KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
+        null,
+        null
+    )
     {
       @Override
       public KafkaIndexTaskClient build(
@@ -1920,6 +1923,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             false
         ),
         ImmutableMap.<String, Object>of(),
+        null,
         null
     );
   }

@@ -157,7 +157,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
       public void reset(ColumnValueSelector selector)
       {
         @SuppressWarnings("unchecked")
-        VarianceAggregatorCollector first = ((ObjectColumnSelector<VarianceAggregatorCollector>) selector).get();
+        VarianceAggregatorCollector first = ((ObjectColumnSelector<VarianceAggregatorCollector>) selector).getObject();
         combined.copyFrom(first);
       }
 
@@ -165,7 +165,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
       public void fold(ColumnValueSelector selector)
       {
         @SuppressWarnings("unchecked")
-        VarianceAggregatorCollector other = ((ObjectColumnSelector<VarianceAggregatorCollector>) selector).get();
+        VarianceAggregatorCollector other = ((ObjectColumnSelector<VarianceAggregatorCollector>) selector).getObject();
         combined.fold(other);
       }
 
@@ -176,7 +176,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
       }
 
       @Override
-      public VarianceAggregatorCollector get()
+      public VarianceAggregatorCollector getObject()
       {
         return combined;
       }

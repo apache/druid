@@ -96,7 +96,6 @@ public class DruidLeaderClientTest extends BaseJettyTest
             }
         )
     );
-
     httpClient = injector.getInstance(ClientHolder.class).getClient();
     return injector;
   }

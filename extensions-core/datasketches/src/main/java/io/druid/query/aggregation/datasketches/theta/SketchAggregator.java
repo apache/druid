@@ -43,7 +43,7 @@ public class SketchAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    Object update = selector.get();
+    Object update = selector.getObject();
     if (update == null) {
       return;
     }
