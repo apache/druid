@@ -48,15 +48,10 @@ public class CustomTierSelectorStrategy extends AbstractTierSelectorStrategy
       pos++;
     }
 
-    this.comparator = new Comparator<Integer>()
-    {
-      @Override
-      public int compare(Integer o1, Integer o2)
-      {
-        int pos1 = lookup.get(o1);
-        int pos2 = lookup.get(o2);
-        return Ints.compare(pos1, pos2);
-      }
+    this.comparator = (o1, o2) -> {
+      int pos1 = lookup.get(o1);
+      int pos2 = lookup.get(o2);
+      return Ints.compare(pos1, pos2);
     };
   }
 
