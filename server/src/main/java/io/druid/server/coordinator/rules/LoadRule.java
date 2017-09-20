@@ -169,7 +169,7 @@ public abstract class LoadRule implements Rule
       final ServerHolder candidate = params.getBalancerStrategy().findNewSegmentHomeReplicator(segment, holders);
       if (candidate == null) {
         log.warn(
-            "Not enough [%s] servers or node capacity to assign primary segment[%s]! Expected Replicants[%d]",
+            "No available [%s] servers or node capacity to assign primary segment[%s]! Expected Replicants[%d]",
             tier, segment.getIdentifier(), targetReplicantsInTier
         );
       } else if (topCandidate == null || candidate.getServer().getPriority() > topCandidate.getServer().getPriority()) {
@@ -233,7 +233,7 @@ public abstract class LoadRule implements Rule
       final ServerHolder holder = params.getBalancerStrategy().findNewSegmentHomeReplicator(segment, holders);
       if (holder == null) {
         log.warn(
-            "Not enough [%s] servers or node capacity to assign segment[%s]! Expected Replicants[%d]",
+            "No available [%s] servers or node capacity to assign segment[%s]! Expected Replicants[%d]",
             tier, segment.getIdentifier(), targetReplicantsInTier
         );
         return numAssigned;
