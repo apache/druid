@@ -37,16 +37,16 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 
-/*
-   * 1. calculating zscore using two-sample Z-Test. IOW,
-   *    using z-test statistic for testing the difference of
-   *    two population proportions.
-   * 2. converting binary variables (e.g. success or not) to continuous variables (e.g. conversion rate).
-   *
-   Please refer to http://math.mercyhurst.edu/~griff/courses/m109/Lectures/old/Sum_06/sect8.1.pdf
-   for more details.
-   http://facweb.cs.depaul.edu/sjost/csc423/documents/test-descriptions/indep-z.pdf
-*/
+/**
+ * 1. calculating zscore using two-sample Z-Test. IOW,
+ * using z-test statistic for testing the difference of
+ * two population proportions.
+ * 2. converting binary variables (e.g. success or not) to continuous variables (e.g. conversion rate).
+ * <p>
+ * Please refer to http://math.mercyhurst.edu/~griff/courses/m109/Lectures/old/Sum_06/sect8.1.pdf
+ * and http://facweb.cs.depaul.edu/sjost/csc423/documents/test-descriptions/indep-z.pdf
+ * for more details.
+ */
 @JsonTypeName("zscore2sample")
 public class ZtestPostAggregator implements PostAggregator
 {
@@ -63,7 +63,6 @@ public class ZtestPostAggregator implements PostAggregator
       @JsonProperty("sample1Size") PostAggregator sample1Size,
       @JsonProperty("successCount2") PostAggregator successCount2,
       @JsonProperty("sample2Size") PostAggregator sample2Size
-
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null post-aggregator name");
@@ -162,6 +161,51 @@ public class ZtestPostAggregator implements PostAggregator
     }
   }
 
+  @JsonProperty
+  public PostAggregator getSuccessCount1()
+  {
+    return successCount1;
+  }
+
+  @JsonProperty
+  public PostAggregator getSample1Size()
+  {
+    return sample1Size;
+  }
+
+  @JsonProperty
+  public PostAggregator getSuccessCount2()
+  {
+    return successCount2;
+  }
+
+  @JsonProperty
+  public PostAggregator getSample2Size()
+  {
+    return sample2Size;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    ZtestPostAggregator that = (ZtestPostAggregator) o;
+
+    if (!name.equals(that.name)) {
+      return false;
+    }
+
+    return (successCount1.equals(that.successCount1) &&
+            sample1Size.equals(that.sample1Size) &&
+            successCount2.equals(that.successCount2) && sample2Size.equals(that.sample2Size));
+  }
+
   @Override
   public int hashCode()
   {
@@ -178,10 +222,10 @@ public class ZtestPostAggregator implements PostAggregator
   {
     return "ZtestPostAggregator{" +
            "name='" + name + '\'' +
-           ", successCount1" + successCount1 +
-           ", sample1Size" + sample1Size +
-           ", successCount2" + successCount2 +
-           ", sample2size" + sample2Size +
+           ", successCount1='" + successCount1 + '\'' +
+           ", sample1Size='" + sample1Size + '\'' +
+           ", successCount2='" + successCount2 + '\'' +
+           ", sample2size='" + sample2Size +
            '}';
   }
 

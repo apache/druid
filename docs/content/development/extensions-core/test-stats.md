@@ -4,7 +4,7 @@ layout: doc_page
 
 # Test Stats Aggregators
 
-Incorporates test statistics related aggregators, including z-score and p-value. Please refer to [https://www.paypal-engineering.com/2017/06/29/democratizing-experimentation-data-for-product-innovations/](https://www.paypal-engineering.com/2017/06/29/democratizing-experimentation-data-for-product-innovations/) for math background and details, although its input spec and example are out of date.
+Incorporates test statistics related aggregators, including z-score and p-value. Please refer to [https://www.paypal-engineering.com/2017/06/29/democratizing-experimentation-data-for-product-innovations/](https://www.paypal-engineering.com/2017/06/29/democratizing-experimentation-data-for-product-innovations/) for math background and details.
 
 Make sure to include `druid-stats` extension in order to use these aggregrators.
 
@@ -31,7 +31,7 @@ S.E. = sqrt{ p1 * ( 1 - p1 )/n1 + p2 * (1 - p2)/n2) }
   "successCount1": <post_aggregator> success count of sample 1,
   "sample1Size": <post_aggregaror> sample 1 size,
   "successCount2": <post_aggregator> success count of sample 2,
-  "sample2size" : <post_aggregator> sample 2 size
+  "sample2Size" : <post_aggregator> sample 2 size
 }
 ```
 

@@ -117,6 +117,31 @@ public class PvaluefromZscorePostAggregator implements PostAggregator
     );
   }
 
+  @JsonProperty
+  public PostAggregator getZscore()
+  {
+    return zScore;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    PvaluefromZscorePostAggregator that = (PvaluefromZscorePostAggregator) o;
+
+    if (!name.equals(that.name)) {
+      return false;
+    }
+
+    return (zScore.equals(that.zScore));
+  }
+
   @Override
   public int hashCode()
   {
@@ -128,8 +153,9 @@ public class PvaluefromZscorePostAggregator implements PostAggregator
   @Override
   public String toString()
   {
-    return "PvaluefromZscorePostAggregator{" + "name'" + name + '\''
-           + ", zScore=" + zScore + '}';
+    return "PvaluefromZscorePostAggregator{" +
+           "name='" + name + '\'' +
+           ", zScore=" + zScore + '}';
   }
 
   @Override

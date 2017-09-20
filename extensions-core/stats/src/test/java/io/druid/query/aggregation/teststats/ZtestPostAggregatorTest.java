@@ -19,8 +19,8 @@
 
 package io.druid.query.aggregation.teststats;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import org.junit.Assert;
@@ -30,14 +30,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class TestStatsTest
+public class ZtestPostAggregatorTest
 {
+  ZtestPostAggregator ztestPostAggregator;
 
   @Test
-  public void testCompute()
+  public void testZtestPostAggregator() throws Exception
   {
-    ZtestPostAggregator ztestPostAggregator;
-    PvaluefromZscorePostAggregator pvaluePostAggregator;
     ConstantPostAggregator successCount1, sample1Size, successCount2, sample2Size;
 
     successCount1 = new ConstantPostAggregator("successCountPopulation1", 39244);
@@ -58,24 +57,33 @@ public class TestStatsTest
       metricValues.put(pa.getName(), ((ConstantPostAggregator) pa).getConstantValue());
     }
 
-    ztestPostAggregator = new ZtestPostAggregator("zscore", successCount1,
-                                                  sample1Size, successCount2, sample2Size
+    ztestPostAggregator = new ZtestPostAggregator(
+        "zscore",
+        successCount1,
+        sample1Size,
+        successCount2,
+        sample2Size
     );
 
     double zscore = ((Number) ztestPostAggregator.compute(metricValues)).doubleValue();
 
-    pvaluePostAggregator = new PvaluefromZscorePostAggregator("pvalue", ztestPostAggregator);
-
-    System.out.print("zscore = " + zscore + "\n");
-    System.out.print("pvalue = " +
-                     pvaluePostAggregator.compute(ImmutableMap.of("zscore", -1783.8762354220219)));
-
     Assert.assertEquals(-1783.8762354220219,
                         zscore, 0.0001
     );
-    Assert.assertNotEquals(
-        0.0,
-        ztestPostAggregator.compute(metricValues)
-    );
+
+    System.out.print(ztestPostAggregator.toString());
+  }
+
+  @Test
+  public void testSerde() throws Exception
+  {
+    DefaultObjectMapper mapper = new DefaultObjectMapper();
+    ZtestPostAggregator postAggregator1 =
+        mapper.readValue(
+            mapper.writeValueAsString(ztestPostAggregator),
+            ZtestPostAggregator.class
+        );
+
+    Assert.assertEquals(ztestPostAggregator, postAggregator1);
   }
 }
