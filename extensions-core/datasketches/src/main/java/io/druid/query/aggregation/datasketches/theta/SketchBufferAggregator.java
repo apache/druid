@@ -19,9 +19,7 @@
 
 package io.druid.query.aggregation.datasketches.theta;
 
-import com.yahoo.memory.Memory;
-import com.yahoo.memory.MemoryRegion;
-import com.yahoo.memory.NativeMemory;
+import com.yahoo.memory.WritableMemory;
 import com.yahoo.sketches.Family;
 import com.yahoo.sketches.theta.SetOperation;
 import com.yahoo.sketches.theta.Union;
@@ -40,7 +38,7 @@ public class SketchBufferAggregator implements BufferAggregator
   private final int size;
   private final int maxIntermediateSize;
   private final IdentityHashMap<ByteBuffer, Int2ObjectMap<Union>> unions = new IdentityHashMap<>();
-  private final IdentityHashMap<ByteBuffer, NativeMemory> nmCache = new IdentityHashMap<>();
+  private final IdentityHashMap<ByteBuffer, WritableMemory> nmCache = new IdentityHashMap<>();
 
   public SketchBufferAggregator(ObjectColumnSelector selector, int size, int maxIntermediateSize)
   {
@@ -91,11 +89,10 @@ public class SketchBufferAggregator implements BufferAggregator
 
   private Union createNewUnion(ByteBuffer buf, int position, boolean isWrapped)
   {
-    NativeMemory nm = getNativeMemory(buf);
-    Memory mem = new MemoryRegion(nm, position, maxIntermediateSize);
+    WritableMemory mem = getMemory(buf).writableRegion(position, maxIntermediateSize);
     Union union = isWrapped
                   ? (Union) SetOperation.wrap(mem)
-                  : (Union) SetOperation.builder().initMemory(mem).build(size, Family.UNION);
+                  : (Union) SetOperation.builder().setNominalEntries(size).build(Family.UNION, mem);
     Int2ObjectMap<Union> unionMap = unions.get(buf);
     if (unionMap == null) {
       unionMap = new Int2ObjectOpenHashMap<>();
@@ -127,6 +124,7 @@ public class SketchBufferAggregator implements BufferAggregator
   public void close()
   {
     unions.clear();
+    nmCache.clear();
   }
 
   @Override
@@ -149,14 +147,14 @@ public class SketchBufferAggregator implements BufferAggregator
     }
   }
 
-  private NativeMemory getNativeMemory(ByteBuffer buffer)
+  private WritableMemory getMemory(ByteBuffer buffer)
   {
-    NativeMemory nm = nmCache.get(buffer);
-    if (nm == null) {
-      nm = new NativeMemory(buffer);
-      nmCache.put(buffer, nm);
+    WritableMemory mem = nmCache.get(buffer);
+    if (mem == null) {
+      mem = WritableMemory.wrap(buffer);
+      nmCache.put(buffer, mem);
     }
-    return nm;
+    return mem;
   }
 
 }
