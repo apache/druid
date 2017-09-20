@@ -115,8 +115,9 @@ public class ParallelCombinerTest
         MoreExecutors.listeningDecorator(SERVICE),
         false,
         THREAD_NUM,
-        0,
-        0 // use default timeout
+        0, // default priority
+        0, // default timeout
+        4
     );
 
     final int numRows = 1000;

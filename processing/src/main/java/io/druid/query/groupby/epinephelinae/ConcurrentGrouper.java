@@ -109,7 +109,8 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       final ListeningExecutorService executor,
       final int priority,
       final boolean hasQueryTimeout,
-      final long queryTimeoutAt
+      final long queryTimeoutAt,
+      final int intermediateCombineDegree
   )
   {
     Preconditions.checkArgument(concurrencyHint > 0, "concurrencyHint > 0");
@@ -143,7 +144,8 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
         sortHasNonGroupingFields,
         concurrencyHint,
         priority,
-        queryTimeoutAt
+        queryTimeoutAt,
+        intermediateCombineDegree
     );
     this.maxDictionarySizeForCombiner = combineKeySerdeFactory.getMaxDictionarySize();
   }

@@ -235,7 +235,8 @@ public class RowBasedGrouperHelper
           grouperSorter,
           priority,
           hasQueryTimeout,
-          queryTimeoutAt
+          queryTimeoutAt,
+          querySpecificConfig.getIntermediateCombineDegree()
       );
     }
 

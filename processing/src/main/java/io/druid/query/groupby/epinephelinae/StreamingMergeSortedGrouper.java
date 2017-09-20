@@ -317,7 +317,7 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
     {
       {
         // Waits for some data to be ready
-        increaseReadIndex(0);
+        increaseReadIndexTo(0);
       }
 
       @Override
@@ -351,18 +351,18 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
         }
 
         final int increaseTo = nextReadIndex == maxNumSlots - 1 ? 0 : nextReadIndex + 1;
-        increaseReadIndex(increaseTo);
+        increaseReadIndexTo(increaseTo);
 
         return new Entry<>(key, values);
       }
 
-      private void increaseReadIndex(int increaseTo)
+      private void increaseReadIndexTo(int target)
       {
         final long startAt = System.nanoTime();
         final long spinTimeoutAt = startAt + SPIN_FOR_TIMEOUT_THRESHOLD_NS;
         long now = startAt;
 
-        while ((!isReady() || increaseTo == curWriteIndex) && !finished && !Thread.currentThread().isInterrupted()) {
+        while ((!isReady() || target == curWriteIndex) && !finished && !Thread.currentThread().isInterrupted()) {
           if (now >= queryTimeoutAtNs) {
             throw new RuntimeException(new TimeoutException());
           }
@@ -372,7 +372,7 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
           now = System.nanoTime();
         }
 
-        nextReadIndex = increaseTo;
+        nextReadIndex = target;
       }
 
       private boolean isReady()

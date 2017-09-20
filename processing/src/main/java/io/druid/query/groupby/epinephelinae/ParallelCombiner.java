@@ -64,7 +64,27 @@ import java.util.concurrent.Future;
  */
 public class ParallelCombiner<KeyType>
 {
-  private static final int MINIMUM_COMBINE_DEGREE = 2;
+  // The combining tree created by this class can have two different degrees for intermediate nodes.
+  // The "leaf combine degree (LCD)" is the number of leaf nodes combined together, while the "intermediate combine
+  // degree (ICD)" is the number of non-leaf nodes combined together. The below picture shows an example where LCD = 2
+  // and ICD = 4.
+  //
+  //        o         <- non-leaf node
+  //     / / \ \      <- ICD = 4
+  //  o   o   o   o   <- non-leaf nodes
+  // / \ / \ / \ / \  <- LCD = 2
+  // o o o o o o o o  <- leaf nodes
+  //
+  // The reason why we need two different degrees is to optimize the number of non-leaf nodes which are run by
+  // different threads at the same time. Note that the leaf nodes are sorted iterators of SpillingGroupers which
+  // generally returns multiple rows of the same grouping key which in turn should be combined, while the non-leaf nodes
+  // are iterators of StreamingMergeSortedGroupers and always returns a single row per grouping key. Generally, the
+  // performance will get better as LCD becomes low while ICD is some value larger than LCD because the amount of work
+  // each thread has to do can be properly tuned. The optimal values for LCD and ICD may vary with query and data. Here,
+  // we use a simple heuristic to avoid complex optimization. That is, ICD is fixed as a user-configurable value and the
+  // minimum LCD satisfying the memory restriction is searched. See findLeafCombineDegreeAndNumBuffers() for more
+  // details.
+  private static final int MINIMUM_LEAF_COMBINE_DEGREE = 2;
 
   private final Supplier<ResourceHolder<ByteBuffer>> combineBufferSupplier;
   private final AggregatorFactory[] combiningFactories;
@@ -75,6 +95,10 @@ public class ParallelCombiner<KeyType>
   private final int priority;
   private final long queryTimeoutAt;
 
+  // The default value is 8 which comes from an experiment. A non-leaf node will combine up to intermediateCombineDegree
+  // rows for the same grouping key.
+  private final int intermediateCombineDegree;
+
   public ParallelCombiner(
       Supplier<ResourceHolder<ByteBuffer>> combineBufferSupplier,
       AggregatorFactory[] combiningFactories,
@@ -83,7 +107,8 @@ public class ParallelCombiner<KeyType>
       boolean sortHasNonGroupingFields,
       int concurrencyHint,
       int priority,
-      long queryTimeoutAt
+      long queryTimeoutAt,
+      int intermediateCombineDegree
   )
   {
     this.combineBufferSupplier = combineBufferSupplier;
@@ -93,6 +118,8 @@ public class ParallelCombiner<KeyType>
     this.keyObjComparator = combineKeySerdeFactory.objectComparator(sortHasNonGroupingFields);
     this.concurrencyHint = concurrencyHint;
     this.priority = priority;
+    this.intermediateCombineDegree = intermediateCombineDegree;
+
     this.queryTimeoutAt = queryTimeoutAt;
   }
 
@@ -118,16 +145,16 @@ public class ParallelCombiner<KeyType>
         combiningFactories
     );
     // We want to maximize the parallelism while the size of buffer slice is greater than the minimum buffer size
-    // required by StreamingMergeSortedGrouper. Here, we find the degree of the cominbing tree and the required number
-    // of buffers maximizing the degree of parallelism.
-    final Pair<Integer, Integer> degreeAndNumBuffers = findCombineDegreeAndNumBuffers(
+    // required by StreamingMergeSortedGrouper. Here, we find the leafCombineDegree of the cominbing tree and the
+    // required number of buffers maximizing the parallelism.
+    final Pair<Integer, Integer> degreeAndNumBuffers = findLeafCombineDegreeAndNumBuffers(
         combineBuffer,
         minimumRequiredBufferCapacity,
         concurrencyHint,
         sortedIterators.size()
     );
 
-    final int combineDegree = degreeAndNumBuffers.lhs;
+    final int leafCombineDegree = degreeAndNumBuffers.lhs;
     final int numBuffers = degreeAndNumBuffers.rhs;
     final int sliceSize = combineBuffer.capacity() / numBuffers;
 
@@ -137,7 +164,7 @@ public class ParallelCombiner<KeyType>
         sortedIterators,
         bufferSupplier,
         combiningFactories,
-        combineDegree,
+        leafCombineDegree,
         mergedDictionary
     );
 
@@ -194,35 +221,36 @@ public class ParallelCombiner<KeyType>
   }
 
   /**
-   * Find a minimum size of the buffer slice and corresponding combining degree and number of slices.  Note that each
-   * node in the combining tree is executed by different threads.  This method assumes that using more threads can
-   * exploit better performance and find such a shape of the combining tree.
+   * Find a minimum size of the buffer slice and corresponding leafCombineDegree and number of slices.  Note that each
+   * node in the combining tree is executed by different threads.  This method assumes that combining the leaf nodes
+   * requires threads as many as possible, while combining intermediate nodes is not.  See the comment on
+   * {@link #MINIMUM_LEAF_COMBINE_DEGREE} for more details.
    *
    * @param combineBuffer                 entire buffer used for combining tree
    * @param requiredMinimumBufferCapacity minimum buffer capacity for {@link StreamingMergeSortedGrouper}
    * @param numAvailableThreads           number of available threads
    * @param numLeafNodes                  number of leaf nodes of combining tree
    *
-   * @return a pair of degree and number of buffers if found.
+   * @return a pair of leafCombineDegree and number of buffers if found.
    */
-  private static Pair<Integer, Integer> findCombineDegreeAndNumBuffers(
+  private Pair<Integer, Integer> findLeafCombineDegreeAndNumBuffers(
       ByteBuffer combineBuffer,
       int requiredMinimumBufferCapacity,
       int numAvailableThreads,
       int numLeafNodes
   )
   {
-    for (int degree = MINIMUM_COMBINE_DEGREE; degree <= numLeafNodes; degree++) {
-      final int requiredBufferNum = computeRequiredBufferNum(numLeafNodes, degree);
+    for (int leafCombineDegree = MINIMUM_LEAF_COMBINE_DEGREE; leafCombineDegree <= numLeafNodes; leafCombineDegree++) {
+      final int requiredBufferNum = computeRequiredBufferNum(numLeafNodes, leafCombineDegree);
       if (requiredBufferNum <= numAvailableThreads) {
         final int expectedSliceSize = combineBuffer.capacity() / requiredBufferNum;
         if (expectedSliceSize >= requiredMinimumBufferCapacity) {
-          return Pair.of(degree, requiredBufferNum);
+          return Pair.of(leafCombineDegree, requiredBufferNum);
         }
       }
     }
 
-    throw new ISE("Cannot find a proper combine degree");
+    throw new ISE("Cannot find a proper leaf combine degree. Try increasing druid.processing.buffer.sizeBytes.");
   }
 
   /**
@@ -231,13 +259,13 @@ public class ParallelCombiner<KeyType>
    * buffers is the number of nodes of the combining tree.
    *
    * @param numChildNodes number of child nodes
-   * @param combineDegree combine degree
+   * @param combineDegree combine degree for the current level
    *
    * @return minimum number of buffers required for combining tree
    *
    * @see #buildCombineTree(List, Supplier, AggregatorFactory[], int, List)
    */
-  static int computeRequiredBufferNum(int numChildNodes, int combineDegree)
+  private int computeRequiredBufferNum(int numChildNodes, int combineDegree)
   {
     // numChildrenForLastNode used to determine that the last node is needed for the current level.
     // Please see buildCombineTree() for more details.
@@ -249,7 +277,7 @@ public class ParallelCombiner<KeyType>
       return numCurLevelNodes;
     } else {
       return numCurLevelNodes +
-             computeRequiredBufferNum(numChildOfParentNodes, combineDegree);
+             computeRequiredBufferNum(numChildOfParentNodes, intermediateCombineDegree);
     }
   }
 
@@ -257,10 +285,10 @@ public class ParallelCombiner<KeyType>
    * Recursively build a combining tree in a bottom-up manner.  Each node of the tree is a task that combines input
    * iterators asynchronously.
    *
-   * @param childIterators all iterators of the child level
+   * @param childIterators      all iterators of the child level
    * @param bufferSupplier      combining buffer supplier
    * @param combiningFactories  array of combining aggregator factories
-   * @param combineDegree       combining degree
+   * @param combineDegree       combining degree for the current level
    * @param dictionary          merged dictionary
    *
    * @return a pair of a list of iterators of the current level in the combining tree and a list of futures of all
@@ -281,7 +309,9 @@ public class ParallelCombiner<KeyType>
     // The below algorithm creates the combining nodes of the current level. It first checks that the number of children
     // to be combined together is 1. If it is, the intermediate combining node for that child is not needed. Instead, it
     // can be directly connected to a node of the parent level. Here is an example of generated tree when
-    // numLeafNodes = 6 and combineDegree = 2.
+    // numLeafNodes = 6 and leafCombineDegree = intermediateCombineDegree = 2. See the description of
+    // MINIMUM_LEAF_COMBINE_DEGREE for more details about leafCombineDegree and intermediateCombineDegree.
+    //
     //      o
     //     / \
     //    o   \
@@ -320,7 +350,13 @@ public class ParallelCombiner<KeyType>
     } else {
       // Build the parent level iterators
       final Pair<List<CloseableIterator<Entry<KeyType>>>, List<Future>> parentIteratorsAndFutures =
-          buildCombineTree(childIteratorsOfNextLevel, bufferSupplier, combiningFactories, combineDegree, dictionary);
+          buildCombineTree(
+              childIteratorsOfNextLevel,
+              bufferSupplier,
+              combiningFactories,
+              intermediateCombineDegree,
+              dictionary
+          );
       combineFutures.addAll(parentIteratorsAndFutures.rhs);
       return Pair.of(parentIteratorsAndFutures.lhs, combineFutures);
     }

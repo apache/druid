@@ -123,8 +123,7 @@ the query context. If neither the context field nor the property is set, the "v2
 
 - "v2", the default, is designed to offer better performance and memory management. This strategy generates
 per-segment results using a fully off-heap map. Data nodes merge the per-segment results using a fully off-heap
-concurrent facts map combined with an on-heap string dictionary. This may optionally involve spilling to disk. Data
-nodes return sorted results to the broker, which merges result streams using an N-way merge. The broker materializes
+concurrent facts map combined with an on-heap string dictionary. This may optionally involve spilling to disk. Data nodes sort and merge results before sending to the broker. Here, if data is spilled on disk, data nodes create a combining tree which merges results using multiple threads. Each node of the tree combines the input rows from child nodes which are run by different threads. If data is not spilled, data nodes simply merges results using a single thread. Finally, data nodes send the merged results to the broker, which merges result streams using an N-way merge. The broker materializes
 the results if necessary (e.g. if the query sorts on columns other than its dimensions). Otherwise, it streams results
 back as they are merged.
 
@@ -220,6 +219,8 @@ When using the "v2" strategy, the following runtime properties apply:
 |`druid.query.groupBy.maxMergingDictionarySize`|Maximum amount of heap space (approximately) to use for the string dictionary during merging. When the dictionary exceeds this size, a spill to disk will be triggered.|100000000|
 |`druid.query.groupBy.maxOnDiskStorage`|Maximum amount of disk space to use, per-query, for spilling result sets to disk when either the merging buffer or the dictionary fills up. Queries that exceed this limit will fail. Set to zero to disable disk spilling.|0 (disabled)|
 |`druid.query.groupBy.singleThreaded`|Merge results using a single thread.|false|
+|`druid.query.groupBy.forceHashAggregation`|Force to use hash-based aggregation.|false|
+|`druid.query.groupBy.intermediateCombineDegree`|The number of intermediate nodes combined together in the combining tree. Higher degrees will need a less numer of threads which might be helpful to improve the query performance by reducing the overhead of too many threads if the server has sufficiently powerful cpu cores.|8|
 
 This may require allocating more direct memory. The amount of direct memory needed by Druid is at least
 `druid.processing.buffer.sizeBytes * (druid.processing.numMergeBuffers + druid.processing.numThreads + 1)`. You can
@@ -249,7 +250,8 @@ When using the "v2" strategy, the following query context parameters apply:
 |`maxOnDiskStorage`|Can be used to lower the value of `druid.query.groupBy.maxOnDiskStorage` for this query.|
 |`sortByDimsFirst`|Sort the results first by dimension values and then by timestamp.|
 |`forcePushDownLimit`|When all fields in the orderby are part of the grouping key, the broker will push limit application down to the historical nodes. When the sorting order uses fields that are not in the grouping key, applying this optimization can result in approximate results with unknown accuracy, so this optimization is disabled by default in that case. Enabling this context flag turns on limit push down for limit/orderbys that contain non-grouping key columns.|
-|`forceHashAggregation`|Force to use hash-based aggregation.|
+|`forceHashAggregation`|Overrides the value of `druid.query.groupBy.forceHashAggregation` for this query.|
+|`intermediateCombineDegree`|Overrides the value of `druid.query.groupBy.intermediateCombineDegree` for this query.|
 
 When using the "v1" strategy, the following query context parameters apply:
 
