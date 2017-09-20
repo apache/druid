@@ -115,7 +115,8 @@ public class SynchronizedUnion implements Union
   }
 
   @Override
-  public boolean isSameResource(Memory mem) {
+  public boolean isSameResource(Memory mem)
+  {
     return delegate.isSameResource(mem);
   }
 }
