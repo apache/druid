@@ -23,8 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.MinMaxPriorityQueue;
-import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -63,7 +61,10 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
+import java.util.TreeSet;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  */
@@ -119,52 +120,48 @@ public class LoadRuleTest
         DruidServer.DEFAULT_TIER, 2
     ));
 
-    DruidCluster druidCluster = new DruidCluster(
-        null,
-        ImmutableMap.of(
-            "hot",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        new DruidServer(
-                            "serverHot",
-                            "hostHot",
-                            null,
-                            1000,
-                            ServerType.HISTORICAL,
-                            "hot",
-                            1
-                        ).toImmutableDruidServer(),
-                        mockPeon
-                    )
-                )
-            ),
-            DruidServer.DEFAULT_TIER,
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        new DruidServer(
-                            "serverNorm",
-                            "hostNorm",
-                            null,
-                            1000,
-                            ServerType.HISTORICAL,
-                            DruidServer.DEFAULT_TIER,
-                            0
-                        ).toImmutableDruidServer(),
-                        mockPeon
-                    )
-                )
-            )
-        )
-    );
-
     final DataSegment segment = createDataSegment("foo");
 
     throttler.registerReplicantCreation(DruidServer.DEFAULT_TIER, segment.getIdentifier(), "hostNorm");
     EasyMock.expectLastCall().once();
 
     EasyMock.replay(throttler, mockPeon);
+
+    DruidCluster druidCluster = new DruidCluster(
+        null,
+        ImmutableMap.of(
+            "hot",
+            Stream.of(
+                new ServerHolder(
+                    new DruidServer(
+                        "serverHot",
+                        "hostHot",
+                        null,
+                        1000,
+                        ServerType.HISTORICAL,
+                        "hot",
+                        1
+                    ).toImmutableDruidServer(),
+                    mockPeon
+                )
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder()))),
+            DruidServer.DEFAULT_TIER,
+            Stream.of(
+                new ServerHolder(
+                    new DruidServer(
+                        "serverNorm",
+                        "hostNorm",
+                        null,
+                        1000,
+                        ServerType.HISTORICAL,
+                        DruidServer.DEFAULT_TIER,
+                        0
+                    ).toImmutableDruidServer(),
+                    mockPeon
+                )
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+        )
+    );
 
     CoordinatorStats stats = rule.run(
         null,
@@ -206,51 +203,47 @@ public class LoadRuleTest
         null,
         ImmutableMap.of(
             "tier1",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        new DruidServer(
-                            "server1",
-                            "host1",
-                            null,
-                            1000,
-                            ServerType.HISTORICAL,
-                            "tier1",
-                            0
-                        ).toImmutableDruidServer(),
-                        mockPeon1
-                    )
+            Stream.of(
+                new ServerHolder(
+                    new DruidServer(
+                        "server1",
+                        "host1",
+                        null,
+                        1000,
+                        ServerType.HISTORICAL,
+                        "tier1",
+                        0
+                    ).toImmutableDruidServer(),
+                    mockPeon1
                 )
-            ),
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder()))),
             "tier2",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        new DruidServer(
-                            "server2",
-                            "host2",
-                            null,
-                            1000,
-                            ServerType.HISTORICAL,
-                            "tier2",
-                            1
-                        ).toImmutableDruidServer(),
-                        mockPeon2
-                    ),
-                    new ServerHolder(
-                        new DruidServer(
-                            "server3",
-                            "host3",
-                            null,
-                            1000,
-                            ServerType.HISTORICAL,
-                            "tier2",
-                            1
-                        ).toImmutableDruidServer(),
-                        mockPeon2
-                    )
+            Stream.of(
+                new ServerHolder(
+                    new DruidServer(
+                        "server2",
+                        "host2",
+                        null,
+                        1000,
+                        ServerType.HISTORICAL,
+                        "tier2",
+                        1
+                    ).toImmutableDruidServer(),
+                    mockPeon2
+                ),
+                new ServerHolder(
+                    new DruidServer(
+                        "server3",
+                        "host3",
+                        null,
+                        1000,
+                        ServerType.HISTORICAL,
+                        "tier2",
+                        1
+                    ).toImmutableDruidServer(),
+                    mockPeon2
                 )
-            )
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
         )
     );
 
@@ -313,23 +306,19 @@ public class LoadRuleTest
         null,
         ImmutableMap.of(
             "hot",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        server1.toImmutableDruidServer(),
-                        mockPeon
-                    )
+            Stream.of(
+                new ServerHolder(
+                    server1.toImmutableDruidServer(),
+                    mockPeon
                 )
-            ),
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder()))),
             DruidServer.DEFAULT_TIER,
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        server2.toImmutableDruidServer(),
-                        mockPeon
-                    )
+            Stream.of(
+                new ServerHolder(
+                    server2.toImmutableDruidServer(),
+                    mockPeon
                 )
-            )
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
         )
     );
 
@@ -368,22 +357,20 @@ public class LoadRuleTest
         null,
         ImmutableMap.of(
             "hot",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        new DruidServer(
-                            "serverHot",
-                            "hostHot",
-                            null,
-                            1000,
-                            ServerType.HISTORICAL,
-                            "hot",
-                            0
-                        ).toImmutableDruidServer(),
-                        mockPeon
-                    )
+            Stream.of(
+                new ServerHolder(
+                    new DruidServer(
+                        "serverHot",
+                        "hostHot",
+                        null,
+                        1000,
+                        ServerType.HISTORICAL,
+                        "hot",
+                        0
+                    ).toImmutableDruidServer(),
+                    mockPeon
                 )
-            )
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
         )
     );
 
@@ -446,18 +433,16 @@ public class LoadRuleTest
         null,
         ImmutableMap.of(
             "hot",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        server1.toImmutableDruidServer(),
-                        mockPeon
-                    ),
-                    new ServerHolder(
-                        server2.toImmutableDruidServer(),
-                        mockPeon
-                    )
+            Stream.of(
+                new ServerHolder(
+                    server1.toImmutableDruidServer(),
+                    mockPeon
+                ),
+                new ServerHolder(
+                    server2.toImmutableDruidServer(),
+                    mockPeon
                 )
-            )
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
         )
     );
 
@@ -493,22 +478,20 @@ public class LoadRuleTest
         null,
         ImmutableMap.of(
             "hot",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        new DruidServer(
-                            "serverHot",
-                            "hostHot",
-                            null,
-                            1000,
-                            ServerType.HISTORICAL,
-                            "hot",
-                            0
-                        ).toImmutableDruidServer(),
-                        peon
-                    )
+            Stream.of(
+                new ServerHolder(
+                    new DruidServer(
+                        "serverHot",
+                        "hostHot",
+                        null,
+                        1000,
+                        ServerType.HISTORICAL,
+                        "hot",
+                        0
+                    ).toImmutableDruidServer(),
+                    peon
                 )
-            )
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
         )
     );
 

@@ -23,11 +23,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.java.util.common.DateTimes;
+import io.druid.server.coordinator.helper.DruidCoordinatorBalancer;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
@@ -43,6 +43,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -284,13 +285,14 @@ public class DruidCoordinatorBalancerTest
                 null,
                 ImmutableMap.of(
                     "normal",
-                    MinMaxPriorityQueue.orderedBy(DruidCoordinatorBalancerTester.percentUsedComparator)
-                                       .create(
-                                           IntStream
-                                               .range(0, druidServers.size())
-                                               .mapToObj(i -> new ServerHolder(druidServers.get(i), peons.get(i)))
-                                               .collect(Collectors.toList())
-                                       )
+                    IntStream
+                        .range(0, druidServers.size())
+                        .mapToObj(i -> new ServerHolder(druidServers.get(i), peons.get(i)))
+                        .collect(
+                            Collectors.toCollection(
+                                () -> new TreeSet<>(DruidCoordinatorBalancer.percentUsedComparator)
+                            )
+                        )
                 )
             )
         )
@@ -319,7 +321,7 @@ public class DruidCoordinatorBalancerTest
       Map<String, DataSegment> segments
   )
   {
-    EasyMock.expect(druidServer.getName()).andReturn(name).atLeastOnce();
+    EasyMock.expect(druidServer.getName()).andReturn(name).anyTimes();
     EasyMock.expect(druidServer.getTier()).andReturn(tier).anyTimes();
     EasyMock.expect(druidServer.getCurrSize()).andReturn(currentSize).atLeastOnce();
     EasyMock.expect(druidServer.getMaxSize()).andReturn(maxSize).atLeastOnce();

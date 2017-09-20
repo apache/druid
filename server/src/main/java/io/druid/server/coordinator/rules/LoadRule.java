@@ -19,7 +19,6 @@
 
 package io.druid.server.coordinator.rules;
 
-import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.java.util.common.IAE;
 import io.druid.server.coordinator.CoordinatorStats;
@@ -33,10 +32,11 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -130,7 +130,7 @@ public abstract class LoadRule implements Rule
       final Predicate<ServerHolder> predicate
   )
   {
-    final MinMaxPriorityQueue<ServerHolder> queue = druidCluster.getHistoricalsByTier(tier);
+    final NavigableSet<ServerHolder> queue = druidCluster.getHistoricalsByTier(tier);
     if (queue == null) {
       log.makeAlert("Tier[%s] has no servers! Check your cluster configuration!", tier).emit();
       return Collections.emptyList();
@@ -269,7 +269,7 @@ public abstract class LoadRule implements Rule
     for (final Object2IntMap.Entry<String> entry : currentReplicants.object2IntEntrySet()) {
       final String tier = entry.getKey();
 
-      final MinMaxPriorityQueue<ServerHolder> holders = druidCluster.getHistoricalsByTier(tier);
+      final NavigableSet<ServerHolder> holders = druidCluster.getHistoricalsByTier(tier);
 
       final int numDropped;
       if (holders == null) {
@@ -287,28 +287,26 @@ public abstract class LoadRule implements Rule
 
   private static int dropForTier(
       final int numToDrop,
-      final MinMaxPriorityQueue<ServerHolder> holdersInTier,
+      final NavigableSet<ServerHolder> holdersInTier,
       final DataSegment segment
   )
   {
     int numDropped = 0;
 
-    final List<ServerHolder> droppedHolders = new ArrayList<>();
+    final Iterator<ServerHolder> iterator = holdersInTier.descendingIterator();
     while (numDropped < numToDrop) {
-      final ServerHolder holder = holdersInTier.pollLast();
-      if (holder == null) {
+      if (!iterator.hasNext()) {
         log.warn("Wtf, holder was null?  I have no servers serving [%s]?", segment.getIdentifier());
         break;
       }
+
+      final ServerHolder holder = iterator.next();
 
       if (holder.isServingSegment(segment)) {
         holder.getPeon().dropSegment(segment, null);
         ++numDropped;
       }
-      droppedHolders.add(holder);
     }
-    // add back the holders
-    holdersInTier.addAll(droppedHolders);
 
     return numDropped;
   }

@@ -19,6 +19,7 @@
 
 package io.druid.server.coordinator;
 
+import com.google.common.primitives.Longs;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
@@ -52,32 +53,32 @@ public class ServerHolder implements Comparable<ServerHolder>
     return peon;
   }
 
-  public Long getMaxSize()
+  public long getMaxSize()
   {
     return server.getMaxSize();
   }
 
-  public Long getCurrServerSize()
+  public long getCurrServerSize()
   {
     return server.getCurrSize();
   }
 
-  public Long getLoadQueueSize()
+  public long getLoadQueueSize()
   {
     return peon.getLoadQueueSize();
   }
 
-  public Long getSizeUsed()
+  public long getSizeUsed()
   {
     return getCurrServerSize() + getLoadQueueSize();
   }
 
-  public Double getPercentUsed()
+  public double getPercentUsed()
   {
-    return (100 * getSizeUsed().doubleValue()) / getMaxSize();
+    return (100.0 * getSizeUsed()) / getMaxSize();
   }
 
-  public Long getAvailableSize()
+  public long getAvailableSize()
   {
     long maxSize = getMaxSize();
     long sizeUsed = getSizeUsed();
@@ -114,7 +115,22 @@ public class ServerHolder implements Comparable<ServerHolder>
   @Override
   public int compareTo(ServerHolder serverHolder)
   {
-    return getAvailableSize().compareTo(serverHolder.getAvailableSize());
+    int result = Longs.compare(getAvailableSize(), serverHolder.getAvailableSize());
+    if (result != 0) {
+      return result;
+    }
+
+    result = server.getHost().compareTo(serverHolder.server.getHost());
+    if (result != 0) {
+      return result;
+    }
+
+    result = server.getTier().compareTo(serverHolder.server.getTier());
+    if (result != 0) {
+      return result;
+    }
+
+    return server.getType().compareTo(serverHolder.server.getType());
   }
 
   @Override
