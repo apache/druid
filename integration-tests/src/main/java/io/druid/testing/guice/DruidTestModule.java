@@ -34,7 +34,7 @@ import com.metamx.http.client.auth.BasicCredentials;
 import io.druid.curator.CuratorConfig;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.ManageLifecycle;
-import io.druid.guice.annotations.Client;
+import io.druid.guice.annotations.EscalatedClient;
 import io.druid.guice.annotations.Self;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.ServerConfig;
@@ -64,8 +64,11 @@ public class DruidTestModule implements Module
 
   @Provides
   @TestClient
-  public HttpClient getHttpClient(IntegrationTestingConfig config, Lifecycle lifecycle, @Client HttpClient delegate)
-      throws Exception
+  public HttpClient getHttpClient(
+      IntegrationTestingConfig config,
+      Lifecycle lifecycle,
+      @EscalatedClient HttpClient delegate
+  ) throws Exception
   {
     if (config.getUsername() != null) {
       return new CredentialedHttpClient(new BasicCredentials(config.getUsername(), config.getPassword()), delegate);

@@ -21,10 +21,10 @@ package io.druid.segment.column;
 
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DoubleColumnSelector;
+import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.data.IndexedDoubles;
 import io.druid.segment.data.ReadableOffset;
-import io.druid.segment.historical.HistoricalFloatColumnSelector;
 
 
 public class IndexedDoublesGenericColumn implements GenericColumn
@@ -67,7 +67,7 @@ public class IndexedDoublesGenericColumn implements GenericColumn
   }
 
   @Override
-  public HistoricalFloatColumnSelector makeFloatSingleValueRowSelector(ReadableOffset offset)
+  public FloatColumnSelector makeFloatSingleValueRowSelector(ReadableOffset offset)
   {
     return column.makeFloatColumnSelector(offset);
   }

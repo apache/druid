@@ -42,6 +42,9 @@ import io.druid.server.log.RequestLogger;
 import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.router.QueryHostFinder;
 import io.druid.server.router.Router;
+import io.druid.server.security.AuthConfig;
+import io.druid.server.security.Authenticator;
+import io.druid.server.security.AuthenticatorMapper;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.client.api.Response;
@@ -108,6 +111,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
   private final GenericQueryMetricsFactory queryMetricsFactory;
+  private final Authenticator escalatingAuthenticator;
 
   private HttpClient broadcastClient;
 
@@ -121,7 +125,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       @Router DruidHttpClientConfig httpClientConfig,
       ServiceEmitter emitter,
       RequestLogger requestLogger,
-      GenericQueryMetricsFactory queryMetricsFactory
+      GenericQueryMetricsFactory queryMetricsFactory,
+      AuthenticatorMapper authenticatorMapper
   )
   {
     this.warehouse = warehouse;
@@ -133,6 +138,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.queryMetricsFactory = queryMetricsFactory;
+    this.escalatingAuthenticator = authenticatorMapper.getEscalatingAuthenticator();
   }
 
   @Override
@@ -142,7 +148,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
 
     // Note that httpClientProvider is setup to return same HttpClient instance on each get() so
     // it is same http client as that is used by parent ProxyServlet.
-    broadcastClient = httpClientProvider.get();
+    broadcastClient = newHttpClient();
     try {
       broadcastClient.start();
     }
@@ -265,6 +271,12 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       }
     }
 
+    // Since we can't see the request object on the remote side, we can't check whether the remote side actually
+    // performed an authorization check here, so always set this to true for the proxy servlet.
+    // If the remote node failed to perform an authorization check, PreResponseAuthorizationCheckFilter
+    // will log that on the remote node.
+    clientRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+
     super.sendProxyRequest(
         clientRequest,
         proxyResponse,
@@ -316,7 +328,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   @Override
   protected HttpClient newHttpClient()
   {
-    return httpClientProvider.get();
+    return escalatingAuthenticator.createEscalatedJettyClient(httpClientProvider.get());
   }
 
   @Override

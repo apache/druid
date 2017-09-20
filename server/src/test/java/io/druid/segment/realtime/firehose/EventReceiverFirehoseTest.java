@@ -31,6 +31,9 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.server.metrics.EventReceiverFirehoseMetric;
 import io.druid.server.metrics.EventReceiverFirehoseRegister;
+import io.druid.server.security.AllowAllAuthenticator;
+import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthTestUtils;
 import org.apache.commons.io.IOUtils;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -74,7 +77,8 @@ public class EventReceiverFirehoseTest
         null,
         new DefaultObjectMapper(),
         new DefaultObjectMapper(),
-        register
+        register,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER
     );
     firehose = (EventReceiverFirehoseFactory.EventReceiverFirehose) eventReceiverFirehoseFactory.connect(
         new MapInputRowParser(
@@ -95,6 +99,14 @@ public class EventReceiverFirehoseTest
   @Test
   public void testSingleThread() throws IOException
   {
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
+            .andReturn(null)
+            .anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
+            .anyTimes();
+    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    EasyMock.expectLastCall().anyTimes();
     EasyMock.expect(req.getContentType()).andReturn("application/json").times(NUM_EVENTS);
     EasyMock.replay(req);
 
@@ -137,6 +149,15 @@ public class EventReceiverFirehoseTest
   @Test
   public void testMultipleThreads() throws InterruptedException, IOException, TimeoutException, ExecutionException
   {
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
+            .andReturn(null)
+            .anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
+            .anyTimes();
+    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    EasyMock.expectLastCall().anyTimes();
+
     EasyMock.expect(req.getContentType()).andReturn("application/json").times(2 * NUM_EVENTS);
     EasyMock.replay(req);
 
@@ -205,7 +226,8 @@ public class EventReceiverFirehoseTest
         null,
         new DefaultObjectMapper(),
         new DefaultObjectMapper(),
-        register
+        register,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER
     );
     EventReceiverFirehoseFactory.EventReceiverFirehose firehose2 =
         (EventReceiverFirehoseFactory.EventReceiverFirehose) eventReceiverFirehoseFactory2
@@ -228,7 +250,17 @@ public class EventReceiverFirehoseTest
   @Test(timeout = 40_000L)
   public void testShutdownWithPrevTime() throws Exception
   {
-    firehose.shutdown(DateTimes.nowUtc().minusMinutes(2).toString());
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
+            .andReturn(null)
+            .anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
+            .anyTimes();
+    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    EasyMock.expectLastCall().anyTimes();
+    EasyMock.replay(req);
+
+    firehose.shutdown(DateTimes.nowUtc().minusMinutes(2).toString(), req);
     while (!firehose.isClosed()) {
       Thread.sleep(50);
     }
@@ -237,7 +269,17 @@ public class EventReceiverFirehoseTest
   @Test(timeout = 40_000L)
   public void testShutdown() throws Exception
   {
-    firehose.shutdown(DateTimes.nowUtc().plusMillis(100).toString());
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
+            .andReturn(null)
+            .anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
+            .anyTimes();
+    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    EasyMock.expectLastCall().anyTimes();
+    EasyMock.replay(req);
+
+    firehose.shutdown(DateTimes.nowUtc().plusMillis(100).toString(), req);
     while (!firehose.isClosed()) {
       Thread.sleep(50);
     }

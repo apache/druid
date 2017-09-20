@@ -30,12 +30,20 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.inject.Binder;
+import com.google.inject.Injector;
+import com.google.inject.Module;
+import com.google.inject.name.Names;
+import io.druid.guice.GuiceInjectors;
+import io.druid.initialization.Initialization;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.ServerConfig;
+import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
@@ -110,6 +118,7 @@ public class DruidAvaticaHandlerTest
   private Connection clientLosAngeles;
   private DruidMeta druidMeta;
   private String url;
+  private Injector injector;
 
   @Before
   public void setUp() throws Exception
@@ -120,6 +129,22 @@ public class DruidAvaticaHandlerTest
     final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
+
+    injector = Initialization.makeInjectorWithModules(
+        GuiceInjectors.makeStartupInjector(),
+        ImmutableList.of(
+            new Module()
+            {
+              @Override
+              public void configure(Binder binder)
+              {
+                binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
+                binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+                binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
+              }
+            }
+        )
+    );
     druidMeta = new DruidMeta(
         new PlannerFactory(
             druidSchema,
@@ -127,9 +152,14 @@ public class DruidAvaticaHandlerTest
             operatorTable,
             macroTable,
             plannerConfig,
+            new AuthConfig(),
+            AuthTestUtils.TEST_AUTHENTICATOR_MAPPER,
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             CalciteTests.getJsonMapper()
         ),
-        AVATICA_CONFIG
+        AVATICA_CONFIG,
+        new AuthConfig(),
+        injector
     );
     final DruidAvaticaHandler handler = new DruidAvaticaHandler(
         druidMeta,
@@ -145,7 +175,7 @@ public class DruidAvaticaHandlerTest
         port,
         DruidAvaticaHandler.AVATICA_PATH
     );
-    client = DriverManager.getConnection(url);
+    client = DriverManager.getConnection(url, "admin", "druid");
 
     final Properties propertiesLosAngeles = new Properties();
     propertiesLosAngeles.setProperty("sqlTimeZone", "America/Los_Angeles");
@@ -558,7 +588,6 @@ public class DruidAvaticaHandlerTest
     final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
-
     final List<Meta.Frame> frames = new ArrayList<>();
     DruidMeta smallFrameDruidMeta = new DruidMeta(
         new PlannerFactory(
@@ -567,9 +596,14 @@ public class DruidAvaticaHandlerTest
             operatorTable,
             macroTable,
             plannerConfig,
+            new AuthConfig(),
+            AuthTestUtils.TEST_AUTHENTICATOR_MAPPER,
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             CalciteTests.getJsonMapper()
         ),
-        smallFrameConfig
+        smallFrameConfig,
+        new AuthConfig(),
+        injector
     )
     {
       @Override

@@ -223,7 +223,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
    *                                  .build();
    * </code></pre>
    *
-   * @see io.druid.query.scan.ScanQuery
+   * @see ScanQuery
    */
   public static class ScanQueryBuilder
   {

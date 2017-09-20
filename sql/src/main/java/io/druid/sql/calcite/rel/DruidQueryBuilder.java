@@ -21,6 +21,7 @@ package io.druid.sql.calcite.rel;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -477,7 +478,7 @@ public class DruidQueryBuilder
         queryGranularity,
         grouping.getAggregatorFactories(),
         grouping.getPostAggregators(),
-        theContext
+        ImmutableSortedMap.copyOf(theContext)
     );
   }
 
@@ -552,7 +553,7 @@ public class DruidQueryBuilder
         Granularities.ALL,
         grouping.getAggregatorFactories(),
         grouping.getPostAggregators(),
-        plannerContext.getQueryContext()
+        ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
     );
   }
 
@@ -587,7 +588,7 @@ public class DruidQueryBuilder
         grouping.getPostAggregators(),
         having != null ? new DimFilterHavingSpec(having) : null,
         limitSpec,
-        plannerContext.getQueryContext()
+        ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
     );
   }
 
@@ -637,7 +638,7 @@ public class DruidQueryBuilder
         filtration.getDimFilter(),
         Ordering.natural().sortedCopy(ImmutableSet.copyOf(getRowOrder())),
         false,
-        plannerContext.getQueryContext()
+        ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
     );
   }
 
@@ -718,7 +719,7 @@ public class DruidQueryBuilder
         metrics.stream().sorted().distinct().collect(Collectors.toList()),
         getVirtualColumns(plannerContext.getExprMacroTable()),
         pagingSpec,
-        plannerContext.getQueryContext()
+        ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
     );
   }
 
