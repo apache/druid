@@ -37,6 +37,6 @@ public class LowestPriorityTierSelectorStrategy extends AbstractTierSelectorStra
   @Override
   public Comparator<Integer> getComparator()
   {
-    return Integer::compare;
+    return Comparator.naturalOrder();
   }
 }

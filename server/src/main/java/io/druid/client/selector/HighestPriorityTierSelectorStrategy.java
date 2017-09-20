@@ -28,8 +28,6 @@ import java.util.Comparator;
  */
 public class HighestPriorityTierSelectorStrategy extends AbstractTierSelectorStrategy
 {
-  private static final Comparator<Integer> REVESE_COMPARATOR = (o1, o2) -> Integer.compare(o2, o1);
-
   @JsonCreator
   public HighestPriorityTierSelectorStrategy(@JacksonInject ServerSelectorStrategy serverSelectorStrategy)
   {
@@ -39,6 +37,6 @@ public class HighestPriorityTierSelectorStrategy extends AbstractTierSelectorStr
   @Override
   public Comparator<Integer> getComparator()
   {
-    return REVESE_COMPARATOR;
+    return Comparator.reverseOrder();
   }
 }
