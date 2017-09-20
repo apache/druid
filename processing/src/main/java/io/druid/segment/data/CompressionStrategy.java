@@ -32,7 +32,6 @@ import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.CompressedPools;
 import net.jpountz.lz4.LZ4Factory;
-import net.jpountz.lz4.LZ4FastDecompressor;
 import net.jpountz.lz4.LZ4SafeDecompressor;
 import org.apache.commons.lang.ArrayUtils;
 
@@ -158,18 +157,12 @@ public enum CompressionStrategy
     return (CompressionStrategy[]) ArrayUtils.removeElement(CompressionStrategy.values(), NONE);
   }
 
-  public static interface Decompressor
+  public interface Decompressor
   {
     /**
      * Implementations of this method are expected to call out.flip() after writing to the output buffer
-     *
-     * @param in
-     * @param numBytes
-     * @param out
      */
-    public void decompress(ByteBuffer in, int numBytes, ByteBuffer out);
-
-    public void decompress(ByteBuffer in, int numBytes, ByteBuffer out, int decompressedSize);
+    void decompress(ByteBuffer in, int numBytes, ByteBuffer out);
   }
 
   public static abstract class Compressor
@@ -236,11 +229,6 @@ public enum CompressionStrategy
       in.position(in.position() + numBytes);
     }
 
-    @Override
-    public void decompress(ByteBuffer in, int numBytes, ByteBuffer out, int decompressedSize)
-    {
-      decompress(in, numBytes, out);
-    }
   }
 
   public static class LZFDecompressor implements Decompressor
@@ -264,11 +252,6 @@ public enum CompressionStrategy
       }
     }
 
-    @Override
-    public void decompress(ByteBuffer in, int numBytes, ByteBuffer out, int decompressedSize)
-    {
-      decompress(in, numBytes, out);
-    }
   }
 
   public static class LZFCompressor extends Compressor
@@ -303,7 +286,6 @@ public enum CompressionStrategy
   public static class LZ4Decompressor implements Decompressor
   {
     private static final LZ4SafeDecompressor lz4Safe = LZ4Factory.fastestInstance().safeDecompressor();
-    private static final LZ4FastDecompressor lz4Fast = LZ4Factory.fastestInstance().fastDecompressor();
     private static final LZ4Decompressor defaultDecompressor = new LZ4Decompressor();
 
     @Override
@@ -322,13 +304,6 @@ public enum CompressionStrategy
       out.limit(out.position() + numDecompressedBytes);
     }
 
-    @Override
-    public void decompress(ByteBuffer in, int numBytes, ByteBuffer out, int decompressedSize)
-    {
-      // lz4Fast.decompress does not modify buffer positions
-      lz4Fast.decompress(in, in.position(), out, out.position(), decompressedSize);
-      out.limit(out.position() + decompressedSize);
-    }
   }
 
   public static class LZ4Compressor extends Compressor
