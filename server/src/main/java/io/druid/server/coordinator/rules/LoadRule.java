@@ -57,6 +57,7 @@ public abstract class LoadRule implements Rule
       final DataSegment segment
   )
   {
+    // get the "snapshots" of targetReplicants and currentReplicants for assignments.
     final Object2IntMap<String> targetReplicants = new Object2IntOpenHashMap<>(getTieredReplicants());
 
     final Object2IntMap<String> currentReplicants = new Object2IntOpenHashMap<>(
@@ -64,6 +65,8 @@ public abstract class LoadRule implements Rule
     );
 
     final CoordinatorStats stats = new CoordinatorStats();
+
+    // performs
     if (params.getAvailableSegments().contains(segment)) {
       assign(targetReplicants, currentReplicants, params, segment, stats);
     }
@@ -141,6 +144,14 @@ public abstract class LoadRule implements Rule
     return queue.stream().filter(predicate).collect(Collectors.toList());
   }
 
+  /***
+   * Iterates through each tier and find the respective segment homes; with the found segment homes, selects the one
+   * with the highest priority to be the holder for the primary replica.
+   * @param targetReplicants
+   * @param params
+   * @param segment
+   * @return
+   */
   @Nullable
   private static ServerHolder assignPrimary(
       final Object2IntMap<String> targetReplicants,
@@ -151,6 +162,7 @@ public abstract class LoadRule implements Rule
     ServerHolder topCandidate = null;
     for (final Object2IntMap.Entry<String> entry : targetReplicants.object2IntEntrySet()) {
       final int targetReplicantsInTier = entry.getIntValue();
+      // sanity check: target number of replicants should be more than zero.
       if (targetReplicantsInTier <= 0) {
         continue;
       }
@@ -162,6 +174,7 @@ public abstract class LoadRule implements Rule
           params.getDruidCluster(),
           createLoadQueueSizeLimitingPredicate(params)
       );
+      // no holders satisfy the predicate
       if (holders.isEmpty()) {
         continue;
       }
@@ -169,10 +182,14 @@ public abstract class LoadRule implements Rule
       final ServerHolder candidate = params.getBalancerStrategy().findNewSegmentHomeReplicator(segment, holders);
       if (candidate == null) {
         log.warn(
-            "No available [%s] servers or node capacity to assign primary segment[%s]! Expected Replicants[%d]",
+            "No available [%s] servers or node capacity to assign primary segment[%s]! " +
+            "Expected Replicants[%d]",
             tier, segment.getIdentifier(), targetReplicantsInTier
         );
-      } else if (topCandidate == null || candidate.getServer().getPriority() > topCandidate.getServer().getPriority()) {
+      } else if (
+          topCandidate == null ||
+          candidate.getServer().getPriority() > topCandidate.getServer().getPriority()
+          ) {
         topCandidate = candidate;
       }
     }
@@ -184,6 +201,16 @@ public abstract class LoadRule implements Rule
     return topCandidate;
   }
 
+  /***
+   *
+   * @param targetReplicants
+   * @param currentReplicants
+   * @param params
+   * @param segment
+   * @param stats
+   * @param tierToSkip if not null, this tier will be skipped from doing assignment, use when primary replica was
+   *                   assgined.
+   */
   private static void assignReplicas(
       final Object2IntMap<String> targetReplicants,
       final Object2IntMap<String> currentReplicants,
@@ -220,6 +247,7 @@ public abstract class LoadRule implements Rule
   )
   {
     final int numToAssign = targetReplicantsInTier - currentReplicantsInTier;
+    // if nothing to assign or no holders available for assignment
     if (numToAssign <= 0 || holders.isEmpty()) {
       return 0;
     }
@@ -260,6 +288,7 @@ public abstract class LoadRule implements Rule
     final DruidCluster druidCluster = params.getDruidCluster();
 
     // Make sure we have enough loaded replicants in the correct tiers in the cluster before doing anything
+    // This enforces that loading is completed before we attempt to drop stuffs as a safety measure
     for (final Object2IntMap.Entry<String> entry : targetReplicants.object2IntEntrySet()) {
       final String tier = entry.getKey();
       // if there are replicants loading in cluster
@@ -295,6 +324,7 @@ public abstract class LoadRule implements Rule
   {
     int numDropped = 0;
 
+    // Use the reverse order to get the holders with least available size first.
     final Iterator<ServerHolder> iterator = holdersInTier.descendingIterator();
     while (numDropped < numToDrop) {
       if (!iterator.hasNext()) {
