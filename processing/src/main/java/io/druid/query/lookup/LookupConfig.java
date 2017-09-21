@@ -44,12 +44,12 @@ public class LookupConfig
   public LookupConfig(
       @JsonProperty("snapshotWorkingDir") String snapshotWorkingDir,
       @JsonProperty("numLookupLoadingThreads") int numLookupLoadingThreads,
-      @JsonProperty("enableLookupSyncOnStartup") Boolean enableLookupSyncOnStartup
+      @JsonProperty("enableLookupSyncOnStartup") boolean enableLookupSyncOnStartup
   )
   {
     this.snapshotWorkingDir = Strings.nullToEmpty(snapshotWorkingDir);
     this.numLookupLoadingThreads = numLookupLoadingThreads;
-    this.enableLookupSyncOnStartup = enableLookupSyncOnStartup == null ? false : enableLookupSyncOnStartup;
+    this.enableLookupSyncOnStartup = enableLookupSyncOnStartup;
   }
 
   public String getSnapshotWorkingDir()
