@@ -293,12 +293,8 @@ public abstract class LoadRule implements Rule
 
     // Make sure we have enough loaded replicants in the correct tiers in the cluster before doing anything
     // This enforces that loading is completed before we attempt to drop stuffs as a safety measure
-    for (final Object2IntMap.Entry<String> entry : targetReplicants.object2IntEntrySet()) {
-      final String tier = entry.getKey();
-      // if there are replicants loading in cluster
-      if (druidCluster.hasTier(tier) && entry.getIntValue() > currentReplicants.getOrDefault(tier, 0)) {
-        return;
-      }
+    if (loadingInProgress(druidCluster)) {
+      return;
     }
 
     for (final Object2IntMap.Entry<String> entry : currentReplicants.object2IntEntrySet()) {
@@ -318,6 +314,22 @@ public abstract class LoadRule implements Rule
 
       stats.addToTieredStat(DROPPED_COUNT, tier, numDropped);
     }
+  }
+
+  /**
+   * Returns true if at least one tier in target replica assignment exists in cluster but does not have enough replicas.
+   */
+  private boolean loadingInProgress(final DruidCluster druidCluster)
+  {
+    for (final Object2IntMap.Entry<String> entry : targetReplicants.object2IntEntrySet()) {
+      final String tier = entry.getKey();
+      // if there are replicants loading in cluster
+      if (druidCluster.hasTier(tier) && entry.getIntValue() > currentReplicants.getOrDefault(tier, 0)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   private static int dropForTier(
