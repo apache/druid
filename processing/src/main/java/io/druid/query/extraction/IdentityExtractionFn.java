@@ -73,13 +73,13 @@ public class IdentityExtractionFn implements ExtractionFn
   @Override
   public String toString()
   {
-     return "Identity";
+    return "Identity";
   }
 
   @Override
   public boolean equals(Object o)
   {
-     return o != null && o instanceof IdentityExtractionFn;
+    return o != null && o instanceof IdentityExtractionFn;
   }
 
   public static final IdentityExtractionFn getInstance()

@@ -25,10 +25,7 @@ public class SingleElementPartitionChunk<T> implements PartitionChunk<T>
 {
   private final T element;
 
-  public SingleElementPartitionChunk
-      (
-          T element
-      )
+  public SingleElementPartitionChunk(T element)
   {
     this.element = element;
   }

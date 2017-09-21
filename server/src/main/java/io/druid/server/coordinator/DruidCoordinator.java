@@ -246,14 +246,12 @@ public class DruidCoordinator
 
         ((LoadRule) rule)
             .getTieredReplicants()
-            .forEach(
-                (final String tier, final Integer ruleReplicants) -> {
-                  int currentReplicants = segmentReplicantLookup.getTotalReplicants(segment.getIdentifier(), tier);
-                  retVal
-                      .computeIfAbsent(tier, ignored -> new Object2LongOpenHashMap<>())
-                      .addTo(segment.getDataSource(), Math.max(ruleReplicants - currentReplicants, 0));
-                }
-            );
+            .forEach((final String tier, final Integer ruleReplicants) -> {
+              int currentReplicants = segmentReplicantLookup.getTotalReplicants(segment.getIdentifier(), tier);
+              retVal
+                  .computeIfAbsent(tier, ignored -> new Object2LongOpenHashMap<>())
+                  .addTo(segment.getDataSource(), Math.max(ruleReplicants - currentReplicants, 0));
+            });
       }
     }
 

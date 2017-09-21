@@ -92,10 +92,8 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   {
     if (canUpsert == null) {
       DatabaseMetaData metaData = handle.getConnection().getMetaData();
-      canUpsert = metaData.getDatabaseMajorVersion() > 9 || (
-          metaData.getDatabaseMajorVersion() == 9 &&
-          metaData.getDatabaseMinorVersion() >= 5
-      );
+      canUpsert = metaData.getDatabaseMajorVersion() > 9 ||
+                  (metaData.getDatabaseMajorVersion() == 9 && metaData.getDatabaseMinorVersion() >= 5);
     }
     return canUpsert;
   }

@@ -190,21 +190,20 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         // to keep the code simple, the proxy servlet will also send a request to one of the default brokers
         if (!server.getHost().equals(defaultServer.getHost())) {
           // issue async requests
+          Response.CompleteListener completeListener = result -> {
+            if (result.isFailed()) {
+              log.warn(
+                  result.getFailure(),
+                  "Failed to forward cancellation request to [%s]",
+                  server.getHost()
+              );
+            }
+          };
           broadcastClient
               .newRequest(rewriteURI(request, server.getScheme(), server.getHost()))
               .method(HttpMethod.DELETE)
               .timeout(CANCELLATION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
-              .send(
-                  result -> {
-                    if (result.isFailed()) {
-                      log.warn(
-                          result.getFailure(),
-                          "Failed to forward cancellation request to [%s]",
-                          server.getHost()
-                      );
-                    }
-                  }
-              );
+              .send(completeListener);
         }
         interruptedQueryCount.incrementAndGet();
       }

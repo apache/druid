@@ -104,20 +104,21 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
     public ComplexColumnPartSerde build()
     {
       return new ComplexColumnPartSerde(
-          typeName, new Serializer()
-      {
-        @Override
-        public long numBytes()
-        {
-          return delegate.getSerializedSize();
-        }
+          typeName,
+          new Serializer()
+          {
+            @Override
+            public long numBytes()
+            {
+              return delegate.getSerializedSize();
+            }
 
-        @Override
-        public void write(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
-        {
-          delegate.writeToChannel(channel, smoosher);
-        }
-      }
+            @Override
+            public void write(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+            {
+              delegate.writeToChannel(channel, smoosher);
+            }
+          }
       );
     }
   }

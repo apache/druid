@@ -28,7 +28,9 @@ import io.druid.guice.ExtensionsConfig;
 import io.druid.guice.GuiceInjectors;
 import io.druid.initialization.Initialization;
 
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.ServiceLoader;
 
 /**
@@ -51,32 +53,38 @@ public class Main
            .withDefaultCommand(Help.class)
            .withCommands(Help.class, Version.class);
 
+    List<Class<? extends Runnable>> serverCommands = Arrays.asList(
+        CliCoordinator.class,
+        CliHistorical.class,
+        CliBroker.class,
+        CliRealtime.class,
+        CliOverlord.class,
+        CliMiddleManager.class,
+        CliRouter.class
+    );
     builder.withGroup("server")
            .withDescription("Run one of the Druid server types.")
            .withDefaultCommand(Help.class)
-           .withCommands(
-               CliCoordinator.class, CliHistorical.class, CliBroker.class,
-               CliRealtime.class, CliOverlord.class, CliMiddleManager.class,
-               CliRouter.class
-           );
+           .withCommands(serverCommands);
 
     builder.withGroup("example")
            .withDescription("Run an example")
            .withDefaultCommand(Help.class)
            .withCommands(CliRealtimeExample.class);
 
+    List<Class<? extends Runnable>> toolCommands = Arrays.asList(
+        DruidJsonValidator.class,
+        PullDependencies.class,
+        CreateTables.class,
+        InsertSegment.class,
+        DumpSegment.class,
+        ResetCluster.class,
+        ValidateSegments.class
+    );
     builder.withGroup("tools")
            .withDescription("Various tools for working with Druid")
            .withDefaultCommand(Help.class)
-           .withCommands(
-               DruidJsonValidator.class,
-               PullDependencies.class,
-               CreateTables.class,
-               InsertSegment.class,
-               DumpSegment.class,
-               ResetCluster.class,
-               ValidateSegments.class
-           );
+           .withCommands(toolCommands);
 
     builder.withGroup("index")
            .withDescription("Run indexing for druid")

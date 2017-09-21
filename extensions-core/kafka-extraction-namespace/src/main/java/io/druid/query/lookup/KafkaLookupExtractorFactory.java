@@ -343,8 +343,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     return !(getKafkaTopic().equals(that.getKafkaTopic())
              && getKafkaProperties().equals(that.getKafkaProperties())
              && getConnectTimeout() == that.getConnectTimeout()
-             && isInjective() == that.isInjective()
-    );
+             && isInjective() == that.isInjective());
   }
 
   @Nullable
