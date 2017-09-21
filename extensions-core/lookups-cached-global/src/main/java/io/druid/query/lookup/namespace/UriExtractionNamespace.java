@@ -35,12 +35,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.IAE;
-import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.UOE;
 import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.parsers.CSVParser;
 import io.druid.java.util.common.parsers.DelimitedParser;
-import io.druid.java.util.common.parsers.JSONParser;
+import io.druid.java.util.common.parsers.JSONPathFieldSpec;
+import io.druid.java.util.common.parsers.JSONPathFieldType;
+import io.druid.java.util.common.parsers.JSONPathParser;
+import io.druid.java.util.common.parsers.JSONPathSpec;
 import io.druid.java.util.common.parsers.Parser;
 import org.joda.time.Period;
 
@@ -52,6 +54,7 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -336,7 +339,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
     }
 
     @Override
-    public boolean equals(Object o)
+    public boolean equals(final Object o)
     {
       if (this == o) {
         return true;
@@ -344,28 +347,26 @@ public class UriExtractionNamespace implements ExtractionNamespace
       if (o == null || getClass() != o.getClass()) {
         return false;
       }
+      final CSVFlatDataParser that = (CSVFlatDataParser) o;
+      return Objects.equals(columns, that.columns) &&
+             Objects.equals(keyColumn, that.keyColumn) &&
+             Objects.equals(valueColumn, that.valueColumn);
+    }
 
-      CSVFlatDataParser that = (CSVFlatDataParser) o;
-
-      if (!getColumns().equals(that.getColumns())) {
-        return false;
-      }
-      if (!getKeyColumn().equals(that.getKeyColumn())) {
-        return false;
-      }
-
-      return getValueColumn().equals(that.getValueColumn());
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(columns, keyColumn, valueColumn);
     }
 
     @Override
     public String toString()
     {
-      return StringUtils.format(
-          "CSVFlatDataParser = { columns = %s, keyColumn = %s, valueColumn = %s }",
-          Arrays.toString(columns.toArray()),
-          keyColumn,
-          valueColumn
-      );
+      return "CSVFlatDataParser{" +
+             "columns=" + columns +
+             ", keyColumn='" + keyColumn + '\'' +
+             ", valueColumn='" + valueColumn + '\'' +
+             '}';
     }
   }
 
@@ -475,7 +476,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
     }
 
     @Override
-    public boolean equals(Object o)
+    public boolean equals(final Object o)
     {
       if (this == o) {
         return true;
@@ -483,33 +484,30 @@ public class UriExtractionNamespace implements ExtractionNamespace
       if (o == null || getClass() != o.getClass()) {
         return false;
       }
+      final TSVFlatDataParser that = (TSVFlatDataParser) o;
+      return Objects.equals(columns, that.columns) &&
+             Objects.equals(delimiter, that.delimiter) &&
+             Objects.equals(listDelimiter, that.listDelimiter) &&
+             Objects.equals(keyColumn, that.keyColumn) &&
+             Objects.equals(valueColumn, that.valueColumn);
+    }
 
-      TSVFlatDataParser that = (TSVFlatDataParser) o;
-
-      if (!getColumns().equals(that.getColumns())) {
-        return false;
-      }
-      if ((getDelimiter() == null) ? that.getDelimiter() == null : getDelimiter().equals(that.getDelimiter())) {
-        return false;
-      }
-      if (!getKeyColumn().equals(that.getKeyColumn())) {
-        return false;
-      }
-
-      return getValueColumn().equals(that.getValueColumn());
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(columns, delimiter, listDelimiter, keyColumn, valueColumn);
     }
 
     @Override
     public String toString()
     {
-      return StringUtils.format(
-          "TSVFlatDataParser = { columns = %s, delimiter = '%s', listDelimiter = '%s',keyColumn = %s, valueColumn = %s }",
-          Arrays.toString(columns.toArray()),
-          delimiter,
-          listDelimiter,
-          keyColumn,
-          valueColumn
-      );
+      return "TSVFlatDataParser{" +
+             "columns=" + columns +
+             ", delimiter='" + delimiter + '\'' +
+             ", listDelimiter='" + listDelimiter + '\'' +
+             ", keyColumn='" + keyColumn + '\'' +
+             ", valueColumn='" + valueColumn + '\'' +
+             '}';
     }
   }
 
@@ -534,7 +532,16 @@ public class UriExtractionNamespace implements ExtractionNamespace
 
       // Copy jsonMapper; don't want to share canonicalization tables, etc., with the global ObjectMapper.
       this.parser = new DelegateParser(
-          new JSONParser(jsonMapper.copy(), ImmutableList.of(keyFieldName, valueFieldName)),
+          new JSONPathParser(
+              new JSONPathSpec(
+                  false,
+                  ImmutableList.of(
+                      new JSONPathFieldSpec(JSONPathFieldType.ROOT, keyFieldName, keyFieldName),
+                      new JSONPathFieldSpec(JSONPathFieldType.ROOT, valueFieldName, valueFieldName)
+                  )
+              ),
+              jsonMapper.copy()
+          ),
           keyFieldName,
           valueFieldName
       );
@@ -559,7 +566,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
     }
 
     @Override
-    public boolean equals(Object o)
+    public boolean equals(final Object o)
     {
       if (this == o) {
         return true;
@@ -567,24 +574,25 @@ public class UriExtractionNamespace implements ExtractionNamespace
       if (o == null || getClass() != o.getClass()) {
         return false;
       }
+      final JSONFlatDataParser that = (JSONFlatDataParser) o;
+      return Objects.equals(parser, that.parser) &&
+             Objects.equals(keyFieldName, that.keyFieldName) &&
+             Objects.equals(valueFieldName, that.valueFieldName);
+    }
 
-      JSONFlatDataParser that = (JSONFlatDataParser) o;
-
-      if (!getKeyFieldName().equals(that.getKeyFieldName())) {
-        return false;
-      }
-
-      return getValueFieldName().equals(that.getValueFieldName());
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(parser, keyFieldName, valueFieldName);
     }
 
     @Override
     public String toString()
     {
-      return StringUtils.format(
-          "JSONFlatDataParser = { keyFieldName = %s, valueFieldName = %s }",
-          keyFieldName,
-          valueFieldName
-      );
+      return "JSONFlatDataParser{" +
+             "keyFieldName='" + keyFieldName + '\'' +
+             ", valueFieldName='" + valueFieldName + '\'' +
+             '}';
     }
   }
 
@@ -649,9 +657,15 @@ public class UriExtractionNamespace implements ExtractionNamespace
     }
 
     @Override
+    public int hashCode()
+    {
+      return 0;
+    }
+
+    @Override
     public String toString()
     {
-      return "ObjectMapperFlatDataParser = { }";
+      return "ObjectMapperFlatDataParser{}";
     }
   }
 }
