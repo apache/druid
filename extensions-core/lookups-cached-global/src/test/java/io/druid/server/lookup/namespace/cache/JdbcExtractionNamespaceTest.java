@@ -269,17 +269,12 @@ public class JdbcExtractionNamespaceTest
         }
     );
 
-    try (final Closeable closeable =
-             new Closeable()
-             {
-               @Override
-               public void close() throws IOException
-               {
-                 if (!setupFuture.isDone() && !setupFuture.cancel(true) && !setupFuture.isDone()) {
-                   throw new IOException("Unable to stop future");
-                 }
-               }
-             }) {
+    Closeable closeable = () -> {
+      if (!setupFuture.isDone() && !setupFuture.cancel(true) && !setupFuture.isDone()) {
+        throw new IOException("Unable to stop future");
+      }
+    };
+    try (final Closeable c = closeable) {
       handleRef = setupFuture.get(10, TimeUnit.SECONDS);
     }
     Assert.assertNotNull(handleRef);

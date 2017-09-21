@@ -43,169 +43,170 @@ import java.util.UUID;
 
 public class RedisCacheTest
 {
-    private static final byte[] HI = StringUtils.toUtf8("hiiiiiiiiiiiiiiiiiii");
-    private static final byte[] HO = StringUtils.toUtf8("hooooooooooooooooooo");
+  private static final byte[] HI = StringUtils.toUtf8("hiiiiiiiiiiiiiiiiiii");
+  private static final byte[] HO = StringUtils.toUtf8("hooooooooooooooooooo");
 
-    private RedisCache cache;
-    private final RedisCacheConfig cacheConfig = new RedisCacheConfig()
+  private RedisCache cache;
+  private final RedisCacheConfig cacheConfig = new RedisCacheConfig()
+  {
+    @Override
+    public int getTimeout()
     {
-        @Override
-        public int getTimeout()
-        {
-            return 10;
-        }
+      return 10;
+    }
 
-        @Override
-        public long getExpiration()
-        {
-            return 3600000;
-        }
-    };
-
-    @Before
-    public void setUp() throws Exception
+    @Override
+    public long getExpiration()
     {
-        JedisPoolConfig poolConfig = new JedisPoolConfig();
-        poolConfig.setMaxTotal(cacheConfig.getMaxTotalConnections());
-        poolConfig.setMaxIdle(cacheConfig.getMaxIdleConnections());
-        poolConfig.setMinIdle(cacheConfig.getMinIdleConnections());
+      return 3600000;
+    }
+  };
 
-        MockJedisPool pool = new MockJedisPool(poolConfig, "localhost");
-        // orginal MockJedis do not support 'milliseconds' in long type,
-        // for test we override to support it
-        pool.setClient(new MockJedis("localhost") {
-            @Override
-            public String psetex(byte[] key, long milliseconds, byte[] value)
-            {
-                return this.psetex(key, (int) milliseconds, value);
+  @Before
+  public void setUp() throws Exception
+  {
+    JedisPoolConfig poolConfig = new JedisPoolConfig();
+    poolConfig.setMaxTotal(cacheConfig.getMaxTotalConnections());
+    poolConfig.setMaxIdle(cacheConfig.getMaxIdleConnections());
+    poolConfig.setMinIdle(cacheConfig.getMinIdleConnections());
+
+    MockJedisPool pool = new MockJedisPool(poolConfig, "localhost");
+    // orginal MockJedis do not support 'milliseconds' in long type,
+    // for test we override to support it
+    pool.setClient(new MockJedis("localhost")
+    {
+      @Override
+      public String psetex(byte[] key, long milliseconds, byte[] value)
+      {
+        return this.psetex(key, (int) milliseconds, value);
+      }
+    });
+
+    cache = RedisCache.create(pool, cacheConfig);
+  }
+
+  @Test
+  public void testBasicInjection() throws Exception
+  {
+    final RedisCacheConfig config = new RedisCacheConfig();
+    Injector injector = Initialization.makeInjectorWithModules(
+        GuiceInjectors.makeStartupInjector(), ImmutableList.of(
+            binder -> {
+              binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/redis");
+              binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+              binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
+
+              binder.bind(RedisCacheConfig.class).toInstance(config);
+              binder.bind(Cache.class).toProvider(RedisCacheProviderWithConfig.class).in(ManageLifecycle.class);
             }
-        });
-
-        cache = RedisCache.create(pool, cacheConfig);
+        )
+    );
+    Lifecycle lifecycle = injector.getInstance(Lifecycle.class);
+    lifecycle.start();
+    try {
+      Cache cache = injector.getInstance(Cache.class);
+      Assert.assertEquals(RedisCache.class, cache.getClass());
     }
-
-    @Test
-    public void testBasicInjection() throws Exception
-    {
-        final RedisCacheConfig config = new RedisCacheConfig();
-        Injector injector = Initialization.makeInjectorWithModules(
-                GuiceInjectors.makeStartupInjector(), ImmutableList.of(
-                        binder -> {
-                            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/redis");
-                            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
-                            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
-
-                            binder.bind(RedisCacheConfig.class).toInstance(config);
-                            binder.bind(Cache.class).toProvider(RedisCacheProviderWithConfig.class).in(ManageLifecycle.class);
-                        }
-                )
-        );
-        Lifecycle lifecycle = injector.getInstance(Lifecycle.class);
-        lifecycle.start();
-        try {
-            Cache cache = injector.getInstance(Cache.class);
-            Assert.assertEquals(RedisCache.class, cache.getClass());
-        }
-        finally {
-            lifecycle.stop();
-        }
+    finally {
+      lifecycle.stop();
     }
+  }
 
-    @Test
-    public void testSimpleInjection()
-    {
-        final String uuid = UUID.randomUUID().toString();
-        System.setProperty(uuid + ".type", "redis");
-        final Injector injector = Initialization.makeInjectorWithModules(
-                GuiceInjectors.makeStartupInjector(), ImmutableList.of(
-                        binder -> {
-                            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/redis");
-                            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
-                            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
+  @Test
+  public void testSimpleInjection()
+  {
+    final String uuid = UUID.randomUUID().toString();
+    System.setProperty(uuid + ".type", "redis");
+    final Injector injector = Initialization.makeInjectorWithModules(
+        GuiceInjectors.makeStartupInjector(), ImmutableList.of(
+            binder -> {
+              binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/redis");
+              binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+              binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
 
-                            binder.bind(Cache.class).toProvider(CacheProvider.class);
-                            JsonConfigProvider.bind(binder, uuid, CacheProvider.class);
-                        }
-                )
-        );
-        final CacheProvider cacheProvider = injector.getInstance(CacheProvider.class);
-        Assert.assertNotNull(cacheProvider);
-        Assert.assertEquals(RedisCacheProvider.class, cacheProvider.getClass());
-    }
+              binder.bind(Cache.class).toProvider(CacheProvider.class);
+              JsonConfigProvider.bind(binder, uuid, CacheProvider.class);
+            }
+        )
+    );
+    final CacheProvider cacheProvider = injector.getInstance(CacheProvider.class);
+    Assert.assertNotNull(cacheProvider);
+    Assert.assertEquals(RedisCacheProvider.class, cacheProvider.getClass());
+  }
 
-    @Test
-    public void testSanity() throws Exception
-    {
-        Assert.assertNull(cache.get(new Cache.NamedKey("a", HI)));
-        put(cache, "a", HI, 0);
-        Assert.assertEquals(0, get(cache, "a", HI));
-        Assert.assertNull(cache.get(new Cache.NamedKey("the", HI)));
+  @Test
+  public void testSanity() throws Exception
+  {
+    Assert.assertNull(cache.get(new Cache.NamedKey("a", HI)));
+    put(cache, "a", HI, 0);
+    Assert.assertEquals(0, get(cache, "a", HI));
+    Assert.assertNull(cache.get(new Cache.NamedKey("the", HI)));
 
-        put(cache, "the", HI, 1);
-        Assert.assertEquals(0, get(cache, "a", HI));
-        Assert.assertEquals(1, get(cache, "the", HI));
+    put(cache, "the", HI, 1);
+    Assert.assertEquals(0, get(cache, "a", HI));
+    Assert.assertEquals(1, get(cache, "the", HI));
 
-        put(cache, "the", HO, 10);
-        Assert.assertEquals(0, get(cache, "a", HI));
-        Assert.assertNull(cache.get(new Cache.NamedKey("a", HO)));
-        Assert.assertEquals(1, get(cache, "the", HI));
-        Assert.assertEquals(10, get(cache, "the", HO));
+    put(cache, "the", HO, 10);
+    Assert.assertEquals(0, get(cache, "a", HI));
+    Assert.assertNull(cache.get(new Cache.NamedKey("a", HO)));
+    Assert.assertEquals(1, get(cache, "the", HI));
+    Assert.assertEquals(10, get(cache, "the", HO));
 
-        cache.close("the");
-        Assert.assertEquals(0, get(cache, "a", HI));
-        Assert.assertNull(cache.get(new Cache.NamedKey("a", HO)));
-    }
+    cache.close("the");
+    Assert.assertEquals(0, get(cache, "a", HI));
+    Assert.assertNull(cache.get(new Cache.NamedKey("a", HO)));
+  }
 
-    @Test
-    public void testGetBulk() throws Exception
-    {
-        Assert.assertNull(cache.get(new Cache.NamedKey("the", HI)));
+  @Test
+  public void testGetBulk() throws Exception
+  {
+    Assert.assertNull(cache.get(new Cache.NamedKey("the", HI)));
 
-        put(cache, "the", HI, 1);
-        put(cache, "the", HO, 10);
+    put(cache, "the", HI, 1);
+    put(cache, "the", HO, 10);
 
-        Cache.NamedKey key1 = new Cache.NamedKey("the", HI);
-        Cache.NamedKey key2 = new Cache.NamedKey("the", HO);
-        Cache.NamedKey key3 = new Cache.NamedKey("a", HI);
+    Cache.NamedKey key1 = new Cache.NamedKey("the", HI);
+    Cache.NamedKey key2 = new Cache.NamedKey("the", HO);
+    Cache.NamedKey key3 = new Cache.NamedKey("a", HI);
 
-        Map<Cache.NamedKey, byte[]> result = cache.getBulk(
-                Lists.newArrayList(
-                        key1,
-                        key2,
-                        key3
-                )
-        );
+    Map<Cache.NamedKey, byte[]> result = cache.getBulk(
+        Lists.newArrayList(
+            key1,
+            key2,
+            key3
+        )
+    );
 
-        Assert.assertEquals(1, Ints.fromByteArray(result.get(key1)));
-        Assert.assertEquals(10, Ints.fromByteArray(result.get(key2)));
-        Assert.assertEquals(null, result.get(key3));
-    }
+    Assert.assertEquals(1, Ints.fromByteArray(result.get(key1)));
+    Assert.assertEquals(10, Ints.fromByteArray(result.get(key2)));
+    Assert.assertEquals(null, result.get(key3));
+  }
 
-    public void put(Cache cache, String namespace, byte[] key, Integer value)
-    {
-        cache.put(new Cache.NamedKey(namespace, key), Ints.toByteArray(value));
-    }
+  public void put(Cache cache, String namespace, byte[] key, Integer value)
+  {
+    cache.put(new Cache.NamedKey(namespace, key), Ints.toByteArray(value));
+  }
 
-    public int get(Cache cache, String namespace, byte[] key)
-    {
-        return Ints.fromByteArray(cache.get(new Cache.NamedKey(namespace, key)));
-    }
+  public int get(Cache cache, String namespace, byte[] key)
+  {
+    return Ints.fromByteArray(cache.get(new Cache.NamedKey(namespace, key)));
+  }
 }
 
 class RedisCacheProviderWithConfig extends RedisCacheProvider
 {
-    private final RedisCacheConfig config;
+  private final RedisCacheConfig config;
 
-    @Inject
-    public RedisCacheProviderWithConfig(RedisCacheConfig config)
-    {
-        this.config = config;
-    }
+  @Inject
+  public RedisCacheProviderWithConfig(RedisCacheConfig config)
+  {
+    this.config = config;
+  }
 
-    @Override
-    public Cache get()
-    {
-        return RedisCache.create(config);
-    }
+  @Override
+  public Cache get()
+  {
+    return RedisCache.create(config);
+  }
 }
 

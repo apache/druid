@@ -65,11 +65,10 @@ public class DruidTestModule implements Module
   @Provides
   @TestClient
   public HttpClient getHttpClient(
-    IntegrationTestingConfig config,
-    Lifecycle lifecycle,
-    @EscalatedClient HttpClient delegate
-  )
-    throws Exception
+      IntegrationTestingConfig config,
+      Lifecycle lifecycle,
+      @EscalatedClient HttpClient delegate
+  ) throws Exception
   {
     if (config.getUsername() != null) {
       return new CredentialedHttpClient(new BasicCredentials(config.getUsername(), config.getPassword()), delegate);

@@ -112,7 +112,7 @@ public class TimeBoundaryQueryQueryToolChestTest
     );
 
     for (int i = 0; i < segments.size(); i++) {
-       Assert.assertEquals(segments.get(i).getInterval(), expected.get(i).getInterval());
+      Assert.assertEquals(segments.get(i).getInterval(), expected.get(i).getInterval());
     }
   }
 

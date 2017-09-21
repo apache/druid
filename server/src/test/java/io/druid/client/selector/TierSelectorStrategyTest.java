@@ -97,14 +97,15 @@ public class TierSelectorStrategyTest
 
     testTierSelectorStrategy(
         new CustomTierSelectorStrategy(
-            new ConnectionCountServerSelectorStrategy(), new CustomTierSelectorStrategyConfig()
-        {
-          @Override
-          public List<Integer> getPriorities()
-          {
-            return Arrays.asList(2, 0, -1, 1);
-          }
-        }
+            new ConnectionCountServerSelectorStrategy(),
+            new CustomTierSelectorStrategyConfig()
+            {
+              @Override
+              public List<Integer> getPriorities()
+              {
+                return Arrays.asList(2, 0, -1, 1);
+              }
+            }
         ),
         mediumPriority, lowPriority, highPriority
     );

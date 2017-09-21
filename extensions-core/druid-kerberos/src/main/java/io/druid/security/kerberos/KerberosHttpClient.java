@@ -62,7 +62,9 @@ public class KerberosHttpClient extends AbstractHttpClient
 
   @Override
   public <Intermediate, Final> ListenableFuture<Final> go(
-    Request request, HttpResponseHandler<Intermediate, Final> httpResponseHandler, Duration duration
+      Request request,
+      HttpResponseHandler<Intermediate, Final> httpResponseHandler,
+      Duration duration
   )
   {
     final SettableFuture<Final> retVal = SettableFuture.create();
@@ -72,10 +74,10 @@ public class KerberosHttpClient extends AbstractHttpClient
 
 
   private <Intermediate, Final> void inner_go(
-    final Request request,
-    final HttpResponseHandler<Intermediate, Final> httpResponseHandler,
-    final Duration duration,
-    final SettableFuture<Final> future
+      final Request request,
+      final HttpResponseHandler<Intermediate, Final> httpResponseHandler,
+      final Duration duration,
+      final SettableFuture<Final> future
   )
   {
     try {
@@ -92,9 +94,9 @@ public class KerberosHttpClient extends AbstractHttpClient
       if (DruidKerberosUtil.needToSendCredentials(cookieManager.getCookieStore(), uri)) {
         // No Cookies for requested URI, authenticate user and add authentication header
         log.debug(
-          "No Auth Cookie found for URI[%s]. Existing Cookies[%s] Authenticating... ",
-          uri,
-          cookieManager.getCookieStore().getCookies()
+            "No Auth Cookie found for URI[%s]. Existing Cookies[%s] Authenticating... ",
+            uri,
+            cookieManager.getCookieStore().getCookies()
         );
         DruidKerberosUtil.authenticateIfRequired(internalClientPrincipal, internalClientKeytab);
         UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
@@ -114,13 +116,11 @@ public class KerberosHttpClient extends AbstractHttpClient
       }
 
       ListenableFuture<RetryResponseHolder<Final>> internalFuture = delegate.go(
-        request,
-        new RetryIfUnauthorizedResponseHandler<Intermediate, Final>(new ResponseCookieHandler(
-          request.getUrl().toURI(),
-          cookieManager,
-          httpResponseHandler
-        )),
-        duration
+          request,
+          new RetryIfUnauthorizedResponseHandler<Intermediate, Final>(
+              new ResponseCookieHandler(request.getUrl().toURI(), cookieManager, httpResponseHandler)
+          ),
+          duration
       );
 
       Futures.addCallback(internalFuture, new FutureCallback<RetryResponseHolder<Final>>()

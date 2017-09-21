@@ -197,11 +197,12 @@ public class DruidSchema extends AbstractSchema
                     // Fuzz a bit to spread load out when we have multiple brokers.
                     final long nextRefresh = nextRefreshNoFuzz + (long) ((nextRefreshNoFuzz - lastRefresh) * 0.10);
 
-                    while (!(
-                        isServerViewInitialized
-                        && (!segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty())
-                        && (refreshImmediately || nextRefresh < System.currentTimeMillis())
-                    )) {
+                    while (true) {
+                      if (isServerViewInitialized &&
+                          (!segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty()) &&
+                          (refreshImmediately || nextRefresh < System.currentTimeMillis())) {
+                        break;
+                      }
                       lock.wait(Math.max(1, nextRefresh - System.currentTimeMillis()));
                     }
 

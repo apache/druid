@@ -525,7 +525,7 @@ public class RowBasedGrouperHelper
   }
 
   private static class InputRawSupplierColumnSelectorStrategyFactory
-    implements ColumnSelectorStrategyFactory<InputRawSupplierColumnSelectorStrategy>
+      implements ColumnSelectorStrategyFactory<InputRawSupplierColumnSelectorStrategy>
   {
     @Override
     public InputRawSupplierColumnSelectorStrategy makeColumnSelectorStrategy(
