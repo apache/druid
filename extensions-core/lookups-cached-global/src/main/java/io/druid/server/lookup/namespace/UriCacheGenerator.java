@@ -39,7 +39,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
 
 /**
@@ -117,74 +116,71 @@ public final class UriCacheGenerator implements CacheGenerator<UriExtractionName
     final String uriPath = uri.getPath();
 
     return RetryUtils.retry(
-        new Callable<CacheScheduler.VersionedCache>()
-        {
-          @Override
-          public CacheScheduler.VersionedCache call() throws Exception
-          {
-            final String version = puller.getVersion(uri);
-            try {
-              // Important to call equals() against version because lastVersion could be null
-              if (version.equals(lastVersion)) {
-                log.debug(
-                    "URI [%s] for [%s] has the same last modified time [%s] as the last cached. " +
-                    "Skipping ",
-                    uri.toString(),
-                    entryId,
-                    version
-                );
-                return null;
-              }
-            }
-            catch (NumberFormatException ex) {
-              log.debug(ex, "Failed to get last modified timestamp. Assuming no timestamp");
-            }
-            final ByteSource source;
-            if (CompressionUtils.isGz(uriPath)) {
-              // Simple gzip stream
-              log.debug("Loading gz");
-              source = new ByteSource()
-              {
-                @Override
-                public InputStream openStream() throws IOException
-                {
-                  return CompressionUtils.gzipInputStream(puller.getInputStream(uri));
-                }
-              };
-            } else {
-              source = new ByteSource()
-              {
-                @Override
-                public InputStream openStream() throws IOException
-                {
-                  return puller.getInputStream(uri);
-                }
-              };
-            }
-
-            CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(entryId, version);
-            try {
-              final MapPopulator.PopulateResult populateResult = new MapPopulator<>(
-                  extractionNamespace.getNamespaceParseSpec()
-                                     .getParser()
-              ).populate(source, versionedCache.getCache());
-              log.info(
-                  "Finished loading %,d values from %,d lines for [%s]",
-                  populateResult.getEntries(),
-                  populateResult.getLines(),
-                  entryId
+        () -> {
+          final String version = puller.getVersion(uri);
+          try {
+            // Important to call equals() against version because lastVersion could be null
+            if (version.equals(lastVersion)) {
+              log.debug(
+                  "URI [%s] for [%s] has the same last modified time [%s] as the last cached. " +
+                  "Skipping ",
+                  uri.toString(),
+                  entryId,
+                  version
               );
-              return versionedCache;
+              return null;
             }
-            catch (Throwable t) {
-              try {
-                versionedCache.close();
+          }
+          catch (NumberFormatException ex) {
+            log.debug(ex, "Failed to get last modified timestamp. Assuming no timestamp");
+          }
+          final ByteSource source;
+          if (CompressionUtils.isGz(uriPath)) {
+            // Simple gzip stream
+            log.debug("Loading gz");
+            source = new ByteSource()
+            {
+              @Override
+              public InputStream openStream() throws IOException
+              {
+                return CompressionUtils.gzipInputStream(puller.getInputStream(uri));
               }
-              catch (Exception e) {
-                t.addSuppressed(e);
+            };
+          } else {
+            source = new ByteSource()
+            {
+              @Override
+              public InputStream openStream() throws IOException
+              {
+                return puller.getInputStream(uri);
               }
-              throw t;
+            };
+          }
+
+          final CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(entryId, version);
+          try {
+            final long startNs = System.nanoTime();
+            final MapPopulator.PopulateResult populateResult = new MapPopulator<>(
+                extractionNamespace.getNamespaceParseSpec().getParser()
+            ).populate(source, versionedCache.getCache());
+            final long duration = System.nanoTime() - startNs;
+            log.info(
+                "Finished loading %,d values from %,d lines for [%s] in %,d ns",
+                populateResult.getEntries(),
+                populateResult.getLines(),
+                entryId,
+                duration
+            );
+            return versionedCache;
+          }
+          catch (Throwable t) {
+            try {
+              versionedCache.close();
             }
+            catch (Exception e) {
+              t.addSuppressed(e);
+            }
+            throw t;
           }
         },
         puller.shouldRetryPredicate(),

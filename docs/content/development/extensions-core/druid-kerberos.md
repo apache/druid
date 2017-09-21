@@ -5,29 +5,46 @@ layout: doc_page
 # Druid-Kerberos
 
 Druid Extension to enable Authentication for Druid Nodes using Kerberos.
-This extension adds AuthenticationFilter which is used to protect HTTP Endpoints using the simple and protected GSSAPI negotiation mechanism [SPNEGO](https://en.wikipedia.org/wiki/SPNEGO). 
+This extension adds an Authenticator which is used to protect HTTP Endpoints using the simple and protected GSSAPI negotiation mechanism [SPNEGO](https://en.wikipedia.org/wiki/SPNEGO). 
 Make sure to [include](../../operations/including-extensions.html) `druid-kerberos` as an extension.
 
 
 ## Configuration
 
+### Creating an Authenticator
+```
+druid.auth.authenticatorChain=["MyKerberosAuthenticator"]
+
+druid.auth.authenticator.MyKerberosAuthenticator.type=kerberos
+```
+
+To use the Kerberos authenticator, add an authenticator with type `kerberos` to the authenticatorChain. The example above uses the name "MyKerberosAuthenticator" for the Authenticator.
+
+Configuration of the named authenticator is assigned through properties with the form:
+
+```
+druid.auth.authenticator.<authenticatorName>.<authenticatorProperty>
+```
+
+The configuration examples in the rest of this document will use "kerberos" as the name of the authenticator being configured.
+
+### Properties
 |Property|Possible Values|Description|Default|required|
 |--------|---------------|-----------|-------|--------|
-|`druid.hadoop.security.kerberos.principal`|`druid@EXAMPLE.COM`| Principal user name, used for internal node communication|empty|Yes|
-|`druid.hadoop.security.kerberos.keytab`|`/etc/security/keytabs/druid.keytab`|Path to keytab file used for internal node communication|empty|Yes|
-|`druid.hadoop.security.spnego.principal`|`HTTP/_HOST@EXAMPLE.COM`| SPNego service principal used by druid nodes|empty|Yes|
-|`druid.hadoop.security.spnego.keytab`|`/etc/security/keytabs/spnego.service.keytab`|SPNego service keytab used by druid nodes|empty|Yes|
-|`druid.hadoop.security.spnego.authToLocal`|`RULE:[1:$1@$0](druid@EXAMPLE.COM)s/.*/druid DEFAULT`|It allows you to set a general rule for mapping principal names to local user names. It will be used if there is not an explicit mapping for the principal name that is being translated.|DEFAULT|No|
-|`druid.hadoop.security.spnego.excludedPaths`|`['/status','/health']`| Array of HTTP paths which which does NOT need to be authenticated.|None|No|
-|`druid.hadoop.security.spnego.cookieSignatureSecret`|`secretString`| Secret used to sign authentication cookies. It is advisable to explicitly set it, if you have multiple druid ndoes running on same machine with different ports as the Cookie Specification does not guarantee isolation by port.|<Random value>|No|
+|`druid.auth.authenticator.kerberos.internalClientPrincipal`|`druid@EXAMPLE.COM`| Principal user name, used for internal node communication|empty|Yes|
+|`druid.auth.authenticator.kerberos.internalClientKeytab`|`/etc/security/keytabs/druid.keytab`|Path to keytab file used for internal node communication|empty|Yes|
+|`druid.auth.authenticator.kerberos.serverPrincipal`|`HTTP/_HOST@EXAMPLE.COM`| SPNego service principal used by druid nodes|empty|Yes|
+|`druid.auth.authenticator.kerberos.serverKeytab`|`/etc/security/keytabs/spnego.service.keytab`|SPNego service keytab used by druid nodes|empty|Yes|
+|`druid.auth.authenticator.kerberos.authToLocal`|`RULE:[1:$1@$0](druid@EXAMPLE.COM)s/.*/druid DEFAULT`|It allows you to set a general rule for mapping principal names to local user names. It will be used if there is not an explicit mapping for the principal name that is being translated.|DEFAULT|No|
+|`druid.auth.authenticator.kerberos.excludedPaths`|`['/status','/health']`| Array of HTTP paths which which does NOT need to be authenticated.|None|No|
+|`druid.auth.authenticator.kerberos.cookieSignatureSecret`|`secretString`| Secret used to sign authentication cookies. It is advisable to explicitly set it, if you have multiple druid ndoes running on same machine with different ports as the Cookie Specification does not guarantee isolation by port.|<Random value>|No|
+|`druid.auth.authenticator.kerberos.authorizerName`|Depends on available authorizers|Authorizer that requests should be directed to|Empty|Yes|
 
 As a note, it is required that the SPNego principal in use by the druid nodes must start with HTTP (This specified by [RFC-4559](https://tools.ietf.org/html/rfc4559)) and must be of the form "HTTP/_HOST@REALM". 
 The special string _HOST will be replaced automatically with the value of config `druid.host`
 
 ### Auth to Local Syntax
-
-
-`druid.hadoop.security.spnego.authToLocal` allows you to set a general rules for mapping principal names to local user names.
+`druid.auth.authenticator.kerberos.authToLocal` allows you to set a general rules for mapping principal names to local user names.
 The syntax for mapping rules is `RULE:\[n:string](regexp)s/pattern/replacement/g`. The integer n indicates how many components the target principal should have. If this matches, then a string will be formed from string, substituting the realm of the principal for $0 and the n‘th component of the principal for $n. e.g. if the principal was druid/admin then `\[2:$2$1suffix]` would result in the string `admindruidsuffix`.
 If this string matches regexp, then the s//\[g] substitution command will be run over the string. The optional g will cause the substitution to be global over the string, instead of replacing only the first match in the string.
 If required, multiple rules can be be joined by newline character and specified as a String. 

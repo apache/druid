@@ -39,13 +39,13 @@ public class BitmapCompressedIndexedInts implements IndexedInts, Comparable<Immu
         ImmutableBitmap set, ImmutableBitmap set1
     )
     {
-      if (set.size() == 0 && set1.size() == 0) {
+      if (set.isEmpty() && set1.isEmpty()) {
         return 0;
       }
-      if (set.size() == 0) {
+      if (set.isEmpty()) {
         return -1;
       }
-      if (set1.size() == 0) {
+      if (set1.isEmpty()) {
         return 1;
       }
       return set.compareTo(set1);

@@ -1432,6 +1432,7 @@ public class KafkaSupervisor implements Supervisor
           taskTuningConfig,
           kafkaIOConfig,
           spec.getContext(),
+          null,
           null
       );
 

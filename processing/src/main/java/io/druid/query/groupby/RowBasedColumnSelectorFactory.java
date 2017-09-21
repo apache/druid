@@ -437,7 +437,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         }
 
         @Override
-        public Object get()
+        public Object getObject()
         {
           return row.get().getTimestampFromEpoch();
         }
@@ -452,7 +452,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         }
 
         @Override
-        public Object get()
+        public Object getObject()
         {
           return row.get().getRaw(columnName);
         }

@@ -23,13 +23,13 @@ import io.druid.segment.ObjectColumnSelector;
 
 /**
  */
-public class TestObjectColumnSelector implements ObjectColumnSelector
+public class TestObjectColumnSelector<T> implements ObjectColumnSelector
 {
   private final Object[] objects;
 
   private int index = 0;
 
-  public TestObjectColumnSelector(Object... objects)
+  public TestObjectColumnSelector(T[] objects)
   {
     this.objects = objects;
   }
@@ -41,7 +41,7 @@ public class TestObjectColumnSelector implements ObjectColumnSelector
   }
 
   @Override
-  public Object get()
+  public Object getObject()
   {
     return objects[index];
   }
