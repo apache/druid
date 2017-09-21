@@ -50,6 +50,9 @@ public abstract class LoadRule implements Rule
   static final String ASSIGNED_COUNT = "assignedCount";
   static final String DROPPED_COUNT = "droppedCount";
 
+  private final Object2IntMap<String> targetReplicants = new Object2IntOpenHashMap<>();
+  private final Object2IntMap<String> currentReplicants = new Object2IntOpenHashMap<>();
+
   @Override
   public CoordinatorStats run(
       final DruidCoordinator coordinator,
@@ -57,28 +60,29 @@ public abstract class LoadRule implements Rule
       final DataSegment segment
   )
   {
-    // get the "snapshots" of targetReplicants and currentReplicants for assignments.
-    final Object2IntMap<String> targetReplicants = new Object2IntOpenHashMap<>(getTieredReplicants());
+    try {
+      // get the "snapshots" of targetReplicants and currentReplicants for assignments.
+      targetReplicants.putAll(getTieredReplicants());
+      currentReplicants.putAll(params.getSegmentReplicantLookup().getClusterTiers(segment.getIdentifier()));
 
-    final Object2IntMap<String> currentReplicants = new Object2IntOpenHashMap<>(
-        params.getSegmentReplicantLookup().getClusterTiers(segment.getIdentifier())
-    );
+      final CoordinatorStats stats = new CoordinatorStats();
 
-    final CoordinatorStats stats = new CoordinatorStats();
+      // performs
+      if (params.getAvailableSegments().contains(segment)) {
+        assign(params, segment, stats);
+      }
 
-    // performs
-    if (params.getAvailableSegments().contains(segment)) {
-      assign(targetReplicants, currentReplicants, params, segment, stats);
+      drop(params, segment, stats);
+
+      return stats;
     }
-
-    drop(targetReplicants, currentReplicants, params, segment, stats);
-
-    return stats;
+    finally {
+      targetReplicants.clear();
+      currentReplicants.clear();
+    }
   }
 
-  private static void assign(
-      final Object2IntMap<String> targetReplicants,
-      final Object2IntMap<String> currentReplicants,
+  private void assign(
       final DruidCoordinatorRuntimeParams params,
       final DataSegment segment,
       final CoordinatorStats stats
@@ -86,9 +90,9 @@ public abstract class LoadRule implements Rule
   {
     // if primary replica already exists
     if (!currentReplicants.isEmpty()) {
-      assignReplicas(targetReplicants, currentReplicants, params, segment, stats, null);
+      assignReplicas(params, segment, stats, null);
     } else {
-      final ServerHolder primaryHolderToLoad = assignPrimary(targetReplicants, params, segment);
+      final ServerHolder primaryHolderToLoad = assignPrimary(params, segment);
       if (primaryHolderToLoad == null) {
         // cluster does not have any replicants and cannot identify primary holder
         // this implies that no assignment could be done
@@ -113,7 +117,7 @@ public abstract class LoadRule implements Rule
       stats.addToTieredStat(ASSIGNED_COUNT, tier, numAssigned);
 
       // do assign replicas for the other tiers.
-      assignReplicas(targetReplicants, currentReplicants, params, segment, stats, tier /* to skip */);
+      assignReplicas(params, segment, stats, tier /* to skip */);
     }
   }
 
@@ -147,14 +151,13 @@ public abstract class LoadRule implements Rule
   /***
    * Iterates through each tier and find the respective segment homes; with the found segment homes, selects the one
    * with the highest priority to be the holder for the primary replica.
-   * @param targetReplicants
+   *
    * @param params
    * @param segment
    * @return
    */
   @Nullable
-  private static ServerHolder assignPrimary(
-      final Object2IntMap<String> targetReplicants,
+  private ServerHolder assignPrimary(
       final DruidCoordinatorRuntimeParams params,
       final DataSegment segment
   )
@@ -203,17 +206,13 @@ public abstract class LoadRule implements Rule
 
   /***
    *
-   * @param targetReplicants
-   * @param currentReplicants
    * @param params
    * @param segment
    * @param stats
    * @param tierToSkip if not null, this tier will be skipped from doing assignment, use when primary replica was
    *                   assgined.
    */
-  private static void assignReplicas(
-      final Object2IntMap<String> targetReplicants,
-      final Object2IntMap<String> currentReplicants,
+  private void assignReplicas(
       final DruidCoordinatorRuntimeParams params,
       final DataSegment segment,
       final CoordinatorStats stats,
@@ -277,9 +276,7 @@ public abstract class LoadRule implements Rule
     return numToAssign;
   }
 
-  private static void drop(
-      final Object2IntMap<String> targetReplicants,
-      final Object2IntMap<String> currentReplicants,
+  private void drop(
       final DruidCoordinatorRuntimeParams params,
       final DataSegment segment,
       final CoordinatorStats stats
