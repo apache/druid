@@ -19,40 +19,30 @@
 
 package io.druid.segment.data;
 
-import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-
-import java.io.IOException;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntIterators;
 
 /**
+ * Doesn't extend {@link it.unimi.dsi.fastutil.ints.IntIterable} to avoid accidential for-each iteration with boxing.
  */
-public class EmptyIndexedInts implements IndexedInts
+public interface BitmapValues
 {
-  public static final EmptyIndexedInts EMPTY_INDEXED_INTS = new EmptyIndexedInts();
-
-  private EmptyIndexedInts()
+  BitmapValues EMPTY = new BitmapValues()
   {
-  }
+    @Override
+    public int size()
+    {
+      return 0;
+    }
 
-  @Override
-  public int size()
-  {
-    return 0;
-  }
+    @Override
+    public IntIterator iterator()
+    {
+      return IntIterators.EMPTY_ITERATOR;
+    }
+  };
 
-  @Override
-  public int get(int index)
-  {
-    throw new UnsupportedOperationException();
-  }
+  int size();
 
-  @Override
-  public void close() throws IOException
-  {
-  }
-
-  @Override
-  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-  {
-    // nothing to inspect
-  }
+  IntIterator iterator();
 }
