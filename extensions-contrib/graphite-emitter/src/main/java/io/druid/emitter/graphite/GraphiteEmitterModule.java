@@ -21,7 +21,6 @@ package io.druid.emitter.graphite;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.inject.Binder;
@@ -61,8 +60,7 @@ public class GraphiteEmitterModule implements DruidModule
     List<Emitter> emitters = ImmutableList.copyOf(
         Lists.transform(
             graphiteEmitterConfig.getAlertEmitters(),
-            alertEmitterName ->
-            {
+            alertEmitterName -> {
               return injector.getInstance(Key.get(Emitter.class, Names.named(alertEmitterName)));
             }
         )
@@ -71,8 +69,7 @@ public class GraphiteEmitterModule implements DruidModule
     List<Emitter> requestLogEmitters = ImmutableList.copyOf(
         Lists.transform(
             graphiteEmitterConfig.getRequestLogEmitters(),
-            requestLogEmitterName ->
-            {
+            requestLogEmitterName -> {
               return injector.getInstance(Key.get(Emitter.class, Names.named(requestLogEmitterName)));
             }
         )
