@@ -59,9 +59,8 @@
 
     <properties>
         <maven.compiler.target>1.8</maven.compiler.target>
-
-        <!-- Curator cannot be updated to 2.12.0 yet, see https://github.com/druid-io/druid/pull/4103 -->
-        <apache.curator.version>2.11.0</apache.curator.version>
+        <apache.curator.version>4.0.0</apache.curator.version>
+        <apache.curator.test.version>2.12.0</apache.curator.test.version>
         <avatica.version>1.9.0</avatica.version>
         <calcite.version>1.12.0</calcite.version>
         <guava.version>16.0.1</guava.version>
@@ -134,7 +133,6 @@
         <module>extensions-contrib/virtual-columns</module>
         <module>extensions-contrib/thrift-extensions</module>
         <module>extensions-contrib/ambari-metrics-emitter</module>
-        <module>extensions-contrib/scan-query</module>
         <module>extensions-contrib/sqlserver-metadata-storage</module>
         <module>extensions-contrib/kafka-emitter</module>
         <module>extensions-contrib/redis-cache</module>
@@ -148,7 +146,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>emitter</artifactId>
-                <version>0.4.5</version>
+                <version>0.6.0</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -298,6 +296,12 @@
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-recipes</artifactId>
                 <version>${apache.curator.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.apache.zookeeper</groupId>
+                        <artifactId>zookeeper</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.curator</groupId>
@@ -784,7 +788,7 @@
             <dependency>
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-test</artifactId>
-                <version>${apache.curator.version}</version>
+                <version>${apache.curator.test.version}</version>
                 <exclusions>
                     <exclusion>
                         <groupId>org.jboss.netty</groupId>
@@ -1150,6 +1154,13 @@
     </build>
 
     <profiles>
+        <profile>
+            <id>spark2</id>
+            <properties>
+                <jackson.version>2.6.5</jackson.version>
+                <aws.sdk.version>1.11.143</aws.sdk.version>
+            </properties>
+        </profile>
         <profile>
             <id>strict</id>
             <build>

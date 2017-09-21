@@ -29,7 +29,6 @@ import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.CompressedPools;
-import it.unimi.dsi.fastutil.ints.IntIterator;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -309,12 +308,6 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
       }
 
       return buffer.get(buffer.position() + bufferIndex);
-    }
-
-    @Override
-    public IntIterator iterator()
-    {
-      return new IndexedIntsIterator(this);
     }
 
     protected void loadBuffer(int bufferNum)

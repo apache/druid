@@ -24,6 +24,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.DateTimes;
@@ -35,6 +36,7 @@ import io.druid.query.DataSource;
 import io.druid.query.Query;
 import io.druid.query.Result;
 import io.druid.query.groupby.GroupByQuery;
+import io.druid.query.scan.ScanQuery;
 import io.druid.query.select.EventHolder;
 import io.druid.query.select.PagingSpec;
 import io.druid.query.select.SelectQuery;
@@ -47,6 +49,7 @@ import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.column.Column;
 import io.druid.server.QueryLifecycleFactory;
+import io.druid.server.security.AuthenticationResult;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerContext;
 import org.apache.calcite.avatica.ColumnMetaData;
@@ -104,11 +107,57 @@ public class QueryMaker
       return executeTopN(queryBuilder, (TopNQuery) query);
     } else if (query instanceof GroupByQuery) {
       return executeGroupBy(queryBuilder, (GroupByQuery) query);
+    } else if (query instanceof ScanQuery) {
+      return executeScan(queryBuilder, (ScanQuery) query);
     } else if (query instanceof SelectQuery) {
       return executeSelect(queryBuilder, (SelectQuery) query);
     } else {
       throw new ISE("Cannot run query of class[%s]", query.getClass().getName());
     }
+  }
+
+  private Sequence<Object[]> executeScan(
+      final DruidQueryBuilder queryBuilder,
+      final ScanQuery query
+  )
+  {
+    final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
+
+    // SQL row column index -> Scan query column index
+    final int[] columnMapping = new int[queryBuilder.getRowOrder().size()];
+    final Map<String, Integer> scanColumnOrder = Maps.newHashMap();
+
+    for (int i = 0; i < query.getColumns().size(); i++) {
+      scanColumnOrder.put(query.getColumns().get(i), i);
+    }
+
+    for (int i = 0; i < queryBuilder.getRowOrder().size(); i++) {
+      final Integer index = scanColumnOrder.get(queryBuilder.getRowOrder().get(i));
+      columnMapping[i] = index == null ? -1 : index;
+    }
+
+    return Sequences.concat(
+        Sequences.map(
+            runQuery(query),
+            scanResult -> {
+              final List<Object[]> retVals = new ArrayList<>();
+              final List<List<Object>> rows = (List<List<Object>>) scanResult.getEvents();
+
+              for (List<Object> row : rows) {
+                final Object[] retVal = new Object[fieldList.size()];
+                for (RelDataTypeField field : fieldList) {
+                  retVal[field.getIndex()] = coerce(
+                      row.get(columnMapping[field.getIndex()]),
+                      field.getType().getSqlTypeName()
+                  );
+                }
+                retVals.add(retVal);
+              }
+
+              return Sequences.simple(retVals);
+            }
+        )
+    );
   }
 
   private Sequence<Object[]> executeSelect(
@@ -169,7 +218,6 @@ public class QueryMaker
 
                             pagingIdentifiers.set(result.getValue().getPagingIdentifiers());
                             final List<Object[]> retVals = new ArrayList<>();
-
                             for (EventHolder holder : result.getValue().getEvents()) {
                               morePages.set(true);
                               final Map<String, Object> map = holder.getEvent();
@@ -220,10 +268,8 @@ public class QueryMaker
   private <T> Sequence<T> runQuery(final Query<T> query)
   {
     Hook.QUERY_PLAN.run(query);
-
-    // Authorization really should be applied in planning. At this point the query has already begun to execute.
-    // So, use "null" authorizationInfo to force the query to fail if security is enabled.
-    return queryLifecycleFactory.factorize().runSimple(query, null, null);
+    final AuthenticationResult authenticationResult = plannerContext.getAuthenticationResult();
+    return queryLifecycleFactory.factorize().runSimple(query, authenticationResult, null);
   }
 
   private Sequence<Object[]> executeTimeseries(

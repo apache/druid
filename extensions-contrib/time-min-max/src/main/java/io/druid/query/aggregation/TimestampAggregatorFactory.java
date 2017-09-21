@@ -106,7 +106,7 @@ public class TimestampAggregatorFactory extends AggregatorFactory
       private long getTimestamp(ColumnValueSelector selector)
       {
         if (selector instanceof ObjectColumnSelector) {
-          Object input = ((ObjectColumnSelector) selector).get();
+          Object input = ((ObjectColumnSelector) selector).getObject();
           return convertLong(timestampSpec, input);
         } else {
           return selector.getLong();

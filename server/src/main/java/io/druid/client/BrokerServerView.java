@@ -31,7 +31,7 @@ import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
 import io.druid.client.selector.TierSelectorStrategy;
 import io.druid.concurrent.Execs;
-import io.druid.guice.annotations.Client;
+import io.druid.guice.annotations.EscalatedClient;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.logger.Logger;
@@ -82,7 +82,7 @@ public class BrokerServerView implements TimelineServerView
       QueryToolChestWarehouse warehouse,
       QueryWatcher queryWatcher,
       @Smile ObjectMapper smileMapper,
-      @Client HttpClient httpClient,
+      @EscalatedClient HttpClient httpClient,
       FilteredServerInventoryView baseView,
       TierSelectorStrategy tierSelectorStrategy,
       ServiceEmitter emitter,
