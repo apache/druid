@@ -48,7 +48,7 @@ import io.druid.indexing.overlord.TaskStorageQueryAdapter;
 import io.druid.indexing.overlord.WorkerTaskRunner;
 import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.http.security.TaskResourceFilter;
-import io.druid.indexing.overlord.setup.BaseWorkerBehaviorConfig;
+import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
@@ -104,7 +104,7 @@ public class OverlordResource
   private final AuditManager auditManager;
   private final AuthorizerMapper authorizerMapper;
 
-  private AtomicReference<BaseWorkerBehaviorConfig> workerConfigRef = null;
+  private AtomicReference<WorkerBehaviorConfig> workerConfigRef = null;
 
   @Inject
   public OverlordResource(
@@ -249,7 +249,7 @@ public class OverlordResource
   public Response getWorkerConfig()
   {
     if (workerConfigRef == null) {
-      workerConfigRef = configManager.watch(BaseWorkerBehaviorConfig.CONFIG_KEY, BaseWorkerBehaviorConfig.class);
+      workerConfigRef = configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class);
     }
 
     return Response.ok(workerConfigRef.get()).build();
@@ -261,14 +261,14 @@ public class OverlordResource
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(ConfigResourceFilter.class)
   public Response setWorkerConfig(
-      final BaseWorkerBehaviorConfig workerBehaviorConfig,
+      final WorkerBehaviorConfig workerBehaviorConfig,
       @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
       @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
       @Context final HttpServletRequest req
   )
   {
     if (!configManager.set(
-        BaseWorkerBehaviorConfig.CONFIG_KEY,
+        WorkerBehaviorConfig.CONFIG_KEY,
         workerBehaviorConfig,
         new AuditInfo(author, comment, req.getRemoteAddr())
     )) {
@@ -293,8 +293,8 @@ public class OverlordResource
     if (theInterval == null && count != null) {
       try {
         List<AuditEntry> workerEntryList = auditManager.fetchAuditHistory(
-            BaseWorkerBehaviorConfig.CONFIG_KEY,
-            BaseWorkerBehaviorConfig.CONFIG_KEY,
+            WorkerBehaviorConfig.CONFIG_KEY,
+            WorkerBehaviorConfig.CONFIG_KEY,
             count
         );
         return Response.ok(workerEntryList).build();
@@ -306,8 +306,8 @@ public class OverlordResource
       }
     }
     List<AuditEntry> workerEntryList = auditManager.fetchAuditHistory(
-        BaseWorkerBehaviorConfig.CONFIG_KEY,
-        BaseWorkerBehaviorConfig.CONFIG_KEY,
+        WorkerBehaviorConfig.CONFIG_KEY,
+        WorkerBehaviorConfig.CONFIG_KEY,
         theInterval
     );
     return Response.ok(workerEntryList).build();

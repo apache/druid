@@ -34,8 +34,8 @@ import com.metamx.emitter.EmittingLogger;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.overlord.WorkerTaskRunner;
-import io.druid.indexing.overlord.setup.BaseWorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import io.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import io.druid.indexing.worker.Worker;
 import io.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
@@ -54,12 +54,12 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
   private static final EmittingLogger log = new EmittingLogger(SimpleWorkerProvisioningStrategy.class);
 
   private final SimpleWorkerProvisioningConfig config;
-  private final Supplier<BaseWorkerBehaviorConfig> workerConfigRef;
+  private final Supplier<WorkerBehaviorConfig> workerConfigRef;
 
   @Inject
   public SimpleWorkerProvisioningStrategy(
       SimpleWorkerProvisioningConfig config,
-      Supplier<BaseWorkerBehaviorConfig> workerConfigRef,
+      Supplier<WorkerBehaviorConfig> workerConfigRef,
       ProvisioningSchedulerConfig provisioningSchedulerConfig
   )
   {
@@ -80,7 +80,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
 
   public SimpleWorkerProvisioningStrategy(
       SimpleWorkerProvisioningConfig config,
-      Supplier<BaseWorkerBehaviorConfig> workerConfigRef,
+      Supplier<WorkerBehaviorConfig> workerConfigRef,
       ProvisioningSchedulerConfig provisioningSchedulerConfig,
       Supplier<ScheduledExecutorService> execFactory
   )
@@ -119,7 +119,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
       Collection<? extends TaskRunnerWorkItem> pendingTasks = runner.getPendingTasks();
       Collection<ImmutableWorkerInfo> workers = runner.getWorkers();
       boolean didProvision = false;
-      final WorkerBehaviorConfig workerConfig =
+      final DefaultWorkerBehaviorConfig workerConfig =
           PendingTaskBasedWorkerProvisioningStrategy.getWorkerBehaviorConfig(workerConfigRef, "provision", log);
       if (workerConfig == null) {
         return false;
@@ -184,7 +184,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
     public synchronized boolean doTerminate()
     {
       Collection<? extends TaskRunnerWorkItem> pendingTasks = runner.getPendingTasks();
-      final WorkerBehaviorConfig workerConfig =
+      final DefaultWorkerBehaviorConfig workerConfig =
           PendingTaskBasedWorkerProvisioningStrategy.getWorkerBehaviorConfig(workerConfigRef, "terminate", log);
       if (workerConfig == null) {
         return false;
@@ -271,7 +271,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
 
 
     private void updateTargetWorkerCount(
-        final WorkerBehaviorConfig workerConfig,
+        final DefaultWorkerBehaviorConfig workerConfig,
         final Collection<? extends TaskRunnerWorkItem> pendingTasks,
         final Collection<ImmutableWorkerInfo> zkWorkers
     )

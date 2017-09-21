@@ -19,84 +19,19 @@
 
 package io.druid.indexing.overlord.setup;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.indexing.overlord.autoscaling.AutoScaler;
-import io.druid.indexing.overlord.autoscaling.NoopAutoScaler;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.guice.annotations.ExtensionPoint;
 
-/**
- */
-public class WorkerBehaviorConfig implements BaseWorkerBehaviorConfig
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DefaultWorkerBehaviorConfig.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "default", value = DefaultWorkerBehaviorConfig.class)
+})
+@ExtensionPoint
+public interface WorkerBehaviorConfig
 {
-  private static final AutoScaler DEFAULT_AUTOSCALER = new NoopAutoScaler();
+  String CONFIG_KEY = "worker.config";
+  WorkerSelectStrategy DEFAULT_STRATEGY = new EqualDistributionWorkerSelectStrategy(null);
 
-  public static WorkerBehaviorConfig defaultConfig()
-  {
-    return new WorkerBehaviorConfig(DEFAULT_STRATEGY, DEFAULT_AUTOSCALER);
-  }
-
-  private final WorkerSelectStrategy selectStrategy;
-  private final AutoScaler autoScaler;
-
-  @JsonCreator
-  public WorkerBehaviorConfig(
-      @JsonProperty("selectStrategy") WorkerSelectStrategy selectStrategy,
-      @JsonProperty("autoScaler") AutoScaler autoScaler
-  )
-  {
-    this.selectStrategy = selectStrategy;
-    this.autoScaler = autoScaler;
-  }
-
-  @Override
-  @JsonProperty
-  public WorkerSelectStrategy getSelectStrategy()
-  {
-    return selectStrategy;
-  }
-
-  @JsonProperty
-  public AutoScaler<?> getAutoScaler()
-  {
-    return autoScaler;
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    WorkerBehaviorConfig that = (WorkerBehaviorConfig) o;
-
-    if (autoScaler != null ? !autoScaler.equals(that.autoScaler) : that.autoScaler != null) {
-      return false;
-    }
-    if (selectStrategy != null ? !selectStrategy.equals(that.selectStrategy) : that.selectStrategy != null) {
-      return false;
-    }
-
-    return true;
-  }
-
-  @Override
-  public int hashCode()
-  {
-    int result = selectStrategy != null ? selectStrategy.hashCode() : 0;
-    result = 31 * result + (autoScaler != null ? autoScaler.hashCode() : 0);
-    return result;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "WorkerConfiguration{" +
-           "selectStrategy=" + selectStrategy +
-           ", autoScaler=" + autoScaler +
-           '}';
-  }
+  WorkerSelectStrategy getSelectStrategy();
 }

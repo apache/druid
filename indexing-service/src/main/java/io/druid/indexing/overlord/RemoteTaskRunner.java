@@ -60,7 +60,7 @@ import io.druid.indexing.overlord.autoscaling.ProvisioningService;
 import io.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
-import io.druid.indexing.overlord.setup.BaseWorkerBehaviorConfig;
+import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.WorkerSelectStrategy;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
@@ -140,7 +140,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   private final ExecutorService workerStatusPathChildrenCacheExecutor;
   private final PathChildrenCache workerPathCache;
   private final HttpClient httpClient;
-  private final Supplier<BaseWorkerBehaviorConfig> workerConfigRef;
+  private final Supplier<WorkerBehaviorConfig> workerConfigRef;
 
   // all workers that exist in ZK
   private final ConcurrentMap<String, ZkWorker> zkWorkers = new ConcurrentHashMap<>();
@@ -187,7 +187,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       CuratorFramework cf,
       PathChildrenCacheFactory.Builder pathChildrenCacheFactory,
       HttpClient httpClient,
-      Supplier<BaseWorkerBehaviorConfig> workerConfigRef,
+      Supplier<WorkerBehaviorConfig> workerConfigRef,
       ProvisioningStrategy<WorkerTaskRunner> provisioningStrategy
   )
   {
@@ -743,10 +743,10 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       return true;
     } else {
       // Nothing running this task, announce it in ZK for a worker to run it
-      BaseWorkerBehaviorConfig workerConfig = workerConfigRef.get();
+      WorkerBehaviorConfig workerConfig = workerConfigRef.get();
       WorkerSelectStrategy strategy;
       if (workerConfig == null || workerConfig.getSelectStrategy() == null) {
-        strategy = BaseWorkerBehaviorConfig.DEFAULT_STRATEGY;
+        strategy = WorkerBehaviorConfig.DEFAULT_STRATEGY;
         log.info("No worker selection strategy set. Using default of [%s]", strategy.getClass().getSimpleName());
       } else {
         strategy = workerConfig.getSelectStrategy();

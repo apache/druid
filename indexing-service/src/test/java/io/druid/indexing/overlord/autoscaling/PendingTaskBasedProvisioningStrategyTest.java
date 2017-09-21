@@ -39,9 +39,9 @@ import io.druid.indexing.overlord.RemoteTaskRunner;
 import io.druid.indexing.overlord.RemoteTaskRunnerWorkItem;
 import io.druid.indexing.overlord.ZkWorker;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
-import io.druid.indexing.overlord.setup.BaseWorkerBehaviorConfig;
-import io.druid.indexing.overlord.setup.FillCapacityWorkerSelectStrategy;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import io.druid.indexing.overlord.setup.FillCapacityWorkerSelectStrategy;
+import io.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
 import io.druid.jackson.DefaultObjectMapper;
@@ -67,7 +67,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   private AutoScaler autoScaler;
   private Task testTask;
   private PendingTaskBasedWorkerProvisioningStrategy strategy;
-  private AtomicReference<BaseWorkerBehaviorConfig> workerConfig;
+  private AtomicReference<WorkerBehaviorConfig> workerConfig;
   private ScheduledExecutorService executorService = Execs.scheduledSingleThreaded("test service");
   private final static String MIN_VERSION = "2014-01-00T00:01:00Z";
   private final static String INVALID_VERSION = "0";
@@ -87,7 +87,7 @@ public class PendingTaskBasedProvisioningStrategyTest
         .setMaxScalingStep(2);
 
     workerConfig = new AtomicReference<>(
-        new WorkerBehaviorConfig(
+        new DefaultWorkerBehaviorConfig(
             new FillCapacityWorkerSelectStrategy(null),
             autoScaler
         )

@@ -38,8 +38,8 @@ import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.RemoteTaskRunner;
 import io.druid.indexing.overlord.RemoteTaskRunnerWorkItem;
 import io.druid.indexing.overlord.ZkWorker;
-import io.druid.indexing.overlord.setup.BaseWorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import io.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
 import io.druid.jackson.DefaultObjectMapper;
@@ -66,7 +66,7 @@ public class SimpleProvisioningStrategyTest
   private AutoScaler autoScaler;
   private Task testTask;
   private SimpleWorkerProvisioningStrategy strategy;
-  private AtomicReference<BaseWorkerBehaviorConfig> workerConfig;
+  private AtomicReference<WorkerBehaviorConfig> workerConfig;
   private ScheduledExecutorService executorService = Execs.scheduledSingleThreaded("test service");
 
   @Before
@@ -85,7 +85,7 @@ public class SimpleProvisioningStrategyTest
     final ProvisioningSchedulerConfig schedulerConfig = new ProvisioningSchedulerConfig();
 
     workerConfig = new AtomicReference<>(
-        new WorkerBehaviorConfig(
+        new DefaultWorkerBehaviorConfig(
             null,
             autoScaler
         )

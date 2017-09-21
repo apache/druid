@@ -36,7 +36,7 @@ import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.WorkerTaskRunner;
 import io.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
-import io.druid.indexing.overlord.setup.BaseWorkerBehaviorConfig;
+import io.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.WorkerSelectStrategy;
 import io.druid.indexing.worker.Worker;
@@ -61,26 +61,26 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
   private static final String SCHEME = "http";
 
   @Nullable
-  static WorkerBehaviorConfig getWorkerBehaviorConfig(
-      Supplier<BaseWorkerBehaviorConfig> workerConfigRef,
+  static DefaultWorkerBehaviorConfig getWorkerBehaviorConfig(
+      Supplier<WorkerBehaviorConfig> workerConfigRef,
       String action,
       EmittingLogger log
   )
   {
-    final BaseWorkerBehaviorConfig baseWorkerBehaviorConfig = workerConfigRef.get();
-    if (baseWorkerBehaviorConfig == null) {
+    final WorkerBehaviorConfig workerBehaviorConfig = workerConfigRef.get();
+    if (workerBehaviorConfig == null) {
       log.error("No workerConfig available, cannot %s workers.", action);
       return null;
     }
-    if (!(baseWorkerBehaviorConfig instanceof WorkerBehaviorConfig)) {
+    if (!(workerBehaviorConfig instanceof DefaultWorkerBehaviorConfig)) {
       log.error(
-          "Only WorkerBehaviorConfig is supported as BaseWorkerBehaviorConfig, [%s] given, cannot %s workers",
-          baseWorkerBehaviorConfig,
+          "Only DefaultWorkerBehaviorConfig is supported as WorkerBehaviorConfig, [%s] given, cannot %s workers",
+          workerBehaviorConfig,
           action
       );
       return null;
     }
-    final WorkerBehaviorConfig workerConfig = (WorkerBehaviorConfig) baseWorkerBehaviorConfig;
+    final DefaultWorkerBehaviorConfig workerConfig = (DefaultWorkerBehaviorConfig) workerBehaviorConfig;
     if (workerConfig.getAutoScaler() == null) {
       log.error("No autoScaler available, cannot %s workers", action);
       return null;
@@ -89,12 +89,12 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
   }
 
   private final PendingTaskBasedWorkerProvisioningConfig config;
-  private final Supplier<BaseWorkerBehaviorConfig> workerConfigRef;
+  private final Supplier<WorkerBehaviorConfig> workerConfigRef;
 
   @Inject
   public PendingTaskBasedWorkerProvisioningStrategy(
       PendingTaskBasedWorkerProvisioningConfig config,
-      Supplier<BaseWorkerBehaviorConfig> workerConfigRef,
+      Supplier<WorkerBehaviorConfig> workerConfigRef,
       ProvisioningSchedulerConfig provisioningSchedulerConfig
   )
   {
@@ -115,7 +115,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
 
   public PendingTaskBasedWorkerProvisioningStrategy(
       PendingTaskBasedWorkerProvisioningConfig config,
-      Supplier<BaseWorkerBehaviorConfig> workerConfigRef,
+      Supplier<WorkerBehaviorConfig> workerConfigRef,
       ProvisioningSchedulerConfig provisioningSchedulerConfig,
       Supplier<ScheduledExecutorService> execFactory
   )
@@ -155,7 +155,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       Collection<ImmutableWorkerInfo> workers = runner.getWorkers();
       log.debug("Workers: %d %s", workers.size(), workers);
       boolean didProvision = false;
-      final WorkerBehaviorConfig workerConfig = getWorkerBehaviorConfig(workerConfigRef, "provision", log);
+      final DefaultWorkerBehaviorConfig workerConfig = getWorkerBehaviorConfig(workerConfigRef, "provision", log);
       if (workerConfig == null) {
         return false;
       }
@@ -221,7 +221,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       return didProvision;
     }
 
-    private Collection<String> getWorkerNodeIDs(Collection<Worker> workers, WorkerBehaviorConfig workerConfig)
+    private Collection<String> getWorkerNodeIDs(Collection<Worker> workers, DefaultWorkerBehaviorConfig workerConfig)
     {
       List<String> ips = new ArrayList<>(workers.size());
       for (Worker worker : workers) {
@@ -234,7 +234,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
 
     private int getScaleUpNodeCount(
         final WorkerTaskRunnerConfig remoteTaskRunnerConfig,
-        final WorkerBehaviorConfig workerConfig,
+        final DefaultWorkerBehaviorConfig workerConfig,
         final Collection<Task> pendingTasks,
         final Collection<ImmutableWorkerInfo> workers
     )
@@ -276,7 +276,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
 
     private int getWorkersNeededToAssignTasks(
         final WorkerTaskRunnerConfig workerTaskRunnerConfig,
-        final WorkerBehaviorConfig workerConfig,
+        final DefaultWorkerBehaviorConfig workerConfig,
         final Collection<Task> pendingTasks,
         final Collection<ImmutableWorkerInfo> workers
     )
@@ -331,7 +331,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     {
       Collection<ImmutableWorkerInfo> zkWorkers = runner.getWorkers();
       log.debug("Workers: %d [%s]", zkWorkers.size(), zkWorkers);
-      final WorkerBehaviorConfig workerConfig = getWorkerBehaviorConfig(workerConfigRef, "terminate", log);
+      final DefaultWorkerBehaviorConfig workerConfig = getWorkerBehaviorConfig(workerConfigRef, "terminate", log);
       if (workerConfig == null) {
         return false;
       }
@@ -413,7 +413,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     }
   }
 
-  private int maxWorkersToTerminate(Collection<ImmutableWorkerInfo> zkWorkers, WorkerBehaviorConfig workerConfig)
+  private int maxWorkersToTerminate(Collection<ImmutableWorkerInfo> zkWorkers, DefaultWorkerBehaviorConfig workerConfig)
   {
     final int currValidWorkers = getCurrValidWorkers(zkWorkers);
     final int invalidWorkers = zkWorkers.size() - currValidWorkers;
