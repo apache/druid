@@ -9,7 +9,8 @@ To use this extension, make sure to [include](../../operations/including-extensi
 ## Introduction
 
 This extension emits druid metrics to a graphite carbon server.
-Events are sent after been [pickled](http://graphite.readthedocs.org/en/latest/feeding-carbon.html#the-pickle-protocol); the size of the batch is configurable. 
+Metrics can be sent by using [plaintext](http://graphite.readthedocs.io/en/latest/feeding-carbon.html#the-plaintext-protocol) or [pickle](http://graphite.readthedocs.io/en/latest/feeding-carbon.html#the-pickle-protocol) protocol.
+The pickle protocol is more efficient and supports sending batches of metrics (plaintext protocol send only one metric) in one request; batch size is configurable.
 
 ## Configuration
 
@@ -19,8 +20,9 @@ All the configuration parameters for graphite emitter are under `druid.emitter.g
 |--------|-----------|---------|-------|
 |`druid.emitter.graphite.hostname`|The hostname of the graphite server.|yes|none|
 |`druid.emitter.graphite.port`|The port of the graphite server.|yes|none|
-|`druid.emitter.graphite.batchSize`|Number of events to send as one batch.|no|100|
-|`druid.emitter.graphite.eventConverter`| Filter and converter of druid events to graphite event(please see next section). |yes|none|  
+|`druid.emitter.graphite.batchSize`|Number of events to send as one batch (only for pickle protocol)|no|100|
+|`druid.emitter.graphite.protocol`|Graphite protocol; available protocols: pickle, plaintext.|no|pickle|
+|`druid.emitter.graphite.eventConverter`| Filter and converter of druid events to graphite event (please see next section).|yes|none|
 |`druid.emitter.graphite.flushPeriod` | Queue flushing period in milliseconds. |no|1 minute|
 |`druid.emitter.graphite.maxQueueSize`| Maximum size of the queue used to buffer events. |no|`MAX_INT`|
 |`druid.emitter.graphite.alertEmitters`| List of emitters where alerts will be forwarded to. |no| empty list (no forwarding)|
@@ -52,10 +54,15 @@ The path will be in the form `<namespacePrefix>.[<druid service name>].[<druid h
 User has control of `<namespacePrefix>.[<druid service name>].[<druid hostname>].`
 
 You can omit the hostname by setting `ignoreHostname=true`
-`druid.SERVICE_NAME.dataSourceName.queryType.query.time`
+`druid.SERVICE_NAME.dataSourceName.queryType.query/time`
 
 You can omit the service name by setting `ignoreServiceName=true`
-`druid.HOSTNAME.dataSourceName.queryType.query.time`
+`druid.HOSTNAME.dataSourceName.queryType.query/time`
+
+Elements in metric name by default are separated by "/", so graphite will create all metrics on one level. If you want to have metrics in the tree structure, you have to set `replaceSlashWithDot=true`
+Original: `druid.HOSTNAME.dataSourceName.queryType.query/time`
+Changed: `druid.HOSTNAME.dataSourceName.queryType.query.time`
+
 
 ```json
 
@@ -70,7 +77,7 @@ Same as for the `all` converter user has control of `<namespacePrefix>.[<druid s
 White-list based converter comes with the following  default white list map located under resources in `./src/main/resources/defaultWhiteListMap.json`
 
 Although user can override the default white list map by supplying a property called `mapPath`.
-This property is a String containing  the path for the file containing **white list map Json object**.
+This property is a String containing the path for the file containing **white list map Json object**.
 For example the following converter will read the map from the file `/pathPrefix/fileName.json`.  
 
 ```json

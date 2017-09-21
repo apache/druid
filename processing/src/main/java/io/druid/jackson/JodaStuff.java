@@ -89,30 +89,30 @@ class JodaStuff
 
   private static class DateTimeDeserializer extends StdDeserializer<DateTime>
   {
-      public DateTimeDeserializer()
-      {
-        super(DateTime.class);
-      }
+    public DateTimeDeserializer()
+    {
+      super(DateTime.class);
+    }
 
-      @Override
-      public DateTime deserialize(JsonParser jp, DeserializationContext ctxt)
-          throws IOException, JsonProcessingException
-      {
-          JsonToken t = jp.getCurrentToken();
-          if (t == JsonToken.VALUE_NUMBER_INT) {
-              return DateTimes.utc(jp.getLongValue());
-          }
-          if (t == JsonToken.VALUE_STRING) {
-              String str = jp.getText().trim();
-              if (str.length() == 0) { // [JACKSON-360]
-                  return null;
-              }
-              // make sure to preserve time zone information when parsing timestamps
-              return ISODateTimeFormat.dateTimeParser()
-                                      .withOffsetParsed()
-                                      .parseDateTime(str);
-          }
-          throw ctxt.mappingException(getValueClass());
+    @Override
+    public DateTime deserialize(JsonParser jp, DeserializationContext ctxt)
+        throws IOException, JsonProcessingException
+    {
+      JsonToken t = jp.getCurrentToken();
+      if (t == JsonToken.VALUE_NUMBER_INT) {
+        return DateTimes.utc(jp.getLongValue());
       }
+      if (t == JsonToken.VALUE_STRING) {
+        String str = jp.getText().trim();
+        if (str.length() == 0) { // [JACKSON-360]
+          return null;
+        }
+        // make sure to preserve time zone information when parsing timestamps
+        return ISODateTimeFormat.dateTimeParser()
+                                .withOffsetParsed()
+                                .parseDateTime(str);
+      }
+      throw ctxt.mappingException(getValueClass());
+    }
   }
 }

@@ -45,7 +45,7 @@ public class DoubleGroupByColumnSelectorStrategy implements GroupByColumnSelecto
   @Override
   public void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] values)
   {
-   values[columnIndex] = selector.getDouble();
+    values[columnIndex] = selector.getDouble();
   }
 
   @Override

@@ -75,7 +75,6 @@ import io.druid.server.http.RulesResource;
 import io.druid.server.http.ServersResource;
 import io.druid.server.http.TiersResource;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
-import io.druid.server.listener.announcer.ListenerDiscoverer;
 import io.druid.server.lookup.cache.LookupCoordinatorManager;
 import io.druid.server.lookup.cache.LookupCoordinatorManagerConfig;
 import io.druid.server.router.TieredBrokerConfig;
@@ -168,9 +167,6 @@ public class CliCoordinator extends ServerRunnable
             binder.bind(LookupCoordinatorManager.class).in(LazySingleton.class);
             binder.bind(DruidCoordinator.class);
 
-            binder.bind(ListenerDiscoverer.class).in(ManageLifecycle.class);
-
-            LifecycleModule.register(binder, ListenerDiscoverer.class);
             LifecycleModule.register(binder, MetadataStorage.class);
             LifecycleModule.register(binder, DruidCoordinator.class);
 

@@ -33,9 +33,7 @@ public class IndexedIterable<T> implements Iterable<T>
     return new IndexedIterable<T>(indexed);
   }
 
-  public IndexedIterable(
-    Indexed<T> indexed
-  )
+  public IndexedIterable(Indexed<T> indexed)
   {
     this.indexed = indexed;
   }

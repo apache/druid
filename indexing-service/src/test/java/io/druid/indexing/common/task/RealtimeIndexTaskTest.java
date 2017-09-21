@@ -958,22 +958,25 @@ public class RealtimeIndexTaskTest
         taskStorage,
         taskActionToolbox
     );
+    IntervalChunkingQueryRunnerDecorator queryRunnerDecorator = new IntervalChunkingQueryRunnerDecorator(
+        null,
+        null,
+        null
+    )
+    {
+      @Override
+      public <T> QueryRunner<T> decorate(
+          QueryRunner<T> delegate, QueryToolChest<T, ? extends Query<T>> toolChest
+      )
+      {
+        return delegate;
+      }
+    };
     final QueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(
         ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>of(
             TimeseriesQuery.class,
             new TimeseriesQueryRunnerFactory(
-                new TimeseriesQueryQueryToolChest(
-                    new IntervalChunkingQueryRunnerDecorator(null, null, null)
-                    {
-                      @Override
-                      public <T> QueryRunner<T> decorate(
-                          QueryRunner<T> delegate, QueryToolChest<T, ? extends Query<T>> toolChest
-                      )
-                      {
-                        return delegate;
-                      }
-                    }
-                ),
+                new TimeseriesQueryQueryToolChest(queryRunnerDecorator),
                 new TimeseriesQueryEngine(),
                 new QueryWatcher()
                 {
@@ -1023,6 +1026,14 @@ public class RealtimeIndexTaskTest
       }
     };
     final TestUtils testUtils = new TestUtils();
+    SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
+    {
+      @Override
+      public List<StorageLocationConfig> getLocations()
+      {
+        return Lists.newArrayList();
+      }
+    };
     final TaskToolboxFactory toolboxFactory = new TaskToolboxFactory(
         taskConfig,
         taskActionClientFactory,
@@ -1038,17 +1049,7 @@ public class RealtimeIndexTaskTest
         MoreExecutors.sameThreadExecutor(), // queryExecutorService
         EasyMock.createMock(MonitorScheduler.class),
         new SegmentLoaderFactory(
-            new SegmentLoaderLocalCacheManager(
-                null,
-                new SegmentLoaderConfig()
-                {
-                  @Override
-                  public List<StorageLocationConfig> getLocations()
-                  {
-                    return Lists.newArrayList();
-                  }
-                }, testUtils.getTestObjectMapper()
-            )
+            new SegmentLoaderLocalCacheManager(null, segmentLoaderConfig, testUtils.getTestObjectMapper())
         ),
         testUtils.getTestObjectMapper(),
         testUtils.getTestIndexIO(),

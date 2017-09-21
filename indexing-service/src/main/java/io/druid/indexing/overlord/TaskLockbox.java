@@ -515,16 +515,7 @@ public class TaskLockbox
       }
 
       return ImmutableList.copyOf(
-          Iterables.filter(
-              searchSpace, new Predicate<TaskLockPosse>()
-          {
-            @Override
-            public boolean apply(TaskLockPosse taskLock)
-            {
-              return taskLock.getTaskIds().contains(task.getId());
-            }
-          }
-          )
+          Iterables.filter(searchSpace, taskLock -> taskLock.getTaskIds().contains(task.getId()))
       );
     }
     finally {

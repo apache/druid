@@ -19,6 +19,8 @@
 
 package io.druid.query.aggregation;
 
+import io.druid.guice.annotations.ExtensionPoint;
+
 import java.io.Closeable;
 
 /**
@@ -30,6 +32,7 @@ import java.io.Closeable;
  * to aggregate(). This is currently (as of this documentation) implemented through the use of {@link
  * io.druid.segment.ColumnValueSelector} objects.
  */
+@ExtensionPoint
 public interface Aggregator extends Closeable
 {
   void aggregate();

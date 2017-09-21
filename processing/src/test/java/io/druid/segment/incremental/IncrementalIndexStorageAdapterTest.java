@@ -278,7 +278,9 @@ public class IncrementalIndexStorageAdapterTest
       Cursor cursor = Sequences.toList(Sequences.limit(cursorSequence, 1), Lists.<Cursor>newArrayList()).get(0);
       DimensionSelector dimSelector;
 
-      dimSelector = cursor.makeDimensionSelector(new DefaultDimensionSpec("sally", "sally"));
+      dimSelector = cursor
+          .getColumnSelectorFactory()
+          .makeDimensionSelector(new DefaultDimensionSpec("sally", "sally"));
       Assert.assertEquals("bo", dimSelector.lookupName(dimSelector.getRow().get(0)));
 
       index.add(
@@ -292,7 +294,9 @@ public class IncrementalIndexStorageAdapterTest
       // Cursor reset should not be affected by out of order values
       cursor.reset();
 
-      dimSelector = cursor.makeDimensionSelector(new DefaultDimensionSpec("sally", "sally"));
+      dimSelector = cursor
+          .getColumnSelectorFactory()
+          .makeDimensionSelector(new DefaultDimensionSpec("sally", "sally"));
       Assert.assertEquals("bo", dimSelector.lookupName(dimSelector.getRow().get(0)));
     }
   }
@@ -430,12 +434,9 @@ public class IncrementalIndexStorageAdapterTest
               @Override
               public Object apply(Cursor cursor)
               {
-                DimensionSelector dimSelector = cursor.makeDimensionSelector(
-                    new DefaultDimensionSpec(
-                        "billy",
-                        "billy"
-                    )
-                );
+                DimensionSelector dimSelector = cursor
+                    .getColumnSelectorFactory()
+                    .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
                 int cardinality = dimSelector.getValueCardinality();
 
                 //index gets more rows at this point, while other thread is iterating over the cursor
@@ -458,9 +459,7 @@ public class IncrementalIndexStorageAdapterTest
                 // and then, cursoring continues in the other thread
                 while (!cursor.isDone()) {
                   IndexedInts row = dimSelector.getRow();
-                  for (int i : row) {
-                    Assert.assertTrue(i < cardinality);
-                  }
+                  row.forEach(i -> Assert.assertTrue(i < cardinality));
                   cursor.advance();
                   rowNumInCursor++;
                 }
@@ -513,12 +512,9 @@ public class IncrementalIndexStorageAdapterTest
               @Override
               public Object apply(Cursor cursor)
               {
-                DimensionSelector dimSelector1A = cursor.makeDimensionSelector(
-                    new DefaultDimensionSpec(
-                        "billy",
-                        "billy"
-                    )
-                );
+                DimensionSelector dimSelector1A = cursor
+                    .getColumnSelectorFactory()
+                    .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
                 int cardinalityA = dimSelector1A.getValueCardinality();
 
                 //index gets more rows at this point, while other thread is iterating over the cursor
@@ -535,12 +531,9 @@ public class IncrementalIndexStorageAdapterTest
                   throw new RuntimeException(ex);
                 }
 
-                DimensionSelector dimSelector1B = cursor.makeDimensionSelector(
-                    new DefaultDimensionSpec(
-                        "billy",
-                        "billy"
-                    )
-                );
+                DimensionSelector dimSelector1B = cursor
+                    .getColumnSelectorFactory()
+                    .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
                 //index gets more rows at this point, while other thread is iterating over the cursor
                 try {
                   index.add(
@@ -562,19 +555,13 @@ public class IncrementalIndexStorageAdapterTest
                   throw new RuntimeException(ex);
                 }
 
-                DimensionSelector dimSelector1C = cursor.makeDimensionSelector(
-                    new DefaultDimensionSpec(
-                        "billy",
-                        "billy"
-                    )
-                );
+                DimensionSelector dimSelector1C = cursor
+                    .getColumnSelectorFactory()
+                    .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
 
-                DimensionSelector dimSelector2D = cursor.makeDimensionSelector(
-                    new DefaultDimensionSpec(
-                        "billy2",
-                        "billy2"
-                    )
-                );
+                DimensionSelector dimSelector2D = cursor
+                    .getColumnSelectorFactory()
+                    .makeDimensionSelector(new DefaultDimensionSpec("billy2", "billy2"));
                 //index gets more rows at this point, while other thread is iterating over the cursor
                 try {
                   index.add(
@@ -596,28 +583,19 @@ public class IncrementalIndexStorageAdapterTest
                   throw new RuntimeException(ex);
                 }
 
-                DimensionSelector dimSelector3E = cursor.makeDimensionSelector(
-                    new DefaultDimensionSpec(
-                        "billy3",
-                        "billy3"
-                    )
-                );
+                DimensionSelector dimSelector3E = cursor
+                    .getColumnSelectorFactory()
+                    .makeDimensionSelector(new DefaultDimensionSpec("billy3", "billy3"));
 
                 int rowNumInCursor = 0;
                 // and then, cursoring continues in the other thread
                 while (!cursor.isDone()) {
                   IndexedInts rowA = dimSelector1A.getRow();
-                  for (int i : rowA) {
-                    Assert.assertTrue(i < cardinalityA);
-                  }
+                  rowA.forEach(i -> Assert.assertTrue(i < cardinalityA));
                   IndexedInts rowB = dimSelector1B.getRow();
-                  for (int i : rowB) {
-                    Assert.assertTrue(i < cardinalityA);
-                  }
+                  rowB.forEach(i -> Assert.assertTrue(i < cardinalityA));
                   IndexedInts rowC = dimSelector1C.getRow();
-                  for (int i : rowC) {
-                    Assert.assertTrue(i < cardinalityA);
-                  }
+                  rowC.forEach(i -> Assert.assertTrue(i < cardinalityA));
                   IndexedInts rowD = dimSelector2D.getRow();
                   // no null id, so should get empty dims array
                   Assert.assertEquals(0, rowD.size());

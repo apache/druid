@@ -39,8 +39,7 @@ import io.druid.timeline.partition.ShardSpec;
 import java.io.File;
 import java.util.concurrent.ExecutorService;
 
-public class
-DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
+public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
 {
   private final ServiceEmitter emitter;
   private final QueryRunnerFactoryConglomerate conglomerate;

@@ -71,9 +71,7 @@ public class ResponseCookieHandler<Intermediate, Final> implements HttpResponseH
   }
 
   @Override
-  public ClientResponse<Intermediate> handleChunk(
-    ClientResponse<Intermediate> clientResponse, HttpChunk httpChunk
-  )
+  public ClientResponse<Intermediate> handleChunk(ClientResponse<Intermediate> clientResponse, HttpChunk httpChunk)
   {
     return delegate.handleChunk(clientResponse, httpChunk);
   }

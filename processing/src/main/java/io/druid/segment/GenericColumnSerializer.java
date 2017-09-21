@@ -19,12 +19,14 @@
 
 package io.druid.segment;
 
+import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 
+@ExtensionPoint
 public interface GenericColumnSerializer extends Closeable
 {
   public void open() throws IOException;

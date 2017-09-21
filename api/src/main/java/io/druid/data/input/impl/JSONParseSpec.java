@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonParser.Feature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.druid.java.util.common.parsers.JSONPathParser;
 import io.druid.java.util.common.parsers.Parser;
 
@@ -114,6 +113,9 @@ public class JSONParseSpec extends ParseSpec
           break;
         case PATH:
           type = JSONPathParser.FieldType.PATH;
+          break;
+        case JQ:
+          type = JSONPathParser.FieldType.JQ;
           break;
         default:
           throw new IllegalArgumentException("Invalid type for field " + druidSpec.getName());
