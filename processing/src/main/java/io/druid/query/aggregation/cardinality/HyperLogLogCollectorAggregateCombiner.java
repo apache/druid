@@ -42,7 +42,7 @@ public final class HyperLogLogCollectorAggregateCombiner extends ObjectAggregate
   public void fold(ColumnValueSelector selector)
   {
     @SuppressWarnings("unchecked")
-    HyperLogLogCollector other = ((ObjectColumnSelector<HyperLogLogCollector>) selector).get();
+    HyperLogLogCollector other = ((ObjectColumnSelector<HyperLogLogCollector>) selector).getObject();
     if (other == null) {
       return;
     }
@@ -60,7 +60,7 @@ public final class HyperLogLogCollectorAggregateCombiner extends ObjectAggregate
 
   @Nullable
   @Override
-  public HyperLogLogCollector get()
+  public HyperLogLogCollector getObject()
   {
     return combined;
   }

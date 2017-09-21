@@ -70,7 +70,7 @@ public class ApproximateHistogramFoldingAggregatorFactory extends ApproximateHis
         }
 
         @Override
-        public ApproximateHistogram get()
+        public ApproximateHistogram getObject()
         {
           return new ApproximateHistogram(0);
         }
@@ -111,7 +111,7 @@ public class ApproximateHistogramFoldingAggregatorFactory extends ApproximateHis
         }
 
         @Override
-        public ApproximateHistogram get()
+        public ApproximateHistogram getObject()
         {
           return new ApproximateHistogram(0);
         }

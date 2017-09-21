@@ -163,7 +163,7 @@ public class VarianceAggregatorCollectorTest
     }
 
     @Override
-    public Object get()
+    public Object getObject()
     {
       return v;
     }

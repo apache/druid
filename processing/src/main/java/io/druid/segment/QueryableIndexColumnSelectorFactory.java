@@ -252,7 +252,7 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
           }
 
           @Override
-          public Float get()
+          public Float getObject()
           {
             return columnVals.getFloatSingleValueRow(offset.getOffset());
           }
@@ -268,7 +268,7 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
           }
 
           @Override
-          public Double get()
+          public Double getObject()
           {
             return columnVals.getDoubleSingleValueRow(offset.getOffset());
           }
@@ -284,7 +284,7 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
           }
 
           @Override
-          public Long get()
+          public Long getObject()
           {
             return columnVals.getLongSingleValueRow(offset.getOffset());
           }
@@ -300,7 +300,7 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
           }
 
           @Override
-          public String get()
+          public String getObject()
           {
             return columnVals.getStringSingleValueRow(offset.getOffset());
           }
@@ -321,7 +321,7 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
 
           @Override
           @Nullable
-          public Object get()
+          public Object getObject()
           {
             final IndexedInts multiValueRow = columnVals.getMultiValueRow(offset.getOffset());
             if (multiValueRow.size() == 0) {
@@ -347,7 +347,7 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
           }
 
           @Override
-          public String get()
+          public String getObject()
           {
             return columnVals.lookupName(columnVals.getSingleValueRow(offset.getOffset()));
           }
@@ -365,7 +365,7 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
       }
 
       @Override
-      public Object get()
+      public Object getObject()
       {
         return columnVals.getRowValue(offset.getOffset());
       }
