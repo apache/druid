@@ -32,7 +32,6 @@ import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.CompressedPools;
-import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntList;
 
 import java.io.IOException;
@@ -374,12 +373,6 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
       return bigEndian ?
              buffer.getInt(pos) >>> bigEndianShift :
              buffer.getInt(pos) & littleEndianMask;
-    }
-
-    @Override
-    public IntIterator iterator()
-    {
-      return new IndexedIntsIterator(this);
     }
 
     protected void loadBuffer(int bufferNum)

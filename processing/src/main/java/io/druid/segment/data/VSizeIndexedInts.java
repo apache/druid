@@ -26,7 +26,6 @@ import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.output.HeapByteBufferOutputBytes;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntLists;
 
@@ -168,12 +167,6 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
   public long getSerializedSize() throws IOException
   {
     return metaSize() + buffer.remaining();
-  }
-
-  @Override
-  public IntIterator iterator()
-  {
-    return new IndexedIntsIterator(this);
   }
 
   @Override

@@ -17,26 +17,32 @@
  * under the License.
  */
 
-package io.druid.client.selector;
+package io.druid.segment.data;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.annotation.JsonCreator;
-
-import java.util.Comparator;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntIterators;
 
 /**
+ * Doesn't extend {@link it.unimi.dsi.fastutil.ints.IntIterable} to avoid accidential for-each iteration with boxing.
  */
-public class HighestPriorityTierSelectorStrategy extends AbstractTierSelectorStrategy
+public interface BitmapValues
 {
-  @JsonCreator
-  public HighestPriorityTierSelectorStrategy(@JacksonInject ServerSelectorStrategy serverSelectorStrategy)
+  BitmapValues EMPTY = new BitmapValues()
   {
-    super(serverSelectorStrategy);
-  }
+    @Override
+    public int size()
+    {
+      return 0;
+    }
 
-  @Override
-  public Comparator<Integer> getComparator()
-  {
-    return Comparator.reverseOrder();
-  }
+    @Override
+    public IntIterator iterator()
+    {
+      return IntIterators.EMPTY_ITERATOR;
+    }
+  };
+
+  int size();
+
+  IntIterator iterator();
 }
