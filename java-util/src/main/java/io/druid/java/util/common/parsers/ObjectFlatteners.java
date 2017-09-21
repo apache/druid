@@ -167,27 +167,28 @@ public class ObjectFlatteners
           {
             return keySet().stream()
                            .map(
-                               field ->
-                                   new Map.Entry<String, Object>()
+                               field -> {
+                                 return new Map.Entry<String, Object>()
+                                 {
+                                   @Override
+                                   public String getKey()
                                    {
-                                     @Override
-                                     public String getKey()
-                                     {
-                                       return field;
-                                     }
-
-                                     @Override
-                                     public Object getValue()
-                                     {
-                                       return get(field);
-                                     }
-
-                                     @Override
-                                     public Object setValue(final Object value)
-                                     {
-                                       throw new UnsupportedOperationException();
-                                     }
+                                     return field;
                                    }
+
+                                   @Override
+                                   public Object getValue()
+                                   {
+                                     return get(field);
+                                   }
+
+                                   @Override
+                                   public Object setValue(final Object value)
+                                   {
+                                     throw new UnsupportedOperationException();
+                                   }
+                                 };
+                               }
                            )
                            .collect(Collectors.toSet());
           }
