@@ -19,43 +19,30 @@
 
 package io.druid.segment.data;
 
-
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.segment.IntIteratorUtils;
-import it.unimi.dsi.fastutil.ints.AbstractIntIterator;
+import it.unimi.dsi.fastutil.ints.IntIterator;
 
 /**
  */
-public class IndexedIntsIterator extends AbstractIntIterator
+public class ImmutableBitmapValues implements BitmapValues
 {
-  private final IndexedInts baseInts;
-  private final int size;
+  private final ImmutableBitmap immutableBitmap;
 
-  private int currIndex = 0;
-
-  public IndexedIntsIterator(
-      IndexedInts baseInts
-  )
+  public ImmutableBitmapValues(ImmutableBitmap immutableBitmap)
   {
-    this.baseInts = baseInts;
-
-    size = baseInts.size();
+    this.immutableBitmap = immutableBitmap;
   }
 
   @Override
-  public boolean hasNext()
+  public int size()
   {
-    return currIndex < size;
+    return immutableBitmap.size();
   }
 
   @Override
-  public int nextInt()
+  public IntIterator iterator()
   {
-    return baseInts.get(currIndex++);
-  }
-
-  @Override
-  public int skip(int n)
-  {
-    return IntIteratorUtils.skip(this, n);
+    return IntIteratorUtils.fromRoaringBitmapIntIterator(immutableBitmap.iterator());
   }
 }
