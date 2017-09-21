@@ -25,11 +25,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
 import com.metamx.common.StringUtils;
 import io.druid.collections.SerializablePair;
+import io.druid.java.util.common.UOE;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.first.FloatFirstAggregatorFactory;
 import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -94,6 +96,12 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    throw new UOE("FloatLastAggregatorFactory is not supported during ingestion for rollup");
+  }
+
+  @Override
   public AggregatorFactory getCombiningFactory()
   {
     return new FloatLastAggregatorFactory(name, name)
@@ -107,7 +115,7 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
           @Override
           public void aggregate()
           {
-            SerializablePair<Long, Float> pair = (SerializablePair<Long, Float>) selector.get();
+            SerializablePair<Long, Float> pair = (SerializablePair<Long, Float>) selector.getObject();
             if (pair.lhs >= lastTime) {
               lastTime = pair.lhs;
               lastValue = pair.rhs;
@@ -125,7 +133,7 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
           @Override
           public void aggregate(ByteBuffer buf, int position)
           {
-            SerializablePair<Long, Float> pair = (SerializablePair<Long, Float>) selector.get();
+            SerializablePair<Long, Float> pair = (SerializablePair<Long, Float>) selector.getObject();
             long lastTime = buf.getLong(position);
             if (pair.lhs >= lastTime) {
               buf.putLong(position, pair.lhs);

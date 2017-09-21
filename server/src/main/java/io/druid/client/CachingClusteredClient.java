@@ -48,6 +48,7 @@ import io.druid.client.selector.ServerSelector;
 import io.druid.concurrent.Execs;
 import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.guice.annotations.Smile;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.BaseSequence;
@@ -329,7 +330,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
           long intervalStart = holderInterval.getStartMillis();
           if (!uncoveredIntervalsOverflowed && startMillis != intervalStart) {
             if (uncoveredIntervalsLimit > uncoveredIntervals.size()) {
-              uncoveredIntervals.add(new Interval(startMillis, intervalStart));
+              uncoveredIntervals.add(Intervals.utc(startMillis, intervalStart));
             } else {
               uncoveredIntervalsOverflowed = true;
             }
@@ -339,7 +340,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
         if (!uncoveredIntervalsOverflowed && startMillis < endMillis) {
           if (uncoveredIntervalsLimit > uncoveredIntervals.size()) {
-            uncoveredIntervals.add(new Interval(startMillis, endMillis));
+            uncoveredIntervals.add(Intervals.utc(startMillis, endMillis));
           } else {
             uncoveredIntervalsOverflowed = true;
           }

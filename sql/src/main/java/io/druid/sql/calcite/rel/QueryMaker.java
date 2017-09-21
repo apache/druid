@@ -19,21 +19,24 @@
 
 package io.druid.sql.calcite.rel;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.math.expr.Evals;
 import io.druid.query.DataSource;
 import io.druid.query.Query;
-import io.druid.query.QueryDataSource;
 import io.druid.query.Result;
 import io.druid.query.groupby.GroupByQuery;
+import io.druid.query.scan.ScanQuery;
 import io.druid.query.select.EventHolder;
 import io.druid.query.select.PagingSpec;
 import io.druid.query.select.SelectQuery;
@@ -46,6 +49,7 @@ import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.column.Column;
 import io.druid.server.QueryLifecycleFactory;
+import io.druid.server.security.AuthenticationResult;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerContext;
 import org.apache.calcite.avatica.ColumnMetaData;
@@ -67,14 +71,17 @@ public class QueryMaker
 {
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final PlannerContext plannerContext;
+  private final ObjectMapper jsonMapper;
 
   public QueryMaker(
       final QueryLifecycleFactory queryLifecycleFactory,
-      final PlannerContext plannerContext
+      final PlannerContext plannerContext,
+      final ObjectMapper jsonMapper
   )
   {
     this.queryLifecycleFactory = queryLifecycleFactory;
     this.plannerContext = plannerContext;
+    this.jsonMapper = jsonMapper;
   }
 
   public PlannerContext getPlannerContext()
@@ -82,42 +89,75 @@ public class QueryMaker
     return plannerContext;
   }
 
+  public ObjectMapper getJsonMapper()
+  {
+    return jsonMapper;
+  }
+
   public Sequence<Object[]> runQuery(
       final DataSource dataSource,
       final DruidQueryBuilder queryBuilder
   )
   {
-    if (dataSource instanceof QueryDataSource) {
-      final GroupByQuery outerQuery = queryBuilder.toGroupByQuery(dataSource, plannerContext);
-      if (outerQuery == null) {
-        // Bug in the planner rules. They shouldn't allow this to happen.
-        throw new IllegalStateException("Can't use QueryDataSource without an outer groupBy query!");
-      }
+    final Query query = queryBuilder.toQuery(dataSource, plannerContext);
 
-      return executeGroupBy(queryBuilder, outerQuery);
+    if (query instanceof TimeseriesQuery) {
+      return executeTimeseries(queryBuilder, (TimeseriesQuery) query);
+    } else if (query instanceof TopNQuery) {
+      return executeTopN(queryBuilder, (TopNQuery) query);
+    } else if (query instanceof GroupByQuery) {
+      return executeGroupBy(queryBuilder, (GroupByQuery) query);
+    } else if (query instanceof ScanQuery) {
+      return executeScan(queryBuilder, (ScanQuery) query);
+    } else if (query instanceof SelectQuery) {
+      return executeSelect(queryBuilder, (SelectQuery) query);
+    } else {
+      throw new ISE("Cannot run query of class[%s]", query.getClass().getName());
+    }
+  }
+
+  private Sequence<Object[]> executeScan(
+      final DruidQueryBuilder queryBuilder,
+      final ScanQuery query
+  )
+  {
+    final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
+
+    // SQL row column index -> Scan query column index
+    final int[] columnMapping = new int[queryBuilder.getRowOrder().size()];
+    final Map<String, Integer> scanColumnOrder = Maps.newHashMap();
+
+    for (int i = 0; i < query.getColumns().size(); i++) {
+      scanColumnOrder.put(query.getColumns().get(i), i);
     }
 
-    final TimeseriesQuery tsQuery = queryBuilder.toTimeseriesQuery(dataSource, plannerContext);
-    if (tsQuery != null) {
-      return executeTimeseries(queryBuilder, tsQuery);
+    for (int i = 0; i < queryBuilder.getRowOrder().size(); i++) {
+      final Integer index = scanColumnOrder.get(queryBuilder.getRowOrder().get(i));
+      columnMapping[i] = index == null ? -1 : index;
     }
 
-    final TopNQuery topNQuery = queryBuilder.toTopNQuery(dataSource, plannerContext);
-    if (topNQuery != null) {
-      return executeTopN(queryBuilder, topNQuery);
-    }
+    return Sequences.concat(
+        Sequences.map(
+            runQuery(query),
+            scanResult -> {
+              final List<Object[]> retVals = new ArrayList<>();
+              final List<List<Object>> rows = (List<List<Object>>) scanResult.getEvents();
 
-    final GroupByQuery groupByQuery = queryBuilder.toGroupByQuery(dataSource, plannerContext);
-    if (groupByQuery != null) {
-      return executeGroupBy(queryBuilder, groupByQuery);
-    }
+              for (List<Object> row : rows) {
+                final Object[] retVal = new Object[fieldList.size()];
+                for (RelDataTypeField field : fieldList) {
+                  retVal[field.getIndex()] = coerce(
+                      row.get(columnMapping[field.getIndex()]),
+                      field.getType().getSqlTypeName()
+                  );
+                }
+                retVals.add(retVal);
+              }
 
-    final SelectQuery selectQuery = queryBuilder.toSelectQuery(dataSource, plannerContext);
-    if (selectQuery != null) {
-      return executeSelect(queryBuilder, selectQuery);
-    }
-
-    throw new IllegalStateException("WTF?! Cannot execute query even though we planned it?");
+              return Sequences.simple(retVals);
+            }
+        )
+    );
   }
 
   private Sequence<Object[]> executeSelect(
@@ -178,7 +218,6 @@ public class QueryMaker
 
                             pagingIdentifiers.set(result.getValue().getPagingIdentifiers());
                             final List<Object[]> retVals = new ArrayList<>();
-
                             for (EventHolder holder : result.getValue().getEvents()) {
                               morePages.set(true);
                               final Map<String, Object> map = holder.getEvent();
@@ -229,10 +268,8 @@ public class QueryMaker
   private <T> Sequence<T> runQuery(final Query<T> query)
   {
     Hook.QUERY_PLAN.run(query);
-
-    // Authorization really should be applied in planning. At this point the query has already begun to execute.
-    // So, use "null" authorizationInfo to force the query to fail if security is enabled.
-    return queryLifecycleFactory.factorize().runSimple(query, null, null);
+    final AuthenticationResult authenticationResult = plannerContext.getAuthenticationResult();
+    return queryLifecycleFactory.factorize().runSimple(query, authenticationResult, null);
   }
 
   private Sequence<Object[]> executeTimeseries(
@@ -373,33 +410,9 @@ public class QueryMaker
     } else if (value == null) {
       coercedValue = null;
     } else if (sqlType == SqlTypeName.DATE) {
-      final DateTime dateTime;
-
-      if (value instanceof Number) {
-        dateTime = new DateTime(((Number) value).longValue());
-      } else if (value instanceof String) {
-        dateTime = new DateTime(Long.parseLong((String) value));
-      } else if (value instanceof DateTime) {
-        dateTime = (DateTime) value;
-      } else {
-        throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
-      }
-
-      return Calcites.jodaToCalciteDate(dateTime, plannerContext.getTimeZone());
+      return Calcites.jodaToCalciteDate(coerceDateTime(value, sqlType), plannerContext.getTimeZone());
     } else if (sqlType == SqlTypeName.TIMESTAMP) {
-      final DateTime dateTime;
-
-      if (value instanceof Number) {
-        dateTime = new DateTime(((Number) value).longValue());
-      } else if (value instanceof String) {
-        dateTime = new DateTime(Long.parseLong((String) value));
-      } else if (value instanceof DateTime) {
-        dateTime = (DateTime) value;
-      } else {
-        throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
-      }
-
-      return Calcites.jodaToCalciteTimestamp(dateTime, plannerContext.getTimeZone());
+      return Calcites.jodaToCalciteTimestamp(coerceDateTime(value, sqlType), plannerContext.getTimeZone());
     } else if (sqlType == SqlTypeName.BOOLEAN) {
       if (value instanceof String) {
         coercedValue = Evals.asBoolean(((String) value));
@@ -445,5 +458,21 @@ public class QueryMaker
     }
 
     return coercedValue;
+  }
+
+  private static DateTime coerceDateTime(Object value, SqlTypeName sqlType)
+  {
+    final DateTime dateTime;
+
+    if (value instanceof Number) {
+      dateTime = DateTimes.utc(((Number) value).longValue());
+    } else if (value instanceof String) {
+      dateTime = DateTimes.utc(Long.parseLong((String) value));
+    } else if (value instanceof DateTime) {
+      dateTime = (DateTime) value;
+    } else {
+      throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
+    }
+    return dateTime;
   }
 }

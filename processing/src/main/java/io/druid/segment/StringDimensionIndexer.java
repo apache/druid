@@ -23,7 +23,6 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
@@ -41,9 +40,11 @@ import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIterable;
 import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import io.druid.segment.incremental.TimeAndDimsHolder;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
 import it.unimi.dsi.fastutil.objects.Object2IntSortedMap;
 
@@ -53,7 +54,6 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 
 public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], String>
@@ -65,7 +65,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     private String minValue = null;
     private String maxValue = null;
 
-    private final Map<String, Integer> valueToId = Maps.newHashMap();
+    private final Object2IntMap<String> valueToId = new Object2IntOpenHashMap<>();
 
     private final List<String> idToValue = Lists.newArrayList();
     private final Object lock;
@@ -73,13 +73,13 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     public DimensionDictionary()
     {
       this.lock = new Object();
+      valueToId.defaultReturnValue(-1);
     }
 
     public int getId(String value)
     {
       synchronized (lock) {
-        final Integer id = valueToId.get(Strings.nullToEmpty(value));
-        return id == null ? -1 : id;
+        return valueToId.getInt(Strings.nullToEmpty(value));
       }
     }
 
@@ -108,8 +108,8 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     {
       String value = Strings.nullToEmpty(originalValue);
       synchronized (lock) {
-        Integer prev = valueToId.get(value);
-        if (prev != null) {
+        int prev = valueToId.getInt(value);
+        if (prev >= 0) {
           return prev;
         }
         final int index = size();
@@ -370,7 +370,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   @Override
   public DimensionSelector makeDimensionSelector(
       final DimensionSpec spec,
-      final IncrementalIndexStorageAdapter.EntryHolder currEntry,
+      final TimeAndDimsHolder currEntry,
       final IncrementalIndex.DimensionDesc desc
   )
   {
@@ -553,74 +553,21 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   }
 
   @Override
-  public LongColumnSelector makeLongColumnSelector(
-      IncrementalIndexStorageAdapter.EntryHolder currEntry, IncrementalIndex.DimensionDesc desc
-  )
+  public LongColumnSelector makeLongColumnSelector(TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc)
   {
      return ZeroLongColumnSelector.instance();
   }
 
   @Override
-  public FloatColumnSelector makeFloatColumnSelector(
-      IncrementalIndexStorageAdapter.EntryHolder currEntry, IncrementalIndex.DimensionDesc desc
-  )
+  public FloatColumnSelector makeFloatColumnSelector(TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc)
   {
     return ZeroFloatColumnSelector.instance();
   }
 
   @Override
-  public DoubleColumnSelector makeDoubleColumnSelector(
-      IncrementalIndexStorageAdapter.EntryHolder currEntry, IncrementalIndex.DimensionDesc desc
-  )
+  public DoubleColumnSelector makeDoubleColumnSelector(TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc)
   {
     return ZeroDoubleColumnSelector.instance();
-  }
-
-  @Override
-  public ObjectColumnSelector makeObjectColumnSelector(
-      final DimensionSpec spec,
-      final IncrementalIndexStorageAdapter.EntryHolder currEntry,
-      final IncrementalIndex.DimensionDesc desc
-  )
-  {
-    final ExtractionFn extractionFn = spec.getExtractionFn();
-    final int dimIndex = desc.getIndex();
-
-    class StringIndexerObjectColumnSelector implements ObjectColumnSelector<String>
-    {
-      @Override
-      public Class<String> classOfObject()
-      {
-        return String.class;
-      }
-
-      @Override
-      public String get()
-      {
-        final Object[] dims = currEntry.getKey().getDims();
-
-        int[] indices;
-        if (dimIndex < dims.length) {
-          indices = (int[]) dims[dimIndex];
-          if (indices.length > 1) {
-            throw new UnsupportedOperationException(
-                "makeObjectColumnSelector does not support multi-value columns."
-            );
-          }
-        } else {
-          indices = null;
-        }
-
-        if (indices == null || indices.length == 0) {
-          return extractionFn.apply(null);
-        }
-
-        final String strValue = getActualValue(indices[0], false);
-        return extractionFn == null ? strValue : extractionFn.apply(strValue);
-      }
-    }
-
-    return new StringIndexerObjectColumnSelector();
   }
 
   @Override

@@ -76,7 +76,7 @@ public class SelectRules
       final Project project = call.rel(0);
       final DruidRel druidRel = call.rel(1);
 
-      // Only push in projections that can be used by the Select query.
+      // Only push in projections that can be used by the Scan or Select queries.
       // Leave anything more complicated to DruidAggregateProjectRule for possible handling in a GroupBy query.
 
       final RowSignature sourceRowSignature = druidRel.getSourceRowSignature();
@@ -158,8 +158,7 @@ public class SelectRules
           (orderBys.size() == 1 && orderBys.get(0).getDimension().equals(Column.TIME_COLUMN_NAME))) {
         call.transformTo(
             druidRel.withQueryBuilder(
-                druidRel.getQueryBuilder()
-                        .withLimitSpec(limitSpec)
+                druidRel.getQueryBuilder().withLimitSpec(limitSpec)
             )
         );
       }

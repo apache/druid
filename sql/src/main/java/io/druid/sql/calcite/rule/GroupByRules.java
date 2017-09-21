@@ -25,6 +25,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.ExprType;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -60,7 +61,7 @@ import io.druid.sql.calcite.expression.SimpleExtraction;
 import io.druid.sql.calcite.filtration.Filtration;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerContext;
-import io.druid.sql.calcite.rel.DruidNestedGroupBy;
+import io.druid.sql.calcite.rel.DruidOuterQueryRel;
 import io.druid.sql.calcite.rel.DruidRel;
 import io.druid.sql.calcite.rel.Grouping;
 import io.druid.sql.calcite.table.RowSignature;
@@ -114,7 +115,7 @@ public class GroupByRules
   {
     private DruidAggregateRule()
     {
-      super(operand(Aggregate.class, operand(DruidRel.class, none())));
+      super(operand(Aggregate.class, operand(DruidRel.class, any())));
     }
 
     @Override
@@ -141,7 +142,7 @@ public class GroupByRules
   {
     private DruidAggregateProjectRule()
     {
-      super(operand(Aggregate.class, operand(Project.class, operand(DruidRel.class, none()))));
+      super(operand(Aggregate.class, operand(Project.class, operand(DruidRel.class, any()))));
     }
 
     @Override
@@ -170,7 +171,7 @@ public class GroupByRules
   {
     private DruidAggregateProjectFilterRule()
     {
-      super(operand(Aggregate.class, operand(Project.class, operand(Filter.class, operand(DruidRel.class, none())))));
+      super(operand(Aggregate.class, operand(Project.class, operand(Filter.class, operand(DruidRel.class, any())))));
     }
 
     @Override
@@ -206,7 +207,7 @@ public class GroupByRules
   {
     private DruidGroupByPostAggregationRule()
     {
-      super(operand(Project.class, operand(DruidRel.class, none())));
+      super(operand(Project.class, operand(DruidRel.class, any())));
     }
 
     @Override
@@ -232,7 +233,7 @@ public class GroupByRules
   {
     private DruidGroupByHavingRule()
     {
-      super(operand(Filter.class, operand(DruidRel.class, none())));
+      super(operand(Filter.class, operand(DruidRel.class, any())));
     }
 
     @Override
@@ -258,7 +259,7 @@ public class GroupByRules
   {
     private DruidGroupByLimitRule()
     {
-      super(operand(Sort.class, operand(DruidRel.class, none())));
+      super(operand(Sort.class, operand(DruidRel.class, any())));
     }
 
     @Override
@@ -442,7 +443,7 @@ public class GroupByRules
 
     if (isNestedQuery) {
       // Nested groupBy.
-      return DruidNestedGroupBy.from(druidRel, filter, grouping, aggregate.getRowType(), rowOrder);
+      return DruidOuterQueryRel.from(druidRel, filter, grouping, aggregate.getRowType(), rowOrder);
     } else {
       // groupBy on a base dataSource or semiJoin.
       return druidRel.withQueryBuilder(
@@ -585,8 +586,7 @@ public class GroupByRules
 
     if (dimFilter != null) {
       return druidRel.withQueryBuilder(
-          druidRel.getQueryBuilder()
-                  .withHaving(dimFilter)
+          druidRel.getQueryBuilder().withHaving(dimFilter)
       );
     } else {
       return null;
@@ -648,7 +648,7 @@ public class GroupByRules
       }
     }
 
-    if (!orderBys.isEmpty() || limitSpec.getLimit() < Integer.MAX_VALUE) {
+    if (!orderBys.isEmpty() || limitSpec.isLimited()) {
       return druidRel.withQueryBuilder(
           druidRel.getQueryBuilder()
                   .withAdjustedGrouping(
@@ -856,8 +856,8 @@ public class GroupByRules
               createMaxAggregatorFactory(aggregationType, name, fieldName, expression, macroTable)
           );
         } else if (kind == SqlKind.AVG) {
-          final String sumName = String.format("%s:sum", name);
-          final String countName = String.format("%s:count", name);
+          final String sumName = StringUtils.format("%s:sum", name);
+          final String countName = StringUtils.format("%s:count", name);
           final AggregatorFactory sum = createSumAggregatorFactory(
               aggregationType,
               sumName,

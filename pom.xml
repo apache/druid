@@ -58,8 +58,9 @@
     </scm>
 
     <properties>
-        <!-- Curator cannot be updated to 2.12.0 yet, see https://github.com/druid-io/druid/pull/4103 -->
-        <apache.curator.version>2.11.0</apache.curator.version>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <apache.curator.version>4.0.0</apache.curator.version>
+        <apache.curator.test.version>2.12.0</apache.curator.test.version>
         <avatica.version>1.9.0</avatica.version>
         <calcite.version>1.12.0</calcite.version>
         <guava.version>16.0.1</guava.version>
@@ -132,7 +133,6 @@
         <module>extensions-contrib/virtual-columns</module>
         <module>extensions-contrib/thrift-extensions</module>
         <module>extensions-contrib/ambari-metrics-emitter</module>
-        <module>extensions-contrib/scan-query</module>
         <module>extensions-contrib/sqlserver-metadata-storage</module>
         <module>extensions-contrib/kafka-emitter</module>
         <module>extensions-contrib/redis-cache</module>
@@ -146,7 +146,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>emitter</artifactId>
-                <version>0.4.5</version>
+                <version>0.6.0</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -296,6 +296,12 @@
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-recipes</artifactId>
                 <version>${apache.curator.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.apache.zookeeper</groupId>
+                        <artifactId>zookeeper</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.curator</groupId>
@@ -678,6 +684,11 @@
                 <version>2.1.0</version>
             </dependency>
             <dependency>
+                <groupId>net.thisptr</groupId>
+                <artifactId>jackson-jq</artifactId>
+                <version>0.0.7</version>
+            </dependency>
+            <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
                 <version>1.6.4</version>
@@ -777,7 +788,7 @@
             <dependency>
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-test</artifactId>
-                <version>${apache.curator.version}</version>
+                <version>${apache.curator.test.version}</version>
                 <exclusions>
                     <exclusion>
                         <groupId>org.jboss.netty</groupId>
@@ -904,6 +915,46 @@
                         <phase>validate</phase>
                         <goals>
                             <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>de.thetaphi</groupId>
+                <artifactId>forbiddenapis</artifactId>
+                <version>2.3</version>
+                <configuration>
+                    <bundledSignatures>
+                        <!--
+                          This will automatically choose the right
+                          signatures based on 'maven.compiler.target':
+                        -->
+                        <bundledSignature>jdk-unsafe</bundledSignature>
+                    </bundledSignatures>
+                    <signaturesFiles>
+                        <signaturesFile>${session.executionRootDirectory}/codestyle/joda-time-forbidden-apis.txt</signaturesFile>
+                    </signaturesFiles>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>validate</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <bundledSignatures>
+                                <!-- Check jdk-system-out only for production code, but not in test code -->
+                                <bundledSignature>jdk-unsafe</bundledSignature>
+                                <bundledSignature>jdk-system-out</bundledSignature>
+                            </bundledSignatures>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>testValidate</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>testCheck</goal>
                         </goals>
                     </execution>
                 </executions>
@@ -1094,8 +1145,8 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <configuration>
-                        <source>1.8</source>
-                        <target>1.8</target>
+                        <source>${maven.compiler.target}</source>
+                        <target>${maven.compiler.target}</target>
                     </configuration>
                 </plugin>
             </plugins>
@@ -1103,6 +1154,13 @@
     </build>
 
     <profiles>
+        <profile>
+            <id>spark2</id>
+            <properties>
+                <jackson.version>2.6.5</jackson.version>
+                <aws.sdk.version>1.11.143</aws.sdk.version>
+            </properties>
+        </profile>
         <profile>
             <id>strict</id>
             <build>
@@ -1116,8 +1174,8 @@
                             <fork>true</fork>
                             <meminitial>1024m</meminitial>
                             <maxmem>3000m</maxmem>
-                            <source>1.8</source>
-                            <target>1.8</target>
+                            <source>${maven.compiler.target}</source>
+                            <target>${maven.compiler.target}</target>
                             <showWarnings>false</showWarnings>
                             <compilerArgs>
                                 <arg>-XepDisableWarningsInGeneratedCode</arg>
@@ -1196,7 +1254,7 @@
                             <trimStackTrace>false</trimStackTrace>
                             <!-- locale settings must be set on the command line before startup -->
                             <!-- set heap size to work around https://github.com/travis-ci/travis-ci/issues/3396 -->
-                            <argLine>-Xmx1024m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
+                            <argLine>-Xmx768m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
                                 -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
                             </argLine>
                             <!-- our tests are very verbose, let's keep the volume down -->

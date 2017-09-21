@@ -24,7 +24,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.math.expr.ExprType;
@@ -58,7 +60,6 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
@@ -88,7 +89,6 @@ public class Expressions
       .put(SqlStdOperatorTable.POWER, "pow")
       .put(SqlStdOperatorTable.REPLACE, "replace")
       .put(SqlStdOperatorTable.SQRT, "sqrt")
-      .put(SqlStdOperatorTable.TRIM, "trim")
       .put(SqlStdOperatorTable.UPPER, "upper")
       .build();
 
@@ -265,7 +265,7 @@ public class Expressions
           // Ignore casts for simple extractions (use Function.identity) since it is ok in many cases.
           typeCastExpression = operandExpression.map(
               Function.identity(),
-              expression -> String.format("CAST(%s, '%s')", expression, toExprType.toString())
+              expression -> StringUtils.format("CAST(%s, '%s')", expression, toExprType.toString())
           );
         } else {
           typeCastExpression = operandExpression;
@@ -301,7 +301,7 @@ public class Expressions
         return null;
       } else if (UNARY_PREFIX_OPERATOR_MAP.containsKey(operator)) {
         return DruidExpression.fromExpression(
-            String.format(
+            StringUtils.format(
                 "(%s %s)",
                 UNARY_PREFIX_OPERATOR_MAP.get(operator),
                 Iterables.getOnlyElement(operands).getExpression()
@@ -309,7 +309,7 @@ public class Expressions
         );
       } else if (UNARY_SUFFIX_OPERATOR_MAP.containsKey(operator)) {
         return DruidExpression.fromExpression(
-            String.format(
+            StringUtils.format(
                 "(%s %s)",
                 Iterables.getOnlyElement(operands).getExpression(),
                 UNARY_SUFFIX_OPERATOR_MAP.get(operator)
@@ -320,7 +320,7 @@ public class Expressions
           throw new ISE("WTF?! Got binary operator[%s] with %s args?", kind, operands.size());
         }
         return DruidExpression.fromExpression(
-            String.format(
+            StringUtils.format(
                 "(%s %s %s)",
                 operands.get(0).getExpression(),
                 BINARY_OPERATOR_MAP.get(operator),
@@ -522,7 +522,7 @@ public class Expressions
         if (granularity != null) {
           // lhs is FLOOR(__time TO granularity); rhs must be a timestamp
           final long rhsMillis = Calcites.calciteDateTimeLiteralToJoda(rhs, plannerContext.getTimeZone()).getMillis();
-          final Interval rhsInterval = granularity.bucket(new DateTime(rhsMillis));
+          final Interval rhsInterval = granularity.bucket(DateTimes.utc(rhsMillis));
 
           // Is rhs aligned on granularity boundaries?
           final boolean rhsAligned = rhsInterval.getStartMillis() == rhsMillis;

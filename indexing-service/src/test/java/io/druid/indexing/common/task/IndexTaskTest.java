@@ -41,6 +41,8 @@ import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import io.druid.indexing.overlord.SegmentPublishResult;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.parsers.ParseException;
@@ -61,7 +63,6 @@ import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.NumberedShardSpec;
 import io.druid.timeline.partition.ShardSpec;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -151,13 +152,13 @@ public class IndexTaskTest
     Assert.assertEquals(2, segments.size());
 
     Assert.assertEquals("test", segments.get(0).getDataSource());
-    Assert.assertEquals(new Interval("2014/P1D"), segments.get(0).getInterval());
+    Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
     Assert.assertEquals(HashBasedNumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
     Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
     Assert.assertEquals(2, ((NumberedShardSpec) segments.get(0).getShardSpec()).getPartitions());
 
     Assert.assertEquals("test", segments.get(1).getDataSource());
-    Assert.assertEquals(new Interval("2014/P1D"), segments.get(1).getInterval());
+    Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(1).getInterval());
     Assert.assertEquals(HashBasedNumberedShardSpec.class, segments.get(1).getShardSpec().getClass());
     Assert.assertEquals(1, segments.get(1).getShardSpec().getPartitionNum());
     Assert.assertEquals(2, ((NumberedShardSpec) segments.get(1).getShardSpec()).getPartitions());
@@ -196,12 +197,12 @@ public class IndexTaskTest
     Assert.assertEquals(2, segments.size());
 
     Assert.assertEquals("test", segments.get(0).getDataSource());
-    Assert.assertEquals(new Interval("2014/P1D"), segments.get(0).getInterval());
+    Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
     Assert.assertEquals(NumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
     Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
 
     Assert.assertEquals("test", segments.get(1).getDataSource());
-    Assert.assertEquals(new Interval("2014/P1D"), segments.get(1).getInterval());
+    Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(1).getInterval());
     Assert.assertEquals(NumberedShardSpec.class, segments.get(1).getShardSpec().getClass());
     Assert.assertEquals(1, segments.get(1).getShardSpec().getPartitionNum());
   }
@@ -227,7 +228,7 @@ public class IndexTaskTest
             null,
             new ArbitraryGranularitySpec(
                 Granularities.MINUTE,
-                Collections.singletonList(new Interval("2014/2015"))
+                Collections.singletonList(Intervals.of("2014/2015"))
             ),
             createTuningConfig(10, null, false, true),
             false
@@ -261,7 +262,7 @@ public class IndexTaskTest
             new UniformGranularitySpec(
                 Granularities.HOUR,
                 Granularities.HOUR,
-                Collections.singletonList(new Interval("2015-03-01T08:00:00Z/2015-03-01T09:00:00Z"))
+                Collections.singletonList(Intervals.of("2015-03-01T08:00:00Z/2015-03-01T09:00:00Z"))
             ),
             createTuningConfig(50, null, false, true),
             false
@@ -304,7 +305,7 @@ public class IndexTaskTest
     Assert.assertEquals(1, segments.size());
 
     Assert.assertEquals("test", segments.get(0).getDataSource());
-    Assert.assertEquals(new Interval("2014/P1D"), segments.get(0).getInterval());
+    Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
     Assert.assertTrue(segments.get(0).getShardSpec().getClass().equals(NoneShardSpec.class));
     Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
   }
@@ -343,12 +344,12 @@ public class IndexTaskTest
     Assert.assertEquals(2, segments.size());
 
     Assert.assertEquals("test", segments.get(0).getDataSource());
-    Assert.assertEquals(new Interval("2014/P1D"), segments.get(0).getInterval());
+    Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
     Assert.assertTrue(segments.get(0).getShardSpec().getClass().equals(NumberedShardSpec.class));
     Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
 
     Assert.assertEquals("test", segments.get(1).getDataSource());
-    Assert.assertEquals(new Interval("2014/P1D"), segments.get(1).getInterval());
+    Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(1).getInterval());
     Assert.assertTrue(segments.get(1).getShardSpec().getClass().equals(NumberedShardSpec.class));
     Assert.assertEquals(1, segments.get(1).getShardSpec().getPartitionNum());
   }
@@ -387,17 +388,17 @@ public class IndexTaskTest
     Assert.assertEquals(3, segments.size());
 
     Assert.assertEquals("test", segments.get(0).getDataSource());
-    Assert.assertEquals(new Interval("2014-01-01T00/PT1H"), segments.get(0).getInterval());
+    Assert.assertEquals(Intervals.of("2014-01-01T00/PT1H"), segments.get(0).getInterval());
     Assert.assertTrue(segments.get(0).getShardSpec().getClass().equals(NoneShardSpec.class));
     Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
 
     Assert.assertEquals("test", segments.get(1).getDataSource());
-    Assert.assertEquals(new Interval("2014-01-01T01/PT1H"), segments.get(1).getInterval());
+    Assert.assertEquals(Intervals.of("2014-01-01T01/PT1H"), segments.get(1).getInterval());
     Assert.assertTrue(segments.get(1).getShardSpec().getClass().equals(NoneShardSpec.class));
     Assert.assertEquals(0, segments.get(1).getShardSpec().getPartitionNum());
 
     Assert.assertEquals("test", segments.get(2).getDataSource());
-    Assert.assertEquals(new Interval("2014-01-01T02/PT1H"), segments.get(2).getInterval());
+    Assert.assertEquals(Intervals.of("2014-01-01T02/PT1H"), segments.get(2).getInterval());
     Assert.assertTrue(segments.get(2).getShardSpec().getClass().equals(NoneShardSpec.class));
     Assert.assertEquals(0, segments.get(2).getShardSpec().getPartitionNum());
   }
@@ -448,7 +449,7 @@ public class IndexTaskTest
 
     Assert.assertEquals(Arrays.asList("d"), segments.get(0).getDimensions());
     Assert.assertEquals(Arrays.asList("val"), segments.get(0).getMetrics());
-    Assert.assertEquals(new Interval("2014/P1D"), segments.get(0).getInterval());
+    Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
   }
 
   @Test
@@ -497,7 +498,7 @@ public class IndexTaskTest
 
     Assert.assertEquals(Arrays.asList("d"), segments.get(0).getDimensions());
     Assert.assertEquals(Arrays.asList("val"), segments.get(0).getMetrics());
-    Assert.assertEquals(new Interval("2014/P1D"), segments.get(0).getInterval());
+    Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
   }
 
   @Test
@@ -541,7 +542,7 @@ public class IndexTaskTest
 
     for (int i = 0; i < 6; i++) {
       final DataSegment segment = segments.get(i);
-      final Interval expectedInterval = new Interval(StringUtils.format("2014-01-01T0%d/PT1H", (i / 2)));
+      final Interval expectedInterval = Intervals.of(StringUtils.format("2014-01-01T0%d/PT1H", (i / 2)));
       final int expectedPartitionNum = i % 2;
 
       Assert.assertEquals("test", segment.getDataSource());
@@ -583,7 +584,7 @@ public class IndexTaskTest
 
     for (int i = 0; i < 3; i++) {
       final DataSegment segment = segments.get(i);
-      final Interval expectedInterval = new Interval("2014-01-01T00:00:00.000Z/2014-01-02T00:00:00.000Z");
+      final Interval expectedInterval = Intervals.of("2014-01-01T00:00:00.000Z/2014-01-02T00:00:00.000Z");
 
       Assert.assertEquals("test", segment.getDataSource());
       Assert.assertEquals(expectedInterval, segment.getInterval());
@@ -624,7 +625,7 @@ public class IndexTaskTest
 
     for (int i = 0; i < 5; i++) {
       final DataSegment segment = segments.get(i);
-      final Interval expectedInterval = new Interval("2014-01-01T00:00:00.000Z/2014-01-02T00:00:00.000Z");
+      final Interval expectedInterval = Intervals.of("2014-01-01T00:00:00.000Z/2014-01-02T00:00:00.000Z");
 
       Assert.assertEquals("test", segment.getDataSource());
       Assert.assertEquals(expectedInterval, segment.getInterval());
@@ -697,7 +698,7 @@ public class IndexTaskTest
 
     Assert.assertEquals(Arrays.asList("d"), segments.get(0).getDimensions());
     Assert.assertEquals(Arrays.asList("val"), segments.get(0).getMetrics());
-    Assert.assertEquals(new Interval("2014/P1D"), segments.get(0).getInterval());
+    Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
   }
 
   @Test
@@ -826,7 +827,7 @@ public class IndexTaskTest
       );
 
       Assert.assertEquals(Arrays.asList("val"), segment.getMetrics());
-      Assert.assertEquals(new Interval("2014/P1D"), segment.getInterval());
+      Assert.assertEquals(Intervals.of("2014/P1D"), segment.getInterval());
     }
   }
 
@@ -892,7 +893,7 @@ public class IndexTaskTest
             if (taskAction instanceof LockListAction) {
               return (RetType) Collections.singletonList(
                   new TaskLock(
-                      "", "", null, new DateTime().toString()
+                      "", "", null, DateTimes.nowUtc().toString()
                   )
               );
             }
@@ -902,7 +903,7 @@ public class IndexTaskTest
                   "groupId",
                   "test",
                   ((LockAcquireAction) taskAction).getInterval(),
-                  new DateTime().toString()
+                  DateTimes.nowUtc().toString()
               );
             }
 
@@ -950,7 +951,7 @@ public class IndexTaskTest
             throw new UnsupportedOperationException();
           }
         }, null, null, null, null, null, null, null, null, null, null, jsonMapper, temporaryFolder.newFolder(),
-            indexIO, null, null, indexMergerV9
+            indexIO, null, null, indexMergerV9, null, null, null, null
         )
     );
 
@@ -983,7 +984,7 @@ public class IndexTaskTest
             granularitySpec != null ? granularitySpec : new UniformGranularitySpec(
                 Granularities.DAY,
                 Granularities.MINUTE,
-                Arrays.asList(new Interval("2014/2015"))
+                Arrays.asList(Intervals.of("2014/2015"))
             ),
             jsonMapper
         ),

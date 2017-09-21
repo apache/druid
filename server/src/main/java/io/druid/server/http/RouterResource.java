@@ -20,7 +20,7 @@
 package io.druid.server.http;
 
 import com.google.inject.Inject;
-import io.druid.curator.discovery.ServerDiscoverySelector;
+import io.druid.client.selector.Server;
 import io.druid.server.router.TieredBrokerHostSelector;
 
 import javax.ws.rs.GET;
@@ -50,12 +50,12 @@ public class RouterResource
   @Produces(MediaType.APPLICATION_JSON)
   public Map<String, List<String>> getBrokers()
   {
-    Map<String, ServerDiscoverySelector> brokerSelectorMap = tieredBrokerHostSelector.getAllBrokers();
+    Map<String, List<Server>> brokerSelectorMap = tieredBrokerHostSelector.getAllBrokers();
 
     Map<String, List<String>> brokersMap = new HashMap<>(brokerSelectorMap.size());
 
-    for (Map.Entry<String, ServerDiscoverySelector> e : brokerSelectorMap.entrySet()) {
-      brokersMap.put(e.getKey(), e.getValue().getAll().stream().map(s -> s.getHost()).collect(Collectors.toList()));
+    for (Map.Entry<String, List<Server>> e : brokerSelectorMap.entrySet()) {
+      brokersMap.put(e.getKey(), e.getValue().stream().map(s -> s.getHost()).collect(Collectors.toList()));
     }
 
     return brokersMap;

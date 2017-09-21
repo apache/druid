@@ -29,6 +29,7 @@ import io.druid.indexer.HadoopIOConfig;
 import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexer.HadoopTuningConfig;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
@@ -40,7 +41,6 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.joda.time.DateTimeZone;
-import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -151,7 +151,7 @@ public class GranularityPathSpecTest
             new UniformGranularitySpec(
                 Granularities.DAY,
                 Granularities.MINUTE,
-                ImmutableList.of(new Interval("2015-11-06T00:00Z/2015-11-07T00:00Z"))
+                ImmutableList.of(Intervals.of("2015-11-06T00:00Z/2015-11-07T00:00Z"))
             ),
             jsonMapper
         ),
@@ -202,7 +202,7 @@ public class GranularityPathSpecTest
             new UniformGranularitySpec(
                 Granularities.DAY,
                 Granularities.ALL,
-                ImmutableList.of(new Interval("2015-01-01T11Z/2015-01-02T05Z"))
+                ImmutableList.of(Intervals.of("2015-01-01T11Z/2015-01-02T05Z"))
             ),
             jsonMapper
         ),

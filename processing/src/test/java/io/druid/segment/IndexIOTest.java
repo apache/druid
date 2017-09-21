@@ -29,6 +29,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.UOE;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -62,7 +63,7 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class IndexIOTest
 {
-  private static Interval DEFAULT_INTERVAL = Interval.parse("1970-01-01/2000-01-01");
+  private static Interval DEFAULT_INTERVAL = Intervals.of("1970-01-01/2000-01-01");
   private static final IndexSpec INDEX_SPEC = IndexMergerTestBase.makeIndexSpec(
       new ConciseBitmapSerdeFactory(),
       CompressedObjectStrategy.CompressionStrategy.LZ4,

@@ -30,7 +30,9 @@ import org.joda.time.format.ISODateTimeFormat;
 import java.util.List;
 
 /**
+ * Do NOT remove "unused" members in this class. They are used by generated Antlr
  */
+@SuppressWarnings("unused")
 interface Function
 {
   String name();
@@ -988,26 +990,6 @@ interface Function
     }
   }
 
-  class TrimFunc implements Function
-  {
-    @Override
-    public String name()
-    {
-      return "trim";
-    }
-
-    @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
-    {
-      if (args.size() != 1) {
-        throw new IAE("Function[%s] needs 1 argument", name());
-      }
-
-      final String arg = args.get(0).eval(bindings).asString();
-      return ExprEval.of(Strings.nullToEmpty(arg).trim());
-    }
-  }
-
   class LowerFunc implements Function
   {
     @Override
@@ -1024,7 +1006,7 @@ interface Function
       }
 
       final String arg = args.get(0).eval(bindings).asString();
-      return ExprEval.of(Strings.nullToEmpty(arg).toLowerCase());
+      return ExprEval.of(StringUtils.toLowerCase(Strings.nullToEmpty(arg)));
     }
   }
 
@@ -1044,7 +1026,7 @@ interface Function
       }
 
       final String arg = args.get(0).eval(bindings).asString();
-      return ExprEval.of(Strings.nullToEmpty(arg).toUpperCase());
+      return ExprEval.of(StringUtils.toUpperCase(Strings.nullToEmpty(arg)));
     }
   }
 }

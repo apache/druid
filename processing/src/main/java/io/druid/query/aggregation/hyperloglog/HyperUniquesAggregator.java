@@ -43,7 +43,7 @@ public class HyperUniquesAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    collector.fold((HyperLogLogCollector) selector.get());
+    collector.fold((HyperLogLogCollector) selector.getObject());
   }
 
   @Override

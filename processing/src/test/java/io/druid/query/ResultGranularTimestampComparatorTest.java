@@ -19,6 +19,7 @@
 
 package io.druid.query;
 
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import org.joda.time.DateTime;
@@ -48,7 +49,7 @@ public class ResultGranularTimestampComparatorTest
     this.descending = descending;
   }
 
-  private final DateTime time = new DateTime("2011-11-11");
+  private final DateTime time = DateTimes.of("2011-11-11");
 
   @Test
   public void testCompareAll()

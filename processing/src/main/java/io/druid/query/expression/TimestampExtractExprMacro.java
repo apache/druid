@@ -21,6 +21,7 @@ package io.druid.query.expression;
 
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprEval;
 import io.druid.math.expr.ExprMacroTable;
@@ -70,7 +71,7 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
     }
 
     final Expr arg = args.get(0);
-    final Unit unit = Unit.valueOf(((String) args.get(1).getLiteralValue()).toUpperCase());
+    final Unit unit = Unit.valueOf(StringUtils.toUpperCase((String) args.get(1).getLiteralValue()));
     final DateTimeZone timeZone;
 
     if (args.size() > 2) {
@@ -87,7 +88,7 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public ExprEval eval(final ObjectBinding bindings)
       {
-        final DateTime dateTime = new DateTime(arg.eval(bindings).asLong()).withChronology(chronology);
+        final DateTime dateTime = new DateTime(arg.eval(bindings).asLong(), chronology);
         switch (unit) {
           case EPOCH:
             return ExprEval.of(dateTime.getMillis());

@@ -31,6 +31,9 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
+import io.druid.discovery.DataNodeService;
+import io.druid.discovery.DruidNodeAnnouncer;
+import io.druid.discovery.LookupNodeService;
 import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.config.TaskConfig;
@@ -44,6 +47,7 @@ import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.loading.SegmentLoader;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
+import io.druid.server.DruidNode;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.server.coordination.DataSegmentServerAnnouncer;
 import io.druid.timeline.DataSegment;
@@ -87,6 +91,11 @@ public class TaskToolbox
   private final CacheConfig cacheConfig;
   private final IndexMergerV9 indexMergerV9;
 
+  private final DruidNodeAnnouncer druidNodeAnnouncer;
+  private final DruidNode druidNode;
+  private final LookupNodeService lookupNodeService;
+  private final DataNodeService dataNodeService;
+
   public TaskToolbox(
       TaskConfig config,
       TaskActionClient taskActionClient,
@@ -107,7 +116,11 @@ public class TaskToolbox
       IndexIO indexIO,
       Cache cache,
       CacheConfig cacheConfig,
-      IndexMergerV9 indexMergerV9
+      IndexMergerV9 indexMergerV9,
+      DruidNodeAnnouncer druidNodeAnnouncer,
+      DruidNode druidNode,
+      LookupNodeService lookupNodeService,
+      DataNodeService dataNodeService
   )
   {
     this.config = config;
@@ -130,6 +143,10 @@ public class TaskToolbox
     this.cache = cache;
     this.cacheConfig = cacheConfig;
     this.indexMergerV9 = Preconditions.checkNotNull(indexMergerV9, "Null IndexMergerV9");
+    this.druidNodeAnnouncer = druidNodeAnnouncer;
+    this.druidNode = druidNode;
+    this.lookupNodeService = lookupNodeService;
+    this.dataNodeService = dataNodeService;
   }
 
   public TaskConfig getConfig()
@@ -270,5 +287,25 @@ public class TaskToolbox
   public File getPersistDir()
   {
     return new File(taskWorkDir, "persist");
+  }
+
+  public DruidNodeAnnouncer getDruidNodeAnnouncer()
+  {
+    return druidNodeAnnouncer;
+  }
+
+  public LookupNodeService getLookupNodeService()
+  {
+    return lookupNodeService;
+  }
+
+  public DataNodeService getDataNodeService()
+  {
+    return dataNodeService;
+  }
+
+  public DruidNode getDruidNode()
+  {
+    return druidNode;
   }
 }

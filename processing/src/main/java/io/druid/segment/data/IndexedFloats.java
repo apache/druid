@@ -19,6 +19,12 @@
 
 package io.druid.segment.data;
 
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.DoubleColumnSelector;
+import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.LongColumnSelector;
+import io.druid.segment.historical.HistoricalColumnSelector;
+
 import java.io.Closeable;
 
 /**
@@ -32,4 +38,82 @@ public interface IndexedFloats extends Closeable
 
   @Override
   void close();
+
+  default FloatColumnSelector makeFloatColumnSelector(ReadableOffset offset)
+  {
+    class HistoricalFloatColumnSelector implements FloatColumnSelector, HistoricalColumnSelector<Float>
+    {
+      @Override
+      public float getFloat()
+      {
+        return IndexedFloats.this.get(offset.getOffset());
+      }
+
+      @Override
+      public double getDouble(int offset)
+      {
+        return IndexedFloats.this.get(offset);
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("indexed", IndexedFloats.this);
+        inspector.visit("offset", offset);
+      }
+    }
+    return new HistoricalFloatColumnSelector();
+  }
+
+  default DoubleColumnSelector makeDoubleColumnSelector(ReadableOffset offset)
+  {
+    class HistoricalDoubleColumnSelector implements DoubleColumnSelector, HistoricalColumnSelector<Double>
+    {
+      @Override
+      public double getDouble()
+      {
+        return IndexedFloats.this.get(offset.getOffset());
+      }
+
+      @Override
+      public double getDouble(int offset)
+      {
+        return IndexedFloats.this.get(offset);
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("indexed", IndexedFloats.this);
+        inspector.visit("offset", offset);
+      }
+    }
+    return new HistoricalDoubleColumnSelector();
+  }
+
+  default LongColumnSelector makeLongColumnSelector(ReadableOffset offset)
+  {
+    class HistoricalLongColumnSelector implements LongColumnSelector, HistoricalColumnSelector<Long>
+    {
+      @Override
+      public long getLong()
+      {
+        return (long) IndexedFloats.this.get(offset.getOffset());
+      }
+
+      @Override
+      public double getDouble(int offset)
+      {
+        return IndexedFloats.this.get(offset);
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("indexed", IndexedFloats.this);
+        inspector.visit("offset", offset);
+      }
+    }
+    return new HistoricalLongColumnSelector();
+  }
 }

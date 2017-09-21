@@ -26,6 +26,7 @@ import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Ordering;
 import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.ImmutableDruidServer;
+import io.druid.java.util.common.DateTimes;
 import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.DruidCluster;
 import io.druid.server.coordinator.DruidCoordinator;
@@ -46,7 +47,7 @@ public class DruidCoordinatorCleanupOvershadowedTest
   DruidCoordinatorCleanupOvershadowed druidCoordinatorCleanupOvershadowed;
   DruidCoordinator coordinator = EasyMock.createStrictMock(DruidCoordinator.class);
   private List<DataSegment> availableSegments;
-  DateTime start = new DateTime("2012-01-01");
+  DateTime start = DateTimes.of("2012-01-01");
   DruidCluster druidCluster;
   private LoadQueuePeon mockPeon = EasyMock.createMock(LoadQueuePeon.class);
   private ImmutableDruidServer druidServer = EasyMock.createMock(ImmutableDruidServer.class);

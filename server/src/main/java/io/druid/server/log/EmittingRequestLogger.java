@@ -50,6 +50,15 @@ public class EmittingRequestLogger implements RequestLogger
     emitter.emit(new RequestLogEventBuilder(feed, requestLogLine));
   }
 
+  @Override
+  public String toString()
+  {
+    return "EmittingRequestLogger{" +
+           "emitter=" + emitter +
+           ", feed='" + feed + '\'' +
+           '}';
+  }
+
   public static class RequestLogEvent implements Event
   {
     final ImmutableMap<String, String> serviceDimensions;

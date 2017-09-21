@@ -29,6 +29,7 @@ import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.DruidServer;
 import io.druid.client.ImmutableDruidServer;
+import io.druid.java.util.common.DateTimes;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
 import io.druid.server.coordinator.rules.PeriodLoadRule;
@@ -36,7 +37,6 @@ import io.druid.server.coordinator.rules.Rule;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Before;
@@ -97,8 +97,8 @@ public class DruidCoordinatorBalancerProfiler
           "segment" + i,
           new DataSegment(
               "datasource" + i,
-              new Interval(new DateTime("2012-01-01"), (new DateTime("2012-01-01")).plusHours(1)),
-              (new DateTime("2012-03-01")).toString(),
+              new Interval(DateTimes.of("2012-01-01"), (DateTimes.of("2012-01-01")).plusHours(1)),
+              (DateTimes.of("2012-03-01")).toString(),
               Maps.<String, Object>newHashMap(),
               Lists.<String>newArrayList(),
               Lists.<String>newArrayList(),
@@ -155,7 +155,7 @@ public class DruidCoordinatorBalancerProfiler
                                                                      .withReplicationThrottleLimit(5)
                                                                      .build()
                                 )
-                                .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
+                                .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
                                 .withEmitter(emitter)
                                 .withDatabaseRuleManager(manager)
                                 .withReplicationManager(new ReplicationThrottler(2, 500))
@@ -245,7 +245,7 @@ public class DruidCoordinatorBalancerProfiler
                                         MAX_SEGMENTS_TO_MOVE
                                     ).build()
                                 )
-                                .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
+                                .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
                                 .build();
     DruidCoordinatorBalancerTester tester = new DruidCoordinatorBalancerTester(coordinator);
     watch.start();

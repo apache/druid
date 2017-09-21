@@ -219,7 +219,7 @@ public class Rules
     rules.add(CaseFilteredAggregatorRule.instance());
 
     // Druid-specific rules.
-    rules.add(new DruidTableScanRule(plannerContext, queryMaker));
+    rules.add(new DruidTableScanRule(queryMaker));
     rules.add(new DruidFilterRule());
 
     if (plannerConfig.getMaxSemiJoinRowsInMemory() > 0) {

@@ -23,7 +23,6 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import io.druid.java.util.common.IAE;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import it.unimi.dsi.fastutil.ints.IntIterator;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -177,12 +176,6 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
     return 1 + 1 + 4 + buffer.remaining();
   }
 
-  @Override
-  public IntIterator iterator()
-  {
-    return new IndexedIntsIterator(this);
-  }
-
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
     channel.write(ByteBuffer.wrap(new byte[]{VERSION, (byte) numBytes}));
@@ -208,12 +201,6 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
     }
 
     throw new IAE("Unknown version[%s]", versionFromBuffer);
-  }
-
-  @Override
-  public void fill(int index, int[] toFill)
-  {
-    throw new UnsupportedOperationException("fill not supported");
   }
 
   @Override

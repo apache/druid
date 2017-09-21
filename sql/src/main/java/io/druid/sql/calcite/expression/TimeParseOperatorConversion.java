@@ -51,6 +51,6 @@ public class TimeParseOperatorConversion implements SqlOperatorConversion
       final RexNode rexNode
   )
   {
-    return OperatorConversions.functionCall(plannerContext, rowSignature, rexNode, "timestamp_parse");
+    return OperatorConversions.convertCall(plannerContext, rowSignature, rexNode, "timestamp_parse");
   }
 }

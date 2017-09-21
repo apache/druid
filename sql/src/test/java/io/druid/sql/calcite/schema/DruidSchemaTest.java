@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.Intervals;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -31,6 +32,7 @@ import io.druid.segment.IndexBuilder;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.table.DruidTable;
@@ -45,7 +47,6 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -116,7 +117,7 @@ public class DruidSchemaTest
     walker = new SpecificSegmentsQuerySegmentWalker(CalciteTests.queryRunnerFactoryConglomerate()).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE1)
-                   .interval(new Interval("2000/P1Y"))
+                   .interval(Intervals.of("2000/P1Y"))
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
                    .build(),
@@ -124,7 +125,7 @@ public class DruidSchemaTest
     ).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE1)
-                   .interval(new Interval("2001/P1Y"))
+                   .interval(Intervals.of("2001/P1Y"))
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
                    .build(),
@@ -139,11 +140,13 @@ public class DruidSchemaTest
         index2
     );
 
+
     schema = new DruidSchema(
         CalciteTests.createMockQueryLifecycleFactory(walker),
         new TestServerInventoryView(walker.getSegments()),
         PLANNER_CONFIG_DEFAULT,
-        new NoopViewManager()
+        new NoopViewManager(),
+        AuthTestUtils.TEST_AUTHENTICATOR_MAPPER
     );
 
     schema.start();

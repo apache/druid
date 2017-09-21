@@ -30,6 +30,7 @@ values for the below mentioned configs among others provided by Java implementat
 |`druid.server.https.keyStoreType`|The type of the key store.|none|yes|
 |`druid.server.https.certAlias`|Alias of TLS/SSL certificate for the connector.|none|yes|
 |`druid.server.https.keyStorePassword`|The [Password Provider](../operations/password-provider.html) or String password for the Key Store.|none|yes|
+|`druid.server.https.keyManagerFactoryAlgorithm`|Algorithm to use for creating KeyManager, more details [here](https://docs.oracle.com/javase/7/docs/technotes/guides/security/jsse/JSSERefGuide.html#KeyManager).|`javax.net.ssl.KeyManagerFactory.getDefaultAlgorithm()`|no|
 |`druid.server.https.keyManagerPassword`|The [Password Provider](../operations/password-provider.html) or String password for the Key Manager.|none|no|
 
 # Druid's internal communication over TLS
@@ -42,5 +43,5 @@ Since, there are various ways to configure SSLContext, by default, Druid looks f
 while creating the HttpClient. This binding can be achieved writing a [Druid extension](../development/extensions.html)
 which can provide an instance of SSLContext. Druid comes with a simple extension present [here](../development/extensions-core/simple-client-sslcontext.html)
 which should be useful enough for most simple cases, see [this](./including-extensions.html) for how to include extensions.
-If this extension does not satisfy the requirement then please follow the extension [implementation] (https://github.com/druid-io/druid/tree/master/extensions-core/simple-client-sslcontext)
+If this extension does not satisfy the requirements then please follow the extension [implementation](https://github.com/druid-io/druid/tree/master/extensions-core/simple-client-sslcontext)
 to create your own extension.

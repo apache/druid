@@ -18,15 +18,19 @@
  */
 
 package io.druid.data.input;
+
+import io.druid.guice.annotations.ExtensionPoint;
+
 /**
  * Committer includes a Runnable and a Jackson-serialized metadata object containing the offset
  */
+@ExtensionPoint
 public interface Committer extends Runnable
 {
-    /**
-     * @return A json serialized representation of commit metadata,
-     * which needs to be serialized and deserialized by Jackson.
-     * Commit metadata can be a complex type, but we recommend keeping it to List/Map/"Primitive JSON" types
-     * */
-    public Object getMetadata();
+  /**
+   * @return A json serialized representation of commit metadata,
+   * which needs to be serialized and deserialized by Jackson.
+   * Commit metadata can be a complex type, but we recommend keeping it to List/Map/"Primitive JSON" types
+   */
+  public Object getMetadata();
 }

@@ -26,11 +26,13 @@ import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Longs;
 import com.metamx.common.StringUtils;
 import io.druid.collections.SerializablePair;
+import io.druid.java.util.common.UOE;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ObjectColumnSelector;
@@ -103,6 +105,12 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    throw new UOE("DoubleFirstAggregatorFactory is not supported during ingestion for rollup");
+  }
+
+  @Override
   public AggregatorFactory getCombiningFactory()
   {
     return new DoubleFirstAggregatorFactory(name, name)
@@ -116,7 +124,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
           @Override
           public void aggregate()
           {
-            SerializablePair<Long, Double> pair = (SerializablePair<Long, Double>) selector.get();
+            SerializablePair<Long, Double> pair = (SerializablePair<Long, Double>) selector.getObject();
             if (pair.lhs < firstTime) {
               firstTime = pair.lhs;
               firstValue = pair.rhs;
@@ -134,7 +142,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
           @Override
           public void aggregate(ByteBuffer buf, int position)
           {
-            SerializablePair<Long, Double> pair = (SerializablePair<Long, Double>) selector.get();
+            SerializablePair<Long, Double> pair = (SerializablePair<Long, Double>) selector.getObject();
             long firstTime = buf.getLong(position);
             if (pair.lhs < firstTime) {
               buf.putLong(position, pair.lhs);

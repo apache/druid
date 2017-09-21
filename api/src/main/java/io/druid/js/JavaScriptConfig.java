@@ -21,7 +21,13 @@ package io.druid.js;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.guice.annotations.PublicApi;
 
+/**
+ * Should be used by extension filters, aggregators, etc, that use JavaScript to determine if JavaScript is enabled
+ * or not.
+ */
+@PublicApi
 public class JavaScriptConfig
 {
   public static final int DEFAULT_OPTIMIZATION_LEVEL = 9;

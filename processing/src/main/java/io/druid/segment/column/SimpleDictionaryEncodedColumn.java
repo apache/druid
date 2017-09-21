@@ -31,10 +31,10 @@ import io.druid.segment.IdLookup;
 import io.druid.segment.data.CachingIndexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedMultivalue;
+import io.druid.segment.data.ReadableOffset;
 import io.druid.segment.data.SingleIndexedInt;
 import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.historical.HistoricalDimensionSelector;
-import io.druid.segment.historical.OffsetHolder;
 import io.druid.segment.historical.SingleValueHistoricalDimensionSelector;
 
 import javax.annotation.Nullable;
@@ -105,10 +105,7 @@ public class SimpleDictionaryEncodedColumn
   }
 
   @Override
-  public HistoricalDimensionSelector makeDimensionSelector(
-      final OffsetHolder offsetHolder,
-      final ExtractionFn extractionFn
-  )
+  public HistoricalDimensionSelector makeDimensionSelector(final ReadableOffset offset, final ExtractionFn extractionFn)
   {
     abstract class QueryableDimensionSelector implements HistoricalDimensionSelector, IdLookup
     {
@@ -158,7 +155,7 @@ public class SimpleDictionaryEncodedColumn
         @Override
         public IndexedInts getRow()
         {
-          return multiValueColumn.get(offsetHolder.getReadableOffset().getOffset());
+          return multiValueColumn.get(offset.getOffset());
         }
 
         @Override
@@ -183,8 +180,7 @@ public class SimpleDictionaryEncodedColumn
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
           inspector.visit("multiValueColumn", multiValueColumn);
-          inspector.visit("offsetHolder", offsetHolder);
-          inspector.visit("offset", offsetHolder.getReadableOffset());
+          inspector.visit("offset", offset);
           inspector.visit("extractionFn", extractionFn);
         }
       }
@@ -202,7 +198,7 @@ public class SimpleDictionaryEncodedColumn
         @Override
         public int getRowValue()
         {
-          return column.get(offsetHolder.getReadableOffset().getOffset());
+          return column.get(offset.getOffset());
         }
 
         @Override
@@ -273,8 +269,7 @@ public class SimpleDictionaryEncodedColumn
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
           inspector.visit("column", column);
-          inspector.visit("offsetHolder", offsetHolder);
-          inspector.visit("offset", offsetHolder.getReadableOffset());
+          inspector.visit("offset", offset);
           inspector.visit("extractionFn", extractionFn);
         }
       }

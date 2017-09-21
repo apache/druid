@@ -39,6 +39,7 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.EncoderFactory;
 import org.joda.time.DateTime;
+import org.joda.time.chrono.ISOChronology;
 import org.junit.Before;
 import org.junit.Test;
 import org.schemarepo.InMemoryRepository;
@@ -75,7 +76,7 @@ public class AvroStreamInputRowParserTest
   public static final float SOME_FLOAT_VALUE = 0.23555f;
   public static final int SOME_INT_VALUE = 1;
   public static final long SOME_LONG_VALUE = 679865987569912369L;
-  public static final DateTime DATE_TIME = new DateTime(2015, 10, 25, 19, 30);
+  public static final DateTime DATE_TIME = new DateTime(2015, 10, 25, 19, 30, ISOChronology.getInstanceUTC());
   public static final List<String> DIMENSIONS = Arrays.asList(EVENT_TYPE, ID, SOME_OTHER_ID, IS_VALID);
   public static final TimeAndDimsParseSpec PARSE_SPEC = new TimeAndDimsParseSpec(
       new TimestampSpec("timestamp", "millis", null),

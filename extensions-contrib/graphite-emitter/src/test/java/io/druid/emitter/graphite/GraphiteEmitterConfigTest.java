@@ -49,9 +49,10 @@ public class GraphiteEmitterConfigTest
         "hostname",
         8080,
         1000,
+        GraphiteEmitterConfig.PICKLE_PROTOCOL,
         1000L,
         100,
-        new SendAllGraphiteEventConverter("prefix", true, true),
+        new SendAllGraphiteEventConverter("prefix", true, true, false),
         Collections.EMPTY_LIST,
         Collections.EMPTY_LIST,
         null,
@@ -67,7 +68,12 @@ public class GraphiteEmitterConfigTest
   @Test
   public void testSerDeserDruidToGraphiteEventConverter() throws IOException
   {
-    SendAllGraphiteEventConverter sendAllGraphiteEventConverter = new SendAllGraphiteEventConverter("prefix", true, true);
+    SendAllGraphiteEventConverter sendAllGraphiteEventConverter = new SendAllGraphiteEventConverter(
+        "prefix",
+        true,
+        true,
+        false
+    );
     String noopGraphiteEventConverterString = mapper.writeValueAsString(sendAllGraphiteEventConverter);
     DruidToGraphiteEventConverter druidToGraphiteEventConverter = mapper.reader(DruidToGraphiteEventConverter.class)
                                                                         .readValue(noopGraphiteEventConverterString);
@@ -77,6 +83,7 @@ public class GraphiteEmitterConfigTest
         "prefix",
         true,
         true,
+        false,
         "",
         new DefaultObjectMapper()
     );

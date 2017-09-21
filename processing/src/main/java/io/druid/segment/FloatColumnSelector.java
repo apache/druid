@@ -27,7 +27,7 @@ import io.druid.query.monomorphicprocessing.HotLoopCallee;
  * FloatColumnSelector has a handle onto some other stateful object (e.g. an Offset) which is changing between calls
  * to get() (though, that doesn't have to be the case if you always want the same value...).
  */
-public interface FloatColumnSelector extends ColumnValueSelector, HotLoopCallee
+public interface FloatColumnSelector extends ColumnValueSelector<Float>, HotLoopCallee
 {
   @CalledFromHotLoop
   @Override
@@ -57,5 +57,29 @@ public interface FloatColumnSelector extends ColumnValueSelector, HotLoopCallee
   default long getLong()
   {
     return (long) getFloat();
+  }
+
+  /**
+   * @deprecated This method is marked as deprecated in FloatColumnSelector to minimize the probability of accidential
+   * calling. "Polymorphism" of FloatColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
+  @Deprecated
+  @Override
+  default Float getObject()
+  {
+    return getFloat();
+  }
+
+  /**
+   * @deprecated This method is marked as deprecated in FloatColumnSelector to minimize the probability of accidential
+   * calling. "Polymorphism" of FloatColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
+  @Deprecated
+  @Override
+  default Class<Float> classOfObject()
+  {
+    return Float.class;
   }
 }

@@ -39,10 +39,9 @@ import io.druid.segment.column.IndexedDoublesGenericColumn;
 import io.druid.segment.column.IndexedFloatsGenericColumn;
 import io.druid.segment.column.IndexedLongsGenericColumn;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.BitmapCompressedIndexedInts;
-import io.druid.segment.data.EmptyIndexedInts;
+import io.druid.segment.data.ImmutableBitmapValues;
+import io.druid.segment.data.BitmapValues;
 import io.druid.segment.data.Indexed;
-import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIterable;
 import io.druid.segment.data.ListIndexed;
 import org.joda.time.Interval;
@@ -300,23 +299,6 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     };
   }
 
-  @VisibleForTesting
-  IndexedInts getBitmapIndex(String dimension, String value)
-  {
-    final Column column = input.getColumn(dimension);
-
-    if (column == null) {
-      return EmptyIndexedInts.EMPTY_INDEXED_INTS;
-    }
-
-    final BitmapIndex bitmaps = column.getBitmapIndex();
-    if (bitmaps == null) {
-      return EmptyIndexedInts.EMPTY_INDEXED_INTS;
-    }
-
-    return new BitmapCompressedIndexedInts(bitmaps.getBitmap(bitmaps.getIndex(value)));
-  }
-
   @Override
   public String getMetricType(String metric)
   {
@@ -347,23 +329,40 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   }
 
   @Override
-  public IndexedInts getBitmapIndex(String dimension, int dictId)
+  public BitmapValues getBitmapValues(String dimension, int dictId)
   {
     final Column column = input.getColumn(dimension);
     if (column == null) {
-      return EmptyIndexedInts.EMPTY_INDEXED_INTS;
+      return BitmapValues.EMPTY;
     }
 
     final BitmapIndex bitmaps = column.getBitmapIndex();
     if (bitmaps == null) {
-      return EmptyIndexedInts.EMPTY_INDEXED_INTS;
+      return BitmapValues.EMPTY;
     }
 
     if (dictId >= 0) {
-      return new BitmapCompressedIndexedInts(bitmaps.getBitmap(dictId));
+      return new ImmutableBitmapValues(bitmaps.getBitmap(dictId));
     } else {
-      return EmptyIndexedInts.EMPTY_INDEXED_INTS;
+      return BitmapValues.EMPTY;
     }
+  }
+
+  @VisibleForTesting
+  BitmapValues getBitmapIndex(String dimension, String value)
+  {
+    final Column column = input.getColumn(dimension);
+
+    if (column == null) {
+      return BitmapValues.EMPTY;
+    }
+
+    final BitmapIndex bitmaps = column.getBitmapIndex();
+    if (bitmaps == null) {
+      return BitmapValues.EMPTY;
+    }
+
+    return new ImmutableBitmapValues(bitmaps.getBitmap(bitmaps.getIndex(value)));
   }
 
   @Override

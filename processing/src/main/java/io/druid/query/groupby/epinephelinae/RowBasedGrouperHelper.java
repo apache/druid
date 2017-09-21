@@ -95,7 +95,8 @@ public class RowBasedGrouperHelper
       final Supplier<ByteBuffer> bufferSupplier,
       final LimitedTemporaryStorage temporaryStorage,
       final ObjectMapper spillMapper,
-      final AggregatorFactory[] aggregatorFactories
+      final AggregatorFactory[] aggregatorFactories,
+      final int mergeBufferSize
   )
   {
     return createGrouperAccumulatorPair(
@@ -111,7 +112,8 @@ public class RowBasedGrouperHelper
         null,
         UNKNOWN_THREAD_PRIORITY,
         false,
-        UNKNOWN_TIMEOUT
+        UNKNOWN_TIMEOUT,
+        mergeBufferSize
     );
   }
 
@@ -133,7 +135,8 @@ public class RowBasedGrouperHelper
       @Nullable final ListeningExecutorService grouperSorter,
       final int priority,
       final boolean hasQueryTimeout,
-      final long queryTimeoutAt
+      final long queryTimeoutAt,
+      final int mergeBufferSize
   )
   {
     // concurrencyHint >= 1 for concurrent groupers, -1 for single-threaded
@@ -186,7 +189,8 @@ public class RowBasedGrouperHelper
           spillMapper,
           true,
           limitSpec,
-          sortHasNonGroupingFields
+          sortHasNonGroupingFields,
+          mergeBufferSize
       );
     } else {
       grouper = new ConcurrentGrouper<>(
@@ -205,7 +209,8 @@ public class RowBasedGrouperHelper
           grouperSorter,
           priority,
           hasQueryTimeout,
-          queryTimeoutAt
+          queryTimeoutAt,
+          mergeBufferSize
       );
     }
 

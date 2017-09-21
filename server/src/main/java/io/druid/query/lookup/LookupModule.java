@@ -32,11 +32,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
+import com.google.inject.Provides;
+import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.common.utils.ServletResourceUtils;
 import io.druid.curator.announcement.Announcer;
 import io.druid.guice.ExpressionModule;
+import io.druid.discovery.LookupNodeService;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
+import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Json;
@@ -47,6 +51,7 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.query.expression.LookupExprMacro;
 import io.druid.server.DruidNode;
 import io.druid.server.http.HostAndPortWithScheme;
+import io.druid.server.http.security.ConfigResourceFilter;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.initialization.jetty.JettyBindings;
 import io.druid.server.listener.announcer.ListenerResourceAnnouncer;
@@ -101,9 +106,17 @@ public class LookupModule implements DruidModule
         2 // 1 for "normal" operation and 1 for "emergency" or other
     );
   }
+
+  @Provides
+  @LazySingleton
+  public LookupNodeService getLookupNodeService(LookupListeningAnnouncerConfig lookupListeningAnnouncerConfig)
+  {
+    return new LookupNodeService(lookupListeningAnnouncerConfig.getLookupTier());
+  }
 }
 
 @Path(ListenerResource.BASE_PATH + "/" + LookupCoordinatorManager.LOOKUP_LISTEN_ANNOUNCE_KEY)
+@ResourceFilters(ConfigResourceFilter.class)
 class LookupListeningResource extends ListenerResource
 {
   private static final Logger LOG = new Logger(LookupListeningResource.class);

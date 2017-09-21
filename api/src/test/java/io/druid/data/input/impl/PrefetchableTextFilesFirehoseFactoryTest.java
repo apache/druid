@@ -24,10 +24,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.DateTimes;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.hamcrest.CoreMatchers;
-import org.joda.time.DateTime;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -124,7 +124,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
     for (int i = 0; i < 10; i++) {
       for (int j = 0; j < 100; j++) {
         final Row row = rows.get(i * 100 + j);
-        Assert.assertEquals(new DateTime(20171220 + i), row.getTimestamp());
+        Assert.assertEquals(DateTimes.utc(20171220 + i), row.getTimestamp());
         Assert.assertEquals(String.valueOf(i), row.getDimension("a").get(0));
         Assert.assertEquals(String.valueOf(j), row.getDimension("b").get(0));
       }

@@ -126,7 +126,7 @@ public class WorkerTaskMonitorTest
               {
                 return basePath;
               }
-            }, null, null, null, null, null
+            }, null, null, null, null
         ),
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         cf,
@@ -187,7 +187,11 @@ public class WorkerTaskMonitorTest
                 indexIO,
                 null,
                 null,
-                indexMergerV9
+                indexMergerV9,
+                null,
+                null,
+                null,
+                null
             ),
             taskConfig,
             new NoopServiceEmitter(),

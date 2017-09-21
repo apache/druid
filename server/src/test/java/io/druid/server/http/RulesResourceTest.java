@@ -23,9 +23,10 @@ import com.google.common.collect.ImmutableList;
 import io.druid.audit.AuditEntry;
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.metadata.MetadataRuleManager;
 import org.easymock.EasyMock;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -59,7 +60,7 @@ public class RulesResourceTest
             "127.0.0.1"
         ),
         "testPayload",
-        new DateTime("2013-01-02T00:00:00Z")
+        DateTimes.of("2013-01-02T00:00:00Z")
     );
     AuditEntry entry2 = new AuditEntry(
         "testKey",
@@ -70,7 +71,7 @@ public class RulesResourceTest
             "127.0.0.1"
         ),
         "testPayload",
-        new DateTime("2013-01-01T00:00:00Z")
+        DateTimes.of("2013-01-01T00:00:00Z")
     );
     EasyMock.expect(auditManager.fetchAuditHistory(EasyMock.eq("datasource1"), EasyMock.eq("rules"), EasyMock.eq(2)))
             .andReturn(ImmutableList.of(entry1, entry2))
@@ -92,7 +93,7 @@ public class RulesResourceTest
   public void testGetDatasourceRuleHistoryWithInterval()
   {
     String interval = "P2D/2013-01-02T00:00:00Z";
-    Interval theInterval = new Interval(interval);
+    Interval theInterval = Intervals.of(interval);
     AuditEntry entry1 = new AuditEntry(
         "testKey",
         "testType",
@@ -102,7 +103,7 @@ public class RulesResourceTest
             "127.0.0.1"
         ),
         "testPayload",
-        new DateTime("2013-01-02T00:00:00Z")
+        DateTimes.of("2013-01-02T00:00:00Z")
     );
     AuditEntry entry2 = new AuditEntry(
         "testKey",
@@ -113,7 +114,7 @@ public class RulesResourceTest
             "127.0.0.1"
         ),
         "testPayload",
-        new DateTime("2013-01-01T00:00:00Z")
+        DateTimes.of("2013-01-01T00:00:00Z")
     );
     EasyMock.expect(auditManager.fetchAuditHistory(EasyMock.eq("datasource1"), EasyMock.eq("rules"), EasyMock.eq(theInterval)))
             .andReturn(ImmutableList.of(entry1, entry2))
@@ -162,7 +163,7 @@ public class RulesResourceTest
             "127.0.0.1"
         ),
         "testPayload",
-        new DateTime("2013-01-02T00:00:00Z")
+        DateTimes.of("2013-01-02T00:00:00Z")
     );
     AuditEntry entry2 = new AuditEntry(
         "testKey",
@@ -173,7 +174,7 @@ public class RulesResourceTest
             "127.0.0.1"
         ),
         "testPayload",
-        new DateTime("2013-01-01T00:00:00Z")
+        DateTimes.of("2013-01-01T00:00:00Z")
     );
     EasyMock.expect(auditManager.fetchAuditHistory(EasyMock.eq("rules"), EasyMock.eq(2)))
             .andReturn(ImmutableList.of(entry1, entry2))
@@ -195,7 +196,7 @@ public class RulesResourceTest
   public void testGetAllDatasourcesRuleHistoryWithInterval()
   {
     String interval = "P2D/2013-01-02T00:00:00Z";
-    Interval theInterval = new Interval(interval);
+    Interval theInterval = Intervals.of(interval);
     AuditEntry entry1 = new AuditEntry(
         "testKey",
         "testType",
@@ -205,7 +206,7 @@ public class RulesResourceTest
             "127.0.0.1"
         ),
         "testPayload",
-        new DateTime("2013-01-02T00:00:00Z")
+        DateTimes.of("2013-01-02T00:00:00Z")
     );
     AuditEntry entry2 = new AuditEntry(
         "testKey",
@@ -216,7 +217,7 @@ public class RulesResourceTest
             "127.0.0.1"
         ),
         "testPayload",
-        new DateTime("2013-01-01T00:00:00Z")
+        DateTimes.of("2013-01-01T00:00:00Z")
     );
     EasyMock.expect(auditManager.fetchAuditHistory(EasyMock.eq("rules"), EasyMock.eq(theInterval)))
             .andReturn(ImmutableList.of(entry1, entry2))

@@ -19,9 +19,9 @@
 
 package io.druid.collections;
 
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.Result;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -38,12 +38,12 @@ public class CombiningIterableTest
   public void testMerge()
   {
     List<Result<Object>> resultsBefore = Arrays.asList(
-        new Result<Object>(new DateTime("2011-01-01"), 1L),
-        new Result<Object>(new DateTime("2011-01-01"), 2L)
+        new Result<Object>(DateTimes.of("2011-01-01"), 1L),
+        new Result<Object>(DateTimes.of("2011-01-01"), 2L)
     );
 
     Iterable<Result<Object>> expectedResults = Arrays.<Result<Object>>asList(
-        new Result<Object>(new DateTime("2011-01-01"), 3L)
+        new Result<Object>(DateTimes.of("2011-01-01"), 3L)
     );
 
     Iterable<Result<Object>> resultsAfter = CombiningIterable.create(

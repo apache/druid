@@ -20,15 +20,17 @@
 package io.druid.utils;
 
 
+import io.druid.guice.annotations.PublicApi;
+import io.druid.java.util.common.logger.Logger;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import io.druid.java.util.common.logger.Logger;
-
 /**
  */
+@PublicApi
 public class CompressionUtils
 {
   private static final Logger log = new Logger(CompressionUtils.class);

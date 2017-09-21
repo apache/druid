@@ -213,6 +213,15 @@ public class DruidNode
     return null;
   }
 
+  public int getPortToUse()
+  {
+    if (serverConfig.isTls()) {
+      return getTlsPort();
+    } else {
+      return getPlaintextPort();
+    }
+  }
+
   public String getHostAndPortToUse()
   {
     return getHostAndTlsPort() != null ? getHostAndTlsPort() : getHostAndPort();

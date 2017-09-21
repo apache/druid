@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import io.druid.indexing.overlord.autoscaling.ec2.EC2AutoScaler;
 import io.druid.indexing.overlord.autoscaling.ec2.EC2EnvironmentConfig;
 import io.druid.indexing.overlord.autoscaling.ec2.EC2NodeData;
@@ -42,7 +43,8 @@ public class WorkerBehaviorConfigTest
     WorkerBehaviorConfig config = new WorkerBehaviorConfig(
         new FillCapacityWithAffinityWorkerSelectStrategy(
             new AffinityConfig(
-                ImmutableMap.of("foo", Arrays.asList("localhost"))
+                ImmutableMap.of("foo", ImmutableSet.of("localhost")),
+                false
             )
         ),
         new EC2AutoScaler(

@@ -23,6 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -32,8 +34,6 @@ import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.SegmentMissingException;
 import io.druid.segment.TestHelper;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -98,12 +98,7 @@ public class RetryQueryRunnerTest
           public Sequence<Result<TimeseriesResultValue>> run(QueryPlus queryPlus, Map context)
           {
             ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
-                new SegmentDescriptor(
-                    new Interval(
-                        178888,
-                        1999999
-                    ), "test", 1
-                )
+                new SegmentDescriptor(Intervals.utc(178888, 1999999), "test", 1)
             );
             return Sequences.empty();
           }
@@ -129,7 +124,7 @@ public class RetryQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 
@@ -158,12 +153,7 @@ public class RetryQueryRunnerTest
           {
             if ((int) context.get("count") == 0) {
               ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
-                  new SegmentDescriptor(
-                      new Interval(
-                          178888,
-                          1999999
-                      ), "test", 1
-                  )
+                  new SegmentDescriptor(Intervals.utc(178888, 1999999), "test", 1)
               );
               context.put("count", 1);
               return Sequences.empty();
@@ -171,7 +161,7 @@ public class RetryQueryRunnerTest
               return Sequences.simple(
                   Arrays.asList(
                       new Result<>(
-                          new DateTime(),
+                          DateTimes.nowUtc(),
                           new TimeseriesResultValue(
                               Maps.<String, Object>newHashMap()
                           )
@@ -189,7 +179,7 @@ public class RetryQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 
@@ -217,12 +207,7 @@ public class RetryQueryRunnerTest
           {
             if ((int) context.get("count") < 3) {
               ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
-                  new SegmentDescriptor(
-                      new Interval(
-                          178888,
-                          1999999
-                      ), "test", 1
-                  )
+                  new SegmentDescriptor(Intervals.utc(178888, 1999999), "test", 1)
               );
               context.put("count", (int) context.get("count") + 1);
               return Sequences.empty();
@@ -230,7 +215,7 @@ public class RetryQueryRunnerTest
               return Sequences.simple(
                   Arrays.asList(
                       new Result<>(
-                          new DateTime(),
+                          DateTimes.nowUtc(),
                           new TimeseriesResultValue(
                               Maps.<String, Object>newHashMap()
                           )
@@ -248,7 +233,7 @@ public class RetryQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 
@@ -274,12 +259,7 @@ public class RetryQueryRunnerTest
           )
           {
             ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
-                new SegmentDescriptor(
-                    new Interval(
-                        178888,
-                        1999999
-                    ), "test", 1
-                )
+                new SegmentDescriptor(Intervals.utc(178888, 1999999), "test", 1)
             );
             return Sequences.empty();
           }
@@ -292,7 +272,7 @@ public class RetryQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 
@@ -321,26 +301,16 @@ public class RetryQueryRunnerTest
             if ((int) context.get("count") == 0) {
               // assume 2 missing segments at first run
               ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
-                  new SegmentDescriptor(
-                      new Interval(
-                          178888,
-                          1999999
-                      ), "test", 1
-                  )
+                  new SegmentDescriptor(Intervals.utc(178888, 1999999), "test", 1)
               );
               ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
-                  new SegmentDescriptor(
-                      new Interval(
-                          178888,
-                          1999999
-                      ), "test", 2
-                  )
+                  new SegmentDescriptor(Intervals.utc(178888, 1999999), "test", 2)
               );
               context.put("count", 1);
               return Sequences.simple(
                   Arrays.asList(
                       new Result<>(
-                          new DateTime(),
+                          DateTimes.nowUtc(),
                           new TimeseriesResultValue(
                               Maps.<String, Object>newHashMap()
                           )
@@ -352,18 +322,13 @@ public class RetryQueryRunnerTest
               Assert.assertTrue("Should retry with 2 missing segments", ((MultipleSpecificSegmentSpec) ((BaseQuery) query).getQuerySegmentSpec()).getDescriptors().size() == 2);
               // assume only left 1 missing at first retry
               ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
-                  new SegmentDescriptor(
-                      new Interval(
-                          178888,
-                          1999999
-                      ), "test", 2
-                  )
+                  new SegmentDescriptor(Intervals.utc(178888, 1999999), "test", 2)
               );
               context.put("count", 2);
               return Sequences.simple(
                   Arrays.asList(
                       new Result<>(
-                          new DateTime(),
+                          DateTimes.nowUtc(),
                           new TimeseriesResultValue(
                               Maps.<String, Object>newHashMap()
                           )
@@ -378,7 +343,7 @@ public class RetryQueryRunnerTest
               return Sequences.simple(
                   Arrays.asList(
                       new Result<>(
-                          new DateTime(),
+                          DateTimes.nowUtc(),
                           new TimeseriesResultValue(
                               Maps.<String, Object>newHashMap()
                           )
@@ -396,7 +361,7 @@ public class RetryQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 

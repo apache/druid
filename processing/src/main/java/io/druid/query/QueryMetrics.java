@@ -78,6 +78,9 @@ import java.util.List;
  * dimension or metric is useful and not very expensive to process and store then emit, skip (see above Goals, 1.)
  * otherwise.
  *
+ * <p>This interface can be extended, but is not marked as an {@code ExtensionPoint}, because it may change in breaking
+ * ways even in minor releases.
+ *
  * <p>If implementors of custom QueryMetrics don't want to fix builds on every Druid release (e. g. if they want to add
  * a single dimension to emitted events and don't want to alter other dimensions and emitted metrics), they could
  * inherit their custom QueryMetrics from {@link DefaultQueryMetrics} or query-specific default implementation class,
@@ -107,7 +110,7 @@ import java.util.List;
  *
  * Making subinterfaces of QueryMetrics for emitting custom dimensions and/or metrics for specific query types
  * -----------------------------------------------------------------------------------------------------------
- * If a query type (e. g. {@link io.druid.query.search.search.SearchQuery} (it's runners) needs to emit custom
+ * If a query type (e. g. {@link io.druid.query.search.SearchQuery} (it's runners) needs to emit custom
  * dimensions and/or metrics which doesn't make sense for all other query types, the following steps should be executed:
  *  1. Create `interface SearchQueryMetrics extends QueryMetrics` (here and below "Search" is the query type) with
  *  additional methods (see "Adding new methods" section above).

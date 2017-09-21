@@ -20,11 +20,13 @@
 package io.druid.initialization;
 
 import com.fasterxml.jackson.databind.Module;
+import io.druid.guice.annotations.ExtensionPoint;
 
 import java.util.List;
 
 /**
  */
+@ExtensionPoint
 public interface DruidModule extends com.google.inject.Module
 {
   public List<? extends Module> getJacksonModules();

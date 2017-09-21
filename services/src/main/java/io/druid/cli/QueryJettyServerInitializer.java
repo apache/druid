@@ -19,12 +19,20 @@
 
 package io.druid.cli;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.servlet.GuiceFilter;
+import io.druid.guice.annotations.Json;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
+import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthenticationUtils;
+import io.druid.server.security.Authenticator;
+import io.druid.server.security.AuthenticatorMapper;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -39,6 +47,8 @@ import java.util.Set;
  */
 public class QueryJettyServerInitializer implements JettyServerInitializer
 {
+  private static Logger log = new Logger(QueryJettyServerInitializer.class);
+
   private final List<Handler> extensionHandlers;
 
   @Inject
@@ -52,7 +62,24 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
   {
     final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
+
+    final AuthConfig authConfig = injector.getInstance(AuthConfig.class);
+    final ObjectMapper jsonMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
+    final AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
+
+    List<Authenticator> authenticators = null;
+    AuthenticationUtils.addSecuritySanityCheckFilter(root, jsonMapper);
+    authenticators = authenticatorMapper.getAuthenticatorChain();
+    AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
+
     JettyServerInitUtils.addExtensionFilters(root, injector);
+
+    // Check that requests were authorized before sending responses
+    AuthenticationUtils.addPreResponseAuthorizationCheckFilter(
+        root,
+        authenticators,
+        jsonMapper
+    );
 
     root.addFilter(GuiceFilter.class, "/*", null);
 

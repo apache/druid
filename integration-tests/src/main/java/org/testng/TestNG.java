@@ -329,17 +329,8 @@ public class TestNG
               s.getChildSuites().add(cSuite);
             }
           }
-          catch (FileNotFoundException e) {
-            e.printStackTrace(System.out);
-          }
-          catch (ParserConfigurationException e) {
-            e.printStackTrace(System.out);
-          }
-          catch (SAXException e) {
-            e.printStackTrace(System.out);
-          }
-          catch (IOException e) {
-            e.printStackTrace(System.out);
+          catch (ParserConfigurationException | SAXException | IOException e) {
+            LOGGER.error("", e);
           }
         }
 
@@ -366,17 +357,8 @@ public class TestNG
           }
         }
       }
-      catch (FileNotFoundException e) {
-        e.printStackTrace(System.out);
-      }
-      catch (IOException e) {
-        e.printStackTrace(System.out);
-      }
-      catch (ParserConfigurationException e) {
-        e.printStackTrace(System.out);
-      }
-      catch (SAXException e) {
-        e.printStackTrace(System.out);
+      catch (IOException | SAXException | ParserConfigurationException e) {
+        LOGGER.error("", e);
       }
       catch (Exception ex) {
         // Probably a Yaml exception, unnest it
@@ -453,14 +435,8 @@ public class TestNG
         m_suites.add(xmlSuite);
       }
     }
-    catch (ParserConfigurationException ex) {
-      ex.printStackTrace();
-    }
-    catch (SAXException ex) {
-      ex.printStackTrace();
-    }
-    catch (IOException ex) {
-      ex.printStackTrace();
+    catch (ParserConfigurationException | SAXException | IOException ex) {
+      LOGGER.error("", ex);
     }
   }
 
@@ -1181,15 +1157,10 @@ public class TestNG
     if (!m_hasTests) {
       setStatus(HAS_NO_TEST);
       if (TestRunner.getVerbose() > 1) {
-        System.err.println("[TestNG] No tests found. Nothing was run");
+        LOGGER.error("[TestNG] No tests found. Nothing was run");
         usage();
       }
     }
-  }
-
-  private void p(String string)
-  {
-    System.out.println("[TestNG] " + string);
   }
 
   private void runExecutionListeners(boolean start)
@@ -1231,8 +1202,7 @@ public class TestNG
         );
       }
       catch (Exception ex) {
-        System.err.println("[TestNG] Reporter " + reporter + " failed");
-        ex.printStackTrace(System.err);
+        LOGGER.error("[TestNG] Reporter " + reporter + " failed", ex);
       }
     }
   }
@@ -1505,7 +1475,7 @@ public class TestNG
     }
     catch (TestNGException ex) {
       if (TestRunner.getVerbose() > 1) {
-        ex.printStackTrace(System.out);
+        LOGGER.error("", ex);
       } else {
         error(ex.getMessage());
       }
@@ -1927,7 +1897,7 @@ public class TestNG
 
   static void exitWithError(String msg)
   {
-    System.err.println(msg);
+    LOGGER.error(msg);
     usage();
     System.exit(1);
   }

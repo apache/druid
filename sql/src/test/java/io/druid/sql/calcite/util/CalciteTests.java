@@ -67,6 +67,11 @@ import io.druid.query.metadata.SegmentMetadataQueryConfig;
 import io.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
 import io.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
+import io.druid.query.scan.ScanQuery;
+import io.druid.query.scan.ScanQueryConfig;
+import io.druid.query.scan.ScanQueryEngine;
+import io.druid.query.scan.ScanQueryQueryToolChest;
+import io.druid.query.scan.ScanQueryRunnerFactory;
 import io.druid.query.select.SelectQuery;
 import io.druid.query.select.SelectQueryConfig;
 import io.druid.query.select.SelectQueryEngine;
@@ -88,6 +93,7 @@ import io.druid.server.QueryLifecycleFactory;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.NoopRequestLogger;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.aggregation.SqlAggregator;
 import io.druid.sql.calcite.expression.SqlOperatorConversion;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
@@ -99,6 +105,7 @@ import io.druid.sql.guice.SqlModule;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.DateTime;
+import org.joda.time.chrono.ISOChronology;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -153,6 +160,16 @@ public class CalciteTests
                       new SegmentMetadataQueryConfig("P1W")
                   ),
                   QueryRunnerTestHelper.NOOP_QUERYWATCHER
+              )
+          )
+          .put(
+              ScanQuery.class,
+              new ScanQueryRunnerFactory(
+                  new ScanQueryQueryToolChest(
+                      new ScanQueryConfig(),
+                      new DefaultGenericQueryMetricsFactory(TestHelper.getJsonMapper())
+                  ),
+                  new ScanQueryEngine()
               )
           )
           .put(
@@ -311,8 +328,14 @@ public class CalciteTests
         new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
         new NoopRequestLogger(),
         new ServerConfig(),
-        new AuthConfig()
+        new AuthConfig(),
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER
     );
+  }
+
+  public static ObjectMapper getJsonMapper()
+  {
+    return INJECTOR.getInstance(Key.get(ObjectMapper.class, Json.class));
   }
 
   public static SpecificSegmentsQuerySegmentWalker createMockWalker(final File tmpDir)
@@ -399,7 +422,8 @@ public class CalciteTests
         CalciteTests.createMockQueryLifecycleFactory(walker),
         new TestServerInventoryView(walker.getSegments()),
         plannerConfig,
-        viewManager
+        viewManager,
+        AuthTestUtils.TEST_AUTHENTICATOR_MAPPER
     );
 
     schema.start();
@@ -423,7 +447,7 @@ public class CalciteTests
   {
     return PARSER.parse(
         ImmutableMap.<String, Object>of(
-            "t", new DateTime(t).getMillis(),
+            "t", new DateTime(t, ISOChronology.getInstanceUTC()).getMillis(),
             "dim1", dim1,
             "dim2", dim2,
             "m1", m1

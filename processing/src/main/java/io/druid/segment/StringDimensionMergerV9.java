@@ -40,6 +40,7 @@ import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.ArrayIndexed;
 import io.druid.segment.data.BitmapSerdeFactory;
+import io.druid.segment.data.BitmapValues;
 import io.druid.segment.data.ByteBufferWriter;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressedVSizeIndexedV3Writer;
@@ -48,7 +49,6 @@ import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.Indexed;
-import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIntsWriter;
 import io.druid.segment.data.IndexedRTree;
 import io.druid.segment.data.VSizeIndexedIntsWriter;
@@ -58,6 +58,7 @@ import it.unimi.dsi.fastutil.ints.AbstractIntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterable;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
+import javax.annotation.Nonnull;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -93,6 +94,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
   protected List<IndexableAdapter> adapters;
   protected ProgressIndicator progress;
   protected final IndexSpec indexSpec;
+  protected IndexMerger.DictionaryMergeIterator dictionaryMergeIterator;
 
   public StringDimensionMergerV9(
       String dimensionName,
@@ -167,18 +169,18 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
 
     cardinality = 0;
     if (numMergeIndex > 1) {
-      IndexMerger.DictionaryMergeIterator iterator = new IndexMerger.DictionaryMergeIterator(dimValueLookups, true);
+      dictionaryMergeIterator = new IndexMerger.DictionaryMergeIterator(dimValueLookups, true);
 
-      while (iterator.hasNext()) {
-        dictionaryWriter.write(iterator.next());
+      while (dictionaryMergeIterator.hasNext()) {
+        dictionaryWriter.write(dictionaryMergeIterator.next());
       }
 
       for (int i = 0; i < adapters.size(); i++) {
-        if (dimValueLookups[i] != null && iterator.needConversion(i)) {
-          dimConversions.set(i, iterator.conversions[i]);
+        if (dimValueLookups[i] != null && dictionaryMergeIterator.needConversion(i)) {
+          dimConversions.set(i, dictionaryMergeIterator.conversions[i]);
         }
       }
-      cardinality = iterator.counter;
+      cardinality = dictionaryMergeIterator.counter;
     } else if (numMergeIndex == 1) {
       for (String value : dimValueLookup) {
         dictionaryWriter.write(value);
@@ -294,6 +296,10 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     try (
         Closeable toCloseEncodedValueWriter = encodedValueWriter;
         Closeable toCloseBitmapWriter = bitmapWriter;
+        // We need to free the ByteBuffers allocated by the dictionary merge iterator here,
+        // these buffers are used by dictIdSeeker in mergeBitmaps() below. The iterator is created and only used
+        // in writeMergedValueMetadata(), but the buffers are still used until after mergeBitmaps().
+        Closeable toCloseDictionaryMergeIterator = dictionaryMergeIterator;
         Closeable dimValsMappedUnmapper = new Closeable()
     {
       @Override
@@ -342,7 +348,6 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
         spatialWriter.close();
       }
 
-
       log.info(
           "Completed dim[%s] inverted with cardinality[%,d] in %,d millis.",
           dimensionName,
@@ -366,13 +371,14 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
       GenericIndexedWriter<ImmutableBitmap> bitmapWriter
   ) throws IOException
   {
-    List<ConvertingIndexedInts> convertedInvertedIndexesToMerge = Lists.newArrayListWithCapacity(adapters.size());
+    List<ConvertingBitmapValues> convertedInvertedIndexesToMerge = Lists.newArrayListWithCapacity(adapters.size());
     for (int j = 0; j < adapters.size(); ++j) {
       int seekedDictId = dictIdSeeker[j].seek(dictId);
       if (seekedDictId != IndexSeeker.NOT_EXIST) {
         convertedInvertedIndexesToMerge.add(
-            new ConvertingIndexedInts(
-                adapters.get(j).getBitmapIndex(dimensionName, seekedDictId), segmentRowNumConversions.get(j)
+            new ConvertingBitmapValues(
+                adapters.get(j).getBitmapValues(dimensionName, seekedDictId),
+                segmentRowNumConversions.get(j)
             )
         );
       }
@@ -380,7 +386,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
 
     MutableBitmap mergedIndexes = bmpFactory.makeEmptyMutableBitmap();
     List<IntIterator> convertedInvertedIndexesIterators = new ArrayList<>(convertedInvertedIndexesToMerge.size());
-    for (ConvertingIndexedInts convertedInvertedIndexes : convertedInvertedIndexesToMerge) {
+    for (ConvertingBitmapValues convertedInvertedIndexes : convertedInvertedIndexesToMerge) {
       convertedInvertedIndexesIterators.add(convertedInvertedIndexes.iterator());
     }
 
@@ -534,34 +540,27 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     }
   }
 
-  public static class ConvertingIndexedInts implements IntIterable
+  public static class ConvertingBitmapValues implements IntIterable
   {
-    private final IndexedInts baseIndex;
+    private final BitmapValues baseValues;
     private final IntBuffer conversionBuffer;
 
-    public ConvertingIndexedInts(
-        IndexedInts baseIndex,
-        IntBuffer conversionBuffer
-    )
+    ConvertingBitmapValues(BitmapValues baseValues, IntBuffer conversionBuffer)
     {
-      this.baseIndex = baseIndex;
+      this.baseValues = baseValues;
       this.conversionBuffer = conversionBuffer;
     }
 
     public int size()
     {
-      return baseIndex.size();
+      return baseValues.size();
     }
 
-    public int get(int index)
-    {
-      return conversionBuffer.get(baseIndex.get(index));
-    }
-
+    @Nonnull
     @Override
     public IntIterator iterator()
     {
-      final IntIterator baseIterator = baseIndex.iterator();
+      final IntIterator baseIterator = baseValues.iterator();
       return new AbstractIntIterator()
       {
         @Override
@@ -579,7 +578,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
         @Override
         public int skip(int n)
         {
-          return IntIteratorUtils.skip(this, n);
+          return IntIteratorUtils.skip(baseIterator, n);
         }
       };
     }

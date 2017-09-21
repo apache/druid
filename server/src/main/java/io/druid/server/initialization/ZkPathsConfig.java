@@ -80,6 +80,11 @@ public class ZkPathsConfig
     return (null == coordinatorPath) ? defaultPath("coordinator") : coordinatorPath;
   }
 
+  public String getOverlordPath()
+  {
+    return defaultPath("overlord");
+  }
+
   public String getLoadQueuePath()
   {
     return (null == loadQueuePath) ? defaultPath("loadQueue") : loadQueuePath;
@@ -88,6 +93,11 @@ public class ZkPathsConfig
   public String getConnectorPath()
   {
     return (null == connectorPath) ? defaultPath("connector") : connectorPath;
+  }
+
+  public String getInternalDiscoveryPath()
+  {
+    return defaultPath("internal-discovery");
   }
 
   public String defaultPath(final String subPath)

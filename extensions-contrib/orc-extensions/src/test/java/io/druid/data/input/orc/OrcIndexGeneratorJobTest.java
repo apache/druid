@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
-import io.druid.java.util.common.StringUtils;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
@@ -38,6 +37,8 @@ import io.druid.indexer.HadoopyShardSpec;
 import io.druid.indexer.IndexGeneratorJob;
 import io.druid.indexer.JobHelper;
 import io.druid.indexer.Jobby;
+import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -117,7 +118,7 @@ public class OrcIndexGeneratorJobTest
           "2014102212,i.example.com,963",
           "2014102212,j.example.com,333"
       );
-  private final Interval interval = new Interval("2014-10-22T00:00:00Z/P1D");
+  private final Interval interval = Intervals.of("2014-10-22T00:00:00Z/P1D");
   private File dataRoot;
   private File outputRoot;
   private Integer[][][] shardInfoForEachSegment = new Integer[][][]{{
