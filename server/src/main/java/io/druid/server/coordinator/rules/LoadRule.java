@@ -33,6 +33,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +53,9 @@ public abstract class LoadRule implements Rule
 
   private final Object2IntMap<String> targetReplicants = new Object2IntOpenHashMap<>();
   private final Object2IntMap<String> currentReplicants = new Object2IntOpenHashMap<>();
+
+  // Cache to hold unsued results from strategy call in assignPrimary
+  private final Map<String, ServerHolder> strategyCache = new HashMap<>();
 
   @Override
   public CoordinatorStats run(
@@ -79,6 +83,7 @@ public abstract class LoadRule implements Rule
     finally {
       targetReplicants.clear();
       currentReplicants.clear();
+      strategyCache.clear();
     }
   }
 
@@ -189,15 +194,21 @@ public abstract class LoadRule implements Rule
             "Expected Replicants[%d]",
             tier, segment.getIdentifier(), targetReplicantsInTier
         );
-      } else if (
-          topCandidate == null ||
-          candidate.getServer().getPriority() > topCandidate.getServer().getPriority()
-          ) {
-        topCandidate = candidate;
+      } else {
+        // cache the result for later use.
+        strategyCache.put(tier, candidate);
+        if (
+            topCandidate == null ||
+            candidate.getServer().getPriority() > topCandidate.getServer().getPriority()
+            ) {
+          topCandidate = candidate;
+        }
       }
     }
 
     if (topCandidate != null) {
+      // remove tier for primary replica
+      strategyCache.remove(topCandidate.getServer().getTier());
       topCandidate.getPeon().loadSegment(segment, null);
     }
 
@@ -236,7 +247,7 @@ public abstract class LoadRule implements Rule
     }
   }
 
-  private static int assignReplicasForTier(
+  private int assignReplicasForTier(
       final String tier,
       final int targetReplicantsInTier,
       final int currentReplicantsInTier,
@@ -257,7 +268,13 @@ public abstract class LoadRule implements Rule
         return numAssigned;
       }
 
-      final ServerHolder holder = params.getBalancerStrategy().findNewSegmentHomeReplicator(segment, holders);
+      // Retrieves from cache if available
+      ServerHolder holder = strategyCache.remove(tier);
+      // Does strategy call if not in cache
+      if (holder == null) {
+        holder = params.getBalancerStrategy().findNewSegmentHomeReplicator(segment, holders);
+      }
+
       if (holder == null) {
         log.warn(
             "No available [%s] servers or node capacity to assign segment[%s]! Expected Replicants[%d]",
