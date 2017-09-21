@@ -365,24 +365,22 @@ public class OverlordResource
             // A bit roundabout, but works as a way of figuring out what tasks haven't been handed
             // off to the runner yet:
             final List<Task> allActiveTasks = taskStorageQueryAdapter.getActiveTasks();
-            final List<Task> activeTasks;
-            Function<Task, ResourceAction> raGenerator = new Function<Task, ResourceAction>()
-            {
-              @Override
-              public ResourceAction apply(Task input)
-              {
-                return new ResourceAction(
-                    new Resource(input.getDataSource(), ResourceType.DATASOURCE),
-                    Action.READ
-                );
-              }
+            Function<Task, Iterable<ResourceAction>> raGenerator = task -> {
+              return Lists.newArrayList(
+                  new ResourceAction(
+                      new Resource(task.getDataSource(), ResourceType.DATASOURCE),
+                      Action.READ
+                  )
+              );
             };
 
-            activeTasks = AuthorizationUtils.filterAuthorizedResources(
-                req,
-                allActiveTasks,
-                raGenerator,
-                authorizerMapper
+            final List<Task> activeTasks = Lists.newArrayList(
+                AuthorizationUtils.filterAuthorizedResources(
+                    req,
+                    allActiveTasks,
+                    raGenerator,
+                    authorizerMapper
+                )
             );
 
             final Set<String> runnersKnownTasks = Sets.newHashSet(
@@ -464,34 +462,32 @@ public class OverlordResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getCompleteTasks(@Context final HttpServletRequest req)
   {
-    final List<TaskStatus> recentlyFinishedTasks;
-    Function<TaskStatus, ResourceAction> raGenerator = new Function<TaskStatus, ResourceAction>()
-    {
-      @Override
-      public ResourceAction apply(TaskStatus input)
-      {
-        final String taskId = input.getId();
-        final Optional<Task> optionalTask = taskStorageQueryAdapter.getTask(taskId);
-        if (!optionalTask.isPresent()) {
-          throw new WebApplicationException(
-              Response.serverError().entity(
-                  StringUtils.format("No task information found for task with id: [%s]", taskId)
-              ).build()
-          );
-        }
-
-        return new ResourceAction(
-            new Resource(optionalTask.get().getDataSource(), ResourceType.DATASOURCE),
-            Action.READ
+    Function<TaskStatus, Iterable<ResourceAction>> raGenerator = taskStatus -> {
+      final String taskId = taskStatus.getId();
+      final Optional<Task> optionalTask = taskStorageQueryAdapter.getTask(taskId);
+      if (!optionalTask.isPresent()) {
+        throw new WebApplicationException(
+            Response.serverError().entity(
+                StringUtils.format("No task information found for task with id: [%s]", taskId)
+            ).build()
         );
       }
+
+      return Lists.newArrayList(
+          new ResourceAction(
+              new Resource(optionalTask.get().getDataSource(), ResourceType.DATASOURCE),
+              Action.READ
+          )
+      );
     };
 
-    recentlyFinishedTasks = AuthorizationUtils.filterAuthorizedResources(
-        req,
-        taskStorageQueryAdapter.getRecentlyFinishedTaskStatuses(),
-        raGenerator,
-        authorizerMapper
+    final List<TaskStatus> recentlyFinishedTasks = Lists.newArrayList(
+        AuthorizationUtils.filterAuthorizedResources(
+            req,
+            taskStorageQueryAdapter.getRecentlyFinishedTaskStatuses(),
+            raGenerator,
+            authorizerMapper
+        )
     );
 
     final List<TaskResponseObject> completeTasks = Lists.transform(
@@ -648,33 +644,32 @@ public class OverlordResource
       HttpServletRequest req
   )
   {
-    Function<TaskRunnerWorkItem, ResourceAction> raGenerator = new Function<TaskRunnerWorkItem, ResourceAction>()
-    {
-      @Override
-      public ResourceAction apply(TaskRunnerWorkItem input)
-      {
-        final String taskId = input.getTaskId();
-        final Optional<Task> optionalTask = taskStorageQueryAdapter.getTask(taskId);
-        if (!optionalTask.isPresent()) {
-          throw new WebApplicationException(
-              Response.serverError().entity(
-                  StringUtils.format("No task information found for task with id: [%s]", taskId)
-              ).build()
-          );
-        }
-
-        return new ResourceAction(
-            new Resource(optionalTask.get().getDataSource(), ResourceType.DATASOURCE),
-            Action.READ
+    Function<TaskRunnerWorkItem, Iterable<ResourceAction>> raGenerator = taskRunnerWorkItem -> {
+      final String taskId = taskRunnerWorkItem.getTaskId();
+      final Optional<Task> optionalTask = taskStorageQueryAdapter.getTask(taskId);
+      if (!optionalTask.isPresent()) {
+        throw new WebApplicationException(
+            Response.serverError().entity(
+                StringUtils.format("No task information found for task with id: [%s]", taskId)
+            ).build()
         );
       }
+
+      return Lists.newArrayList(
+          new ResourceAction(
+              new Resource(optionalTask.get().getDataSource(), ResourceType.DATASOURCE),
+              Action.READ
+          )
+      );
     };
 
-    return AuthorizationUtils.filterAuthorizedResources(
-        req,
-        collectionToFilter,
-        raGenerator,
-        authorizerMapper
+    return Lists.newArrayList(
+        AuthorizationUtils.filterAuthorizedResources(
+            req,
+            collectionToFilter,
+            raGenerator,
+            authorizerMapper
+        )
     );
   }
 

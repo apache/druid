@@ -459,9 +459,7 @@ public class IncrementalIndexStorageAdapterTest
                 // and then, cursoring continues in the other thread
                 while (!cursor.isDone()) {
                   IndexedInts row = dimSelector.getRow();
-                  for (int i : row) {
-                    Assert.assertTrue(i < cardinality);
-                  }
+                  row.forEach(i -> Assert.assertTrue(i < cardinality));
                   cursor.advance();
                   rowNumInCursor++;
                 }
@@ -593,17 +591,11 @@ public class IncrementalIndexStorageAdapterTest
                 // and then, cursoring continues in the other thread
                 while (!cursor.isDone()) {
                   IndexedInts rowA = dimSelector1A.getRow();
-                  for (int i : rowA) {
-                    Assert.assertTrue(i < cardinalityA);
-                  }
+                  rowA.forEach(i -> Assert.assertTrue(i < cardinalityA));
                   IndexedInts rowB = dimSelector1B.getRow();
-                  for (int i : rowB) {
-                    Assert.assertTrue(i < cardinalityA);
-                  }
+                  rowB.forEach(i -> Assert.assertTrue(i < cardinalityA));
                   IndexedInts rowC = dimSelector1C.getRow();
-                  for (int i : rowC) {
-                    Assert.assertTrue(i < cardinalityA);
-                  }
+                  rowC.forEach(i -> Assert.assertTrue(i < cardinalityA));
                   IndexedInts rowD = dimSelector2D.getRow();
                   // no null id, so should get empty dims array
                   Assert.assertEquals(0, rowD.size());

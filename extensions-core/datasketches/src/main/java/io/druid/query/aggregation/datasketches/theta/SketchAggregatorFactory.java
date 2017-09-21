@@ -123,7 +123,7 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
       public void fold(ColumnValueSelector selector)
       {
         @SuppressWarnings("unchecked")
-        SketchHolder other = ((ObjectColumnSelector<SketchHolder>) selector).get();
+        SketchHolder other = ((ObjectColumnSelector<SketchHolder>) selector).getObject();
         // SketchAggregatorFactory.combine() delegates to SketchHolder.combine() and it doesn't check for nulls, so we
         // neither.
         other.updateUnion(union);
@@ -138,7 +138,7 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
 
       @Nullable
       @Override
-      public SketchHolder get()
+      public SketchHolder getObject()
       {
         return combined;
       }

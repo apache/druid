@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
@@ -33,6 +34,7 @@ import io.druid.server.http.security.DatasourceResourceFilter;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
+import io.druid.server.security.ResourceAction;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -102,14 +104,20 @@ public class MetadataResource
       );
     }
 
-    List<String> datasourceNamesList = AuthorizationUtils.filterAuthorizedResources(
-        req,
-        dataSourceNamesPreAuth,
-        AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR,
-        authorizerMapper
-    );
+    final Set<String> dataSourceNamesPostAuth = Sets.newTreeSet();
+    Function<String, Iterable<ResourceAction>> raGenerator = datasourceName -> {
+      return Lists.newArrayList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(datasourceName));
+    };
 
-    final Set<String> dataSourceNamesPostAuth = Sets.newTreeSet(datasourceNamesList);
+    Iterables.addAll(
+        dataSourceNamesPostAuth,
+        AuthorizationUtils.filterAuthorizedResources(
+            req,
+            dataSourceNamesPreAuth,
+            raGenerator,
+            authorizerMapper
+        )
+    );
 
     // Cannot do both includeDisabled and full, let includeDisabled take priority
     // Always use dataSourceNamesPostAuth to determine the set of returned dataSources

@@ -54,7 +54,7 @@ public class TimestampBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    Long newTime = TimestampAggregatorFactory.convertLong(timestampSpec, selector.get());
+    Long newTime = TimestampAggregatorFactory.convertLong(timestampSpec, selector.getObject());
     if (newTime != null) {
       long prev = buf.getLong(position);
       buf.putLong(position, comparator.compare(prev, newTime) > 0 ? prev : newTime);

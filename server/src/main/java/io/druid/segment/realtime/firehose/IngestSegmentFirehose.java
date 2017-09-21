@@ -149,7 +149,7 @@ public class IngestSegmentFirehose implements Firehose
                                         for (Map.Entry<String, ObjectColumnSelector> metSelector : metSelectors.entrySet()) {
                                           final String metric = metSelector.getKey();
                                           final ObjectColumnSelector selector = metSelector.getValue();
-                                          theEvent.put(metric, selector.get());
+                                          theEvent.put(metric, selector.getObject());
                                         }
                                         cursor.advance();
                                         return new MapBasedInputRow(timestamp, dims, theEvent);
