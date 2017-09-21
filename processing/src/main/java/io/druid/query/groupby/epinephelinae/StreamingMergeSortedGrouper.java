@@ -38,18 +38,23 @@ import java.util.concurrent.TimeoutException;
 
 /**
  * A streaming grouper which can aggregate sorted inputs.  This grouper can aggregate while its iterator is being
- * consumed.  Also, the aggregation thread and iterating thread can be different.
+ * consumed.  The aggregation thread and the iterating thread can be different.
  *
- * This grouper is backed by a circular array off-heap buffer.  Reading iterator is able to read from an array slot only
- * if the write for that slot is finished.
+ * This grouper is backed by an off-heap circular array.  The reading thread is able to read data from an array slot
+ * only when aggregation for the grouping key correspoing to that slot is finished.  Since the reading and writing
+ * threads cannot access the same array slot at the same time, they can read/write data without contention.
+ *
+ * This class uses the spinlock for waiting for at least one slot to become available when the array is empty or full.
+ * If the array is empty, the reading thread waits for the aggregation for an array slot is finished.  If the array is
+ * full, the writing thread waits for the reading thread to read at least one aggregate from the array.
  */
 public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
 {
   private static final Logger LOG = new Logger(StreamingMergeSortedGrouper.class);
-  private static final long DEFAULT_TIMEOUT_NS = 5_000_000_000L; // 5 seconds
+  private static final long DEFAULT_TIMEOUT_NS = 5_000_000_000L; // 5 seconds. default timeout for spinlock
 
-  // Threashold time for spin locks in increaseWriteIndex() and increaseReadIndex(). Thread.yield() is called for the
-  // waiting thread after this threadhold time.
+  // Threashold time for spinlocks in increaseWriteIndex() and increaseReadIndex(). The waiting thread calls
+  // Thread.yield() after this threadhold time.
   private static final long SPIN_FOR_TIMEOUT_THRESHOLD_NS = 1000L;
 
   private final Supplier<ByteBuffer> bufferSupplier;
@@ -59,37 +64,51 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
   private final int keySize;
   private final int recordSize; // size of (key + all aggregates)
 
-  // Timeout for waiting for a slot to be available for read/write. This is required to prevent the processing
-  // thread from being blocked if the iterator of this grouper is not consumed due to some failures.
+  // Timeout for spinlock. This is required to prevent the writing thread from being blocked if the iterator of this
+  // grouper is not consumed due to some failures which potentially makes the whole system being paused.
   private final long queryTimeoutAtNs;
 
-  // Below variables are initialized when init() is called
+  // Below variables are initialized when init() is called.
   private ByteBuffer buffer;
   private int maxNumSlots;
   private boolean initialized;
 
   /**
-   * Indicate that this grouper consumed the last input or not.  Always set by the writing thread and read by the
+   * Indicate that this grouper consumed the last input or not.  The writing thread must set this value to true by
+   * calling {@link #finish()} when it's done.  This variable is always set by the writing thread and read by the
    * reading thread.
    */
   private volatile boolean finished;
 
   /**
-   * Current write position.  This is always moved ahead of nextReadIndex.
-   * Also, it is always incremented by the writing thread and read by both the writing and the reading threads.
+   * Current write index of the array.  This points to the array slot where the aggregation is currently performed.  Its
+   * initial value is -1 which means any data are not written yet.  Since it's assumed that the input is sorted by the
+   * grouping key, this variable is moved to the next slot whenever a new grouping key is found.  Once it reaches the
+   * last slot of the array, it moves to the first slot.
+   *
+   * This is always moved ahead of {@link #nextReadIndex}.  If the array is full, this variable
+   * cannot be moved until {@link #nextReadIndex} is moved.  See {@link #increaseWriteIndex()} for more details. This
+   * variable is always incremented by the writing thread and read by both the writing and the reading threads.
    */
   private volatile int curWriteIndex;
 
   /**
-   * Next read position.  This can be moved to a position only when write for the position is finished.
-   * Also, it is always incremented by the reading thread and read by both the writing and the reading threads.
+   * Next read index of the array.  This points to the array slot which the reading thread will read next.  Its initial
+   * value is -1 which means any data are not read yet.  This variable can point an array slot only when the aggregation
+   * for that slot is finished.  Once it reaches the last slot of the array, it moves to the first slot.
+   *
+   * This always follows {@link #curWriteIndex}.  If the array is empty, this variable cannot be moved until the
+   * aggregation for at least one grouping key is finished which in turn {@link #curWriteIndex} is moved.  See
+   * {@link #iterator()} for more details.  This variable is always incremented by the reading thread and read by both
+   * the writing and the reading threads.
    */
   private volatile int nextReadIndex;
 
   /**
-   * Returns the minimum buffer capacity required to use this grouper.  This grouper keeps track read/write indexes
-   * and they cannot point the same position at the same time.  Since the read/write indexes circularly, the required
-   * minimum buffer capacity is 3 * record size.
+   * Returns the minimum buffer capacity required for this grouper.  This grouper keeps track read/write indexes
+   * and they cannot point the same array slot at the same time.  Since the read/write indexes move circularly, one
+   * extra slot is needed in addition to the read/write slots.  Finally, the required minimum buffer capacity is
+   * 3 * record size.
    *
    * @return required minimum buffer capacity
    */
@@ -126,6 +145,9 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
       offset += aggregatorFactories[i].getMaxIntermediateSize();
     }
     this.recordSize = offset;
+
+    // queryTimeoutAtMs comes from System.currentTimeMillis(), but we should use System.nanoTime() to check timeout in
+    // this class. See increaseWriteIndex() and increaseReadIndex().
     final long timeoutNs = queryTimeoutAtMs == QueryContexts.NO_TIMEOUT ?
                            DEFAULT_TIMEOUT_NS :
                            TimeUnit.MILLISECONDS.toNanos(queryTimeoutAtMs - System.currentTimeMillis());
@@ -179,6 +201,8 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
 
       final int prevRecordOffset = curWriteIndex * recordSize;
       if (curWriteIndex == -1 || !keyEquals(keyBuffer, buffer, prevRecordOffset)) {
+        // Initialize a new slot for the new key. This may be potentially blocked if the array is full until at least
+        // one slot becomes available.
         initNewSlot(keyBuffer);
       }
 
@@ -195,8 +219,18 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
     }
   }
 
+  /**
+   * Checks two keys contained in the given buffers are same.
+   *
+   * @param curKeyBuffer the buffer for the given key from {@link #aggregate(Object)}
+   * @param buffer       the whole array buffer
+   * @param bufferOffset the key offset of the buffer
+   *
+   * @return true if the two buffers are same.
+   */
   private boolean keyEquals(ByteBuffer curKeyBuffer, ByteBuffer buffer, int bufferOffset)
   {
+    // Since this method is frequently called per each input row, the compare performance matters.
     int i = 0;
     for (; i + Long.BYTES <= keySize; i += Long.BYTES) {
       if (curKeyBuffer.getLong(i) != buffer.getLong(bufferOffset + i)) {
@@ -205,6 +239,7 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
     }
 
     if (i + Integer.BYTES <= keySize) {
+      // This can be called at most once because we already compared using getLong() in the above.
       if (curKeyBuffer.getInt(i) != buffer.getInt(bufferOffset + i)) {
         return false;
       }
@@ -220,8 +255,13 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
     return true;
   }
 
+  /**
+   * Initialize a new slot for a new grouping key.  This may be potentially blocked if the array is full until at least
+   * one slot becomes available.
+   */
   private void initNewSlot(ByteBuffer newKey)
   {
+    // Wait if the array is full and increase curWriteIndex
     increaseWriteIndex();
 
     final int recordOffset = recordSize * curWriteIndex;
@@ -234,8 +274,7 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
   }
 
   /**
-   * Wait for {@link #nextReadIndex} to be moved if necessary and move {@link #curWriteIndex}.  {@link #nextReadIndex}
-   * is checked in while loops instead of waiting using a lock to avoid frequent thread park.
+   * Wait for {@link #nextReadIndex} to be moved if necessary and move {@link #curWriteIndex}.
    */
   private void increaseWriteIndex()
   {
@@ -243,12 +282,23 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
     final long spinTimeoutAt = startAt + SPIN_FOR_TIMEOUT_THRESHOLD_NS;
     long now = startAt;
 
+    // In the below, we check that the array is full and wait for at least one slot to become available. This is done
+    // in a while loop instead of using a lock to avoid frequent thread park.
+    //
+    // nextReadIndex is a volatile variable and the changes on it should be continuously checked until they are seen.
+    // See the following links.
+    // * http://docs.oracle.com/javase/specs/jls/se7/html/jls-8.html#jls-8.3.1.4
+    // * http://docs.oracle.com/javase/specs/jls/se7/html/jls-17.html#jls-17.4.5
+    // * https://stackoverflow.com/questions/11761552/detailed-semantics-of-volatile-regarding-timeliness-of-visibility
+
     if (curWriteIndex == maxNumSlots - 1) {
-      // Should wait for the reading thread to start reading only if the writing thread should overwrite the first slot.
+      // We additionally check that nextReadIndex is -1 here because the writing thread should wait for the reading
+      // thread to start reading only when the writing thread tries to overwrite the first slot for the first time.
       while ((nextReadIndex == -1 || nextReadIndex == 0) && !Thread.currentThread().isInterrupted()) {
         if (now >= queryTimeoutAtNs) {
           throw new RuntimeException(new TimeoutException());
         }
+        // Thread.yield() should not be called from the very beginning
         if (now >= spinTimeoutAt) {
           Thread.yield();
         }
@@ -261,6 +311,7 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
         if (now >= queryTimeoutAtNs) {
           throw new RuntimeException(new TimeoutException());
         }
+        // Thread.yield() should not be called from the very beginning
         if (now >= spinTimeoutAt) {
           Thread.yield();
         }
@@ -301,9 +352,9 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
   }
 
   /**
-   * Return a sorted iterator.  This method can be called safely while writing and iterating thread and writing thread
-   * can be different.  The result iterator always returns sorted results.  This method should be called only one time
-   * per grouper.
+   * Return a sorted iterator.  This method can be called safely while writing, and the iterating thread and the writing
+   * thread can be different.  The result iterator always returns sorted results.  This method should be called only one
+   * time per grouper.
    *
    * @return a sorted iterator
    */
@@ -316,16 +367,24 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
     return new CloseableIterator<Entry<KeyType>>()
     {
       {
-        // Waits for some data to be ready
+        // Wait for some data to be ready and initialize nextReadIndex.
         increaseReadIndexTo(0);
       }
 
       @Override
       public boolean hasNext()
       {
+        // Once finished becomes true, curWriteIndex isn't changed anymore and thus remainig() can be computed safely
+        // because nextReadIndex is changed only by the reading thread.
         return !finished || remaining() > 0;
       }
 
+      /**
+       * Calculate the number of remaining items in the array.  Must be called only when
+       * {@link StreamingMergeSortedGrouper#finished} is true.
+       *
+       * @return the number of remaining items
+       */
       private int remaining()
       {
         if (curWriteIndex >= nextReadIndex) {
@@ -351,21 +410,38 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
         }
 
         final int increaseTo = nextReadIndex == maxNumSlots - 1 ? 0 : nextReadIndex + 1;
+        // Wait if the array is empty until at least one slot becomes available for read, and then increase
+        // nextReadIndex.
         increaseReadIndexTo(increaseTo);
 
         return new Entry<>(key, values);
       }
 
+      /**
+       * Wait for {@link StreamingMergeSortedGrouper#curWriteIndex} to be moved if necessary and move
+       * {@link StreamingMergeSortedGrouper#nextReadIndex}.
+       *
+       * @param target the target index {@link StreamingMergeSortedGrouper#nextReadIndex} will move to
+       */
       private void increaseReadIndexTo(int target)
       {
         final long startAt = System.nanoTime();
         final long spinTimeoutAt = startAt + SPIN_FOR_TIMEOUT_THRESHOLD_NS;
         long now = startAt;
 
+        // In the below, we check that the array is empty and wait for at least one slot to become available. This is
+        // done in a while loop instead of using a lock to avoid frequent thread park.
+        //
+        // curWriteIndex is a volatile variable and the changes on it should be continuously checked until they are seen.
+        // See the following links.
+        // * http://docs.oracle.com/javase/specs/jls/se7/html/jls-8.html#jls-8.3.1.4
+        // * http://docs.oracle.com/javase/specs/jls/se7/html/jls-17.html#jls-17.4.5
+        // * https://stackoverflow.com/questions/11761552/detailed-semantics-of-volatile-regarding-timeliness-of-visibility
         while ((!isReady() || target == curWriteIndex) && !finished && !Thread.currentThread().isInterrupted()) {
           if (now >= queryTimeoutAtNs) {
             throw new RuntimeException(new TimeoutException());
           }
+          // Thread.yield() should not be called from the very beginning
           if (now >= spinTimeoutAt) {
             Thread.yield();
           }
