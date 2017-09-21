@@ -54,7 +54,7 @@ public abstract class LoadRule implements Rule
   private final Object2IntMap<String> targetReplicants = new Object2IntOpenHashMap<>();
   private final Object2IntMap<String> currentReplicants = new Object2IntOpenHashMap<>();
 
-  // Cache to hold unsued results from strategy call in assignPrimary
+  // Cache to hold unused results from strategy call in assignPrimary
   private final Map<String, ServerHolder> strategyCache = new HashMap<>();
 
   @Override
