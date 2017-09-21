@@ -153,13 +153,9 @@ public abstract class LoadRule implements Rule
     return queue.stream().filter(predicate).collect(Collectors.toList());
   }
 
-  /***
+  /**
    * Iterates through each tier and find the respective segment homes; with the found segment homes, selects the one
    * with the highest priority to be the holder for the primary replica.
-   *
-   * @param params
-   * @param segment
-   * @return
    */
   @Nullable
   private ServerHolder assignPrimary(
@@ -197,10 +193,8 @@ public abstract class LoadRule implements Rule
       } else {
         // cache the result for later use.
         strategyCache.put(tier, candidate);
-        if (
-            topCandidate == null ||
-            candidate.getServer().getPriority() > topCandidate.getServer().getPriority()
-            ) {
+        if (topCandidate == null ||
+            candidate.getServer().getPriority() > topCandidate.getServer().getPriority()) {
           topCandidate = candidate;
         }
       }
@@ -215,11 +209,7 @@ public abstract class LoadRule implements Rule
     return topCandidate;
   }
 
-  /***
-   *
-   * @param params
-   * @param segment
-   * @param stats
+  /**
    * @param tierToSkip if not null, this tier will be skipped from doing assignment, use when primary replica was
    *                   assgined.
    */
