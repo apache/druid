@@ -70,6 +70,7 @@ import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
+import io.druid.segment.realtime.appenderator.SegmentAllocator;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
 import io.druid.segment.realtime.plumber.Sink;
@@ -167,7 +168,7 @@ public class RealtimeManagerTest
         {
           @Override
           public Plumber findPlumber(
-              DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
+              SegmentAllocator segmentAllocator, DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
           )
           {
             return plumber;
@@ -181,7 +182,7 @@ public class RealtimeManagerTest
         {
           @Override
           public Plumber findPlumber(
-              DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
+              SegmentAllocator segmentAllocator, DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
           )
           {
             return plumber2;
@@ -373,12 +374,12 @@ public class RealtimeManagerTest
             return firehose;
           }
         },
-        (schema, config, metrics) -> plumber,
+        (segmentAllocator, schema, config, metrics) -> plumber,
         null
     );
     RealtimeIOConfig ioConfig2 = new RealtimeIOConfig(
         null,
-        (schema, config, metrics) -> plumber2,
+        (segmentAllocator, schema, config, metrics) -> plumber2,
         (parser, arg) -> firehoseV2
     );
 
@@ -417,7 +418,7 @@ public class RealtimeManagerTest
             return firehose;
           }
         },
-        (schema, config, metrics) -> plumber,
+        (segmentAllocator, schema, config, metrics) -> plumber,
         null
     );
 
@@ -1043,7 +1044,7 @@ public class RealtimeManagerTest
     }
 
     @Override
-    public int add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
+    public int add(InputRow row, String sequenceName, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
     {
       if (row == null) {
         return -1;

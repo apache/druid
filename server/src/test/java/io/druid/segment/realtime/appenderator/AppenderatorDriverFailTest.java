@@ -41,7 +41,6 @@ import io.druid.query.SegmentDescriptor;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.appenderator.AppenderatorDriverTest.TestCommitterSupplier;
-import io.druid.segment.realtime.appenderator.AppenderatorDriverTest.TestSegmentAllocator;
 import io.druid.segment.realtime.appenderator.AppenderatorDriverTest.TestSegmentHandoffNotifierFactory;
 import io.druid.timeline.DataSegment;
 import org.hamcrest.CoreMatchers;
@@ -99,7 +98,7 @@ public class AppenderatorDriverFailTest
   @Before
   public void setUp()
   {
-    allocator = new TestSegmentAllocator(DATA_SOURCE, Granularities.HOUR);
+    allocator = new TestSegmentAllocator(DATA_SOURCE, "abc123", Granularities.HOUR);
     segmentHandoffNotifierFactory = new TestSegmentHandoffNotifierFactory();
   }
 

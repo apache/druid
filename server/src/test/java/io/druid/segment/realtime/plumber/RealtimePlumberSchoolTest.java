@@ -56,8 +56,11 @@ import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.FireDepartmentTest;
 import io.druid.segment.realtime.FireHydrant;
 import io.druid.segment.realtime.SegmentPublisher;
+import io.druid.segment.realtime.appenderator.SegmentAllocator;
+import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
+import io.druid.timeline.partition.NoneShardSpec;
 import org.apache.commons.io.FileUtils;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -98,6 +101,9 @@ public class RealtimePlumberSchoolTest
   private DataSchema schema2;
   private FireDepartmentMetrics metrics;
   private File tmpDir;
+  private SegmentAllocator segmentAllocator;
+  private SegmentIdentifier segmentIdentifier;
+  private String sequenceName;
 
   public RealtimePlumberSchoolTest(RejectionPolicyFactory rejectionPolicy)
   {
@@ -183,6 +189,8 @@ public class RealtimePlumberSchoolTest
         )
     ).andReturn(true).anyTimes();
 
+    segmentAllocator = EasyMock.createMock(SegmentAllocator.class);
+
     emitter = EasyMock.createMock(ServiceEmitter.class);
 
     EasyMock.replay(announcer, segmentPublisher, dataSegmentPusher, handoffNotifierFactory, handoffNotifier, emitter);
@@ -221,7 +229,9 @@ public class RealtimePlumberSchoolTest
     );
 
     metrics = new FireDepartmentMetrics();
-    plumber = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema, tuningConfig, metrics);
+    plumber = (RealtimePlumber) realtimePlumberSchool.findPlumber(segmentAllocator, schema, tuningConfig, metrics);
+
+    sequenceName = String.valueOf(System.nanoTime());
   }
 
   @After
@@ -249,17 +259,25 @@ public class RealtimePlumberSchoolTest
     final Object commitMetadata = "dummyCommitMetadata";
     testPersist(commitMetadata);
 
-    plumber = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema, tuningConfig, metrics);
+    plumber = (RealtimePlumber) realtimePlumberSchool.findPlumber(segmentAllocator, schema, tuningConfig, metrics);
     Assert.assertEquals(commitMetadata, plumber.startJob());
   }
 
   private void testPersist(final Object commitMetadata) throws Exception
   {
+    Interval segmentInterval = Intervals.utc(0, TimeUnit.HOURS.toMillis(1));
+    segmentIdentifier = new SegmentIdentifier(
+        schema.getDataSource(),
+        segmentInterval,
+        "version",
+        tuningConfig.getShardSpec()
+    );
+
     plumber.getSinks()
            .put(
-               0L,
+               segmentIdentifier,
                new Sink(
-                   Intervals.utc(0, TimeUnit.HOURS.toMillis(1)),
+                   segmentInterval,
                    schema,
                    tuningConfig.getShardSpec(),
                    DateTimes.of("2014-12-01T12:34:56.789").toString(),
@@ -273,6 +291,11 @@ public class RealtimePlumberSchoolTest
     EasyMock.expect(row.getTimestampFromEpoch()).andReturn(0L);
     EasyMock.expect(row.getDimensions()).andReturn(new ArrayList<String>());
     EasyMock.replay(row);
+
+    EasyMock.expect(
+        segmentAllocator.allocate(EasyMock.anyObject(InputRow.class), EasyMock.anyString(), EasyMock.anyString())
+    ).andReturn(segmentIdentifier);
+    EasyMock.replay(segmentAllocator);
 
     final CountDownLatch doneSignal = new CountDownLatch(1);
 
@@ -290,7 +313,7 @@ public class RealtimePlumberSchoolTest
         doneSignal.countDown();
       }
     };
-    plumber.add(row, Suppliers.ofInstance(committer));
+    plumber.add(row, sequenceName, Suppliers.ofInstance(committer));
     plumber.persist(committer);
 
     doneSignal.await();
@@ -302,11 +325,23 @@ public class RealtimePlumberSchoolTest
   @Test(timeout = 60000)
   public void testPersistFails() throws Exception
   {
+    Interval segmentInterval = Intervals.utc(0, TimeUnit.HOURS.toMillis(1));
+    segmentIdentifier = new SegmentIdentifier(
+        schema.getDataSource(),
+        segmentInterval,
+        "version",
+        tuningConfig.getShardSpec()
+    );
+    EasyMock.expect(
+        segmentAllocator.allocate(EasyMock.anyObject(InputRow.class), EasyMock.anyString(), EasyMock.anyString())
+    ).andReturn(segmentIdentifier);
+    EasyMock.replay(segmentAllocator);
+
     plumber.getSinks()
            .put(
-               0L,
+               segmentIdentifier,
                new Sink(
-                   Intervals.utc(0, TimeUnit.HOURS.toMillis(1)),
+                   segmentInterval,
                    schema,
                    tuningConfig.getShardSpec(),
                    DateTimes.of("2014-12-01T12:34:56.789").toString(),
@@ -319,7 +354,7 @@ public class RealtimePlumberSchoolTest
     EasyMock.expect(row.getTimestampFromEpoch()).andReturn(0L);
     EasyMock.expect(row.getDimensions()).andReturn(new ArrayList<String>());
     EasyMock.replay(row);
-    plumber.add(row, Suppliers.ofInstance(Committers.nil()));
+    plumber.add(row, sequenceName, Suppliers.ofInstance(Committers.nil()));
 
     final CountDownLatch doneSignal = new CountDownLatch(1);
 
@@ -358,10 +393,19 @@ public class RealtimePlumberSchoolTest
   {
     Interval testInterval = new Interval(DateTimes.of("1970-01-01"), DateTimes.of("1971-01-01"));
 
-    RealtimePlumber plumber2 = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema2, tuningConfig, metrics);
+    segmentIdentifier = new SegmentIdentifier(schema2.getDataSource(), testInterval, "test", NoneShardSpec.instance());
+
+    EasyMock.expect(
+        segmentAllocator.allocate(EasyMock.anyObject(InputRow.class), EasyMock.anyString(), EasyMock.anyString())
+    ).andReturn(
+        segmentIdentifier
+    );
+    EasyMock.replay(segmentAllocator);
+
+    RealtimePlumber plumber2 = (RealtimePlumber) realtimePlumberSchool.findPlumber(segmentAllocator, schema2, tuningConfig, metrics);
     plumber2.getSinks()
             .put(
-                0L,
+                segmentIdentifier,
                 new Sink(
                     testInterval,
                     schema2,
@@ -387,11 +431,11 @@ public class RealtimePlumberSchoolTest
         doneSignal.countDown();
       }
     };
-    plumber2.add(getTestInputRow("1970-01-01"), Suppliers.ofInstance(committer));
-    plumber2.add(getTestInputRow("1970-02-01"), Suppliers.ofInstance(committer));
-    plumber2.add(getTestInputRow("1970-03-01"), Suppliers.ofInstance(committer));
-    plumber2.add(getTestInputRow("1970-04-01"), Suppliers.ofInstance(committer));
-    plumber2.add(getTestInputRow("1970-05-01"), Suppliers.ofInstance(committer));
+    plumber2.add(getTestInputRow("1970-01-01"), sequenceName, Suppliers.ofInstance(committer));
+    plumber2.add(getTestInputRow("1970-02-01"), sequenceName, Suppliers.ofInstance(committer));
+    plumber2.add(getTestInputRow("1970-03-01"), sequenceName, Suppliers.ofInstance(committer));
+    plumber2.add(getTestInputRow("1970-04-01"), sequenceName, Suppliers.ofInstance(committer));
+    plumber2.add(getTestInputRow("1970-05-01"), sequenceName, Suppliers.ofInstance(committer));
 
     plumber2.persist(committer);
 
@@ -410,17 +454,18 @@ public class RealtimePlumberSchoolTest
     FileUtils.deleteDirectory(new File(persistDir, "1"));
     FileUtils.deleteDirectory(new File(persistDir, "3"));
     RealtimePlumber restoredPlumber = (RealtimePlumber) realtimePlumberSchool.findPlumber(
+        segmentAllocator,
         schema2,
         tuningConfig,
         metrics
     );
     restoredPlumber.bootstrapSinksFromDisk();
 
-    Map<Long, Sink> sinks = restoredPlumber.getSinks();
+    Map<SegmentIdentifier, Sink> sinks = restoredPlumber.getSinks();
     Assert.assertEquals(1, sinks.size());
 
 
-    List<FireHydrant> hydrants = Lists.newArrayList(sinks.get(new Long(0)));
+    List<FireHydrant> hydrants = Lists.newArrayList(sinks.get(segmentIdentifier));
     DateTime startTime = DateTimes.of("1970-01-01T00:00:00.000Z");
     Interval expectedInterval = new Interval(startTime, DateTimes.of("1971-01-01T00:00:00.000Z"));
     Assert.assertEquals(0, hydrants.get(0).getCount());
@@ -444,6 +489,7 @@ public class RealtimePlumberSchoolTest
     FileUtils.deleteDirectory(new File(persistDir, "2"));
     FileUtils.deleteDirectory(new File(persistDir, "4"));
     RealtimePlumber restoredPlumber2 = (RealtimePlumber) realtimePlumberSchool.findPlumber(
+        segmentAllocator,
         schema2,
         tuningConfig,
         metrics
@@ -473,9 +519,20 @@ public class RealtimePlumberSchoolTest
 
     QueryableIndex qindex;
     FireHydrant hydrant;
-    Map<Long, Sink> sinks;
+    Map<SegmentIdentifier, Sink> sinks;
 
-    RealtimePlumber plumber = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema2, tuningConfig, metrics);
+    Interval testInterval = new Interval(DateTimes.of("1970-01-01"), DateTimes.of("1971-01-01"));
+
+    segmentIdentifier = new SegmentIdentifier(schema2.getDataSource(), testInterval, "test", NoneShardSpec.instance());
+
+    EasyMock.expect(
+        segmentAllocator.allocate(EasyMock.anyObject(InputRow.class), EasyMock.anyString(), EasyMock.anyString())
+    ).andReturn(
+        segmentIdentifier
+    );
+    EasyMock.replay(segmentAllocator);
+
+    RealtimePlumber plumber = (RealtimePlumber) realtimePlumberSchool.findPlumber(segmentAllocator, schema2, tuningConfig, metrics);
     Assert.assertNull(plumber.startJob());
 
     final CountDownLatch doneSignal = new CountDownLatch(1);
@@ -501,6 +558,7 @@ public class RealtimePlumberSchoolTest
             ImmutableList.of("dimD"),
             ImmutableList.of("1")
         ),
+        sequenceName,
         Suppliers.ofInstance(committer)
     );
     plumber.add(
@@ -509,6 +567,7 @@ public class RealtimePlumberSchoolTest
             ImmutableList.of("dimC"),
             ImmutableList.of("1")
         ),
+        sequenceName,
         Suppliers.ofInstance(committer)
     );
     plumber.add(
@@ -517,6 +576,7 @@ public class RealtimePlumberSchoolTest
             ImmutableList.of("dimA"),
             ImmutableList.of("1")
         ),
+        sequenceName,
         Suppliers.ofInstance(committer)
     );
     plumber.add(
@@ -525,6 +585,7 @@ public class RealtimePlumberSchoolTest
             ImmutableList.of("dimB"),
             ImmutableList.of("1")
         ),
+        sequenceName,
         Suppliers.ofInstance(committer)
     );
     plumber.add(
@@ -533,6 +594,7 @@ public class RealtimePlumberSchoolTest
             ImmutableList.of("dimE"),
             ImmutableList.of("1")
         ),
+        sequenceName,
         Suppliers.ofInstance(committer)
     );
     plumber.add(
@@ -541,6 +603,7 @@ public class RealtimePlumberSchoolTest
             ImmutableList.of("dimA", "dimB", "dimC", "dimD", "dimE"),
             ImmutableList.of("1")
         ),
+        sequenceName,
         Suppliers.ofInstance(committer)
     );
 
@@ -552,6 +615,7 @@ public class RealtimePlumberSchoolTest
     plumber.finishJob();
 
     RealtimePlumber restoredPlumber = (RealtimePlumber) realtimePlumberSchool.findPlumber(
+        segmentAllocator,
         schema2,
         tuningConfig,
         metrics
@@ -560,7 +624,7 @@ public class RealtimePlumberSchoolTest
 
     sinks = restoredPlumber.getSinks();
     Assert.assertEquals(1, sinks.size());
-    List<FireHydrant> hydrants = Lists.newArrayList(sinks.get(0L));
+    List<FireHydrant> hydrants = Lists.newArrayList(sinks.get(segmentIdentifier));
 
     for (int i = 0; i < hydrants.size(); i++) {
       hydrant = hydrants.get(i);

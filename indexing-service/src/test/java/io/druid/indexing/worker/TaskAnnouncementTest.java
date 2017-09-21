@@ -33,6 +33,7 @@ import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentMetrics;
+import io.druid.segment.realtime.appenderator.SegmentAllocator;
 import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
@@ -64,7 +65,7 @@ public class TaskAnnouncementTest
             {
               @Override
               public Plumber findPlumber(
-                  DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
+                  SegmentAllocator segmentAllocator, DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
               )
               {
                 return null;

@@ -37,6 +37,8 @@ import io.druid.segment.IndexMerger;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireDepartmentMetrics;
+import io.druid.segment.realtime.appenderator.SegmentAllocator;
+import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -73,8 +75,8 @@ public class FlushingPlumber extends RealtimePlumber
       IndexIO indexIO,
       Cache cache,
       CacheConfig cacheConfig,
-      ObjectMapper objectMapper
-
+      ObjectMapper objectMapper,
+      SegmentAllocator segmentAllocator
   )
   {
     super(
@@ -92,7 +94,8 @@ public class FlushingPlumber extends RealtimePlumber
         indexIO,
         cache,
         cacheConfig,
-        objectMapper
+        objectMapper,
+        segmentAllocator
     );
 
     this.flushDuration = flushDuration;
@@ -117,7 +120,7 @@ public class FlushingPlumber extends RealtimePlumber
     return retVal;
   }
 
-  protected void flushAfterDuration(final long truncatedTime, final Sink sink)
+  protected void flushAfterDuration(final SegmentIdentifier identifier, final Sink sink)
   {
     log.info(
         "Abandoning segment %s at %s",
@@ -134,7 +137,7 @@ public class FlushingPlumber extends RealtimePlumber
           public ScheduledExecutors.Signal call() throws Exception
           {
             log.info("Abandoning segment %s", sink.getSegment().getIdentifier());
-            abandonSegment(truncatedTime, sink);
+            abandonSegment(identifier, sink);
             return ScheduledExecutors.Signal.STOP;
           }
         }
@@ -185,16 +188,16 @@ public class FlushingPlumber extends RealtimePlumber
                     getRejectionPolicy().getCurrMaxTime().minus(windowMillis)
                 ).getMillis();
 
-                List<Map.Entry<Long, Sink>> sinksToPush = Lists.newArrayList();
-                for (Map.Entry<Long, Sink> entry : getSinks().entrySet()) {
-                  final Long intervalStart = entry.getKey();
-                  if (intervalStart < minTimestamp) {
+                List<Map.Entry<SegmentIdentifier, Sink>> sinksToPush = Lists.newArrayList();
+                for (Map.Entry<SegmentIdentifier, Sink> entry : getSinks().entrySet()) {
+                  DateTime intervalStart = entry.getKey().getInterval().getStart();
+                  if (intervalStart.isBefore(minTimestamp)) {
                     log.info("Adding entry[%s] to flush.", entry);
                     sinksToPush.add(entry);
                   }
                 }
 
-                for (final Map.Entry<Long, Sink> entry : sinksToPush) {
+                for (final Map.Entry<SegmentIdentifier, Sink> entry : sinksToPush) {
                   flushAfterDuration(entry.getKey(), entry.getValue());
                 }
 
@@ -214,7 +217,7 @@ public class FlushingPlumber extends RealtimePlumber
   {
     log.info("Stopping job");
 
-    for (final Map.Entry<Long, Sink> entry : getSinks().entrySet()) {
+    for (final Map.Entry<SegmentIdentifier, Sink> entry : getSinks().entrySet()) {
       abandonSegment(entry.getKey(), entry.getValue());
     }
     shutdownExecutors();

@@ -112,17 +112,17 @@ public class AppenderatorPlumberTest
     commitMetadata.put("x", "1");
     Assert.assertEquals(
         1,
-        plumber.add(rows[0], null));        
+        plumber.add(rows[0], null, null));
 
     commitMetadata.put("x", "2");
     Assert.assertEquals(
         2,
-        plumber.add(rows[1], null));        
+        plumber.add(rows[1], null, null));
 
     commitMetadata.put("x", "3");
     Assert.assertEquals(
         3,
-        plumber.add(rows[2], null));
+        plumber.add(rows[2], null, null));
 
     
     Assert.assertEquals(1, plumber.getSegmentsView().size());

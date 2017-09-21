@@ -38,12 +38,13 @@ public interface Plumber
 
   /**
    * @param row               the row to insert
+   * @param sequenceName      sequenceName for this row's segment
    * @param committerSupplier supplier of a committer associated with all data that has been added, including this row
    *
    * @return - positive numbers indicate how many summarized rows exist in the index for that timestamp,
    * -1 means a row was thrown away because it was too late
    */
-  int add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException;
+  int add(InputRow row, String sequenceName, Supplier<Committer> committerSupplier) throws IndexSizeExceededException;
 
   <T> QueryRunner<T> getQueryRunner(Query<T> query);
 
