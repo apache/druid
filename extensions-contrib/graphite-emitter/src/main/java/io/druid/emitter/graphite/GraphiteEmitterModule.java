@@ -61,13 +61,9 @@ public class GraphiteEmitterModule implements DruidModule
     List<Emitter> emitters = ImmutableList.copyOf(
         Lists.transform(
             graphiteEmitterConfig.getAlertEmitters(),
-            new Function<String, Emitter>()
+            alertEmitterName ->
             {
-              @Override
-              public Emitter apply(String s)
-              {
-                return injector.getInstance(Key.get(Emitter.class, Names.named(s)));
-              }
+              return injector.getInstance(Key.get(Emitter.class, Names.named(alertEmitterName)));
             }
         )
     );
@@ -75,13 +71,9 @@ public class GraphiteEmitterModule implements DruidModule
     List<Emitter> requestLogEmitters = ImmutableList.copyOf(
         Lists.transform(
             graphiteEmitterConfig.getRequestLogEmitters(),
-            new Function<String, Emitter>()
+            requestLogEmitterName ->
             {
-              @Override
-              public Emitter apply(String s)
-              {
-                return injector.getInstance(Key.get(Emitter.class, Names.named(s)));
-              }
+              return injector.getInstance(Key.get(Emitter.class, Names.named(requestLogEmitterName)));
             }
         )
     );
