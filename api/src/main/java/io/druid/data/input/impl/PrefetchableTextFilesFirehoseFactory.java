@@ -238,13 +238,12 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
            */
           private void fetch() throws Exception
           {
-            for (int i = nextFetchIndex; i < objects.size() && fetchedBytes.get() <= maxFetchCapacityBytes; i++) {
-              final ObjectType object = objects.get(i);
-              LOG.info("Fetching [%d]th object[%s], fetchedBytes[%d]", i, object, fetchedBytes.get());
+            for (; nextFetchIndex < objects.size() && fetchedBytes.get() <= maxFetchCapacityBytes; nextFetchIndex++) {
+              final ObjectType object = objects.get(nextFetchIndex);
+              LOG.info("Fetching [%d]th object[%s], fetchedBytes[%d]", nextFetchIndex, object, fetchedBytes.get());
               final File outFile = File.createTempFile(FETCH_FILE_PREFIX, null, temporaryDirectory);
               fetchedBytes.addAndGet(download(object, outFile, 0));
               fetchFiles.put(new FetchedFile(object, outFile, getFileCloser(outFile, fetchedBytes)));
-              nextFetchIndex++;
             }
           }
 
@@ -293,9 +292,8 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
               throw new NoSuchElementException();
             }
 
-            // If fetch() fails, hasNext() always returns true because nextFetchIndex must be smaller than the number
-            // of objects, which means next() is always called. The below method checks that fetch() threw an exception
-            // and propagates it if exists.
+            // If fetch() fails, hasNext() always returns true and next() is always called. The below method checks that
+            // fetch() threw an exception and propagates it if exists.
             checkFetchException(false);
 
             final OpenedObject openedObject;
@@ -375,15 +373,18 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
           private OpenedObject openObjectFromRemote() throws IOException
           {
             final OpenedObject openedObject;
-            final Closeable resourceCloser = getNoopCloser();
 
-            if (totalCachedBytes < maxCacheCapacityBytes) {
+            if (fetchFiles.size() > 0) {
+              // If fetchFiles is not empty even though prefetching is disabled, they should be cached files.
+              // We use them first.
+              openedObject = new OpenedObject(fetchFiles.poll());
+            } else if (totalCachedBytes < maxCacheCapacityBytes) {
               try {
                 // Since maxFetchCapacityBytes is 0, at most one file is fetched.
                 fetch();
                 FetchedFile fetchedFile = fetchFiles.poll();
                 if (fetchedFile == null) {
-                  throw new ISE("Cannot fetch object[%s]", objects.get(nextFetchIndex));
+                  throw new ISE("Cannot fetch object[%s]", objects.get(nextFetchIndex - 1));
                 }
                 final FetchedFile maybeCached = cacheIfPossible(fetchedFile);
                 openedObject = new OpenedObject(maybeCached);
@@ -392,9 +393,10 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
                 throw Throwables.propagate(e);
               }
             } else {
-              final ObjectType object = objects.get(nextFetchIndex++);
-              LOG.info("Reading object[%s]", object);
-              openedObject = new OpenedObject(object, openObjectStream(object), resourceCloser);
+              final ObjectType object = objects.get(nextFetchIndex);
+              LOG.info("Reading [%d]the object[%s]", nextFetchIndex, object);
+              nextFetchIndex++;
+              openedObject = new OpenedObject(object, openObjectStream(object), getNoopCloser());
             }
             return openedObject;
           }

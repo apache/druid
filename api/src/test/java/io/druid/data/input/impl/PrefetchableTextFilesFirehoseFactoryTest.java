@@ -279,10 +279,27 @@ public class PrefetchableTextFilesFirehoseFactoryTest
   }
 
   @Test
-  public void testReconnect() throws IOException
+  public void testReconnectWithCacheAndPrefetch() throws IOException
   {
     final TestPrefetchableTextFilesFirehoseFactory factory =
         TestPrefetchableTextFilesFirehoseFactory.of(testDir);
+
+    for (int i = 0; i < 5; i++) {
+      final List<Row> rows = new ArrayList<>();
+      try (Firehose firehose = factory.connect(parser, firehoseTempDir)) {
+        while (firehose.hasMore()) {
+          rows.add(firehose.nextRow());
+        }
+      }
+      assertResult(rows);
+    }
+  }
+
+  @Test
+  public void testReconnectWithCache() throws IOException
+  {
+    final TestPrefetchableTextFilesFirehoseFactory factory =
+        TestPrefetchableTextFilesFirehoseFactory.with(testDir, 2048, 0);
 
     for (int i = 0; i < 5; i++) {
       final List<Row> rows = new ArrayList<>();
