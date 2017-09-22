@@ -575,15 +575,14 @@ public class UriExtractionNamespace implements ExtractionNamespace
         return false;
       }
       final JSONFlatDataParser that = (JSONFlatDataParser) o;
-      return Objects.equals(parser, that.parser) &&
-             Objects.equals(keyFieldName, that.keyFieldName) &&
+      return Objects.equals(keyFieldName, that.keyFieldName) &&
              Objects.equals(valueFieldName, that.valueFieldName);
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(parser, keyFieldName, valueFieldName);
+      return Objects.hash(keyFieldName, valueFieldName);
     }
 
     @Override
