@@ -38,7 +38,9 @@ import org.apache.curator.utils.ZKPaths;
 import java.io.IOException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -67,6 +69,8 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
   private final ExecutorService pathChildrenCacheExecutor;
 
   private volatile PathChildrenCache childrenCache;
+
+  private final CountDownLatch latch = new CountDownLatch(1);
 
   public CuratorInventoryManager(
       CuratorFramework curatorFramework,
@@ -124,10 +128,11 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
     }
 
     // Block start() till PathChildrenCache is fully loaded
-    while (!containerCacheListener.doneInitializing) {
-      Thread.sleep(2000);
+    while (!latch.await(1, TimeUnit.MINUTES)) {
       log.info("Waiting for PathChildrenCache to be completely loaded.");
     }
+
+    log.info("PathChildrenCache has been loaded.");
   }
 
   @LifecycleStop
@@ -350,6 +355,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
       // only fire if we are done initializing the parent PathChildrenCache
       if (containersInitialized && uninitializedInventory.isEmpty()) {
         doneInitializing = true;
+        latch.countDown();
         strategy.inventoryInitialized();
       }
     }
