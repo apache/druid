@@ -28,6 +28,8 @@ for both broker and historical nodes, when defined in the common properties file
 DEPRECATED: Use caffeine instead
 </div>
 
+The local cache is deprecated in favor of the Caffeine cache, and may be removed in a future version of Druid. The Caffeine cache affords significantly better performance and control over eviction behavior compared to `local` cache, and is recommended in any situation where you are using JRE 8u60 or higher.
+
 A simple in-memory LRU cache. Local cache resides in JVM heap memory, so if you enable it, make sure you increase heap size accordingly.
 
 |Property|Description|Default|
