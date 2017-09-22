@@ -48,6 +48,12 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
+      <groupId>io.druid</groupId>
+      <artifactId>druid-server</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>com.metamx</groupId>
       <artifactId>emitter</artifactId>
       <scope>provided</scope>
@@ -71,13 +77,6 @@
       <groupId>pl.pragmatists</groupId>
       <artifactId>JUnitParams</artifactId>
       <version>1.0.4</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.druid</groupId>
-      <artifactId>druid-server</artifactId>
-      <version>${project.parent.version}</version>
-      <type>test-jar</type>
       <scope>test</scope>
     </dependency>
     <dependency>
