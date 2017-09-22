@@ -57,22 +57,22 @@ public class BlockLayoutIndexedFloatSupplier implements Supplier<IndexedFloats>
     final int rem = sizePer - 1;
     final boolean powerOf2 = sizePer == (1 << div);
     if (powerOf2) {
-        return new BlockLayoutIndexedFloats()
+      return new BlockLayoutIndexedFloats()
+      {
+        @Override
+        public float get(int index)
         {
-          @Override
-          public float get(int index)
-          {
-            // optimize division and remainder for powers of 2
-            final int bufferNum = index >> div;
+          // optimize division and remainder for powers of 2
+          final int bufferNum = index >> div;
 
-            if (bufferNum != currIndex) {
-              loadBuffer(bufferNum);
-            }
-
-            final int bufferIndex = index & rem;
-            return floatBuffer.get(floatBuffer.position() + bufferIndex);
+          if (bufferNum != currIndex) {
+            loadBuffer(bufferNum);
           }
-        };
+
+          final int bufferIndex = index & rem;
+          return floatBuffer.get(floatBuffer.position() + bufferIndex);
+        }
+      };
     } else {
       return new BlockLayoutIndexedFloats();
     }

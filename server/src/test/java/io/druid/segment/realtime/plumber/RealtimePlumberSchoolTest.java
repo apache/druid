@@ -262,18 +262,15 @@ public class RealtimePlumberSchoolTest
 
   private void testPersist(final Object commitMetadata) throws Exception
   {
-    plumber.getSinks()
-           .put(
-               0L,
-               new Sink(
-                   Intervals.utc(0, TimeUnit.HOURS.toMillis(1)),
-                   schema,
-                   tuningConfig.getShardSpec(),
-                   DateTimes.of("2014-12-01T12:34:56.789").toString(),
-                   tuningConfig.getMaxRowsInMemory(),
-                   tuningConfig.isReportParseExceptions()
-               )
-           );
+    Sink sink = new Sink(
+        Intervals.utc(0, TimeUnit.HOURS.toMillis(1)),
+        schema,
+        tuningConfig.getShardSpec(),
+        DateTimes.of("2014-12-01T12:34:56.789").toString(),
+        tuningConfig.getMaxRowsInMemory(),
+        tuningConfig.isReportParseExceptions()
+    );
+    plumber.getSinks().put(0L, sink);
     Assert.assertNull(plumber.startJob());
 
     final InputRow row = EasyMock.createNiceMock(InputRow.class);
@@ -309,18 +306,15 @@ public class RealtimePlumberSchoolTest
   @Test(timeout = 60000)
   public void testPersistFails() throws Exception
   {
-    plumber.getSinks()
-           .put(
-               0L,
-               new Sink(
-                   Intervals.utc(0, TimeUnit.HOURS.toMillis(1)),
-                   schema,
-                   tuningConfig.getShardSpec(),
-                   DateTimes.of("2014-12-01T12:34:56.789").toString(),
-                   tuningConfig.getMaxRowsInMemory(),
-                   tuningConfig.isReportParseExceptions()
-               )
-           );
+    Sink sink = new Sink(
+        Intervals.utc(0, TimeUnit.HOURS.toMillis(1)),
+        schema,
+        tuningConfig.getShardSpec(),
+        DateTimes.of("2014-12-01T12:34:56.789").toString(),
+        tuningConfig.getMaxRowsInMemory(),
+        tuningConfig.isReportParseExceptions()
+    );
+    plumber.getSinks().put(0L, sink);
     plumber.startJob();
     final InputRow row = EasyMock.createNiceMock(InputRow.class);
     EasyMock.expect(row.getTimestampFromEpoch()).andReturn(0L);
@@ -366,18 +360,15 @@ public class RealtimePlumberSchoolTest
     Interval testInterval = new Interval(DateTimes.of("1970-01-01"), DateTimes.of("1971-01-01"));
 
     RealtimePlumber plumber2 = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema2, tuningConfig, metrics);
-    plumber2.getSinks()
-            .put(
-                0L,
-                new Sink(
-                    testInterval,
-                    schema2,
-                    tuningConfig.getShardSpec(),
-                    DateTimes.of("2014-12-01T12:34:56.789").toString(),
-                    tuningConfig.getMaxRowsInMemory(),
-                    tuningConfig.isReportParseExceptions()
-                )
-            );
+    Sink sink = new Sink(
+        testInterval,
+        schema2,
+        tuningConfig.getShardSpec(),
+        DateTimes.of("2014-12-01T12:34:56.789").toString(),
+        tuningConfig.getMaxRowsInMemory(),
+        tuningConfig.isReportParseExceptions()
+    );
+    plumber2.getSinks().put(0L, sink);
     Assert.assertNull(plumber2.startJob());
     final CountDownLatch doneSignal = new CountDownLatch(1);
     final Committer committer = new Committer()

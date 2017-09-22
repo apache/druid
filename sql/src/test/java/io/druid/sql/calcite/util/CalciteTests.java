@@ -139,15 +139,13 @@ public class CalciteTests
 
           // This Module is just to get a LookupReferencesManager with a usable "lookyloo" lookup.
 
-          binder.bind(LookupReferencesManager.class)
-                .toInstance(
-                    TestExprMacroTable.createTestLookupReferencesManager(
-                        ImmutableMap.of(
-                            "a", "xa",
-                            "abc", "xabc"
-                        )
-                    )
-                );
+          LookupReferencesManager testLookupReferencesManager = TestExprMacroTable.createTestLookupReferencesManager(
+              ImmutableMap.of(
+                  "a", "xa",
+                  "abc", "xabc"
+              )
+          );
+          binder.bind(LookupReferencesManager.class).toInstance(testLookupReferencesManager);
         }
       }
   );

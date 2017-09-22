@@ -303,15 +303,13 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
           rMultiValuedColumn = null;
         }
 
-        builder.setHasMultipleValues(hasMultipleValues)
-               .setDictionaryEncodedColumn(
-                   new DictionaryEncodedColumnSupplier(
-                       rDictionary,
-                       rSingleValuedColumn,
-                       rMultiValuedColumn,
-                       columnConfig.columnCacheSizeBytes()
-                   )
-               );
+        DictionaryEncodedColumnSupplier dictionaryEncodedColumnSupplier = new DictionaryEncodedColumnSupplier(
+            rDictionary,
+            rSingleValuedColumn,
+            rMultiValuedColumn,
+            columnConfig.columnCacheSizeBytes()
+        );
+        builder.setHasMultipleValues(hasMultipleValues).setDictionaryEncodedColumn(dictionaryEncodedColumnSupplier);
 
         GenericIndexed<ImmutableBitmap> rBitmaps = GenericIndexed.read(
             buffer, bitmapSerdeFactory.getObjectStrategy(), builder.getFileMapper()

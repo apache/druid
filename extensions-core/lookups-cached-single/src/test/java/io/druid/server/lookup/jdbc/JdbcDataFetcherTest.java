@@ -112,8 +112,7 @@ public class JdbcDataFetcherTest
   public void testFetchKeys()
   {
     ImmutableMap.Builder<String, String> mapBuilder = ImmutableMap.builder();
-    for (Map.Entry<String, String> entry: jdbcDataFetcher.fetch(lookupMap.keySet())
-        ) {
+    for (Map.Entry<String, String> entry: jdbcDataFetcher.fetch(lookupMap.keySet())) {
       mapBuilder.put(entry.getKey(), entry.getValue());
     }
 

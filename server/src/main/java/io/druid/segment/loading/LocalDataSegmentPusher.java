@@ -98,10 +98,10 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
     final long size = compressSegment(dataSegmentFile, tmpOutDir);
 
     final DataSegment dataSegment = createDescriptorFile(
-      segment.withLoadSpec(makeLoadSpec(new File(outDir, "index.zip").toURI()))
-             .withSize(size)
-             .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile)),
-      tmpOutDir
+        segment.withLoadSpec(makeLoadSpec(new File(outDir, "index.zip").toURI()))
+               .withSize(size)
+               .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile)),
+        tmpOutDir
     );
 
     // moving the temporary directory to the final destination, once success the potentially concurrent push operations

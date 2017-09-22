@@ -41,6 +41,14 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
         new AffinityConfig(ImmutableMap.of("foo", ImmutableSet.of("localhost1", "localhost2", "localhost3")), false)
     );
 
+    NoopTask noopTask = new NoopTask(null, 1, 0, null, null, null)
+    {
+      @Override
+      public String getDataSource()
+      {
+        return "foo";
+      }
+    };
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
             new RemoteTaskRunnerConfig(),
             ImmutableMap.of(
@@ -73,14 +81,7 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
                             DateTimes.nowUtc()
                     )
             ),
-            new NoopTask(null, 1, 0, null, null, null)
-            {
-              @Override
-              public String getDataSource()
-              {
-                return "foo";
-              }
-            }
+            noopTask
     );
     Assert.assertEquals("localhost1", worker.getWorker().getHost());
   }

@@ -158,7 +158,7 @@ public class DruidStatement implements Closeable
       final String query,
       final long maxRowCount,
       final AuthenticationResult authenticationResult
-      )
+  )
   {
     try (final DruidPlanner planner = plannerFactory.createPlanner(queryContext)) {
       synchronized (lock) {

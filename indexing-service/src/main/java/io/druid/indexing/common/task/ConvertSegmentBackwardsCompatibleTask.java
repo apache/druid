@@ -41,7 +41,7 @@ public class ConvertSegmentBackwardsCompatibleTask extends ConvertSegmentTask
       @JsonProperty("force") Boolean force,
       @JsonProperty("validate") Boolean validate,
       @JsonProperty("outputMediumFactory") @Nullable OutputMediumFactory outputMediumFactory
-      )
+  )
   {
     super(
         id == null ? ConvertSegmentTask.makeId(dataSource, interval) : id,

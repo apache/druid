@@ -64,7 +64,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
       @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
       @JsonProperty("resetOffsetAutomatically") Boolean resetOffsetAutomatically,
       @JsonProperty("outputMediumFactory") @Nullable OutputMediumFactory outputMediumFactory
-      )
+  )
   {
     // Cannot be a static because default basePersistDirectory is unique per-instance
     final RealtimeTuningConfig defaults = RealtimeTuningConfig.makeDefaultTuningConfig(basePersistDirectory);

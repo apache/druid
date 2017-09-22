@@ -406,7 +406,9 @@ public class NamespaceLookupExtractorFactoryTest
     final NamespaceLookupExtractorFactory f1 = new NamespaceLookupExtractorFactory(
         en1,
         scheduler
-    ), f2 = new NamespaceLookupExtractorFactory(en2, scheduler), f1b = new NamespaceLookupExtractorFactory(
+    );
+    final NamespaceLookupExtractorFactory f2 = new NamespaceLookupExtractorFactory(en2, scheduler);
+    final NamespaceLookupExtractorFactory f1b = new NamespaceLookupExtractorFactory(
         en1,
         scheduler
     );

@@ -19,13 +19,11 @@
 
 package io.druid.server.shard;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.java.util.common.Pair;
@@ -102,16 +100,9 @@ public class SingleDimensionShardSpecTest
       SingleDimensionShardSpec spec = entry.getKey();
       for (Pair<Boolean, Map<String, String>> pair : entry.getValue()) {
         final InputRow inputRow = new MapBasedInputRow(
-            0, ImmutableList.of("billy"), Maps.transformValues(
-            pair.rhs, new Function<String, Object>()
-        {
-          @Override
-          public Object apply(String input)
-          {
-            return input;
-          }
-        }
-        )
+            0,
+            ImmutableList.of("billy"),
+            Maps.transformValues(pair.rhs, input -> input)
         );
         Assert.assertEquals(StringUtils.format("spec[%s], row[%s]", spec, inputRow), pair.lhs, spec.isInChunk(inputRow.getTimestampFromEpoch(), inputRow));
       }

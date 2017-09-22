@@ -467,14 +467,18 @@ public class RealtimeManagerTest
 
     realtimeManager3.start();
 
-    while (realtimeManager3.getFireChiefs("testing").values().stream()
-                           .anyMatch(
-                               fireChief -> {
-                                 final Plumber plumber = fireChief.getPlumber();
-                                 return plumber == null || !((TestPlumber) plumber).isStartedJob();
-                               }
-                           )
-        ) {
+    while (true) {
+      boolean notAllStarted = realtimeManager3
+          .getFireChiefs("testing").values().stream()
+          .anyMatch(
+              fireChief -> {
+                final Plumber plumber = fireChief.getPlumber();
+                return plumber == null || !((TestPlumber) plumber).isStartedJob();
+              }
+          );
+      if (!notAllStarted) {
+        break;
+      }
       Thread.sleep(10);
     }
 
@@ -536,14 +540,18 @@ public class RealtimeManagerTest
 
     realtimeManager3.start();
 
-    while (realtimeManager3.getFireChiefs("testing").values().stream()
-                           .anyMatch(
-                               fireChief -> {
-                                 final Plumber plumber = fireChief.getPlumber();
-                                 return plumber == null || !((TestPlumber) plumber).isStartedJob();
-                               }
-                           )
-        ) {
+    while (true) {
+      boolean notAllStarted = realtimeManager3
+          .getFireChiefs("testing").values().stream()
+          .anyMatch(
+              fireChief -> {
+                final Plumber plumber = fireChief.getPlumber();
+                return plumber == null || !((TestPlumber) plumber).isStartedJob();
+              }
+          );
+      if (!notAllStarted) {
+        break;
+      }
       Thread.sleep(10);
     }
 
@@ -644,14 +652,18 @@ public class RealtimeManagerTest
 
     realtimeManager3.start();
 
-    while (realtimeManager3.getFireChiefs("testing").values().stream()
-                           .anyMatch(
-                               fireChief -> {
-                                 final Plumber plumber = fireChief.getPlumber();
-                                 return plumber == null || !((TestPlumber) plumber).isStartedJob();
-                               }
-                           )
-        ) {
+    while (true) {
+      boolean notAllStarted = realtimeManager3
+          .getFireChiefs("testing").values().stream()
+          .anyMatch(
+              fireChief -> {
+                final Plumber plumber = fireChief.getPlumber();
+                return plumber == null || !((TestPlumber) plumber).isStartedJob();
+              }
+          );
+      if (!notAllStarted) {
+        break;
+      }
       Thread.sleep(10);
     }
 

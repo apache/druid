@@ -941,7 +941,7 @@ public class IndexTask extends AbstractTask
         @JsonProperty("reportParseExceptions") @Nullable Boolean reportParseExceptions,
         @JsonProperty("publishTimeout") @Nullable Long publishTimeout,
         @JsonProperty("outputMediumFactory") @Nullable OutputMediumFactory outputMediumFactory
-        )
+    )
     {
       this(
           targetPartitionSize,

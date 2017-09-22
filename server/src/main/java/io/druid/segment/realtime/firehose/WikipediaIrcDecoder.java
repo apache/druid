@@ -149,10 +149,10 @@ class WikipediaIrcDecoder implements IrcDecoder
       File tmpFile = File.createTempFile("druid", "geo");
 
       FileUtils.copyInputStreamToFile(
-        new GZIPInputStream(
-          new URL("http://geolite.maxmind.com/download/geoip/database/GeoLite2-City.mmdb.gz").openStream()
-        ),
-        tmpFile
+          new GZIPInputStream(
+              new URL("http://geolite.maxmind.com/download/geoip/database/GeoLite2-City.mmdb.gz").openStream()
+          ),
+          tmpFile
       );
 
       if (!tmpFile.renameTo(geoDb)) {

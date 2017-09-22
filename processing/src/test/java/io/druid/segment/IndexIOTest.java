@@ -204,9 +204,8 @@ public class IndexIOTest
                             return new Object[]{
                                 maplist1,
                                 maplist2,
-                                filterNullValues(maplist1).equals(filterNullValues(maplist2))
-                                ? null
-                                : SegmentValidationException.class
+                                filterNullValues(maplist1).equals(filterNullValues(maplist2)) ?
+                                    null : SegmentValidationException.class
                             };
                           }
 
