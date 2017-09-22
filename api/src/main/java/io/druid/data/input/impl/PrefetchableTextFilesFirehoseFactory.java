@@ -107,13 +107,12 @@ import java.util.concurrent.atomic.AtomicLong;
 public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
     extends AbstractTextFilesFirehoseFactory<ObjectType>
 {
-  static final String FETCH_FILE_PREFIX = "fetch-";
-
   private static final Logger LOG = new Logger(PrefetchableTextFilesFirehoseFactory.class);
   private static final long DEFAULT_MAX_CACHE_CAPACITY_BYTES = 1024 * 1024 * 1024; // 1GB
   private static final long DEFAULT_MAX_FETCH_CAPACITY_BYTES = 1024 * 1024 * 1024; // 1GB
   private static final long DEFAULT_FETCH_TIMEOUT = 60_000; // 60 secs
   private static final int DEFAULT_MAX_FETCH_RETRY = 3;
+  private static final String FETCH_FILE_PREFIX = "fetch-";
 
   // The below two variables are roughly the max size of total cached/fetched objects, but the actual cached/fetched
   // size can be larger. The reason is our current client implementations for cloud storages like s3 don't support range

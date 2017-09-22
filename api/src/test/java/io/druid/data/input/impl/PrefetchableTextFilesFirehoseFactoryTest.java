@@ -52,7 +52,6 @@ public class PrefetchableTextFilesFirehoseFactoryTest
 {
   private static final List<File> FIREHOSE_TMP_DIRS = new ArrayList<>();
   private static File TEST_DIR;
-//  private static File firehoseTempDir;
 
   private static final StringInputRowParser parser = new StringInputRowParser(
       new CSVParseSpec(
@@ -83,10 +82,6 @@ public class PrefetchableTextFilesFirehoseFactoryTest
     TEST_DIR = File.createTempFile(PrefetchableTextFilesFirehoseFactoryTest.class.getSimpleName(), "testDir");
     FileUtils.forceDelete(TEST_DIR);
     FileUtils.forceMkdir(TEST_DIR);
-
-//    firehoseTempDir = File.createTempFile(PrefetchableTextFilesFirehoseFactoryTest.class.getSimpleName(), "baseDir");
-//    FileUtils.forceDelete(firehoseTempDir);
-//    FileUtils.forceMkdir(firehoseTempDir);
 
     for (int i = 0; i < 100; i++) {
       // Each file is 1390 bytes
