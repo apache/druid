@@ -178,8 +178,6 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   @Override
   protected InputStream openObjectStream(S3Object object) throws IOException
   {
-    log.info("Reading from bucket[%s] object[%s] (%s)", object.getBucketName(), object.getKey(), object);
-
     try {
       // Get data of the given object and open an input stream
       return s3Client.getObject(object.getBucketName(), object.getKey()).getDataInputStream();
