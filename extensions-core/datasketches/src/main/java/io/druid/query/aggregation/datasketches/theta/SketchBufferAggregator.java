@@ -38,7 +38,7 @@ public class SketchBufferAggregator implements BufferAggregator
   private final int size;
   private final int maxIntermediateSize;
   private final IdentityHashMap<ByteBuffer, Int2ObjectMap<Union>> unions = new IdentityHashMap<>();
-  private final IdentityHashMap<ByteBuffer, WritableMemory> nmCache = new IdentityHashMap<>();
+  private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
 
   public SketchBufferAggregator(ObjectColumnSelector selector, int size, int maxIntermediateSize)
   {
@@ -124,7 +124,7 @@ public class SketchBufferAggregator implements BufferAggregator
   public void close()
   {
     unions.clear();
-    nmCache.clear();
+    memCache.clear();
   }
 
   @Override
@@ -142,17 +142,17 @@ public class SketchBufferAggregator implements BufferAggregator
       unionMap.remove(oldPosition);
       if (unionMap.isEmpty()) {
         unions.remove(oldBuffer);
-        nmCache.remove(oldBuffer);
+        memCache.remove(oldBuffer);
       }
     }
   }
 
   private WritableMemory getMemory(ByteBuffer buffer)
   {
-    WritableMemory mem = nmCache.get(buffer);
+    WritableMemory mem = memCache.get(buffer);
     if (mem == null) {
       mem = WritableMemory.wrap(buffer);
-      nmCache.put(buffer, mem);
+      memCache.put(buffer, mem);
     }
     return mem;
   }
