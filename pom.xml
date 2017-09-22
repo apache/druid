@@ -79,6 +79,7 @@
         <!-- Cannot update to AWS SDK 1.11+ because of Jackson incompatibility.
         Need to update Druid to use Jackson 2.6+ -->
         <aws.sdk.version>1.10.77</aws.sdk.version>
+        <caffeine.version>2.5.5</caffeine.version>
     </properties>
 
     <modules>
@@ -100,7 +101,6 @@
         <module>hll</module>
         <!-- Core extensions -->
         <module>extensions-core/avro-extensions</module>
-        <module>extensions-core/caffeine-cache</module>
         <module>extensions-core/datasketches</module>
         <module>extensions-core/druid-kerberos</module>
         <module>extensions-core/hdfs-storage</module>
@@ -743,6 +743,11 @@
                 <artifactId>calcite-core</artifactId>
                 <version>${calcite.version}</version>
                 <type>test-jar</type>
+            </dependency>
+            <dependency>
+                <groupId>com.github.ben-manes.caffeine</groupId>
+                <artifactId>caffeine</artifactId>
+                <version>${caffeine.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.easymock</groupId>

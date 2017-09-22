@@ -23,11 +23,12 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.inject.Provider;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = LocalCacheProvider.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = CaffeineCacheProvider.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "local", value = LocalCacheProvider.class),
     @JsonSubTypes.Type(name = "memcached", value = MemcachedCacheProvider.class),
-    @JsonSubTypes.Type(name = "hybrid", value = HybridCacheProvider.class)
+    @JsonSubTypes.Type(name = "hybrid", value = HybridCacheProvider.class),
+    @JsonSubTypes.Type(name = "caffeine", value = CaffeineCacheProvider.class)
 })
 public interface CacheProvider extends Provider<Cache>
 {
