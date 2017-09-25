@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
@@ -71,6 +70,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -153,7 +153,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     );
     loadQueuePeon.start();
     druidNode = new DruidNode("hey", "what", 1234, null, new ServerConfig());
-    loadManagementPeons = new MapMaker().makeMap();
+    loadManagementPeons = new ConcurrentHashMap<>();
     scheduledExecutorFactory = new ScheduledExecutorFactory()
     {
       @Override

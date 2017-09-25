@@ -21,7 +21,6 @@ package io.druid.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
@@ -40,6 +39,7 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class RetryQueryRunnerTest
 {
@@ -89,7 +89,7 @@ public class RetryQueryRunnerTest
   @Test
   public void testRunWithMissingSegments() throws Exception
   {
-    Map<String, Object> context = new MapMaker().makeMap();
+    Map<String, Object> context = new ConcurrentHashMap<>();
     context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
         new QueryRunner<Result<TimeseriesResultValue>>()
@@ -139,7 +139,7 @@ public class RetryQueryRunnerTest
   @Test
   public void testRetry() throws Exception
   {
-    Map<String, Object> context = new MapMaker().makeMap();
+    Map<String, Object> context = new ConcurrentHashMap<>();
     context.put("count", 0);
     context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
@@ -193,7 +193,7 @@ public class RetryQueryRunnerTest
   @Test
   public void testRetryMultiple() throws Exception
   {
-    Map<String, Object> context = new MapMaker().makeMap();
+    Map<String, Object> context = new ConcurrentHashMap<>();
     context.put("count", 0);
     context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
@@ -247,7 +247,7 @@ public class RetryQueryRunnerTest
   @Test(expected = SegmentMissingException.class)
   public void testException() throws Exception
   {
-    Map<String, Object> context = new MapMaker().makeMap();
+    Map<String, Object> context = new ConcurrentHashMap<>();
     context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
         new QueryRunner<Result<TimeseriesResultValue>>()
@@ -285,7 +285,7 @@ public class RetryQueryRunnerTest
   @Test
   public void testNoDuplicateRetry() throws Exception
   {
-    Map<String, Object> context = new MapMaker().makeMap();
+    Map<String, Object> context = new ConcurrentHashMap<>();
     context.put("count", 0);
     context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
