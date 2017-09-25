@@ -47,7 +47,6 @@ import java.util.Calendar;
 import java.util.Locale;
 import java.util.NavigableSet;
 import java.util.TimeZone;
-import java.util.TreeSet;
 
 /**
  * Utility functions for Calcite.
@@ -249,9 +248,21 @@ public class Calcites
     return rexNode instanceof RexLiteral && SqlTypeName.INT_TYPES.contains(rexNode.getType().getSqlTypeName());
   }
 
-  public static boolean anyStartsWith(final TreeSet<String> set, final String prefix)
+  public static String findOutputNamePrefix(final String basePrefix, final NavigableSet<String> strings)
   {
-    final NavigableSet<String> headSet = set.headSet(prefix, true);
-    return !headSet.isEmpty() && headSet.first().startsWith(prefix);
+    String prefix = basePrefix;
+
+    while (!isUsablePrefix(strings, prefix)) {
+      prefix = "_" + prefix;
+    }
+
+    return prefix;
+  }
+
+  private static boolean isUsablePrefix(final NavigableSet<String> strings, final String prefix)
+  {
+    // ":" is one character after "9"
+    final NavigableSet<String> subSet = strings.subSet(prefix + "0", true, prefix + ":", false);
+    return subSet.isEmpty();
   }
 }

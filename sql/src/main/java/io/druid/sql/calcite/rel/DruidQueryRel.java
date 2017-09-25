@@ -19,12 +19,10 @@
 
 package io.druid.sql.calcite.rel;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Preconditions;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.query.QueryDataSource;
-import io.druid.query.groupby.GroupByQuery;
 import io.druid.sql.calcite.table.DruidTable;
-import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.interpreter.BindableConvention;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptCluster;
@@ -33,12 +31,12 @@ import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelWriter;
+import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 
+import javax.annotation.Nonnull;
 import java.util.List;
-import javax.annotation.Nullable;
-import java.io.IOException;
 
 /**
  * DruidRel that uses a "table" dataSource.
@@ -56,7 +54,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
 
   private final RelOptTable table;
   private final DruidTable druidTable;
-  private final DruidQueryBuilder queryBuilder;
+  private final PartialDruidQuery partialQuery;
 
   private DruidQueryRel(
       final RelOptCluster cluster,
@@ -64,49 +62,51 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
       final RelOptTable table,
       final DruidTable druidTable,
       final QueryMaker queryMaker,
-      final DruidQueryBuilder queryBuilder
+      final PartialDruidQuery partialQuery
   )
   {
     super(cluster, traitSet, queryMaker);
     this.table = Preconditions.checkNotNull(table, "table");
     this.druidTable = Preconditions.checkNotNull(druidTable, "druidTable");
-    this.queryBuilder = Preconditions.checkNotNull(queryBuilder, "queryBuilder");
+    this.partialQuery = Preconditions.checkNotNull(partialQuery, "partialQuery");
   }
 
   /**
    * Create a DruidQueryRel representing a full scan.
    */
   public static DruidQueryRel fullScan(
-      final RelOptCluster cluster,
+      final LogicalTableScan scanRel,
       final RelOptTable table,
       final DruidTable druidTable,
       final QueryMaker queryMaker
   )
   {
     return new DruidQueryRel(
-        cluster,
-        cluster.traitSetOf(Convention.NONE),
+        scanRel.getCluster(),
+        scanRel.getCluster().traitSetOf(Convention.NONE),
         table,
         druidTable,
         queryMaker,
-        DruidQueryBuilder.fullScan(druidTable.getRowSignature(), cluster.getTypeFactory())
+        PartialDruidQuery.create(scanRel)
     );
   }
 
-  @Nullable
   @Override
-  public QueryDataSource asDataSource()
+  @Nonnull
+  public DruidQuery toDruidQuery()
   {
-    final GroupByQuery groupByQuery = getQueryBuilder().toGroupByQuery(druidTable.getDataSource(), getPlannerContext());
+    return partialQuery.build(
+        druidTable.getDataSource(),
+        druidTable.getRowSignature(),
+        getPlannerContext(),
+        getCluster().getRexBuilder()
+    );
+  }
 
-    if (groupByQuery == null) {
-      // QueryDataSources must currently embody groupBy queries. This will thrown an exception if the query
-      // cannot be converted to a groupBy, but that's OK because we really shouldn't get into that situation anyway.
-      // That would be a bug in our planner rules.
-      throw new IllegalStateException("WTF?! Tried to convert query to QueryDataSource but couldn't make a groupBy?");
-    }
-
-    return new QueryDataSource(groupByQuery);
+  @Override
+  public DruidQuery toDruidQueryForExplaining()
+  {
+    return toDruidQuery();
   }
 
   @Override
@@ -118,7 +118,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
         table,
         druidTable,
         getQueryMaker(),
-        queryBuilder
+        partialQuery
     );
   }
 
@@ -131,7 +131,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
         table,
         druidTable,
         getQueryMaker(),
-        queryBuilder
+        partialQuery
     );
   }
 
@@ -142,19 +142,13 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   }
 
   @Override
-  public RowSignature getSourceRowSignature()
+  public PartialDruidQuery getPartialDruidQuery()
   {
-    return druidTable.getRowSignature();
+    return partialQuery;
   }
 
   @Override
-  public DruidQueryBuilder getQueryBuilder()
-  {
-    return queryBuilder;
-  }
-
-  @Override
-  public DruidQueryRel withQueryBuilder(final DruidQueryBuilder newQueryBuilder)
+  public DruidQueryRel withPartialQuery(final PartialDruidQuery newQueryBuilder)
   {
     return new DruidQueryRel(
         getCluster(),
@@ -175,7 +169,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   @Override
   public Sequence<Object[]> runQuery()
   {
-    return getQueryMaker().runQuery(druidTable.getDataSource(), queryBuilder);
+    return getQueryMaker().runQuery(toDruidQuery());
   }
 
   @Override
@@ -187,24 +181,24 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   @Override
   protected RelDataType deriveRowType()
   {
-    return queryBuilder.getRowType();
+    return partialQuery.getRowType();
   }
 
   @Override
   public RelWriter explainTerms(final RelWriter pw)
   {
     final String queryString;
+    final DruidQuery druidQuery = toDruidQueryForExplaining();
 
     try {
-      queryString = getQueryMaker()
-          .getJsonMapper()
-          .writeValueAsString(queryBuilder.toQuery(druidTable.getDataSource(), getPlannerContext()));
+      queryString = getQueryMaker().getJsonMapper().writeValueAsString(druidQuery.getQuery());
     }
-    catch (IOException e) {
+    catch (JsonProcessingException e) {
       throw new RuntimeException(e);
     }
 
-    return pw.item("query", queryString);
+    return pw.item("query", queryString)
+             .item("signature", druidQuery.getOutputRowSignature());
   }
 
   @Override
@@ -212,26 +206,29 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   {
     double cost = COST_BASE;
 
-    if (queryBuilder.getSelectProjection() != null) {
-      cost += COST_PER_COLUMN * queryBuilder.getSelectProjection().getVirtualColumns().size();
-      cost += COST_PER_COLUMN * queryBuilder.getSelectProjection().getDirectColumns().size();
+    if (partialQuery.getSelectProject() != null) {
+      cost += COST_PER_COLUMN * partialQuery.getSelectProject().getChildExps().size();
     }
 
-    if (queryBuilder.getFilter() != null) {
+    if (partialQuery.getWhereFilter() != null) {
       cost *= COST_FILTER_MULTIPLIER;
     }
 
-    if (queryBuilder.getGrouping() != null) {
+    if (partialQuery.getAggregate() != null) {
       cost *= COST_GROUPING_MULTIPLIER;
-      cost += COST_PER_COLUMN * queryBuilder.getGrouping().getAggregatorFactories().size();
-      cost += COST_PER_COLUMN * queryBuilder.getGrouping().getPostAggregators().size();
+      cost += COST_PER_COLUMN * partialQuery.getAggregate().getGroupSet().size();
+      cost += COST_PER_COLUMN * partialQuery.getAggregate().getAggCallList().size();
     }
 
-    if (queryBuilder.getLimitSpec() != null && queryBuilder.getLimitSpec().isLimited()) {
+    if (partialQuery.getPostProject() != null) {
+      cost += COST_PER_COLUMN * partialQuery.getPostProject().getChildExps().size();
+    }
+
+    if (partialQuery.getSort() != null && partialQuery.getSort().fetch != null) {
       cost *= COST_LIMIT_MULTIPLIER;
     }
 
-    if (queryBuilder.getHaving() != null) {
+    if (partialQuery.getHavingFilter() != null) {
       cost *= COST_HAVING_MULTIPLIER;
     }
 

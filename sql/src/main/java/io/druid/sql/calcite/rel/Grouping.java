@@ -20,16 +20,19 @@
 package io.druid.sql.calcite.rel;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.druid.java.util.common.ISE;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.filter.DimFilter;
 import io.druid.sql.calcite.aggregation.Aggregation;
 import io.druid.sql.calcite.aggregation.DimensionExpression;
+import io.druid.sql.calcite.table.RowSignature;
 
+import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -37,14 +40,20 @@ public class Grouping
 {
   private final List<DimensionExpression> dimensions;
   private final List<Aggregation> aggregations;
+  private final DimFilter havingFilter;
+  private final RowSignature outputRowSignature;
 
   private Grouping(
       final List<DimensionExpression> dimensions,
-      final List<Aggregation> aggregations
+      final List<Aggregation> aggregations,
+      final DimFilter havingFilter,
+      final RowSignature outputRowSignature
   )
   {
     this.dimensions = ImmutableList.copyOf(dimensions);
     this.aggregations = ImmutableList.copyOf(aggregations);
+    this.havingFilter = havingFilter;
+    this.outputRowSignature = outputRowSignature;
 
     // Verify no collisions.
     final Set<String> seen = Sets.newHashSet();
@@ -63,14 +72,23 @@ public class Grouping
         throw new ISE("Duplicate field name: %s", aggregation.getPostAggregator().getName());
       }
     }
+
+    // Verify that items in the output signature exist.
+    for (final String field : outputRowSignature.getRowOrder()) {
+      if (!seen.contains(field)) {
+        throw new ISE("Missing field in rowOrder: %s", field);
+      }
+    }
   }
 
   public static Grouping create(
       final List<DimensionExpression> dimensions,
-      final List<Aggregation> aggregations
+      final List<Aggregation> aggregations,
+      final DimFilter havingFilter,
+      final RowSignature outputRowSignature
   )
   {
-    return new Grouping(dimensions, aggregations);
+    return new Grouping(dimensions, aggregations, havingFilter, outputRowSignature);
   }
 
   public List<DimensionExpression> getDimensions()
@@ -83,6 +101,12 @@ public class Grouping
     return aggregations;
   }
 
+  @Nullable
+  public DimFilter getHavingFilter()
+  {
+    return havingFilter;
+  }
+
   public List<DimensionSpec> getDimensionSpecs()
   {
     return dimensions.stream().map(DimensionExpression::toDimensionSpec).collect(Collectors.toList());
@@ -90,26 +114,26 @@ public class Grouping
 
   public List<AggregatorFactory> getAggregatorFactories()
   {
-    final List<AggregatorFactory> retVal = Lists.newArrayList();
-    for (final Aggregation aggregation : aggregations) {
-      retVal.addAll(aggregation.getAggregatorFactories());
-    }
-    return retVal;
+    return aggregations.stream()
+                       .flatMap(aggregation -> aggregation.getAggregatorFactories().stream())
+                       .collect(Collectors.toList());
   }
 
   public List<PostAggregator> getPostAggregators()
   {
-    final List<PostAggregator> retVal = Lists.newArrayList();
-    for (final Aggregation aggregation : aggregations) {
-      if (aggregation.getPostAggregator() != null) {
-        retVal.add(aggregation.getPostAggregator());
-      }
-    }
-    return retVal;
+    return aggregations.stream()
+                       .map(Aggregation::getPostAggregator)
+                       .filter(Objects::nonNull)
+                       .collect(Collectors.toList());
+  }
+
+  public RowSignature getOutputRowSignature()
+  {
+    return outputRowSignature;
   }
 
   @Override
-  public boolean equals(Object o)
+  public boolean equals(final Object o)
   {
     if (this == o) {
       return true;
@@ -117,22 +141,17 @@ public class Grouping
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    Grouping grouping = (Grouping) o;
-
-    if (dimensions != null ? !dimensions.equals(grouping.dimensions) : grouping.dimensions != null) {
-      return false;
-    }
-    return aggregations != null ? aggregations.equals(grouping.aggregations) : grouping.aggregations == null;
-
+    final Grouping grouping = (Grouping) o;
+    return Objects.equals(dimensions, grouping.dimensions) &&
+           Objects.equals(aggregations, grouping.aggregations) &&
+           Objects.equals(havingFilter, grouping.havingFilter) &&
+           Objects.equals(outputRowSignature, grouping.outputRowSignature);
   }
 
   @Override
   public int hashCode()
   {
-    int result = dimensions != null ? dimensions.hashCode() : 0;
-    result = 31 * result + (aggregations != null ? aggregations.hashCode() : 0);
-    return result;
+    return Objects.hash(dimensions, aggregations, havingFilter, outputRowSignature);
   }
 
   @Override
@@ -141,6 +160,8 @@ public class Grouping
     return "Grouping{" +
            "dimensions=" + dimensions +
            ", aggregations=" + aggregations +
+           ", havingFilter=" + havingFilter +
+           ", outputRowSignature=" + outputRowSignature +
            '}';
   }
 }

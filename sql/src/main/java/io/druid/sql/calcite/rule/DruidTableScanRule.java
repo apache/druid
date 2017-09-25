@@ -45,7 +45,7 @@ public class DruidTableScanRule extends RelOptRule
     final DruidTable druidTable = table.unwrap(DruidTable.class);
     if (druidTable != null) {
       call.transformTo(
-          DruidQueryRel.fullScan(scan.getCluster(), table, druidTable, queryMaker)
+          DruidQueryRel.fullScan(scan, table, druidTable, queryMaker)
       );
     }
   }

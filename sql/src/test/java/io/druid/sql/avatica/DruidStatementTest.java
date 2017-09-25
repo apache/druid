@@ -21,7 +21,6 @@ package io.druid.sql.avatica;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-
 import io.druid.java.util.common.DateTimes;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.security.AllowAllAuthenticator;
