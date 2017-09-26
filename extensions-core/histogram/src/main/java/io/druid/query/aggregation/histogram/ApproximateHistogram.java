@@ -1546,6 +1546,20 @@ public class ApproximateHistogram
     final long[] bins = this.bins();
 
     for (int j = 0; j < probabilities.length; ++j) {
+      // Adapted from Ben-Haiv/Tom-Tov (Algorithm 4: Uniform Procedure)
+      // Our histogram has a set of bins {(p1, m1), (p2, m2), ... (pB, mB)}
+      // and properties of min and max saved during construction, such
+      // that min <= p1 and pB <= max.
+      //
+      // When min < p1 or pB < max, these are special cases of using the
+      // dummy bins (p0, 0) or (pB+1, 0) respectively, where p0 == min
+      // and pB+1 == max.
+      //
+      // This histogram gives an ordered set of numbers {pi, pi+1, ..., pn},
+      // such that min <= pi < pn <= max, and n is the sum({m1, ..., mB}).
+      // We use s to determine which pairs of (pi, mi), (pi+1, mi+1) to
+      // calculate our quantile from by computing sum([pi,mi]) < s < sum
+      // ([pi+1, mi+1])
       final double s = probabilities[j] * this.count();
 
       int i = 0;
@@ -1564,6 +1578,7 @@ public class ApproximateHistogram
       }
 
       if (i == 0) {
+        // At the first bin, there are no points to the left of p (min)
         quantiles[j] = this.min();
       } else {
         final double d = s - sum;
@@ -1577,7 +1592,11 @@ public class ApproximateHistogram
           z = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
         }
         final double uj = this.positions[i - 1] + (this.positions[i] - this.positions[i - 1]) * z;
-        quantiles[j] = (float) uj;
+        // A given bin (p, m) has m/2 points to the left and right of p, and
+        // uj could be one of those points. However, uj is still subject to:
+        // [min] (p0, 0) < uj < (p, m) or
+        //                      (p, m) < uj < (pB+1, 0) [max]
+        quantiles[j] = ((float) uj < this.max()) ? (float) uj : this.max();
       }
     }
 
