@@ -20,21 +20,21 @@ package io.druid.data.input;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import io.druid.data.input.avro.AvroBytesDecoder;
-import io.druid.data.input.avro.GenericRecordAsMap;
+import io.druid.data.input.avro.AvroParsers;
 import io.druid.data.input.impl.ParseSpec;
-import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.parsers.ObjectFlattener;
 import org.apache.avro.generic.GenericRecord;
-import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
-import java.util.List;
+import java.util.Objects;
 
 public class AvroStreamInputRowParser implements ByteBufferInputRowParser
 {
   private final ParseSpec parseSpec;
-  private final List<String> dimensions;
   private final AvroBytesDecoder avroBytesDecoder;
+  private final ObjectFlattener<GenericRecord> avroFlattener;
 
   @JsonCreator
   public AvroStreamInputRowParser(
@@ -42,29 +42,15 @@ public class AvroStreamInputRowParser implements ByteBufferInputRowParser
       @JsonProperty("avroBytesDecoder") AvroBytesDecoder avroBytesDecoder
   )
   {
-    this.parseSpec = parseSpec;
-    this.dimensions = parseSpec.getDimensionsSpec().getDimensionNames();
-    this.avroBytesDecoder = avroBytesDecoder;
+    this.parseSpec = Preconditions.checkNotNull(parseSpec, "parseSpec");
+    this.avroBytesDecoder = Preconditions.checkNotNull(avroBytesDecoder, "avroBytesDecoder");
+    this.avroFlattener = AvroParsers.makeFlattener(parseSpec, false, false);
   }
 
   @Override
   public InputRow parse(ByteBuffer input)
   {
-    return parseGenericRecord(avroBytesDecoder.parse(input), parseSpec, dimensions, false, false);
-  }
-
-  protected static InputRow parseGenericRecord(
-      GenericRecord record,
-      ParseSpec parseSpec,
-      List<String> dimensions,
-      boolean fromPigAvroStorage,
-      boolean binaryAsString
-  )
-  {
-    GenericRecordAsMap genericRecordAsMap = new GenericRecordAsMap(record, fromPigAvroStorage, binaryAsString);
-    TimestampSpec timestampSpec = parseSpec.getTimestampSpec();
-    DateTime dateTime = timestampSpec.extractTimestamp(genericRecordAsMap);
-    return new MapBasedInputRow(dateTime, dimensions, genericRecordAsMap);
+    return AvroParsers.parseGenericRecord(avroBytesDecoder.parse(input), parseSpec, avroFlattener);
   }
 
   @JsonProperty
@@ -90,7 +76,7 @@ public class AvroStreamInputRowParser implements ByteBufferInputRowParser
   }
 
   @Override
-  public boolean equals(Object o)
+  public boolean equals(final Object o)
   {
     if (this == o) {
       return true;
@@ -98,24 +84,14 @@ public class AvroStreamInputRowParser implements ByteBufferInputRowParser
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    AvroStreamInputRowParser that = (AvroStreamInputRowParser) o;
-
-    if (!parseSpec.equals(that.parseSpec)) {
-      return false;
-    }
-    if (!dimensions.equals(that.dimensions)) {
-      return false;
-    }
-    return avroBytesDecoder.equals(that.avroBytesDecoder);
+    final AvroStreamInputRowParser that = (AvroStreamInputRowParser) o;
+    return Objects.equals(parseSpec, that.parseSpec) &&
+           Objects.equals(avroBytesDecoder, that.avroBytesDecoder);
   }
 
   @Override
   public int hashCode()
   {
-    int result = parseSpec.hashCode();
-    result = 31 * result + dimensions.hashCode();
-    result = 31 * result + avroBytesDecoder.hashCode();
-    return result;
+    return Objects.hash(parseSpec, avroBytesDecoder);
   }
 }
