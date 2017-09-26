@@ -184,6 +184,12 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
+  public void identity(String identity)
+  {
+    setDimension("identity", identity);
+  }
+
+  @Override
   public BitmapResultFactory<?> makeBitmapResultFactory(BitmapFactory factory)
   {
     return new DefaultBitmapResultFactory(factory);

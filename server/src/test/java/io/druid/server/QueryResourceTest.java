@@ -19,6 +19,7 @@
 
 package io.druid.server;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -38,9 +39,11 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
+import io.druid.query.Result;
 import io.druid.query.SegmentDescriptor;
+import io.druid.query.timeboundary.TimeBoundaryResultValue;
 import io.druid.server.initialization.ServerConfig;
-import io.druid.server.log.NoopRequestLogger;
+import io.druid.server.log.TestRequestLogger;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
@@ -63,8 +66,11 @@ import org.junit.Test;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.StreamingOutput;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -125,6 +131,7 @@ public class QueryResourceTest
 
   private QueryResource queryResource;
   private QueryManager queryManager;
+  private TestRequestLogger testRequestLogger;
 
   @BeforeClass
   public static void staticSetup()
@@ -139,13 +146,14 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getHeader(QueryResource.HEADER_IF_NONE_MATCH)).andReturn(null).anyTimes();
     EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
     queryManager = new QueryManager();
+    testRequestLogger = new TestRequestLogger();
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
             warehouse,
             testSegmentWalker,
             new DefaultGenericQueryMetricsFactory(jsonMapper),
             new NoopServiceEmitter(),
-            new NoopRequestLogger(),
+            testRequestLogger,
             serverConfig,
             new AuthConfig(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER
@@ -229,7 +237,8 @@ public class QueryResourceTest
 
     EasyMock.replay(testServletRequest);
 
-    AuthorizerMapper authMapper = new AuthorizerMapper(null) {
+    AuthorizerMapper authMapper = new AuthorizerMapper(null)
+    {
       @Override
       public Authorizer getAuthorizer(String name)
       {
@@ -255,7 +264,7 @@ public class QueryResourceTest
             testSegmentWalker,
             new DefaultGenericQueryMetricsFactory(jsonMapper),
             new NoopServiceEmitter(),
-            new NoopRequestLogger(),
+            testRequestLogger,
             serverConfig,
             new AuthConfig(null, null, null),
             authMapper
@@ -286,12 +295,22 @@ public class QueryResourceTest
         testServletRequest
     );
 
-    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    ((StreamingOutput) response.getEntity()).write(baos);
+    final List<Result<TimeBoundaryResultValue>> responses = jsonMapper.readValue(
+        baos.toByteArray(),
+        new TypeReference<List<Result<TimeBoundaryResultValue>>>() {}
+    );
 
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+    Assert.assertEquals(0, responses.size());
+    Assert.assertEquals(1, testRequestLogger.getLogs().size());
+    Assert.assertEquals(true, testRequestLogger.getLogs().get(0).getQueryStats().getStats().get("success"));
+    Assert.assertEquals("druid", testRequestLogger.getLogs().get(0).getQueryStats().getStats().get("identity"));
   }
 
   @Test(timeout = 60_000L)
-  public void testSecuredGetServer() throws Exception
+  public void testSecuredCancelQuery() throws Exception
   {
     final CountDownLatch waitForCancellationLatch = new CountDownLatch(1);
     final CountDownLatch waitFinishLatch = new CountDownLatch(2);
@@ -311,7 +330,8 @@ public class QueryResourceTest
 
     EasyMock.replay(testServletRequest);
 
-    AuthorizerMapper authMapper = new AuthorizerMapper(null) {
+    AuthorizerMapper authMapper = new AuthorizerMapper(null)
+    {
       @Override
       public Authorizer getAuthorizer(String name)
       {
@@ -352,7 +372,7 @@ public class QueryResourceTest
             testSegmentWalker,
             new DefaultGenericQueryMetricsFactory(jsonMapper),
             new NoopServiceEmitter(),
-            new NoopRequestLogger(),
+            testRequestLogger,
             serverConfig,
             new AuthConfig(null, null, null),
             authMapper
@@ -404,7 +424,7 @@ public class QueryResourceTest
           @Override
           public void run()
           {
-            Response response = queryResource.getServer("id_1", testServletRequest);
+            Response response = queryResource.cancelQuery("id_1", testServletRequest);
             Assert.assertEquals(Response.Status.ACCEPTED.getStatusCode(), response.getStatus());
             waitForCancellationLatch.countDown();
             waitFinishLatch.countDown();
@@ -416,7 +436,7 @@ public class QueryResourceTest
   }
 
   @Test(timeout = 60_000L)
-  public void testDenySecuredGetServer() throws Exception
+  public void testDenySecuredCancelQuery() throws Exception
   {
     final CountDownLatch waitForCancellationLatch = new CountDownLatch(1);
     final CountDownLatch waitFinishLatch = new CountDownLatch(2);
@@ -474,7 +494,7 @@ public class QueryResourceTest
             testSegmentWalker,
             new DefaultGenericQueryMetricsFactory(jsonMapper),
             new NoopServiceEmitter(),
-            new NoopRequestLogger(),
+            testRequestLogger,
             serverConfig,
             new AuthConfig(null, null, null),
             authMapper
@@ -527,7 +547,7 @@ public class QueryResourceTest
           public void run()
           {
             try {
-              queryResource.getServer("id_1", testServletRequest);
+              queryResource.cancelQuery("id_1", testServletRequest);
             }
             catch (ForbiddenException e) {
               waitForCancellationLatch.countDown();

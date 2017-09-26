@@ -44,9 +44,10 @@ public class AuthorizationUtils
    *
    * If this attribute is already set when this function is called, an exception is thrown.
    *
-   * @param request HTTP request to be authorized
-   * @param resourceAction A resource identifier and the action to be taken the resource.
+   * @param request          HTTP request to be authorized
+   * @param resourceAction   A resource identifier and the action to be taken the resource.
    * @param authorizerMapper The singleton AuthorizerMapper instance
+   *
    * @return ACCESS_OK or the failed Access object returned by the Authorizer that checked the request.
    */
   public static Access authorizeResourceAction(
@@ -63,6 +64,28 @@ public class AuthorizationUtils
   }
 
   /**
+   * Returns the authentication information for a request.
+   *
+   * @param request http request
+   *
+   * @return authentication result
+   *
+   * @throws IllegalStateException if the request was not authenticated
+   */
+  public static AuthenticationResult authenticationResultFromRequest(final HttpServletRequest request)
+  {
+    final AuthenticationResult authenticationResult = (AuthenticationResult) request.getAttribute(
+        AuthConfig.DRUID_AUTHENTICATION_RESULT
+    );
+
+    if (authenticationResult == null) {
+      throw new ISE("Null authentication result");
+    }
+
+    return authenticationResult;
+  }
+
+  /**
    * Check a list of resource-actions to be performed by the identity represented by authenticationResult.
    *
    * If one of the resource-actions fails the authorization check, this method returns the failed
@@ -71,7 +94,8 @@ public class AuthorizationUtils
    * Otherwise, return ACCESS_OK if all resource-actions were successfully authorized.
    *
    * @param authenticationResult Authentication result representing identity of requester
-   * @param resourceActions An Iterable of resource-actions to authorize
+   * @param resourceActions      An Iterable of resource-actions to authorize
+   *
    * @return ACCESS_OK or the Access object from the first failed check
    */
   public static Access authorizeAllResourceActions(
@@ -119,8 +143,9 @@ public class AuthorizationUtils
    *
    * If this attribute is already set when this function is called, an exception is thrown.
    *
-   * @param request HTTP request to be authorized
+   * @param request         HTTP request to be authorized
    * @param resourceActions An Iterable of resource-actions to authorize
+   *
    * @return ACCESS_OK or the Access object from the first failed check
    */
   public static Access authorizeAllResourceActions(
@@ -133,15 +158,8 @@ public class AuthorizationUtils
       throw new ISE("Request already had authorization check.");
     }
 
-    final AuthenticationResult authenticationResult = (AuthenticationResult) request.getAttribute(
-        AuthConfig.DRUID_AUTHENTICATION_RESULT
-    );
-    if (authenticationResult == null) {
-      throw new ISE("Null authentication result");
-    }
-
     Access access = authorizeAllResourceActions(
-        authenticationResult,
+        authenticationResultFromRequest(request),
         resourceActions,
         authorizerMapper
     );
@@ -168,12 +186,12 @@ public class AuthorizationUtils
    *
    * If this attribute is already set when this function is called, an exception is thrown.
    *
-   * @param request HTTP request to be authorized
-   * @param resources resources to be processed into resource-actions
+   * @param request                 HTTP request to be authorized
+   * @param resources               resources to be processed into resource-actions
    * @param resourceActionGenerator Function that creates an iterable of resource-actions from a resource
-   * @param authorizerMapper authorizer mapper
-   * @return Iterable containing resources that were authorized
+   * @param authorizerMapper        authorizer mapper
    *
+   * @return Iterable containing resources that were authorized
    */
   public static <ResType> Iterable<ResType> filterAuthorizedResources(
       final HttpServletRequest request,
@@ -186,12 +204,7 @@ public class AuthorizationUtils
       throw new ISE("Request already had authorization check.");
     }
 
-    final AuthenticationResult authenticationResult = (AuthenticationResult) request.getAttribute(
-        AuthConfig.DRUID_AUTHENTICATION_RESULT
-    );
-    if (authenticationResult == null) {
-      throw new ISE("Null authentication result");
-    }
+    final AuthenticationResult authenticationResult = authenticationResultFromRequest(request);
 
     final Authorizer authorizer = authorizerMapper.getAuthorizer(authenticationResult.getAuthorizerName());
     if (authorizer == null) {
@@ -229,7 +242,6 @@ public class AuthorizationUtils
 
     return filteredResources;
   }
-
 
 
   /**

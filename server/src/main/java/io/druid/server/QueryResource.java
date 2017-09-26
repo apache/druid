@@ -125,7 +125,7 @@ public class QueryResource implements QueryCountStatsProvider
   @DELETE
   @Path("{id}")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getServer(@PathParam("id") String queryId, @Context final HttpServletRequest req)
+  public Response cancelQuery(@PathParam("id") String queryId, @Context final HttpServletRequest req)
   {
     if (log.isDebugEnabled()) {
       log.debug("Received cancel request for query [%s]", queryId);
