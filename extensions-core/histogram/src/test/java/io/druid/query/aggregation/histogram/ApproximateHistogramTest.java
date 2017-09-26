@@ -48,6 +48,12 @@ public class ApproximateHistogramTest
   static final float[] VALUES5 = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   static final float[] VALUES6 = {1f, 1.5f, 2f, 2.5f, 3f, 3.5f, 4f, 4.5f, 5f, 5.5f, 6f, 6.5f, 7f, 7.5f, 8f, 8.5f, 9f, 9.5f, 10f};
 
+  // Based on the example from https://metamarkets.com/2013/histograms/
+  // This dataset can make getQuantiles() return values exceeding max
+  // for example: q=0.95 returns 25.16 when max=25
+  static final float[] VALUES7 = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 12, 12,
+          15, 20, 25, 25, 25};
+
   protected ApproximateHistogram buildHistogram(int size, float[] values)
   {
     ApproximateHistogram h = new ApproximateHistogram(size);
@@ -390,6 +396,35 @@ public class ApproximateHistogramTest
         "expected quantiles match actual quantiles",
         new float[]{1f, 2f, 3f, 4f, 5f, 6f, 7f, 8f, 9f},
         h.getQuantiles(new float[]{.1f, .2f, .3f, .4f, .5f, .6f, .7f, .8f, .9f}), 0.1f
+    );
+  }
+
+  @Test
+  public void testQuantileBetweenMinMax()
+  {
+    ApproximateHistogram h = buildHistogram(20, VALUES7);
+
+    Assert.assertTrue(
+        "min value incorrect",
+        VALUES7[0] == h.min()
+    );
+    Assert.assertTrue(
+        "max value incorrect",
+        VALUES7[VALUES7.length - 1] == h.max()
+    );
+
+    Assert.assertArrayEquals(
+        "expected quantiles match actual quantiles",
+        new float[]{1.8f, 3.6f, 5.4f, 7.2f, 9f, 11.05f, 12.37f, 17f, 23.5f},
+        h.getQuantiles(new float[]{.1f, .2f, .3f, .4f, .5f, .6f, .7f, .8f,
+                .9f}), 0.1f
+    );
+
+    // Test for outliers (0.05f and 0.95f, which should be min <= value <= max)
+    Assert.assertArrayEquals(
+        "expected quantiles match actual quantiles",
+        new float[]{h.min(), h.max()},
+        h.getQuantiles(new float[]{.05f, .95f}), 0.1f
     );
   }
 
