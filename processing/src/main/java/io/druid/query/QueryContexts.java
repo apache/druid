@@ -132,6 +132,29 @@ public class QueryContexts
     }
   }
 
+  public static <T> Query<T> withMaxQueryTimeout(Query<T> query, long maxQueryTimeout)
+  {
+    Object obj = query.getContextValue(TIMEOUT_KEY);
+    if (obj == null) {
+      //don't do anything if timeout is not set in the context.
+      return query;
+    } else {
+      long curr = ((Number) obj).longValue();
+      if (curr > maxQueryTimeout) {
+        throw new IAE(
+            "configured [%s = %s] is more than enforced limit of maxQueryTimeout [%s].",
+            TIMEOUT_KEY,
+            curr,
+            maxQueryTimeout
+        );
+      } else {
+        return query;
+      }
+    }
+  }
+
+
+
   public static <T> long getMaxScatterGatherBytes(Query<T> query)
   {
     return parseLong(query, MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);

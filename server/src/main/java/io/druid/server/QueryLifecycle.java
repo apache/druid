@@ -32,6 +32,7 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.query.DruidMetrics;
 import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
+import io.druid.query.QueryContexts;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryMetrics;
 import io.druid.query.QueryPlus;
@@ -58,7 +59,7 @@ import java.util.concurrent.TimeUnit;
  *
  * <ol>
  * <li>Initialization ({@link #initialize(Query)})</li>
- * <li>Authorization ({@link #authorize(String, String, HttpServletRequest)}</li>
+ * <li>Authorization ({@link #authorize(HttpServletRequest)}</li>
  * <li>Execution ({@link #execute()}</li>
  * <li>Logging ({@link #emitLogsAndMetrics(Throwable, String, long)}</li>
  * </ol>
@@ -171,10 +172,11 @@ public class QueryLifecycle
     }
 
     this.queryPlus = QueryPlus.wrap(
-        (Query) DirectDruidClient.withDefaultTimeoutAndMaxScatterGatherBytes(
-            baseQuery.withId(queryId),
-            serverConfig
-        )
+        QueryContexts.withMaxQueryTimeout(
+            (Query) DirectDruidClient.withDefaultTimeoutAndMaxScatterGatherBytes(
+                baseQuery.withId(queryId),
+                serverConfig
+            ), serverConfig.getMaxQueryTimeout())
     );
     this.toolChest = warehouse.getToolChest(baseQuery);
   }
@@ -213,8 +215,6 @@ public class QueryLifecycle
   /**
    * Authorize the query. Will return an Access object denoting whether the query is authorized or not.
    *
-   * @param token authentication token from the request
-   * @param namespace namespace of the authentication token
    * @param req HTTP request object of the request. If provided, the auth-related fields in the HTTP request
    *            will be automatically set.
    *
