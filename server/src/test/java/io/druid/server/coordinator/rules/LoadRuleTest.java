@@ -268,7 +268,7 @@ public class LoadRuleTest
                                      .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
-                                     .withBalancerReferenceTimestamp(DateTime.parse("2013-01-01"))
+                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
                                      .withAvailableSegments(Collections.singletonList(segment)).build(),
         segment
     );
