@@ -291,8 +291,7 @@ public abstract class LoadRule implements Rule
   {
     final DruidCluster druidCluster = params.getDruidCluster();
 
-    // Make sure we have enough loaded replicants in the correct tiers in the cluster before doing anything
-    // This enforces that loading is completed before we attempt to drop stuffs as a safety measure
+    // This enforces that loading is completed before we attempt to drop stuffs as a safety measure.
     if (loadingInProgress(druidCluster)) {
       return;
     }
