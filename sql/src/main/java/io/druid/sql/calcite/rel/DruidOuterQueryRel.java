@@ -21,6 +21,7 @@ package io.druid.sql.calcite.rel;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.QueryDataSource;
@@ -47,8 +48,8 @@ import java.util.List;
  */
 public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
 {
-  private final RelNode sourceRel;
   private final DruidQueryBuilder queryBuilder;
+  private RelNode sourceRel;
 
   private DruidOuterQueryRel(
       RelOptCluster cluster,
@@ -167,6 +168,15 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
   public List<RelNode> getInputs()
   {
     return ImmutableList.of(sourceRel);
+  }
+
+  @Override
+  public void replaceInput(int ordinalInParent, RelNode p)
+  {
+    if (ordinalInParent != 0) {
+      throw new IndexOutOfBoundsException(StringUtils.format("Invalid ordinalInParent[%s]", ordinalInParent));
+    }
+    this.sourceRel = p;
   }
 
   @Override

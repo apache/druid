@@ -19,6 +19,7 @@
 
 package io.druid.sql.calcite.rel;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -62,11 +63,11 @@ import java.util.Set;
  */
 public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
 {
-  private final DruidRel<?> left;
-  private final RelNode right;
   private final List<DruidExpression> leftExpressions;
   private final List<Integer> rightKeys;
   private final int maxSemiJoinRowsInMemory;
+  private DruidRel<?> left;
+  private RelNode right;
 
   private DruidSemiJoin(
       final RelOptCluster cluster,
@@ -232,6 +233,22 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
   public List<RelNode> getInputs()
   {
     return ImmutableList.of(right);
+  }
+
+  @Override
+  public void replaceInput(int ordinalInParent, RelNode p)
+  {
+    if (ordinalInParent == 0) {
+      Preconditions.checkArgument(
+          p instanceof DruidRel,
+          "RelNode[%s] is not a DruidRel", p.getClass().getCanonicalName()
+      );
+      this.left = (DruidRel<?>) p;
+    } else if (ordinalInParent == 1) {
+      this.right = p;
+    } else {
+      throw new IndexOutOfBoundsException(StringUtils.format("Invalid ordinalInParent[%s]", ordinalInParent));
+    }
   }
 
   @Override

@@ -99,6 +99,7 @@ import io.druid.sql.calcite.planner.PlannerFactory;
 import io.druid.sql.calcite.planner.PlannerResult;
 import io.druid.sql.calcite.schema.DruidSchema;
 import io.druid.sql.calcite.util.CalciteTests;
+import io.druid.sql.calcite.util.InputDataSource;
 import io.druid.sql.calcite.util.QueryLogHook;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import io.druid.sql.calcite.view.InProcessViewManager;
@@ -115,10 +116,12 @@ import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.rules.TestName;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class CalciteQueryTest
 {
@@ -221,13 +224,16 @@ public class CalciteQueryTest
   @Rule
   public QueryLogHook queryLogHook = QueryLogHook.create();
 
+  @Rule
+  public TestName testName = new TestName();
+
   private SpecificSegmentsQuerySegmentWalker walker = null;
 
   @Before
   public void setUp() throws Exception
   {
     Calcites.setSystemProperties();
-    walker = CalciteTests.createMockWalker(temporaryFolder.newFolder());
+    walker = CalciteTests.createMockWalker(getClass().getMethod(testName.getMethodName()), temporaryFolder.newFolder());
   }
 
   @After
@@ -325,6 +331,7 @@ public class CalciteQueryTest
   }
 
   @Test
+  @InputDataSource(names = {"foo", "foo2", "lineitem"})
   public void testInformationSchemaTables() throws Exception
   {
     testQuery(
@@ -335,6 +342,7 @@ public class CalciteQueryTest
         ImmutableList.of(
             new Object[]{"druid", "foo", "TABLE"},
             new Object[]{"druid", "foo2", "TABLE"},
+            new Object[]{"druid", "lineitem", "TABLE"},
             new Object[]{"druid", "aview", "VIEW"},
             new Object[]{"druid", "bview", "VIEW"},
             new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE"},
@@ -3157,6 +3165,69 @@ public class CalciteQueryTest
   }
 
   @Test
+  @InputDataSource(names = {"lineitem"})
+  public void testNestedGroupByForLineitem() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + "    FLOOR(__time to hour) AS __time,\n"
+        + "    l_linestatus,\n"
+        + "    COUNT(l_partkey)\n"
+        + "FROM (\n"
+        + "    SELECT\n"
+        + "        MAX(__time) AS __time,\n"
+        + "        l_partkey,\n"
+        + "        l_linestatus\n"
+        + "    FROM druid.lineitem\n"
+        + "    WHERE 1=1\n"
+        + "        AND l_returnflag = 'R'\n"
+        + "    GROUP BY l_partkey, l_linestatus\n"
+        + ")\n"
+        + "GROUP BY FLOOR(__time to hour), l_linestatus",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(CalciteTests.LINEITEM_DATASOURCE)
+                                        .setInterval(QSS(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(DIMS(
+                                            new DefaultDimensionSpec("l_linestatus", "d0"),
+                                            new DefaultDimensionSpec("l_partkey", "d1")
+                                        ))
+                                        .setDimFilter(new SelectorDimFilter("l_returnflag", "R", null))
+                                        .setAggregatorSpecs(AGGS(new LongMaxAggregatorFactory("a0", "__time")))
+                                        .setContext(QUERY_CONTEXT_DEFAULT)
+                                        .build()
+                        )
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(DIMS(
+                            new ExtractionDimensionSpec(
+                                "a0",
+                                "d0",
+                                ValueType.LONG,
+                                new TimeFormatExtractionFn(null, null, null, Granularities.HOUR, true)
+                            ),
+                            new DefaultDimensionSpec("d0", "d1", ValueType.STRING)
+                        ))
+                        .setAggregatorSpecs(AGGS(
+                            new FilteredAggregatorFactory(
+                                new CountAggregatorFactory("a0"),
+                                new NotDimFilter(new SelectorDimFilter("d1", "", null))
+                            )
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[] {752803200000L, "F", 1L},
+            new Object[] {760147200000L, "F", 1L}
+        )
+    );
+  }
+
+  @Test
   public void testDoubleNestedGroupBy() throws Exception
   {
     testQuery(
@@ -5430,6 +5501,7 @@ public class CalciteQueryTest
   }
 
   @Test
+  @InputDataSource(names = {"foo2"})
   public void testUnicodeFilterAndGroupBy() throws Exception
   {
     testQuery(
@@ -5554,18 +5626,13 @@ public class CalciteQueryTest
       final List<Object[]> results
   )
   {
-    for (int i = 0; i < results.size(); i++) {
-      log.info("row #%d: %s", i, Arrays.toString(results.get(i)));
-    }
-
-    Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResults.size(), results.size());
-    for (int i = 0; i < results.size(); i++) {
-      Assert.assertArrayEquals(
-          StringUtils.format("result #%d: %s", i + 1, sql),
-          expectedResults.get(i),
-          results.get(i)
-      );
-    }
+    final List<List<Object>> expectedResultList = expectedResults.stream()
+                                                                 .map(Arrays::asList)
+                                                                 .collect(Collectors.toList());
+    final List<List<Object>> actualResultList = results.stream()
+                                                       .map(Arrays::asList)
+                                                       .collect(Collectors.toList());
+    Assert.assertEquals(expectedResultList, actualResultList);
 
     if (expectedQueries != null) {
       final List<Query> recordedQueries = queryLogHook.getRecordedQueries();

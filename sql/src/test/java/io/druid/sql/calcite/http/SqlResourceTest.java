@@ -51,6 +51,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.rules.TestName;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
@@ -69,6 +70,9 @@ public class SqlResourceTest
   @Rule
   public QueryLogHook queryLogHook = QueryLogHook.create();
 
+  @Rule
+  public TestName testName = new TestName();
+
   private SpecificSegmentsQuerySegmentWalker walker = null;
 
   private SqlResource resource;
@@ -79,7 +83,7 @@ public class SqlResourceTest
   public void setUp() throws Exception
   {
     Calcites.setSystemProperties();
-    walker = CalciteTests.createMockWalker(temporaryFolder.newFolder());
+    walker = CalciteTests.createMockWalker(getClass().getMethod(testName.getMethodName()), temporaryFolder.newFolder());
 
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig);

@@ -43,6 +43,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.rules.TestName;
 
 import java.util.List;
 
@@ -54,6 +55,9 @@ public class DruidStatementTest
   @Rule
   public QueryLogHook queryLogHook = QueryLogHook.create();
 
+  @Rule
+  public TestName testName = new TestName();
+
   private SpecificSegmentsQuerySegmentWalker walker;
   private PlannerFactory plannerFactory;
 
@@ -61,7 +65,7 @@ public class DruidStatementTest
   public void setUp() throws Exception
   {
     Calcites.setSystemProperties();
-    walker = CalciteTests.createMockWalker(temporaryFolder.newFolder());
+    walker = CalciteTests.createMockWalker(getClass().getMethod(testName.getMethodName()), temporaryFolder.newFolder());
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidSchema druidSchema = CalciteTests.createMockSchema(
         walker,
