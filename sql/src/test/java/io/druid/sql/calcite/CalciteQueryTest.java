@@ -3917,8 +3917,8 @@ public class CalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setDimensions(
                             DIMS(
-                                new DefaultDimensionSpec("dim1", "d0"),
-                                new DefaultDimensionSpec("dim2", "d1")
+                                new DefaultDimensionSpec("dim2", "d0"),
+                                new DefaultDimensionSpec("dim1", "d1")
                             )
                         )
                         .setAggregatorSpecs(
