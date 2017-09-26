@@ -3909,7 +3909,7 @@ public class CalciteQueryTest
   public void testGroupBySortPushDown() throws Exception
   {
     testQuery(
-        "SELECT dim1, dim2, SUM(cnt) FROM druid.foo GROUP BY dim1, dim2 ORDER BY dim2 LIMIT 4",
+        "SELECT dim2, dim1, SUM(cnt) FROM druid.foo GROUP BY dim2, dim1 ORDER BY dim1 LIMIT 4",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -3938,10 +3938,10 @@ public class CalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{"10.1", "", 1L},
-            new Object[]{"2", "", 1L},
-            new Object[]{"abc", "", 1L},
-            new Object[]{"1", "a", 1L}
+            new Object[]{"a", "", 1L},
+            new Object[]{"a", "1", 1L},
+            new Object[]{"", "10.1", 1L},
+            new Object[]{"", "2", 1L}
         )
     );
   }
