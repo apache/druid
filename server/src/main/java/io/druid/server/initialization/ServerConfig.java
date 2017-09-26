@@ -81,7 +81,6 @@ public class ServerConfig
     return maxQueryTimeout;
   }
 
-
   public boolean isPlaintext()
   {
     return plaintext;
