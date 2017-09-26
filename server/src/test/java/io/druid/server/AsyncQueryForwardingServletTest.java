@@ -45,7 +45,6 @@ import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.Query;
 import io.druid.query.QueryToolChest;
 import io.druid.server.initialization.BaseJettyTest;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.log.RequestLogger;
@@ -113,7 +112,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                 JsonConfigProvider.bindInstance(
                     binder,
                     Key.get(DruidNode.class, Self.class),
-                    new DruidNode("test", "localhost", null, null, new ServerConfig())
+                    new DruidNode("test", "localhost", null, null, true, false)
                 );
                 binder.bind(JettyServerInitializer.class).to(ProxyJettyServerInit.class).in(LazySingleton.class);
                 binder.bind(AuthorizerMapper.class).toInstance(

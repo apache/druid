@@ -51,7 +51,6 @@ import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.server.DruidNode;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.apache.hadoop.conf.Configuration;
@@ -136,7 +135,7 @@ public class DatasourcePathSpecTest
               {
                 binder.bind(UsedSegmentLister.class).toInstance(segmentList);
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("dummy-node", null, null, null, new ServerConfig())
+                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("dummy-node", null, null, null, true, false)
                 );
               }
             }

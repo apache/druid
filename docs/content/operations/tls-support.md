@@ -9,8 +9,8 @@ TLS Support
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.server.http.plaintext`|Enable/Disable HTTP connector.|`true`|
-|`druid.server.http.tls`|Enable/Disable HTTPS connector.|`false`|
+|`druid.enablePlaintextPort`|Enable/Disable HTTP connector.|`true`|
+|`druid.enableTlsPort`|Enable/Disable HTTPS connector.|`false`|
 
 Although not recommended but both HTTP and HTTPS connectors can be enabled at a time and respective ports are configurable using `druid.plaintextPort`
 and `druid.tlsPort` properties on each node. Please see `Configuration` section of individual nodes to check the valid and default values for these ports.

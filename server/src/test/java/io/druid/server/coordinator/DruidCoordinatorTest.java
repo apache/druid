@@ -44,7 +44,6 @@ import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.ServerType;
 import io.druid.server.coordinator.rules.ForeverLoadRule;
 import io.druid.server.coordinator.rules.Rule;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.lookup.cache.LookupCoordinatorManager;
 import io.druid.server.metrics.NoopServiceEmitter;
@@ -151,7 +150,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         druidCoordinatorConfig
     );
     loadQueuePeon.start();
-    druidNode = new DruidNode("hey", "what", 1234, null, new ServerConfig());
+    druidNode = new DruidNode("hey", "what", 1234, null, true, false);
     loadManagementPeons = new ConcurrentHashMap<>();
     scheduledExecutorFactory = new ScheduledExecutorFactory()
     {

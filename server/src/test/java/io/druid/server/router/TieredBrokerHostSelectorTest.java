@@ -43,7 +43,6 @@ import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.server.DruidNode;
 import io.druid.server.coordinator.rules.IntervalLoadRule;
 import io.druid.server.coordinator.rules.Rule;
-import io.druid.server.initialization.ServerConfig;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -75,19 +74,19 @@ public class TieredBrokerHostSelectorTest
     druidNodeDiscoveryProvider = EasyMock.createStrictMock(DruidNodeDiscoveryProvider.class);
 
     node1 = new DiscoveryDruidNode(
-        new DruidNode("hotBroker", "hotHost", 8080, null, new ServerConfig()),
+        new DruidNode("hotBroker", "hotHost", 8080, null, true, false),
         DruidNodeDiscoveryProvider.NODE_TYPE_BROKER,
         ImmutableMap.of()
     );
 
     node2 = new DiscoveryDruidNode(
-        new DruidNode("coldBroker", "coldHost1", 8080, null, new ServerConfig()),
+        new DruidNode("coldBroker", "coldHost1", 8080, null, true, false),
         DruidNodeDiscoveryProvider.NODE_TYPE_BROKER,
         ImmutableMap.of()
     );
 
     node3 = new DiscoveryDruidNode(
-        new DruidNode("coldBroker", "coldHost2", 8080, null, new ServerConfig()),
+        new DruidNode("coldBroker", "coldHost2", 8080, null, true, false),
         DruidNodeDiscoveryProvider.NODE_TYPE_BROKER,
         ImmutableMap.of()
     );

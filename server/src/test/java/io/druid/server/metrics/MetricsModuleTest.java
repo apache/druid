@@ -30,7 +30,6 @@ import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Self;
 import io.druid.initialization.Initialization;
 import io.druid.server.DruidNode;
-import io.druid.server.initialization.ServerConfig;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -48,7 +47,7 @@ public class MetricsModuleTest
           public void configure(Binder binder)
           {
             JsonConfigProvider.bindInstance(
-                binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null, null, new ServerConfig())
+                binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null, null, true, false)
             );
           }
         })
@@ -73,7 +72,7 @@ public class MetricsModuleTest
           public void configure(Binder binder)
           {
             JsonConfigProvider.bindInstance(
-                binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null, null, new ServerConfig())
+                binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null, null, true, false)
             );
             binder.bind(Key.get(
                 String.class,
