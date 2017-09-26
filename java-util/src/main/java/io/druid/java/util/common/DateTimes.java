@@ -21,6 +21,7 @@ package io.druid.java.util.common;
 
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
+import org.joda.time.format.DateTimeFormatter;
 
 public final class DateTimes
 {
@@ -36,6 +37,11 @@ public final class DateTimes
   public static DateTime of(String instant)
   {
     return new DateTime(instant, ISOChronology.getInstanceUTC());
+  }
+
+  public static DateTime of(String instant, DateTimeFormatter formatter)
+  {
+    return utc(formatter.parseMillis(instant));
   }
 
   public static DateTime nowUtc()
