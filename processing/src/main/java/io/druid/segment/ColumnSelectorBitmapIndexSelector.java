@@ -209,7 +209,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
 
     final Column column = index.getColumn(dimension);
     if (column == null || !columnSupportsFiltering(column)) {
-      if (value == null) {
+      if (NullHandlingHelper.isNullOrDefault(value)) {
         return bitmapFactory.complement(bitmapFactory.makeEmptyImmutableBitmap(), getNumRows());
       } else {
         return bitmapFactory.makeEmptyImmutableBitmap();

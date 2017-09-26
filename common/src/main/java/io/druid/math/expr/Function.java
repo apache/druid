@@ -904,6 +904,7 @@ interface Function
             builder.append(s);
           } else {
             // Result of concatenation is null if any of the Values is null.
+            // e.g. 'select CONCAT(null, "abc") as c;' will return null as per Standard SQL spec.
             return ExprEval.of(null);
           }
         }
@@ -964,6 +965,8 @@ interface Function
           return ExprEval.of(arg.substring(index));
         }
       } else {
+        // If starting index of substring is greater then the lengh of string, the result will be a zero length string.
+        // e.g. 'select substring("abc", 4,5) as c;' will return an empty string
         return ExprEval.of("");
       }
     }

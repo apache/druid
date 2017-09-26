@@ -103,6 +103,12 @@ public class LongSumAggregatorFactory extends AggregatorFactory
   @Override
   public Object combine(Object lhs, Object rhs)
   {
+    if (lhs == null) {
+      return rhs;
+    }
+    if (rhs == null) {
+      return lhs;
+    }
     return LongSumAggregator.combineValues(lhs, rhs);
   }
 

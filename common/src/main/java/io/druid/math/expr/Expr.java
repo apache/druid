@@ -490,6 +490,8 @@ class BinPlusExpr extends BinaryEvalOpExprBase
   @Override
   protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
+    // Result of expression is Null if any of the argument is null.
+    // e.g "select null * 2 as c;" will return null as per Standard SQL spec.
     if (left == null || right == null) {
       return ExprEval.of(null);
     }

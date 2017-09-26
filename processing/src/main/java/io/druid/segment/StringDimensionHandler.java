@@ -72,7 +72,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
     return retVal;
   }
 
-  public boolean isNUllRow(int[] row, Indexed<String> encodings)
+  private boolean isNUllRow(int[] row, Indexed<String> encodings)
   {
     if (row == null) {
       return true;

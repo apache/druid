@@ -21,6 +21,7 @@ package io.druid.segment.data;
 
 import io.druid.guice.annotations.ExtensionPoint;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 
@@ -42,6 +43,9 @@ public interface ObjectStrategy<T> extends Comparator<T>
    * @param numBytes number of bytes used to store the value, starting at buffer.position()
    * @return an object created from the given byte buffer representation
    */
+  @Nullable
   public T fromByteBuffer(ByteBuffer buffer, int numBytes);
-  public byte[] toBytes(T val);
+
+  @Nullable
+  public byte[] toBytes(@Nullable T val);
 }

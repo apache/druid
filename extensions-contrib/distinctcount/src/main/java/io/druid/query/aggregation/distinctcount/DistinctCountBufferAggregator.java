@@ -25,8 +25,10 @@ import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.NullHandlingHelper;
+import io.druid.segment.data.IndexedInts;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import org.roaringbitmap.IntIterator;
 
 import java.nio.ByteBuffer;
 
@@ -51,12 +53,11 @@ public class DistinctCountBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    boolean countNulls = NullHandlingHelper.useDefaultValuesForNull();
     MutableBitmap mutableBitmap = getMutableBitmap(buf, position);
-    for (final Integer index : selector.getRow()) {
-      if (countNulls || selector.lookupName(index) != null) {
-        mutableBitmap.add(index);
-      }
+    IndexedInts row = selector.getRow();
+    for (int i = 0; i < row.size(); i++) {
+      int index = row.get(i);
+      mutableBitmap.add(index);
     }
     buf.putLong(position, mutableBitmap.size());
   }
@@ -74,25 +75,25 @@ public class DistinctCountBufferAggregator implements BufferAggregator
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    return buf.getLong(position);
+    return countValues(buf, position);
   }
 
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    return (float) buf.getLong(position);
+    return (float) countValues(buf, position);
   }
 
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
-    return buf.getLong(position);
+    return countValues(buf, position);
   }
 
   @Override
   public double getDouble(ByteBuffer buf, int position)
   {
-    return (double) buf.getLong(position);
+    return (double) countValues(buf, position);
   }
 
   @Override
@@ -105,5 +106,22 @@ public class DistinctCountBufferAggregator implements BufferAggregator
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
     inspector.visit("selector", selector);
+  }
+
+  private long countValues(ByteBuffer buf, int position)
+  {
+    MutableBitmap mutableBitmap = getMutableBitmap(buf, position);
+    if (NullHandlingHelper.useDefaultValuesForNull()) {
+      return mutableBitmap.size();
+    }
+    int retVal = 0;
+    IntIterator iterator = mutableBitmap.iterator();
+    while (iterator.hasNext()) {
+      String val = selector.lookupName(iterator.next());
+      if (val != null) {
+        retVal++;
+      }
+    }
+    return retVal;
   }
 }

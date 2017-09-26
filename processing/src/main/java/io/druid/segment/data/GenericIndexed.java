@@ -31,6 +31,7 @@ import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.NullHandlingHelper;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -85,9 +86,11 @@ public class GenericIndexed<T> implements Indexed<T>
     }
 
     @Override
+    @Nullable
     public String fromByteBuffer(final ByteBuffer buffer, final int numBytes)
     {
       if (numBytes < 0) {
+        // nulBytes will be -1 for null values.
         return null;
       }
       return NullHandlingHelper.defaultToNull(StringUtils.fromUtf8Nullable(buffer, numBytes));

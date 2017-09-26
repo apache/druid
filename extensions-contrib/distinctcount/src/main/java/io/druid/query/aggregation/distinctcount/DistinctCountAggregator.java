@@ -23,6 +23,8 @@ import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.NullHandlingHelper;
+import io.druid.segment.data.IndexedInts;
+import org.roaringbitmap.IntIterator;
 
 public class DistinctCountAggregator implements Aggregator
 {
@@ -42,11 +44,10 @@ public class DistinctCountAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    boolean countNulls = NullHandlingHelper.useDefaultValuesForNull();
-    for (final Integer index : selector.getRow()) {
-      if (countNulls || selector.lookupName(index) != null) {
-        mutableBitmap.add(index);
-      }
+    IndexedInts row = selector.getRow();
+    for (int i = 0; i < row.size(); i++) {
+      int index = row.get(i);
+      mutableBitmap.add(index);
     }
   }
 
@@ -59,13 +60,13 @@ public class DistinctCountAggregator implements Aggregator
   @Override
   public Object get()
   {
-    return mutableBitmap.size();
+    return countValues();
   }
 
   @Override
   public float getFloat()
   {
-    return (float) mutableBitmap.size();
+    return (float) countValues();
   }
 
   @Override
@@ -77,12 +78,28 @@ public class DistinctCountAggregator implements Aggregator
   @Override
   public long getLong()
   {
-    return (long) mutableBitmap.size();
+    return (long) countValues();
   }
 
   @Override
   public double getDouble()
   {
-    return (double) mutableBitmap.size();
+    return (double) countValues();
+  }
+
+  private int countValues()
+  {
+    if (NullHandlingHelper.useDefaultValuesForNull()) {
+      return mutableBitmap.size();
+    }
+    int retVal = 0;
+    IntIterator iterator = mutableBitmap.iterator();
+    while (iterator.hasNext()) {
+      String val = selector.lookupName(iterator.next());
+      if (val != null) {
+        retVal++;
+      }
+    }
+    return retVal;
   }
 }
