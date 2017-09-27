@@ -85,6 +85,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -164,7 +165,7 @@ public class DruidCoordinator
         taskMaster,
         serviceAnnouncer,
         self,
-        Maps.<String, LoadQueuePeon>newConcurrentMap(),
+        new ConcurrentHashMap<>(),
         indexingServiceHelpers,
         factory,
         lookupCoordinatorManager,
