@@ -25,6 +25,7 @@ import com.google.common.io.Files;
 import com.yahoo.sketches.theta.Sketches;
 import com.yahoo.sketches.theta.UpdateSketch;
 import io.druid.data.input.MapBasedRow;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -37,7 +38,6 @@ import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
 import io.druid.query.groupby.epinephelinae.GrouperTestUtil;
 import io.druid.query.groupby.epinephelinae.TestColumnSelectorFactory;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -100,7 +100,7 @@ public class OldApiSketchAggregationTest
     Assert.assertEquals(1, results.size());
     Assert.assertEquals(
         new MapBasedRow(
-            DateTime.parse("2014-10-19T00:00:00.000Z"),
+            DateTimes.of("2014-10-19T00:00:00.000Z"),
             ImmutableMap
                 .<String, Object>builder()
                 .put("sketch_count", 50.0)
@@ -132,7 +132,7 @@ public class OldApiSketchAggregationTest
     Assert.assertEquals(1, results.size());
     Assert.assertEquals(
         new MapBasedRow(
-            DateTime.parse("2014-10-19T00:00:00.000Z"),
+            DateTimes.of("2014-10-19T00:00:00.000Z"),
             ImmutableMap
                 .<String, Object>builder()
                 .put("sids_sketch_count", 50.0)

@@ -47,7 +47,6 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
-import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.BaseResultSetMapper;
@@ -574,8 +573,8 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                       protected Interval mapInternal(int index, Map<String, Object> row)
                       {
                         return new Interval(
-                            DateTime.parse((String) row.get("start")),
-                            DateTime.parse((String) row.get("end"))
+                            DateTimes.of((String) row.get("start")),
+                            DateTimes.of((String) row.get("end"))
                         );
                       }
                     }
