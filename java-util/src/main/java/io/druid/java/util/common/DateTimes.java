@@ -23,12 +23,20 @@ import org.joda.time.Chronology;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
 import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
 
 public final class DateTimes
 {
   public static final DateTime EPOCH = utc(0);
   public static final DateTime MAX = utc(JodaUtils.MAX_INSTANT);
   public static final DateTime MIN = utc(JodaUtils.MIN_INSTANT);
+
+  public static final UtcFormatter ISO_DATE_TIME = wrapFormatter(ISODateTimeFormat.dateTime());
+  public static final UtcFormatter ISO_DATE_OPTIONAL_TIME = wrapFormatter(ISODateTimeFormat.dateOptionalTimeParser());
+  public static final UtcFormatter ISO_DATE_OR_TIME = wrapFormatter(ISODateTimeFormat.dateTimeParser());
+  public static final UtcFormatter ISO_DATE_OR_TIME_WITH_OFFSET = wrapFormatter(
+      ISODateTimeFormat.dateTimeParser().withOffsetParsed()
+  );
 
   /**
    * Simple wrapper class to enforce UTC Chronology in formatter. Specifically, it will use

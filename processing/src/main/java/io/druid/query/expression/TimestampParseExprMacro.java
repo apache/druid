@@ -26,7 +26,6 @@ import io.druid.math.expr.ExprEval;
 import io.druid.math.expr.ExprMacroTable;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.ISODateTimeFormat;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -56,11 +55,10 @@ public class TimestampParseExprMacro implements ExprMacroTable.ExprMacro
       timeZone = DateTimeZone.UTC;
     }
 
-    final DateTimes.UtcFormatter formatter = DateTimes.wrapFormatter(
+    final DateTimes.UtcFormatter formatter =
         formatString == null
-        ? ISODateTimeFormat.dateTimeParser()
-        : DateTimeFormat.forPattern(formatString).withZone(timeZone)
-    );
+        ? DateTimes.ISO_DATE_OR_TIME
+        : DateTimes.wrapFormatter(DateTimeFormat.forPattern(formatString).withZone(timeZone));
 
     class TimestampParseExpr implements Expr
     {

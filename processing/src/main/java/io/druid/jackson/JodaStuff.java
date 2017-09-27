@@ -36,7 +36,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.joda.time.format.ISODateTimeFormat;
 
 import java.io.IOException;
 
@@ -89,11 +88,6 @@ class JodaStuff
 
   private static class DateTimeDeserializer extends StdDeserializer<DateTime>
   {
-    private static final DateTimes.UtcFormatter FORMATTER = DateTimes.wrapFormatter(
-        // make sure to preserve time zone information when parsing timestamps
-        ISODateTimeFormat.dateTimeParser().withOffsetParsed()
-    );
-
     public DateTimeDeserializer()
     {
       super(DateTime.class);
@@ -112,7 +106,8 @@ class JodaStuff
         if (str.length() == 0) { // [JACKSON-360]
           return null;
         }
-        return FORMATTER.parse(str);
+        // make sure to preserve time zone information when parsing timestamps
+        return DateTimes.ISO_DATE_OR_TIME_WITH_OFFSET.parse(str);
       }
       throw ctxt.mappingException(getValueClass());
     }
