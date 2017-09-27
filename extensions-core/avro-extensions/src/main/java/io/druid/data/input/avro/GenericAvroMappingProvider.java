@@ -17,28 +17,28 @@
  * under the License.
  */
 
-package io.druid.data.input.impl;
+package io.druid.data.input.avro;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonValue;
-import io.druid.java.util.common.StringUtils;
+import com.jayway.jsonpath.Configuration;
+import com.jayway.jsonpath.TypeRef;
+import com.jayway.jsonpath.spi.mapper.MappingProvider;
 
-public enum JSONPathFieldType
+/**
+ * MappingProvider for JsonPath + Avro.
+ */
+public class GenericAvroMappingProvider implements MappingProvider
 {
-  ROOT,
-  PATH,
-  JQ;
-
-  @JsonValue
   @Override
-  public String toString()
+  public <T> T map(final Object o, final Class<T> aClass, final Configuration configuration)
   {
-    return StringUtils.toLowerCase(this.name());
+    // Not used by us.
+    throw new UnsupportedOperationException();
   }
 
-  @JsonCreator
-  public static JSONPathFieldType fromString(String name)
+  @Override
+  public <T> T map(final Object o, final TypeRef<T> typeRef, final Configuration configuration)
   {
-    return valueOf(StringUtils.toUpperCase(name));
+    // Not used by us.
+    throw new UnsupportedOperationException();
   }
 }

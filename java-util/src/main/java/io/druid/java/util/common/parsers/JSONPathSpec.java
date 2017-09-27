@@ -17,16 +17,19 @@
  * under the License.
  */
 
-package io.druid.data.input.impl;
+package io.druid.java.util.common.parsers;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 
 import java.util.List;
+import java.util.Objects;
 
 public class JSONPathSpec
 {
+  public static final JSONPathSpec DEFAULT = new JSONPathSpec(null, null);
+
   private final boolean useFieldDiscovery;
   private final List<JSONPathFieldSpec> fields;
 
@@ -50,5 +53,34 @@ public class JSONPathSpec
   public List<JSONPathFieldSpec> getFields()
   {
     return fields;
+  }
+
+  @Override
+  public boolean equals(final Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    final JSONPathSpec that = (JSONPathSpec) o;
+    return useFieldDiscovery == that.useFieldDiscovery &&
+           Objects.equals(fields, that.fields);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(useFieldDiscovery, fields);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "JSONPathSpec{" +
+           "useFieldDiscovery=" + useFieldDiscovery +
+           ", fields=" + fields +
+           '}';
   }
 }

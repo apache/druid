@@ -19,42 +19,26 @@
 
 package io.druid.java.util.common.parsers;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.jayway.jsonpath.Configuration;
-import com.jayway.jsonpath.JsonPath;
-import net.thisptr.jackson.jq.JsonQuery;
-import net.thisptr.jackson.jq.exception.JsonQueryException;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+import io.druid.java.util.common.StringUtils;
 
-
-public class FlattenExpr
+public enum JSONPathFieldType
 {
-  private JsonPath jsonPathExpr;
-  private JsonQuery jsonQueryExpr;
+  ROOT,
+  PATH,
+  JQ;
 
-
-  FlattenExpr(JsonPath jsonPathExpr)
+  @JsonValue
+  @Override
+  public String toString()
   {
-    this.jsonPathExpr = jsonPathExpr;
+    return StringUtils.toLowerCase(this.name());
   }
 
-  FlattenExpr(JsonQuery jsonQueryExpr)
+  @JsonCreator
+  public static JSONPathFieldType fromString(String name)
   {
-    this.jsonQueryExpr = jsonQueryExpr;
-  }
-
-  public JsonNode readPath(JsonNode document, Configuration jsonConfig)
-  {
-    return this.jsonPathExpr.read(document, jsonConfig);
-  }
-
-  public JsonNode readJq(JsonNode document)
-  {
-    try {
-      return this.jsonQueryExpr.apply(document).get(0);
-    }
-    catch (JsonQueryException e) {
-      // ignore errors.
-    }
-    return null;
+    return valueOf(StringUtils.toUpperCase(name));
   }
 }

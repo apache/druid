@@ -21,6 +21,9 @@ package io.druid.data.input.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.TestObjectMapper;
+import io.druid.java.util.common.parsers.JSONPathFieldSpec;
+import io.druid.java.util.common.parsers.JSONPathFieldType;
+import io.druid.java.util.common.parsers.JSONPathSpec;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -88,10 +91,10 @@ public class JSONPathSpecTest
 
     Assert.assertEquals(JSONPathFieldType.ROOT, timestamp.getType());
     Assert.assertEquals("timestamp", timestamp.getName());
-    Assert.assertEquals(null, timestamp.getExpr());
+    Assert.assertEquals("timestamp", timestamp.getExpr());
 
     Assert.assertEquals(JSONPathFieldType.ROOT, foodotbar1.getType());
     Assert.assertEquals("foo.bar1", foodotbar1.getName());
-    Assert.assertEquals(null, foodotbar1.getExpr());
+    Assert.assertEquals("foo.bar1", foodotbar1.getExpr());
   }
 }

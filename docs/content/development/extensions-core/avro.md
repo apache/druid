@@ -14,7 +14,10 @@ This is for streaming/realtime ingestion.
 |-------|------|-------------|----------|
 | type | String | This should say `avro_stream`. | no |
 | avroBytesDecoder | JSON Object | Specifies how to decode bytes to Avro record. | yes |
-| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be a timeAndDims parseSpec. | yes |
+| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be an "avro" parseSpec. | yes |
+
+An Avro parseSpec can contain a [flattenSpec](../../ingestion/flatten-spec.html) using either the "root" or "path"
+field types, which can be used to read nested Avro records. The "jq" field type is not currently supported for Avro.
 
 For example, using Avro stream parser with schema repo Avro bytes decoder:
 
@@ -33,9 +36,10 @@ For example, using Avro stream parser with schema repo Avro bytes decoder:
     }
   },
   "parseSpec" : {
-    "format": "timeAndDims",
+    "format": "avro",
     "timestampSpec": <standard timestampSpec>,
-    "dimensionsSpec": <standard dimensionsSpec>
+    "dimensionsSpec": <standard dimensionsSpec>,
+    "flattenSpec": <optional>
   }
 }
 ```
@@ -45,6 +49,12 @@ For example, using Avro stream parser with schema repo Avro bytes decoder:
 If `type` is not included, the avroBytesDecoder defaults to `schema_repo`.
 
 ##### Inline Schema Based Avro Bytes Decoder
+
+<div class="note info">
+The "schema_inline" decoder reads Avro records using a fixed schema and does not support schema migration. If you
+may need to migrate schemas in the future, consider one of the other decoders, all of which use a message header that
+allows the parser to identify the proper Avro schema for reading records.
+</div>
 
 This decoder can be used if all the input events can be read using the same schema. In that case schema can be specified in the input task json itself as described below.
 
@@ -150,8 +160,11 @@ This is for batch ingestion using the HadoopDruidIndexer. The `inputFormat` of `
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | type | String | This should say `avro_hadoop`. | no |
-| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be a timeAndDims parseSpec. | yes |
+| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be an "avro" parseSpec. | yes |
 | fromPigAvroStorage | Boolean | Specifies whether the data file is stored using AvroStorage. | no(default == false) |
+
+An Avro parseSpec can contain a [flattenSpec](../../ingestion/flatten-spec.html) using either the "root" or "path"
+field types, which can be used to read nested Avro records. The "jq" field type is not currently supported for Avro.
 
 For example, using Avro Hadoop parser with custom reader's schema file:
 
@@ -164,9 +177,10 @@ For example, using Avro Hadoop parser with custom reader's schema file:
       "parser" : {
         "type" : "avro_hadoop",
         "parseSpec" : {
-          "format": "timeAndDims",
+          "format": "avro",
           "timestampSpec": <standard timestampSpec>,
-          "dimensionsSpec": <standard dimensionsSpec>
+          "dimensionsSpec": <standard dimensionsSpec>,
+          "flattenSpec": <optional>
         }
       }
     },
