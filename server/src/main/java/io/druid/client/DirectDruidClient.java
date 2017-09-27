@@ -117,20 +117,6 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   private final AtomicInteger openConnections;
   private final boolean isSmile;
 
-  public static <T, QueryType extends Query<T>> QueryType withDefaultTimeoutAndMaxScatterGatherBytes(
-      final QueryType query,
-      ServerConfig serverConfig
-  )
-  {
-    return (QueryType) QueryContexts.withMaxScatterGatherBytes(
-        QueryContexts.withDefaultTimeout(
-            (Query) query,
-            serverConfig.getDefaultQueryTimeout()
-        ),
-        serverConfig.getMaxScatterGatherBytes()
-    );
-  }
-
   /**
    * Removes the magical fields added by {@link #makeResponseContextForQuery(Query, long)}.
    */

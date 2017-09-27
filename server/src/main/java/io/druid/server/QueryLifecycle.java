@@ -173,7 +173,7 @@ public class QueryLifecycle
 
     this.queryPlus = QueryPlus.wrap(
         QueryContexts.withMaxQueryTimeout(
-            (Query) DirectDruidClient.withDefaultTimeoutAndMaxScatterGatherBytes(
+            (Query) withTimeoutAndMaxScatterGatherBytes(
                 baseQuery.withId(queryId),
                 serverConfig
             ), serverConfig.getMaxQueryTimeout())
@@ -361,6 +361,23 @@ public class QueryLifecycle
     AUTHORIZED,
     EXECUTING,
     DONE
+  }
+
+  public static <T, QueryType extends Query<T>> QueryType withTimeoutAndMaxScatterGatherBytes(
+      final QueryType query,
+      ServerConfig serverConfig
+  )
+  {
+    return (QueryType) QueryContexts.withMaxQueryTimeout(
+        QueryContexts.withMaxScatterGatherBytes(
+            QueryContexts.withDefaultTimeout(
+                (Query) query,
+                serverConfig.getDefaultQueryTimeout()
+            ),
+            serverConfig.getMaxScatterGatherBytes()
+        ),
+        serverConfig.getMaxQueryTimeout()
+    );
   }
 
   public static class QueryResponse
