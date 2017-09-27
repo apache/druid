@@ -51,8 +51,10 @@ public class ApproximateHistogramTest
   // Based on the example from https://metamarkets.com/2013/histograms/
   // This dataset can make getQuantiles() return values exceeding max
   // for example: q=0.95 returns 25.16 when max=25
-  static final float[] VALUES7 = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 12, 12,
-          15, 20, 25, 25, 25};
+  static final float[] VALUES7 = {
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 12, 12,
+      15, 20, 25, 25, 25
+  };
 
   protected ApproximateHistogram buildHistogram(int size, float[] values)
   {
@@ -416,8 +418,10 @@ public class ApproximateHistogramTest
     Assert.assertArrayEquals(
         "expected quantiles match actual quantiles",
         new float[]{1.8f, 3.6f, 5.4f, 7.2f, 9f, 11.05f, 12.37f, 17f, 23.5f},
-        h.getQuantiles(new float[]{.1f, .2f, .3f, .4f, .5f, .6f, .7f, .8f,
-                .9f}), 0.1f
+        h.getQuantiles(new float[]{
+            .1f, .2f, .3f, .4f, .5f, .6f, .7f, .8f,
+            .9f
+        }), 0.1f
     );
 
     // Test for outliers (0.05f and 0.95f, which should be min <= value <= max)

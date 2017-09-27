@@ -59,7 +59,7 @@ public class TimestampParser
               }
             }
 
-            return new DateTime(parser.parseDateTime(input), timeZone);
+            return DateTimes.of(input, parser).withZone(timeZone);
           }
         }
 
@@ -90,7 +90,7 @@ public class TimestampParser
         final DateTimeFormatter formatter = DateTimeFormat.forPattern(format);
         return input -> {
           Preconditions.checkArgument(!Strings.isNullOrEmpty(input), "null timestamp");
-          return formatter.parseDateTime(ParserUtils.stripQuotes(input));
+          return DateTimes.of(ParserUtils.stripQuotes(input), formatter);
         };
       }
       catch (Exception e) {

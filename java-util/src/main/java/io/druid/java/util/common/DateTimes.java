@@ -41,7 +41,7 @@ public final class DateTimes
 
   public static DateTime of(String instant, DateTimeFormatter formatter)
   {
-    return utc(formatter.parseMillis(instant));
+    return formatter.withChronology(ISOChronology.getInstanceUTC()).parseDateTime(instant);
   }
 
   public static DateTime nowUtc()

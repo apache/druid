@@ -21,6 +21,7 @@ package io.druid.timeline;
 
 import com.google.common.base.Function;
 import io.druid.guice.annotations.PublicApi;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
@@ -86,8 +87,8 @@ public class DataSegmentUtils
     DateTimeFormatter formatter = ISODateTimeFormat.dateTime();
 
     try {
-      DateTime start = formatter.parseDateTime(splits[0]);
-      DateTime end = formatter.parseDateTime(splits[1]);
+      DateTime start = DateTimes.of(splits[0], formatter);
+      DateTime end = DateTimes.of(splits[1], formatter);
       String version = splits[2];
       String trail = splits.length > 3 ? join(splits, DataSegment.delimiter, 3, splits.length) : null;
 

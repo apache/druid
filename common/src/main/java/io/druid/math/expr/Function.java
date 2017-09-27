@@ -20,6 +20,7 @@
 package io.druid.math.expr;
 
 import com.google.common.base.Strings;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
@@ -834,7 +835,7 @@ interface Function
       }
       DateTime date;
       try {
-        date = DateTime.parse(value.asString(), formatter);
+        date = DateTimes.of(value.asString(), formatter);
       }
       catch (IllegalArgumentException e) {
         throw new IAE(e, "invalid value %s", value.asString());

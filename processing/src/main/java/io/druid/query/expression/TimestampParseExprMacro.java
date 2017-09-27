@@ -19,6 +19,7 @@
 
 package io.druid.query.expression;
 
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprEval;
@@ -67,7 +68,7 @@ public class TimestampParseExprMacro implements ExprMacroTable.ExprMacro
       public ExprEval eval(final ObjectBinding bindings)
       {
         try {
-          return ExprEval.of(formatter.parseDateTime(arg.eval(bindings).asString()).getMillis());
+          return ExprEval.of(DateTimes.of(arg.eval(bindings).asString(), formatter).getMillis());
         }
         catch (IllegalArgumentException e) {
           // Catch exceptions potentially thrown by formatter.parseDateTime. Our docs say that unparseable timestamps

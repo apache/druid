@@ -108,9 +108,7 @@ class JodaStuff
           return null;
         }
         // make sure to preserve time zone information when parsing timestamps
-        return ISODateTimeFormat.dateTimeParser()
-                                .withOffsetParsed()
-                                .parseDateTime(str);
+        return DateTimes.of(str, ISODateTimeFormat.dateTimeParser().withOffsetParsed());
       }
       throw ctxt.mappingException(getValueClass());
     }
