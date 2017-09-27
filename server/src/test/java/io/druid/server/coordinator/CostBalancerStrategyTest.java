@@ -38,6 +38,7 @@ import org.junit.Test;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 
 public class CostBalancerStrategyTest
@@ -110,7 +111,7 @@ public class CostBalancerStrategyTest
   {
     // Not using EasyMock as it hampers the performance of multithreads.
     DataSegment segment = new DataSegment(
-        dataSource, interval, String.valueOf(index), Maps.<String, Object>newConcurrentMap(),
+        dataSource, interval, String.valueOf(index), new ConcurrentHashMap<>(),
         Lists.<String>newArrayList(), Lists.<String>newArrayList(), null, 0, index * 100L
     );
     return segment;
