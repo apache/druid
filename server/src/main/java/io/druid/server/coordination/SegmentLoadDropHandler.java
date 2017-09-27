@@ -34,14 +34,7 @@ import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.server.SegmentManager;
-import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.cache.ChildData;
-import org.apache.curator.framework.recipes.cache.PathChildrenCache;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
-import org.apache.curator.utils.ZKPaths;
 
 import java.io.File;
 import java.io.IOException;
@@ -60,50 +53,44 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  */
-public class ZkCoordinator implements DataSegmentChangeHandler
+public class SimpleDataSegmentChangeHandler implements DataSegmentChangeHandler
 {
-  private static final EmittingLogger log = new EmittingLogger(ZkCoordinator.class);
+  private static final EmittingLogger log = new EmittingLogger(SimpleDataSegmentChangeHandler.class);
 
   private final Object lock = new Object();
 
   private final ObjectMapper jsonMapper;
-  private final ZkPathsConfig zkPaths;
   private final SegmentLoaderConfig config;
-  private final DruidServerMetadata me;
-  private final CuratorFramework curator;
+  private final DruidServerMetadata me; //unused ?
   private final DataSegmentAnnouncer announcer;
   private final DataSegmentServerAnnouncer serverAnnouncer;
   private final SegmentManager segmentManager;
   private final ScheduledExecutorService exec;
   private final ConcurrentSkipListSet<DataSegment> segmentsToDelete;
 
-
-  private volatile PathChildrenCache loadQueueCache;
   private volatile boolean started = false;
 
+  //TODO: this also needs to have concept of asynchrounous add/remove segments that would be used in the SegmentListerResource.
+
   @Inject
-  public ZkCoordinator(
+  public SimpleDataSegmentChangeHandler(
       ObjectMapper jsonMapper,
       SegmentLoaderConfig config,
-      ZkPathsConfig zkPaths,
       DruidServerMetadata me,
       DataSegmentAnnouncer announcer,
       DataSegmentServerAnnouncer serverAnnouncer,
-      CuratorFramework curator,
       SegmentManager segmentManager,
       ScheduledExecutorFactory factory
   )
   {
     this.jsonMapper = jsonMapper;
-    this.zkPaths = zkPaths;
     this.config = config;
     this.me = me;
-    this.curator = curator;
     this.announcer = announcer;
     this.serverAnnouncer = serverAnnouncer;
     this.segmentManager = segmentManager;
 
-    this.exec = factory.create(1, "ZkCoordinator-Exec--%d");
+    this.exec = factory.create(1, "SimpleDataSegmentChangeHandler-Exec--%d");
     this.segmentsToDelete = new ConcurrentSkipListSet<>();
   }
 
@@ -115,106 +102,21 @@ public class ZkCoordinator implements DataSegmentChangeHandler
         return;
       }
 
-      log.info("Starting zkCoordinator for server[%s]", me.getName());
-
-      final String loadQueueLocation = ZKPaths.makePath(zkPaths.getLoadQueuePath(), me.getName());
-      final String servedSegmentsLocation = ZKPaths.makePath(zkPaths.getServedSegmentsPath(), me.getName());
-      final String liveSegmentsLocation = ZKPaths.makePath(zkPaths.getLiveSegmentsPath(), me.getName());
-
-      loadQueueCache = new PathChildrenCache(
-          curator,
-          loadQueueLocation,
-          true,
-          true,
-          Execs.multiThreaded(config.getNumLoadingThreads(), "ZkCoordinator-%s")
-      );
-
       try {
-        curator.newNamespaceAwareEnsurePath(loadQueueLocation).ensure(curator.getZookeeperClient());
-        curator.newNamespaceAwareEnsurePath(servedSegmentsLocation).ensure(curator.getZookeeperClient());
-        curator.newNamespaceAwareEnsurePath(liveSegmentsLocation).ensure(curator.getZookeeperClient());
-
         loadLocalCache();
+
+        //TODO: announce this historical here too, is this class used at realtime nodes too, then we have two locations
+        //where announcement happens?
+        //lifecycle driven, will all peons run this code? Maybe ZkCoordinator was not configured to run on realtime nodes
+        //but then how were they listening for segment load requests?
+        //however since announcement is lifecycle.last so DiscoveryDruidNode announcement doesn't have to be done here
+        //explicitly?
         serverAnnouncer.announce();
-
-        loadQueueCache.getListenable().addListener(
-            new PathChildrenCacheListener()
-            {
-              @Override
-              public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception
-              {
-                final ChildData child = event.getData();
-                switch (event.getType()) {
-                  case CHILD_ADDED:
-                    final String path = child.getPath();
-                    final DataSegmentChangeRequest request = jsonMapper.readValue(
-                        child.getData(), DataSegmentChangeRequest.class
-                    );
-
-                    log.info("New request[%s] with zNode[%s].", request.asString(), path);
-
-                    try {
-                      request.go(
-                          getDataSegmentChangeHandler(),
-                          new DataSegmentChangeCallback()
-                          {
-                            boolean hasRun = false;
-
-                            @Override
-                            public void execute()
-                            {
-                              try {
-                                if (!hasRun) {
-                                  curator.delete().guaranteed().forPath(path);
-                                  log.info("Completed request [%s]", request.asString());
-                                  hasRun = true;
-                                }
-                              }
-                              catch (Exception e) {
-                                try {
-                                  curator.delete().guaranteed().forPath(path);
-                                }
-                                catch (Exception e1) {
-                                  log.error(e1, "Failed to delete zNode[%s], but ignoring exception.", path);
-                                }
-                                log.error(e, "Exception while removing zNode[%s]", path);
-                                throw Throwables.propagate(e);
-                              }
-                            }
-                          }
-                      );
-                    }
-                    catch (Exception e) {
-                      try {
-                        curator.delete().guaranteed().forPath(path);
-                      }
-                      catch (Exception e1) {
-                        log.error(e1, "Failed to delete zNode[%s], but ignoring exception.", path);
-                      }
-
-                      log.makeAlert(e, "Segment load/unload: uncaught exception.")
-                         .addData("node", path)
-                         .addData("nodeProperties", request)
-                         .emit();
-                    }
-
-                    break;
-                  case CHILD_REMOVED:
-                    log.info("zNode[%s] was removed", event.getData().getPath());
-                    break;
-                  default:
-                    log.info("Ignoring event[%s]", event);
-                }
-              }
-            }
-        );
-        loadQueueCache.start();
       }
       catch (Exception e) {
         Throwables.propagateIfPossible(e, IOException.class);
         throw Throwables.propagate(e);
       }
-
       started = true;
     }
   }
@@ -222,21 +124,19 @@ public class ZkCoordinator implements DataSegmentChangeHandler
   @LifecycleStop
   public void stop()
   {
-    log.info("Stopping ZkCoordinator for [%s]", me);
     synchronized (lock) {
       if (!started) {
         return;
       }
 
       try {
-        loadQueueCache.close();
         serverAnnouncer.unannounce();
+        //TODO: should we unannounce the server here?
       }
       catch (Exception e) {
         throw Throwables.propagate(e);
       }
       finally {
-        loadQueueCache = null;
         started = false;
       }
     }
@@ -302,11 +202,6 @@ public class ZkCoordinator implements DataSegmentChangeHandler
           }
         }
     );
-  }
-
-  public DataSegmentChangeHandler getDataSegmentChangeHandler()
-  {
-    return ZkCoordinator.this;
   }
 
   /**
