@@ -376,7 +376,9 @@ public class JobHelper
         Path workingPath = config.makeIntermediatePath();
         log.info("Deleting path[%s]", workingPath);
         try {
-          workingPath.getFileSystem(injectSystemProperties(new Configuration())).delete(workingPath, true);
+          Configuration conf = injectSystemProperties(new Configuration());
+          config.addJobProperties(conf);
+          workingPath.getFileSystem(conf).delete(workingPath, true);
         }
         catch (IOException e) {
           log.error(e, "Failed to cleanup path[%s]", workingPath);

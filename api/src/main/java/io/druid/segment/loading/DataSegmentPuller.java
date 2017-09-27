@@ -19,6 +19,7 @@
 
 package io.druid.segment.loading;
 
+import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.timeline.DataSegment;
 
 import java.io.File;
@@ -26,6 +27,7 @@ import java.io.File;
 /**
  * A DataSegmentPuller is responsible for pulling data for a particular segment into a particular directory
  */
+@ExtensionPoint
 public interface DataSegmentPuller
 {
   /**

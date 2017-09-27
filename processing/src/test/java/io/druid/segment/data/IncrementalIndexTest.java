@@ -646,25 +646,25 @@ public class IncrementalIndexTest
                     Map<String, Object> context = new HashMap<String, Object>();
                     Sequence<Result<TimeseriesResultValue>> sequence = runner.run(QueryPlus.wrap(query), context);
 
-                    for (Double result :
-                        sequence.accumulate(
-                            new Double[0], new Accumulator<Double[], Result<TimeseriesResultValue>>()
-                            {
-                              @Override
-                              public Double[] accumulate(
-                                  Double[] accumulated, Result<TimeseriesResultValue> in
-                              )
-                              {
-                                if (currentlyRunning.get() > 0) {
-                                  concurrentlyRan.incrementAndGet();
-                                }
-                                queriesAccumualted.incrementAndGet();
-                                return Lists.asList(in.getValue().getDoubleMetric("doubleSumResult0"), accumulated)
-                                            .toArray(new Double[accumulated.length + 1]);
-                              }
+                    Double[] results = sequence.accumulate(
+                        new Double[0],
+                        new Accumulator<Double[], Result<TimeseriesResultValue>>()
+                        {
+                          @Override
+                          public Double[] accumulate(
+                              Double[] accumulated, Result<TimeseriesResultValue> in
+                          )
+                          {
+                            if (currentlyRunning.get() > 0) {
+                              concurrentlyRan.incrementAndGet();
                             }
-                        )
-                        ) {
+                            queriesAccumualted.incrementAndGet();
+                            return Lists.asList(in.getValue().getDoubleMetric("doubleSumResult0"), accumulated)
+                                        .toArray(new Double[accumulated.length + 1]);
+                          }
+                        }
+                    );
+                    for (Double result : results) {
                       final Integer maxValueExpected = someoneRan.get() + concurrentThreads;
                       if (maxValueExpected > 0) {
                         // Eventually consistent, but should be somewhere in that range

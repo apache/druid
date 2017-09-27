@@ -20,8 +20,8 @@
 package io.druid.segment;
 
 import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.data.BitmapValues;
 import io.druid.segment.data.Indexed;
-import io.druid.segment.data.IndexedInts;
 import org.joda.time.Interval;
 
 import java.util.Map;
@@ -43,7 +43,7 @@ public interface IndexableAdapter
 
   Iterable<Rowboat> getRows();
 
-  IndexedInts getBitmapIndex(String dimension, int dictId);
+  BitmapValues getBitmapValues(String dimension, int dictId);
 
   String getMetricType(String metric);
 

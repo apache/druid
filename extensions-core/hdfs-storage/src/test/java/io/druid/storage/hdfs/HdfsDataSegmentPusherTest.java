@@ -382,23 +382,23 @@ public class HdfsDataSegmentPusherTest
     try {
       schema = objectMapper.readValue(
       "{\n"
-      + "    \"dataSchema\": {\n"
-      + "        \"dataSource\": \"source\",\n"
-      + "        \"metricsSpec\": [],\n"
-      + "        \"granularitySpec\": {\n"
-      + "            \"type\": \"uniform\",\n"
-      + "            \"segmentGranularity\": \"hour\",\n"
-      + "            \"intervals\": [\"2012-07-10/P1D\"]\n"
-      + "        }\n"
-      + "    },\n"
-      + "    \"ioConfig\": {\n"
-      + "        \"type\": \"hadoop\",\n"
-      + "        \"segmentOutputPath\": \"hdfs://server:9100/tmp/druid/datatest\"\n"
-      + "    }\n"
-      + "}",
-      HadoopIngestionSpec.class
-  );
-  }
+            + "    \"dataSchema\": {\n"
+            + "        \"dataSource\": \"source\",\n"
+            + "        \"metricsSpec\": [],\n"
+            + "        \"granularitySpec\": {\n"
+            + "            \"type\": \"uniform\",\n"
+            + "            \"segmentGranularity\": \"hour\",\n"
+            + "            \"intervals\": [\"2012-07-10/P1D\"]\n"
+            + "        }\n"
+            + "    },\n"
+            + "    \"ioConfig\": {\n"
+            + "        \"type\": \"hadoop\",\n"
+            + "        \"segmentOutputPath\": \"hdfs://server:9100/tmp/druid/datatest\"\n"
+            + "    }\n"
+            + "}",
+          HadoopIngestionSpec.class
+      );
+    }
     catch (Exception e) {
       throw Throwables.propagate(e);
     }

@@ -348,7 +348,7 @@ public class GroupByQuery extends BaseQuery<Row>
         throw new IAE("When forcing limit push down, a limit spec must be provided.");
       }
 
-      if (((DefaultLimitSpec) limitSpec).getLimit() == Integer.MAX_VALUE) {
+      if (!((DefaultLimitSpec) limitSpec).isLimited()) {
         throw new IAE("When forcing limit push down, the provided limit spec must have a limit.");
       }
 
@@ -373,7 +373,7 @@ public class GroupByQuery extends BaseQuery<Row>
       DefaultLimitSpec defaultLimitSpec = (DefaultLimitSpec) limitSpec;
 
       // If only applying an orderby without a limit, don't try to push down
-      if (defaultLimitSpec.getLimit() == Integer.MAX_VALUE) {
+      if (!defaultLimitSpec.isLimited()) {
         return false;
       }
 

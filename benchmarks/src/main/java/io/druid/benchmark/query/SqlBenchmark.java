@@ -25,8 +25,8 @@ import com.google.common.io.Files;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
 import io.druid.benchmark.datagen.SegmentGenerator;
-import io.druid.java.util.common.Intervals;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -39,6 +39,8 @@ import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.segment.QueryableIndex;
+import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.planner.DruidPlanner;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.planner.PlannerFactory;
@@ -112,13 +114,16 @@ public class SqlBenchmark
     final PlannerConfig plannerConfig = new PlannerConfig();
 
     this.walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(dataSegment, index);
-
     plannerFactory = new PlannerFactory(
         CalciteTests.createMockSchema(walker, plannerConfig),
         CalciteTests.createMockQueryLifecycleFactory(walker),
         CalciteTests.createOperatorTable(),
         CalciteTests.createExprMacroTable(),
-        plannerConfig
+        plannerConfig,
+        new AuthConfig(),
+        AuthTestUtils.TEST_AUTHENTICATOR_MAPPER,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        CalciteTests.getJsonMapper()
     );
     groupByQuery = GroupByQuery
         .builder()

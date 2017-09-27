@@ -40,7 +40,7 @@ import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.RegexDimFilter;
 import io.druid.query.filter.SearchQueryDimFilter;
 import io.druid.query.ordering.StringComparators;
-import io.druid.query.search.search.ContainsSearchQuerySpec;
+import io.druid.query.search.ContainsSearchQuerySpec;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.VirtualColumns;
@@ -144,10 +144,10 @@ public class IncrementalIndexReadBenchmark
     Cursor cursor = Sequences.toList(Sequences.limit(cursors, 1), Lists.<Cursor>newArrayList()).get(0);
 
     List<DimensionSelector> selectors = new ArrayList<>();
-    selectors.add(cursor.makeDimensionSelector(new DefaultDimensionSpec("dimSequential", null)));
-    selectors.add(cursor.makeDimensionSelector(new DefaultDimensionSpec("dimZipf", null)));
-    selectors.add(cursor.makeDimensionSelector(new DefaultDimensionSpec("dimUniform", null)));
-    selectors.add(cursor.makeDimensionSelector(new DefaultDimensionSpec("dimSequentialHalfNull", null)));
+    selectors.add(makeDimensionSelector(cursor, "dimSequential"));
+    selectors.add(makeDimensionSelector(cursor, "dimZipf"));
+    selectors.add(makeDimensionSelector(cursor, "dimUniform"));
+    selectors.add(makeDimensionSelector(cursor, "dimSequentialHalfNull"));
 
     cursor.reset();
     while (!cursor.isDone()) {
@@ -179,10 +179,10 @@ public class IncrementalIndexReadBenchmark
     Cursor cursor = Sequences.toList(Sequences.limit(cursors, 1), Lists.<Cursor>newArrayList()).get(0);
 
     List<DimensionSelector> selectors = new ArrayList<>();
-    selectors.add(cursor.makeDimensionSelector(new DefaultDimensionSpec("dimSequential", null)));
-    selectors.add(cursor.makeDimensionSelector(new DefaultDimensionSpec("dimZipf", null)));
-    selectors.add(cursor.makeDimensionSelector(new DefaultDimensionSpec("dimUniform", null)));
-    selectors.add(cursor.makeDimensionSelector(new DefaultDimensionSpec("dimSequentialHalfNull", null)));
+    selectors.add(makeDimensionSelector(cursor, "dimSequential"));
+    selectors.add(makeDimensionSelector(cursor, "dimZipf"));
+    selectors.add(makeDimensionSelector(cursor, "dimUniform"));
+    selectors.add(makeDimensionSelector(cursor, "dimSequentialHalfNull"));
 
     cursor.reset();
     while (!cursor.isDone()) {
@@ -204,5 +204,10 @@ public class IncrementalIndexReadBenchmark
         false,
         null
     );
+  }
+
+  private static DimensionSelector makeDimensionSelector(Cursor cursor, String name)
+  {
+    return cursor.getColumnSelectorFactory().makeDimensionSelector(new DefaultDimensionSpec(name, null));
   }
 }

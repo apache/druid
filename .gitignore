@@ -13,3 +13,4 @@ target
 *.log
 *.DS_Store
 _site
+dependency-reduced-pom.xml

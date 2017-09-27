@@ -171,7 +171,7 @@ public class SketchHolder
     return result;
   }
 
-  public static Object combine(Object o1, Object o2, int nomEntries)
+  public static SketchHolder combine(Object o1, Object o2, int nomEntries)
   {
     SketchHolder holder1 = (SketchHolder) o1;
     SketchHolder holder2 = (SketchHolder) o2;
@@ -194,7 +194,7 @@ public class SketchHolder
     }
   }
 
-  private void invalidateCache()
+  void invalidateCache()
   {
     cachedEstimate = null;
     cachedSketch = null;

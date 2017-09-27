@@ -25,6 +25,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
 import com.metamx.common.StringUtils;
 import io.druid.collections.SerializablePair;
+import io.druid.java.util.common.UOE;
+import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
@@ -54,7 +56,7 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
   public DoubleLastAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") final String fieldName
-      )
+  )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
@@ -94,6 +96,12 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    throw new UOE("DoubleLastAggregatorFactory is not supported during ingestion for rollup");
+  }
+
+  @Override
   public AggregatorFactory getCombiningFactory()
   {
     return new DoubleLastAggregatorFactory(name, name)
@@ -107,7 +115,7 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
           @Override
           public void aggregate()
           {
-            SerializablePair<Long, Double> pair = (SerializablePair<Long, Double>) selector.get();
+            SerializablePair<Long, Double> pair = (SerializablePair<Long, Double>) selector.getObject();
             if (pair.lhs >= lastTime) {
               lastTime = pair.lhs;
               lastValue = pair.rhs;
@@ -125,7 +133,7 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
           @Override
           public void aggregate(ByteBuffer buf, int position)
           {
-            SerializablePair<Long, Double> pair = (SerializablePair<Long, Double>) selector.get();
+            SerializablePair<Long, Double> pair = (SerializablePair<Long, Double>) selector.getObject();
             long lastTime = buf.getLong(position);
             if (pair.lhs >= lastTime) {
               buf.putLong(position, pair.lhs);

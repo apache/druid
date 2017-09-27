@@ -467,16 +467,16 @@ public class TaskLockbox
 
       final String version;
 
-        if (preferredVersion != null) {
-          // We have a preferred version. We'll trust our caller to not break our ordering assumptions and just use it.
-          version = preferredVersion;
-        } else {
-          // We are running under an interval lock right now, so just using the current time works as long as we can
-          // trustour clock to be monotonic and have enough resolution since the last time we created a TaskLock for
-          // the same interval. This may not always be true; to assure it we would need to use some method of
-          // timekeeping other than the wall clock.
-          version = DateTimes.nowUtc().toString();
-        }
+      if (preferredVersion != null) {
+        // We have a preferred version. We'll trust our caller to not break our ordering assumptions and just use it.
+        version = preferredVersion;
+      } else {
+        // We are running under an interval lock right now, so just using the current time works as long as we can
+        // trustour clock to be monotonic and have enough resolution since the last time we created a TaskLock for
+        // the same interval. This may not always be true; to assure it we would need to use some method of
+        // timekeeping other than the wall clock.
+        version = DateTimes.nowUtc().toString();
+      }
 
       final TaskLockPosse posseToUse = new TaskLockPosse(
           new TaskLock(lockType, groupId, dataSource, interval, version, priority)
@@ -648,7 +648,7 @@ public class TaskLockbox
                                                      .collect(Collectors.toList());
 
       for (TaskLockPosse taskLockPosse : posses) {
-          final TaskLock taskLock = taskLockPosse.getTaskLock();
+        final TaskLock taskLock = taskLockPosse.getTaskLock();
 
         // Remove task from live list
         log.info("Removing task[%s] from TaskLock[%s]", task.getId(), taskLock.getGroupId());
@@ -674,7 +674,7 @@ public class TaskLockbox
         try {
           taskStorage.removeLock(task.getId(), taskLock);
         }
-          catch (Exception e) {
+        catch (Exception e) {
           log.makeAlert(e, "Failed to clean up lock from storage")
              .addData("task", task.getId())
              .addData("dataSource", taskLock.getDataSource())

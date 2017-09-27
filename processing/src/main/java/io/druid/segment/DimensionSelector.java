@@ -147,4 +147,24 @@ public interface DimensionSelector extends ColumnValueSelector, HotLoopCallee
   {
     throw new UnsupportedOperationException("DimensionSelector cannot be operated as numeric ColumnValueSelector");
   }
+
+  /**
+   * @deprecated always throws {@link UnsupportedOperationException}
+   */
+  @Deprecated
+  @Override
+  default Object getObject()
+  {
+    throw new UnsupportedOperationException("DimensionSelector cannot be operated as object ColumnValueSelector");
+  }
+
+  /**
+   * @deprecated always throws {@link UnsupportedOperationException}
+   */
+  @Deprecated
+  @Override
+  default Class classOfObject()
+  {
+    throw new UnsupportedOperationException("DimensionSelector cannot be operated as object ColumnValueSelector");
+  }
 }

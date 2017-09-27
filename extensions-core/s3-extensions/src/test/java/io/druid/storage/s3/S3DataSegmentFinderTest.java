@@ -354,8 +354,7 @@ public class S3DataSegmentFinderTest
       };
 
       ImmutableList<String> keys = ImmutableList.copyOf(
-        Ordering.natural().sortedCopy(Iterables.filter(keysOrigin, prefixFilter)
-        )
+          Ordering.natural().sortedCopy(Iterables.filter(keysOrigin, prefixFilter))
       );
 
       int startOffset = 0;

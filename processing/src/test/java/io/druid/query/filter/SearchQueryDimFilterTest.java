@@ -21,7 +21,7 @@ package io.druid.query.filter;
 
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.RegexDimExtractionFn;
-import io.druid.query.search.search.SearchQuerySpec;
+import io.druid.query.search.SearchQuerySpec;
 import org.junit.Assert;
 import org.junit.Test;
 

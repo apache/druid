@@ -22,15 +22,21 @@ package io.druid.query.aggregation.datasketches.theta;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
+import com.yahoo.sketches.Family;
 import com.yahoo.sketches.Util;
 import com.yahoo.sketches.theta.SetOperation;
+import com.yahoo.sketches.theta.Union;
 import io.druid.java.util.common.StringUtils;
+import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.aggregation.ObjectAggregateCombiner;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.ObjectColumnSelector;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Comparator;
@@ -96,6 +102,47 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   public Object combine(Object lhs, Object rhs)
   {
     return SketchHolder.combine(lhs, rhs, size);
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    return new ObjectAggregateCombiner<SketchHolder>()
+    {
+      private final Union union = (Union) SetOperation.builder().build(size, Family.UNION);
+      private final SketchHolder combined = SketchHolder.of(union);
+
+      @Override
+      public void reset(ColumnValueSelector selector)
+      {
+        union.reset();
+        fold(selector);
+      }
+
+      @Override
+      public void fold(ColumnValueSelector selector)
+      {
+        @SuppressWarnings("unchecked")
+        SketchHolder other = ((ObjectColumnSelector<SketchHolder>) selector).getObject();
+        // SketchAggregatorFactory.combine() delegates to SketchHolder.combine() and it doesn't check for nulls, so we
+        // neither.
+        other.updateUnion(union);
+        combined.invalidateCache();
+      }
+
+      @Override
+      public Class<SketchHolder> classOfObject()
+      {
+        return SketchHolder.class;
+      }
+
+      @Nullable
+      @Override
+      public SketchHolder getObject()
+      {
+        return combined;
+      }
+    };
   }
 
   @Override

@@ -199,34 +199,32 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
     // Emit coordinator metrics
     params
         .getLoadManagementPeons()
-        .forEach(
-            (final String serverName, final LoadQueuePeon queuePeon) -> {
-              emitter.emit(
-                  new ServiceMetricEvent.Builder()
-                      .setDimension(DruidMetrics.SERVER, serverName).build(
-                      "segment/loadQueue/size", queuePeon.getLoadQueueSize()
-                  )
-              );
-              emitter.emit(
-                  new ServiceMetricEvent.Builder()
-                      .setDimension(DruidMetrics.SERVER, serverName).build(
-                      "segment/loadQueue/failed", queuePeon.getAndResetFailedAssignCount()
-                  )
-              );
-              emitter.emit(
-                  new ServiceMetricEvent.Builder()
-                      .setDimension(DruidMetrics.SERVER, serverName).build(
-                      "segment/loadQueue/count", queuePeon.getSegmentsToLoad().size()
-                  )
-              );
-              emitter.emit(
-                  new ServiceMetricEvent.Builder()
-                      .setDimension(DruidMetrics.SERVER, serverName).build(
-                      "segment/dropQueue/count", queuePeon.getSegmentsToDrop().size()
-                  )
-              );
-            }
-        );
+        .forEach((final String serverName, final LoadQueuePeon queuePeon) -> {
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.SERVER, serverName).build(
+                  "segment/loadQueue/size", queuePeon.getLoadQueueSize()
+              )
+          );
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.SERVER, serverName).build(
+                  "segment/loadQueue/failed", queuePeon.getAndResetFailedAssignCount()
+              )
+          );
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.SERVER, serverName).build(
+                  "segment/loadQueue/count", queuePeon.getSegmentsToLoad().size()
+              )
+          );
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.SERVER, serverName).build(
+                  "segment/dropQueue/count", queuePeon.getSegmentsToDrop().size()
+              )
+          );
+        });
 
     coordinator.getSegmentAvailability().object2LongEntrySet().forEach(
         (final Object2LongMap.Entry<String> entry) -> {
@@ -266,23 +264,21 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
 
     allSegments
         .collect(Collectors.groupingBy(DataSegment::getDataSource))
-        .forEach(
-            (final String name, final List<DataSegment> segments) -> {
-              final long size = segments.stream().mapToLong(DataSegment::getSize).sum();
-              emitter.emit(
-                  new ServiceMetricEvent.Builder()
-                      .setDimension(DruidMetrics.DATASOURCE, name).build(
-                      "segment/size", size
-                  )
-              );
-              emitter.emit(
-                  new ServiceMetricEvent.Builder()
-                      .setDimension(DruidMetrics.DATASOURCE, name).build(
-                      "segment/count", segments.size()
-                  )
-              );
-            }
-        );
+        .forEach((final String name, final List<DataSegment> segments) -> {
+          final long size = segments.stream().mapToLong(DataSegment::getSize).sum();
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DATASOURCE, name).build(
+                  "segment/size", size
+              )
+          );
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DATASOURCE, name).build(
+                  "segment/count", segments.size()
+              )
+          );
+        });
 
     return params;
   }

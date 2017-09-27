@@ -85,7 +85,7 @@ public class TopNMapFn
     final ColumnSelectorPlus selectorPlus = DimensionHandlerUtils.createColumnSelectorPlus(
         STRATEGY_FACTORY,
         query.getDimensionSpec(),
-        cursor
+        cursor.getColumnSelectorFactory()
     );
 
     if (selectorPlus.getSelector() == null) {

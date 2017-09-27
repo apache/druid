@@ -21,14 +21,19 @@ package io.druid.sql.calcite.rel;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Ordering;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.DataSource;
+import io.druid.query.Query;
+import io.druid.query.QueryDataSource;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
@@ -36,7 +41,7 @@ import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.having.DimFilterHavingSpec;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
-import io.druid.query.ordering.StringComparators;
+import io.druid.query.scan.ScanQuery;
 import io.druid.query.select.PagingSpec;
 import io.druid.query.select.SelectQuery;
 import io.druid.query.timeseries.TimeseriesQuery;
@@ -64,6 +69,7 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.type.SqlTypeName;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -338,6 +344,60 @@ public class DruidQueryBuilder
   }
 
   /**
+   * Return this query as some kind of Druid query. The returned query will either be {@link TopNQuery},
+   * {@link TimeseriesQuery}, {@link GroupByQuery}, {@link ScanQuery}, or {@link SelectQuery}.
+   *
+   * @param dataSource     data source to query
+   * @param plannerContext planner context
+   *
+   * @return Druid query
+   */
+  public Query toQuery(
+      final DataSource dataSource,
+      final PlannerContext plannerContext
+  )
+  {
+    if (dataSource instanceof QueryDataSource) {
+      // If there is a subquery then the outer query must be a groupBy.
+      final GroupByQuery outerQuery = toGroupByQuery(dataSource, plannerContext);
+
+      if (outerQuery == null) {
+        // Bug in the planner rules. They shouldn't allow this to happen.
+        throw new IllegalStateException("Can't use QueryDataSource without an outer groupBy query!");
+      }
+
+      return outerQuery;
+    }
+
+    final TimeseriesQuery tsQuery = toTimeseriesQuery(dataSource, plannerContext);
+    if (tsQuery != null) {
+      return tsQuery;
+    }
+
+    final TopNQuery topNQuery = toTopNQuery(dataSource, plannerContext);
+    if (topNQuery != null) {
+      return topNQuery;
+    }
+
+    final GroupByQuery groupByQuery = toGroupByQuery(dataSource, plannerContext);
+    if (groupByQuery != null) {
+      return groupByQuery;
+    }
+
+    final ScanQuery scanQuery = toScanQuery(dataSource, plannerContext);
+    if (scanQuery != null) {
+      return scanQuery;
+    }
+
+    final SelectQuery selectQuery = toSelectQuery(dataSource, plannerContext);
+    if (selectQuery != null) {
+      return selectQuery;
+    }
+
+    throw new IllegalStateException("WTF?! Cannot build a query even though we planned it?");
+  }
+
+  /**
    * Return this query as a Timeseries query, or null if this query is not compatible with Timeseries.
    *
    * @param dataSource     data source to query
@@ -345,6 +405,7 @@ public class DruidQueryBuilder
    *
    * @return query or null
    */
+  @Nullable
   public TimeseriesQuery toTimeseriesQuery(
       final DataSource dataSource,
       final PlannerContext plannerContext
@@ -355,10 +416,12 @@ public class DruidQueryBuilder
     }
 
     final Granularity queryGranularity;
+    final boolean descending;
     final List<DimensionSpec> dimensions = grouping.getDimensionSpecs();
 
     if (dimensions.isEmpty()) {
       queryGranularity = Granularities.ALL;
+      descending = false;
     } else if (dimensions.size() == 1) {
       final DimensionSpec dimensionSpec = Iterables.getOnlyElement(dimensions);
       final Granularity gran = ExtractionFns.toQueryGranularity(dimensionSpec.getExtractionFn());
@@ -366,32 +429,42 @@ public class DruidQueryBuilder
       if (gran == null || !dimensionSpec.getDimension().equals(Column.TIME_COLUMN_NAME)) {
         // Timeseries only applies if the single dimension is granular __time.
         return null;
+      } else {
+        queryGranularity = gran;
       }
 
-      // Timeseries only applies if sort is null, or if the first sort field is the time dimension.
-      final boolean sortingOnTime =
-          limitSpec == null || limitSpec.getColumns().isEmpty()
-          || (limitSpec.getLimit() == Integer.MAX_VALUE
-              && limitSpec.getColumns().get(0).getDimension().equals(dimensionSpec.getOutputName()));
+      if (limitSpec != null) {
+        // If there is a limit spec, timeseries cannot LIMIT; and must be ORDER BY time (or nothing).
 
-      if (sortingOnTime) {
-        queryGranularity = gran;
+        if (limitSpec.isLimited()) {
+          return null;
+        }
+
+        if (limitSpec.getColumns().isEmpty()) {
+          descending = false;
+        } else {
+          // We're ok if the first order by is time (since every time value is distinct, the rest of the columns
+          // wouldn't matter anyway).
+          final OrderByColumnSpec firstOrderBy = limitSpec.getColumns().get(0);
+
+          if (firstOrderBy.getDimension().equals(dimensionSpec.getOutputName())) {
+            // Order by time.
+            descending = firstOrderBy.getDirection() == OrderByColumnSpec.Direction.DESCENDING;
+          } else {
+            // Order by something else.
+            return null;
+          }
+        }
       } else {
-        return null;
+        // No limitSpec.
+        descending = false;
       }
     } else {
+      // More than one dimension, timeseries cannot handle.
       return null;
     }
 
     final Filtration filtration = Filtration.create(filter).optimize(sourceRowSignature);
-
-    final boolean descending;
-    if (limitSpec != null && !limitSpec.getColumns().isEmpty()) {
-      descending = limitSpec.getColumns().get(0).getDirection() == OrderByColumnSpec.Direction.DESCENDING;
-    } else {
-      descending = false;
-    }
-
     final Map<String, Object> theContext = Maps.newHashMap();
     theContext.put("skipEmptyBuckets", true);
     theContext.putAll(plannerContext.getQueryContext());
@@ -405,7 +478,7 @@ public class DruidQueryBuilder
         queryGranularity,
         grouping.getAggregatorFactories(),
         grouping.getPostAggregators(),
-        theContext
+        ImmutableSortedMap.copyOf(theContext)
     );
   }
 
@@ -417,6 +490,7 @@ public class DruidQueryBuilder
    *
    * @return query or null
    */
+  @Nullable
   public TopNQuery toTopNQuery(
       final DataSource dataSource,
       final PlannerContext plannerContext
@@ -440,7 +514,7 @@ public class DruidQueryBuilder
       limitColumn = new OrderByColumnSpec(
           dimensionSpec.getOutputName(),
           OrderByColumnSpec.Direction.ASCENDING,
-          StringComparators.LEXICOGRAPHIC
+          Calcites.getStringComparatorForValueType(dimensionSpec.getOutputType())
       );
     } else {
       limitColumn = Iterables.getOnlyElement(limitSpec.getColumns());
@@ -479,7 +553,7 @@ public class DruidQueryBuilder
         Granularities.ALL,
         grouping.getAggregatorFactories(),
         grouping.getPostAggregators(),
-        plannerContext.getQueryContext()
+        ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
     );
   }
 
@@ -491,6 +565,7 @@ public class DruidQueryBuilder
    *
    * @return query or null
    */
+  @Nullable
   public GroupByQuery toGroupByQuery(
       final DataSource dataSource,
       final PlannerContext plannerContext
@@ -513,7 +588,57 @@ public class DruidQueryBuilder
         grouping.getPostAggregators(),
         having != null ? new DimFilterHavingSpec(having) : null,
         limitSpec,
-        plannerContext.getQueryContext()
+        ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
+    );
+  }
+
+  /**
+   * Return this query as a Scan query, or null if this query is not compatible with Scan.
+   *
+   * @param dataSource     data source to query
+   * @param plannerContext planner context
+   *
+   * @return query or null
+   */
+  @Nullable
+  public ScanQuery toScanQuery(
+      final DataSource dataSource,
+      final PlannerContext plannerContext
+  )
+  {
+    if (grouping != null) {
+      // Scan cannot GROUP BY.
+      return null;
+    }
+
+    if (limitSpec != null && limitSpec.getColumns().size() > 0) {
+      // Scan cannot ORDER BY.
+      return null;
+    }
+
+    if (getRowOrder().isEmpty()) {
+      // Should never do a scan query without any columns that we're interested in. This is probably a planner bug.
+      throw new ISE("WTF?! Attempting to convert to Scan query without any columns?");
+    }
+
+    final Filtration filtration = Filtration.create(filter).optimize(sourceRowSignature);
+
+    // DefaultLimitSpec (which we use to "remember" limits) is int typed, and Integer.MAX_VALUE means "no limit".
+    final long scanLimit = limitSpec == null || limitSpec.getLimit() == Integer.MAX_VALUE
+                           ? 0L
+                           : (long) limitSpec.getLimit();
+
+    return new ScanQuery(
+        dataSource,
+        filtration.getQuerySegmentSpec(),
+        selectProjection != null ? VirtualColumns.create(selectProjection.getVirtualColumns()) : VirtualColumns.EMPTY,
+        ScanQuery.RESULT_FORMAT_COMPACTED_LIST,
+        0,
+        scanLimit,
+        filtration.getDimFilter(),
+        Ordering.natural().sortedCopy(ImmutableSet.copyOf(getRowOrder())),
+        false,
+        ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
     );
   }
 
@@ -525,6 +650,7 @@ public class DruidQueryBuilder
    *
    * @return query or null
    */
+  @Nullable
   public SelectQuery toSelectQuery(
       final DataSource dataSource,
       final PlannerContext plannerContext
@@ -536,6 +662,7 @@ public class DruidQueryBuilder
 
     final Filtration filtration = Filtration.create(filter).optimize(sourceRowSignature);
     final boolean descending;
+    final int threshold;
 
     if (limitSpec != null) {
       // Safe to assume limitSpec has zero or one entry; DruidSelectSortRule wouldn't push in anything else.
@@ -548,8 +675,11 @@ public class DruidQueryBuilder
       } else {
         descending = false;
       }
+
+      threshold = limitSpec.getLimit();
     } else {
       descending = false;
+      threshold = 0;
     }
 
     // We need to ask for dummy columns to prevent Select from returning all of them.
@@ -576,6 +706,9 @@ public class DruidQueryBuilder
       metrics.add(dummyColumn);
     }
 
+    // Not used for actual queries (will be replaced by QueryMaker) but the threshold is important for the planner.
+    final PagingSpec pagingSpec = new PagingSpec(null, threshold);
+
     return new SelectQuery(
         dataSource,
         filtration.getQuerySegmentSpec(),
@@ -585,8 +718,8 @@ public class DruidQueryBuilder
         ImmutableList.of(new DefaultDimensionSpec(dummyColumn, dummyColumn)),
         metrics.stream().sorted().distinct().collect(Collectors.toList()),
         getVirtualColumns(plannerContext.getExprMacroTable()),
-        new PagingSpec(null, 0) /* dummy -- will be replaced */,
-        plannerContext.getQueryContext()
+        pagingSpec,
+        ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
     );
   }
 

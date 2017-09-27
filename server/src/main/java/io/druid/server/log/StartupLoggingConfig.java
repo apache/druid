@@ -30,7 +30,7 @@ public class StartupLoggingConfig
   private boolean logProperties = false;
 
   @JsonProperty
-  private List<String> maskProperties = ImmutableList.of("password");
+  private List<String> maskProperties = ImmutableList.of("Password", "password", "Secret", "secret");
 
   public boolean isLogProperties()
   {

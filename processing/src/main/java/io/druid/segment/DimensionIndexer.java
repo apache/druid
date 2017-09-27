@@ -25,7 +25,7 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import io.druid.segment.incremental.TimeAndDimsHolder;
 
 import javax.annotation.Nullable;
 
@@ -217,7 +217,7 @@ public interface DimensionIndexer
    */
   DimensionSelector makeDimensionSelector(
       DimensionSpec spec,
-      IncrementalIndexStorageAdapter.EntryHolder currEntry,
+      TimeAndDimsHolder currEntry,
       IncrementalIndex.DimensionDesc desc
   );
 
@@ -229,10 +229,7 @@ public interface DimensionIndexer
    * @param desc Descriptor object for this dimension within an IncrementalIndex
    * @return A new object that reads rows from currEntry
    */
-  LongColumnSelector makeLongColumnSelector(
-      IncrementalIndexStorageAdapter.EntryHolder currEntry,
-      IncrementalIndex.DimensionDesc desc
-  );
+  LongColumnSelector makeLongColumnSelector(TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc);
 
 
   /**
@@ -242,10 +239,7 @@ public interface DimensionIndexer
    * @param desc Descriptor object for this dimension within an IncrementalIndex
    * @return A new object that reads rows from currEntry
    */
-  FloatColumnSelector makeFloatColumnSelector(
-      IncrementalIndexStorageAdapter.EntryHolder currEntry,
-      IncrementalIndex.DimensionDesc desc
-  );
+  FloatColumnSelector makeFloatColumnSelector(TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc);
 
 
   /**
@@ -255,10 +249,7 @@ public interface DimensionIndexer
    * @param desc Descriptor object for this dimension within an IncrementalIndex
    * @return A new object that reads rows from currEntry
    */
-  DoubleColumnSelector makeDoubleColumnSelector(
-      IncrementalIndexStorageAdapter.EntryHolder currEntry,
-      IncrementalIndex.DimensionDesc desc
-  );
+  DoubleColumnSelector makeDoubleColumnSelector(TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc);
 
   /**
    * Compares the row values for this DimensionIndexer's dimension from a TimeAndDims key.

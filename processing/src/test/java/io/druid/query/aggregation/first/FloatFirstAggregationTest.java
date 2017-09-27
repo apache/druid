@@ -60,7 +60,7 @@ public class FloatFirstAggregationTest
     combiningAggFactory = (FloatFirstAggregatorFactory) floatFirstAggregatorFactory.getCombiningFactory();
     timeSelector = new TestLongColumnSelector(times);
     valueSelector = new TestFloatColumnSelector(floats);
-    objectSelector = new TestObjectColumnSelector(pairs);
+    objectSelector = new TestObjectColumnSelector<>(pairs);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
     EasyMock.expect(colSelectorFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME)).andReturn(timeSelector);
     EasyMock.expect(colSelectorFactory.makeFloatColumnSelector("nilly")).andReturn(valueSelector);

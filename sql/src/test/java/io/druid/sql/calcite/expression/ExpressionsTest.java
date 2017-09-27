@@ -29,6 +29,7 @@ import io.druid.math.expr.Parser;
 import io.druid.query.extraction.RegexDimExtractionFn;
 import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.segment.column.ValueType;
+import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.planner.PlannerContext;
@@ -43,6 +44,7 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.joda.time.DateTime;
@@ -62,6 +64,7 @@ public class ExpressionsTest
       CalciteTests.createOperatorTable(),
       CalciteTests.createExprMacroTable(),
       new PlannerConfig(),
+      AuthTestUtils.TEST_AUTHORIZER_MAPPER,
       ImmutableMap.of()
   );
   private final RowSignature rowSignature = RowSignature
@@ -72,6 +75,7 @@ public class ExpressionsTest
       .add("x", ValueType.FLOAT)
       .add("y", ValueType.LONG)
       .add("s", ValueType.STRING)
+      .add("spacey", ValueType.STRING)
       .add("tstr", ValueType.STRING)
       .add("dstr", ValueType.STRING)
       .build();
@@ -82,6 +86,7 @@ public class ExpressionsTest
       .put("x", 2.5)
       .put("y", 3.0)
       .put("s", "foo")
+      .put("spacey", "  hey there  ")
       .put("tstr", "2000-02-03 04:05:06")
       .put("dstr", "2000-02-03")
       .build();
@@ -147,6 +152,43 @@ public class ExpressionsTest
             "regexp_extract(\"s\",'f(.)')"
         ),
         "fo"
+    );
+  }
+
+  @Test
+  public void testTrim()
+  {
+    testExpression(
+        rexBuilder.makeCall(
+            SqlStdOperatorTable.TRIM,
+            rexBuilder.makeFlag(SqlTrimFunction.Flag.BOTH),
+            rexBuilder.makeLiteral(" "),
+            inputRef("spacey")
+        ),
+        DruidExpression.fromExpression("trim(\"spacey\",' ')"),
+        "hey there"
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            SqlStdOperatorTable.TRIM,
+            rexBuilder.makeFlag(SqlTrimFunction.Flag.LEADING),
+            rexBuilder.makeLiteral(" h"),
+            inputRef("spacey")
+        ),
+        DruidExpression.fromExpression("ltrim(\"spacey\",' h')"),
+        "ey there  "
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            SqlStdOperatorTable.TRIM,
+            rexBuilder.makeFlag(SqlTrimFunction.Flag.TRAILING),
+            rexBuilder.makeLiteral(" e"),
+            inputRef("spacey")
+        ),
+        DruidExpression.fromExpression("rtrim(\"spacey\",' e')"),
+        "  hey ther"
     );
   }
 

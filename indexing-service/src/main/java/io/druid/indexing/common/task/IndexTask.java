@@ -405,7 +405,7 @@ public class IndexTask extends AbstractTask
 
       final int numShards;
       if (determineNumPartitions) {
-        final long numRows = new Double(collector.estimateCardinality()).longValue();
+        final long numRows = collector.estimateCardinalityRound();
         numShards = (int) Math.ceil((double) numRows / tuningConfig.getTargetPartitionSize());
         log.info("Estimated [%,d] rows of data for interval [%s], creating [%,d] shards", numRows, interval, numShards);
       } else {

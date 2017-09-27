@@ -126,7 +126,7 @@ public class WorkerTaskMonitorTest
               {
                 return basePath;
               }
-            }, null, null, null, null, null
+            }, null, null, null, null
         ),
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         cf,

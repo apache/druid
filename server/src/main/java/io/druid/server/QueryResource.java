@@ -24,9 +24,10 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.joda.ser.DateTimeSerializer;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
@@ -38,16 +39,16 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Yielder;
 import io.druid.java.util.common.guava.Yielders;
+import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
 import io.druid.query.QueryContexts;
 import io.druid.query.QueryInterruptedException;
 import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.security.Access;
-import io.druid.server.security.Action;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationInfo;
-import io.druid.server.security.Resource;
-import io.druid.server.security.ResourceType;
+import io.druid.server.security.AuthorizerMapper;
+import io.druid.server.security.AuthorizationUtils;
+import io.druid.server.security.ForbiddenException;
 import org.joda.time.DateTime;
 
 import javax.servlet.http.HttpServletRequest;
@@ -92,6 +93,9 @@ public class QueryResource implements QueryCountStatsProvider
   protected final ObjectMapper serializeDateTimeAsLongSmileMapper;
   protected final QueryManager queryManager;
   protected final AuthConfig authConfig;
+  protected final AuthorizerMapper authorizerMapper;
+
+  private final GenericQueryMetricsFactory queryMetricsFactory;
   private final AtomicLong successfulQueryCount = new AtomicLong();
   private final AtomicLong failedQueryCount = new AtomicLong();
   private final AtomicLong interruptedQueryCount = new AtomicLong();
@@ -102,7 +106,9 @@ public class QueryResource implements QueryCountStatsProvider
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
       QueryManager queryManager,
-      AuthConfig authConfig
+      AuthConfig authConfig,
+      AuthorizerMapper authorizerMapper,
+      GenericQueryMetricsFactory queryMetricsFactory
   )
   {
     this.queryLifecycleFactory = queryLifecycleFactory;
@@ -112,6 +118,8 @@ public class QueryResource implements QueryCountStatsProvider
     this.serializeDateTimeAsLongSmileMapper = serializeDataTimeAsLong(smileMapper);
     this.queryManager = queryManager;
     this.authConfig = authConfig;
+    this.authorizerMapper = authorizerMapper;
+    this.queryMetricsFactory = queryMetricsFactory;
   }
 
   @DELETE
@@ -122,28 +130,22 @@ public class QueryResource implements QueryCountStatsProvider
     if (log.isDebugEnabled()) {
       log.debug("Received cancel request for query [%s]", queryId);
     }
-    if (authConfig.isEnabled()) {
-      // This is an experimental feature, see - https://github.com/druid-io/druid/pull/2424
-      final AuthorizationInfo authorizationInfo = (AuthorizationInfo) req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN);
-      Preconditions.checkNotNull(
-          authorizationInfo,
-          "Security is enabled but no authorization info found in the request"
-      );
-      Set<String> datasources = queryManager.getQueryDatasources(queryId);
-      if (datasources == null) {
-        log.warn("QueryId [%s] not registered with QueryManager, cannot cancel", queryId);
-      } else {
-        for (String dataSource : datasources) {
-          Access authResult = authorizationInfo.isAuthorized(
-              new Resource(dataSource, ResourceType.DATASOURCE),
-              Action.WRITE
-          );
-          if (!authResult.isAllowed()) {
-            return Response.status(Response.Status.FORBIDDEN).header("Access-Check-Result", authResult).build();
-          }
-        }
-      }
+    Set<String> datasources = queryManager.getQueryDatasources(queryId);
+    if (datasources == null) {
+      log.warn("QueryId [%s] not registered with QueryManager, cannot cancel", queryId);
+      datasources = Sets.newTreeSet();
     }
+
+    Access authResult = AuthorizationUtils.authorizeAllResourceActions(
+        req,
+        Iterables.transform(datasources, AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR),
+        authorizerMapper
+    );
+
+    if (!authResult.isAllowed()) {
+      throw new ForbiddenException(authResult.toString());
+    }
+
     queryManager.cancelQuery(queryId);
     return Response.status(Response.Status.ACCEPTED).build();
   }
@@ -154,7 +156,7 @@ public class QueryResource implements QueryCountStatsProvider
   public Response doPost(
       final InputStream in,
       @QueryParam("pretty") final String pretty,
-      @Context final HttpServletRequest req // used to get request content-type, remote address and AuthorizationInfo
+      @Context final HttpServletRequest req // used to get request content-type, remote address and auth-related headers
   ) throws IOException
   {
     final QueryLifecycle queryLifecycle = queryLifecycleFactory.factorize();
@@ -174,9 +176,9 @@ public class QueryResource implements QueryCountStatsProvider
         log.debug("Got query [%s]", query);
       }
 
-      final Access authResult = queryLifecycle.authorize((AuthorizationInfo) req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN));
+      final Access authResult = queryLifecycle.authorize(req);
       if (!authResult.isAllowed()) {
-        return Response.status(Response.Status.FORBIDDEN).header("Access-Check-Result", authResult).build();
+        throw new ForbiddenException(authResult.toString());
       }
 
       final QueryLifecycle.QueryResponse queryResponse = queryLifecycle.execute();
@@ -269,6 +271,11 @@ public class QueryResource implements QueryCountStatsProvider
       interruptedQueryCount.incrementAndGet();
       queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr(), -1);
       return context.gotError(e);
+    }
+    catch (ForbiddenException e) {
+      // don't do anything for an authorization failure, ForbiddenExceptionMapper will catch this later and
+      // send an error response if this is thrown.
+      throw e;
     }
     catch (Exception e) {
       failedQueryCount.incrementAndGet();

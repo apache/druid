@@ -21,12 +21,9 @@ package io.druid.server.http;
 
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-
 import io.druid.client.indexing.IndexingService;
-import io.druid.client.selector.Server;
-import io.druid.curator.discovery.ServerDiscoverySelector;
+import io.druid.discovery.DruidLeaderClient;
 import io.druid.java.util.common.ISE;
-
 import org.eclipse.jetty.proxy.ProxyServlet;
 
 import javax.servlet.http.HttpServletRequest;
@@ -38,27 +35,28 @@ import java.net.URISyntaxException;
  */
 public class OverlordProxyServlet extends ProxyServlet
 {
-  private final ServerDiscoverySelector selector;
+  private final DruidLeaderClient druidLeaderClient;
 
   @Inject
   OverlordProxyServlet(
-      @IndexingService ServerDiscoverySelector selector
+      @IndexingService DruidLeaderClient druidLeaderClient
   )
   {
-    this.selector = selector;
+    this.druidLeaderClient = druidLeaderClient;
   }
 
   @Override
   protected String rewriteTarget(HttpServletRequest request)
   {
     try {
-      final Server indexer = selector.pick();
-      if (indexer == null) {
-        throw new ISE("Can't find indexingService, did you configure druid.selectors.indexing.serviceName same as druid.service at overlord?");
+      final String overlordLeader = druidLeaderClient.findCurrentLeader();
+      if (overlordLeader == null) {
+        throw new ISE("Can't find Overlord leader.");
       }
+
       return new URI(
           request.getScheme(),
-          indexer.getHost(),
+          overlordLeader,
           request.getRequestURI(),
           request.getQueryString(),
           null

@@ -19,6 +19,8 @@
 
 package io.druid.emitter.graphite;
 
+import com.codahale.metrics.graphite.Graphite;
+import com.codahale.metrics.graphite.GraphiteSender;
 import com.codahale.metrics.graphite.PickledGraphite;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.emitter.core.Emitter;
@@ -28,6 +30,7 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.server.log.EmittingRequestLogger;
 
 import java.io.IOException;
 import java.net.SocketException;
@@ -50,7 +53,8 @@ public class GraphiteEmitter implements Emitter
 
   private final DruidToGraphiteEventConverter graphiteEventConverter;
   private final GraphiteEmitterConfig graphiteEmitterConfig;
-  private final List<Emitter> emitterList;
+  private final List<Emitter> alertEmitters;
+  private final List<Emitter> requestLogEmitters;
   private final AtomicBoolean started = new AtomicBoolean(false);
   private final LinkedBlockingQueue<GraphiteEvent> eventsQueue;
   private static final long FLUSH_TIMEOUT = 60000; // default flush wait 1 min
@@ -62,10 +66,12 @@ public class GraphiteEmitter implements Emitter
 
   public GraphiteEmitter(
       GraphiteEmitterConfig graphiteEmitterConfig,
-      List<Emitter> emitterList
+      List<Emitter> alertEmitters,
+      List<Emitter> requestLogEmitters
   )
   {
-    this.emitterList = emitterList;
+    this.alertEmitters = alertEmitters;
+    this.requestLogEmitters = requestLogEmitters;
     this.graphiteEmitterConfig = graphiteEmitterConfig;
     this.graphiteEventConverter = graphiteEmitterConfig.getDruidToGraphiteEventConverter();
     this.eventsQueue = new LinkedBlockingQueue(graphiteEmitterConfig.getMaxQueueSize());
@@ -119,8 +125,12 @@ public class GraphiteEmitter implements Emitter
         log.error(e, "got interrupted with message [%s]", e.getMessage());
         Thread.currentThread().interrupt();
       }
-    } else if (!emitterList.isEmpty() && event instanceof AlertEvent) {
-      for (Emitter emitter : emitterList) {
+    } else if (event instanceof EmittingRequestLogger.RequestLogEvent) {
+      for (Emitter emitter : requestLogEmitters) {
+        emitter.emit(event);
+      }
+    } else if (!alertEmitters.isEmpty() && event instanceof AlertEvent) {
+      for (Emitter emitter : alertEmitters) {
         emitter.emit(event);
       }
     } else if (event instanceof AlertEvent) {
@@ -136,17 +146,32 @@ public class GraphiteEmitter implements Emitter
 
   private class ConsumerRunnable implements Runnable
   {
-    @Override
-    public void run()
+    private final GraphiteSender graphite;
+
+    public ConsumerRunnable()
     {
-      try (PickledGraphite pickledGraphite = new PickledGraphite(
+      if (graphiteEmitterConfig.getProtocol().equals(GraphiteEmitterConfig.PLAINTEXT_PROTOCOL)) {
+        graphite = new Graphite(
+          graphiteEmitterConfig.getHostname(),
+          graphiteEmitterConfig.getPort()
+        );
+      } else {
+        graphite = new PickledGraphite(
           graphiteEmitterConfig.getHostname(),
           graphiteEmitterConfig.getPort(),
           graphiteEmitterConfig.getBatchSize()
-      )) {
-        if (!pickledGraphite.isConnected()) {
+        );
+      }
+      log.info("Using %s protocol.", graphiteEmitterConfig.getProtocol());
+    }
+
+    @Override
+    public void run()
+    {
+      try {
+        if (!graphite.isConnected()) {
           log.info("trying to connect to graphite server");
-          pickledGraphite.connect();
+          graphite.connect();
         }
         while (eventsQueue.size() > 0 && !exec.isShutdown()) {
           try {
@@ -161,7 +186,7 @@ public class GraphiteEmitter implements Emitter
                   graphiteEvent.getValue(),
                   graphiteEvent.getTimestamp()
               );
-              pickledGraphite.send(
+              graphite.send(
                   graphiteEvent.getEventPath(),
                   graphiteEvent.getValue(),
                   graphiteEvent.getTimestamp()
@@ -176,9 +201,9 @@ public class GraphiteEmitter implements Emitter
             } else if (e instanceof SocketException) {
               // This is antagonistic to general Closeable contract in Java,
               // it is needed to allow re-connection in case of the socket is closed due long period of inactivity
-              pickledGraphite.close();
+              graphite.close();
               log.warn("Trying to re-connect to graphite server");
-              pickledGraphite.connect();
+              graphite.connect();
             }
           }
         }
@@ -220,7 +245,16 @@ public class GraphiteEmitter implements Emitter
 
   protected static String sanitize(String namespace)
   {
+    return sanitize(namespace, false);
+  }
+
+  protected static String sanitize(String namespace, Boolean replaceSlashToDot)
+  {
     Pattern DOT_OR_WHITESPACE = Pattern.compile("[\\s]+|[.]+");
-    return DOT_OR_WHITESPACE.matcher(namespace).replaceAll("_");
+    String sanitizedNamespace = DOT_OR_WHITESPACE.matcher(namespace).replaceAll("_");
+    if (replaceSlashToDot) {
+      sanitizedNamespace = sanitizedNamespace.replace("/", ".");
+    }
+    return sanitizedNamespace;
   }
 }

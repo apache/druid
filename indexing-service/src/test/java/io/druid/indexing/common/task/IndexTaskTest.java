@@ -601,7 +601,7 @@ public class IndexTaskTest
     File tmpDir = temporaryFolder.newFolder();
     File tmpFile = File.createTempFile("druid", "index", tmpDir);
 
-   populateRollupTestData(tmpFile);
+    populateRollupTestData(tmpFile);
 
     IndexTask indexTask = new IndexTask(
         null,
@@ -884,8 +884,8 @@ public class IndexTaskTest
   private final List<DataSegment> runTask(final IndexTask indexTask) throws Exception
   {
     final List<DataSegment> segments = Lists.newArrayList();
-    final TaskToolbox box = new TaskToolbox(
-        null, new TaskActionClient()
+
+    final TaskActionClient actionClient = new TaskActionClient()
     {
       @Override
       public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
@@ -896,8 +896,7 @@ public class IndexTaskTest
                   TaskLockType.EXCLUSIVE,
                   "",
                   "",
-                  Intervals.of("2014/P1Y"),
-                  DateTimes.nowUtc().toString(),
+                  Intervals.of("2014/P1Y"), DateTimes.nowUtc().toString(),
                   Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY
               )
           );
@@ -905,8 +904,7 @@ public class IndexTaskTest
 
         if (taskAction instanceof LockAcquireAction) {
           return (RetType) new TaskLock(
-              TaskLockType.EXCLUSIVE,
-              "groupId",
+              TaskLockType.EXCLUSIVE, "groupId",
               "test",
               ((LockAcquireAction) taskAction).getInterval(),
               DateTimes.nowUtc().toString(),
@@ -941,7 +939,9 @@ public class IndexTaskTest
 
         return null;
       }
-    }, null, new DataSegmentPusher()
+    };
+
+    final DataSegmentPusher pusher = new DataSegmentPusher()
     {
       @Deprecated
       @Override
@@ -968,8 +968,33 @@ public class IndexTaskTest
       {
         throw new UnsupportedOperationException();
       }
-    }, null, null, null, null, null, null, null, null, null, null, jsonMapper, temporaryFolder.newFolder(),
-        indexIO, null, null, indexMergerV9, null, null, null, null
+    };
+
+    final TaskToolbox box = new TaskToolbox(
+        null,
+        actionClient,
+        null,
+        pusher,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        jsonMapper,
+        temporaryFolder.newFolder(),
+        indexIO,
+        null,
+        null,
+        indexMergerV9,
+        null,
+        null,
+        null,
+        null
     );
 
     indexTask.isReady(box.getTaskActionClient());

@@ -96,18 +96,16 @@ public class RealtimeishTask extends AbstractTask
     Assert.assertEquals("locks2", ImmutableList.of(lock1, lock2), locks2);
 
     // Push first segment
-    toolbox.getTaskActionClient()
-           .submit(
-               new SegmentInsertAction(
-                   ImmutableSet.of(
-                       DataSegment.builder()
-                                  .dataSource("foo")
-                                  .interval(interval1)
-                                  .version(lock1.getVersion())
-                                  .build()
-                   )
-               )
-           );
+    SegmentInsertAction firstSegmentInsertAction = new SegmentInsertAction(
+        ImmutableSet.of(
+            DataSegment.builder()
+                       .dataSource("foo")
+                       .interval(interval1)
+                       .version(lock1.getVersion())
+                       .build()
+        )
+    );
+    toolbox.getTaskActionClient().submit(firstSegmentInsertAction);
 
     // Release first lock
     toolbox.getTaskActionClient().submit(new LockReleaseAction(interval1));
@@ -117,18 +115,16 @@ public class RealtimeishTask extends AbstractTask
     Assert.assertEquals("locks3", ImmutableList.of(lock2), locks3);
 
     // Push second segment
-    toolbox.getTaskActionClient()
-           .submit(
-               new SegmentInsertAction(
-                   ImmutableSet.of(
-                       DataSegment.builder()
-                                  .dataSource("foo")
-                                  .interval(interval2)
-                                  .version(lock2.getVersion())
-                                  .build()
-                   )
-               )
-           );
+    SegmentInsertAction secondSegmentInsertAction = new SegmentInsertAction(
+        ImmutableSet.of(
+            DataSegment.builder()
+                       .dataSource("foo")
+                       .interval(interval2)
+                       .version(lock2.getVersion())
+                       .build()
+        )
+    );
+    toolbox.getTaskActionClient().submit(secondSegmentInsertAction);
 
     // Release second lock
     toolbox.getTaskActionClient().submit(new LockReleaseAction(interval2));
