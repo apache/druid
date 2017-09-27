@@ -19,6 +19,7 @@
 
 package io.druid.java.util.common;
 
+import org.joda.time.Chronology;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
 import org.joda.time.format.DateTimeFormatter;
@@ -29,6 +30,35 @@ public final class DateTimes
   public static final DateTime MAX = utc(JodaUtils.MAX_INSTANT);
   public static final DateTime MIN = utc(JodaUtils.MIN_INSTANT);
 
+  /**
+   * Simple wrapper class to enforce UTC Chronology in formatter. Specifically, it will use
+   * {@link DateTimeFormatter#withChronology(Chronology)} to set the chronology to
+   * {@link ISOChronology#getInstanceUTC()} on the wrapped {@link DateTimeFormatter}.
+   */
+  public static class UtcFormatter
+  {
+    private final DateTimeFormatter innerFormatter;
+
+    private UtcFormatter(final DateTimeFormatter innerFormatter)
+    {
+      this.innerFormatter = innerFormatter.withChronology(ISOChronology.getInstanceUTC());
+    }
+
+    public DateTime parse(final String instant)
+    {
+      return innerFormatter.parseDateTime(instant);
+    }
+  }
+
+  /**
+   * Creates a {@link UtcFormatter} that wraps around a {@link DateTimeFormatter}.
+   * @param formatter inner {@link DateTimeFormatter} used to parse {@link String}
+   */
+  public static UtcFormatter wrapFormatter(final DateTimeFormatter formatter)
+  {
+    return new UtcFormatter(formatter);
+  }
+
   public static DateTime utc(long instant)
   {
     return new DateTime(instant, ISOChronology.getInstanceUTC());
@@ -37,11 +67,6 @@ public final class DateTimes
   public static DateTime of(String instant)
   {
     return new DateTime(instant, ISOChronology.getInstanceUTC());
-  }
-
-  public static DateTime of(String instant, DateTimeFormatter formatter)
-  {
-    return formatter.withChronology(ISOChronology.getInstanceUTC()).parseDateTime(instant);
   }
 
   public static DateTime nowUtc()

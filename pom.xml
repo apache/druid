@@ -940,7 +940,7 @@
                         <signaturesFile>${session.executionRootDirectory}/codestyle/joda-time-forbidden-apis.txt</signaturesFile>
                     </signaturesFiles>
                     <excludes>
-                        <exclude>io/druid/java/util/common/DateTimes.class</exclude>
+                        <exclude>io/druid/java/util/common/DateTimes$UtcFormatter.class</exclude>
                     </excludes>
                 </configuration>
                 <executions>

@@ -26,7 +26,6 @@ import io.druid.math.expr.ExprEval;
 import io.druid.math.expr.ExprMacroTable;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 
 import javax.annotation.Nonnull;
@@ -57,9 +56,11 @@ public class TimestampParseExprMacro implements ExprMacroTable.ExprMacro
       timeZone = DateTimeZone.UTC;
     }
 
-    final DateTimeFormatter formatter = formatString == null
-                                        ? ISODateTimeFormat.dateTimeParser()
-                                        : DateTimeFormat.forPattern(formatString).withZone(timeZone);
+    final DateTimes.UtcFormatter formatter = DateTimes.wrapFormatter(
+        formatString == null
+        ? ISODateTimeFormat.dateTimeParser()
+        : DateTimeFormat.forPattern(formatString).withZone(timeZone)
+    );
 
     class TimestampParseExpr implements Expr
     {
@@ -68,7 +69,7 @@ public class TimestampParseExprMacro implements ExprMacroTable.ExprMacro
       public ExprEval eval(final ObjectBinding bindings)
       {
         try {
-          return ExprEval.of(DateTimes.of(arg.eval(bindings).asString(), formatter).getMillis());
+          return ExprEval.of(formatter.parse(arg.eval(bindings).asString()).getMillis());
         }
         catch (IllegalArgumentException e) {
           // Catch exceptions potentially thrown by formatter.parseDateTime. Our docs say that unparseable timestamps

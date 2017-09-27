@@ -27,7 +27,6 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 
 import java.util.Objects;
@@ -84,11 +83,11 @@ public class DataSegmentUtils
       return null;
     }
 
-    DateTimeFormatter formatter = ISODateTimeFormat.dateTime();
+    DateTimes.UtcFormatter formatter = DateTimes.wrapFormatter(ISODateTimeFormat.dateTime());
 
     try {
-      DateTime start = DateTimes.of(splits[0], formatter);
-      DateTime end = DateTimes.of(splits[1], formatter);
+      DateTime start = formatter.parse(splits[0]);
+      DateTime end = formatter.parse(splits[1]);
       String version = splits[2];
       String trail = splits.length > 3 ? join(splits, DataSegment.delimiter, 3, splits.length) : null;
 

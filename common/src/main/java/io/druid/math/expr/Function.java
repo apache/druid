@@ -835,7 +835,7 @@ interface Function
       }
       DateTime date;
       try {
-        date = DateTimes.of(value.asString(), formatter);
+        date = DateTimes.wrapFormatter(formatter).parse(value.asString());
       }
       catch (IllegalArgumentException e) {
         throw new IAE(e, "invalid value %s", value.asString());

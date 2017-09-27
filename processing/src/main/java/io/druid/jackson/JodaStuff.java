@@ -89,6 +89,11 @@ class JodaStuff
 
   private static class DateTimeDeserializer extends StdDeserializer<DateTime>
   {
+    private static final DateTimes.UtcFormatter FORMATTER = DateTimes.wrapFormatter(
+        // make sure to preserve time zone information when parsing timestamps
+        ISODateTimeFormat.dateTimeParser().withOffsetParsed()
+    );
+
     public DateTimeDeserializer()
     {
       super(DateTime.class);
@@ -107,8 +112,7 @@ class JodaStuff
         if (str.length() == 0) { // [JACKSON-360]
           return null;
         }
-        // make sure to preserve time zone information when parsing timestamps
-        return DateTimes.of(str, ISODateTimeFormat.dateTimeParser().withOffsetParsed());
+        return FORMATTER.parse(str);
       }
       throw ctxt.mappingException(getValueClass());
     }
