@@ -27,7 +27,6 @@ import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.MapUtils;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -72,9 +71,9 @@ public class IntervalsResource
   {
     final Comparator<Interval> comparator = Comparators.inverse(Comparators.intervalsByStartThenEnd());
     final Set<DruidDataSource> datasources = InventoryViewUtils.getSecuredDataSources(
+        req,
         serverInventoryView,
-        authorizerMapper,
-        (AuthenticationResult) req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)
+        authorizerMapper
     );
 
     final Map<Interval, Map<String, Map<String, Object>>> retVal = Maps.newTreeMap(comparator);
@@ -104,9 +103,9 @@ public class IntervalsResource
   {
     final Interval theInterval = Intervals.of(interval.replace("_", "/"));
     final Set<DruidDataSource> datasources = InventoryViewUtils.getSecuredDataSources(
+        req,
         serverInventoryView,
-        authorizerMapper,
-        (AuthenticationResult) req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)
+        authorizerMapper
     );
 
     final Comparator<Interval> comparator = Comparators.inverse(Comparators.intervalsByStartThenEnd());

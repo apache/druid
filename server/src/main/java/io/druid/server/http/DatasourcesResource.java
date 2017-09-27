@@ -44,7 +44,6 @@ import io.druid.metadata.MetadataSegmentManager;
 import io.druid.query.TableDataSource;
 import io.druid.server.http.security.DatasourceResourceFilter;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
@@ -111,9 +110,9 @@ public class DatasourcesResource
   {
     Response.ResponseBuilder builder = Response.ok();
     final Set<DruidDataSource> datasources = InventoryViewUtils.getSecuredDataSources(
+        req,
         serverInventoryView,
-        authorizerMapper,
-        (AuthenticationResult) req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)
+        authorizerMapper
     );
 
     if (full != null) {
