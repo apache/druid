@@ -65,7 +65,6 @@ import io.druid.query.QueryWatcher;
 import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.Result;
 import io.druid.query.aggregation.MetricManipulatorFns;
-import io.druid.server.initialization.ServerConfig;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferInputStream;
 import org.jboss.netty.handler.codec.http.HttpChunk;
