@@ -172,11 +172,10 @@ public class QueryLifecycle
     }
 
     this.queryPlus = QueryPlus.wrap(
-        QueryContexts.withMaxQueryTimeout(
-            (Query) withTimeoutAndMaxScatterGatherBytes(
-                baseQuery.withId(queryId),
-                serverConfig
-            ), serverConfig.getMaxQueryTimeout())
+        (Query) withTimeoutAndMaxScatterGatherBytes(
+            baseQuery.withId(queryId),
+            serverConfig
+        )
     );
     this.toolChest = warehouse.getToolChest(baseQuery);
   }
