@@ -125,7 +125,7 @@ public class DatasourcesResourceTest
         ImmutableList.of(server)
     ).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
-      new AuthenticationResult("druid", "druid")
+      new AuthenticationResult("druid", "druid", null)
     ).atLeastOnce();
     EasyMock.replay(inventoryView, server, request);
     DatasourcesResource datasourcesResource = new DatasourcesResource(
@@ -155,7 +155,7 @@ public class DatasourcesResourceTest
   @Test
   public void testSecuredGetFullQueryableDataSources() throws Exception
   {
-    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid");
+    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null);
 
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(authenticationResult)
@@ -233,7 +233,7 @@ public class DatasourcesResourceTest
         ImmutableList.of(server)
     ).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
-        new AuthenticationResult("druid", "druid")
+        new AuthenticationResult("druid", "druid", null)
     ).atLeastOnce();
 
     EasyMock.replay(inventoryView, server, request);

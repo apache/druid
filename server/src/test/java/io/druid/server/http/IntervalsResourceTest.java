@@ -109,7 +109,7 @@ public class IntervalsResourceTest
         ImmutableList.of(server)
     ).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
-        new AuthenticationResult("druid", "druid")
+        new AuthenticationResult("druid", "druid", null)
     ).atLeastOnce();
     EasyMock.replay(inventoryView, request);
 
@@ -143,7 +143,7 @@ public class IntervalsResourceTest
         ImmutableList.of(server)
     ).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
-        new AuthenticationResult("druid", "druid")
+        new AuthenticationResult("druid", "druid", null)
     ).atLeastOnce();
     EasyMock.replay(inventoryView, request);
 
@@ -171,7 +171,7 @@ public class IntervalsResourceTest
         ImmutableList.of(server)
     ).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
-        new AuthenticationResult("druid", "druid")
+        new AuthenticationResult("druid", "druid", null)
     ).atLeastOnce();
     EasyMock.replay(inventoryView, request);
 
@@ -201,7 +201,7 @@ public class IntervalsResourceTest
         ImmutableList.of(server)
     ).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
-        new AuthenticationResult("druid", "druid")
+        new AuthenticationResult("druid", "druid", null)
     ).atLeastOnce();
     EasyMock.replay(inventoryView, request);
 

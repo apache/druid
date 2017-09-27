@@ -50,7 +50,7 @@ public class PreResponseAuthorizationCheckFilterTest
   @Test
   public void testValidRequest() throws Exception
   {
-    AuthenticationResult authenticationResult = new AuthenticationResult("so-very-valid", "so-very-valid");
+    AuthenticationResult authenticationResult = new AuthenticationResult("so-very-valid", "so-very-valid", null);
 
     HttpServletRequest req = EasyMock.createStrictMock(HttpServletRequest.class);
     HttpServletResponse resp = EasyMock.createStrictMock(HttpServletResponse.class);
@@ -103,7 +103,7 @@ public class PreResponseAuthorizationCheckFilterTest
     expectedException.expect(ISE.class);
     expectedException.expectMessage("Request did not have an authorization check performed.");
 
-    AuthenticationResult authenticationResult = new AuthenticationResult("so-very-valid", "so-very-valid");
+    AuthenticationResult authenticationResult = new AuthenticationResult("so-very-valid", "so-very-valid", null);
 
     HttpServletRequest req = EasyMock.createStrictMock(HttpServletRequest.class);
     HttpServletResponse resp = EasyMock.createStrictMock(HttpServletResponse.class);

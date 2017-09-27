@@ -37,7 +37,7 @@ import java.util.Map;
  */
 public class AllowAllAuthenticator implements Authenticator
 {
-  public static final AuthenticationResult ALLOW_ALL_RESULT = new AuthenticationResult("allowAll", "allowAll");
+  public static final AuthenticationResult ALLOW_ALL_RESULT = new AuthenticationResult("allowAll", "allowAll", null);
 
   @Override
   public Class<? extends Filter> getFilterClass()

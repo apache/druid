@@ -111,7 +111,7 @@ public class ResourceFilterTestHelper
     ).anyTimes();
     EasyMock.expect(request.getMethod()).andReturn(requestMethod).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).anyTimes();
-    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid");
+    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null);
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(authenticationResult)
             .atLeastOnce();
