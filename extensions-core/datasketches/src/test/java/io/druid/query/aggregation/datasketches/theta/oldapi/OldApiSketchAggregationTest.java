@@ -203,7 +203,7 @@ public class OldApiSketchAggregationTest
   public void testRelocation()
   {
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
-    SketchHolder sketchHolder = SketchHolder.of(Sketches.updateSketchBuilder().build(16));
+    SketchHolder sketchHolder = SketchHolder.of(Sketches.updateSketchBuilder().setNominalEntries(16).build());
     UpdateSketch updateSketch = (UpdateSketch) sketchHolder.getSketch();
     updateSketch.update(1);
 
