@@ -626,10 +626,10 @@ public class GroupByQuery extends BaseQuery<Row>
       }
 
       if (isNumericField.get(i)) {
-        if (comparator == StringComparators.NUMERIC) {
+        if (comparator.equals(StringComparators.NUMERIC)) {
           dimCompare = ((Ordering) Comparators.naturalNullsFirst()).compare(
-              rhs.getRaw(fieldName),
-              lhs.getRaw(fieldName)
+              lhs.getRaw(fieldName),
+              rhs.getRaw(fieldName)
           );
         } else {
           dimCompare = comparator.compare(String.valueOf(lhsObj), String.valueOf(rhsObj));
