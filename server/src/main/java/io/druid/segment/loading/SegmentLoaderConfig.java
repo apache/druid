@@ -31,8 +31,6 @@ import java.util.List;
  */
 public class SegmentLoaderConfig
 {
-  private static final int DEFAULT_NUM_BOOTSTRAP_THREADS = 1;
-
   @JsonProperty
   @NotEmpty
   private List<StorageLocationConfig> locations = null;
@@ -45,6 +43,9 @@ public class SegmentLoaderConfig
 
   @JsonProperty("announceIntervalMillis")
   private int announceIntervalMillis = 0; // do not background announce
+
+  @JsonProperty("numLoadingThreads")
+  private int numLoadingThreads = 1;
 
   @JsonProperty("numBootstrapThreads")
   private Integer numBootstrapThreads = null;
@@ -72,9 +73,14 @@ public class SegmentLoaderConfig
     return announceIntervalMillis;
   }
 
+  public int getNumLoadingThreads()
+  {
+    return numLoadingThreads;
+  }
+
   public int getNumBootstrapThreads()
   {
-    return numBootstrapThreads == null ? DEFAULT_NUM_BOOTSTRAP_THREADS : numBootstrapThreads;
+    return numBootstrapThreads == null ? numLoadingThreads : numBootstrapThreads;
   }
 
   public File getInfoDir()
