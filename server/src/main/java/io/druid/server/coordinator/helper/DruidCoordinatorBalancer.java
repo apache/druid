@@ -38,6 +38,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.SortedSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -87,7 +88,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
   private void balanceTier(
       DruidCoordinatorRuntimeParams params,
       String tier,
-      NavigableSet<ServerHolder> servers,
+      SortedSet<ServerHolder> servers,
       CoordinatorStats stats
   )
   {

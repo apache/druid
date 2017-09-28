@@ -26,7 +26,7 @@ import io.druid.client.ImmutableDruidServer;
 import io.druid.timeline.DataSegment;
 
 import java.util.Map;
-import java.util.NavigableSet;
+import java.util.SortedSet;
 
 /**
  * A lookup for the number of replicants of a given segment for a certain tier.
@@ -38,7 +38,7 @@ public class SegmentReplicantLookup
     final Table<String, String, Integer> segmentsInCluster = HashBasedTable.create();
     final Table<String, String, Integer> loadingSegments = HashBasedTable.create();
 
-    for (NavigableSet<ServerHolder> serversByType : cluster.getSortedHistoricalsByTier()) {
+    for (SortedSet<ServerHolder> serversByType : cluster.getSortedHistoricalsByTier()) {
       for (ServerHolder serverHolder : serversByType) {
         ImmutableDruidServer server = serverHolder.getServer();
 

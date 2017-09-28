@@ -35,7 +35,6 @@ import io.druid.timeline.DataSegment;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 
 import java.util.List;
-import java.util.NavigableSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -171,7 +170,7 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
     );
 
     log.info("Load Queues:");
-    for (NavigableSet<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
+    for (Iterable<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
       for (ServerHolder serverHolder : serverHolders) {
         ImmutableDruidServer server = serverHolder.getServer();
         LoadQueuePeon queuePeon = serverHolder.getPeon();
