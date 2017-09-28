@@ -103,19 +103,16 @@ public abstract class LoadRule implements Rule
         return;
       }
 
+      int numAssigned = 1; // 1 replica (i.e., primary replica) already assigned
+
       final String tier = primaryHolderToLoad.getServer().getTier();
       // assign replicas for the rest of the tier
-      final int numAssigned = 1 /* for primary replica */ + assignReplicasForTier(
+      numAssigned += assignReplicasForTier(
           tier,
           targetReplicants.getOrDefault(tier, 0),
-          // note: adding 1 to currentReplicantsInTier to account for the one assigned as primary replica
-          currentReplicants.getOrDefault(tier, 0) + 1,
+          numAssigned, // note that the currentReplicantsInTier is the just-assigned primary replica.
           params,
-          getFilteredHolders(
-              tier,
-              params.getDruidCluster(),
-              createLoadQueueSizeLimitingPredicate(params).and(holder -> !holder.equals(primaryHolderToLoad))
-          ),
+          createLoadQueueSizeLimitingPredicate(params).and(holder -> !holder.equals(primaryHolderToLoad)),
           segment
       );
       stats.addToTieredStat(ASSIGNED_COUNT, tier, numAssigned);
@@ -210,7 +207,7 @@ public abstract class LoadRule implements Rule
 
   /**
    * @param tierToSkip if not null, this tier will be skipped from doing assignment, use when primary replica was
-   *                   assgined.
+   *                   assigned.
    */
   private void assignReplicas(
       final DruidCoordinatorRuntimeParams params,
@@ -229,25 +226,34 @@ public abstract class LoadRule implements Rule
           entry.getIntValue(),
           currentReplicants.getOrDefault(tier, 0),
           params,
-          getFilteredHolders(tier, params.getDruidCluster(), createLoadQueueSizeLimitingPredicate(params)),
+          createLoadQueueSizeLimitingPredicate(params),
           segment
       );
       stats.addToTieredStat(ASSIGNED_COUNT, tier, numAssigned);
     }
   }
 
+  /**
+   * @param predicate {@link Predicate} used to pre-filter {@link ServerHolder}s retrieved from {@link DruidCluster}.
+   */
   private int assignReplicasForTier(
       final String tier,
       final int targetReplicantsInTier,
       final int currentReplicantsInTier,
       final DruidCoordinatorRuntimeParams params,
-      final List<ServerHolder> holders,
+      final Predicate<ServerHolder> predicate,
       final DataSegment segment
   )
   {
     final int numToAssign = targetReplicantsInTier - currentReplicantsInTier;
-    // if nothing to assign or no holders available for assignment
-    if (numToAssign <= 0 || holders.isEmpty()) {
+    // if nothing to assign
+    if (numToAssign <= 0) {
+      return 0;
+    }
+
+    final List<ServerHolder> holders = getFilteredHolders(tier, params.getDruidCluster(), predicate);
+    // if no holders available for assignment
+    if (holders.isEmpty()) {
       return 0;
     }
 
