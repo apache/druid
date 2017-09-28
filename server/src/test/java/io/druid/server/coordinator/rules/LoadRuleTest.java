@@ -314,6 +314,15 @@ public class LoadRuleTest
         0
     );
     server2.addDataSegment(segment.getIdentifier(), segment);
+    DruidServer server3 = new DruidServer(
+        "serverNormNotServing",
+        "hostNorm",
+        null,
+        10,
+        ServerType.HISTORICAL,
+        DruidServer.DEFAULT_TIER,
+        0
+    );
     DruidCluster druidCluster = new DruidCluster(
         null,
         ImmutableMap.of(
@@ -328,6 +337,10 @@ public class LoadRuleTest
             Stream.of(
                 new ServerHolder(
                     server2.toImmutableDruidServer(),
+                    mockPeon
+                ),
+                new ServerHolder(
+                    server3.toImmutableDruidServer(),
                     mockPeon
                 )
             ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
