@@ -32,7 +32,6 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.math.expr.Evals;
-import io.druid.query.DataSource;
 import io.druid.query.Query;
 import io.druid.query.Result;
 import io.druid.query.groupby.GroupByQuery;
@@ -52,6 +51,7 @@ import io.druid.server.QueryLifecycleFactory;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerContext;
+import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.runtime.Hook;
@@ -94,45 +94,43 @@ public class QueryMaker
     return jsonMapper;
   }
 
-  public Sequence<Object[]> runQuery(
-      final DataSource dataSource,
-      final DruidQueryBuilder queryBuilder
-  )
+  public Sequence<Object[]> runQuery(final DruidQuery druidQuery)
   {
-    final Query query = queryBuilder.toQuery(dataSource, plannerContext);
+    final Query query = druidQuery.getQuery();
 
     if (query instanceof TimeseriesQuery) {
-      return executeTimeseries(queryBuilder, (TimeseriesQuery) query);
+      return executeTimeseries(druidQuery, (TimeseriesQuery) query);
     } else if (query instanceof TopNQuery) {
-      return executeTopN(queryBuilder, (TopNQuery) query);
+      return executeTopN(druidQuery, (TopNQuery) query);
     } else if (query instanceof GroupByQuery) {
-      return executeGroupBy(queryBuilder, (GroupByQuery) query);
+      return executeGroupBy(druidQuery, (GroupByQuery) query);
     } else if (query instanceof ScanQuery) {
-      return executeScan(queryBuilder, (ScanQuery) query);
+      return executeScan(druidQuery, (ScanQuery) query);
     } else if (query instanceof SelectQuery) {
-      return executeSelect(queryBuilder, (SelectQuery) query);
+      return executeSelect(druidQuery, (SelectQuery) query);
     } else {
       throw new ISE("Cannot run query of class[%s]", query.getClass().getName());
     }
   }
 
   private Sequence<Object[]> executeScan(
-      final DruidQueryBuilder queryBuilder,
+      final DruidQuery druidQuery,
       final ScanQuery query
   )
   {
-    final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
+    final List<RelDataTypeField> fieldList = druidQuery.getOutputRowType().getFieldList();
+    final RowSignature outputRowSignature = druidQuery.getOutputRowSignature();
 
     // SQL row column index -> Scan query column index
-    final int[] columnMapping = new int[queryBuilder.getRowOrder().size()];
+    final int[] columnMapping = new int[outputRowSignature.getRowOrder().size()];
     final Map<String, Integer> scanColumnOrder = Maps.newHashMap();
 
     for (int i = 0; i < query.getColumns().size(); i++) {
       scanColumnOrder.put(query.getColumns().get(i), i);
     }
 
-    for (int i = 0; i < queryBuilder.getRowOrder().size(); i++) {
-      final Integer index = scanColumnOrder.get(queryBuilder.getRowOrder().get(i));
+    for (int i = 0; i < outputRowSignature.getRowOrder().size(); i++) {
+      final Integer index = scanColumnOrder.get(outputRowSignature.getRowOrder().get(i));
       columnMapping[i] = index == null ? -1 : index;
     }
 
@@ -161,14 +159,15 @@ public class QueryMaker
   }
 
   private Sequence<Object[]> executeSelect(
-      final DruidQueryBuilder queryBuilder,
+      final DruidQuery druidQuery,
       final SelectQuery baseQuery
   )
   {
-    Preconditions.checkState(queryBuilder.getGrouping() == null, "grouping must be null");
+    Preconditions.checkState(druidQuery.getGrouping() == null, "grouping must be null");
 
-    final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
-    final Integer limit = queryBuilder.getLimitSpec() != null ? queryBuilder.getLimitSpec().getLimit() : null;
+    final List<RelDataTypeField> fieldList = druidQuery.getOutputRowType().getFieldList();
+    final Integer limit = druidQuery.getLimitSpec() != null ? druidQuery.getLimitSpec().getLimit() : null;
+    final RowSignature outputRowSignature = druidQuery.getOutputRowSignature();
 
     // Select is paginated, we need to make multiple queries.
     final Sequence<Sequence<Object[]>> sequenceOfSequences = Sequences.simple(
@@ -223,7 +222,7 @@ public class QueryMaker
                               final Map<String, Object> map = holder.getEvent();
                               final Object[] retVal = new Object[fieldList.size()];
                               for (RelDataTypeField field : fieldList) {
-                                final String outputName = queryBuilder.getRowOrder().get(field.getIndex());
+                                final String outputName = outputRowSignature.getRowOrder().get(field.getIndex());
                                 if (outputName.equals(Column.TIME_COLUMN_NAME)) {
                                   retVal[field.getIndex()] = coerce(
                                       holder.getTimestamp().getMillis(),
@@ -273,14 +272,14 @@ public class QueryMaker
   }
 
   private Sequence<Object[]> executeTimeseries(
-      final DruidQueryBuilder queryBuilder,
+      final DruidQuery druidQuery,
       final TimeseriesQuery query
   )
   {
-    final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
-    final String timeOutputName = queryBuilder.getGrouping().getDimensions().isEmpty()
+    final List<RelDataTypeField> fieldList = druidQuery.getOutputRowType().getFieldList();
+    final String timeOutputName = druidQuery.getGrouping().getDimensions().isEmpty()
                                   ? null
-                                  : Iterables.getOnlyElement(queryBuilder.getGrouping().getDimensions())
+                                  : Iterables.getOnlyElement(druidQuery.getGrouping().getDimensions())
                                              .getOutputName();
 
     return Sequences.map(
@@ -294,7 +293,7 @@ public class QueryMaker
             final Object[] retVal = new Object[fieldList.size()];
 
             for (final RelDataTypeField field : fieldList) {
-              final String outputName = queryBuilder.getRowOrder().get(field.getIndex());
+              final String outputName = druidQuery.getOutputRowSignature().getRowOrder().get(field.getIndex());
               if (outputName.equals(timeOutputName)) {
                 retVal[field.getIndex()] = coerce(result.getTimestamp(), field.getType().getSqlTypeName());
               } else {
@@ -309,11 +308,11 @@ public class QueryMaker
   }
 
   private Sequence<Object[]> executeTopN(
-      final DruidQueryBuilder queryBuilder,
+      final DruidQuery druidQuery,
       final TopNQuery query
   )
   {
-    final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
+    final List<RelDataTypeField> fieldList = druidQuery.getOutputRowType().getFieldList();
 
     return Sequences.concat(
         Sequences.map(
@@ -329,7 +328,7 @@ public class QueryMaker
                 for (DimensionAndMetricValueExtractor row : rows) {
                   final Object[] retVal = new Object[fieldList.size()];
                   for (final RelDataTypeField field : fieldList) {
-                    final String outputName = queryBuilder.getRowOrder().get(field.getIndex());
+                    final String outputName = druidQuery.getOutputRowSignature().getRowOrder().get(field.getIndex());
                     retVal[field.getIndex()] = coerce(row.getMetric(outputName), field.getType().getSqlTypeName());
                   }
 
@@ -344,11 +343,11 @@ public class QueryMaker
   }
 
   private Sequence<Object[]> executeGroupBy(
-      final DruidQueryBuilder queryBuilder,
+      final DruidQuery druidQuery,
       final GroupByQuery query
   )
   {
-    final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
+    final List<RelDataTypeField> fieldList = druidQuery.getOutputRowType().getFieldList();
 
     return Sequences.map(
         runQuery(query),
@@ -360,7 +359,7 @@ public class QueryMaker
             final Object[] retVal = new Object[fieldList.size()];
             for (RelDataTypeField field : fieldList) {
               retVal[field.getIndex()] = coerce(
-                  row.getRaw(queryBuilder.getRowOrder().get(field.getIndex())),
+                  row.getRaw(druidQuery.getOutputRowSignature().getRowOrder().get(field.getIndex())),
                   field.getType().getSqlTypeName()
               );
             }

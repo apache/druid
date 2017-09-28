@@ -41,7 +41,6 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.DruidNode;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.planner.Calcites;
@@ -163,7 +162,7 @@ public class DruidAvaticaHandlerTest
     );
     final DruidAvaticaHandler handler = new DruidAvaticaHandler(
         druidMeta,
-        new DruidNode("dummy", "dummy", 1, null, new ServerConfig()),
+        new DruidNode("dummy", "dummy", 1, null, true, false),
         new AvaticaMonitor()
     );
     final int port = new Random().nextInt(9999) + 10000;
@@ -288,7 +287,7 @@ public class DruidAvaticaHandlerTest
         ImmutableList.of(
             ImmutableMap.of(
                 "PLAN",
-                "DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"context\":{\"skipEmptyBuckets\":true}}])\n"
+                "DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"context\":{\"skipEmptyBuckets\":true}}], signature=[{a0:LONG}])\n"
             )
         ),
         getRows(resultSet)
@@ -622,7 +621,7 @@ public class DruidAvaticaHandlerTest
 
     final DruidAvaticaHandler handler = new DruidAvaticaHandler(
         smallFrameDruidMeta,
-        new DruidNode("dummy", "dummy", 1, null, new ServerConfig()),
+        new DruidNode("dummy", "dummy", 1, null, true, false),
         new AvaticaMonitor()
     );
     final int port = new Random().nextInt(9999) + 20000;

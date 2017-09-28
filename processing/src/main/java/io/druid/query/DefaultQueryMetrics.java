@@ -184,6 +184,12 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
+  public void identity(String identity)
+  {
+    // Emit nothing by default.
+  }
+
+  @Override
   public BitmapResultFactory<?> makeBitmapResultFactory(BitmapFactory factory)
   {
     return new DefaultBitmapResultFactory(factory);
