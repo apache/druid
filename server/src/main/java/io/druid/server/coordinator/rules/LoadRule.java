@@ -71,7 +71,6 @@ public abstract class LoadRule implements Rule
 
       final CoordinatorStats stats = new CoordinatorStats();
 
-      // performs
       if (params.getAvailableSegments().contains(segment)) {
         assign(params, segment, stats);
       }
