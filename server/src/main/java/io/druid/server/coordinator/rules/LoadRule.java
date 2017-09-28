@@ -86,6 +86,9 @@ public abstract class LoadRule implements Rule
     }
   }
 
+  /**
+   * @param stats {@link CoordinatorStats} to accumulate assignment statistics.
+   */
   private void assign(
       final DruidCoordinatorRuntimeParams params,
       final DataSegment segment,
@@ -206,6 +209,7 @@ public abstract class LoadRule implements Rule
   }
 
   /**
+   * @param stats {@link CoordinatorStats} to accumulate assignment statistics.
    * @param tierToSkip if not null, this tier will be skipped from doing assignment, use when primary replica was
    *                   assigned.
    */
@@ -288,6 +292,9 @@ public abstract class LoadRule implements Rule
     return numToAssign;
   }
 
+  /**
+   * @param stats {@link CoordinatorStats} to accumulate assignment statistics.
+   */
   private void drop(
       final DruidCoordinatorRuntimeParams params,
       final DataSegment segment,
