@@ -50,6 +50,6 @@ public class HistoricalResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getLoadStatus()
   {
-    return Response.ok(ImmutableMap.of("cacheInitialized", coordinator.isCacheInitialized())).build();
+    return Response.ok(ImmutableMap.of("cacheInitialized", coordinator.isStarted())).build();
   }
 }
