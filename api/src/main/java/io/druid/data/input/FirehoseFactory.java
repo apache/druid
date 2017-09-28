@@ -21,7 +21,7 @@ package io.druid.data.input;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.data.input.impl.InputRowParser;
-import io.druid.data.input.impl.PrefetchableTextFilesFirehoseFactory;
+import io.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.java.util.common.parsers.ParseException;
 

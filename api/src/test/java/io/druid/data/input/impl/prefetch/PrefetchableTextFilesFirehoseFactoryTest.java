@@ -17,13 +17,17 @@
  * under the License.
  */
 
-package io.druid.data.input.impl;
+package io.druid.data.input.impl.prefetch;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.Row;
+import io.druid.data.input.impl.CSVParseSpec;
+import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.data.input.impl.StringInputRowParser;
+import io.druid.data.input.impl.TimestampSpec;
 import io.druid.java.util.common.DateTimes;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.TrueFileFilter;
@@ -87,7 +91,8 @@ public class PrefetchableTextFilesFirehoseFactoryTest
       // Each file is 1390 bytes
       try (final Writer writer = Files.newBufferedWriter(
           new File(TEST_DIR, "test_" + i).toPath(),
-          StandardCharsets.UTF_8)
+          StandardCharsets.UTF_8
+      )
       ) {
         for (int j = 0; j < 100; j++) {
           final String a = (20171220 + i) + "," + i + "," + j + "\n";
@@ -320,7 +325,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
       final List<Row> rows = new ArrayList<>();
       try (Firehose firehose = factory.connect(parser, firehoseTmpDir)) {
         if (i > 0) {
-          Assert.assertEquals(2780, factory.getTotalCachedBytes());
+          Assert.assertEquals(2780, factory.getCacheManager().getTotalCachedBytes());
         }
 
         while (firehose.hasMore()) {
@@ -343,7 +348,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
       final List<Row> rows = new ArrayList<>();
       try (Firehose firehose = factory.connect(parser, firehoseTmpDir)) {
         if (i > 0) {
-          Assert.assertEquals(2780, factory.getTotalCachedBytes());
+          Assert.assertEquals(2780, factory.getCacheManager().getTotalCachedBytes());
         }
 
         while (firehose.hasMore()) {
