@@ -420,9 +420,8 @@ public class LookupReferencesManager
             response.getContent(),
             LOOKUPS_ALL_REFERENCE
         );
-        lookupMap.entrySet()
-                 .stream().forEach(e -> lookupBeanList.add
-                         (new LookupBean(e.getKey(), null, e.getValue())));
+        lookupMap.forEach((k, v) -> lookupBeanList.add(new LookupBean(k, null, v)));
+
       }
       return lookupBeanList;
     }
