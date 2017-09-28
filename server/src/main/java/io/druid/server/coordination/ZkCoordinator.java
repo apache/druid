@@ -51,6 +51,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -87,6 +88,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
 
   private volatile PathChildrenCache loadQueueCache;
   private volatile boolean started = false;
+  private volatile boolean cacheInitialized = false;
 
   @Inject
   public ZkCoordinator(
@@ -141,7 +143,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
         curator.newNamespaceAwareEnsurePath(servedSegmentsLocation).ensure(curator.getZookeeperClient());
         curator.newNamespaceAwareEnsurePath(liveSegmentsLocation).ensure(curator.getZookeeperClient());
 
-        loadLocalCache();
+        CompletableFuture<Void> allLocallyCachedSegmentsAnnounced = loadLocalCache();
         serverAnnouncer.announce();
 
         loadQueueCache.getListenable().addListener(
@@ -216,6 +218,8 @@ public class ZkCoordinator implements DataSegmentChangeHandler
             }
         );
         loadQueueCache.start();
+
+        allLocallyCachedSegmentsAnnounced.thenAcceptAsync(unused -> cacheInitialized = true);
       }
       catch (Exception e) {
         Throwables.propagateIfPossible(e, IOException.class);
@@ -249,17 +253,20 @@ public class ZkCoordinator implements DataSegmentChangeHandler
     }
   }
 
-  public boolean isStarted()
+  public boolean isCacheInitialized()
   {
-    return started;
+    return cacheInitialized;
   }
 
-  private void loadLocalCache()
+  /**
+   * Returns a future, which is completed when all locally cached segments are loaded and announced.
+   */
+  private CompletableFuture<Void> loadLocalCache() throws InterruptedException
   {
     final long loadLocalCacheStartMs = System.currentTimeMillis();
     File baseDir = config.getInfoDir();
     if (!baseDir.exists() && !config.getInfoDir().mkdirs()) {
-      return;
+      return CompletableFuture.completedFuture(null);
     }
 
     List<DataSegment> cachedSegments = Lists.newArrayList();
@@ -298,8 +305,9 @@ public class ZkCoordinator implements DataSegmentChangeHandler
          .emit();
     }
 
-    addSegments(cachedSegments);
+    CompletableFuture<Void> announcedFuture = loadLocalSegments(cachedSegments);
     log.info("Cache load took %,d ms", System.currentTimeMillis() - loadLocalCacheStartMs);
+    return announcedFuture;
   }
 
   public DataSegmentChangeHandler getDataSegmentChangeHandler()
@@ -380,13 +388,14 @@ public class ZkCoordinator implements DataSegmentChangeHandler
     }
   }
 
-  private void addSegments(Collection<DataSegment> segments)
+  /**
+   * Returns a future, which is completed when all segments are announced.
+   */
+  private CompletableFuture<Void> loadLocalSegments(Collection<DataSegment> segments) throws InterruptedException
   {
-    ExecutorService loadingExecutor = null;
-    final BackgroundSegmentAnnouncer segmentAnnouncer = new BackgroundSegmentAnnouncer(announcer, exec, config);
+    ExecutorService loadingExecutor = Execs.multiThreaded(config.getNumBootstrapThreads(), "ZkCoordinator-loading-%s");
     try {
-      loadingExecutor = Execs.multiThreaded(config.getNumBootstrapThreads(), "ZkCoordinator-loading-%s");
-
+      final BackgroundSegmentAnnouncer segmentAnnouncer = new BackgroundSegmentAnnouncer(announcer, exec, config);
       final int numSegments = segments.size();
       final CountDownLatch latch = new CountDownLatch(numSegments);
       final AtomicInteger counter = new AtomicInteger(0);
@@ -433,17 +442,15 @@ public class ZkCoordinator implements DataSegmentChangeHandler
           log.makeAlert("%,d errors seen while loading segments", failedSegments.size())
              .addData("failedSegments", failedSegments);
         }
+        return segmentAnnouncer.finishAnnouncingAsync();
       }
       catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
         log.makeAlert(e, "LoadingInterrupted");
+        throw e;
       }
     }
     finally {
-      segmentAnnouncer.finishAnnouncingAsync();
-      if (loadingExecutor != null) {
-        loadingExecutor.shutdownNow();
-      }
+      loadingExecutor.shutdownNow();
     }
   }
 
@@ -567,21 +574,17 @@ public class ZkCoordinator implements DataSegmentChangeHandler
       }
     }
 
-    void finishAnnouncingAsync()
+    CompletableFuture<Void> finishAnnouncingAsync()
     {
-      Execs.makeThread(
-          "ZkCoordinator - Segment Announce Finisher",
-          () -> {
-            try {
-              finishAnnouncing();
-            }
-            catch (Exception e) {
-              log.makeAlert(e, "Failed to announce segments -- likely problem with announcing.")
-                 .emit();
-            }
-          },
-          true
-      ).start();
+      return CompletableFuture.runAsync(() -> {
+        try {
+          finishAnnouncing();
+        }
+        catch (Exception e) {
+          log.makeAlert(e, "Failed to announce segments -- likely problem with announcing.")
+             .emit();
+        }
+      });
     }
 
     void finishAnnouncing() throws SegmentLoadingException
