@@ -91,7 +91,7 @@ public class LookupReferencesManagerTest
     container = new LookupExtractorFactoryContainer("v0", lookupExtractorFactory);
     mapper.registerSubtypes(MapLookupExtractorFactory.class);
     lookupReferencesManager = new LookupReferencesManager(
-        new LookupConfig(temporaryFolder.newFolder().getAbsolutePath(), LOOKUP_THREADS, LOOKUP_DISABLE),
+        new LookupConfig(temporaryFolder.newFolder().getAbsolutePath(), true),
         mapper, druidLeaderClient, config,
         true
     );
@@ -101,7 +101,7 @@ public class LookupReferencesManagerTest
   public void testStartStop() throws JsonProcessingException, InterruptedException, MalformedURLException
   {
     lookupReferencesManager = new LookupReferencesManager(
-        new LookupConfig(null, LOOKUP_THREADS, LOOKUP_DISABLE),
+        new LookupConfig(null, true),
         mapper, druidLeaderClient, config
     );
 
@@ -445,7 +445,7 @@ public class LookupReferencesManagerTest
   public void testRealModeWithMainThread() throws Exception
   {
     LookupReferencesManager lookupReferencesManager = new LookupReferencesManager(
-        new LookupConfig(temporaryFolder.newFolder().getAbsolutePath(), LOOKUP_THREADS, LOOKUP_DISABLE),
+        new LookupConfig(temporaryFolder.newFolder().getAbsolutePath(), true),
         mapper, druidLeaderClient, config
     );
     Map<String, Object> lookupMap = new HashMap<>();
@@ -572,9 +572,7 @@ public class LookupReferencesManagerTest
     lookupReferencesManager.stop();
     lookupReferencesManager = new LookupReferencesManager(
         new LookupConfig(
-            lookupReferencesManager.lookupSnapshotTaker.getPersistFile().getParent(),
-            LOOKUP_THREADS,
-            LOOKUP_DISABLE
+            lookupReferencesManager.lookupSnapshotTaker.getPersistFile().getParent(), true
         ),
         mapper, druidLeaderClient, config,
         true
@@ -595,7 +593,7 @@ public class LookupReferencesManagerTest
   public void testDisableLookupSync() throws Exception
   {
     LookupReferencesManager lookupReferencesManager = new LookupReferencesManager(
-        new LookupConfig(temporaryFolder.newFolder().getAbsolutePath(), LOOKUP_THREADS, true),
+        new LookupConfig(temporaryFolder.newFolder().getAbsolutePath(), true),
         mapper, druidLeaderClient, config
     );
     Map<String, Object> lookupMap = new HashMap<>();
