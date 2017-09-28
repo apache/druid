@@ -17,52 +17,43 @@
  * under the License.
  */
 
-package io.druid.server;
+package io.druid.server.log;
 
-import com.fasterxml.jackson.annotation.JsonValue;
+import com.google.common.collect.ImmutableList;
+import io.druid.server.RequestLogLine;
 
-import java.util.Map;
-import java.util.Objects;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
-/**
- */
-public class QueryStats
+public class TestRequestLogger implements RequestLogger
 {
-  private final Map<String, Object> stats;
+  private final List<RequestLogLine> logs;
 
-  public QueryStats(Map<String, Object> stats)
+  public TestRequestLogger()
   {
-    this.stats = stats;
-  }
-
-  @JsonValue
-  public Map<String, Object> getStats()
-  {
-    return stats;
+    this.logs = new ArrayList<>();
   }
 
   @Override
-  public boolean equals(final Object o)
+  public void log(final RequestLogLine requestLogLine) throws IOException
   {
-    if (this == o) {
-      return true;
+    synchronized (logs) {
+      logs.add(requestLogLine);
     }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
+  }
+
+  public List<RequestLogLine> getLogs()
+  {
+    synchronized (logs) {
+      return ImmutableList.copyOf(logs);
     }
-    final QueryStats that = (QueryStats) o;
-    return Objects.equals(stats, that.stats);
   }
 
-  @Override
-  public int hashCode()
+  public void clear()
   {
-    return Objects.hash(stats);
-  }
-
-  @Override
-  public String toString()
-  {
-    return String.valueOf(stats);
+    synchronized (logs) {
+      logs.clear();
+    }
   }
 }
