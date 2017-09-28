@@ -36,7 +36,6 @@ import io.druid.metadata.MetadataStorageConnector;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.server.DruidNode;
-import io.druid.server.initialization.ServerConfig;
 
 import java.util.List;
 
@@ -106,7 +105,7 @@ public class CreateTables extends GuiceRunnable
                 binder, Key.get(MetadataStorageTablesConfig.class), MetadataStorageTablesConfig.fromBase(base)
             );
             JsonConfigProvider.bindInstance(
-                binder, Key.get(DruidNode.class, Self.class), new DruidNode("tools", "localhost", -1, null, new ServerConfig())
+                binder, Key.get(DruidNode.class, Self.class), new DruidNode("tools", "localhost", -1, null, true, false)
             );
           }
         }

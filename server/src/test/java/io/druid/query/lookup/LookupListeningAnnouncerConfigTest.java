@@ -31,7 +31,6 @@ import io.druid.guice.JsonConfigurator;
 import io.druid.guice.annotations.Self;
 import io.druid.initialization.Initialization;
 import io.druid.server.DruidNode;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.server.metrics.DataSourceTaskIdHolder;
 import org.junit.Assert;
 import org.junit.Before;
@@ -51,7 +50,7 @@ public class LookupListeningAnnouncerConfigTest
             public void configure(Binder binder)
             {
               JsonConfigProvider.bindInstance(
-                  binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null, null, new ServerConfig())
+                  binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null, null, true, false)
               );
               binder.bind(Key.get(
                   String.class,

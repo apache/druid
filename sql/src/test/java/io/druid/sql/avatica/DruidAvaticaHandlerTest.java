@@ -41,7 +41,6 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.DruidNode;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.planner.Calcites;
@@ -163,7 +162,7 @@ public class DruidAvaticaHandlerTest
     );
     final DruidAvaticaHandler handler = new DruidAvaticaHandler(
         druidMeta,
-        new DruidNode("dummy", "dummy", 1, null, new ServerConfig()),
+        new DruidNode("dummy", "dummy", 1, null, true, false),
         new AvaticaMonitor()
     );
     final int port = new Random().nextInt(9999) + 10000;
@@ -622,7 +621,7 @@ public class DruidAvaticaHandlerTest
 
     final DruidAvaticaHandler handler = new DruidAvaticaHandler(
         smallFrameDruidMeta,
-        new DruidNode("dummy", "dummy", 1, null, new ServerConfig()),
+        new DruidNode("dummy", "dummy", 1, null, true, false),
         new AvaticaMonitor()
     );
     final int port = new Random().nextInt(9999) + 20000;
