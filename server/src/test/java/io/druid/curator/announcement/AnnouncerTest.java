@@ -38,6 +38,7 @@ import org.junit.Test;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  */
@@ -99,7 +100,19 @@ public class AnnouncerTest extends CuratorTestBase
           }
       );
       curator.inTransaction().delete().forPath(testPath1).and().commit();
-      Assert.assertTrue("Wait for /test1 to be created", timing.forWaiting().awaitLatch(latch));
+
+      // Wait for /test1 to be restored.
+      final boolean restored = latch.await(45, TimeUnit.SECONDS);
+
+      if (!restored) {
+        // Test failed. But it has been sketchy in CI; do some extra checks here to help track down why.
+        final Stat stat = curator.checkExists().forPath(testPath1);
+        if (stat != null) {
+          Assert.fail("/test1 was restored but latch did not countDown");
+        } else {
+          Assert.fail("/test1 was not restored");
+        }
+      }
 
       Assert.assertArrayEquals(
           "expect /test1 data is restored",
