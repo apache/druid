@@ -61,9 +61,11 @@ public class TimestampSpecTest
         };
     TimestampSpec spec = new TimestampSpec("TIMEstamp", DATE_FORMAT, null);
 
+    DateTimes.UtcFormatter formatter = DateTimes.wrapFormatter(ISODateTimeFormat.dateHourMinuteSecond());
+
     for (String date : dates) {
       DateTime dateTime = spec.extractTimestamp(ImmutableMap.<String, Object>of("TIMEstamp", date));
-      DateTime expectedDateTime = ISODateTimeFormat.dateHourMinuteSecond().parseDateTime(date);
+      DateTime expectedDateTime = formatter.parse(date);
       Assert.assertEquals(expectedDateTime, dateTime);
     }
   }

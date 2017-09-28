@@ -20,12 +20,11 @@
 package io.druid.math.expr;
 
 import com.google.common.base.Strings;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
-import org.joda.time.format.ISODateTimeFormat;
 
 import java.util.List;
 
@@ -824,17 +823,17 @@ interface Function
         throw new IAE("first argument should be string type but got %s type", value.type());
       }
 
-      DateTimeFormatter formatter = ISODateTimeFormat.dateOptionalTimeParser();
+      DateTimes.UtcFormatter formatter = DateTimes.ISO_DATE_OPTIONAL_TIME;
       if (args.size() > 1) {
         ExprEval format = args.get(1).eval(bindings);
         if (format.type() != ExprType.STRING) {
           throw new IAE("second argument should be string type but got %s type", format.type());
         }
-        formatter = DateTimeFormat.forPattern(format.asString());
+        formatter = DateTimes.wrapFormatter(DateTimeFormat.forPattern(format.asString()));
       }
       DateTime date;
       try {
-        date = DateTime.parse(value.asString(), formatter);
+        date = formatter.parse(value.asString());
       }
       catch (IllegalArgumentException e) {
         throw new IAE(e, "invalid value %s", value.asString());

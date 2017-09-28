@@ -23,9 +23,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
-import io.druid.java.util.common.JodaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.JodaUtils;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.data.CompressedObjectStrategy;
@@ -34,7 +35,6 @@ import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.commons.io.FileUtils;
-import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -56,7 +56,7 @@ public class IndexMergerV9CompatibilityTest
 {
   @Rule
   public final CloserRule closer = new CloserRule(false);
-  private static final long TIMESTAMP = DateTime.parse("2014-01-01").getMillis();
+  private static final long TIMESTAMP = DateTimes.of("2014-01-01").getMillis();
   private static final AggregatorFactory[] DEFAULT_AGG_FACTORIES = new AggregatorFactory[]{
       new CountAggregatorFactory(
           "count"
