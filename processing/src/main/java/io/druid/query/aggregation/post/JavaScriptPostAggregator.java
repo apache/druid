@@ -86,7 +86,8 @@ public class JavaScriptPostAggregator implements PostAggregator
   private final List<String> fieldNames;
   private final String function;
 
-  private final Function fn;
+  // This variable is lazily initialized to avoid unnecessary JavaScript compilation during JSON serde
+  private Function fn;
 
   @JsonCreator
   public JavaScriptPostAggregator(
@@ -99,12 +100,11 @@ public class JavaScriptPostAggregator implements PostAggregator
     Preconditions.checkNotNull(name, "Must have a valid, non-null post-aggregator name");
     Preconditions.checkNotNull(fieldNames, "Must have a valid, non-null fieldNames");
     Preconditions.checkNotNull(function, "Must have a valid, non-null function");
-    Preconditions.checkState(config.isEnabled(), "JavaScript is disabled.");
+    Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
 
     this.name = name;
     this.fieldNames = fieldNames;
     this.function = function;
-    this.fn = compile(function);
   }
 
   @Override
@@ -127,6 +127,7 @@ public class JavaScriptPostAggregator implements PostAggregator
     for (String field : fieldNames) {
       args[i++] = combinedAggregators.get(field);
     }
+    fn = fn == null ? compile(function) : fn;
     return fn.apply(args);
   }
 
@@ -179,9 +180,6 @@ public class JavaScriptPostAggregator implements PostAggregator
     if (!fieldNames.equals(that.fieldNames)) {
       return false;
     }
-    if (!fn.equals(that.fn)) {
-      return false;
-    }
     if (!function.equals(that.function)) {
       return false;
     }
@@ -198,7 +196,6 @@ public class JavaScriptPostAggregator implements PostAggregator
     int result = name.hashCode();
     result = 31 * result + fieldNames.hashCode();
     result = 31 * result + function.hashCode();
-    result = 31 * result + fn.hashCode();
     return result;
   }
 }

@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.js.JavaScriptConfig;
 import org.mozilla.javascript.Context;
@@ -67,8 +66,10 @@ public class JavaScriptExtractionFn implements ExtractionFn
   }
 
   private final String function;
-  private final Function<Object, String> fn;
   private final boolean injective;
+
+  // This variable is lazily initialized to avoid unnecessary JavaScript compilation during JSON serde
+  private Function<Object, String> fn;
 
   @JsonCreator
   public JavaScriptExtractionFn(
@@ -78,15 +79,10 @@ public class JavaScriptExtractionFn implements ExtractionFn
   )
   {
     Preconditions.checkNotNull(function, "function must not be null");
+    Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
 
     this.function = function;
     this.injective = injective;
-
-    if (config.isEnabled()) {
-      this.fn = compile(function);
-    } else {
-      this.fn = null;
-    }
   }
 
   @JsonProperty
@@ -115,10 +111,7 @@ public class JavaScriptExtractionFn implements ExtractionFn
   @Nullable
   public String apply(@Nullable Object value)
   {
-    if (fn == null) {
-      throw new ISE("JavaScript is disabled");
-    }
-
+    fn = fn == null ? compile(function) : fn;
     return Strings.emptyToNull(fn.apply(value));
   }
 

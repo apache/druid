@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.RangeSet;
-import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.extraction.ExtractionFn;
@@ -41,9 +40,9 @@ public class JavaScriptDimFilter implements DimFilter
   private final String dimension;
   private final String function;
   private final ExtractionFn extractionFn;
-  private final JavaScriptConfig config;
 
-  private final JavaScriptPredicateFactory predicateFactory;
+  // This variable is lazily initialized to avoid unnecessary JavaScript compilation during JSON serde
+  private JavaScriptPredicateFactory predicateFactory;
 
   @JsonCreator
   public JavaScriptDimFilter(
@@ -55,16 +54,10 @@ public class JavaScriptDimFilter implements DimFilter
   {
     Preconditions.checkArgument(dimension != null, "dimension must not be null");
     Preconditions.checkArgument(function != null, "function must not be null");
+    Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
     this.dimension = dimension;
     this.function = function;
     this.extractionFn = extractionFn;
-    this.config = config;
-
-    if (config.isEnabled()) {
-      this.predicateFactory = new JavaScriptPredicateFactory(function, extractionFn);
-    } else {
-      this.predicateFactory = null;
-    }
   }
 
   @JsonProperty
@@ -111,10 +104,9 @@ public class JavaScriptDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    if (!config.isEnabled()) {
-      throw new ISE("JavaScript is disabled");
-    }
-
+    predicateFactory = predicateFactory == null ?
+                       new JavaScriptPredicateFactory(function, extractionFn) :
+                       predicateFactory;
     return new JavaScriptFilter(dimension, predicateFactory);
   }
 

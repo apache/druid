@@ -88,6 +88,9 @@ public class JavaScriptParseSpecTest
   @Test
   public void testMakeParserNotAllowed()
   {
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage("JavaScript is disabled");
+
     final JavaScriptConfig config = new JavaScriptConfig(false);
     JavaScriptParseSpec spec = new JavaScriptParseSpec(
         new TimestampSpec("abc", "iso", null),
@@ -95,9 +98,5 @@ public class JavaScriptParseSpecTest
         "abc",
         config
     );
-
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage("JavaScript is disabled");
-    spec.makeParser();
   }
 }

@@ -280,6 +280,9 @@ public class JavaScriptAggregatorTest
   @Test
   public void testJavaScriptDisabledFactorize()
   {
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage("JavaScript is disabled");
+
     final JavaScriptAggregatorFactory factory = new JavaScriptAggregatorFactory(
         "foo",
         ImmutableList.of("foo"),
@@ -288,16 +291,13 @@ public class JavaScriptAggregatorTest
         scriptDoubleSum.get("fnCombine"),
         new JavaScriptConfig(false)
     );
-
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage("JavaScript is disabled");
-    factory.factorize(DUMMY_COLUMN_SELECTOR_FACTORY);
-    Assert.assertTrue(false);
   }
 
   @Test
   public void testJavaScriptDisabledFactorizeBuffered()
   {
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage("JavaScript is disabled");
     final JavaScriptAggregatorFactory factory = new JavaScriptAggregatorFactory(
         "foo",
         ImmutableList.of("foo"),
@@ -306,11 +306,6 @@ public class JavaScriptAggregatorTest
         scriptDoubleSum.get("fnCombine"),
         new JavaScriptConfig(false)
     );
-
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage("JavaScript is disabled");
-    factory.factorizeBuffered(DUMMY_COLUMN_SELECTOR_FACTORY);
-    Assert.assertTrue(false);
   }
 
   public static void main(String... args) throws Exception
