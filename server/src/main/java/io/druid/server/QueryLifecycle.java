@@ -367,7 +367,7 @@ public class QueryLifecycle
       ServerConfig serverConfig
   )
   {
-    return (QueryType) QueryContexts.withMaxQueryTimeout(
+    return (QueryType) QueryContexts.verifyMaxQueryTimeout(
         QueryContexts.withMaxScatterGatherBytes(
             QueryContexts.withDefaultTimeout(
                 (Query) query,

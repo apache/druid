@@ -132,7 +132,7 @@ public class QueryContexts
     }
   }
 
-  public static <T> Query<T> withMaxQueryTimeout(Query<T> query, long maxQueryTimeout)
+  public static <T> Query<T> verifyMaxQueryTimeout(Query<T> query, long maxQueryTimeout)
   {
     Object obj = query.getContextValue(TIMEOUT_KEY);
     if (obj == null) {

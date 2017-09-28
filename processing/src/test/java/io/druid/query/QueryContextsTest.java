@@ -90,7 +90,7 @@ public class QueryContextsTest
         ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1000)
     );
 
-    QueryContexts.withMaxQueryTimeout(query, 100);
+    QueryContexts.verifyMaxQueryTimeout(query, 100);
   }
 
   @Test
