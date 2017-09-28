@@ -28,10 +28,10 @@ import org.apache.avro.util.Utf8;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Collection;
 
 public class GenericRecordAsMap implements Map<String, Object>
 {
@@ -45,7 +45,10 @@ public class GenericRecordAsMap implements Map<String, Object>
     @Override
     public String apply(Object input)
     {
-      return String.valueOf(((GenericRecord) input).get(0));
+      if(input instanceof GenericRecord) {
+        return String.valueOf(((GenericRecord) input).get(0));
+      }
+      return String.valueOf(input);
     }
   };
 
@@ -102,7 +105,7 @@ public class GenericRecordAsMap implements Map<String, Object>
   public Object get(Object key)
   {
     Object field = record.get(key.toString());
-    if (fromPigAvroStorage && field instanceof GenericData.Array) {
+    if (field instanceof GenericData.Array) {
       return Lists.transform((List) field, PIG_AVRO_STORAGE_ARRAY_TO_STRING_INCLUDING_NULL);
     }
     if (field instanceof ByteBuffer) {
