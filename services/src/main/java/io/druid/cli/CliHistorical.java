@@ -83,15 +83,26 @@ public class CliHistorical extends ServerRunnable
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/historical");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8083);
 
-            // register Server before binding ZkCoordinator to ensure HTTP endpoints are available immediately
             LifecycleModule.register(binder, Server.class);
             binder.bind(ServerManager.class).in(LazySingleton.class);
+
+            binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig(ServerType.HISTORICAL));
+            binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
+          }
+        },
+        // Start lookups before loading segments, to minimize harm from lookups unavailability when segments are already
+        // loaded
+        new LookupModule(),
+        new Module()
+        {
+          @Override
+          public void configure(Binder binder)
+          {
             binder.bind(SegmentManager.class).in(LazySingleton.class);
             binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
             binder.bind(QuerySegmentWalker.class).to(ServerManager.class).in(LazySingleton.class);
 
-            binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig(ServerType.HISTORICAL));
-            binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
+
             binder.bind(QueryCountStatsProvider.class).to(QueryResource.class);
             Jerseys.addResource(binder, QueryResource.class);
             Jerseys.addResource(binder, HistoricalResource.class);
@@ -103,8 +114,7 @@ public class CliHistorical extends ServerRunnable
             binder.install(new CacheModule());
             MetricsModule.register(binder, CacheMonitor.class);
           }
-        },
-        new LookupModule()
+        }
     );
   }
 }

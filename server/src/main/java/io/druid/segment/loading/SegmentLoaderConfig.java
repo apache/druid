@@ -23,12 +23,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
 import org.hibernate.validator.constraints.NotEmpty;
 
+import javax.validation.constraints.Min;
 import java.io.File;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  */
-public class SegmentLoaderConfig
+public class SegmentLoaderConfig implements Cloneable
 {
   @JsonProperty
   @NotEmpty
@@ -38,10 +40,14 @@ public class SegmentLoaderConfig
   private boolean deleteOnRemove = true;
 
   @JsonProperty("dropSegmentDelayMillis")
-  private int dropSegmentDelayMillis = 30 * 1000; // 30 seconds
+  private int dropSegmentDelayMillis = (int) TimeUnit.SECONDS.toMillis(30);
 
   @JsonProperty("announceIntervalMillis")
   private int announceIntervalMillis = 0; // do not background announce
+
+  @JsonProperty("localCachedSegmentLoadingAnnounceDelaySeconds")
+  @Min(0)
+  private int localCachedSegmentLoadingAnnounceDelaySeconds = 0;
 
   @JsonProperty("numLoadingThreads")
   private int numLoadingThreads = 1;
@@ -72,6 +78,11 @@ public class SegmentLoaderConfig
     return announceIntervalMillis;
   }
 
+  public int getLocalCachedSegmentLoadingAnnounceDelaySeconds()
+  {
+    return localCachedSegmentLoadingAnnounceDelaySeconds;
+  }
+
   public int getNumLoadingThreads()
   {
     return numLoadingThreads;
@@ -92,11 +103,20 @@ public class SegmentLoaderConfig
 
   public SegmentLoaderConfig withLocations(List<StorageLocationConfig> locations)
   {
-    SegmentLoaderConfig retVal = new SegmentLoaderConfig();
+    SegmentLoaderConfig retVal = this.clone();
     retVal.locations = Lists.newArrayList(locations);
-    retVal.deleteOnRemove = this.deleteOnRemove;
-    retVal.infoDir = this.infoDir;
     return retVal;
+  }
+
+  @Override
+  protected SegmentLoaderConfig clone()
+  {
+    try {
+      return (SegmentLoaderConfig) super.clone();
+    }
+    catch (CloneNotSupportedException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @Override
@@ -106,6 +126,10 @@ public class SegmentLoaderConfig
            "locations=" + locations +
            ", deleteOnRemove=" + deleteOnRemove +
            ", dropSegmentDelayMillis=" + dropSegmentDelayMillis +
+           ", announceIntervalMillis=" + announceIntervalMillis +
+           ", localCachedSegmentLoadingAnnounceDelaySeconds=" + localCachedSegmentLoadingAnnounceDelaySeconds +
+           ", numLoadingThreads=" + numLoadingThreads +
+           ", numBootstrapThreads=" + numBootstrapThreads +
            ", infoDir=" + infoDir +
            '}';
   }

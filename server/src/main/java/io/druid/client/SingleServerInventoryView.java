@@ -38,7 +38,9 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 
 /**
+ * @deprecated legacy
  */
+@Deprecated
 @ManageLifecycle
 public class SingleServerInventoryView extends AbstractCuratorServerInventoryView<DataSegment> implements FilteredServerInventoryView
 {
@@ -108,7 +110,7 @@ public class SingleServerInventoryView extends AbstractCuratorServerInventoryVie
       final Predicate<Pair<DruidServerMetadata, DataSegment>> filter
   )
   {
-    SegmentCallback filteringCallback = new SingleServerInventoryView.FilteringSegmentCallback(callback, filter);
+    SegmentCallback filteringCallback = new FilteringSegmentCallback(callback, filter);
     segmentPredicates.put(filteringCallback, filter);
     registerSegmentCallback(
         exec,
@@ -120,49 +122,6 @@ public class SingleServerInventoryView extends AbstractCuratorServerInventoryVie
   protected void segmentCallbackRemoved(SegmentCallback callback)
   {
     segmentPredicates.remove(callback);
-  }
-
-  static class FilteringSegmentCallback implements SegmentCallback
-  {
-
-    private final SegmentCallback callback;
-    private final Predicate<Pair<DruidServerMetadata, DataSegment>> filter;
-
-    FilteringSegmentCallback(SegmentCallback callback, Predicate<Pair<DruidServerMetadata, DataSegment>> filter)
-    {
-      this.callback = callback;
-      this.filter = filter;
-    }
-
-    @Override
-    public CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment)
-    {
-      final CallbackAction action;
-      if (filter.apply(Pair.of(server, segment))) {
-        action = callback.segmentAdded(server, segment);
-      } else {
-        action = CallbackAction.CONTINUE;
-      }
-      return action;
-    }
-
-    @Override
-    public CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment)
-    {
-      final CallbackAction action;
-      if (filter.apply(Pair.of(server, segment))) {
-        action = callback.segmentRemoved(server, segment);
-      } else {
-        action = CallbackAction.CONTINUE;
-      }
-      return action;
-    }
-
-    @Override
-    public CallbackAction segmentViewInitialized()
-    {
-      return callback.segmentViewInitialized();
-    }
   }
 
 }

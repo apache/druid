@@ -21,11 +21,9 @@ package io.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
@@ -41,6 +39,7 @@ import org.apache.curator.framework.CuratorFramework;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -100,33 +99,10 @@ public class BatchServerInventoryView extends AbstractCuratorServerInventoryView
     );
 
     // make a copy of the set and not just a filtered view, in order to not keep all the segment data in memory
-    Set<DataSegment> filteredInventory = Sets.newHashSet(Iterables.transform(
-        Iterables.filter(
-            Iterables.transform(
-                inventory,
-                new Function<DataSegment, Pair<DruidServerMetadata, DataSegment>>()
-                {
-                  @Override
-                  public Pair<DruidServerMetadata, DataSegment> apply(DataSegment input)
-                  {
-                    return Pair.of(container.getMetadata(), input);
-                  }
-                }
-            ),
-            predicate
-        ),
-        new Function<Pair<DruidServerMetadata, DataSegment>, DataSegment>()
-        {
-          @Override
-          public DataSegment apply(
-              Pair<DruidServerMetadata, DataSegment> input
-          )
-          {
-            return input.rhs;
-          }
-        }
-    ));
-    return filteredInventory;
+    return inventory
+        .stream()
+        .filter(input -> predicate.apply(Pair.of(container.getMetadata(), input)))
+        .collect(Collectors.toSet());
   }
 
   @Override
@@ -176,7 +152,7 @@ public class BatchServerInventoryView extends AbstractCuratorServerInventoryView
       final Predicate<Pair<DruidServerMetadata, DataSegment>> filter
   )
   {
-    SegmentCallback filteringCallback = new SingleServerInventoryView.FilteringSegmentCallback(callback, filter);
+    SegmentCallback filteringCallback = new FilteringSegmentCallback(callback, filter);
     segmentPredicates.put(filteringCallback, filter);
     registerSegmentCallback(
         exec,

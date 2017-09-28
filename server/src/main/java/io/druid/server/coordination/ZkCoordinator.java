@@ -23,8 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Queues;
-import com.google.common.util.concurrent.SettableFuture;
+import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.concurrent.Execs;
@@ -44,13 +43,19 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.utils.ZKPaths;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.DelayQueue;
+import java.util.concurrent.Delayed;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -58,6 +63,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -248,9 +254,9 @@ public class ZkCoordinator implements DataSegmentChangeHandler
     return started;
   }
 
-  public void loadLocalCache()
+  private void loadLocalCache()
   {
-    final long start = System.currentTimeMillis();
+    final long loadLocalCacheStartMs = System.currentTimeMillis();
     File baseDir = config.getInfoDir();
     if (!baseDir.exists() && !config.getInfoDir().mkdirs()) {
       return;
@@ -292,17 +298,8 @@ public class ZkCoordinator implements DataSegmentChangeHandler
          .emit();
     }
 
-    addSegments(
-        cachedSegments,
-        new DataSegmentChangeCallback()
-        {
-          @Override
-          public void execute()
-          {
-            log.info("Cache load took %,d ms", System.currentTimeMillis() - start);
-          }
-        }
-    );
+    addSegments(cachedSegments);
+    log.info("Cache load took %,d ms", System.currentTimeMillis() - loadLocalCacheStartMs);
   }
 
   public DataSegmentChangeHandler getDataSegmentChangeHandler()
@@ -383,14 +380,11 @@ public class ZkCoordinator implements DataSegmentChangeHandler
     }
   }
 
-  private void addSegments(Collection<DataSegment> segments, final DataSegmentChangeCallback callback)
+  private void addSegments(Collection<DataSegment> segments)
   {
     ExecutorService loadingExecutor = null;
-    try (final BackgroundSegmentAnnouncer backgroundSegmentAnnouncer =
-             new BackgroundSegmentAnnouncer(announcer, exec, config.getAnnounceIntervalMillis())) {
-
-      backgroundSegmentAnnouncer.startAnnouncing();
-
+    final BackgroundSegmentAnnouncer segmentAnnouncer = new BackgroundSegmentAnnouncer(announcer, exec, config);
+    try {
       loadingExecutor = Execs.multiThreaded(config.getNumBootstrapThreads(), "ZkCoordinator-loading-%s");
 
       final int numSegments = segments.size();
@@ -411,9 +405,9 @@ public class ZkCoordinator implements DataSegmentChangeHandler
                       numSegments,
                       segment.getIdentifier()
                   );
-                  loadSegment(segment, callback);
+                  loadSegment(segment, () -> {});
                   try {
-                    backgroundSegmentAnnouncer.announceSegment(segment);
+                    segmentAnnouncer.announceSegment(segment);
                   }
                   catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -444,16 +438,9 @@ public class ZkCoordinator implements DataSegmentChangeHandler
         Thread.currentThread().interrupt();
         log.makeAlert(e, "LoadingInterrupted");
       }
-
-      backgroundSegmentAnnouncer.finishAnnouncing();
-    }
-    catch (SegmentLoadingException e) {
-      log.makeAlert(e, "Failed to load segments -- likely problem with announcing.")
-         .addData("numSegments", segments.size())
-         .emit();
     }
     finally {
-      callback.execute();
+      segmentAnnouncer.finishAnnouncingAsync();
       if (loadingExecutor != null) {
         loadingExecutor.shutdownNow();
       }
@@ -513,33 +500,47 @@ public class ZkCoordinator implements DataSegmentChangeHandler
     return ImmutableList.copyOf(segmentsToDelete);
   }
 
-  private static class BackgroundSegmentAnnouncer implements AutoCloseable
+  private static class BackgroundSegmentAnnouncer
   {
     private static final EmittingLogger log = new EmittingLogger(BackgroundSegmentAnnouncer.class);
 
-    private final int intervalMillis;
     private final DataSegmentAnnouncer announcer;
-    private final ScheduledExecutorService exec;
-    private final LinkedBlockingQueue<DataSegment> queue;
-    private final SettableFuture<Boolean> doneAnnouncing;
-
-    private final Object lock = new Object();
+    private final SegmentQueue queue;
+    @Nullable
+    private final ScheduledFuture<?> periodicBackgroundAnnouncement;
 
     private volatile boolean finished = false;
-    private volatile ScheduledFuture startedAnnouncing = null;
-    private volatile ScheduledFuture nextAnnoucement = null;
 
     public BackgroundSegmentAnnouncer(
         DataSegmentAnnouncer announcer,
         ScheduledExecutorService exec,
-        int intervalMillis
+        SegmentLoaderConfig config
     )
     {
       this.announcer = announcer;
-      this.exec = exec;
-      this.intervalMillis = intervalMillis;
-      this.queue = Queues.newLinkedBlockingQueue();
-      this.doneAnnouncing = SettableFuture.create();
+      this.queue = makeQueue(config);
+      int intervalMillis = config.getAnnounceIntervalMillis();
+      if (intervalMillis > 0) {
+        log.info("Starting background segment announcing task");
+        periodicBackgroundAnnouncement = exec.scheduleWithFixedDelay(
+            this::periodicAnnounce,
+            intervalMillis,
+            intervalMillis,
+            TimeUnit.MILLISECONDS
+        );
+      } else {
+        periodicBackgroundAnnouncement = null;
+      }
+    }
+
+    private static SegmentQueue makeQueue(SegmentLoaderConfig config)
+    {
+      int delaySeconds = config.getLocalCachedSegmentLoadingAnnounceDelaySeconds();
+      if (delaySeconds == 0) {
+        return new SimpleSegmentQueue();
+      } else {
+        return new DelayedSegmentQueue(TimeUnit.SECONDS.toNanos(delaySeconds));
+      }
     }
 
     public void announceSegment(final DataSegment segment) throws InterruptedException
@@ -550,97 +551,189 @@ public class ZkCoordinator implements DataSegmentChangeHandler
       queue.put(segment);
     }
 
-    public void startAnnouncing()
+    private void periodicAnnounce()
     {
-      if (intervalMillis <= 0) {
-        return;
+      if (!(finished && queue.isEmpty())) {
+        final List<DataSegment> segments = queue.drainAvailable();
+        try {
+          // With delays, it might be that we drained no elements this time
+          if (!segments.isEmpty()) {
+            announcer.announceSegments(segments);
+          }
+        }
+        catch (IOException e) {
+          throw new RuntimeException(new SegmentLoadingException(e, "Failed to announce segments[%s]", segments));
+        }
       }
-
-      log.info("Starting background segment announcing task");
-
-      // schedule background announcing task
-      nextAnnoucement = startedAnnouncing = exec.schedule(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              synchronized (lock) {
-                try {
-                  if (!(finished && queue.isEmpty())) {
-                    final List<DataSegment> segments = Lists.newLinkedList();
-                    queue.drainTo(segments);
-                    try {
-                      announcer.announceSegments(segments);
-                      nextAnnoucement = exec.schedule(this, intervalMillis, TimeUnit.MILLISECONDS);
-                    }
-                    catch (IOException e) {
-                      doneAnnouncing.setException(
-                          new SegmentLoadingException(e, "Failed to announce segments[%s]", segments)
-                      );
-                    }
-                  } else {
-                    doneAnnouncing.set(true);
-                  }
-                }
-                catch (Exception e) {
-                  doneAnnouncing.setException(e);
-                }
-              }
-            }
-          },
-          intervalMillis,
-          TimeUnit.MILLISECONDS
-      );
     }
 
-    public void finishAnnouncing() throws SegmentLoadingException
+    void finishAnnouncingAsync()
     {
-      synchronized (lock) {
+      Execs.makeThread(
+          "ZkCoordinator - Segment Announce Finisher",
+          () -> {
+            try {
+              finishAnnouncing();
+            }
+            catch (Exception e) {
+              log.makeAlert(e, "Failed to announce segments -- likely problem with announcing.")
+                 .emit();
+            }
+          },
+          true
+      ).start();
+    }
+
+    void finishAnnouncing() throws SegmentLoadingException
+    {
+      try {
+        cancelPeriodicBackgroundAnnouncement();
+        final long finishAnnouncingStartMs = System.currentTimeMillis();
         finished = true;
         // announce any remaining segments
+        final List<DataSegment> segments = queue.takeAllRemaining();
         try {
-          final List<DataSegment> segments = Lists.newLinkedList();
-          queue.drainTo(segments);
           announcer.announceSegments(segments);
         }
         catch (Exception e) {
-          throw new SegmentLoadingException(e, "Failed to announce segments[%s]", queue);
+          throw new SegmentLoadingException(e, "Failed to announce segments[%s]", segments);
         }
-
-        // get any exception that may have been thrown in background announcing
-        try {
-          // check in case intervalMillis is <= 0
-          if (startedAnnouncing != null) {
-            startedAnnouncing.cancel(false);
-          }
-          // - if the task is waiting on the lock, then the queue will be empty by the time it runs
-          // - if the task just released it, then the lock ensures any exception is set in doneAnnouncing
-          if (doneAnnouncing.isDone()) {
-            doneAnnouncing.get();
-          }
-        }
-        catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          throw new SegmentLoadingException(e, "Loading Interrupted");
-        }
-        catch (ExecutionException e) {
-          throw new SegmentLoadingException(e.getCause(), "Background Announcing Task Failed");
+        finally {
+          log.info(
+              "Finished background segment accouncing in %,d ms",
+              System.currentTimeMillis() - finishAnnouncingStartMs
+          );
         }
       }
-      log.info("Completed background segment announcing");
+      catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new SegmentLoadingException(e, "Announcing Interrupted");
+      }
+    }
+
+    private void cancelPeriodicBackgroundAnnouncement() throws InterruptedException
+    {
+      if (periodicBackgroundAnnouncement == null) {
+        return;
+      }
+      periodicBackgroundAnnouncement.cancel(false);
+      try {
+        periodicBackgroundAnnouncement.get();
+      }
+      catch (CancellationException e) {
+        // expected, ignore
+      }
+      catch (ExecutionException e) {
+        log.makeAlert(e.getCause(), "Failed to announce segments in background")
+           .emit();
+      }
+    }
+  }
+
+  private interface SegmentQueue
+  {
+    void put(DataSegment segment) throws InterruptedException;
+    List<DataSegment> drainAvailable();
+    List<DataSegment> takeAllRemaining() throws InterruptedException;
+    boolean isEmpty();
+  }
+
+  private static class SimpleSegmentQueue implements SegmentQueue
+  {
+    private final BlockingQueue<DataSegment> delegate = new LinkedBlockingQueue<>();
+
+    @Override
+    public void put(DataSegment segment) throws InterruptedException
+    {
+      delegate.put(segment);
     }
 
     @Override
-    public void close()
+    public List<DataSegment> drainAvailable()
     {
-      // stop background scheduling
-      synchronized (lock) {
-        finished = true;
-        if (nextAnnoucement != null) {
-          nextAnnoucement.cancel(false);
-        }
+      List<DataSegment> list = new ArrayList<>(delegate.size());
+      delegate.drainTo(list);
+      return list;
+    }
+
+    @Override
+    public List<DataSegment> takeAllRemaining()
+    {
+      return drainAvailable();
+    }
+
+    @Override
+    public boolean isEmpty()
+    {
+      return delegate.isEmpty();
+    }
+  }
+
+  private static class DelayedSegmentQueue implements SegmentQueue
+  {
+    private final DelayQueue<DelayedDataSegment> delayQueue = new DelayQueue<>();
+    private final long delayNs;
+
+    private DelayedSegmentQueue(long delayNs)
+    {
+      this.delayNs = delayNs;
+    }
+
+    @Override
+    public void put(DataSegment segment)
+    {
+      delayQueue.put(new DelayedDataSegment(segment, System.nanoTime() + delayNs));
+    }
+
+    @Override
+    public List<DataSegment> drainAvailable()
+    {
+      List<DelayedDataSegment> list = new ArrayList<>();
+      delayQueue.drainTo(list);
+      return list.stream().map(d -> d.segment).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<DataSegment> takeAllRemaining() throws InterruptedException
+    {
+      List<DataSegment> list = new ArrayList<>(delayQueue.size());
+      while (!delayQueue.isEmpty()) {
+        list.add(delayQueue.take().segment);
       }
+      return list;
+    }
+
+    @Override
+    public boolean isEmpty()
+    {
+      return delayQueue.isEmpty();
+    }
+  }
+
+  @SuppressWarnings("ComparableImplementedButEqualsNotOverridden")
+  private static class DelayedDataSegment implements Delayed
+  {
+    final DataSegment segment;
+    final long timeOutNs;
+
+    private DelayedDataSegment(DataSegment segment, long timeOutNs)
+    {
+      this.segment = segment;
+      this.timeOutNs = timeOutNs;
+    }
+
+    @Override
+    public long getDelay(TimeUnit unit)
+    {
+      return unit.convert(timeOutNs - System.nanoTime(), TimeUnit.NANOSECONDS);
+    }
+
+    @SuppressWarnings("SubtractionInCompareTo")
+    @Override
+    public int compareTo(Delayed o)
+    {
+      // nanosecond "stamps" should be compared with -, not Long.compare(), because they may overflow themselves
+      return Ints.saturatedCast(timeOutNs - ((DelayedDataSegment) o).timeOutNs);
     }
   }
 }

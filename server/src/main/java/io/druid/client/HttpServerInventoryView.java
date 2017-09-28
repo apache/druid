@@ -76,8 +76,9 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 
 /**
- * This class uses CuratorInventoryManager to listen for queryable server membership which serve segments(e.g. Historicals).
- * For each queryable server, it uses HTTP GET /druid-internal/v1/segments (see docs in SegmentListerResource.getSegments(..).
+ * This class uses {@link io.druid.curator.inventory.CuratorInventoryManager} (via {@link DruidServerDiscovery}) to
+ * listen for queryable server membership which serve segments (e.g. Historicals). For each queryable server, it uses
+ * HTTP GET /druid-internal/v1/segments (see docs in {@link io.druid.server.http.SegmentListerResource#getSegments}).
  */
 public class HttpServerInventoryView implements ServerInventoryView, FilteredServerInventoryView
 {

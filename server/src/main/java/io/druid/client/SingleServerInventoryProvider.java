@@ -32,7 +32,9 @@ import org.apache.curator.framework.CuratorFramework;
 import javax.validation.constraints.NotNull;
 
 /**
+ * @deprecated legacy
  */
+@Deprecated
 public class SingleServerInventoryProvider implements ServerInventoryViewProvider
 {
   @JacksonInject

@@ -24,10 +24,15 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.joda.time.Period;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  */
 public class HttpServerInventoryViewConfig
 {
+  private static final long DEFAULT_SERVER_TIMEOUT_MS = TimeUnit.MINUTES.toMillis(4);
+  private static final int DEFAULT_NUM_THREADS = 5;
+
   @JsonProperty
   private final long serverTimeout;
 
@@ -38,12 +43,13 @@ public class HttpServerInventoryViewConfig
   public HttpServerInventoryViewConfig(
       @JsonProperty("serverTimeout") Period serverTimeout,
       @JsonProperty("numThreads") Integer numThreads
-  ){
+  )
+  {
     this.serverTimeout = serverTimeout != null
                          ? serverTimeout.toStandardDuration().getMillis()
-                         : 4*60*1000; //4 mins
+                         : DEFAULT_SERVER_TIMEOUT_MS;
 
-    this.numThreads = numThreads != null ? numThreads.intValue() : 5;
+    this.numThreads = numThreads != null ? numThreads : DEFAULT_NUM_THREADS;
 
     Preconditions.checkArgument(this.serverTimeout > 0, "server timeout must be > 0 ms");
     Preconditions.checkArgument(this.numThreads > 1, "numThreads must be > 1");
