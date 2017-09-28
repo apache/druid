@@ -49,8 +49,9 @@ public class CoordinatorResourceTestClient
 
   @Inject
   CoordinatorResourceTestClient(
-    ObjectMapper jsonMapper,
-    @TestClient HttpClient httpClient, IntegrationTestingConfig config
+      ObjectMapper jsonMapper,
+      @TestClient HttpClient httpClient,
+      IntegrationTestingConfig config
   )
   {
     this.jsonMapper = jsonMapper;

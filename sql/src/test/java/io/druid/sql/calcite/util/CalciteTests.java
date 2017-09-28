@@ -146,7 +146,8 @@ public class CalciteTests
                             "abc", "xabc"
                         )
                     )
-                );
+            );
+
         }
       }
   );

@@ -22,11 +22,11 @@ package io.druid.segment.incremental;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.IndexableAdapter;
 import io.druid.segment.Rowboat;
+import io.druid.segment.data.BitmapValues;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.data.IncrementalIndexTest;
-import io.druid.segment.data.IndexedInts;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -55,8 +55,8 @@ public class IncrementalIndexAdapterTest
     );
     String dimension = "dim1";
     for (int i = 0; i < adapter.getDimValueLookup(dimension).size(); i++) {
-      IndexedInts indexedInts = adapter.getBitmapIndex(dimension, i);
-      Assert.assertEquals(1, indexedInts.size());
+      BitmapValues bitmapValues = adapter.getBitmapValues(dimension, i);
+      Assert.assertEquals(1, bitmapValues.size());
     }
   }
 

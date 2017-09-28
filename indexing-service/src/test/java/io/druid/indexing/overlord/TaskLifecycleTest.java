@@ -32,7 +32,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.emitter.EmittingLogger;
@@ -140,6 +139,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 
@@ -172,9 +172,8 @@ public class TaskLifecycleTest
     this.taskStorageType = taskStorageType;
   }
 
-  public final
   @Rule
-  TemporaryFolder temporaryFolder = new TemporaryFolder();
+  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   private static final Ordering<DataSegment> byIntervalOrdering = new Ordering<DataSegment>()
   {
@@ -355,7 +354,7 @@ public class TaskLifecycleTest
     emitter = newMockEmitter();
     EmittingLogger.registerEmitter(emitter);
     mapper = TEST_UTILS.getTestObjectMapper();
-    handOffCallbacks = Maps.newConcurrentMap();
+    handOffCallbacks = new ConcurrentHashMap<>();
 
     // Set up things, the order does matter as if it is messed up then the setUp
     // should fail because of the Precondition checks in the respective setUp methods
@@ -529,6 +528,14 @@ public class TaskLifecycleTest
     File tmpDir = temporaryFolder.newFolder();
     taskConfig = new TaskConfig(tmpDir.toString(), null, null, 50000, null, false, null, null);
 
+    SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
+    {
+      @Override
+      public List<StorageLocationConfig> getLocations()
+      {
+        return Lists.newArrayList();
+      }
+    };
     return new TaskToolboxFactory(
         taskConfig,
         tac,
@@ -590,17 +597,7 @@ public class TaskLifecycleTest
         MoreExecutors.sameThreadExecutor(), // query executor service
         monitorScheduler, // monitor scheduler
         new SegmentLoaderFactory(
-            new SegmentLoaderLocalCacheManager(
-                null,
-                new SegmentLoaderConfig()
-                {
-                  @Override
-                  public List<StorageLocationConfig> getLocations()
-                  {
-                    return Lists.newArrayList();
-                  }
-                }, new DefaultObjectMapper()
-            )
+            new SegmentLoaderLocalCacheManager(null, segmentLoaderConfig, new DefaultObjectMapper())
         ),
         MAPPER,
         INDEX_IO,

@@ -19,19 +19,22 @@
 
 package io.druid.benchmark;
 
+import io.druid.java.util.common.parsers.Parser;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
+import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.Warmup;
+import org.openjdk.jmh.infra.Blackhole;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
-
-import io.druid.java.util.common.parsers.Parser;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,9 +42,13 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
+@BenchmarkMode(Mode.AverageTime)
+@Warmup(iterations = 10)
+@Measurement(iterations = 25)
+@Fork(value = 1)
 public class FlattenJSONBenchmark
 {
-  private static final int numEvents = 1000000;
+  private static final int numEvents = 100000;
 
   List<String> flatInputs;
   List<String> nestedInputs;
@@ -82,9 +89,12 @@ public class FlattenJSONBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public Map<String, Object> baseline()
+  public Map<String, Object> baseline(final Blackhole blackhole)
   {
     Map<String, Object> parsed = flatParser.parse(flatInputs.get(flatCounter));
+    for (String s : parsed.keySet()) {
+      blackhole.consume(parsed.get(s));
+    }
     flatCounter = (flatCounter + 1) % numEvents;
     return parsed;
   }
@@ -92,9 +102,12 @@ public class FlattenJSONBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public Map<String, Object> flatten()
+  public Map<String, Object> flatten(final Blackhole blackhole)
   {
     Map<String, Object> parsed = nestedParser.parse(nestedInputs.get(nestedCounter));
+    for (String s : parsed.keySet()) {
+      blackhole.consume(parsed.get(s));
+    }
     nestedCounter = (nestedCounter + 1) % numEvents;
     return parsed;
   }
@@ -102,9 +115,12 @@ public class FlattenJSONBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public Map<String, Object> jqflatten()
+  public Map<String, Object> jqflatten(final Blackhole blackhole)
   {
     Map<String, Object> parsed = jqParser.parse(jqInputs.get(jqCounter));
+    for (String s : parsed.keySet()) {
+      blackhole.consume(parsed.get(s));
+    }
     jqCounter = (jqCounter + 1) % numEvents;
     return parsed;
   }
@@ -112,9 +128,12 @@ public class FlattenJSONBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public Map<String, Object> preflattenNestedParser()
+  public Map<String, Object> preflattenNestedParser(final Blackhole blackhole)
   {
     Map<String, Object> parsed = fieldDiscoveryParser.parse(flatInputs.get(nestedCounter));
+    for (String s : parsed.keySet()) {
+      blackhole.consume(parsed.get(s));
+    }
     nestedCounter = (nestedCounter + 1) % numEvents;
     return parsed;
   }
@@ -122,9 +141,12 @@ public class FlattenJSONBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public Map<String, Object> forcedRootPaths()
+  public Map<String, Object> forcedRootPaths(final Blackhole blackhole)
   {
     Map<String, Object> parsed = forcedPathParser.parse(flatInputs.get(nestedCounter));
+    for (String s : parsed.keySet()) {
+      blackhole.consume(parsed.get(s));
+    }
     nestedCounter = (nestedCounter + 1) % numEvents;
     return parsed;
   }
@@ -133,12 +155,8 @@ public class FlattenJSONBenchmark
   {
     Options opt = new OptionsBuilder()
         .include(FlattenJSONBenchmark.class.getSimpleName())
-        .warmupIterations(1)
-        .measurementIterations(25)
-        .forks(1)
         .build();
 
     new Runner(opt).run();
   }
 }
-

@@ -23,64 +23,64 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class RedisCacheConfig
 {
-    @JsonProperty
-    private String host;
+  @JsonProperty
+  private String host;
 
-    @JsonProperty
-    private int port;
+  @JsonProperty
+  private int port;
 
-    // milliseconds, default to one day
-    @JsonProperty
-    private long expiration = 24 * 3600 * 1000;
+  // milliseconds, default to one day
+  @JsonProperty
+  private long expiration = 24 * 3600 * 1000;
 
-    // milliseconds, the type is 'int' because current Jedis only accept 'int' for timeout
-    @JsonProperty
-    private int timeout = 2000;
+  // milliseconds, the type is 'int' because current Jedis only accept 'int' for timeout
+  @JsonProperty
+  private int timeout = 2000;
 
-    // max connections of redis connection pool
-    @JsonProperty
-    private int maxTotalConnections = 8;
+  // max connections of redis connection pool
+  @JsonProperty
+  private int maxTotalConnections = 8;
 
-    // max idle connections of redis connection pool
-    @JsonProperty
-    private int maxIdleConnections = 8;
+  // max idle connections of redis connection pool
+  @JsonProperty
+  private int maxIdleConnections = 8;
 
-    // min idle connections of redis connection pool
-    @JsonProperty
-    private int minIdleConnections = 0;
+  // min idle connections of redis connection pool
+  @JsonProperty
+  private int minIdleConnections = 0;
 
-    public String getHost()
-    {
-        return host;
-    }
+  public String getHost()
+  {
+    return host;
+  }
 
-    public int getPort()
-    {
-        return port;
-    }
+  public int getPort()
+  {
+    return port;
+  }
 
-    public long getExpiration()
-    {
-        return expiration;
-    }
+  public long getExpiration()
+  {
+    return expiration;
+  }
 
-    public int getTimeout()
-    {
-        return timeout;
-    }
+  public int getTimeout()
+  {
+    return timeout;
+  }
 
-    public int getMaxTotalConnections()
-    {
-        return maxTotalConnections;
-    }
+  public int getMaxTotalConnections()
+  {
+    return maxTotalConnections;
+  }
 
-    public int getMaxIdleConnections()
-    {
-        return maxIdleConnections;
-    }
+  public int getMaxIdleConnections()
+  {
+    return maxIdleConnections;
+  }
 
-    public int getMinIdleConnections()
-    {
-        return minIdleConnections;
-    }
+  public int getMinIdleConnections()
+  {
+    return minIdleConnections;
+  }
 }

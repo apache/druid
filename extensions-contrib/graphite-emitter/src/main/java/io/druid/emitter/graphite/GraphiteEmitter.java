@@ -30,6 +30,7 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.server.log.EmittingRequestLogger;
 
 import java.io.IOException;
 import java.net.SocketException;
@@ -52,7 +53,8 @@ public class GraphiteEmitter implements Emitter
 
   private final DruidToGraphiteEventConverter graphiteEventConverter;
   private final GraphiteEmitterConfig graphiteEmitterConfig;
-  private final List<Emitter> emitterList;
+  private final List<Emitter> alertEmitters;
+  private final List<Emitter> requestLogEmitters;
   private final AtomicBoolean started = new AtomicBoolean(false);
   private final LinkedBlockingQueue<GraphiteEvent> eventsQueue;
   private static final long FLUSH_TIMEOUT = 60000; // default flush wait 1 min
@@ -64,10 +66,12 @@ public class GraphiteEmitter implements Emitter
 
   public GraphiteEmitter(
       GraphiteEmitterConfig graphiteEmitterConfig,
-      List<Emitter> emitterList
+      List<Emitter> alertEmitters,
+      List<Emitter> requestLogEmitters
   )
   {
-    this.emitterList = emitterList;
+    this.alertEmitters = alertEmitters;
+    this.requestLogEmitters = requestLogEmitters;
     this.graphiteEmitterConfig = graphiteEmitterConfig;
     this.graphiteEventConverter = graphiteEmitterConfig.getDruidToGraphiteEventConverter();
     this.eventsQueue = new LinkedBlockingQueue(graphiteEmitterConfig.getMaxQueueSize());
@@ -121,8 +125,12 @@ public class GraphiteEmitter implements Emitter
         log.error(e, "got interrupted with message [%s]", e.getMessage());
         Thread.currentThread().interrupt();
       }
-    } else if (!emitterList.isEmpty() && event instanceof AlertEvent) {
-      for (Emitter emitter : emitterList) {
+    } else if (event instanceof EmittingRequestLogger.RequestLogEvent) {
+      for (Emitter emitter : requestLogEmitters) {
+        emitter.emit(event);
+      }
+    } else if (!alertEmitters.isEmpty() && event instanceof AlertEvent) {
+      for (Emitter emitter : alertEmitters) {
         emitter.emit(event);
       }
     } else if (event instanceof AlertEvent) {

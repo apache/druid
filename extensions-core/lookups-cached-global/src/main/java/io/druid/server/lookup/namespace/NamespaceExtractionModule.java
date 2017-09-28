@@ -26,6 +26,7 @@ import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
+import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.PolyBind;
 import io.druid.initialization.DruidModule;
@@ -77,6 +78,8 @@ public class NamespaceExtractionModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
+    JsonConfigProvider.bind(binder, "druid.lookup.namespace", NamespaceExtractionConfig.class);
+
     PolyBind
         .createChoiceWithDefault(binder, TYPE_PREFIX, Key.get(NamespaceExtractionCacheManager.class), "onHeap")
         .in(LazySingleton.class);

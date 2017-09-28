@@ -181,7 +181,10 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     request.setAttribute(HOST_ATTRIBUTE, defaultServer.getHost());
     request.setAttribute(SCHEME_ATTRIBUTE, defaultServer.getScheme());
 
-    final boolean isQueryEndpoint = request.getRequestURI().startsWith("/druid/v2");
+    // The Router does not have the ability to look inside SQL queries and route them intelligently, so just treat
+    // them as a generic request.
+    final boolean isQueryEndpoint = request.getRequestURI().startsWith("/druid/v2")
+                                    && !request.getRequestURI().startsWith("/druid/v2/sql");
 
     if (isQueryEndpoint && HttpMethod.DELETE.is(request.getMethod())) {
       // query cancellation request
@@ -190,21 +193,20 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         // to keep the code simple, the proxy servlet will also send a request to one of the default brokers
         if (!server.getHost().equals(defaultServer.getHost())) {
           // issue async requests
+          Response.CompleteListener completeListener = result -> {
+            if (result.isFailed()) {
+              log.warn(
+                  result.getFailure(),
+                  "Failed to forward cancellation request to [%s]",
+                  server.getHost()
+              );
+            }
+          };
           broadcastClient
               .newRequest(rewriteURI(request, server.getScheme(), server.getHost()))
               .method(HttpMethod.DELETE)
               .timeout(CANCELLATION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
-              .send(
-                  result -> {
-                    if (result.isFailed()) {
-                      log.warn(
-                          result.getFailure(),
-                          "Failed to forward cancellation request to [%s]",
-                          server.getHost()
-                      );
-                    }
-                  }
-              );
+              .send(completeListener);
         }
         interruptedQueryCount.incrementAndGet();
       }

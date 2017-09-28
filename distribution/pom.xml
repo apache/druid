@@ -79,8 +79,6 @@
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-avro-extensions</argument>
                                 <argument>-c</argument>
-                                <argument>io.druid.extensions:druid-caffeine-cache</argument>
-                                <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-datasketches</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-hdfs-storage</argument>

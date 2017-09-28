@@ -393,12 +393,11 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
                                                 .aggregators(queryAggregatorFactories)
                                                 .build();
                   Map<String, Object> context = new HashMap<String, Object>();
-                  for (Result<TimeseriesResultValue> result :
-                      Sequences.toList(
-                          runner.run(QueryPlus.wrap(query), context),
-                          new LinkedList<Result<TimeseriesResultValue>>()
-                      )
-                      ) {
+                  LinkedList<Result<TimeseriesResultValue>> results = Sequences.toList(
+                      runner.run(QueryPlus.wrap(query), context),
+                      new LinkedList<Result<TimeseriesResultValue>>()
+                  );
+                  for (Result<TimeseriesResultValue> result : results) {
                     if (someoneRan.get()) {
                       Assert.assertTrue(result.getValue().getDoubleMetric("doubleSumResult0") > 0);
                     }

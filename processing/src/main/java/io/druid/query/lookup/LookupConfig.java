@@ -30,10 +30,10 @@ public class LookupConfig
   private final String snapshotWorkingDir;
 
   @JsonProperty
-  private int numLookupLoadingThreads = 10;
+  private int numLookupLoadingThreads = Runtime.getRuntime().availableProcessors() / 2;
 
   @JsonProperty
-  private boolean enableLookupSyncOnStartup;
+  private boolean enableLookupSyncOnStartup = false;
 
   /**
    * @param snapshotWorkingDir working directory to store lookups snapshot file, passing null or empty string will disable the snapshot utility

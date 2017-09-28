@@ -1,0 +1,2 @@
+com.google.common.collect.MapMaker @ Create java.util.concurrent.ConcurrentHashMap directly
+com.google.common.collect.Maps#newConcurrentMap() @ Create java.util.concurrent.ConcurrentHashMap directly

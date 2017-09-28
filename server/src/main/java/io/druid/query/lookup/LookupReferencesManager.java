@@ -76,6 +76,11 @@ public class LookupReferencesManager
 {
   private static final EmittingLogger LOG = new EmittingLogger(LookupReferencesManager.class);
 
+  private static final TypeReference<Map<String, LookupExtractorFactoryContainer>> LOOKUPS_ALL_REFERENCE =
+      new TypeReference<Map<String, LookupExtractorFactoryContainer>>()
+      {
+      };
+
   // Lookups state (loaded/to-be-loaded/to-be-dropped etc) is managed by immutable LookupUpdateState instance.
   // Any update to state is done by creating updated LookupUpdateState instance and atomically setting that
   // into the ref here.
@@ -99,18 +104,14 @@ public class LookupReferencesManager
 
   private final ObjectMapper jsonMapper;
 
-  private static final TypeReference<Map<String, LookupExtractorFactoryContainer>> LOOKUPS_ALL_REFERENCE =
-      new TypeReference<Map<String, LookupExtractorFactoryContainer>>()
-      {
-      };
-
   private final LookupListeningAnnouncerConfig lookupListeningAnnouncerConfig;
 
   private final LookupConfig lookupConfig;
 
   @Inject
   public LookupReferencesManager(
-      LookupConfig lookupConfig, @Json ObjectMapper objectMapper,
+      LookupConfig lookupConfig,
+      @Json ObjectMapper objectMapper,
       @Coordinator DruidLeaderClient druidLeaderClient,
       LookupListeningAnnouncerConfig lookupListeningAnnouncerConfig
   )
@@ -120,8 +121,11 @@ public class LookupReferencesManager
 
   @VisibleForTesting
   LookupReferencesManager(
-      LookupConfig lookupConfig, ObjectMapper objectMapper, DruidLeaderClient druidLeaderClient,
-      LookupListeningAnnouncerConfig lookupListeningAnnouncerConfig, boolean testMode
+      LookupConfig lookupConfig,
+      ObjectMapper objectMapper,
+      DruidLeaderClient druidLeaderClient,
+      LookupListeningAnnouncerConfig lookupListeningAnnouncerConfig,
+      boolean testMode
   )
   {
     if (Strings.isNullOrEmpty(lookupConfig.getSnapshotWorkingDir())) {
@@ -414,17 +418,7 @@ public class LookupReferencesManager
         LOG.error(e, "Failed to finish lookup load process.");
       }
       finally {
-        try {
-          executorService.shutdownNow();
-          if (!executorService.awaitTermination(60, TimeUnit.SECONDS)) {
-            LOG.warn("Lookup loading didn't complete in 60 seconds!");
-          }
-        }
-        catch (InterruptedException e) {
-          LOG.error("Lookup loading interrupted. ");
-          Thread.currentThread().interrupt();
-
-        }
+        executorService.shutdownNow();
       }
     } else {
       LOG.info("No lookups to be loaded at this point");
@@ -432,6 +426,7 @@ public class LookupReferencesManager
     }
   }
 
+  @Nullable
   private List<LookupBean> getLookupListFromCoordinator(String tier)
   {
     try {
@@ -456,10 +451,8 @@ public class LookupReferencesManager
             response.getContent(),
             LOOKUPS_ALL_REFERENCE
         );
-        if (!lookupMap.isEmpty()) {
-          for (Map.Entry<String, LookupExtractorFactoryContainer> e : lookupMap.entrySet()) {
-            lookupBeanList.add(new LookupBean(e.getKey(), null, e.getValue()));
-          }
+        for (Map.Entry<String, LookupExtractorFactoryContainer> e : lookupMap.entrySet()) {
+          lookupBeanList.add(new LookupBean(e.getKey(), null, e.getValue()));
         }
       }
       return lookupBeanList;

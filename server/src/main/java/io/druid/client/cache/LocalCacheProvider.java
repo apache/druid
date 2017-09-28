@@ -24,7 +24,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.validation.constraints.Min;
 
 /**
+ * Deprecated, use {@CaffeineCacheProvider}
  */
+@Deprecated
 public class LocalCacheProvider implements CacheProvider
 {
   @JsonProperty

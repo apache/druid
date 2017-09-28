@@ -63,45 +63,46 @@ public class DefaultOfflineAppenderatorFactoryTest
   {
     Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
-        ImmutableList.<Module>of(new Module()
-                                 {
-                                   @Override
-                                   public void configure(Binder binder)
-                                   {
-                                     binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/tool");
-                                     binder.bindConstant().annotatedWith(Names.named("servicePort")).to(9999);
-                                     binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
-                                     binder.bind(DruidProcessingConfig.class).toInstance(
-                                         new DruidProcessingConfig()
-                                         {
-                                           @Override
-                                           public String getFormatString()
-                                           {
-                                             return "processing-%s";
-                                           }
+        ImmutableList.<Module>of(
+            new Module()
+            {
+              @Override
+              public void configure(Binder binder)
+              {
+                binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/tool");
+                binder.bindConstant().annotatedWith(Names.named("servicePort")).to(9999);
+                binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
+                binder.bind(DruidProcessingConfig.class).toInstance(
+                    new DruidProcessingConfig()
+                    {
+                      @Override
+                      public String getFormatString()
+                      {
+                        return "processing-%s";
+                      }
 
-                                           @Override
-                                           public int intermediateComputeSizeBytes()
-                                           {
-                                             return 100 * 1024 * 1024;
-                                           }
+                      @Override
+                      public int intermediateComputeSizeBytes()
+                      {
+                        return 100 * 1024 * 1024;
+                      }
 
-                                           @Override
-                                           public int getNumThreads()
-                                           {
-                                             return 1;
-                                           }
+                      @Override
+                      public int getNumThreads()
+                      {
+                        return 1;
+                      }
 
-                                           @Override
-                                           public int columnCacheSizeBytes()
-                                           {
-                                             return 25 * 1024 * 1024;
-                                           }
-                                         }
-                                     );
-                                     binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class);
-                                   }
-                                 }
+                      @Override
+                      public int columnCacheSizeBytes()
+                      {
+                        return 25 * 1024 * 1024;
+                      }
+                    }
+                );
+                binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class);
+              }
+            }
         )
     );
     ObjectMapper objectMapper = injector.getInstance(ObjectMapper.class);

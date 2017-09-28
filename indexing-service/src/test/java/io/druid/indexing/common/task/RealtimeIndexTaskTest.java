@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -134,6 +133,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 
@@ -958,22 +958,25 @@ public class RealtimeIndexTaskTest
         taskStorage,
         taskActionToolbox
     );
+    IntervalChunkingQueryRunnerDecorator queryRunnerDecorator = new IntervalChunkingQueryRunnerDecorator(
+        null,
+        null,
+        null
+    )
+    {
+      @Override
+      public <T> QueryRunner<T> decorate(
+          QueryRunner<T> delegate, QueryToolChest<T, ? extends Query<T>> toolChest
+      )
+      {
+        return delegate;
+      }
+    };
     final QueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(
         ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>of(
             TimeseriesQuery.class,
             new TimeseriesQueryRunnerFactory(
-                new TimeseriesQueryQueryToolChest(
-                    new IntervalChunkingQueryRunnerDecorator(null, null, null)
-                    {
-                      @Override
-                      public <T> QueryRunner<T> decorate(
-                          QueryRunner<T> delegate, QueryToolChest<T, ? extends Query<T>> toolChest
-                      )
-                      {
-                        return delegate;
-                      }
-                    }
-                ),
+                new TimeseriesQueryQueryToolChest(queryRunnerDecorator),
                 new TimeseriesQueryEngine(),
                 new QueryWatcher()
                 {
@@ -986,7 +989,7 @@ public class RealtimeIndexTaskTest
             )
         )
     );
-    handOffCallbacks = Maps.newConcurrentMap();
+    handOffCallbacks = new ConcurrentHashMap<>();
     final SegmentHandoffNotifierFactory handoffNotifierFactory = new SegmentHandoffNotifierFactory()
     {
       @Override
@@ -1023,6 +1026,14 @@ public class RealtimeIndexTaskTest
       }
     };
     final TestUtils testUtils = new TestUtils();
+    SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
+    {
+      @Override
+      public List<StorageLocationConfig> getLocations()
+      {
+        return Lists.newArrayList();
+      }
+    };
     final TaskToolboxFactory toolboxFactory = new TaskToolboxFactory(
         taskConfig,
         taskActionClientFactory,
@@ -1038,17 +1049,7 @@ public class RealtimeIndexTaskTest
         MoreExecutors.sameThreadExecutor(), // queryExecutorService
         EasyMock.createMock(MonitorScheduler.class),
         new SegmentLoaderFactory(
-            new SegmentLoaderLocalCacheManager(
-                null,
-                new SegmentLoaderConfig()
-                {
-                  @Override
-                  public List<StorageLocationConfig> getLocations()
-                  {
-                    return Lists.newArrayList();
-                  }
-                }, testUtils.getTestObjectMapper()
-            )
+            new SegmentLoaderLocalCacheManager(null, segmentLoaderConfig, testUtils.getTestObjectMapper())
         ),
         testUtils.getTestObjectMapper(),
         testUtils.getTestIndexIO(),

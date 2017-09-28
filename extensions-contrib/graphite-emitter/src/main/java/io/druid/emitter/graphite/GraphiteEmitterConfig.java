@@ -52,6 +52,9 @@ public class GraphiteEmitterConfig
   @JsonProperty
   final private List<String> alertEmitters;
   @JsonProperty
+  final private List<String> requestLogEmitters;
+
+  @JsonProperty
   final private Long emitWaitTime;
   //waiting up to the specified wait time if necessary for an event to become available.
   @JsonProperty
@@ -95,6 +98,11 @@ public class GraphiteEmitterConfig
         : that.getAlertEmitters() != null) {
       return false;
     }
+    if (getRequestLogEmitters() != null
+        ? !getRequestLogEmitters().equals(that.getRequestLogEmitters())
+        : that.getRequestLogEmitters() != null) {
+      return false;
+    }
     if (!getEmitWaitTime().equals(that.getEmitWaitTime())) {
       return false;
     }
@@ -113,6 +121,7 @@ public class GraphiteEmitterConfig
     result = 31 * result + getMaxQueueSize().hashCode();
     result = 31 * result + getDruidToGraphiteEventConverter().hashCode();
     result = 31 * result + (getAlertEmitters() != null ? getAlertEmitters().hashCode() : 0);
+    result = 31 * result + (getRequestLogEmitters() != null ? getRequestLogEmitters().hashCode() : 0);
     result = 31 * result + getEmitWaitTime().hashCode();
     result = 31 * result + getWaitForEventTime().hashCode();
     return result;
@@ -128,6 +137,7 @@ public class GraphiteEmitterConfig
       @JsonProperty("maxQueueSize") Integer maxQueueSize,
       @JsonProperty("eventConverter") DruidToGraphiteEventConverter druidToGraphiteEventConverter,
       @JsonProperty("alertEmitters") List<String> alertEmitters,
+      @JsonProperty("requestLogEmitters") List<String> requestLogEmitters,
       @JsonProperty("emitWaitTime") Long emitWaitTime,
       @JsonProperty("waitForEventTime") Long waitForEventTime
   )
@@ -135,6 +145,7 @@ public class GraphiteEmitterConfig
     this.waitForEventTime = waitForEventTime == null ? DEFAULT_GET_TIMEOUT : waitForEventTime;
     this.emitWaitTime = emitWaitTime == null ? 0 : emitWaitTime;
     this.alertEmitters = alertEmitters == null ? Collections.<String>emptyList() : alertEmitters;
+    this.requestLogEmitters = requestLogEmitters == null ? Collections.<String>emptyList() : requestLogEmitters;
     this.druidToGraphiteEventConverter = Preconditions.checkNotNull(
         druidToGraphiteEventConverter,
         "Event converter can not ne null dude"
@@ -193,6 +204,12 @@ public class GraphiteEmitterConfig
   public List<String> getAlertEmitters()
   {
     return alertEmitters;
+  }
+
+  @JsonProperty
+  public List<String> getRequestLogEmitters()
+  {
+    return requestLogEmitters;
   }
 
   @JsonProperty

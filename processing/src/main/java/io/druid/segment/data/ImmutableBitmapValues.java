@@ -17,16 +17,32 @@
  * under the License.
  */
 
-package io.druid.client.cache;
+package io.druid.segment.data;
 
-import com.fasterxml.jackson.annotation.JsonTypeName;
+import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.segment.IntIteratorUtils;
+import it.unimi.dsi.fastutil.ints.IntIterator;
 
-@JsonTypeName("caffeine")
-public class CaffeineCacheProvider extends CaffeineCacheConfig implements CacheProvider
+/**
+ */
+public class ImmutableBitmapValues implements BitmapValues
 {
-  @Override
-  public Cache get()
+  private final ImmutableBitmap immutableBitmap;
+
+  public ImmutableBitmapValues(ImmutableBitmap immutableBitmap)
   {
-    return CaffeineCache.create(this);
+    this.immutableBitmap = immutableBitmap;
+  }
+
+  @Override
+  public int size()
+  {
+    return immutableBitmap.size();
+  }
+
+  @Override
+  public IntIterator iterator()
+  {
+    return IntIteratorUtils.fromRoaringBitmapIntIterator(immutableBitmap.iterator());
   }
 }

@@ -24,8 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
-import com.google.common.collect.Maps;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.ImmutableDruidDataSource;
@@ -71,6 +69,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -136,18 +135,24 @@ public class DruidCoordinatorTest extends CuratorTestBase
         false,
         new Duration("PT0s")
     );
-    pathChildrenCache = new PathChildrenCache(curator, LOADPATH, true, true, Execs.singleThreaded("coordinator_test_path_children_cache-%d"));
+    pathChildrenCache = new PathChildrenCache(
+        curator,
+        LOADPATH,
+        true,
+        true,
+        Execs.singleThreaded("coordinator_test_path_children_cache-%d")
+    );
     loadQueuePeon = new LoadQueuePeon(
-      curator,
-      LOADPATH,
-      objectMapper,
-      Execs.scheduledSingleThreaded("coordinator_test_load_queue_peon_scheduled-%d"),
-      Execs.singleThreaded("coordinator_test_load_queue_peon-%d"),
-      druidCoordinatorConfig
+        curator,
+        LOADPATH,
+        objectMapper,
+        Execs.scheduledSingleThreaded("coordinator_test_load_queue_peon_scheduled-%d"),
+        Execs.singleThreaded("coordinator_test_load_queue_peon-%d"),
+        druidCoordinatorConfig
     );
     loadQueuePeon.start();
     druidNode = new DruidNode("hey", "what", 1234, null, new ServerConfig());
-    loadManagementPeons = new MapMaker().makeMap();
+    loadManagementPeons = new ConcurrentHashMap<>();
     scheduledExecutorFactory = new ScheduledExecutorFactory()
     {
       @Override
@@ -178,7 +183,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         scheduledExecutorFactory,
         null,
         null,
-        new NoopServiceAnnouncer() {
+        new NoopServiceAnnouncer()
+        {
           @Override
           public void announce(DruidNode node)
           {
@@ -306,7 +312,17 @@ public class DruidCoordinatorTest extends CuratorTestBase
     DruidDataSource[] druidDataSources = {
         new DruidDataSource(dataSource, Collections.<String, String>emptyMap())
     };
-    final DataSegment dataSegment = new DataSegment(dataSource, Intervals.of("2010-01-01/P1D"), "v1", null, null, null, null, 0x9, 0);
+    final DataSegment dataSegment = new DataSegment(
+        dataSource,
+        Intervals.of("2010-01-01/P1D"),
+        "v1",
+        null,
+        null,
+        null,
+        null,
+        0x9,
+        0
+    );
     druidDataSources[0].addSegment("0", dataSegment);
 
     EasyMock.expect(databaseSegmentManager.isStarted()).andReturn(true).anyTimes();
@@ -338,25 +354,25 @@ public class DruidCoordinatorTest extends CuratorTestBase
 
     final CountDownLatch assignSegmentLatch = new CountDownLatch(1);
     pathChildrenCache.getListenable().addListener(
-      new PathChildrenCacheListener()
-      {
-        @Override
-        public void childEvent(
-            CuratorFramework curatorFramework, PathChildrenCacheEvent pathChildrenCacheEvent
-        ) throws Exception
+        new PathChildrenCacheListener()
         {
-          if (pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)) {
-            if (assignSegmentLatch.getCount() > 0) {
-              //Coordinator should try to assign segment to druidServer historical
-              //Simulate historical loading segment
-              druidServer.addDataSegment(dataSegment.getIdentifier(), dataSegment);
-              assignSegmentLatch.countDown();
-            } else {
-              Assert.fail("The same segment is assigned to the same server multiple times");
+          @Override
+          public void childEvent(
+              CuratorFramework curatorFramework, PathChildrenCacheEvent pathChildrenCacheEvent
+          ) throws Exception
+          {
+            if (pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)) {
+              if (assignSegmentLatch.getCount() > 0) {
+                //Coordinator should try to assign segment to druidServer historical
+                //Simulate historical loading segment
+                druidServer.addDataSegment(dataSegment.getIdentifier(), dataSegment);
+                assignSegmentLatch.countDown();
+              } else {
+                Assert.fail("The same segment is assigned to the same server multiple times");
+              }
             }
           }
         }
-      }
     );
     pathChildrenCache.start();
 
@@ -440,7 +456,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
   {
     // Not using EasyMock as it hampers the performance of multithreads.
     DataSegment segment = new DataSegment(
-        dataSource, interval, "dummy_version", Maps.<String, Object>newConcurrentMap(),
+        dataSource, interval, "dummy_version", new ConcurrentHashMap<>(),
         Lists.<String>newArrayList(), Lists.<String>newArrayList(), null, 0, 0L
     );
     return segment;

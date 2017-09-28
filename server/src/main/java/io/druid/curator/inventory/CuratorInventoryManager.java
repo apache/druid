@@ -21,7 +21,6 @@ package io.druid.curator.inventory;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
 import io.druid.curator.cache.PathChildrenCacheFactory;
 import io.druid.java.util.common.StringUtils;
@@ -38,6 +37,7 @@ import org.apache.curator.utils.ZKPaths;
 
 import java.io.IOException;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
@@ -80,7 +80,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
     this.config = config;
     this.strategy = strategy;
 
-    this.containers = new MapMaker().makeMap();
+    this.containers = new ConcurrentHashMap<>();
     this.uninitializedInventory = Sets.newConcurrentHashSet();
 
     this.pathChildrenCacheExecutor = exec;
