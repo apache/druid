@@ -186,7 +186,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public void identity(String identity)
   {
-    setDimension("identity", identity);
+    // Emit nothing by default.
   }
 
   @Override
