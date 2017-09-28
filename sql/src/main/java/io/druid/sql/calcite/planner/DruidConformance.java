@@ -58,4 +58,22 @@ public class DruidConformance extends SqlAbstractConformance
     // For ORDER BY columnAlias (where columnAlias is a "column AS columnAlias")
     return true;
   }
+
+  @Override
+  public boolean isGroupByAlias()
+  {
+    return true;
+  }
+
+  @Override
+  public boolean isGroupByOrdinal()
+  {
+    return true;
+  }
+
+  @Override
+  public boolean isHavingAlias()
+  {
+    return true;
+  }
 }

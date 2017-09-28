@@ -38,22 +38,37 @@ import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.ConversionUtil;
+import org.apache.calcite.util.DateString;
+import org.apache.calcite.util.TimeString;
+import org.apache.calcite.util.TimestampString;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Days;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.DateTimeFormatterBuilder;
+import org.joda.time.format.ISODateTimeFormat;
 
 import java.nio.charset.Charset;
-import java.util.Calendar;
-import java.util.Locale;
 import java.util.NavigableSet;
-import java.util.TimeZone;
 
 /**
  * Utility functions for Calcite.
  */
 public class Calcites
 {
-  private static final TimeZone GMT_TIME_ZONE = TimeZone.getTimeZone("GMT");
+  private static final DateTimeFormatter CALCITE_TIME_PARSER = ISODateTimeFormat.timeParser();
+  private static final DateTimeFormatter CALCITE_DATE_PARSER = ISODateTimeFormat.dateParser();
+  private static final DateTimeFormatter CALCITE_TIMESTAMP_PARSER = new DateTimeFormatterBuilder()
+      .append(CALCITE_DATE_PARSER)
+      .appendLiteral(' ')
+      .append(CALCITE_TIME_PARSER)
+      .toFormatter();
+
+  private static final DateTimeFormatter CALCITE_TIME_PRINTER = DateTimeFormat.forPattern("HH:mm:ss.S");
+  private static final DateTimeFormatter CALCITE_DATE_PRINTER = DateTimeFormat.forPattern("yyyy-MM-dd");
+  private static final DateTimeFormatter CALCITE_TIMESTAMP_PRINTER = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.S");
+
   private static final Charset DEFAULT_CHARSET = Charset.forName(ConversionUtil.NATIVE_UTF16_CHARSET_NAME);
 
   private Calcites()
@@ -174,19 +189,44 @@ public class Calcites
   }
 
   /**
-   * Calcite expects TIMESTAMP and DATE literals to be represented by Calendars that would have the expected
-   * local time fields if printed as UTC.
+   * Calcite expects TIMESTAMP literals to be represented by TimestampStrings in the local time zone.
    *
    * @param dateTime joda timestamp
    * @param timeZone session time zone
    *
    * @return Calcite style Calendar, appropriate for literals
    */
-  public static Calendar jodaToCalciteCalendarLiteral(final DateTime dateTime, final DateTimeZone timeZone)
+  public static TimestampString jodaToCalciteTimestampString(final DateTime dateTime, final DateTimeZone timeZone)
   {
-    final Calendar calendar = Calendar.getInstance(GMT_TIME_ZONE, Locale.ENGLISH);
-    calendar.setTimeInMillis(Calcites.jodaToCalciteTimestamp(dateTime, timeZone));
-    return calendar;
+    // The replaceAll is because Calcite doesn't like trailing zeroes in its fractional seconds part.
+    return new TimestampString(CALCITE_TIMESTAMP_PRINTER.print(dateTime.withZone(timeZone)).replaceAll("\\.?0+$", ""));
+  }
+
+  /**
+   * Calcite expects TIME literals to be represented by TimeStrings in the local time zone.
+   *
+   * @param dateTime joda timestamp
+   * @param timeZone session time zone
+   *
+   * @return Calcite style Calendar, appropriate for literals
+   */
+  public static TimeString jodaToCalciteTimeString(final DateTime dateTime, final DateTimeZone timeZone)
+  {
+    // The replaceAll is because Calcite doesn't like trailing zeroes in its fractional seconds part.
+    return new TimeString(CALCITE_TIME_PRINTER.print(dateTime.withZone(timeZone)).replaceAll("\\.?0+$", ""));
+  }
+
+  /**
+   * Calcite expects DATE literals to be represented by DateStrings in the local time zone.
+   *
+   * @param dateTime joda timestamp
+   * @param timeZone session time zone
+   *
+   * @return Calcite style Calendar, appropriate for literals
+   */
+  public static DateString jodaToCalciteDateString(final DateTime dateTime, final DateTimeZone timeZone)
+  {
+    return new DateString(CALCITE_DATE_PRINTER.print(dateTime.withZone(timeZone)));
   }
 
   /**
@@ -202,11 +242,18 @@ public class Calcites
   {
     final SqlTypeName typeName = literal.getType().getSqlTypeName();
     if (literal.getKind() != SqlKind.LITERAL || (typeName != SqlTypeName.TIMESTAMP && typeName != SqlTypeName.DATE)) {
-      throw new IAE("Expected TIMESTAMP or DATE literal but got[%s:%s]", literal.getKind(), typeName);
+      throw new IAE("Expected literal but got[%s]", literal.getKind());
     }
 
-    final Calendar calendar = (Calendar) RexLiteral.value(literal);
-    return calciteTimestampToJoda(calendar.getTimeInMillis(), timeZone);
+    if (typeName == SqlTypeName.TIMESTAMP) {
+      final TimestampString timestampString = (TimestampString) RexLiteral.value(literal);
+      return CALCITE_TIMESTAMP_PARSER.parseDateTime(timestampString.toString()).withZoneRetainFields(timeZone);
+    } else if (typeName == SqlTypeName.DATE) {
+      final DateString dateString = (DateString) RexLiteral.value(literal);
+      return CALCITE_DATE_PARSER.parseDateTime(dateString.toString()).withZoneRetainFields(timeZone);
+    } else {
+      throw new IAE("Expected TIMESTAMP or DATE but got[%s]", typeName);
+    }
   }
 
   /**

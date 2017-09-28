@@ -17,37 +17,30 @@
  * under the License.
  */
 
-package io.druid.sql.calcite.expression;
+package io.druid.sql.calcite.expression.builtin;
 
-import com.google.inject.Inject;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.Expr;
-import io.druid.query.lookup.LookupReferencesManager;
-import io.druid.query.lookup.RegisteredLookupExtractionFn;
+import io.druid.sql.calcite.expression.DruidExpression;
+import io.druid.sql.calcite.expression.OperatorConversions;
+import io.druid.sql.calcite.expression.SqlOperatorConversion;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
-import org.apache.calcite.sql.type.SqlTypeName;
 
-public class LookupOperatorConversion implements SqlOperatorConversion
+public class TruncateOperatorConversion implements SqlOperatorConversion
 {
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
-      .operatorBuilder("LOOKUP")
-      .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)
-      .returnType(SqlTypeName.VARCHAR)
-      .functionCategory(SqlFunctionCategory.STRING)
+      .operatorBuilder("TRUNCATE")
+      .operandTypes(SqlTypeFamily.NUMERIC, SqlTypeFamily.INTEGER)
+      .requiredOperands(1)
+      .returnTypeInference(ReturnTypes.ARG0)
+      .functionCategory(SqlFunctionCategory.NUMERIC)
       .build();
-
-  private final LookupReferencesManager lookupReferencesManager;
-
-  @Inject
-  public LookupOperatorConversion(final LookupReferencesManager lookupReferencesManager)
-  {
-    this.lookupReferencesManager = lookupReferencesManager;
-  }
 
   @Override
   public SqlFunction calciteOperator()
@@ -66,25 +59,32 @@ public class LookupOperatorConversion implements SqlOperatorConversion
         plannerContext,
         rowSignature,
         rexNode,
-        StringUtils.toLowerCase(calciteOperator().getName()),
         inputExpressions -> {
           final DruidExpression arg = inputExpressions.get(0);
-          final Expr lookupNameExpr = inputExpressions.get(1).parse(plannerContext.getExprMacroTable());
+          final Expr digitsExpr = inputExpressions.size() > 1
+                                  ? inputExpressions.get(1).parse(plannerContext.getExprMacroTable())
+                                  : null;
 
-          if (arg.isSimpleExtraction() && lookupNameExpr.isLiteral()) {
-            return arg.getSimpleExtraction().cascade(
-                new RegisteredLookupExtractionFn(
-                    lookupReferencesManager,
-                    (String) lookupNameExpr.getLiteralValue(),
-                    false,
-                    null,
-                    false,
-                    true
-                )
-            );
+          final String factorString;
+
+          if (digitsExpr == null) {
+            factorString = "1";
+          } else if (digitsExpr.isLiteral()) {
+            final int digits = ((Number) digitsExpr.getLiteralValue()).intValue();
+            final double factor = Math.pow(10, digits);
+            factorString = DruidExpression.numberLiteral(factor);
           } else {
-            return null;
+            factorString = StringUtils.format("pow(10,%s)", inputExpressions.get(1));
           }
+
+          return DruidExpression.fromExpression(
+              StringUtils.format(
+                  "(cast(cast(%s * %s,'long'),'double') / %s)",
+                  arg.getExpression(),
+                  factorString,
+                  factorString
+              )
+          );
         }
     );
   }

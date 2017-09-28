@@ -17,11 +17,14 @@
  * under the License.
  */
 
-package io.druid.sql.calcite.expression;
+package io.druid.sql.calcite.expression.builtin;
 
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.Expr;
 import io.druid.query.extraction.RegexDimExtractionFn;
+import io.druid.sql.calcite.expression.DruidExpression;
+import io.druid.sql.calcite.expression.OperatorConversions;
+import io.druid.sql.calcite.expression.SqlOperatorConversion;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.rex.RexNode;

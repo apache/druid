@@ -17,9 +17,13 @@
  * under the License.
  */
 
-package io.druid.sql.calcite.expression;
+package io.druid.sql.calcite.expression.builtin;
 
 import com.google.common.collect.Iterables;
+import io.druid.sql.calcite.expression.DruidExpression;
+import io.druid.sql.calcite.expression.Expressions;
+import io.druid.sql.calcite.expression.OperatorConversions;
+import io.druid.sql.calcite.expression.SqlOperatorConversion;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.rex.RexCall;
@@ -30,12 +34,12 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 
-public class TimestampToMillisOperatorConversion implements SqlOperatorConversion
+public class MillisToTimestampOperatorConversion implements SqlOperatorConversion
 {
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
-      .operatorBuilder("TIMESTAMP_TO_MILLIS")
-      .operandTypes(SqlTypeFamily.TIMESTAMP)
-      .returnType(SqlTypeName.BIGINT)
+      .operatorBuilder("MILLIS_TO_TIMESTAMP")
+      .operandTypes(SqlTypeFamily.EXACT_NUMERIC)
+      .returnType(SqlTypeName.TIMESTAMP)
       .functionCategory(SqlFunctionCategory.TIMEDATE)
       .build();
 

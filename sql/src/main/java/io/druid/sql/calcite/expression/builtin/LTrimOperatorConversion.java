@@ -17,26 +17,29 @@
  * under the License.
  */
 
-package io.druid.sql.calcite.expression;
+package io.druid.sql.calcite.expression.builtin;
 
-import com.google.common.collect.Iterables;
+import io.druid.sql.calcite.expression.DruidExpression;
+import io.druid.sql.calcite.expression.OperatorConversions;
+import io.druid.sql.calcite.expression.SqlOperatorConversion;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
-import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 
-public class MillisToTimestampOperatorConversion implements SqlOperatorConversion
+public class LTrimOperatorConversion implements SqlOperatorConversion
 {
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
-      .operatorBuilder("MILLIS_TO_TIMESTAMP")
-      .operandTypes(SqlTypeFamily.EXACT_NUMERIC)
-      .returnType(SqlTypeName.TIMESTAMP)
-      .functionCategory(SqlFunctionCategory.TIMEDATE)
+      .operatorBuilder("LTRIM")
+      .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)
+      .returnType(SqlTypeName.VARCHAR)
+      .functionCategory(SqlFunctionCategory.STRING)
+      .requiredOperands(1)
       .build();
 
   @Override
@@ -52,8 +55,25 @@ public class MillisToTimestampOperatorConversion implements SqlOperatorConversio
       final RexNode rexNode
   )
   {
-    // Nothing to do, just leave the operand unchanged. Druid treats millis and timestamps the same internally.
-    final RexCall call = (RexCall) rexNode;
-    return Expressions.toDruidExpression(plannerContext, rowSignature, Iterables.getOnlyElement(call.getOperands()));
+    return OperatorConversions.convertCall(
+        plannerContext,
+        rowSignature,
+        rexNode,
+        druidExpressions -> {
+          if (druidExpressions.size() > 1) {
+            return TrimOperatorConversion.makeTrimExpression(
+                SqlTrimFunction.Flag.LEADING,
+                druidExpressions.get(0),
+                druidExpressions.get(1)
+            );
+          } else {
+            return TrimOperatorConversion.makeTrimExpression(
+                SqlTrimFunction.Flag.LEADING,
+                druidExpressions.get(0),
+                DruidExpression.fromExpression(DruidExpression.stringLiteral(" "))
+            );
+          }
+        }
+    );
   }
 }
