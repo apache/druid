@@ -50,6 +50,7 @@ public class DataSchema
   private final Map<String, Object> parser;
   private final AggregatorFactory[] aggregators;
   private final GranularitySpec granularitySpec;
+  private final TransformSpec transformSpec;
 
   private final ObjectMapper jsonMapper;
 
@@ -59,12 +60,14 @@ public class DataSchema
       @JsonProperty("parser") Map<String, Object> parser,
       @JsonProperty("metricsSpec") AggregatorFactory[] aggregators,
       @JsonProperty("granularitySpec") GranularitySpec granularitySpec,
+      @JsonProperty("transformSpec") TransformSpec transformSpec,
       @JacksonInject ObjectMapper jsonMapper
   )
   {
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "null ObjectMapper.");
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource cannot be null. Please provide a dataSource.");
     this.parser = parser;
+    this.transformSpec = transformSpec == null ? TransformSpec.NONE : transformSpec;
 
     if (granularitySpec == null) {
       log.warn("No granularitySpec has been specified. Using UniformGranularitySpec as default.");
@@ -108,7 +111,9 @@ public class DataSchema
       return null;
     }
 
-    final InputRowParser inputRowParser = jsonMapper.convertValue(this.parser, InputRowParser.class);
+    final InputRowParser inputRowParser = transformSpec.decorate(
+        jsonMapper.convertValue(this.parser, InputRowParser.class)
+    );
 
     final Set<String> dimensionExclusions = Sets.newHashSet();
     for (AggregatorFactory aggregator : aggregators) {
@@ -143,12 +148,12 @@ public class DataSchema
 
         return inputRowParser.withParseSpec(
             inputRowParser.getParseSpec()
-                  .withDimensionsSpec(
-                      dimensionsSpec
-                          .withDimensionExclusions(
-                              Sets.difference(dimensionExclusions, dimSet)
+                          .withDimensionsSpec(
+                              dimensionsSpec
+                                  .withDimensionExclusions(
+                                      Sets.difference(dimensionExclusions, dimSet)
+                                  )
                           )
-                  )
         );
       } else {
         return inputRowParser;
@@ -171,9 +176,15 @@ public class DataSchema
     return granularitySpec;
   }
 
+  @JsonProperty
+  public TransformSpec getTransformSpec()
+  {
+    return transformSpec;
+  }
+
   public DataSchema withGranularitySpec(GranularitySpec granularitySpec)
   {
-    return new DataSchema(dataSource, parser, aggregators, granularitySpec, jsonMapper);
+    return new DataSchema(dataSource, parser, aggregators, granularitySpec, transformSpec, jsonMapper);
   }
 
   @Override
@@ -184,6 +195,7 @@ public class DataSchema
            ", parser=" + parser +
            ", aggregators=" + Arrays.toString(aggregators) +
            ", granularitySpec=" + granularitySpec +
+           ", transformSpec=" + transformSpec +
            '}';
   }
 }

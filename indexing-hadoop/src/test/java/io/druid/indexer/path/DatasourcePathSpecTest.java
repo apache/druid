@@ -279,6 +279,7 @@ public class DatasourcePathSpecTest
                 new UniformGranularitySpec(
                     Granularities.DAY, Granularities.NONE, ImmutableList.of(Intervals.of("2000/3000"))
                 ),
+                null,
                 HadoopDruidIndexerConfig.JSON_MAPPER
             ),
             new HadoopIOConfig(

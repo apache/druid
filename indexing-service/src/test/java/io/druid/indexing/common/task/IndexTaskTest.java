@@ -1008,6 +1008,7 @@ public class IndexTaskTest
                 Granularities.MINUTE,
                 Arrays.asList(Intervals.of("2014/2015"))
             ),
+            null,
             jsonMapper
         ),
         new IndexTask.IndexIOConfig(

@@ -236,6 +236,7 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
                 null,
                 ImmutableList.of(Intervals.of("2010-01-01/P1D"))
             ),
+            null,
             jsonMapper
         ),
         new HadoopIOConfig(

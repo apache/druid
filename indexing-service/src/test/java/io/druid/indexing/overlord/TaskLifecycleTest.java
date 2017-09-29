@@ -661,6 +661,7 @@ public class TaskLifecycleTest
                     null,
                     ImmutableList.of(Intervals.of("2010-01-01/P2D"))
                 ),
+                null,
                 mapper
             ),
             new IndexIOConfig(new MockFirehoseFactory(false), false),
@@ -718,6 +719,7 @@ public class TaskLifecycleTest
                     null,
                     ImmutableList.of(Intervals.of("2010-01-01/P1D"))
                 ),
+                null,
                 mapper
             ),
             new IndexIOConfig(new MockExceptionalFirehoseFactory(), false),
@@ -1082,6 +1084,7 @@ public class TaskLifecycleTest
                     null,
                     ImmutableList.of(Intervals.of("2010-01-01/P2D"))
                 ),
+                null,
                 mapper
             ),
             new IndexIOConfig(new MockFirehoseFactory(false), false),
@@ -1183,6 +1186,7 @@ public class TaskLifecycleTest
         null,
         new AggregatorFactory[]{new LongSumAggregatorFactory("count", "rows")},
         new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
+        null,
         mapper
     );
     RealtimeIOConfig realtimeIOConfig = new RealtimeIOConfig(

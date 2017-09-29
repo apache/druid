@@ -199,6 +199,7 @@ public class KafkaIndexTaskTest
       ),
       new AggregatorFactory[]{new CountAggregatorFactory("rows")},
       new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
+      null,
       objectMapper
   );
 

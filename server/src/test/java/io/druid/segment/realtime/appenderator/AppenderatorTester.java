@@ -130,6 +130,7 @@ public class AppenderatorTester implements AutoCloseable
             new LongSumAggregatorFactory("met", "met")
         },
         new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null),
+        null,
         objectMapper
     );
 

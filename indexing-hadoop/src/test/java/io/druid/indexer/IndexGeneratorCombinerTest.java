@@ -82,6 +82,7 @@ public class IndexGeneratorCombinerTest
                 new UniformGranularitySpec(
                     Granularities.DAY, Granularities.NONE, ImmutableList.of(Intervals.of("2010/2011"))
                 ),
+                null,
                 HadoopDruidIndexerConfig.JSON_MAPPER
             ),
             new HadoopIOConfig(
