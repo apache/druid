@@ -399,7 +399,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
                 try {
                   log.info(
                       "Loading segment[%d/%d][%s]",
-                      counter.getAndIncrement(),
+                      counter.incrementAndGet(),
                       numSegments,
                       segment.getIdentifier()
                   );
