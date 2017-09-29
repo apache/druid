@@ -22,13 +22,11 @@ package io.druid.sql.calcite.planner;
 import com.google.common.collect.ImmutableList;
 import io.druid.sql.calcite.rel.QueryMaker;
 import io.druid.sql.calcite.rule.CaseFilteredAggregatorRule;
-import io.druid.sql.calcite.rule.DruidFilterRule;
 import io.druid.sql.calcite.rule.DruidRelToBindableRule;
 import io.druid.sql.calcite.rule.DruidRelToDruidRule;
+import io.druid.sql.calcite.rule.DruidRules;
 import io.druid.sql.calcite.rule.DruidSemiJoinRule;
 import io.druid.sql.calcite.rule.DruidTableScanRule;
-import io.druid.sql.calcite.rule.GroupByRules;
-import io.druid.sql.calcite.rule.SelectRules;
 import io.druid.sql.calcite.rule.SortCollapseRule;
 import org.apache.calcite.interpreter.Bindables;
 import org.apache.calcite.plan.RelOptRule;
@@ -219,15 +217,12 @@ public class Rules
     rules.add(CaseFilteredAggregatorRule.instance());
 
     // Druid-specific rules.
-    rules.add(new DruidTableScanRule(plannerContext, queryMaker));
-    rules.add(new DruidFilterRule());
+    rules.add(new DruidTableScanRule(queryMaker));
+    rules.addAll(DruidRules.rules());
 
     if (plannerConfig.getMaxSemiJoinRowsInMemory() > 0) {
       rules.add(DruidSemiJoinRule.instance());
     }
-
-    rules.addAll(SelectRules.rules());
-    rules.addAll(GroupByRules.rules());
 
     return rules.build();
   }

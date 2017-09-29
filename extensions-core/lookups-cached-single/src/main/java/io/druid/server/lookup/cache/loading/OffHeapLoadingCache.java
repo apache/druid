@@ -124,8 +124,7 @@ public class OffHeapLoadingCache<K, V> implements LoadingCache<K, V>
   public Map<K, V> getAllPresent(final Iterable<K> keys)
   {
     ImmutableMap.Builder builder = ImmutableMap.builder();
-    for (K key : keys
-        ) {
+    for (K key : keys) {
       V value = getIfPresent(key);
       if (value != null) {
         builder.put(key, value);

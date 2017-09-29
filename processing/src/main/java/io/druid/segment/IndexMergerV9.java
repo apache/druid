@@ -34,7 +34,8 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.inject.Inject;
 import io.druid.collections.CombiningIterable;
-import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.JodaUtils;
 import io.druid.io.ZeroCopyByteArrayOutputStream;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
@@ -320,8 +321,8 @@ public class IndexMergerV9 implements IndexMerger
     cols.writeToChannel(writer);
     dims.writeToChannel(writer);
 
-    DateTime minTime = new DateTime(JodaUtils.MAX_INSTANT);
-    DateTime maxTime = new DateTime(JodaUtils.MIN_INSTANT);
+    DateTime minTime = DateTimes.MAX;
+    DateTime maxTime = DateTimes.MIN;
 
     for (IndexableAdapter index : adapters) {
       minTime = JodaUtils.minDateTime(minTime, index.getDataInterval().getStart());
@@ -663,14 +664,14 @@ public class IndexMergerV9 implements IndexMerger
       throw new IAE("Trying to persist an empty index!");
     }
 
-    final long firstTimestamp = index.getMinTime().getMillis();
-    final long lastTimestamp = index.getMaxTime().getMillis();
+    final DateTime firstTimestamp = index.getMinTime();
+    final DateTime lastTimestamp = index.getMaxTime();
     if (!(dataInterval.contains(firstTimestamp) && dataInterval.contains(lastTimestamp))) {
       throw new IAE(
           "interval[%s] does not encapsulate the full range of timestamps[%s, %s]",
           dataInterval,
-          new DateTime(firstTimestamp),
-          new DateTime(lastTimestamp)
+          firstTimestamp,
+          lastTimestamp
       );
     }
 

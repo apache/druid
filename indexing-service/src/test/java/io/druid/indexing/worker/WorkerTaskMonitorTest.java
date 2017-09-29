@@ -47,7 +47,6 @@ import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.IndexerZkConfig;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import org.apache.curator.framework.CuratorFramework;
@@ -71,7 +70,7 @@ public class WorkerTaskMonitorTest
   private static final String basePath = "/test/druid";
   private static final String tasksPath = StringUtils.format("%s/indexer/tasks/worker", basePath);
   private static final String statusPath = StringUtils.format("%s/indexer/status/worker", basePath);
-  private static final DruidNode DUMMY_NODE = new DruidNode("dummy", "dummy", 9000, null, new ServerConfig());
+  private static final DruidNode DUMMY_NODE = new DruidNode("dummy", "dummy", 9000, null, true, false);
 
   private TestingCluster testingCluster;
   private CuratorFramework cf;
@@ -126,7 +125,7 @@ public class WorkerTaskMonitorTest
               {
                 return basePath;
               }
-            }, null, null, null, null, null
+            }, null, null, null, null
         ),
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         cf,
@@ -187,7 +186,11 @@ public class WorkerTaskMonitorTest
                 indexIO,
                 null,
                 null,
-                indexMergerV9
+                indexMergerV9,
+                null,
+                null,
+                null,
+                null
             ),
             taskConfig,
             new NoopServiceEmitter(),

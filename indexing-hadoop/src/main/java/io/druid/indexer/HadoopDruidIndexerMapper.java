@@ -22,13 +22,13 @@ package io.druid.indexer;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.StringInputRowParser;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.RE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.joda.time.DateTime;
 
 import java.io.IOException;
 
@@ -82,7 +82,7 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
       }
 
       if (!granularitySpec.bucketIntervals().isPresent()
-          || granularitySpec.bucketInterval(new DateTime(inputRow.getTimestampFromEpoch()))
+          || granularitySpec.bucketInterval(DateTimes.utc(inputRow.getTimestampFromEpoch()))
                             .isPresent()) {
         innerMap(inputRow, value, context, reportParseExceptions);
       }

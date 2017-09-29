@@ -40,11 +40,13 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.ISODateTimeFormat;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
@@ -74,16 +76,16 @@ public class SqlResource
   @POST
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  public Response doPost(final SqlQuery sqlQuery) throws SQLException, IOException
+  public Response doPost(
+      final SqlQuery sqlQuery,
+      @Context final HttpServletRequest req
+  ) throws SQLException, IOException
   {
-    // This is not integrated with the experimental authorization framework.
-    // (Non-trivial since we don't know the dataSources up-front)
-
     final PlannerResult plannerResult;
     final DateTimeZone timeZone;
 
     try (final DruidPlanner planner = plannerFactory.createPlanner(sqlQuery.getContext())) {
-      plannerResult = planner.plan(sqlQuery.getQuery());
+      plannerResult = planner.plan(sqlQuery.getQuery(), req, null);
       timeZone = planner.getPlannerContext().getTimeZone();
 
       // Remember which columns are time-typed, so we can emit ISO8601 instead of millis values.

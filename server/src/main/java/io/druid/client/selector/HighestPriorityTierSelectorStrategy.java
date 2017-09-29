@@ -21,7 +21,6 @@ package io.druid.client.selector;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.google.common.primitives.Ints;
 
 import java.util.Comparator;
 
@@ -29,15 +28,6 @@ import java.util.Comparator;
  */
 public class HighestPriorityTierSelectorStrategy extends AbstractTierSelectorStrategy
 {
-  private static final Comparator<Integer> comparator = new Comparator<Integer>()
-  {
-    @Override
-    public int compare(Integer o1, Integer o2)
-    {
-      return Ints.compare(o2, o1);
-    }
-  };
-
   @JsonCreator
   public HighestPriorityTierSelectorStrategy(@JacksonInject ServerSelectorStrategy serverSelectorStrategy)
   {
@@ -47,6 +37,6 @@ public class HighestPriorityTierSelectorStrategy extends AbstractTierSelectorStr
   @Override
   public Comparator<Integer> getComparator()
   {
-    return comparator;
+    return Comparator.reverseOrder();
   }
 }

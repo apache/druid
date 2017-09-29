@@ -24,10 +24,10 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NumberedShardSpec;
 import org.apache.commons.io.FileUtils;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -50,7 +50,7 @@ public class LocalDataSegmentFinderTest
   private static final DataSegment SEGMENT_1 = DataSegment.builder()
                                                           .dataSource("wikipedia")
                                                           .interval(
-                                                              new Interval(
+                                                              Intervals.of(
                                                                   "2013-08-31T00:00:00.000Z/2013-09-01T00:00:00.000Z"
                                                               )
                                                           )
@@ -69,7 +69,7 @@ public class LocalDataSegmentFinderTest
 
   private static final DataSegment SEGMENT_2 = DataSegment.builder(SEGMENT_1)
                                                           .interval(
-                                                              new Interval(
+                                                              Intervals.of(
                                                                   "2013-09-01T00:00:00.000Z/2013-09-02T00:00:00.000Z"
                                                               )
                                                           )
@@ -77,7 +77,7 @@ public class LocalDataSegmentFinderTest
 
   private static final DataSegment SEGMENT_3 = DataSegment.builder(SEGMENT_1)
                                                           .interval(
-                                                              new Interval(
+                                                              Intervals.of(
                                                                   "2013-09-02T00:00:00.000Z/2013-09-03T00:00:00.000Z"
                                                               )
                                                           )
@@ -86,7 +86,7 @@ public class LocalDataSegmentFinderTest
 
   private static final DataSegment SEGMENT_4_0 = DataSegment.builder(SEGMENT_1)
                                                             .interval(
-                                                                new Interval(
+                                                                Intervals.of(
                                                                     "2013-09-02T00:00:00.000Z/2013-09-03T00:00:00.000Z"
                                                                 )
                                                             )
@@ -95,7 +95,7 @@ public class LocalDataSegmentFinderTest
 
   private static final DataSegment SEGMENT_4_1 = DataSegment.builder(SEGMENT_1)
                                                             .interval(
-                                                                new Interval(
+                                                                Intervals.of(
                                                                     "2013-09-02T00:00:00.000Z/2013-09-03T00:00:00.000Z"
                                                                 )
                                                             )

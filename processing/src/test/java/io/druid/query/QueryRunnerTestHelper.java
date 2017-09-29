@@ -27,6 +27,8 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.emitter.core.NoopEmitter;
 import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.UOE;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
@@ -138,7 +140,7 @@ public class QueryRunnerTestHelper
       "ntimestamps",
       Arrays.asList("__time"),
       "function aggregate(current, t) { if (t > " +
-      new DateTime("2011-04-01T12:00:00Z").getMillis() +
+      DateTimes.of("2011-04-01T12:00:00Z").getMillis() +
       ") { return current + 1; } else { return current; } }",
       JS_RESET_0,
       JS_COMBINE_A_PLUS_B,
@@ -155,6 +157,12 @@ public class QueryRunnerTestHelper
   public static final HyperUniquesAggregatorFactory qualityUniques = new HyperUniquesAggregatorFactory(
       "uniques",
       "quality_uniques"
+  );
+  public static final HyperUniquesAggregatorFactory qualityUniquesRounded = new HyperUniquesAggregatorFactory(
+      "uniques",
+      "quality_uniques",
+      false,
+      true
   );
   public static final CardinalityAggregatorFactory qualityCardinality = new CardinalityAggregatorFactory(
       "cardinality",
@@ -238,22 +246,22 @@ public class QueryRunnerTestHelper
     expectedFullOnIndexValuesDesc = list.toArray(new String[list.size()]);
   }
 
-  public static final DateTime earliest = new DateTime("2011-01-12");
-  public static final DateTime last = new DateTime("2011-04-15");
+  public static final DateTime earliest = DateTimes.of("2011-01-12");
+  public static final DateTime last = DateTimes.of("2011-04-15");
 
-  public static final DateTime skippedDay = new DateTime("2011-01-21T00:00:00.000Z");
+  public static final DateTime skippedDay = DateTimes.of("2011-01-21T00:00:00.000Z");
 
   public static final QuerySegmentSpec firstToThird = new MultipleIntervalSegmentSpec(
-      Arrays.asList(new Interval("2011-04-01T00:00:00.000Z/2011-04-03T00:00:00.000Z"))
+      Arrays.asList(Intervals.of("2011-04-01T00:00:00.000Z/2011-04-03T00:00:00.000Z"))
   );
   public static final QuerySegmentSpec secondOnly = new MultipleIntervalSegmentSpec(
-      Arrays.asList(new Interval("2011-04-02T00:00:00.000Z/P1D"))
+      Arrays.asList(Intervals.of("2011-04-02T00:00:00.000Z/P1D"))
   );
   public static final QuerySegmentSpec fullOnInterval = new MultipleIntervalSegmentSpec(
-      Arrays.asList(new Interval("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z"))
+      Arrays.asList(Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z"))
   );
   public static final QuerySegmentSpec emptyInterval = new MultipleIntervalSegmentSpec(
-      Arrays.asList(new Interval("2020-04-02T00:00:00.000Z/P1D"))
+      Arrays.asList(Intervals.of("2020-04-02T00:00:00.000Z/P1D"))
   );
 
   public static Iterable<Object[]> transformToConstructionFeeder(Iterable<?> in)

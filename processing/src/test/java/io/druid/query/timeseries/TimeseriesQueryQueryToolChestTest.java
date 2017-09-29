@@ -22,6 +22,8 @@ package io.druid.query.timeseries;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Druids;
@@ -33,8 +35,6 @@ import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.segment.TestHelper;
 import io.druid.segment.VirtualColumns;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -68,13 +68,7 @@ public class TimeseriesQueryQueryToolChestTest
         TOOL_CHEST.getCacheStrategy(
             new TimeseriesQuery(
                 new TableDataSource("dummy"),
-                new MultipleIntervalSegmentSpec(
-                    ImmutableList.of(
-                        new Interval(
-                            "2015-01-01/2015-01-02"
-                        )
-                    )
-                ),
+                new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
                 descending,
                 VirtualColumns.EMPTY,
                 null,
@@ -90,7 +84,7 @@ public class TimeseriesQueryQueryToolChestTest
 
     final Result<TimeseriesResultValue> result = new Result<>(
         // test timestamps that result in integer size millis
-        new DateTime(123L),
+        DateTimes.utc(123L),
         new TimeseriesResultValue(
             ImmutableMap.of("metric1", 2, "metric0", 3)
         )

@@ -27,7 +27,6 @@ import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
-
 import io.druid.java.util.common.lifecycle.Lifecycle;
 
 import java.lang.annotation.Annotation;

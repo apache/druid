@@ -19,9 +19,12 @@
 
 package io.druid.segment.data;
 
+import io.druid.guice.annotations.ExtensionPoint;
+
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 
+@ExtensionPoint
 public interface ObjectStrategy<T> extends Comparator<T>
 {
   public Class<? extends T> getClazz();

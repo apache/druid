@@ -40,6 +40,7 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.LongDimensionSchema;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -76,7 +77,6 @@ import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.commons.io.FileUtils;
-import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -311,7 +311,9 @@ public class GroupByMultiSegmentTest
         ),
         (QueryToolChest) toolChest
     );
-    QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(new Interval(0, 1000000)));
+    QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(
+        Collections.singletonList(Intervals.utc(0, 1000000))
+    );
 
     GroupByQuery query = GroupByQuery
         .builder()
@@ -335,7 +337,7 @@ public class GroupByMultiSegmentTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<Row> queryResult = theRunner.run(query, Maps.<String, Object>newHashMap());
+    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
     List<Row> results = Sequences.toList(queryResult, Lists.<Row>newArrayList());
 
     Row expectedRow = GroupByQueryRunnerTestHelper.createExpectedRow(

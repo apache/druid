@@ -20,6 +20,7 @@
 package io.druid.sql.calcite.expression;
 
 import com.google.common.collect.ImmutableList;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
@@ -60,7 +61,7 @@ public class CeilOperatorConversion implements SqlOperatorConversion
       // CEIL(expr)
       return druidExpression.map(
           simpleExtraction -> null,
-          expression -> String.format("ceil(%s)", expression)
+          expression -> StringUtils.format("ceil(%s)", expression)
       );
     } else if (call.getOperands().size() == 2) {
       // CEIL(expr TO timeUnit)

@@ -28,9 +28,9 @@ import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockListAction;
+import io.druid.java.util.common.DateTimes;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.IOException;
@@ -86,7 +86,7 @@ public abstract class AbstractTask implements Task
         dataSource,
         interval.getStart(),
         interval.getEnd(),
-        new DateTime().toString()
+        DateTimes.nowUtc().toString()
     );
   }
 

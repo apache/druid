@@ -28,9 +28,12 @@ import com.google.common.collect.Lists;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
+import io.druid.query.QueryPlus;
 import io.druid.query.Result;
 import io.druid.query.SegmentDescriptor;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -42,8 +45,6 @@ import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.plumber.Committers;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -302,7 +303,7 @@ public class AppenderatorTest
       // Query1: 2000/2001
       final TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
                                            .dataSource(AppenderatorTester.DATASOURCE)
-                                           .intervals(ImmutableList.of(new Interval("2000/2001")))
+                                           .intervals(ImmutableList.of(Intervals.of("2000/2001")))
                                            .aggregators(
                                                Arrays.<AggregatorFactory>asList(
                                                    new LongSumAggregatorFactory("count", "count"),
@@ -313,12 +314,12 @@ public class AppenderatorTest
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results1 = Lists.newArrayList();
-      Sequences.toList(query1.run(appenderator, ImmutableMap.<String, Object>of()), results1);
+      Sequences.toList(QueryPlus.wrap(query1).run(appenderator, ImmutableMap.of()), results1);
       Assert.assertEquals(
           "query1",
           ImmutableList.of(
               new Result<>(
-                  new DateTime("2000"),
+                  DateTimes.of("2000"),
                   new TimeseriesResultValue(ImmutableMap.<String, Object>of("count", 3L, "met", 7L))
               )
           ),
@@ -328,7 +329,7 @@ public class AppenderatorTest
       // Query2: 2000/2002
       final TimeseriesQuery query2 = Druids.newTimeseriesQueryBuilder()
                                            .dataSource(AppenderatorTester.DATASOURCE)
-                                           .intervals(ImmutableList.of(new Interval("2000/2002")))
+                                           .intervals(ImmutableList.of(Intervals.of("2000/2002")))
                                            .aggregators(
                                                Arrays.<AggregatorFactory>asList(
                                                    new LongSumAggregatorFactory("count", "count"),
@@ -339,16 +340,16 @@ public class AppenderatorTest
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results2 = Lists.newArrayList();
-      Sequences.toList(query2.run(appenderator, ImmutableMap.<String, Object>of()), results2);
+      Sequences.toList(QueryPlus.wrap(query2).run(appenderator, ImmutableMap.of()), results2);
       Assert.assertEquals(
           "query2",
           ImmutableList.of(
               new Result<>(
-                  new DateTime("2000"),
+                  DateTimes.of("2000"),
                   new TimeseriesResultValue(ImmutableMap.<String, Object>of("count", 3L, "met", 7L))
               ),
               new Result<>(
-                  new DateTime("2001"),
+                  DateTimes.of("2001"),
                   new TimeseriesResultValue(ImmutableMap.<String, Object>of("count", 4L, "met", 120L))
               )
           ),
@@ -358,7 +359,7 @@ public class AppenderatorTest
       // Query3: 2000/2001T01
       final TimeseriesQuery query3 = Druids.newTimeseriesQueryBuilder()
                                            .dataSource(AppenderatorTester.DATASOURCE)
-                                           .intervals(ImmutableList.of(new Interval("2000/2001T01")))
+                                           .intervals(ImmutableList.of(Intervals.of("2000/2001T01")))
                                            .aggregators(
                                                Arrays.<AggregatorFactory>asList(
                                                    new LongSumAggregatorFactory("count", "count"),
@@ -369,15 +370,15 @@ public class AppenderatorTest
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results3 = Lists.newArrayList();
-      Sequences.toList(query3.run(appenderator, ImmutableMap.<String, Object>of()), results3);
+      Sequences.toList(QueryPlus.wrap(query3).run(appenderator, ImmutableMap.of()), results3);
       Assert.assertEquals(
           ImmutableList.of(
               new Result<>(
-                  new DateTime("2000"),
+                  DateTimes.of("2000"),
                   new TimeseriesResultValue(ImmutableMap.<String, Object>of("count", 3L, "met", 7L))
               ),
               new Result<>(
-                  new DateTime("2001"),
+                  DateTimes.of("2001"),
                   new TimeseriesResultValue(ImmutableMap.<String, Object>of("count", 1L, "met", 8L))
               )
           ),
@@ -389,8 +390,8 @@ public class AppenderatorTest
                                            .dataSource(AppenderatorTester.DATASOURCE)
                                            .intervals(
                                                ImmutableList.of(
-                                                   new Interval("2000/2001T01"),
-                                                   new Interval("2001T03/2001T04")
+                                                   Intervals.of("2000/2001T01"),
+                                                   Intervals.of("2001T03/2001T04")
                                                )
                                            )
                                            .aggregators(
@@ -403,15 +404,15 @@ public class AppenderatorTest
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results4 = Lists.newArrayList();
-      Sequences.toList(query4.run(appenderator, ImmutableMap.<String, Object>of()), results4);
+      Sequences.toList(QueryPlus.wrap(query4).run(appenderator, ImmutableMap.of()), results4);
       Assert.assertEquals(
           ImmutableList.of(
               new Result<>(
-                  new DateTime("2000"),
+                  DateTimes.of("2000"),
                   new TimeseriesResultValue(ImmutableMap.<String, Object>of("count", 3L, "met", 7L))
               ),
               new Result<>(
-                  new DateTime("2001"),
+                  DateTimes.of("2001"),
                   new TimeseriesResultValue(ImmutableMap.<String, Object>of("count", 2L, "met", 72L))
               )
           ),
@@ -459,12 +460,12 @@ public class AppenderatorTest
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results1 = Lists.newArrayList();
-      Sequences.toList(query1.run(appenderator, ImmutableMap.<String, Object>of()), results1);
+      Sequences.toList(QueryPlus.wrap(query1).run(appenderator, ImmutableMap.of()), results1);
       Assert.assertEquals(
           "query1",
           ImmutableList.of(
               new Result<>(
-                  new DateTime("2001"),
+                  DateTimes.of("2001"),
                   new TimeseriesResultValue(ImmutableMap.<String, Object>of("count", 4L, "met", 120L))
               )
           ),
@@ -485,7 +486,7 @@ public class AppenderatorTest
                                                new MultipleSpecificSegmentSpec(
                                                    ImmutableList.of(
                                                        new SegmentDescriptor(
-                                                           new Interval("2001/PT1H"),
+                                                           Intervals.of("2001/PT1H"),
                                                            IDENTIFIERS.get(2).getVersion(),
                                                            IDENTIFIERS.get(2).getShardSpec().getPartitionNum()
                                                        )
@@ -495,12 +496,12 @@ public class AppenderatorTest
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results2 = Lists.newArrayList();
-      Sequences.toList(query2.run(appenderator, ImmutableMap.<String, Object>of()), results2);
+      Sequences.toList(QueryPlus.wrap(query2).run(appenderator, ImmutableMap.of()), results2);
       Assert.assertEquals(
           "query2",
           ImmutableList.of(
               new Result<>(
-                  new DateTime("2001"),
+                  DateTimes.of("2001"),
                   new TimeseriesResultValue(ImmutableMap.<String, Object>of("count", 1L, "met", 8L))
               )
           ),
@@ -521,12 +522,12 @@ public class AppenderatorTest
                                                new MultipleSpecificSegmentSpec(
                                                    ImmutableList.of(
                                                        new SegmentDescriptor(
-                                                           new Interval("2001/PT1H"),
+                                                           Intervals.of("2001/PT1H"),
                                                            IDENTIFIERS.get(2).getVersion(),
                                                            IDENTIFIERS.get(2).getShardSpec().getPartitionNum()
                                                        ),
                                                        new SegmentDescriptor(
-                                                           new Interval("2001T03/PT1H"),
+                                                           Intervals.of("2001T03/PT1H"),
                                                            IDENTIFIERS.get(2).getVersion(),
                                                            IDENTIFIERS.get(2).getShardSpec().getPartitionNum()
                                                        )
@@ -536,12 +537,12 @@ public class AppenderatorTest
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results3 = Lists.newArrayList();
-      Sequences.toList(query3.run(appenderator, ImmutableMap.<String, Object>of()), results3);
+      Sequences.toList(QueryPlus.wrap(query3).run(appenderator, ImmutableMap.of()), results3);
       Assert.assertEquals(
           "query2",
           ImmutableList.of(
               new Result<>(
-                  new DateTime("2001"),
+                  DateTimes.of("2001"),
                   new TimeseriesResultValue(ImmutableMap.<String, Object>of("count", 2L, "met", 72L))
               )
           ),
@@ -554,7 +555,7 @@ public class AppenderatorTest
   {
     return new SegmentIdentifier(
         AppenderatorTester.DATASOURCE,
-        new Interval(interval),
+        Intervals.of(interval),
         version,
         new LinearShardSpec(partitionNum)
     );
@@ -563,7 +564,7 @@ public class AppenderatorTest
   static InputRow IR(String ts, String dim, long met)
   {
     return new MapBasedInputRow(
-        new DateTime(ts).getMillis(),
+        DateTimes.of(ts).getMillis(),
         ImmutableList.of("dim"),
         ImmutableMap.<String, Object>of(
             "dim",

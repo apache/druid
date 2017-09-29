@@ -25,6 +25,7 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.audit.AuditEntry;
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
+import io.druid.java.util.common.Intervals;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.server.coordinator.rules.Rule;
 import io.druid.server.http.security.RulesResourceFilter;
@@ -164,7 +165,7 @@ public class RulesResource
       return auditManager.fetchAuditHistory("rules", count);
     }
 
-    Interval theInterval = interval == null ? null : new Interval(interval);
+    Interval theInterval = interval == null ? null : Intervals.of(interval);
     if (dataSourceName != null) {
       return auditManager.fetchAuditHistory(dataSourceName, "rules", theInterval);
     }

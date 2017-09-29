@@ -21,6 +21,7 @@ package io.druid.data.input;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.guice.annotations.PublicApi;
 import org.joda.time.DateTime;
 
 import java.util.List;
@@ -29,6 +30,7 @@ import java.util.List;
  * A Row of data.  This can be used for both input and output into various parts of the system.  It assumes
  * that the user already knows the schema of the row and can query for the parts that they care about.
  */
+@PublicApi
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "version", defaultImpl = MapBasedRow.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "v1", value = MapBasedRow.class)

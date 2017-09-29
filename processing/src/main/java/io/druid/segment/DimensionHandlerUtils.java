@@ -134,13 +134,16 @@ public final class DimensionHandlerUtils
    * @param <ColumnSelectorStrategyClass> The strategy type created by the provided strategy factory.
    * @param strategyFactory A factory provided by query engines that generates type-handling strategies
    * @param dimensionSpecs The set of columns to generate ColumnSelectorPlus objects for
-   * @param cursor Used to create value selectors for columns.
+   * @param columnSelectorFactory Used to create value selectors for columns.
    * @return An array of ColumnSelectorPlus objects, in the order of the columns specified in dimensionSpecs
    */
-  public static <ColumnSelectorStrategyClass extends ColumnSelectorStrategy> ColumnSelectorPlus<ColumnSelectorStrategyClass>[] createColumnSelectorPluses(
+  public static <ColumnSelectorStrategyClass extends ColumnSelectorStrategy>
+  //CHECKSTYLE.OFF: Indentation
+  ColumnSelectorPlus<ColumnSelectorStrategyClass>[] createColumnSelectorPluses(
+      //CHECKSTYLE.ON: Indentation
       ColumnSelectorStrategyFactory<ColumnSelectorStrategyClass> strategyFactory,
       List<DimensionSpec> dimensionSpecs,
-      ColumnSelectorFactory cursor
+      ColumnSelectorFactory columnSelectorFactory
   )
   {
     int dimCount = dimensionSpecs.size();
@@ -150,12 +153,12 @@ public final class DimensionHandlerUtils
       final String dimName = dimSpec.getDimension();
       final ColumnValueSelector selector = getColumnValueSelectorFromDimensionSpec(
           dimSpec,
-          cursor
+          columnSelectorFactory
       );
       ColumnSelectorStrategyClass strategy = makeStrategy(
           strategyFactory,
           dimSpec,
-          cursor.getColumnCapabilities(dimSpec.getDimension()),
+          columnSelectorFactory.getColumnCapabilities(dimSpec.getDimension()),
           selector
       );
       final ColumnSelectorPlus<ColumnSelectorStrategyClass> selectorPlus = new ColumnSelectorPlus<>(

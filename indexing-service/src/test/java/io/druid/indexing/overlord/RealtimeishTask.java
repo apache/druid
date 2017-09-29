@@ -31,6 +31,7 @@ import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.task.AbstractTask;
 import io.druid.indexing.common.task.TaskResource;
+import io.druid.java.util.common.Intervals;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -66,8 +67,8 @@ public class RealtimeishTask extends AbstractTask
   @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
-    final Interval interval1 = new Interval("2010-01-01T00/PT1H");
-    final Interval interval2 = new Interval("2010-01-01T01/PT1H");
+    final Interval interval1 = Intervals.of("2010-01-01T00/PT1H");
+    final Interval interval2 = Intervals.of("2010-01-01T01/PT1H");
 
     // Sort of similar to what realtime tasks do:
 
@@ -88,18 +89,16 @@ public class RealtimeishTask extends AbstractTask
     Assert.assertEquals("locks2", ImmutableList.of(lock1, lock2), locks2);
 
     // Push first segment
-    toolbox.getTaskActionClient()
-           .submit(
-               new SegmentInsertAction(
-                   ImmutableSet.of(
-                       DataSegment.builder()
-                                  .dataSource("foo")
-                                  .interval(interval1)
-                                  .version(lock1.getVersion())
-                                  .build()
-                   )
-               )
-           );
+    SegmentInsertAction firstSegmentInsertAction = new SegmentInsertAction(
+        ImmutableSet.of(
+            DataSegment.builder()
+                       .dataSource("foo")
+                       .interval(interval1)
+                       .version(lock1.getVersion())
+                       .build()
+        )
+    );
+    toolbox.getTaskActionClient().submit(firstSegmentInsertAction);
 
     // Release first lock
     toolbox.getTaskActionClient().submit(new LockReleaseAction(interval1));
@@ -109,18 +108,16 @@ public class RealtimeishTask extends AbstractTask
     Assert.assertEquals("locks3", ImmutableList.of(lock2), locks3);
 
     // Push second segment
-    toolbox.getTaskActionClient()
-           .submit(
-               new SegmentInsertAction(
-                   ImmutableSet.of(
-                       DataSegment.builder()
-                                  .dataSource("foo")
-                                  .interval(interval2)
-                                  .version(lock2.getVersion())
-                                  .build()
-                   )
-               )
-           );
+    SegmentInsertAction secondSegmentInsertAction = new SegmentInsertAction(
+        ImmutableSet.of(
+            DataSegment.builder()
+                       .dataSource("foo")
+                       .interval(interval2)
+                       .version(lock2.getVersion())
+                       .build()
+        )
+    );
+    toolbox.getTaskActionClient().submit(secondSegmentInsertAction);
 
     // Release second lock
     toolbox.getTaskActionClient().submit(new LockReleaseAction(interval2));

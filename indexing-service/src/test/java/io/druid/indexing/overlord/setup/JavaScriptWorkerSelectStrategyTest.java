@@ -22,7 +22,6 @@ package io.druid.indexing.overlord.setup;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
@@ -126,7 +125,7 @@ public class JavaScriptWorkerSelectStrategyTest
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         workerMap,
         createMockTask("index_hadoop")
-    ).get();
+    );
     // batch tasks should be sent to worker1
     Assert.assertEquals(worker1, workerForBatchTask);
 
@@ -134,7 +133,7 @@ public class JavaScriptWorkerSelectStrategyTest
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         workerMap,
         createMockTask("other_type")
-    ).get();
+    );
     // all other tasks should be sent to worker2
     Assert.assertEquals(worker2, workerForOtherTask);
   }
@@ -146,12 +145,12 @@ public class JavaScriptWorkerSelectStrategyTest
         "10.0.0.1", createMockWorker(1, true, true),
         "10.0.0.2", createMockWorker(1, true, true)
     );
-    Optional<ImmutableWorkerInfo> workerForOtherTask = STRATEGY.findWorkerForTask(
+    ImmutableWorkerInfo workerForOtherTask = STRATEGY.findWorkerForTask(
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         workerMap,
         createMockTask("other_type")
     );
-    Assert.assertFalse(workerForOtherTask.isPresent());
+    Assert.assertNull(workerForOtherTask);
   }
 
   @Test
@@ -161,20 +160,20 @@ public class JavaScriptWorkerSelectStrategyTest
         "10.0.0.1", createMockWorker(1, true, false),
         "10.0.0.4", createMockWorker(1, true, false)
     );
-    Optional<ImmutableWorkerInfo> workerForBatchTask = STRATEGY.findWorkerForTask(
+    ImmutableWorkerInfo workerForBatchTask = STRATEGY.findWorkerForTask(
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         workerMap,
         createMockTask("index_hadoop")
     );
-    Assert.assertFalse(workerForBatchTask.isPresent());
+    Assert.assertNull(workerForBatchTask);
 
-    Optional<ImmutableWorkerInfo> workerForOtherTask = STRATEGY.findWorkerForTask(
+    ImmutableWorkerInfo workerForOtherTask = STRATEGY.findWorkerForTask(
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         workerMap,
         createMockTask("otherTask")
     );
     // all other tasks should be sent to worker2
-    Assert.assertFalse(workerForOtherTask.isPresent());
+    Assert.assertNull(workerForOtherTask);
   }
 
   @Test
@@ -184,20 +183,20 @@ public class JavaScriptWorkerSelectStrategyTest
         "10.0.0.1", createMockWorker(1, false, true),
         "10.0.0.4", createMockWorker(1, false, true)
     );
-    Optional<ImmutableWorkerInfo> workerForBatchTask = STRATEGY.findWorkerForTask(
+    ImmutableWorkerInfo workerForBatchTask = STRATEGY.findWorkerForTask(
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         workerMap,
         createMockTask("index_hadoop")
     );
-    Assert.assertFalse(workerForBatchTask.isPresent());
+    Assert.assertNull(workerForBatchTask);
 
-    Optional<ImmutableWorkerInfo> workerForOtherTask = STRATEGY.findWorkerForTask(
+    ImmutableWorkerInfo workerForOtherTask = STRATEGY.findWorkerForTask(
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         workerMap,
         createMockTask("otherTask")
     );
     // all other tasks should be sent to worker2
-    Assert.assertFalse(workerForOtherTask.isPresent());
+    Assert.assertNull(workerForOtherTask);
   }
 
   @Test
@@ -208,12 +207,12 @@ public class JavaScriptWorkerSelectStrategyTest
         "10.0.0.1", createMockWorker(1, true, true),
         "10.0.0.2", createMockWorker(5, true, true)
     );
-    Optional<ImmutableWorkerInfo> workerForBatchTask = STRATEGY.findWorkerForTask(
+    ImmutableWorkerInfo workerForBatchTask = STRATEGY.findWorkerForTask(
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         workerMap,
         createMockTask("index_hadoop")
     );
-    Assert.assertEquals(workerMap.get("10.0.0.2"), workerForBatchTask.get());
+    Assert.assertEquals(workerMap.get("10.0.0.2"), workerForBatchTask);
 
   }
 

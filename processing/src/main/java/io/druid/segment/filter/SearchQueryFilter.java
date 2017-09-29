@@ -27,7 +27,7 @@ import io.druid.query.filter.DruidDoublePredicate;
 import io.druid.query.filter.DruidFloatPredicate;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
-import io.druid.query.search.search.SearchQuerySpec;
+import io.druid.query.search.SearchQuerySpec;
 
 /**
  */

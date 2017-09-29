@@ -21,6 +21,7 @@ package io.druid.server.log;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.CharStreams;
+import io.druid.java.util.common.DateTimes;
 import io.druid.server.RequestLogLine;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -47,7 +48,7 @@ public class FileRequestLoggerTest
   @Test public void testLog() throws IOException
   {
     ObjectMapper objectMapper = new ObjectMapper();
-    DateTime dateTime = new DateTime();
+    DateTime dateTime = DateTimes.nowUtc();
     File logDir = temporaryFolder.newFolder();
     String actualLogString = dateTime.toString() + "\t" + HOST;
 

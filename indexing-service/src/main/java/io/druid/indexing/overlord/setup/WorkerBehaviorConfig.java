@@ -29,7 +29,7 @@ import io.druid.indexing.overlord.autoscaling.NoopAutoScaler;
 public class WorkerBehaviorConfig
 {
   public static final String CONFIG_KEY = "worker.config";
-  public static WorkerSelectStrategy DEFAULT_STRATEGY = new EqualDistributionWorkerSelectStrategy();
+  public static WorkerSelectStrategy DEFAULT_STRATEGY = new EqualDistributionWorkerSelectStrategy(null);
   public static AutoScaler DEFAULT_AUTOSCALER = new NoopAutoScaler();
 
   public static WorkerBehaviorConfig defaultConfig()

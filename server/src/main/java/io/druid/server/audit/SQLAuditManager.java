@@ -29,6 +29,7 @@ import io.druid.audit.AuditEntry;
 import io.druid.audit.AuditManager;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Json;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.metadata.SQLMetadataConnector;
@@ -165,7 +166,7 @@ public class SQLAuditManager implements AuditManager
   {
     final Interval theInterval;
     if (interval == null) {
-      DateTime now = new DateTime();
+      DateTime now = DateTimes.nowUtc();
       theInterval = new Interval(now.minus(config.getAuditHistoryMillis()), now);
     } else {
       theInterval = interval;

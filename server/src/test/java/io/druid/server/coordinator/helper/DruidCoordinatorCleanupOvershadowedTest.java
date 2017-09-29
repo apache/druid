@@ -22,10 +22,10 @@ package io.druid.server.coordinator.helper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.MinMaxPriorityQueue;
-import com.google.common.collect.Ordering;
 import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.ImmutableDruidServer;
+import io.druid.java.util.common.DateTimes;
+import io.druid.server.coordination.ServerType;
 import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.DruidCluster;
 import io.druid.server.coordinator.DruidCoordinator;
@@ -40,13 +40,16 @@ import org.junit.Test;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class DruidCoordinatorCleanupOvershadowedTest
 {
   DruidCoordinatorCleanupOvershadowed druidCoordinatorCleanupOvershadowed;
   DruidCoordinator coordinator = EasyMock.createStrictMock(DruidCoordinator.class);
   private List<DataSegment> availableSegments;
-  DateTime start = new DateTime("2012-01-01");
+  DateTime start = DateTimes.of("2012-01-01");
   DruidCluster druidCluster;
   private LoadQueuePeon mockPeon = EasyMock.createMock(LoadQueuePeon.class);
   private ImmutableDruidServer druidServer = EasyMock.createMock(ImmutableDruidServer.class);
@@ -70,11 +73,28 @@ public class DruidCoordinatorCleanupOvershadowedTest
     druidCoordinatorCleanupOvershadowed = new DruidCoordinatorCleanupOvershadowed(coordinator);
     availableSegments = ImmutableList.of(segmentV1, segmentV0, segmentV2);
 
-    druidCluster = new DruidCluster(
-        null,
-        ImmutableMap.of("normal", MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-            Collections.singletonList(new ServerHolder(druidServer, mockPeon))
-        )));
+    // Dummy values for comparisons in TreeSet
+    EasyMock.expect(mockPeon.getLoadQueueSize())
+            .andReturn(0L)
+            .anyTimes();
+    EasyMock.expect(druidServer.getMaxSize())
+            .andReturn(0L)
+            .anyTimes();
+    EasyMock.expect(druidServer.getCurrSize())
+            .andReturn(0L)
+            .anyTimes();
+    EasyMock.expect(druidServer.getName())
+            .andReturn("")
+            .anyTimes();
+    EasyMock.expect(druidServer.getHost())
+            .andReturn("")
+            .anyTimes();
+    EasyMock.expect(druidServer.getTier())
+            .andReturn("")
+            .anyTimes();
+    EasyMock.expect(druidServer.getType())
+            .andReturn(ServerType.HISTORICAL)
+            .anyTimes();
 
     EasyMock.expect(druidServer.getDataSources())
             .andReturn(ImmutableList.of(druidDataSource))
@@ -87,6 +107,16 @@ public class DruidCoordinatorCleanupOvershadowedTest
     coordinator.removeSegment(segmentV0);
     EasyMock.expectLastCall();
     EasyMock.replay(mockPeon, coordinator, druidServer, druidDataSource);
+
+    druidCluster = new DruidCluster(
+        null,
+        ImmutableMap.of(
+            "normal",
+            Stream.of(
+                new ServerHolder(druidServer, mockPeon)
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+        ));
+
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams.newBuilder()
                                                                         .withAvailableSegments(availableSegments)
                                                                         .withCoordinatorStats(new CoordinatorStats())

@@ -36,7 +36,7 @@ public class ApproximateHistogramAggregator implements Aggregator
     }
   };
 
-  static Object combineHistograms(Object lhs, Object rhs)
+  static ApproximateHistogram combineHistograms(Object lhs, Object rhs)
   {
     return ((ApproximateHistogram) lhs).foldFast((ApproximateHistogram) rhs);
   }

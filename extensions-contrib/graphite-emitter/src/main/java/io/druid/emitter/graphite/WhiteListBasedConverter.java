@@ -70,6 +70,9 @@ public class WhiteListBasedConverter implements DruidToGraphiteEventConverter
   private final String namespacePrefix;
 
   @JsonProperty
+  private final boolean replaceSlashWithDot;
+
+  @JsonProperty
   private final String mapPath;
 
   private final ObjectMapper mapper;
@@ -79,6 +82,7 @@ public class WhiteListBasedConverter implements DruidToGraphiteEventConverter
       @JsonProperty("namespacePrefix") String namespacePrefix,
       @JsonProperty("ignoreHostname") Boolean ignoreHostname,
       @JsonProperty("ignoreServiceName") Boolean ignoreServiceName,
+      @JsonProperty("replaceSlashWithDot") Boolean replaceSlashWithDot,
       @JsonProperty("mapPath") String mapPath,
       @JacksonInject ObjectMapper mapper
   )
@@ -88,6 +92,7 @@ public class WhiteListBasedConverter implements DruidToGraphiteEventConverter
     this.whiteListDimsMapper = readMap(this.mapPath);
     this.ignoreHostname = ignoreHostname == null ? false : ignoreHostname;
     this.ignoreServiceName = ignoreServiceName == null ? false : ignoreServiceName;
+    this.replaceSlashWithDot = replaceSlashWithDot == null ? false : replaceSlashWithDot;
     this.namespacePrefix = Preconditions.checkNotNull(namespacePrefix, "namespace prefix can not be null");
   }
 
@@ -107,6 +112,12 @@ public class WhiteListBasedConverter implements DruidToGraphiteEventConverter
   public String getNamespacePrefix()
   {
     return namespacePrefix;
+  }
+
+  @JsonProperty
+  public boolean replaceSlashWithDot()
+  {
+    return replaceSlashWithDot;
   }
 
   public ImmutableSortedMap<String, ImmutableSet<String>> getWhiteListDimsMapper()
@@ -200,7 +211,7 @@ public class WhiteListBasedConverter implements DruidToGraphiteEventConverter
       metricPathBuilder.add(GraphiteEmitter.sanitize(serviceMetricEvent.getHost()));
     }
     metricPathBuilder.addAll(this.getOrderedDimValues(serviceMetricEvent));
-    metricPathBuilder.add(GraphiteEmitter.sanitize(serviceMetricEvent.getMetric()));
+    metricPathBuilder.add(GraphiteEmitter.sanitize(serviceMetricEvent.getMetric(), this.replaceSlashWithDot()));
 
     final GraphiteEvent graphiteEvent = new GraphiteEvent(
         Joiner.on(".").join(metricPathBuilder.build()),
@@ -228,6 +239,9 @@ public class WhiteListBasedConverter implements DruidToGraphiteEventConverter
     if (isIgnoreServiceName() != that.isIgnoreServiceName()) {
       return false;
     }
+    if (replaceSlashWithDot() != that.replaceSlashWithDot()) {
+      return false;
+    }
     if (!getNamespacePrefix().equals(that.getNamespacePrefix())) {
       return false;
     }
@@ -240,6 +254,7 @@ public class WhiteListBasedConverter implements DruidToGraphiteEventConverter
   {
     int result = (isIgnoreHostname() ? 1 : 0);
     result = 31 * result + (isIgnoreServiceName() ? 1 : 0);
+    result = 31 * result + (replaceSlashWithDot() ? 1 : 0);
     result = 31 * result + getNamespacePrefix().hashCode();
     result = 31 * result + (mapPath != null ? mapPath.hashCode() : 0);
     return result;

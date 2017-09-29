@@ -45,11 +45,13 @@ import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.concurrent.Execs;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.RetryUtils;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.io.Closer;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -71,10 +73,10 @@ import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
 import org.apache.commons.io.FileUtils;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -88,6 +90,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -110,7 +113,7 @@ public class AppenderatorImpl implements Appenderator
   private final IndexIO indexIO;
   private final IndexMerger indexMerger;
   private final Cache cache;
-  private final Map<SegmentIdentifier, Sink> sinks = Maps.newConcurrentMap();
+  private final Map<SegmentIdentifier, Sink> sinks = new ConcurrentHashMap<>();
   private final Set<SegmentIdentifier> droppingSinks = Sets.newConcurrentHashSet();
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline = new VersionedIntervalTimeline<>(
       String.CASE_INSENSITIVE_ORDER
@@ -576,22 +579,32 @@ public class AppenderatorImpl implements Appenderator
         throw new ISE("Merged target[%s] exists after removing?!", mergedTarget);
       }
 
-      List<QueryableIndex> indexes = Lists.newArrayList();
-      for (FireHydrant fireHydrant : sink) {
-        Segment segment = fireHydrant.getSegment();
-        final QueryableIndex queryableIndex = segment.asQueryableIndex();
-        log.info("Adding hydrant[%s]", fireHydrant);
-        indexes.add(queryableIndex);
-      }
-
       final File mergedFile;
-      mergedFile = indexMerger.mergeQueryableIndex(
-          indexes,
-          schema.getGranularitySpec().isRollup(),
-          schema.getAggregators(),
-          mergedTarget,
-          tuningConfig.getIndexSpec()
-      );
+      List<QueryableIndex> indexes = Lists.newArrayList();
+      Closer closer = Closer.create();
+      try {
+        for (FireHydrant fireHydrant : sink) {
+          Pair<Segment, Closeable> segmentAndCloseable = fireHydrant.getAndIncrementSegment();
+          final QueryableIndex queryableIndex = segmentAndCloseable.lhs.asQueryableIndex();
+          log.info("Adding hydrant[%s]", fireHydrant);
+          indexes.add(queryableIndex);
+          closer.register(segmentAndCloseable.rhs);
+        }
+
+        mergedFile = indexMerger.mergeQueryableIndex(
+            indexes,
+            schema.getGranularitySpec().isRollup(),
+            schema.getAggregators(),
+            mergedTarget,
+            tuningConfig.getIndexSpec()
+        );
+      }
+      catch (Throwable t) {
+        throw closer.rethrow(t);
+      }
+      finally {
+        closer.close();
+      }
 
       // Retry pushing segments because uploading to deep storage might fail especially for cloud storage types
       final DataSegment segment = RetryUtils.retry(
@@ -716,7 +729,7 @@ public class AppenderatorImpl implements Appenderator
 
   private void resetNextFlush()
   {
-    nextFlush = new DateTime().plus(tuningConfig.getIntermediatePersistPeriod()).getMillis();
+    nextFlush = DateTimes.nowUtc().plus(tuningConfig.getIntermediatePersistPeriod()).getMillis();
   }
 
   /**
@@ -947,14 +960,7 @@ public class AppenderatorImpl implements Appenderator
               if (cache != null) {
                 cache.close(SinkQuerySegmentWalker.makeHydrantCacheIdentifier(hydrant));
               }
-              try {
-                hydrant.getSegment().close();
-              }
-              catch (IOException e) {
-                log.makeAlert(e, "Failed to explicitly close segment[%s]", schema.getDataSource())
-                   .addData("identifier", hydrant.getSegment().getIdentifier())
-                   .emit();
-              }
+              hydrant.swapSegment(null);
             }
 
             if (removeOnDiskData) {
@@ -1040,7 +1046,7 @@ public class AppenderatorImpl implements Appenderator
 
         indexToPersist.swapSegment(
             new QueryableIndexSegment(
-                indexToPersist.getSegment().getIdentifier(),
+                indexToPersist.getSegmentIdentifier(),
                 indexIO.loadIndex(persistedFile)
             )
         );

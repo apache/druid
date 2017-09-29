@@ -20,6 +20,7 @@
 package io.druid.query.timeseries;
 
 import com.google.common.collect.ImmutableMap;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -42,7 +43,7 @@ public class TimeseriesBinaryFnTest
       rowsCount,
       indexLongSum
   );
-  final DateTime currTime = new DateTime();
+  final DateTime currTime = DateTimes.nowUtc();
 
   @Test
   public void testMerge()

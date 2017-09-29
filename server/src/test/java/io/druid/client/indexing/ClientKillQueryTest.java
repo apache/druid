@@ -19,6 +19,7 @@
 
 package io.druid.client.indexing;
 
+import io.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -29,7 +30,8 @@ import org.junit.Test;
 public class ClientKillQueryTest
 {
   private static final String DATA_SOURCE = "data_source";
-  private static final Interval INTERVAL = new Interval(new DateTime(), new DateTime().plus(1));
+  public static final DateTime START = DateTimes.nowUtc();
+  private static final Interval INTERVAL = new Interval(START, START.plus(1));
   ClientKillQuery clientKillQuery;
 
   @Before

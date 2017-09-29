@@ -18,9 +18,10 @@
  */
 package io.druid.data.input.orc;
 
-import io.druid.java.util.common.StringUtils;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.indexer.HadoopDruidIndexerConfig;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.ql.exec.vector.BytesColumnVector;
@@ -41,7 +42,6 @@ import org.apache.orc.CompressionKind;
 import org.apache.orc.OrcFile;
 import org.apache.orc.TypeDescription;
 import org.apache.orc.Writer;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -101,7 +101,7 @@ public class DruidOrcInputFormatTest
     MapBasedInputRow row = (MapBasedInputRow) parser.parse(data);
 
     Assert.assertTrue(row.getEvent().keySet().size() == 4);
-    Assert.assertEquals(new DateTime(timestamp), row.getTimestamp());
+    Assert.assertEquals(DateTimes.of(timestamp), row.getTimestamp());
     Assert.assertEquals(parser.getParseSpec().getDimensionsSpec().getDimensionNames(), row.getDimensions());
     Assert.assertEquals(col1, row.getEvent().get("col1"));
     Assert.assertEquals(Arrays.asList(col2), row.getDimension("col2"));

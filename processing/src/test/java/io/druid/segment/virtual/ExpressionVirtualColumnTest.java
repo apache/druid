@@ -95,16 +95,16 @@ public class ExpressionVirtualColumnTest
     final ObjectColumnSelector selector = XPLUSY.makeObjectColumnSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW0);
-    Assert.assertEquals(null, selector.get());
+    Assert.assertEquals(null, selector.getObject());
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW1);
-    Assert.assertEquals(4.0d, selector.get());
+    Assert.assertEquals(4.0d, selector.getObject());
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW2);
-    Assert.assertEquals(5.1d, selector.get());
+    Assert.assertEquals(5.1d, selector.getObject());
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW3);
-    Assert.assertEquals(5L, selector.get());
+    Assert.assertEquals(5L, selector.getObject());
   }
 
   @Test

@@ -31,6 +31,7 @@ import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.RE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
@@ -423,7 +424,7 @@ public class IndexGeneratorJobTest
     this.useCombiner = useCombiner;
     this.partitionType = partitionType;
     this.shardInfoForEachSegment = shardInfoForEachSegment;
-    this.interval = new Interval(interval);
+    this.interval = Intervals.of(interval);
     this.data = data;
     this.inputFormatName = inputFormatName;
     this.inputRowParser = inputRowParser;

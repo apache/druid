@@ -23,6 +23,7 @@ import com.google.common.collect.Lists;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.LegacyDataSource;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
@@ -194,6 +195,6 @@ public class SegmentAnalyzerTest
         new LegacyDataSource("test"), QuerySegmentSpecs.create("2011/2012"), null, null, null, analyses, false, false
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
-    return Sequences.toList(query.run(runner, context), Lists.<SegmentAnalysis>newArrayList());
+    return Sequences.toList(runner.run(QueryPlus.wrap(query), context), Lists.<SegmentAnalysis>newArrayList());
   }
 }

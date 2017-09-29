@@ -32,7 +32,6 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import java.util.function.ToIntFunction;
 
 /**
  * A buffer grouper for array-based aggregation.  This grouper stores aggregated values in the buffer using the grouping
@@ -48,7 +47,7 @@ import java.util.function.ToIntFunction;
  * different segments cannot be currently retrieved, this grouper can be used only when performing per-segment query
  * execution.
  */
-public class BufferArrayGrouper implements Grouper<Integer>
+public class BufferArrayGrouper implements IntGrouper
 {
   private static final Logger LOG = new Logger(BufferArrayGrouper.class);
 
@@ -137,15 +136,13 @@ public class BufferArrayGrouper implements Grouper<Integer>
   }
 
   @Override
-  public AggregateResult aggregate(Integer key, int dimIndex)
+  public AggregateResult aggregate(int key, int dimIndex)
   {
     Preconditions.checkArgument(
         dimIndex >= 0 && dimIndex < cardinalityWithMissingValue,
         "Invalid dimIndex[%s]",
         dimIndex
     );
-
-    Preconditions.checkNotNull(key);
 
     final int recordOffset = dimIndex * recordSize;
 
@@ -209,7 +206,7 @@ public class BufferArrayGrouper implements Grouper<Integer>
   }
 
   @Override
-  public ToIntFunction<Integer> hashFunction()
+  public IntGrouperHashFunction hashFunction()
   {
     return key -> key + 1;
   }

@@ -19,6 +19,7 @@
 
 package io.druid.query;
 
+import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.segment.Segment;
 
 import java.util.concurrent.ExecutorService;
@@ -26,6 +27,7 @@ import java.util.concurrent.ExecutorService;
 /**
  * An interface that defines the nitty gritty implementation detauls of a Query on a Segment
  */
+@ExtensionPoint
 public interface QueryRunnerFactory<T, QueryType extends Query<T>>
 {
   /**

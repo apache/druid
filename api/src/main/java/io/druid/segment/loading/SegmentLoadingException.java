@@ -19,10 +19,12 @@
 
 package io.druid.segment.loading;
 
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.StringUtils;
 
 /**
  */
+@PublicApi
 public class SegmentLoadingException extends Exception
 {
   public SegmentLoadingException(

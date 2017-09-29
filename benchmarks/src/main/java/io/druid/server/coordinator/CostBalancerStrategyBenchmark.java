@@ -19,6 +19,7 @@
 
 package io.druid.server.coordinator;
 
+import io.druid.java.util.common.DateTimes;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -39,7 +40,7 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Benchmark)
 public class CostBalancerStrategyBenchmark
 {
-  private final static DateTime t0 = new DateTime("2016-01-01T01:00:00Z");
+  private final static DateTime t0 = DateTimes.of("2016-01-01T01:00:00Z");
 
   private List<DataSegment> segments;
   private DataSegment segment;

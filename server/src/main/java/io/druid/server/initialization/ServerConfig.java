@@ -24,6 +24,7 @@ import org.joda.time.Period;
 
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import java.util.Objects;
 
 /**
  */
@@ -45,12 +46,6 @@ public class ServerConfig
   @Min(1)
   private long maxScatterGatherBytes = Long.MAX_VALUE;
 
-  @JsonProperty
-  private boolean plaintext = true;
-
-  @JsonProperty
-  private boolean tls = false;
-
   public int getNumThreads()
   {
     return numThreads;
@@ -71,14 +66,26 @@ public class ServerConfig
     return maxScatterGatherBytes;
   }
 
-  public boolean isPlaintext()
+  @Override
+  public boolean equals(Object o)
   {
-    return plaintext;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ServerConfig that = (ServerConfig) o;
+    return numThreads == that.numThreads &&
+           defaultQueryTimeout == that.defaultQueryTimeout &&
+           maxScatterGatherBytes == that.maxScatterGatherBytes &&
+           Objects.equals(maxIdleTime, that.maxIdleTime);
   }
 
-  public boolean isTls()
+  @Override
+  public int hashCode()
   {
-    return tls;
+    return Objects.hash(numThreads, maxIdleTime, defaultQueryTimeout, maxScatterGatherBytes);
   }
 
   @Override
@@ -89,8 +96,6 @@ public class ServerConfig
            ", maxIdleTime=" + maxIdleTime +
            ", defaultQueryTimeout=" + defaultQueryTimeout +
            ", maxScatterGatherBytes=" + maxScatterGatherBytes +
-           ", plaintext=" + plaintext +
-           ", tls=" + tls +
            '}';
   }
 }

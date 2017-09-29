@@ -24,7 +24,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -33,6 +32,7 @@ import com.metamx.emitter.EmittingLogger;
 import io.druid.client.ServerView;
 import io.druid.client.TimelineServerView;
 import io.druid.guice.ManageLifecycle;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.guava.Sequence;
@@ -49,7 +49,9 @@ import io.druid.query.spec.MultipleSpecificSegmentSpec;
 import io.druid.segment.column.ValueType;
 import io.druid.server.QueryLifecycleFactory;
 import io.druid.server.coordination.DruidServerMetadata;
-import io.druid.server.security.SystemAuthorizationInfo;
+import io.druid.server.security.AuthenticationResult;
+import io.druid.server.security.Authenticator;
+import io.druid.server.security.AuthenticatorMapper;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.table.DruidTable;
 import io.druid.sql.calcite.table.RowSignature;
@@ -58,7 +60,6 @@ import io.druid.sql.calcite.view.ViewManager;
 import io.druid.timeline.DataSegment;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
-import org.joda.time.DateTime;
 
 import java.io.IOException;
 import java.util.Comparator;
@@ -69,6 +70,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -115,6 +117,9 @@ public class DruidSchema extends AbstractSchema
   // All segments that need to be refreshed.
   private final TreeSet<DataSegment> segmentsNeedingRefresh = new TreeSet<>(SEGMENT_ORDER);
 
+  // Escalating authenticator, so we can attach an authentication result to queries we generate.
+  private final Authenticator escalatingAuthenticator;
+
   private boolean refreshImmediately = false;
   private long lastRefresh = 0L;
   private boolean isServerViewInitialized = false;
@@ -124,7 +129,8 @@ public class DruidSchema extends AbstractSchema
       final QueryLifecycleFactory queryLifecycleFactory,
       final TimelineServerView serverView,
       final PlannerConfig config,
-      final ViewManager viewManager
+      final ViewManager viewManager,
+      final AuthenticatorMapper authenticatorMapper
   )
   {
     this.queryLifecycleFactory = Preconditions.checkNotNull(queryLifecycleFactory, "queryLifecycleFactory");
@@ -132,7 +138,39 @@ public class DruidSchema extends AbstractSchema
     this.config = Preconditions.checkNotNull(config, "config");
     this.viewManager = Preconditions.checkNotNull(viewManager, "viewManager");
     this.cacheExec = ScheduledExecutors.fixed(1, "DruidSchema-Cache-%d");
-    this.tables = Maps.newConcurrentMap();
+    this.tables = new ConcurrentHashMap<>();
+    this.escalatingAuthenticator = authenticatorMapper.getEscalatingAuthenticator();
+
+    serverView.registerTimelineCallback(
+        MoreExecutors.sameThreadExecutor(),
+        new TimelineServerView.TimelineCallback()
+        {
+          @Override
+          public ServerView.CallbackAction timelineInitialized()
+          {
+            synchronized (lock) {
+              isServerViewInitialized = true;
+              lock.notifyAll();
+            }
+
+            return ServerView.CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public ServerView.CallbackAction segmentAdded(final DruidServerMetadata server, final DataSegment segment)
+          {
+            addSegment(server, segment);
+            return ServerView.CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public ServerView.CallbackAction segmentRemoved(final DataSegment segment)
+          {
+            removeSegment(segment);
+            return ServerView.CallbackAction.CONTINUE;
+          }
+        }
+    );
   }
 
   @LifecycleStart
@@ -151,18 +189,20 @@ public class DruidSchema extends AbstractSchema
 
                 try {
                   synchronized (lock) {
-                    final long nextRefreshNoFuzz = new DateTime(lastRefresh)
+                    final long nextRefreshNoFuzz = DateTimes
+                        .utc(lastRefresh)
                         .plus(config.getMetadataRefreshPeriod())
                         .getMillis();
 
                     // Fuzz a bit to spread load out when we have multiple brokers.
                     final long nextRefresh = nextRefreshNoFuzz + (long) ((nextRefreshNoFuzz - lastRefresh) * 0.10);
 
-                    while (!(
-                        isServerViewInitialized
-                        && (!segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty())
-                        && (refreshImmediately || nextRefresh < System.currentTimeMillis())
-                    )) {
+                    while (true) {
+                      if (isServerViewInitialized &&
+                          (!segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty()) &&
+                          (refreshImmediately || nextRefresh < System.currentTimeMillis())) {
+                        break;
+                      }
                       lock.wait(Math.max(1, nextRefresh - System.currentTimeMillis()));
                     }
 
@@ -236,37 +276,6 @@ public class DruidSchema extends AbstractSchema
             finally {
               log.info("Metadata refresh stopped.");
             }
-          }
-        }
-    );
-
-    serverView.registerTimelineCallback(
-        MoreExecutors.sameThreadExecutor(),
-        new TimelineServerView.TimelineCallback()
-        {
-          @Override
-          public ServerView.CallbackAction timelineInitialized()
-          {
-            synchronized (lock) {
-              isServerViewInitialized = true;
-              lock.notifyAll();
-            }
-
-            return ServerView.CallbackAction.CONTINUE;
-          }
-
-          @Override
-          public ServerView.CallbackAction segmentAdded(final DruidServerMetadata server, final DataSegment segment)
-          {
-            addSegment(server, segment);
-            return ServerView.CallbackAction.CONTINUE;
-          }
-
-          @Override
-          public ServerView.CallbackAction segmentRemoved(final DataSegment segment)
-          {
-            removeSegment(segment);
-            return ServerView.CallbackAction.CONTINUE;
           }
         }
     );
@@ -400,7 +409,8 @@ public class DruidSchema extends AbstractSchema
     final Set<DataSegment> retVal = new HashSet<>();
     final Sequence<SegmentAnalysis> sequence = runSegmentMetadataQuery(
         queryLifecycleFactory,
-        Iterables.limit(segments, MAX_SEGMENTS_PER_QUERY)
+        Iterables.limit(segments, MAX_SEGMENTS_PER_QUERY),
+        escalatingAuthenticator.createEscalatedAuthenticationResult()
     );
 
     Yielder<SegmentAnalysis> yielder = Yielders.each(sequence);
@@ -470,7 +480,8 @@ public class DruidSchema extends AbstractSchema
 
   private static Sequence<SegmentAnalysis> runSegmentMetadataQuery(
       final QueryLifecycleFactory queryLifecycleFactory,
-      final Iterable<DataSegment> segments
+      final Iterable<DataSegment> segments,
+      final AuthenticationResult authenticationResult
   )
   {
     // Sanity check: getOnlyElement of a set, to ensure all segments have the same dataSource.
@@ -495,8 +506,7 @@ public class DruidSchema extends AbstractSchema
         false
     );
 
-    // Use SystemAuthorizationInfo since this is a query generated by Druid itself.
-    return queryLifecycleFactory.factorize().runSimple(segmentMetadataQuery, SystemAuthorizationInfo.INSTANCE, null);
+    return queryLifecycleFactory.factorize().runSimple(segmentMetadataQuery, authenticationResult, null);
   }
 
   private static RowSignature analysisToRowSignature(final SegmentAnalysis analysis)

@@ -19,11 +19,12 @@
 
 package io.druid.query.topn;
 
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.collections.StupidPool;
+import io.druid.java.util.common.DateTimes;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
@@ -33,7 +34,6 @@ import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.segment.TestHelper;
-import org.joda.time.DateTime;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -77,14 +77,7 @@ public class TopNUnionQueryTest
                 new TopNQueryRunnerFactory(
                     new StupidPool<ByteBuffer>(
                         "TopNQueryRunnerFactory-bufferPool",
-                        new Supplier<ByteBuffer>()
-                        {
-                          @Override
-                          public ByteBuffer get()
-                          {
-                            return ByteBuffer.allocate(2000);
-                          }
-                        }
+                        () -> ByteBuffer.allocate(2000)
                     ),
                     new TopNQueryQueryToolChest(
                         new TopNQueryConfig(),
@@ -130,7 +123,7 @@ public class TopNUnionQueryTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -180,7 +173,7 @@ public class TopNUnionQueryTest
         )
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 
 

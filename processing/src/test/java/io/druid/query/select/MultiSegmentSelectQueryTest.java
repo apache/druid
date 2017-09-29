@@ -26,9 +26,12 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.CharSource;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
@@ -50,7 +53,6 @@ import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.SingleElementPartitionChunk;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -152,7 +154,7 @@ public class MultiSegmentSelectQueryTest
     timeline.add(index2.getInterval(), "v2", new SingleElementPartitionChunk(segment_override));
 
     segmentIdentifiers = Lists.newArrayList();
-    for (TimelineObjectHolder<String, ?> holder : timeline.lookup(new Interval("2011-01-12/2011-01-14"))) {
+    for (TimelineObjectHolder<String, ?> holder : timeline.lookup(Intervals.of("2011-01-12/2011-01-14"))) {
       segmentIdentifiers.add(makeIdentifier(holder.getInterval(), holder.getVersion()));
     }
 
@@ -183,7 +185,7 @@ public class MultiSegmentSelectQueryTest
   private static IncrementalIndex newIndex(String minTimeStamp, int maxRowCount)
   {
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-        .withMinTimestamp(new DateTime(minTimeStamp).getMillis())
+        .withMinTimestamp(DateTimes.of(minTimeStamp).getMillis())
         .withQueryGranularity(Granularities.HOUR)
         .withMetrics(TestIndex.METRIC_AGGS)
         .build();
@@ -248,7 +250,7 @@ public class MultiSegmentSelectQueryTest
   {
     for (int[] expected : expectedOffsets) {
       List<Result<SelectResultValue>> results = Sequences.toList(
-          runner.run(query, ImmutableMap.of()),
+          runner.run(QueryPlus.wrap(query), ImmutableMap.of()),
           Lists.<Result<SelectResultValue>>newArrayList()
       );
       Assert.assertEquals(1, results.size());
@@ -295,7 +297,7 @@ public class MultiSegmentSelectQueryTest
   {
     for (int[] expected : expectedOffsets) {
       List<Result<SelectResultValue>> results = Sequences.toList(
-          runner.run(query, ImmutableMap.of()),
+          runner.run(QueryPlus.wrap(query), ImmutableMap.of()),
           Lists.<Result<SelectResultValue>>newArrayList()
       );
       Assert.assertEquals(2, results.size());
@@ -340,14 +342,17 @@ public class MultiSegmentSelectQueryTest
     QueryRunner unionQueryRunner = new UnionQueryRunner(runner);
 
     List<Result<SelectResultValue>> results = Sequences.toList(
-        unionQueryRunner.run(query, ImmutableMap.of()),
+        unionQueryRunner.run(QueryPlus.wrap(query), ImmutableMap.of()),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
     Map<String, Integer> pagingIdentifiers = results.get(0).getValue().getPagingIdentifiers();
     query = query.withPagingSpec(toNextCursor(PagingSpec.merge(Arrays.asList(pagingIdentifiers)), query, 3));
 
-    Sequences.toList(unionQueryRunner.run(query, ImmutableMap.of()), Lists.<Result<SelectResultValue>>newArrayList());
+    Sequences.toList(
+        unionQueryRunner.run(QueryPlus.wrap(query), ImmutableMap.of()),
+        Lists.<Result<SelectResultValue>>newArrayList()
+    );
   }
 
   private PagingSpec toNextCursor(Map<String, Integer> merged, SelectQuery query, int threshold)

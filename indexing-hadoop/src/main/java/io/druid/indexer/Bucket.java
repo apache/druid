@@ -20,9 +20,8 @@
 package io.druid.indexer;
 
 import com.google.common.annotations.VisibleForTesting;
-
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
-
 import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
@@ -118,7 +117,7 @@ public class Bucket
   {
     ByteBuffer buf = ByteBuffer.wrap(keyBytes);
 
-    Bucket bucket = new Bucket(buf.getInt(), new DateTime(buf.getLong()), buf.getInt());
+    Bucket bucket = new Bucket(buf.getInt(), DateTimes.utc(buf.getLong()), buf.getInt());
     byte[] bytesLeft = new byte[buf.remaining()];
     buf.get(bytesLeft);
 

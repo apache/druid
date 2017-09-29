@@ -13,7 +13,7 @@ SUPERVISORDIR=/usr/lib/druid/conf
 RESOURCEDIR=$DIR/src/test/resources
 
 # so docker IP addr will be known during docker build
-echo $DOCKER_IP > $DOCKERDIR/docker_ip
+echo ${DOCKER_IP:=127.0.0.1} > $DOCKERDIR/docker_ip
 
 # Make directories if they dont exist
 mkdir -p $SHARED_DIR/logs

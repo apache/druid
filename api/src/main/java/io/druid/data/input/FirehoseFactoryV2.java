@@ -20,8 +20,8 @@
 package io.druid.data.input;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-
 import io.druid.data.input.impl.InputRowParser;
+import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.java.util.common.parsers.ParseException;
 
 import java.io.IOException;
@@ -37,6 +37,7 @@ import java.io.IOException;
  * value will throw a surprising NPE.   Throwing IOException on connection failure or runtime exception on
  * invalid configuration is preferred over returning null.
  */
+@ExtensionPoint
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public interface FirehoseFactoryV2<T extends InputRowParser>
 {

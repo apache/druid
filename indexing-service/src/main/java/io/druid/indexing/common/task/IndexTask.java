@@ -36,7 +36,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.ListenableFuture;
-import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.JodaUtils;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -116,7 +117,11 @@ public class IndexTask extends AbstractTask
 
   private static String makeId(String id, IndexIngestionSpec ingestionSchema)
   {
-    return id != null ? id : StringUtils.format("index_%s_%s", makeDataSource(ingestionSchema), new DateTime());
+    if (id != null) {
+      return id;
+    } else {
+      return StringUtils.format("index_%s_%s", makeDataSource(ingestionSchema), DateTimes.nowUtc());
+    }
   }
 
   private static String makeGroupId(IndexIngestionSpec ingestionSchema)
@@ -372,7 +377,7 @@ public class IndexTask extends AbstractTask
 
       final int numShards;
       if (determineNumPartitions) {
-        final long numRows = new Double(collector.estimateCardinality()).longValue();
+        final long numRows = collector.estimateCardinalityRound();
         numShards = (int) Math.ceil((double) numRows / tuningConfig.getTargetPartitionSize());
         log.info("Estimated [%,d] rows of data for interval [%s], creating [%,d] shards", numRows, interval, numShards);
       } else {

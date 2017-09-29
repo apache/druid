@@ -19,12 +19,14 @@
 
 package io.druid.segment;
 
+import io.druid.guice.annotations.PublicApi;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
 
 /**
  */
+@PublicApi
 public interface Segment extends Closeable
 {
   public String getIdentifier();

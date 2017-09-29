@@ -22,6 +22,7 @@ package io.druid.sql.calcite.aggregation;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -90,7 +91,7 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
     final AggregatorFactory aggregatorFactory;
 
     if (input.isDirectColumnAccess() && rowSignature.getColumnType(input.getDirectColumn()) == ValueType.COMPLEX) {
-      aggregatorFactory = new HyperUniquesAggregatorFactory(name, input.getDirectColumn());
+      aggregatorFactory = new HyperUniquesAggregatorFactory(name, input.getDirectColumn(), false, true);
     } else {
       final SqlTypeName sqlTypeName = rexNode.getType().getSqlTypeName();
       final ValueType inputType = Calcites.getValueTypeForSqlTypeName(sqlTypeName);
@@ -104,7 +105,7 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
         dimensionSpec = input.getSimpleExtraction().toDimensionSpec(null, ValueType.STRING);
       } else {
         final ExpressionVirtualColumn virtualColumn = input.toVirtualColumn(
-            String.format("%s:v", name),
+            StringUtils.format("%s:v", name),
             inputType,
             plannerContext.getExprMacroTable()
         );
@@ -112,7 +113,7 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
         virtualColumns.add(virtualColumn);
       }
 
-      aggregatorFactory = new CardinalityAggregatorFactory(name, ImmutableList.of(dimensionSpec), false);
+      aggregatorFactory = new CardinalityAggregatorFactory(name, null, ImmutableList.of(dimensionSpec), false, true);
     }
 
     return Aggregation.create(virtualColumns, aggregatorFactory).filter(filter);

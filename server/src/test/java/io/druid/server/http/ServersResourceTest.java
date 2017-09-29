@@ -24,11 +24,11 @@ import com.google.common.collect.ImmutableList;
 import io.druid.client.CoordinatorServerView;
 import io.druid.client.DruidServer;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -47,7 +47,7 @@ public class ServersResourceTest
     DruidServer dummyServer = new DruidServer("dummy", "host", null, 1234L, ServerType.HISTORICAL, "tier", 0);
     DataSegment segment = DataSegment.builder()
                                      .dataSource("dataSource")
-                                     .interval(new Interval("2016-03-22T14Z/2016-03-22T15Z"))
+                                     .interval(Intervals.of("2016-03-22T14Z/2016-03-22T15Z"))
                                      .version("v0")
                                      .size(1L)
                                      .build();

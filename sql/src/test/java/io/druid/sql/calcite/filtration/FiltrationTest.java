@@ -20,10 +20,10 @@
 package io.druid.sql.calcite.filtration;
 
 import com.google.common.collect.ImmutableList;
+import io.druid.java.util.common.Intervals;
 import io.druid.query.filter.IntervalDimFilter;
 import io.druid.query.filter.NotDimFilter;
 import io.druid.segment.column.Column;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -36,7 +36,7 @@ public class FiltrationTest
         new NotDimFilter(
             new IntervalDimFilter(
                 Column.TIME_COLUMN_NAME,
-                ImmutableList.of(new Interval("2000/2001"), new Interval("2002/2003")),
+                ImmutableList.of(Intervals.of("2000/2001"), Intervals.of("2002/2003")),
                 null
             )
         ),
@@ -52,7 +52,7 @@ public class FiltrationTest
         new NotDimFilter(
             new IntervalDimFilter(
                 Column.TIME_COLUMN_NAME,
-                ImmutableList.of(new Interval("2000/2001"), new Interval("2002/2003")),
+                ImmutableList.of(Intervals.of("2000/2001"), Intervals.of("2002/2003")),
                 null
             )
         ),

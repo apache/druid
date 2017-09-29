@@ -20,6 +20,7 @@
 package io.druid.java.util.common.granularity;
 
 import com.google.common.collect.ImmutableList;
+import io.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.format.DateTimeFormatter;
@@ -29,15 +30,6 @@ import org.joda.time.format.DateTimeFormatter;
  */
 public class AllGranularity extends Granularity
 {
-  // These constants are from JodaUtils in druid-common.
-  // Creates circular dependency.
-  // Will be nice to move JodaUtils here sometime
-  public static final long MAX_INSTANT = Long.MAX_VALUE / 2;
-  public static final long MIN_INSTANT = Long.MIN_VALUE / 2;
-
-  private final DateTime maxDateTime = new DateTime(MAX_INSTANT);
-  private final DateTime minDateTime = new DateTime(MIN_INSTANT);
-
   /**
    * This constructor is public b/c it is serialized and deserialized
    * based on type in GranularityModule
@@ -53,7 +45,7 @@ public class AllGranularity extends Granularity
   @Override
   public DateTime increment(DateTime time)
   {
-    return maxDateTime;
+    return DateTimes.MAX;
   }
 
   @Override
@@ -65,7 +57,7 @@ public class AllGranularity extends Granularity
   @Override
   public DateTime bucketStart(DateTime time)
   {
-    return minDateTime;
+    return DateTimes.MIN;
   }
 
   @Override

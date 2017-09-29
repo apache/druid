@@ -24,7 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.jackson.DefaultObjectMapper;
-import org.joda.time.Interval;
+import io.druid.java.util.common.Intervals;
 import org.joda.time.Period;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -47,9 +47,9 @@ public class BroadcastDistributionRuleSerdeTest
         new Object[]{new ForeverBroadcastDistributionRule(ImmutableList.of("large_source1", "large_source2"))},
         new Object[]{new ForeverBroadcastDistributionRule(ImmutableList.of())},
         new Object[]{new ForeverBroadcastDistributionRule(null)},
-        new Object[]{new IntervalBroadcastDistributionRule(new Interval("0/1000"), ImmutableList.of("large_source"))},
-        new Object[]{new IntervalBroadcastDistributionRule(new Interval("0/1000"), ImmutableList.of())},
-        new Object[]{new IntervalBroadcastDistributionRule(new Interval("0/1000"), null)},
+        new Object[]{new IntervalBroadcastDistributionRule(Intervals.of("0/1000"), ImmutableList.of("large_source"))},
+        new Object[]{new IntervalBroadcastDistributionRule(Intervals.of("0/1000"), ImmutableList.of())},
+        new Object[]{new IntervalBroadcastDistributionRule(Intervals.of("0/1000"), null)},
         new Object[]{new PeriodBroadcastDistributionRule(new Period(1000), ImmutableList.of("large_source"))},
         new Object[]{new PeriodBroadcastDistributionRule(new Period(1000), ImmutableList.of())},
         new Object[]{new PeriodBroadcastDistributionRule(new Period(1000), null)}

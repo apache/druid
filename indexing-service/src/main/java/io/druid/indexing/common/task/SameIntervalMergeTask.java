@@ -25,10 +25,10 @@ import com.google.common.base.Preconditions;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
+import io.druid.java.util.common.DateTimes;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.IndexSpec;
 import io.druid.timeline.DataSegment;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.List;
@@ -102,7 +102,7 @@ public class SameIntervalMergeTask extends AbstractFixedIntervalTask
         dataSource,
         interval.getStart(),
         interval.getEnd(),
-        new DateTime().toString()
+        DateTimes.nowUtc().toString()
     );
   }
 

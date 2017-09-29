@@ -36,6 +36,7 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.FloatDimensionSchema;
 import io.druid.data.input.impl.LongDimensionSchema;
 import io.druid.data.input.impl.StringDimensionSchema;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.granularity.Granularities;
@@ -48,15 +49,15 @@ import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.SimpleDictionaryEncodedColumn;
 import io.druid.segment.data.BitmapSerdeFactory;
+import io.druid.segment.data.BitmapValues;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.IncrementalIndexTest;
-import io.druid.segment.data.IndexedInts;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
-import org.joda.time.DateTime;
+import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -1520,12 +1521,13 @@ public class IndexMergerTestBase
     checkBitmapIndex(Lists.newArrayList(3), adapter.getBitmapIndex("d9", "921"));
   }
 
-  private void checkBitmapIndex(ArrayList<Integer> expected, IndexedInts real)
+  private void checkBitmapIndex(ArrayList<Integer> expected, BitmapValues real)
   {
     Assert.assertEquals(expected.size(), real.size());
     int i = 0;
-    for (Object index : real) {
-      Assert.assertEquals(expected.get(i++), index);
+    for (IntIterator iterator = real.iterator(); iterator.hasNext(); ) {
+      int index = iterator.nextInt();
+      Assert.assertEquals(expected.get(i++), (Integer) index);
     }
   }
 
@@ -1746,7 +1748,7 @@ public class IndexMergerTestBase
     ));
     closer.closeLater(index2);
 
-    Interval interval = new Interval(0, new DateTime().getMillis());
+    Interval interval = new Interval(DateTimes.EPOCH, DateTimes.nowUtc());
     RoaringBitmapFactory factory = new RoaringBitmapFactory();
     ArrayList<IndexableAdapter> toMerge = Lists.<IndexableAdapter>newArrayList(
         new IncrementalIndexAdapter(interval, index1, factory),
@@ -1797,7 +1799,7 @@ public class IndexMergerTestBase
     );
     closer.closeLater(index2);
 
-    Interval interval = new Interval(0, new DateTime().getMillis());
+    Interval interval = new Interval(DateTimes.EPOCH, DateTimes.nowUtc());
     RoaringBitmapFactory factory = new RoaringBitmapFactory();
     ArrayList<IndexableAdapter> toMerge = Lists.<IndexableAdapter>newArrayList(
         new IncrementalIndexAdapter(interval, index1, factory),
@@ -1867,7 +1869,7 @@ public class IndexMergerTestBase
     );
 
 
-    Interval interval = new Interval(0, new DateTime().getMillis());
+    Interval interval = new Interval(DateTimes.EPOCH, DateTimes.nowUtc());
     RoaringBitmapFactory factory = new RoaringBitmapFactory();
     ArrayList<IndexableAdapter> toMerge = Lists.<IndexableAdapter>newArrayList(
         new IncrementalIndexAdapter(interval, index1, factory),
@@ -1927,7 +1929,7 @@ public class IndexMergerTestBase
     closer.closeLater(index5);
 
 
-    Interval interval = new Interval(0, new DateTime().getMillis());
+    Interval interval = new Interval(DateTimes.EPOCH, DateTimes.nowUtc());
     RoaringBitmapFactory factory = new RoaringBitmapFactory();
     ArrayList<IndexableAdapter> toMerge = Lists.<IndexableAdapter>newArrayList(
         new IncrementalIndexAdapter(interval, index1, factory),
@@ -1976,7 +1978,7 @@ public class IndexMergerTestBase
     closer.closeLater(index5);
 
 
-    Interval interval = new Interval(0, new DateTime().getMillis());
+    Interval interval = new Interval(DateTimes.EPOCH, DateTimes.nowUtc());
     RoaringBitmapFactory factory = new RoaringBitmapFactory();
     ArrayList<IndexableAdapter> toMerge = Lists.<IndexableAdapter>newArrayList(
         new IncrementalIndexAdapter(interval, index2, factory)

@@ -165,7 +165,11 @@ public class TestHelper
                  && (((Result) expectedNext).getValue()) instanceof TopNResultValue) {
         // Special to allow a floating point delta to be used in result comparison due to legacy expected results
         assertTopNResultValue(failMsg, (Result) expectedNext, (Result) next);
-        assertTopNResultValue(String.format("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg), (Result) expectedNext, (Result) next2);
+        assertTopNResultValue(
+            StringUtils.format("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg),
+            (Result) expectedNext,
+            (Result) next2
+        );
       } else {
         assertResult(failMsg, (Result) expectedNext, (Result) next);
         assertResult(
@@ -290,7 +294,7 @@ public class TestHelper
     Assert.assertEquals("Size of list must match", listExpectedRows.size(), listActualRows.size());
 
     IntStream.range(0, listExpectedRows.size()).forEach(value -> assertRow(
-        String.format("%s, on value number [%s]", msg, value),
+        StringUtils.format("%s, on value number [%s]", msg, value),
         listExpectedRows.get(value),
         listActualRows.get(value)
     ));

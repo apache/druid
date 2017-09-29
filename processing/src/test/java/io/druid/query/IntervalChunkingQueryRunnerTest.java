@@ -86,7 +86,7 @@ public class IntervalChunkingQueryRunnerTest
     EasyMock.replay(toolChest);
 
     QueryRunner runner = decorator.decorate(baseRunner, toolChest);
-    runner.run(query, Collections.EMPTY_MAP);
+    runner.run(QueryPlus.wrap(query), Collections.EMPTY_MAP);
 
     EasyMock.verify(executors);
   }
@@ -103,7 +103,7 @@ public class IntervalChunkingQueryRunnerTest
     EasyMock.replay(toolChest);
 
     QueryRunner runner = decorator.decorate(baseRunner, toolChest);
-    runner.run(query, Collections.EMPTY_MAP);
+    runner.run(QueryPlus.wrap(query), Collections.EMPTY_MAP);
 
     EasyMock.verify(executors);
   }

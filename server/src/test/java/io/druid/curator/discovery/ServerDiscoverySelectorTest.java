@@ -38,6 +38,7 @@ public class ServerDiscoverySelectorTest
   private ServerDiscoverySelector serverDiscoverySelector;
   private ServiceInstance instance;
   private static final int PORT = 8080;
+  private static final int SSL_PORT = 8280;
   private static final String ADDRESS = "localhost";
 
   @Before
@@ -77,6 +78,63 @@ public class ServerDiscoverySelectorTest
     Assert.assertEquals("http", uri.getScheme());
   }
 
+  @Test
+  public void testPickWithNullSslPort() throws Exception
+  {
+    EasyMock.expect(serviceProvider.getInstance()).andReturn(instance).anyTimes();
+    EasyMock.expect(instance.getAddress()).andReturn(ADDRESS).anyTimes();
+    EasyMock.expect(instance.getPort()).andReturn(PORT).anyTimes();
+    EasyMock.expect(instance.getSslPort()).andReturn(null).anyTimes();
+    EasyMock.replay(instance, serviceProvider);
+    Server server = serverDiscoverySelector.pick();
+    Assert.assertEquals(PORT, server.getPort());
+    Assert.assertEquals(ADDRESS, server.getAddress());
+    Assert.assertTrue(server.getHost().contains(Integer.toString(PORT)));
+    Assert.assertTrue(server.getHost().contains(ADDRESS));
+    Assert.assertEquals("http", server.getScheme());
+    EasyMock.verify(instance, serviceProvider);
+    final URI uri = new URI(
+        server.getScheme(),
+        null,
+        server.getAddress(),
+        server.getPort(),
+        "/druid/indexer/v1/action",
+        null,
+        null
+    );
+    Assert.assertEquals(PORT, uri.getPort());
+    Assert.assertEquals(ADDRESS, uri.getHost());
+    Assert.assertEquals("http", uri.getScheme());
+  }
+
+  @Test
+  public void testPickWithSslPort() throws Exception
+  {
+    EasyMock.expect(serviceProvider.getInstance()).andReturn(instance).anyTimes();
+    EasyMock.expect(instance.getAddress()).andReturn(ADDRESS).anyTimes();
+    EasyMock.expect(instance.getPort()).andReturn(PORT).anyTimes();
+    EasyMock.expect(instance.getSslPort()).andReturn(SSL_PORT).anyTimes();
+    EasyMock.replay(instance, serviceProvider);
+    Server server = serverDiscoverySelector.pick();
+    Assert.assertEquals(SSL_PORT, server.getPort());
+    Assert.assertEquals(ADDRESS, server.getAddress());
+    Assert.assertTrue(server.getHost().contains(Integer.toString(SSL_PORT)));
+    Assert.assertTrue(server.getHost().contains(ADDRESS));
+    Assert.assertEquals("https", server.getScheme());
+    EasyMock.verify(instance, serviceProvider);
+    final URI uri = new URI(
+        server.getScheme(),
+        null,
+        server.getAddress(),
+        server.getPort(),
+        "/druid/indexer/v1/action",
+        null,
+        null
+    );
+    Assert.assertEquals(SSL_PORT, uri.getPort());
+    Assert.assertEquals(ADDRESS, uri.getHost());
+    Assert.assertEquals("https", uri.getScheme());
+  }
 
   @Test
   public void testPickIPv6() throws Exception

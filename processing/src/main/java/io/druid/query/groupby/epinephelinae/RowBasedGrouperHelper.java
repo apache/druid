@@ -33,6 +33,7 @@ import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.IAE;
@@ -65,6 +66,7 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -78,6 +80,43 @@ import java.util.Set;
 // this class contains shared code between GroupByMergingQueryRunnerV2 and GroupByRowProcessor
 public class RowBasedGrouperHelper
 {
+  private static final int SINGLE_THREAD_CONCURRENCY_HINT = -1;
+  private static final int UNKNOWN_THREAD_PRIORITY = -1;
+  private static final long UNKNOWN_TIMEOUT = -1L;
+
+  /**
+   * Create a single-threaded grouper and accumulator.
+   */
+  public static Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, Row>> createGrouperAccumulatorPair(
+      final GroupByQuery query,
+      final boolean isInputRaw,
+      final Map<String, ValueType> rawInputRowSignature,
+      final GroupByQueryConfig config,
+      final Supplier<ByteBuffer> bufferSupplier,
+      final LimitedTemporaryStorage temporaryStorage,
+      final ObjectMapper spillMapper,
+      final AggregatorFactory[] aggregatorFactories,
+      final int mergeBufferSize
+  )
+  {
+    return createGrouperAccumulatorPair(
+        query,
+        isInputRaw,
+        rawInputRowSignature,
+        config,
+        bufferSupplier,
+        SINGLE_THREAD_CONCURRENCY_HINT,
+        temporaryStorage,
+        spillMapper,
+        aggregatorFactories,
+        null,
+        UNKNOWN_THREAD_PRIORITY,
+        false,
+        UNKNOWN_TIMEOUT,
+        mergeBufferSize
+    );
+  }
+
   /**
    * If isInputRaw is true, transformations such as timestamp truncation and extraction functions have not
    * been applied to the input rows yet, for example, in a nested query, if an extraction function is being
@@ -92,7 +131,12 @@ public class RowBasedGrouperHelper
       final int concurrencyHint,
       final LimitedTemporaryStorage temporaryStorage,
       final ObjectMapper spillMapper,
-      final AggregatorFactory[] aggregatorFactories
+      final AggregatorFactory[] aggregatorFactories,
+      @Nullable final ListeningExecutorService grouperSorter,
+      final int priority,
+      final boolean hasQueryTimeout,
+      final long queryTimeoutAt,
+      final int mergeBufferSize
   )
   {
     // concurrencyHint >= 1 for concurrent groupers, -1 for single-threaded
@@ -145,7 +189,8 @@ public class RowBasedGrouperHelper
           spillMapper,
           true,
           limitSpec,
-          sortHasNonGroupingFields
+          sortHasNonGroupingFields,
+          mergeBufferSize
       );
     } else {
       grouper = new ConcurrentGrouper<>(
@@ -160,7 +205,12 @@ public class RowBasedGrouperHelper
           spillMapper,
           concurrencyHint,
           limitSpec,
-          sortHasNonGroupingFields
+          sortHasNonGroupingFields,
+          grouperSorter,
+          priority,
+          hasQueryTimeout,
+          queryTimeoutAt,
+          mergeBufferSize
       );
     }
 
@@ -475,7 +525,7 @@ public class RowBasedGrouperHelper
   }
 
   private static class InputRawSupplierColumnSelectorStrategyFactory
-    implements ColumnSelectorStrategyFactory<InputRawSupplierColumnSelectorStrategy>
+      implements ColumnSelectorStrategyFactory<InputRawSupplierColumnSelectorStrategy>
   {
     @Override
     public InputRawSupplierColumnSelectorStrategy makeColumnSelectorStrategy(

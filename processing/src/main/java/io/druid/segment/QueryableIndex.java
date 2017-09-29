@@ -28,6 +28,11 @@ import java.io.IOException;
 import java.util.Map;
 
 /**
+ * Direct interface to memory mapped segments. Not a public API for extensions; site specific queries should be
+ * using {@link StorageAdapter}.
+ *
+ * @see QueryableIndexStorageAdapter for query path adapter
+ * @see QueryableIndexIndexableAdapter for indexing path adapter
  */
 public interface QueryableIndex extends ColumnSelector, Closeable
 {

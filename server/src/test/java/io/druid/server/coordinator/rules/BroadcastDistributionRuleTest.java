@@ -23,9 +23,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.MinMaxPriorityQueue;
-import com.google.common.collect.Ordering;
 import io.druid.client.DruidServer;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.server.coordination.ServerType;
 import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.DruidCluster;
@@ -35,12 +35,14 @@ import io.druid.server.coordinator.SegmentReplicantLookup;
 import io.druid.server.coordinator.ServerHolder;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -61,8 +63,8 @@ public class BroadcastDistributionRuleTest
   {
     smallSegment = new DataSegment(
         "small_source",
-        new Interval("0/1000"),
-        new DateTime().toString(),
+        Intervals.of("0/1000"),
+        DateTimes.nowUtc().toString(),
         Maps.newHashMap(),
         Lists.newArrayList(),
         Lists.newArrayList(),
@@ -75,8 +77,8 @@ public class BroadcastDistributionRuleTest
       largeSegments.add(
           new DataSegment(
               "large_source",
-              new Interval((i * 1000) + "/" + ((i + 1) * 1000)),
-              new DateTime().toString(),
+              Intervals.of((i * 1000) + "/" + ((i + 1) * 1000)),
+              DateTimes.nowUtc().toString(),
               Maps.newHashMap(),
               Lists.newArrayList(),
               Lists.newArrayList(),
@@ -91,8 +93,8 @@ public class BroadcastDistributionRuleTest
       largeSegments2.add(
           new DataSegment(
               "large_source2",
-              new Interval((i * 1000) + "/" + ((i + 1) * 1000)),
-              new DateTime().toString(),
+              Intervals.of((i * 1000) + "/" + ((i + 1) * 1000)),
+              DateTimes.nowUtc().toString(),
               Maps.newHashMap(),
               Lists.newArrayList(),
               Lists.newArrayList(),
@@ -198,21 +200,17 @@ public class BroadcastDistributionRuleTest
         null,
         ImmutableMap.of(
             "hot",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Lists.newArrayList(
-                    holdersOfLargeSegments.get(0),
-                    holderOfSmallSegment,
-                    holdersOfLargeSegments2.get(0)
-                )
-            ),
+            Stream.of(
+                holdersOfLargeSegments.get(0),
+                holderOfSmallSegment,
+                holdersOfLargeSegments2.get(0)
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder()))),
             DruidServer.DEFAULT_TIER,
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Lists.newArrayList(
-                    holdersOfLargeSegments.get(1),
-                    holdersOfLargeSegments.get(2),
-                    holdersOfLargeSegments2.get(1)
-                )
-            )
+            Stream.of(
+                holdersOfLargeSegments.get(1),
+                holdersOfLargeSegments.get(2),
+                holdersOfLargeSegments2.get(1)
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
         )
     );
   }
@@ -227,7 +225,7 @@ public class BroadcastDistributionRuleTest
         DruidCoordinatorRuntimeParams.newBuilder()
                                      .withDruidCluster(druidCluster)
                                      .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
-                                     .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
+                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
                                      .withAvailableSegments(Lists.newArrayList(
                                          smallSegment,
                                          largeSegments.get(0),
@@ -267,7 +265,7 @@ public class BroadcastDistributionRuleTest
         DruidCoordinatorRuntimeParams.newBuilder()
                                      .withDruidCluster(druidCluster)
                                      .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
-                                     .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
+                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
                                      .withAvailableSegments(Lists.newArrayList(
                                          smallSegment,
                                          largeSegments.get(0),
@@ -305,7 +303,7 @@ public class BroadcastDistributionRuleTest
         DruidCoordinatorRuntimeParams.newBuilder()
                                      .withDruidCluster(druidCluster)
                                      .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
-                                     .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
+                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
                                      .withAvailableSegments(Lists.newArrayList(
                                          smallSegment,
                                          largeSegments.get(0),

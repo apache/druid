@@ -22,6 +22,7 @@ package io.druid.sql.calcite.expression;
 import com.google.common.base.Preconditions;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.rex.RexCall;
@@ -85,7 +86,7 @@ public abstract class TimeArithmeticOperatorConversion implements SqlOperatorCon
               timeExpr,
               shiftExpr.map(
                   simpleExtraction -> null,
-                  expression -> String.format("concat('P', %s, 'M')", expression)
+                  expression -> StringUtils.format("concat('P', %s, 'M')", expression)
               ),
               DruidExpression.fromExpression(DruidExpression.numberLiteral(direction > 0 ? 1 : -1))
           )
@@ -94,7 +95,7 @@ public abstract class TimeArithmeticOperatorConversion implements SqlOperatorCon
       // timestamp_expr { + | - } <interval_expr> (day-time interval)
       // Period is a value in milliseconds. Ignore time zone.
       return DruidExpression.fromExpression(
-          String.format(
+          StringUtils.format(
               "(%s %s %s)",
               timeExpr.getExpression(),
               direction > 0 ? "+" : "-",

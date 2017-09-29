@@ -22,6 +22,7 @@ package io.druid.segment;
 import com.google.common.collect.ImmutableMap;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.data.CompressedObjectStrategy;
@@ -44,7 +45,7 @@ import java.util.Map;
 
 public class StringDimensionHandlerTest
 {
-  private static final Interval TEST_INTERVAL = Interval.parse("2015-01-01/2015-12-31");
+  private static final Interval TEST_INTERVAL = Intervals.of("2015-01-01/2015-12-31");
 
   private static final IndexSpec INDEX_SPEC = new IndexSpec(
       new ConciseBitmapSerdeFactory(),

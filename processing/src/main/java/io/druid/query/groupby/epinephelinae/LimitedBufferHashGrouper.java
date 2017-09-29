@@ -108,12 +108,11 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
     }
     this.totalBuffer = bufferSupplier.get();
 
-    validateBufferCapacity(
-        limit,
-        maxLoadFactor,
-        totalBuffer,
-        bucketSize
-    );
+    // We check this already in SpillingGrouper to ensure that LimitedBufferHashGrouper is only used when there is
+    // sufficient buffer capacity. If this error occurs, something went very wrong.
+    if (!validateBufferCapacity(totalBuffer.capacity())) {
+      throw new IAE("WTF? Using LimitedBufferHashGrouper with insufficient buffer capacity.");
+    }
 
     //only store offsets up to `limit` + 1 instead of up to # of buckets, we only keep the top results
     int heapByteSize = (limit + 1) * Ints.BYTES;
@@ -375,27 +374,25 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
     };
   }
 
-
-  private void validateBufferCapacity(
-      int limit,
-      float maxLoadFactor,
-      ByteBuffer buffer,
-      int bucketSize
-  )
+  public boolean validateBufferCapacity(int bufferCapacity)
   {
     int numBucketsNeeded = (int) Math.ceil((limit + 1) / maxLoadFactor);
     int targetTableArenaSize = numBucketsNeeded * bucketSize * 2;
     int heapSize = (limit + 1) * (Ints.BYTES);
     int requiredSize = targetTableArenaSize + heapSize;
 
-    if (buffer.capacity() < requiredSize) {
-      throw new IAE(
-          "Buffer capacity [%d] is too small for limit[%d] with load factor[%f], minimum bytes needed: [%d]",
-          buffer.capacity(),
+    if (bufferCapacity < requiredSize) {
+      log.debug(
+          "Buffer capacity [%,d] is too small for limit[%d] with load factor[%f], " +
+          "minimum bytes needed: [%,d], not applying limit push down optimization.",
+          bufferCapacity,
           limit,
           maxLoadFactor,
           requiredSize
       );
+      return false;
+    } else {
+      return true;
     }
   }
 

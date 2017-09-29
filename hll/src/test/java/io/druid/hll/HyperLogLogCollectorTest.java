@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.logger.Logger;
 import org.apache.commons.codec.binary.Base64;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -36,13 +37,13 @@ import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.Locale;
 import java.util.Random;
 
 /**
  */
 public class HyperLogLogCollectorTest
 {
+  private static final Logger log = new Logger(HyperLogLogCollectorTest.class);
 
   private final HashFunction fn = Hashing.murmur3_128();
 
@@ -118,15 +119,10 @@ public class HyperLogLogCollectorTest
 
     int n = count;
 
-    System.out.println("True cardinality " + n);
-    System.out.println("Rolling buffer cardinality " + rolling.estimateCardinality());
-    System.out.println("Simple  buffer cardinality " + simple.estimateCardinality());
-    System.out.println(
-        StringUtils.format(
-            "Rolling cardinality estimate off by %4.1f%%",
-            100 * (1 - rolling.estimateCardinality() / n)
-        )
-    );
+    log.info("True cardinality " + n);
+    log.info("Rolling buffer cardinality " + rolling.estimateCardinality());
+    log.info("Simple  buffer cardinality " + simple.estimateCardinality());
+    log.info("Rolling cardinality estimate off by %4.1f%%", 100 * (1 - rolling.estimateCardinality() / n));
 
     Assert.assertEquals(n, simple.estimateCardinality(), n * 0.05);
     Assert.assertEquals(n, rolling.estimateCardinality(), n * 0.05);
@@ -145,22 +141,13 @@ public class HyperLogLogCollectorTest
       theCollector.add(fn.hashLong(count).asBytes());
       rolling.fold(theCollector);
     }
-    System.out.printf(
-        Locale.ENGLISH,
-        "testHighCardinalityRollingFold2 took %d ms%n",
-        System.currentTimeMillis() - start
-    );
+    log.info("testHighCardinalityRollingFold2 took %d ms", System.currentTimeMillis() - start);
 
     int n = count;
 
-    System.out.println("True cardinality " + n);
-    System.out.println("Rolling buffer cardinality " + rolling.estimateCardinality());
-    System.out.println(
-        StringUtils.format(
-            "Rolling cardinality estimate off by %4.1f%%",
-            100 * (1 - rolling.estimateCardinality() / n)
-        )
-    );
+    log.info("True cardinality " + n);
+    log.info("Rolling buffer cardinality " + rolling.estimateCardinality());
+    log.info("Rolling cardinality estimate off by %4.1f%%", 100 * (1 - rolling.estimateCardinality() / n));
 
     Assert.assertEquals(n, rolling.estimateCardinality(), n * 0.05);
   }
@@ -843,9 +830,8 @@ public class HyperLogLogCollectorTest
 
     error += errorThisTime;
 
-    System.out.printf(
-        Locale.ENGLISH,
-        "%,d ==? %,f in %,d millis. actual error[%,f%%], avg. error [%,f%%]%n",
+    log.info(
+        "%,d ==? %,f in %,d millis. actual error[%,f%%], avg. error [%,f%%]",
         numThings,
         estimatedValue,
         System.currentTimeMillis() - startTime,

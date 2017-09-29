@@ -43,7 +43,7 @@ public class BufferArrayGrouperTest
   public void testAggregate()
   {
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
-    final Grouper<Integer> grouper = newGrouper(columnSelectorFactory, 1024);
+    final IntGrouper grouper = newGrouper(columnSelectorFactory, 1024);
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
     grouper.aggregate(12);

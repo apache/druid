@@ -19,16 +19,8 @@
 
 package io.druid.segment;
 
-public interface ObjectColumnSelector<T> extends ColumnValueSelector
+public interface ObjectColumnSelector<T> extends ColumnValueSelector<T>
 {
-  public Class<T> classOfObject();
-
-  /**
-   * This method is not annotated with {@link io.druid.query.monomorphicprocessing.CalledFromHotLoop}, because
-   * ObjectColumnSelector doesn't extend {@link io.druid.query.monomorphicprocessing.HotLoopCallee} yet. If it will,
-   * this method should be annotated.
-   */
-  public T get();
 
   /**
    * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidential
@@ -39,7 +31,11 @@ public interface ObjectColumnSelector<T> extends ColumnValueSelector
   @Override
   default float getFloat()
   {
-    return ((Number) get()).floatValue();
+    T value = getObject();
+    if (value == null) {
+      return 0;
+    }
+    return ((Number) value).floatValue();
   }
 
   /**
@@ -51,7 +47,11 @@ public interface ObjectColumnSelector<T> extends ColumnValueSelector
   @Override
   default double getDouble()
   {
-    return ((Number) get()).doubleValue();
+    T value = getObject();
+    if (value == null) {
+      return 0;
+    }
+    return ((Number) value).doubleValue();
   }
 
   /**
@@ -63,6 +63,10 @@ public interface ObjectColumnSelector<T> extends ColumnValueSelector
   @Override
   default long getLong()
   {
-    return ((Number) get()).longValue();
+    T value = getObject();
+    if (value == null) {
+      return 0;
+    }
+    return ((Number) value).longValue();
   }
 }

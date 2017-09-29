@@ -292,7 +292,7 @@ public class ByteBufferHashTable
     final int startBucket = keyHash % buckets;
     int bucket = startBucket;
 
-outer:
+    outer:
     while (true) {
       final int bucketOffset = bucket * bucketSizeWithHash;
 

@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
+import io.druid.java.util.common.Intervals;
 import org.joda.time.Interval;
 
 import java.util.List;
@@ -128,7 +129,7 @@ public class RangeSets
         end = Filtration.eternity().getEndMillis();
       }
 
-      retVal.add(new Interval(start, end));
+      retVal.add(Intervals.utc(start, end));
     }
 
     return retVal;

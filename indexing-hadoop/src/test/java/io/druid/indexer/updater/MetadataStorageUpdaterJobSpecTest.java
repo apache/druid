@@ -36,7 +36,8 @@ public class MetadataStorageUpdaterJobSpecTest
         "jdbc:mysql://localhost/druid",
         "druid",
         "\"nothing\"",
-        "nothing");
+        "nothing"
+    );
   }
 
   @Test
@@ -48,17 +49,18 @@ public class MetadataStorageUpdaterJobSpecTest
         "jdbc:mysql://localhost/druid",
         "druid",
         "{\"type\":\"default\",\"password\":\"nothing\"}",
-        "nothing");
+        "nothing"
+    );
   }
 
   private void testMetadataStorageUpdaterJobSpec(
-    String segmentTable,
-    String type,
-    String connectURI,
-    String user,
-    String pwdString,
-    String pwd
-    ) throws Exception
+      String segmentTable,
+      String type,
+      String connectURI,
+      String user,
+      String pwdString,
+      String pwd
+  ) throws Exception
   {
     MetadataStorageUpdaterJobSpec spec = jsonMapper.readValue(
         "{" +
@@ -68,7 +70,8 @@ public class MetadataStorageUpdaterJobSpecTest
         "\"password\": " + pwdString + ",\n" +
         "\"segmentTable\": \"" + segmentTable + "\"\n" +
         "}",
-        MetadataStorageUpdaterJobSpec.class);
+        MetadataStorageUpdaterJobSpec.class
+    );
 
     Assert.assertEquals(segmentTable, spec.getSegmentTable());
     Assert.assertEquals(type, spec.getType());

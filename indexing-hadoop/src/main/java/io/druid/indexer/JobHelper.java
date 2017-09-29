@@ -27,6 +27,7 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;
 import io.druid.indexer.updater.HadoopDruidConverterConfig;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.FileUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.IOE;
@@ -51,7 +52,6 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
-import org.joda.time.DateTime;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -376,7 +376,9 @@ public class JobHelper
         Path workingPath = config.makeIntermediatePath();
         log.info("Deleting path[%s]", workingPath);
         try {
-          workingPath.getFileSystem(injectSystemProperties(new Configuration())).delete(workingPath, true);
+          Configuration conf = injectSystemProperties(new Configuration());
+          config.addJobProperties(conf);
+          workingPath.getFileSystem(conf).delete(workingPath, true);
         }
         catch (IOException e) {
           log.error(e, "Failed to cleanup path[%s]", workingPath);
@@ -622,10 +624,10 @@ public class JobHelper
                   log.info(
                       "File[%s / %s / %sB] existed, but wasn't the same as [%s / %s / %sB]",
                       finalIndexZipFile.getPath(),
-                      new DateTime(finalIndexZipFile.getModificationTime()),
+                      DateTimes.utc(finalIndexZipFile.getModificationTime()),
                       finalIndexZipFile.getLen(),
                       zipFile.getPath(),
-                      new DateTime(zipFile.getModificationTime()),
+                      DateTimes.utc(zipFile.getModificationTime()),
                       zipFile.getLen()
                   );
                   outputFS.delete(finalIndexZipFilePath, false);
@@ -634,7 +636,7 @@ public class JobHelper
                   log.info(
                       "File[%s / %s / %sB] existed and will be kept",
                       finalIndexZipFile.getPath(),
-                      new DateTime(finalIndexZipFile.getModificationTime()),
+                      DateTimes.utc(finalIndexZipFile.getModificationTime()),
                       finalIndexZipFile.getLen()
                   );
                   needRename = false;

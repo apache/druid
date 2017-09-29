@@ -22,9 +22,7 @@ package io.druid.sql.calcite.rel;
 import com.google.common.base.Throwables;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.query.QueryDataSource;
 import io.druid.sql.calcite.planner.PlannerContext;
-import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.interpreter.BindableRel;
 import org.apache.calcite.interpreter.Node;
@@ -35,24 +33,20 @@ import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.AbstractRelNode;
 
+import javax.annotation.Nullable;
+import java.util.List;
+
 public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode implements BindableRel
 {
   private final QueryMaker queryMaker;
 
-  public DruidRel(RelOptCluster cluster, RelTraitSet traitSet, QueryMaker queryMaker)
+  protected DruidRel(RelOptCluster cluster, RelTraitSet traitSet, QueryMaker queryMaker)
   {
     super(cluster, traitSet);
     this.queryMaker = queryMaker;
   }
 
-  public abstract RowSignature getSourceRowSignature();
-
-  public final RowSignature getOutputRowSignature()
-  {
-    return getQueryBuilder().getOutputRowSignature();
-  }
-
-  public abstract DruidQueryBuilder getQueryBuilder();
+  public abstract PartialDruidQuery getPartialDruidQuery();
 
   /**
    * Return the number of Druid queries this rel involves, including sub-queries. Simple queries will return 1.
@@ -63,18 +57,44 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode imple
 
   public abstract Sequence<Object[]> runQuery();
 
-  public abstract T withQueryBuilder(DruidQueryBuilder newQueryBuilder);
+  public abstract T withPartialQuery(PartialDruidQuery newQueryBuilder);
+
+  public boolean isValidDruidQuery()
+  {
+    try {
+      toDruidQueryForExplaining();
+      return true;
+    }
+    catch (CannotBuildQueryException e) {
+      return false;
+    }
+  }
 
   /**
-   * Convert this DruidRel to a QueryDataSource, for embedding in some other outer query. This may be an expensive
-   * operation. For example, DruidSemiJoin needs to execute the right-hand side query in order to complete this
-   * method.
+   * Convert this DruidRel to a DruidQuery. This may be an expensive operation. For example, DruidSemiJoin needs to
+   * execute the right-hand side query in order to complete this method.
    *
    * This method may return null if it knows that this rel will yield an empty result set.
    *
-   * @return query dataSource, or null if it is known in advance that this rel will yield an empty result set.
+   * @return query, or null if it is known in advance that this rel will yield an empty result set.
+   *
+   * @throws CannotBuildQueryException
    */
-  public abstract QueryDataSource asDataSource();
+  @Nullable
+  public abstract DruidQuery toDruidQuery();
+
+  /**
+   * Convert this DruidRel to a DruidQuery for purposes of explaining. This must be an inexpensive operation. For
+   * example, DruidSemiJoin will use a dummy dataSource in order to complete this method, rather than executing
+   * the right-hand side query.
+   *
+   * This method may not return null.
+   *
+   * @return query
+   *
+   * @throws CannotBuildQueryException
+   */
+  public abstract DruidQuery toDruidQueryForExplaining();
 
   public abstract T asBindable();
 
@@ -89,6 +109,11 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode imple
   }
 
   public abstract T asDruidConvention();
+
+  /**
+   * Get a list of names of datasources read by this DruidRel
+   */
+  public abstract List<String> getDatasourceNames();
 
   @Override
   public Class<Object[]> getElementType()

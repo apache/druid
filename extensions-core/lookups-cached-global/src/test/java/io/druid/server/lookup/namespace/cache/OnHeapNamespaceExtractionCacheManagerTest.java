@@ -29,7 +29,6 @@ import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Self;
 import io.druid.initialization.Initialization;
 import io.druid.server.DruidNode;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.server.lookup.namespace.NamespaceExtractionModule;
 import org.junit.Assert;
 import org.junit.Test;
@@ -50,7 +49,7 @@ public class OnHeapNamespaceExtractionCacheManagerTest
               public void configure(Binder binder)
               {
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null, null, new ServerConfig())
+                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null, null, true, false)
                 );
               }
             }

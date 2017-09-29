@@ -39,6 +39,7 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
@@ -60,7 +61,7 @@ public class TimeParseBenchmark
   @Setup
   public void setup()
   {
-    SimpleDateFormat format = new SimpleDateFormat(DATA_FORMAT);
+    SimpleDateFormat format = new SimpleDateFormat(DATA_FORMAT, Locale.ENGLISH);
     long start = System.currentTimeMillis();
     int rowsPerBatch = numRows / numBatches;
     int numRowInBatch = 0;

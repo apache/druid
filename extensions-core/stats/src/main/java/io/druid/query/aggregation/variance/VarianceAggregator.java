@@ -116,7 +116,7 @@ public abstract class VarianceAggregator implements Aggregator
     @Override
     public void aggregate()
     {
-      VarianceAggregatorCollector.combineValues(holder, selector.get());
+      VarianceAggregatorCollector.combineValues(holder, selector.getObject());
     }
   }
 }

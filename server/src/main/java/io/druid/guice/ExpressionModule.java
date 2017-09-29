@@ -34,6 +34,7 @@ import io.druid.query.expression.TimestampFloorExprMacro;
 import io.druid.query.expression.TimestampFormatExprMacro;
 import io.druid.query.expression.TimestampParseExprMacro;
 import io.druid.query.expression.TimestampShiftExprMacro;
+import io.druid.query.expression.TrimExprMacro;
 
 import java.util.List;
 
@@ -51,6 +52,9 @@ public class ExpressionModule implements DruidModule
           .add(TimestampFormatExprMacro.class)
           .add(TimestampParseExprMacro.class)
           .add(TimestampShiftExprMacro.class)
+          .add(TrimExprMacro.BothTrimExprMacro.class)
+          .add(TrimExprMacro.LeftTrimExprMacro.class)
+          .add(TrimExprMacro.RightTrimExprMacro.class)
           .build();
 
   @Override

@@ -278,7 +278,9 @@ public class DumpSegment extends GuiceRunnable
                     final List<ObjectColumnSelector> selectors = Lists.newArrayList();
 
                     for (String columnName : columnNames) {
-                      selectors.add(makeSelector(columnName, index.getColumn(columnName), cursor));
+                      selectors.add(
+                          makeSelector(columnName, index.getColumn(columnName), cursor.getColumnSelectorFactory())
+                      );
                     }
 
                     while (!cursor.isDone()) {
@@ -286,7 +288,7 @@ public class DumpSegment extends GuiceRunnable
 
                       for (int i = 0; i < columnNames.size(); i++) {
                         final String columnName = columnNames.get(i);
-                        final Object value = selectors.get(i).get();
+                        final Object value = selectors.get(i).getObject();
 
                         if (timeISO8601 && columnNames.get(i).equals(Column.TIME_COLUMN_NAME)) {
                           row.put(columnName, new DateTime(value, DateTimeZone.UTC).toString());
@@ -523,7 +525,7 @@ public class DumpSegment extends GuiceRunnable
           }
 
           @Override
-          public List<String> get()
+          public List<String> getObject()
           {
             final IndexedInts row = dimensionSelector.getRow();
             if (row.size() == 0) {
@@ -547,7 +549,7 @@ public class DumpSegment extends GuiceRunnable
           }
 
           @Override
-          public String get()
+          public String getObject()
           {
             final IndexedInts row = dimensionSelector.getRow();
             return row.size() == 0 ? null : dimensionSelector.lookupName(row.get(0));
@@ -570,7 +572,7 @@ public class DumpSegment extends GuiceRunnable
           }
 
           @Override
-          public Object get()
+          public Object getObject()
           {
             return null;
           }

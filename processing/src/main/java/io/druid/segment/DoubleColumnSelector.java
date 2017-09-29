@@ -23,7 +23,7 @@ import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import io.druid.query.monomorphicprocessing.HotLoopCallee;
 
 
-public interface DoubleColumnSelector extends ColumnValueSelector, HotLoopCallee
+public interface DoubleColumnSelector extends ColumnValueSelector<Double>, HotLoopCallee
 {
   @CalledFromHotLoop
   @Override
@@ -53,5 +53,29 @@ public interface DoubleColumnSelector extends ColumnValueSelector, HotLoopCallee
   default long getLong()
   {
     return (long) getDouble();
+  }
+
+  /**
+   * @deprecated This method is marked as deprecated in DoubleColumnSelector to minimize the probability of accidential
+   * calling. "Polymorphism" of DoubleColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
+  @Deprecated
+  @Override
+  default Double getObject()
+  {
+    return getDouble();
+  }
+
+  /**
+   * @deprecated This method is marked as deprecated in DoubleColumnSelector to minimize the probability of accidential
+   * calling. "Polymorphism" of DoubleColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
+  @Deprecated
+  @Override
+  default Class<Double> classOfObject()
+  {
+    return Double.class;
   }
 }

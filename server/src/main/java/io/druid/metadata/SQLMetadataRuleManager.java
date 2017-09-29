@@ -39,6 +39,7 @@ import io.druid.client.DruidServer;
 import io.druid.concurrent.Execs;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Json;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
@@ -108,7 +109,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                       )
                   )
               );
-              final String version = new DateTime().toString();
+              final String version = DateTimes.nowUtc().toString();
               handle.createStatement(
                   StringUtils.format(
                       "INSERT INTO %s (id, dataSource, version, payload) VALUES (:id, :dataSource, :version, :payload)",
@@ -365,7 +366,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
               @Override
               public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
               {
-                final DateTime auditTime = DateTime.now();
+                final DateTime auditTime = DateTimes.nowUtc();
                 auditManager.doAudit(
                     AuditEntry.builder()
                               .key(dataSource)

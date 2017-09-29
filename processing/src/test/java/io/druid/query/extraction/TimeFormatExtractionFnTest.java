@@ -21,9 +21,9 @@ package io.druid.query.extraction;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
-import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.Assert;
 import org.junit.Test;
@@ -34,12 +34,12 @@ public class TimeFormatExtractionFnTest
 {
 
   private static final long[] timestamps = {
-      new DateTime("2015-01-01T23:00:00Z").getMillis(),
-      new DateTime("2015-01-02T23:00:00Z").getMillis(),
-      new DateTime("2015-03-03T23:00:00Z").getMillis(),
-      new DateTime("2015-03-04T23:00:00Z").getMillis(),
-      new DateTime("2015-05-02T23:00:00Z").getMillis(),
-      new DateTime("2015-12-21T23:00:00Z").getMillis()
+      DateTimes.of("2015-01-01T23:00:00Z").getMillis(),
+      DateTimes.of("2015-01-02T23:00:00Z").getMillis(),
+      DateTimes.of("2015-03-03T23:00:00Z").getMillis(),
+      DateTimes.of("2015-03-04T23:00:00Z").getMillis(),
+      DateTimes.of("2015-05-02T23:00:00Z").getMillis(),
+      DateTimes.of("2015-12-21T23:00:00Z").getMillis()
   };
 
   @Test

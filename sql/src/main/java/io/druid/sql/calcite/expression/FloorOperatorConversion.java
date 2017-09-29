@@ -19,6 +19,7 @@
 
 package io.druid.sql.calcite.expression;
 
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
@@ -57,7 +58,7 @@ public class FloorOperatorConversion implements SqlOperatorConversion
       // FLOOR(expr)
       return druidExpression.map(
           simpleExtraction -> null, // BucketExtractionFn could do this, but it's lame since it returns strings.
-          expression -> String.format("floor(%s)", expression)
+          expression -> StringUtils.format("floor(%s)", expression)
       );
     } else if (call.getOperands().size() == 2) {
       // FLOOR(expr TO timeUnit)

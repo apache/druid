@@ -20,9 +20,9 @@
 package io.druid.query.expression;
 
 import com.google.common.collect.ImmutableMap;
+import io.druid.java.util.common.DateTimes;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.Parser;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -32,13 +32,14 @@ public class ExprMacroTest
 {
   private static final Expr.ObjectBinding BINDINGS = Parser.withMap(
       ImmutableMap.<String, Object>builder()
-          .put("t", new DateTime("2000-02-03T04:05:06").getMillis())
+          .put("t", DateTimes.of("2000-02-03T04:05:06").getMillis())
           .put("tstr", "2000-02-03T04:05:06")
           .put("tstr_sql", "2000-02-03 04:05:06")
           .put("x", "foo")
           .put("y", 2)
           .put("z", 3.1)
           .put("CityOfAngels", "America/Los_Angeles")
+          .put("spacey", "  hey there  ")
           .build()
   );
 
@@ -82,28 +83,28 @@ public class ExprMacroTest
   @Test
   public void testTimestampCeil()
   {
-    assertExpr("timestamp_ceil(t, 'P1M')", new DateTime("2000-03-01").getMillis());
-    assertExpr("timestamp_ceil(t, 'P1D','','America/Los_Angeles')", new DateTime("2000-02-03T08").getMillis());
-    assertExpr("timestamp_ceil(t, 'P1D','',CityOfAngels)", new DateTime("2000-02-03T08").getMillis());
-    assertExpr("timestamp_ceil(t, 'P1D','1970-01-01T01','Etc/UTC')", new DateTime("2000-02-04T01").getMillis());
+    assertExpr("timestamp_ceil(t, 'P1M')", DateTimes.of("2000-03-01").getMillis());
+    assertExpr("timestamp_ceil(t, 'P1D','','America/Los_Angeles')", DateTimes.of("2000-02-03T08").getMillis());
+    assertExpr("timestamp_ceil(t, 'P1D','',CityOfAngels)", DateTimes.of("2000-02-03T08").getMillis());
+    assertExpr("timestamp_ceil(t, 'P1D','1970-01-01T01','Etc/UTC')", DateTimes.of("2000-02-04T01").getMillis());
   }
 
   @Test
   public void testTimestampFloor()
   {
-    assertExpr("timestamp_floor(t, 'P1M')", new DateTime("2000-02-01").getMillis());
-    assertExpr("timestamp_floor(t, 'P1D','','America/Los_Angeles')", new DateTime("2000-02-02T08").getMillis());
-    assertExpr("timestamp_floor(t, 'P1D','',CityOfAngels)", new DateTime("2000-02-02T08").getMillis());
-    assertExpr("timestamp_floor(t, 'P1D','1970-01-01T01','Etc/UTC')", new DateTime("2000-02-03T01").getMillis());
+    assertExpr("timestamp_floor(t, 'P1M')", DateTimes.of("2000-02-01").getMillis());
+    assertExpr("timestamp_floor(t, 'P1D','','America/Los_Angeles')", DateTimes.of("2000-02-02T08").getMillis());
+    assertExpr("timestamp_floor(t, 'P1D','',CityOfAngels)", DateTimes.of("2000-02-02T08").getMillis());
+    assertExpr("timestamp_floor(t, 'P1D','1970-01-01T01','Etc/UTC')", DateTimes.of("2000-02-03T01").getMillis());
   }
 
   @Test
   public void testTimestampShift()
   {
-    assertExpr("timestamp_shift(t, 'P1D', 2)", new DateTime("2000-02-05T04:05:06").getMillis());
-    assertExpr("timestamp_shift(t, 'P1D', 2, 'America/Los_Angeles')", new DateTime("2000-02-05T04:05:06").getMillis());
-    assertExpr("timestamp_shift(t, 'P1D', 2, CityOfAngels)", new DateTime("2000-02-05T04:05:06").getMillis());
-    assertExpr("timestamp_shift(t, 'P1D', 2, '-08:00')", new DateTime("2000-02-05T04:05:06").getMillis());
+    assertExpr("timestamp_shift(t, 'P1D', 2)", DateTimes.of("2000-02-05T04:05:06").getMillis());
+    assertExpr("timestamp_shift(t, 'P1D', 2, 'America/Los_Angeles')", DateTimes.of("2000-02-05T04:05:06").getMillis());
+    assertExpr("timestamp_shift(t, 'P1D', 2, CityOfAngels)", DateTimes.of("2000-02-05T04:05:06").getMillis());
+    assertExpr("timestamp_shift(t, 'P1D', 2, '-08:00')", DateTimes.of("2000-02-05T04:05:06").getMillis());
   }
 
   @Test
@@ -118,12 +119,12 @@ public class ExprMacroTest
   @Test
   public void testTimestampParse()
   {
-    assertExpr("timestamp_parse(tstr)", new DateTime("2000-02-03T04:05:06").getMillis());
+    assertExpr("timestamp_parse(tstr)", DateTimes.of("2000-02-03T04:05:06").getMillis());
     assertExpr("timestamp_parse(tstr_sql)", null);
-    assertExpr("timestamp_parse(tstr_sql,'yyyy-MM-dd HH:mm:ss')", new DateTime("2000-02-03T04:05:06").getMillis());
+    assertExpr("timestamp_parse(tstr_sql,'yyyy-MM-dd HH:mm:ss')", DateTimes.of("2000-02-03T04:05:06").getMillis());
     assertExpr(
         "timestamp_parse(tstr_sql,'yyyy-MM-dd HH:mm:ss','America/Los_Angeles')",
-        new DateTime("2000-02-03T04:05:06-08:00").getMillis()
+        DateTimes.of("2000-02-03T04:05:06-08:00").getMillis()
     );
   }
 
@@ -133,6 +134,42 @@ public class ExprMacroTest
     assertExpr("timestamp_format(t)", "2000-02-03T04:05:06.000Z");
     assertExpr("timestamp_format(t,'yyyy-MM-dd HH:mm:ss')", "2000-02-03 04:05:06");
     assertExpr("timestamp_format(t,'yyyy-MM-dd HH:mm:ss','America/Los_Angeles')", "2000-02-02 20:05:06");
+  }
+
+  @Test
+  public void testTrim()
+  {
+    assertExpr("trim('')", null);
+    assertExpr("trim(concat(' ',x,' '))", "foo");
+    assertExpr("trim(spacey)", "hey there");
+    assertExpr("trim(spacey, '')", "  hey there  ");
+    assertExpr("trim(spacey, 'he ')", "y ther");
+    assertExpr("trim(spacey, spacey)", null);
+    assertExpr("trim(spacey, substring(spacey, 0, 4))", "y ther");
+  }
+
+  @Test
+  public void testLTrim()
+  {
+    assertExpr("ltrim('')", null);
+    assertExpr("ltrim(concat(' ',x,' '))", "foo ");
+    assertExpr("ltrim(spacey)", "hey there  ");
+    assertExpr("ltrim(spacey, '')", "  hey there  ");
+    assertExpr("ltrim(spacey, 'he ')", "y there  ");
+    assertExpr("ltrim(spacey, spacey)", null);
+    assertExpr("ltrim(spacey, substring(spacey, 0, 4))", "y there  ");
+  }
+
+  @Test
+  public void testRTrim()
+  {
+    assertExpr("rtrim('')", null);
+    assertExpr("rtrim(concat(' ',x,' '))", " foo");
+    assertExpr("rtrim(spacey)", "  hey there");
+    assertExpr("rtrim(spacey, '')", "  hey there  ");
+    assertExpr("rtrim(spacey, 'he ')", "  hey ther");
+    assertExpr("rtrim(spacey, spacey)", null);
+    assertExpr("rtrim(spacey, substring(spacey, 0, 4))", "  hey ther");
   }
 
   private void assertExpr(final String expression, final Object expectedResult)

@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.JsonSerializable;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
 import com.google.common.base.Preconditions;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import org.joda.time.Chronology;
@@ -37,6 +38,7 @@ import org.joda.time.chrono.ISOChronology;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 
 /**
@@ -84,9 +86,10 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
   }
 
   @JsonProperty("origin")
+  @Nullable
   public DateTime getOrigin()
   {
-    return hasOrigin ? new DateTime(origin) : null;
+    return hasOrigin ? DateTimes.utc(origin) : null;
   }
 
   // Used only for Segments. Not for Queries

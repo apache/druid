@@ -123,7 +123,7 @@ public class TimestampMinMaxAggregatorTest
     String json = "{\"type\":\"" + aggType + "\",\"name\":\"" + aggType + "\",\"fieldName\":\"test\"}";
 
     aggregatorFactory = mapper.readValue(json, aggClass);
-    selector = new TestObjectColumnSelector(values);
+    selector = new TestObjectColumnSelector<>(values);
     selectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
     EasyMock.expect(selectorFactory.makeObjectColumnSelector("test")).andReturn(selector);
     EasyMock.replay(selectorFactory);
