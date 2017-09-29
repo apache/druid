@@ -43,8 +43,8 @@ import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.security.Access;
 import io.druid.server.security.AuthenticationResult;
-import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
+import io.druid.server.security.AuthorizerMapper;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -81,6 +81,7 @@ public class QueryLifecycle
   private final long startNs;
 
   private State state = State.NEW;
+  private AuthenticationResult authenticationResult;
   private QueryToolChest toolChest;
   private QueryPlus queryPlus;
 
@@ -112,9 +113,9 @@ public class QueryLifecycle
    * is unauthorized, an IllegalStateException will be thrown. Logs and metrics are emitted when the Sequence is
    * either fully iterated or throws an exception.
    *
-   * @param query                   the query
-   * @param authenticationResult    authentication result indicating identity of the requester
-   * @param remoteAddress           remote address, for logging; or null if unknown
+   * @param query                the query
+   * @param authenticationResult authentication result indicating identity of the requester
+   * @param remoteAddress        remote address, for logging; or null if unknown
    *
    * @return results
    */
@@ -186,29 +187,21 @@ public class QueryLifecycle
    * @param authenticationResult authentication result indicating the identity of the requester
    *
    * @return authorization result
-   *
-   * */
-  public Access authorize(
-      final AuthenticationResult authenticationResult
-  )
+   */
+  public Access authorize(final AuthenticationResult authenticationResult)
   {
     transition(State.INITIALIZED, State.AUTHORIZING);
-    Access authResult = AuthorizationUtils.authorizeAllResourceActions(
+    return doAuthorize(
         authenticationResult,
-        Iterables.transform(
-            queryPlus.getQuery().getDataSource().getNames(),
-            AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
-        ),
-        authorizerMapper
+        AuthorizationUtils.authorizeAllResourceActions(
+            authenticationResult,
+            Iterables.transform(
+                queryPlus.getQuery().getDataSource().getNames(),
+                AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
+            ),
+            authorizerMapper
+        )
     );
-
-    if (!authResult.isAllowed()) {
-      // Not authorized; go straight to Jail, do not pass Go.
-      transition(State.AUTHORIZING, State.DONE);
-    } else {
-      transition(State.AUTHORIZING, State.AUTHORIZED);
-    }
-    return authResult;
   }
 
   /**
@@ -218,29 +211,41 @@ public class QueryLifecycle
    *            will be automatically set.
    *
    * @return authorization result
-   *
-   * */
-  public Access authorize(
-      @Nullable HttpServletRequest req
-  )
+   */
+  public Access authorize(HttpServletRequest req)
   {
     transition(State.INITIALIZED, State.AUTHORIZING);
-    Access authResult = AuthorizationUtils.authorizeAllResourceActions(
-        req,
-        Iterables.transform(
-            queryPlus.getQuery().getDataSource().getNames(),
-            AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
-        ),
-        authorizerMapper
+    return doAuthorize(
+        AuthorizationUtils.authenticationResultFromRequest(req),
+        AuthorizationUtils.authorizeAllResourceActions(
+            req,
+            Iterables.transform(
+                queryPlus.getQuery().getDataSource().getNames(),
+                AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
+            ),
+            authorizerMapper
+        )
     );
+  }
 
-    if (!authResult.isAllowed()) {
+  private Access doAuthorize(final AuthenticationResult authenticationResult, final Access authorizationResult)
+  {
+    if (!authorizationResult.isAllowed()) {
       // Not authorized; go straight to Jail, do not pass Go.
-      transition(State.AUTHORIZING, State.DONE);
+      transition(State.AUTHORIZING, State.UNAUTHORIZED);
     } else {
       transition(State.AUTHORIZING, State.AUTHORIZED);
     }
-    return authResult;
+
+    this.authenticationResult = authenticationResult;
+
+    final QueryMetrics queryMetrics = queryPlus.getQueryMetrics();
+
+    if (queryMetrics != null) {
+      queryMetrics.identity(authenticationResult.getIdentity());
+    }
+
+    return authorizationResult;
   }
 
   /**
@@ -313,6 +318,9 @@ public class QueryLifecycle
       statsMap.put("query/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs));
       statsMap.put("query/bytes", bytesWritten);
       statsMap.put("success", success);
+      if (authenticationResult != null) {
+        statsMap.put("identity", authenticationResult.getIdentity());
+      }
       if (e != null) {
         statsMap.put("exception", e.toString());
 
@@ -359,6 +367,7 @@ public class QueryLifecycle
     AUTHORIZING,
     AUTHORIZED,
     EXECUTING,
+    UNAUTHORIZED,
     DONE
   }
 

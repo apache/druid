@@ -50,12 +50,6 @@ public class ServerConfig
   @Min(1)
   private long maxQueryTimeout = Long.MAX_VALUE;
 
-  @JsonProperty
-  private boolean plaintext = true;
-
-  @JsonProperty
-  private boolean tls = false;
-
   public int getNumThreads()
   {
     return numThreads;
@@ -81,16 +75,6 @@ public class ServerConfig
     return maxQueryTimeout;
   }
 
-  public boolean isPlaintext()
-  {
-    return plaintext;
-  }
-
-  public boolean isTls()
-  {
-    return tls;
-  }
-
   @Override
   public boolean equals(Object o)
   {
@@ -105,23 +89,13 @@ public class ServerConfig
            defaultQueryTimeout == that.defaultQueryTimeout &&
            maxScatterGatherBytes == that.maxScatterGatherBytes &&
            maxQueryTimeout == that.maxQueryTimeout &&
-           plaintext == that.plaintext &&
-           tls == that.tls &&
            Objects.equals(maxIdleTime, that.maxIdleTime);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(
-        numThreads,
-        maxIdleTime,
-        defaultQueryTimeout,
-        maxScatterGatherBytes,
-        maxQueryTimeout,
-        plaintext,
-        tls
-    );
+    return Objects.hash(numThreads, maxIdleTime, defaultQueryTimeout, maxScatterGatherBytes, maxQueryTimeout);
   }
 
   @Override
@@ -133,8 +107,6 @@ public class ServerConfig
            ", defaultQueryTimeout=" + defaultQueryTimeout +
            ", maxScatterGatherBytes=" + maxScatterGatherBytes +
            ", maxQueryTimeout=" + maxQueryTimeout +
-           ", plaintext=" + plaintext +
-           ", tls=" + tls +
            '}';
   }
 }

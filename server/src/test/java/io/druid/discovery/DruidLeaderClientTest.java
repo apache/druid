@@ -42,7 +42,6 @@ import io.druid.initialization.Initialization;
 import io.druid.java.util.common.StringUtils;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.BaseJettyTest;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import org.easymock.EasyMock;
 import org.eclipse.jetty.server.Handler;
@@ -73,7 +72,7 @@ public class DruidLeaderClientTest extends BaseJettyTest
   @Override
   protected Injector setupInjector()
   {
-    final DruidNode node = new DruidNode("test", "localhost", null, null, new ServerConfig());
+    final DruidNode node = new DruidNode("test", "localhost", null, null, true, false);
     discoveryDruidNode = new DiscoveryDruidNode(node, "test", ImmutableMap.of());
 
     Injector injector = Initialization.makeInjectorWithModules(
@@ -163,7 +162,7 @@ public class DruidLeaderClientTest extends BaseJettyTest
     DruidNodeDiscovery druidNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
     EasyMock.expect(druidNodeDiscovery.getAllNodes()).andReturn(
         ImmutableList.of(new DiscoveryDruidNode(
-            new DruidNode("test", "dummyhost", 64231, null, new ServerConfig()),
+            new DruidNode("test", "dummyhost", 64231, null, true, false),
             "test",
             ImmutableMap.of()
         ))
