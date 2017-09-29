@@ -303,12 +303,14 @@ public class DetermineHashedPartitionsJob implements Jobby
   {
     private final List<Interval> intervals = Lists.newArrayList();
     protected HadoopDruidIndexerConfig config = null;
+    private boolean determineIntervals;
 
     @Override
     protected void setup(Context context)
         throws IOException, InterruptedException
     {
       config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
+      determineIntervals = !config.getSegmentGranularIntervals().isPresent();
     }
 
     @Override
@@ -325,7 +327,19 @@ public class DetermineHashedPartitionsJob implements Jobby
         );
       }
 
-      Interval interval = config.getGranularitySpec().getSegmentGranularity().bucket(new DateTime(key.get()));
+      Interval interval;
+
+      if (determineIntervals) {
+        interval = config.getGranularitySpec().getSegmentGranularity().bucket(new DateTime(key.get()));
+      }
+      else {
+        Optional<Interval> intervalOptional = config.getGranularitySpec().bucketInterval(new DateTime(key.get()));
+
+        if (!intervalOptional.isPresent()) {
+          throw new ISE("WTF?! No bucket found for timestamp: %s", key.get());
+        }
+        interval = intervalOptional.get();
+      }
 
       intervals.add(interval);
       final Path outPath = config.makeSegmentPartitionInfoPath(interval);
@@ -353,7 +367,7 @@ public class DetermineHashedPartitionsJob implements Jobby
         throws IOException, InterruptedException
     {
       super.run(context);
-      if (!config.getSegmentGranularIntervals().isPresent()) {
+      if (determineIntervals) {
         final Path outPath = config.makeIntervalInfoPath();
         final OutputStream out = Utils.makePathAndOutputStream(
             context, outPath, config.isOverwriteFiles()
