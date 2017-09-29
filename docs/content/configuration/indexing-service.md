@@ -224,6 +224,30 @@ useful if you want work evenly distributed across your middleManagers.
 |`type`|`equalDistribution`.|required; must be `equalDistribution`|
 |`affinityConfig`|[Affinity config](#affinity) object|null (no affinity)|
 
+##### Equal Distribution With Limit
+A limit config can be provided.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`type`|`equalDistributionWithLimit`.|required; must be `equalDistributionWithLimit`|
+|`limit`|JSON object mapping a task id prefix String name to an Integer means max slot those tasks can use.The priority of the prefix match is determined by their length.The longer the length, the higher the priority.|{}|
+
+Example: This config indicates that up to one task with prefix `prefix1` can run, other tasks with prefix `prefix1` must be pending.
+
+```json
+{
+  "selectStrategy": {
+    "type": "equalDistributionWithLimit",
+    "limitConfig": {
+      "limit": {
+        "prefix1": 1
+      }
+    }
+  },
+  "autoScaler": null
+}
+```
+
 ##### Fill Capacity
 
 Tasks are assigned to the worker with the most currently-running tasks at the time the task begins running. This is
