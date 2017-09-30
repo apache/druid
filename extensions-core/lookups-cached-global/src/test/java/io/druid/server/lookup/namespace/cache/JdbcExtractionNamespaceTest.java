@@ -36,6 +36,7 @@ import io.druid.query.lookup.namespace.CacheGenerator;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.JdbcExtractionNamespace;
 import io.druid.server.lookup.namespace.JdbcCacheGenerator;
+import io.druid.server.lookup.namespace.NamespaceExtractionConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import org.joda.time.Period;
 import org.junit.After;
@@ -224,7 +225,7 @@ public class JdbcExtractionNamespaceTest
                       }
                     }
                 ),
-                new OnHeapNamespaceExtractionCacheManager(lifecycle, noopServiceEmitter)
+                new OnHeapNamespaceExtractionCacheManager(lifecycle, noopServiceEmitter, new NamespaceExtractionConfig())
             );
             try {
               lifecycle.start();

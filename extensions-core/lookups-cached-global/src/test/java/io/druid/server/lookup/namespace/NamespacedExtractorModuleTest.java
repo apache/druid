@@ -79,7 +79,7 @@ public class NamespacedExtractorModuleTest
     scheduler = new CacheScheduler(
         noopServiceEmitter,
         factoryMap,
-        new OnHeapNamespaceExtractionCacheManager(lifecycle, noopServiceEmitter)
+        new OnHeapNamespaceExtractionCacheManager(lifecycle, noopServiceEmitter, new NamespaceExtractionConfig())
     );
   }
 

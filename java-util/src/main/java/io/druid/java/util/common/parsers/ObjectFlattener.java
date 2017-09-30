@@ -17,28 +17,11 @@
  * under the License.
  */
 
-package io.druid.data.input.impl;
+package io.druid.java.util.common.parsers;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonValue;
-import io.druid.java.util.common.StringUtils;
+import java.util.Map;
 
-public enum JSONPathFieldType
+public interface ObjectFlattener<T>
 {
-  ROOT,
-  PATH,
-  JQ;
-
-  @JsonValue
-  @Override
-  public String toString()
-  {
-    return StringUtils.toLowerCase(this.name());
-  }
-
-  @JsonCreator
-  public static JSONPathFieldType fromString(String name)
-  {
-    return valueOf(StringUtils.toUpperCase(name));
-  }
+  Map<String, Object> flatten(T obj);
 }

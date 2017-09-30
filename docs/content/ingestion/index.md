@@ -131,6 +131,10 @@ Use this with the String Parser to load JSON.
 
 #### JSON Lowercase ParseSpec
 
+<div class="note caution">
+The _jsonLowercase_ parser is deprecated and may be removed in a future version of Druid.
+</div>
+
 This is a special variation of the JSON ParseSpec that lower cases all the column names in the incoming JSON data. This parseSpec is required if you are updating to Druid 0.7.x from Druid 0.6.x, are directly ingesting JSON with mixed case column names, do not have any ETL in place to lower case those column names, and would like to make queries that include the data you created using 0.6.x and 0.7.x.
 
 | Field | Type | Description | Required |

@@ -20,8 +20,6 @@
 package io.druid.server.coordinator.helper;
 
 import com.google.common.collect.Maps;
-import com.google.common.collect.MinMaxPriorityQueue;
-
 import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.java.util.common.guava.Comparators;
@@ -34,6 +32,7 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
 
 import java.util.Map;
+import java.util.SortedSet;
 
 public class DruidCoordinatorCleanupOvershadowed implements DruidCoordinatorHelper
 {
@@ -55,7 +54,7 @@ public class DruidCoordinatorCleanupOvershadowed implements DruidCoordinatorHelp
       DruidCluster cluster = params.getDruidCluster();
       Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = Maps.newHashMap();
 
-      for (MinMaxPriorityQueue<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
+      for (SortedSet<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
         for (ServerHolder serverHolder : serverHolders) {
           ImmutableDruidServer server = serverHolder.getServer();
 

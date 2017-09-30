@@ -19,29 +19,11 @@
 
 package io.druid.client.cache;
 
-import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.google.common.collect.ImmutableList;
-import com.google.inject.Binder;
-import io.druid.initialization.DruidModule;
-
-import java.util.List;
-
-public class CaffeineDruidModule implements DruidModule
+public class CaffeineCacheProvider extends CaffeineCacheConfig implements CacheProvider
 {
-
   @Override
-  public void configure(Binder binder)
+  public Cache get()
   {
-
-  }
-
-  @Override
-  public List<? extends Module> getJacksonModules()
-  {
-    return ImmutableList.of(
-        new SimpleModule("DruidCaffeineCache")
-            .registerSubtypes(CaffeineCacheProvider.class)
-    );
+    return CaffeineCache.create(this);
   }
 }
