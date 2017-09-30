@@ -25,12 +25,12 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-
-import io.druid.java.util.common.granularity.Granularity;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.timeline.DataSegment;
@@ -162,38 +162,31 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
         for (Granularity gran : Granularity.granularitiesFinerThan(preferredSegmentGranularity)) {
           tryIntervals.add(gran.bucket(timestamp));
         }
-      } else {
-        // Existing segment(s) exist for this row; use the interval of the first one.
-        tryIntervals.add(usedSegmentsForRow.iterator().next().getInterval());
-      }
-
-      for (final Interval tryInterval : tryIntervals) {
-        if (tryInterval.contains(rowInterval)) {
-          log.debug(
-              "Trying to allocate pending segment for rowInterval[%s], segmentInterval[%s].",
-              rowInterval,
-              tryInterval
-          );
-          final TaskLock tryLock = toolbox.getTaskLockbox().tryLock(task, tryInterval).orNull();
-          if (tryLock != null) {
-            final SegmentIdentifier identifier = msc.allocatePendingSegment(
-                dataSource,
-                sequenceName,
-                previousSegmentId,
-                tryInterval,
-                tryLock.getVersion()
-            );
+        for (Interval tryInterval : tryIntervals) {
+          if (tryInterval.contains(rowInterval)) {
+            final SegmentIdentifier identifier = tryAllocate(toolbox, task, tryInterval, rowInterval, false);
             if (identifier != null) {
               return identifier;
-            } else {
-              log.debug(
-                  "Could not allocate pending segment for rowInterval[%s], segmentInterval[%s].",
-                  rowInterval,
-                  tryInterval
-              );
             }
-          } else {
-            log.debug("Could not acquire lock for rowInterval[%s], segmentInterval[%s].", rowInterval, tryInterval);
+          }
+        }
+      } else {
+        // Existing segment(s) exist for this row; use the interval of the first one.
+        final DataSegment firstSegment = usedSegmentsForRow.iterator().next();
+        if (!firstSegment.getInterval().contains(rowInterval)) {
+          log.error("The interval of existing segment[%s] doesn't contain rowInterval[%s]", firstSegment, rowInterval);
+        } else {
+          // If segment allocation failed here, it is highly likely an unrecoverable error. We log here for easier
+          // debugging.
+          final SegmentIdentifier identifier = tryAllocate(
+              toolbox,
+              task,
+              firstSegment.getInterval(),
+              rowInterval,
+              true
+          );
+          if (identifier != null) {
+            return identifier;
           }
         }
       }
@@ -229,6 +222,58 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
       } else {
         return null;
       }
+    }
+  }
+
+  private SegmentIdentifier tryAllocate(
+      TaskActionToolbox toolbox,
+      Task task,
+      Interval tryInterval,
+      Interval rowInterval,
+      boolean logOnFail
+  ) throws IOException
+  {
+    log.debug(
+        "Trying to allocate pending segment for rowInterval[%s], segmentInterval[%s].",
+        rowInterval,
+        tryInterval
+    );
+    final TaskLock tryLock = toolbox.getTaskLockbox().tryLock(task, tryInterval).orNull();
+    if (tryLock != null) {
+      final SegmentIdentifier identifier = toolbox.getIndexerMetadataStorageCoordinator().allocatePendingSegment(
+          dataSource,
+          sequenceName,
+          previousSegmentId,
+          tryInterval,
+          tryLock.getVersion()
+      );
+      if (identifier != null) {
+        return identifier;
+      } else {
+        final String msg = StringUtils.format(
+            "Could not allocate pending segment for rowInterval[%s], segmentInterval[%s].",
+            rowInterval,
+            tryInterval
+        );
+        if (logOnFail) {
+          log.error(msg);
+        } else {
+          log.debug(msg);
+        }
+        return null;
+      }
+    } else {
+      final String msg = StringUtils.format(
+          "Could not acquire lock for rowInterval[%s], segmentInterval[%s].",
+          rowInterval,
+          tryInterval
+      );
+      if (logOnFail) {
+        log.error(msg);
+      } else {
+        log.debug(msg);
+      }
+      return null;
     }
   }
 
