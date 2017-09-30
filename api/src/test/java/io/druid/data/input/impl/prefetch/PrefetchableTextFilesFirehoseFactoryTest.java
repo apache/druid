@@ -88,7 +88,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
     FileUtils.forceMkdir(TEST_DIR);
 
     for (int i = 0; i < 100; i++) {
-      // Each file is 1390 bytes
+      // Each file is 1490 bytes
       try (final Writer writer = Files.newBufferedWriter(
           new File(TEST_DIR, "test_" + i).toPath(),
           StandardCharsets.UTF_8
@@ -169,6 +169,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
       }
     }
 
+    Assert.assertEquals(0, factory.getCacheManager().getTotalCachedBytes());
     assertResult(rows);
     assertNumRemainingCacheFiles(firehoseTmpDir, 0);
   }
@@ -187,6 +188,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
       }
     }
 
+    Assert.assertEquals(0, factory.getCacheManager().getTotalCachedBytes());
     assertResult(rows);
     assertNumRemainingCacheFiles(firehoseTmpDir, 0);
   }
@@ -325,7 +327,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
       final List<Row> rows = new ArrayList<>();
       try (Firehose firehose = factory.connect(parser, firehoseTmpDir)) {
         if (i > 0) {
-          Assert.assertEquals(2780, factory.getCacheManager().getTotalCachedBytes());
+          Assert.assertEquals(2980, factory.getCacheManager().getTotalCachedBytes());
         }
 
         while (firehose.hasMore()) {
@@ -348,7 +350,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
       final List<Row> rows = new ArrayList<>();
       try (Firehose firehose = factory.connect(parser, firehoseTmpDir)) {
         if (i > 0) {
-          Assert.assertEquals(2780, factory.getCacheManager().getTotalCachedBytes());
+          Assert.assertEquals(2980, factory.getCacheManager().getTotalCachedBytes());
         }
 
         while (firehose.hasMore()) {

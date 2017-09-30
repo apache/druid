@@ -141,7 +141,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
   @Override
   public Firehose connect(StringInputRowParser firehoseParser, File temporaryDirectory) throws IOException
   {
-    if (cacheManager.isEnabled() && maxFetchCapacityBytes == 0) {
+    if (!cacheManager.isEnabled() && maxFetchCapacityBytes == 0) {
       return super.connect(firehoseParser, temporaryDirectory);
     }
 
