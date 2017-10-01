@@ -19,28 +19,18 @@
 
 package io.druid.segment;
 
-public final class NullStringObjectColumnSelector implements ObjectColumnSelector<String>
+import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
+import io.druid.query.monomorphicprocessing.HotLoopCallee;
+
+/**
+ * Double value selecting polymorphic "part" of the {@link ColumnValueSelector} interface. Users of {@link
+ * ColumnValueSelector#getDouble()} are encouraged to reduce the parameter/field/etc. type to
+ * BaseDoubleColumnValueSelector to make it impossible to accidently call any method other than {@link #getDouble()}.
+ *
+ * All implementations of this interface MUST also implement {@link ColumnValueSelector}.
+ */
+public interface BaseDoubleColumnValueSelector extends HotLoopCallee
 {
-  private static final NullStringObjectColumnSelector INSTANCE = new NullStringObjectColumnSelector();
-
-  public static NullStringObjectColumnSelector instance()
-  {
-    return INSTANCE;
-  }
-
-  private NullStringObjectColumnSelector()
-  {
-  }
-
-  @Override
-  public Class<String> classOfObject()
-  {
-    return String.class;
-  }
-
-  @Override
-  public String getObject()
-  {
-    return null;
-  }
+  @CalledFromHotLoop
+  double getDouble();
 }

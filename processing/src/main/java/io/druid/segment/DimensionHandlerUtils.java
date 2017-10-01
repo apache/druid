@@ -184,11 +184,9 @@ public final class DimensionHandlerUtils
       case STRING:
         return columnSelectorFactory.makeDimensionSelector(dimSpec);
       case LONG:
-        return columnSelectorFactory.makeLongColumnSelector(dimSpec.getDimension());
       case FLOAT:
-        return columnSelectorFactory.makeFloatColumnSelector(dimSpec.getDimension());
       case DOUBLE:
-        return columnSelectorFactory.makeDoubleColumnSelector(dimSpec.getDimension());
+        return columnSelectorFactory.makeColumnValueSelector(dimSpec.getDimension());
       default:
         return null;
     }

@@ -20,37 +20,12 @@
 package io.druid.segment;
 
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.historical.HistoricalColumnSelector;
 
-public final class ZeroFloatColumnSelector implements FloatColumnSelector, HistoricalColumnSelector<Float>
+public abstract class TestObjectColumnSelector<T> implements ObjectColumnSelector<T>
 {
-  private static final ZeroFloatColumnSelector INSTANCE = new ZeroFloatColumnSelector();
-
-  private ZeroFloatColumnSelector()
-  {
-    // No instantiation.
-  }
-
-  public static ZeroFloatColumnSelector instance()
-  {
-    return INSTANCE;
-  }
-
-  @Override
-  public float getFloat()
-  {
-    return 0.0f;
-  }
-
-  @Override
-  public double getDouble(int offset)
-  {
-    return 0.0;
-  }
-
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
-    // nothing to inspect
+    // Don't care about runtime shape in tests
   }
 }

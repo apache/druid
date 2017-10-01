@@ -26,15 +26,13 @@ import io.druid.query.topn.TopNParams;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNResultBuilder;
 import io.druid.segment.Capabilities;
-import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.Cursor;
 import io.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.util.Map;
 
-public interface TopNColumnSelectorStrategy
-    <ValueSelectorType extends ColumnValueSelector, DimExtractionAggregateStoreType extends Map>
+public interface TopNColumnSelectorStrategy<ValueSelectorType, DimExtractionAggregateStoreType extends Map>
     extends ColumnSelectorStrategy
 {
   int CARDINALITY_UNKNOWN = -1;

@@ -20,17 +20,13 @@
 package io.druid.query.aggregation;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.java.util.common.StringUtils;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.DoubleColumnSelector;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
-import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.ColumnCapabilities;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -56,31 +52,13 @@ public class JavaScriptAggregatorTest
     }
 
     @Override
-    public FloatColumnSelector makeFloatColumnSelector(String columnName)
-    {
-      return null;
-    }
-
-    @Override
-    public LongColumnSelector makeLongColumnSelector(String columnName)
-    {
-      return null;
-    }
-
-    @Override
-    public ObjectColumnSelector makeObjectColumnSelector(String columnName)
+    public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
     {
       return null;
     }
 
     @Override
     public ColumnCapabilities getColumnCapabilities(String columnName)
-    {
-      return null;
-    }
-
-    @Override
-    public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
     {
       return null;
     }
@@ -139,7 +117,7 @@ public class JavaScriptAggregatorTest
     Map<String, String> script = sumLogATimesBPlusTen;
 
     JavaScriptAggregator agg = new JavaScriptAggregator(
-        Arrays.<ObjectColumnSelector>asList(MetricSelectorUtils.wrap(selector1), MetricSelectorUtils.wrap(selector2)),
+        Arrays.asList(selector1, selector2),
         JavaScriptAggregatorFactory.compileScript(
             script.get("fnAggregate"),
             script.get("fnReset"),
@@ -175,7 +153,7 @@ public class JavaScriptAggregatorTest
 
     Map<String, String> script = sumLogATimesBPlusTen;
     JavaScriptBufferAggregator agg = new JavaScriptBufferAggregator(
-        Arrays.<ObjectColumnSelector>asList(MetricSelectorUtils.wrap(selector1), MetricSelectorUtils.wrap(selector2)),
+        Arrays.asList(selector1, selector2),
         JavaScriptAggregatorFactory.compileScript(
             script.get("fnAggregate"),
             script.get("fnReset"),
@@ -211,7 +189,7 @@ public class JavaScriptAggregatorTest
     Map<String, String> script = scriptDoubleSum;
 
     JavaScriptAggregator agg = new JavaScriptAggregator(
-        Collections.<ObjectColumnSelector>singletonList(null),
+        Collections.singletonList(null),
         JavaScriptAggregatorFactory.compileScript(
             script.get("fnAggregate"),
             script.get("fnReset"),
@@ -244,7 +222,7 @@ public class JavaScriptAggregatorTest
         new Object[]{"what", null, new String[]{"hey", "there"}}
     );
     final JavaScriptAggregator agg = new JavaScriptAggregator(
-        Collections.<ObjectColumnSelector>singletonList(ocs),
+        Collections.singletonList(ocs),
         JavaScriptAggregatorFactory.compileScript(
             "function aggregate(current, a) { if (Array.isArray(a)) { return current + a.length; } else if (typeof a === 'string') { return current + 1; } else { return current; } }",
             scriptDoubleSum.get("fnReset"),
@@ -337,7 +315,7 @@ public class JavaScriptAggregatorTest
 
     Map<String, String> script = scriptDoubleSum;
     JavaScriptAggregator aggRhino = new JavaScriptAggregator(
-        Lists.asList(MetricSelectorUtils.wrap(selector), new ObjectColumnSelector[]{}),
+        Collections.singletonList(selector),
         JavaScriptAggregatorFactory.compileScript(
             script.get("fnAggregate"),
             script.get("fnReset"),

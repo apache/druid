@@ -54,13 +54,13 @@ import io.druid.query.groupby.orderby.OrderByColumnSpec;
 import io.druid.query.groupby.strategy.GroupByStrategyV2;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
+import io.druid.segment.BaseDoubleColumnValueSelector;
+import io.druid.segment.BaseFloatColumnValueSelector;
+import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.DoubleColumnSelector;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
@@ -537,12 +537,13 @@ public class RowBasedGrouperHelper
         case STRING:
           return new StringInputRawSupplierColumnSelectorStrategy();
         case LONG:
-          return (InputRawSupplierColumnSelectorStrategy<LongColumnSelector>) columnSelector -> columnSelector::getLong;
+          return (InputRawSupplierColumnSelectorStrategy<BaseLongColumnValueSelector>)
+              columnSelector -> columnSelector::getLong;
         case FLOAT:
-          return (InputRawSupplierColumnSelectorStrategy<FloatColumnSelector>)
+          return (InputRawSupplierColumnSelectorStrategy<BaseFloatColumnValueSelector>)
               columnSelector -> columnSelector::getFloat;
         case DOUBLE:
-          return (InputRawSupplierColumnSelectorStrategy<DoubleColumnSelector>)
+          return (InputRawSupplierColumnSelectorStrategy<BaseDoubleColumnValueSelector>)
               columnSelector -> columnSelector::getDouble;
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", type);

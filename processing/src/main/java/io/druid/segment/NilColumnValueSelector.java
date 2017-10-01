@@ -17,63 +17,52 @@
  * under the License.
  */
 
-package io.druid.query.aggregation.datasketches.theta;
+package io.druid.segment;
 
-import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
-import java.nio.ByteBuffer;
+import javax.annotation.Nullable;
 
-public final class EmptySketchBufferAggregator implements BufferAggregator
+public final class NilColumnValueSelector implements ColumnValueSelector
 {
-  private static final EmptySketchBufferAggregator INSTANCE = new EmptySketchBufferAggregator();
+  private static final NilColumnValueSelector INSTANCE = new NilColumnValueSelector();
 
-  public static EmptySketchBufferAggregator instance()
+  public static NilColumnValueSelector instance()
   {
     return INSTANCE;
   }
 
-  private EmptySketchBufferAggregator()
+  private NilColumnValueSelector() {}
+
+  @Override
+  public double getDouble()
   {
+    return 0.0;
   }
 
   @Override
-  public void init(ByteBuffer buf, int position)
+  public float getFloat()
   {
+    return 0.0f;
   }
 
   @Override
-  public void aggregate(ByteBuffer buf, int position)
+  public long getLong()
   {
+    return 0L;
+  }
+
+  @Nullable
+  @Override
+  public Object getObject()
+  {
+    return null;
   }
 
   @Override
-  public Object get(ByteBuffer buf, int position)
+  public Class classOfObject()
   {
-    return SketchHolder.EMPTY;
-  }
-
-  @Override
-  public float getFloat(ByteBuffer buf, int position)
-  {
-    throw new UnsupportedOperationException("Not implemented");
-  }
-
-  @Override
-  public long getLong(ByteBuffer buf, int position)
-  {
-    throw new UnsupportedOperationException("Not implemented");
-  }
-
-  @Override
-  public double getDouble(ByteBuffer buf, int position)
-  {
-    throw new UnsupportedOperationException("Not implemented");
-  }
-
-  @Override
-  public void close()
-  {
+    return Object.class;
   }
 
   @Override

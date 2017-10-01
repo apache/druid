@@ -20,9 +20,8 @@
 package io.druid.query.filter;
 
 import io.druid.query.dimension.ColumnSelectorStrategy;
-import io.druid.segment.ColumnValueSelector;
 
-public interface ValueMatcherColumnSelectorStrategy<ValueSelectorType extends ColumnValueSelector> extends ColumnSelectorStrategy
+public interface ValueMatcherColumnSelectorStrategy<ValueSelectorType> extends ColumnSelectorStrategy
 {
   /**
    * Create a single value ValueMatcher.

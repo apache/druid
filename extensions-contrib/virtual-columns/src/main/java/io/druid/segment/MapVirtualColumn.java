@@ -23,21 +23,16 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Maps;
 import com.metamx.common.StringUtils;
-import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilterUtils;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.IndexedInts;
 import io.druid.segment.virtual.VirtualColumnCacheHelper;
 
 import java.nio.ByteBuffer;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 
 /**
  */
@@ -64,104 +59,6 @@ public class MapVirtualColumn implements VirtualColumn
   }
 
   @Override
-  public ObjectColumnSelector makeObjectColumnSelector(String dimension, ColumnSelectorFactory factory)
-  {
-    final DimensionSelector keySelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(keyDimension));
-    final DimensionSelector valueSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(valueDimension));
-
-    final String subColumnName = VirtualColumns.splitColumnName(dimension).rhs;
-
-    if (subColumnName == null) {
-      return new ObjectColumnSelector<Map>()
-      {
-        @Override
-        public Class classOfObject()
-        {
-          return Map.class;
-        }
-
-        @Override
-        public Map getObject()
-        {
-          final IndexedInts keyIndices = keySelector.getRow();
-          final IndexedInts valueIndices = valueSelector.getRow();
-          if (keyIndices == null || valueIndices == null) {
-            return null;
-          }
-          final int limit = Math.min(keyIndices.size(), valueIndices.size());
-          final Map<String, String> map = Maps.newHashMapWithExpectedSize(limit);
-          for (int i = 0; i < limit; i++) {
-            map.put(
-                keySelector.lookupName(keyIndices.get(i)),
-                valueSelector.lookupName(valueIndices.get(i))
-            );
-          }
-          return map;
-        }
-      };
-    }
-
-    IdLookup keyIdLookup = keySelector.idLookup();
-    if (keyIdLookup != null) {
-      final int keyId = keyIdLookup.lookupId(subColumnName);
-      if (keyId < 0) {
-        return NullStringObjectColumnSelector.instance();
-      }
-      return new ObjectColumnSelector<String>()
-      {
-        @Override
-        public Class classOfObject()
-        {
-          return String.class;
-        }
-
-        @Override
-        public String getObject()
-        {
-          final IndexedInts keyIndices = keySelector.getRow();
-          final IndexedInts valueIndices = valueSelector.getRow();
-          if (keyIndices == null || valueIndices == null) {
-            return null;
-          }
-          final int limit = Math.min(keyIndices.size(), valueIndices.size());
-          for (int i = 0; i < limit; i++) {
-            if (keyIndices.get(i) == keyId) {
-              return valueSelector.lookupName(valueIndices.get(i));
-            }
-          }
-          return null;
-        }
-      };
-    } else {
-      return new ObjectColumnSelector<String>()
-      {
-        @Override
-        public Class classOfObject()
-        {
-          return String.class;
-        }
-
-        @Override
-        public String getObject()
-        {
-          final IndexedInts keyIndices = keySelector.getRow();
-          final IndexedInts valueIndices = valueSelector.getRow();
-          if (keyIndices == null || valueIndices == null) {
-            return null;
-          }
-          final int limit = Math.min(keyIndices.size(), valueIndices.size());
-          for (int i = 0; i < limit; i++) {
-            if (Objects.equals(keySelector.lookupName(keyIndices.get(i)), subColumnName)) {
-              return valueSelector.lookupName(valueIndices.get(i));
-            }
-          }
-          return null;
-        }
-      };
-    }
-  }
-
-  @Override
   public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec, ColumnSelectorFactory factory)
   {
     // Could probably do something useful here if the column name is dot-style. But for now just return nothing.
@@ -169,21 +66,9 @@ public class MapVirtualColumn implements VirtualColumn
   }
 
   @Override
-  public FloatColumnSelector makeFloatColumnSelector(String columnName, ColumnSelectorFactory factory)
+  public ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelectorFactory factory)
   {
-    return ZeroFloatColumnSelector.instance();
-  }
-
-  @Override
-  public LongColumnSelector makeLongColumnSelector(String columnName, ColumnSelectorFactory factory)
-  {
-    return ZeroLongColumnSelector.instance();
-  }
-
-  @Override
-  public DoubleColumnSelector makeDoubleColumnSelector(String columnName, ColumnSelectorFactory factory)
-  {
-    return ZeroDoubleColumnSelector.instance();
+    return NilColumnValueSelector.instance();
   }
 
   @Override

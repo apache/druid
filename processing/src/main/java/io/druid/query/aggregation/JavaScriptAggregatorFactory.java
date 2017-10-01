@@ -31,16 +31,15 @@ import com.google.common.primitives.Doubles;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.js.JavaScriptConfig;
+import io.druid.segment.BaseObjectColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
-import io.druid.segment.ObjectColumnSelector;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextAction;
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.ScriptableObject;
 
-import javax.annotation.Nullable;
 import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
@@ -48,6 +47,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class JavaScriptAggregatorFactory extends AggregatorFactory
 {
@@ -95,17 +95,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   public Aggregator factorize(final ColumnSelectorFactory columnFactory)
   {
     return new JavaScriptAggregator(
-        Lists.transform(
-            fieldNames,
-            new com.google.common.base.Function<String, ObjectColumnSelector>()
-            {
-              @Override
-              public ObjectColumnSelector apply(@Nullable String s)
-              {
-                return columnFactory.makeObjectColumnSelector(s);
-              }
-            }
-        ),
+        fieldNames.stream().map(columnFactory::makeColumnValueSelector).collect(Collectors.toList()),
         getCompiledScript()
     );
   }
@@ -114,17 +104,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   public BufferAggregator factorizeBuffered(final ColumnSelectorFactory columnSelectorFactory)
   {
     return new JavaScriptBufferAggregator(
-        Lists.transform(
-            fieldNames,
-            new com.google.common.base.Function<String, ObjectColumnSelector>()
-            {
-              @Override
-              public ObjectColumnSelector apply(@Nullable String s)
-              {
-                return columnSelectorFactory.makeObjectColumnSelector(s);
-              }
-            }
-        ),
+        fieldNames.stream().map(columnSelectorFactory::makeColumnValueSelector).collect(Collectors.toList()),
         getCompiledScript()
     );
   }
@@ -330,7 +310,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
     return new JavaScriptAggregator.ScriptAggregator()
     {
       @Override
-      public double aggregate(final double current, final ObjectColumnSelector[] selectorList)
+      public double aggregate(final double current, final BaseObjectColumnValueSelector[] selectorList)
       {
         Context cx = Context.getCurrentContext();
         if (cx == null) {
@@ -345,7 +325,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
 
         args[0] = current;
         for (int i = 0; i < size; i++) {
-          final ObjectColumnSelector selector = selectorList[i];
+          final BaseObjectColumnValueSelector selector = selectorList[i];
           if (selector != null) {
             final Object arg = selector.getObject();
             if (arg != null && arg.getClass().isArray()) {

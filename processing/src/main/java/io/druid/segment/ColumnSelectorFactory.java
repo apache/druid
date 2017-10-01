@@ -30,12 +30,7 @@ import javax.annotation.Nullable;
 public interface ColumnSelectorFactory
 {
   DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec);
-  FloatColumnSelector makeFloatColumnSelector(String columnName);
-  LongColumnSelector makeLongColumnSelector(String columnName);
-  DoubleColumnSelector makeDoubleColumnSelector(String columnName);
-
-  @Nullable
-  ObjectColumnSelector makeObjectColumnSelector(String columnName);
+  ColumnValueSelector makeColumnValueSelector(String columnName);
 
   /**
    * Returns capabilities of a particular column, if known. May be null if the column doesn't exist, or if

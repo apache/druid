@@ -17,33 +17,7 @@
  * under the License.
  */
 
+@EverythingIsNonnullByDefault
 package io.druid.segment;
 
-import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-
-public final class ZeroDoubleColumnSelector implements DoubleColumnSelector
-{
-  private static final ZeroDoubleColumnSelector INSTANCE = new ZeroDoubleColumnSelector();
-
-  private ZeroDoubleColumnSelector()
-  {
-    // No instantiation.
-  }
-
-  public static ZeroDoubleColumnSelector instance()
-  {
-    return INSTANCE;
-  }
-
-  @Override
-  public double getDouble()
-  {
-    return 0.0d;
-  }
-
-  @Override
-  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-  {
-    // nothing to inspect
-  }
-}
+import io.druid.annotations.EverythingIsNonnullByDefault;

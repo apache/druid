@@ -19,13 +19,14 @@
 
 package io.druid.query.aggregation.variance;
 
+import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Longs;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
-import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.BaseFloatColumnValueSelector;
+import io.druid.segment.BaseLongColumnValueSelector;
+import io.druid.segment.BaseObjectColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
@@ -87,9 +88,9 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
 
   public static final class FloatVarianceAggregator extends VarianceBufferAggregator
   {
-    private final FloatColumnSelector selector;
+    private final BaseFloatColumnValueSelector selector;
 
-    public FloatVarianceAggregator(String name, FloatColumnSelector selector)
+    public FloatVarianceAggregator(String name, BaseFloatColumnValueSelector selector)
     {
       super(name);
       this.selector = selector;
@@ -119,9 +120,9 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
 
   public static final class LongVarianceAggregator extends VarianceBufferAggregator
   {
-    private final LongColumnSelector selector;
+    private final BaseLongColumnValueSelector selector;
 
-    public LongVarianceAggregator(String name, LongColumnSelector selector)
+    public LongVarianceAggregator(String name, BaseLongColumnValueSelector selector)
     {
       super(name);
       this.selector = selector;
@@ -151,9 +152,9 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
 
   public static final class ObjectVarianceAggregator extends VarianceBufferAggregator
   {
-    private final ObjectColumnSelector selector;
+    private final BaseObjectColumnValueSelector selector;
 
-    public ObjectVarianceAggregator(String name, ObjectColumnSelector selector)
+    public ObjectVarianceAggregator(String name, BaseObjectColumnValueSelector selector)
     {
       super(name);
       this.selector = selector;
@@ -163,7 +164,7 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
     public void aggregate(ByteBuffer buf, int position)
     {
       VarianceAggregatorCollector holder2 = (VarianceAggregatorCollector) selector.getObject();
-
+      Preconditions.checkState(holder2 != null);
       long count = buf.getLong(position + COUNT_OFFSET);
       if (count == 0) {
         buf.putLong(position, holder2.count);

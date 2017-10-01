@@ -17,20 +17,14 @@
  * under the License.
  */
 
-package io.druid.query.aggregation;
+package io.druid.segment.column;
 
-import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.data.ReadableOffset;
 
-/**
- * Specialization of {@link AggregateCombiner} for object aggregations.
- */
-public abstract class ObjectAggregateCombiner<T> implements AggregateCombiner<T>, ObjectColumnSelector<T>
+import java.io.Closeable;
+
+public interface BaseColumn extends Closeable
 {
-
-  @Override
-  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-  {
-    // Usually AggregateCombiner has nothing to inspect
-  }
+  ColumnValueSelector makeColumnValueSelector(ReadableOffset offset);
 }

@@ -33,8 +33,8 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.QueryContexts;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.filter.Filter;
+import io.druid.segment.BaseObjectColumnValueSelector;
 import io.druid.segment.Cursor;
-import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.VirtualColumn;
@@ -144,16 +144,16 @@ public class ScanQueryEngine
                       @Override
                       public Iterator<ScanResultValue> make()
                       {
-                        final List<ObjectColumnSelector> columnSelectors = new ArrayList<>(allColumns.size());
+                        final List<BaseObjectColumnValueSelector> columnSelectors = new ArrayList<>(allColumns.size());
 
                         for (String column : allColumns) {
-                          final ObjectColumnSelector selector;
+                          final BaseObjectColumnValueSelector selector;
 
                           if (legacy && column.equals(LEGACY_TIMESTAMP_KEY)) {
                             selector = cursor.getColumnSelectorFactory()
-                                             .makeObjectColumnSelector(Column.TIME_COLUMN_NAME);
+                                             .makeColumnValueSelector(Column.TIME_COLUMN_NAME);
                           } else {
-                            selector = cursor.getColumnSelectorFactory().makeObjectColumnSelector(column);
+                            selector = cursor.getColumnSelectorFactory().makeColumnValueSelector(column);
                           }
 
                           columnSelectors.add(selector);
@@ -237,7 +237,7 @@ public class ScanQueryEngine
 
                           private Object getColumnValue(int i)
                           {
-                            final ObjectColumnSelector selector = columnSelectors.get(i);
+                            final BaseObjectColumnValueSelector selector = columnSelectors.get(i);
                             final Object value;
 
                             if (legacy && allColumns.get(i).equals(LEGACY_TIMESTAMP_KEY)) {

@@ -17,20 +17,21 @@
  * under the License.
  */
 
-package io.druid.query.aggregation;
+package io.druid.segment;
 
-import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.ObjectColumnSelector;
+import javax.annotation.Nullable;
 
 /**
- * Specialization of {@link AggregateCombiner} for object aggregations.
+ * Object value selecting polymorphic "part" of the {@link ColumnValueSelector} interface. Users of {@link
+ * ColumnValueSelector#getObject()} are encouraged to reduce the parameter/field/etc. type to
+ * BaseObjectColumnValueSelector to make it impossible to accidently call any method other than {@link #getObject()}.
+ *
+ * All implementations of this interface MUST also implement {@link ColumnValueSelector}.
  */
-public abstract class ObjectAggregateCombiner<T> implements AggregateCombiner<T>, ObjectColumnSelector<T>
+public interface BaseObjectColumnValueSelector<T>
 {
+  @Nullable
+  T getObject();
 
-  @Override
-  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-  {
-    // Usually AggregateCombiner has nothing to inspect
-  }
+  Class<T> classOfObject();
 }

@@ -34,7 +34,6 @@ import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.ObjectAggregateCombiner;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
-import io.druid.segment.ObjectColumnSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -66,24 +65,16 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
-    if (selector == null) {
-      return new EmptySketchAggregator();
-    } else {
-      return new SketchAggregator(selector, size);
-    }
+    ColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
+    return new SketchAggregator(selector, size);
   }
 
   @SuppressWarnings("unchecked")
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
-    if (selector == null) {
-      return EmptySketchBufferAggregator.instance();
-    } else {
-      return new SketchBufferAggregator(selector, size, getMaxIntermediateSize());
-    }
+    ColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
+    return new SketchBufferAggregator(selector, size, getMaxIntermediateSize());
   }
 
   @Override
@@ -99,8 +90,11 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Object combine(Object lhs, Object rhs)
+  public Object combine(Object lhs, @Nullable Object rhs)
   {
+    if (rhs == null) {
+      return lhs;
+    }
     return SketchHolder.combine(lhs, rhs, size);
   }
 
@@ -122,12 +116,11 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
       @Override
       public void fold(ColumnValueSelector selector)
       {
-        @SuppressWarnings("unchecked")
-        SketchHolder other = ((ObjectColumnSelector<SketchHolder>) selector).getObject();
-        // SketchAggregatorFactory.combine() delegates to SketchHolder.combine() and it doesn't check for nulls, so we
-        // neither.
-        other.updateUnion(union);
-        combined.invalidateCache();
+        SketchHolder other = (SketchHolder) selector.getObject();
+        if (other != null) {
+          other.updateUnion(union);
+          combined.invalidateCache();
+        }
       }
 
       @Override

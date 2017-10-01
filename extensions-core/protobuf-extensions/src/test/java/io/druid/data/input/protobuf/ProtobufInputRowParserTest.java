@@ -157,9 +157,9 @@ public class ProtobufInputRowParserTest
     assertDimensionEquals(row, "bar0", "bar0");
 
 
-    assertEquals(47.11F, row.getFloatMetric("someFloatColumn"), 0.0);
-    assertEquals(815.0F, row.getFloatMetric("someIntColumn"), 0.0);
-    assertEquals(816.0F, row.getFloatMetric("someLongColumn"), 0.0);
+    assertEquals(47.11F, row.getMetric("someFloatColumn").floatValue(), 0.0);
+    assertEquals(815.0F, row.getMetric("someIntColumn").floatValue(), 0.0);
+    assertEquals(816.0F, row.getMetric("someLongColumn").floatValue(), 0.0);
   }
 
   private void assertDimensionEquals(InputRow row, String dimension, Object expected)

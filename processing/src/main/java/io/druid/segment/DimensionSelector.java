@@ -46,7 +46,7 @@ public interface DimensionSelector extends ColumnValueSelector, HotLoopCallee
   /**
    * @param value nullable dimension value
    */
-  ValueMatcher makeValueMatcher(String value);
+  ValueMatcher makeValueMatcher(@Nullable String value);
 
   ValueMatcher makeValueMatcher(Predicate<String> predicate);
 
@@ -148,23 +148,20 @@ public interface DimensionSelector extends ColumnValueSelector, HotLoopCallee
     throw new UnsupportedOperationException("DimensionSelector cannot be operated as numeric ColumnValueSelector");
   }
 
-  /**
-   * @deprecated always throws {@link UnsupportedOperationException}
-   */
-  @Deprecated
-  @Override
-  default Object getObject()
+  @Nullable
+  default Object defaultGetObject()
   {
-    throw new UnsupportedOperationException("DimensionSelector cannot be operated as object ColumnValueSelector");
-  }
-
-  /**
-   * @deprecated always throws {@link UnsupportedOperationException}
-   */
-  @Deprecated
-  @Override
-  default Class classOfObject()
-  {
-    throw new UnsupportedOperationException("DimensionSelector cannot be operated as object ColumnValueSelector");
+    IndexedInts row = getRow();
+    if (row.size() == 0) {
+      return null;
+    }
+    if (row.size() == 1) {
+      return lookupName(row.get(0));
+    }
+    final String[] strings = new String[row.size()];
+    for (int i = 0; i < row.size(); i++) {
+      strings[i] = lookupName(row.get(i));
+    }
+    return strings;
   }
 }

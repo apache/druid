@@ -22,7 +22,6 @@ package io.druid.query.aggregation.cardinality;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.query.aggregation.ObjectAggregateCombiner;
 import io.druid.segment.ColumnValueSelector;
-import io.druid.segment.ObjectColumnSelector;
 
 import javax.annotation.Nullable;
 
@@ -41,8 +40,7 @@ public final class HyperLogLogCollectorAggregateCombiner extends ObjectAggregate
   @Override
   public void fold(ColumnValueSelector selector)
   {
-    @SuppressWarnings("unchecked")
-    HyperLogLogCollector other = ((ObjectColumnSelector<HyperLogLogCollector>) selector).getObject();
+    HyperLogLogCollector other = (HyperLogLogCollector) selector.getObject();
     if (other == null) {
       return;
     }

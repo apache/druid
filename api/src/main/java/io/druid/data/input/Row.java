@@ -64,7 +64,7 @@ public interface Row extends Comparable<Row>
   public List<String> getDimension(String dimension);
 
   /**
-   * Returns the raw dimension value for the given column name. This is different from #getDimension which
+   * Returns the raw dimension value for the given column name. This is different from {@link #getDimension} which
    * all values to strings before returning them.
    *
    * @param dimension the column name of the dimension requested
@@ -74,32 +74,10 @@ public interface Row extends Comparable<Row>
   public Object getRaw(String dimension);
 
   /**
-   * Returns the float value of the given metric column.
-   * <p/>
-   *
-   * @param metric the column name of the metric requested
-   *
-   * @return the float value for the provided column name.
+   * Returns the metric column value for the given column name. This method is different from {@link #getRaw} in two
+   * aspects:
+   *  1. If the column is absent in the row, numeric zero is returned, rather than null.
+   *  2. If the column has string value, an attempt is made to parse this value as a number.
    */
-  public float getFloatMetric(String metric);
-
-  /**
-   * Returns the long value of the given metric column.
-   * <p/>
-   *
-   * @param metric the column name of the metric requested
-   *
-   * @return the long value for the provided column name.
-   */
-  public long getLongMetric(String metric);
-
-  /**
-   * Returns the double value of the given metric column.
-   * <p/>
-   *
-   * @param metric the column name of the metric requested
-   *
-   * @return the double value for the provided column name.
-   */
-  public double getDoubleMetric(String metric);
+  Number getMetric(String metric);
 }

@@ -17,20 +17,20 @@
  * under the License.
  */
 
-package io.druid.query.aggregation;
+package io.druid.segment;
 
-import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.ObjectColumnSelector;
+import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
+import io.druid.query.monomorphicprocessing.HotLoopCallee;
 
 /**
- * Specialization of {@link AggregateCombiner} for object aggregations.
+ * Long value selecting polymorphic "part" of the {@link ColumnValueSelector} interface. Users of {@link
+ * ColumnValueSelector#getLong()} are encouraged to reduce the parameter/field/etc. type to BaseLongColumnValueSelector
+ * to make it impossible to accidently call any method other than {@link #getLong()}.
+ *
+ * All implementations of this interface MUST also implement {@link ColumnValueSelector}.
  */
-public abstract class ObjectAggregateCombiner<T> implements AggregateCombiner<T>, ObjectColumnSelector<T>
+public interface BaseLongColumnValueSelector extends HotLoopCallee
 {
-
-  @Override
-  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-  {
-    // Usually AggregateCombiner has nothing to inspect
-  }
+  @CalledFromHotLoop
+  long getLong();
 }

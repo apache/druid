@@ -19,8 +19,6 @@
 
 package io.druid.segment;
 
-import javax.annotation.Nullable;
-
 /**
  * Base type for interfaces that manage column value selection, e.g. DimensionSelector, LongColumnSelector
  *
@@ -28,16 +26,7 @@ import javax.annotation.Nullable;
  * Druid: Sum, Min, Max, etc: {@link #getFloat()}, {@link #getDouble()} and {@link #getLong()} to support "polymorphic"
  * rollup aggregation during index merging.
  */
-public interface ColumnValueSelector<T>
+public interface ColumnValueSelector<T> extends BaseLongColumnValueSelector, BaseDoubleColumnValueSelector,
+    BaseFloatColumnValueSelector, BaseObjectColumnValueSelector<T>
 {
-  float getFloat();
-
-  double getDouble();
-
-  long getLong();
-
-  @Nullable
-  T getObject();
-
-  Class<T> classOfObject();
 }

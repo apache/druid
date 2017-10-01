@@ -19,31 +19,18 @@
 
 package io.druid.segment;
 
-import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
+import io.druid.query.monomorphicprocessing.HotLoopCallee;
 
-public final class ZeroLongColumnSelector implements LongColumnSelector
+/**
+ * Float value selecting polymorphic "part" of the {@link ColumnValueSelector} interface. Users of {@link
+ * ColumnValueSelector#getFloat()} are encouraged to reduce the parameter/field/etc. type to
+ * BaseFloatColumnValueSelector to make it impossible to accidently call any method other than {@link #getFloat()}.
+ *
+ * All implementations of this interface MUST also implement {@link ColumnValueSelector}.
+ */
+public interface BaseFloatColumnValueSelector extends HotLoopCallee
 {
-  private static final ZeroLongColumnSelector INSTANCE = new ZeroLongColumnSelector();
-
-  private ZeroLongColumnSelector()
-  {
-    // No instantiation.
-  }
-
-  public static ZeroLongColumnSelector instance()
-  {
-    return INSTANCE;
-  }
-
-  @Override
-  public long getLong()
-  {
-    return 0;
-  }
-
-  @Override
-  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-  {
-    // nothing to inspect
-  }
+  @CalledFromHotLoop
+  float getFloat();
 }
