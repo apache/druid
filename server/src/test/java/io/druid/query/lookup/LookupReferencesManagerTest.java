@@ -92,20 +92,7 @@ public class LookupReferencesManagerTest
     mapper.registerSubtypes(MapLookupExtractorFactory.class);
     String temporaryPath = temporaryFolder.newFolder().getAbsolutePath();
     lookupReferencesManager = new LookupReferencesManager(
-        new LookupConfig()
-        {
-          @Override
-          public boolean getEnableLookupSyncOnStartup()
-          {
-            return true;
-          }
-
-          @Override
-          public String getSnapshotWorkingDir()
-          {
-            return temporaryPath;
-          }
-        },
+        new LookupConfig(temporaryFolder.newFolder().getAbsolutePath()),
         mapper, druidLeaderClient, config,
         true
     );
@@ -115,13 +102,7 @@ public class LookupReferencesManagerTest
   public void testStartStop() throws JsonProcessingException, InterruptedException, MalformedURLException
   {
     lookupReferencesManager = new LookupReferencesManager(
-        new LookupConfig() {
-          @Override
-          public boolean getEnableLookupSyncOnStartup()
-          {
-            return true;
-          }
-        },
+        new LookupConfig(null),
         mapper, druidLeaderClient, config
     );
 
@@ -465,14 +446,7 @@ public class LookupReferencesManagerTest
   public void testRealModeWithMainThread() throws Exception
   {
     LookupReferencesManager lookupReferencesManager = new LookupReferencesManager(
-          new LookupConfig()
-          {
-            @Override
-            public boolean getEnableLookupSyncOnStartup()
-            {
-              return true;
-            }
-        },
+        new LookupConfig(temporaryFolder.newFolder().getAbsolutePath()),
         mapper, druidLeaderClient, config
     );
     Map<String, Object> lookupMap = new HashMap<>();
@@ -598,19 +572,7 @@ public class LookupReferencesManagerTest
     lookupReferencesManager.handlePendingNotices();
     lookupReferencesManager.stop();
     lookupReferencesManager = new LookupReferencesManager(
-        new LookupConfig()
-        {
-          @Override
-          public boolean getEnableLookupSyncOnStartup()
-          {
-            return true;
-          }
-          @Override
-          public String getSnapshotWorkingDir()
-          {
-            return lookupReferencesManager.lookupSnapshotTaker.getPersistFile().getParent();
-          }
-        },
+        new LookupConfig(lookupReferencesManager.lookupSnapshotTaker.getPersistFile().getParent()),
         mapper, druidLeaderClient, config,
         true
     );
@@ -630,7 +592,7 @@ public class LookupReferencesManagerTest
   public void testDisableLookupSync() throws Exception
   {
     LookupReferencesManager lookupReferencesManager = new LookupReferencesManager(
-        new LookupConfig(),
+        new LookupConfig(null),
         mapper, druidLeaderClient, config
     );
     Map<String, Object> lookupMap = new HashMap<>();
