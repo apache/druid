@@ -22,6 +22,7 @@ package io.druid.data.input;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
+import com.google.common.primitives.Longs;
 import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
@@ -31,14 +32,12 @@ import org.joda.time.DateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 /**
  */
 @PublicApi
 public class MapBasedRow implements Row
 {
-  private static final Pattern LONG_PAT = Pattern.compile("[-|+]?\\d+");
   private static final Long LONG_ZERO = 0L;
 
   private final DateTime timestamp;
@@ -115,10 +114,13 @@ public class MapBasedRow implements Row
       return (Number) metricValue;
     } else if (metricValue instanceof String) {
       try {
-        String metricValueString = StringUtils.removeChar((String) metricValue, ',');
+        String metricValueString = StringUtils.removeChar(((String) metricValue).trim(), ',');
+        // Longs.tryParse() doesn't support leading '+', so we need to trim it ourselves
+        metricValueString = trimLeadingPlusOfLongString(metricValueString);
+        Long v = Longs.tryParse(metricValueString);
         // Do NOT use ternary operator here, because it makes Java to convert Long to Double
-        if (LONG_PAT.matcher(metricValueString).matches()) {
-          return Long.valueOf(metricValueString);
+        if (v != null) {
+          return v;
         } else {
           return Double.valueOf(metricValueString);
         }
@@ -129,6 +131,22 @@ public class MapBasedRow implements Row
     } else {
       throw new ParseException("Unknown type[%s]", metricValue.getClass());
     }
+  }
+
+  private static String trimLeadingPlusOfLongString(String metricValueString)
+  {
+    if (metricValueString.isEmpty()) {
+      return metricValueString;
+    }
+    if (metricValueString.charAt(0) == '+') {
+      if (metricValueString.length() > 1) {
+        char secondChar = metricValueString.charAt(1);
+        if (secondChar >= '0' && secondChar <= '9') {
+          metricValueString = metricValueString.substring(1);
+        }
+      }
+    }
+    return metricValueString;
   }
 
   @Override
