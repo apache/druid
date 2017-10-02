@@ -57,13 +57,14 @@ import java.util.NavigableSet;
  */
 public class Calcites
 {
-  private static final DateTimeFormatter CALCITE_TIME_PARSER = ISODateTimeFormat.timeParser();
-  private static final DateTimeFormatter CALCITE_DATE_PARSER = ISODateTimeFormat.dateParser();
-  private static final DateTimeFormatter CALCITE_TIMESTAMP_PARSER = new DateTimeFormatterBuilder()
-      .append(CALCITE_DATE_PARSER)
-      .appendLiteral(' ')
-      .append(CALCITE_TIME_PARSER)
-      .toFormatter();
+  private static final DateTimes.UtcFormatter CALCITE_DATE_PARSER = DateTimes.wrapFormatter(ISODateTimeFormat.dateParser());
+  private static final DateTimes.UtcFormatter CALCITE_TIMESTAMP_PARSER = DateTimes.wrapFormatter(
+      new DateTimeFormatterBuilder()
+          .append(ISODateTimeFormat.dateParser())
+          .appendLiteral(' ')
+          .append(ISODateTimeFormat.timeParser())
+          .toFormatter()
+  );
 
   private static final DateTimeFormatter CALCITE_TIME_PRINTER = DateTimeFormat.forPattern("HH:mm:ss.S");
   private static final DateTimeFormatter CALCITE_DATE_PRINTER = DateTimeFormat.forPattern("yyyy-MM-dd");
@@ -247,10 +248,10 @@ public class Calcites
 
     if (typeName == SqlTypeName.TIMESTAMP) {
       final TimestampString timestampString = (TimestampString) RexLiteral.value(literal);
-      return CALCITE_TIMESTAMP_PARSER.parseDateTime(timestampString.toString()).withZoneRetainFields(timeZone);
+      return CALCITE_TIMESTAMP_PARSER.parse(timestampString.toString()).withZoneRetainFields(timeZone);
     } else if (typeName == SqlTypeName.DATE) {
       final DateString dateString = (DateString) RexLiteral.value(literal);
-      return CALCITE_DATE_PARSER.parseDateTime(dateString.toString()).withZoneRetainFields(timeZone);
+      return CALCITE_DATE_PARSER.parse(dateString.toString()).withZoneRetainFields(timeZone);
     } else {
       throw new IAE("Expected TIMESTAMP or DATE but got[%s]", typeName);
     }
