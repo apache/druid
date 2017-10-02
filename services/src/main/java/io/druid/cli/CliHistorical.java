@@ -32,7 +32,7 @@ import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
-import io.druid.guice.ManageLifecycle;
+import io.druid.guice.ManageLifecycleLast;
 import io.druid.guice.NodeTypeConfig;
 import io.druid.guice.QueryRunnerFactoryModule;
 import io.druid.guice.QueryableModule;
@@ -99,7 +99,7 @@ public class CliHistorical extends ServerRunnable
           public void configure(Binder binder)
           {
             binder.bind(SegmentManager.class).in(LazySingleton.class);
-            binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
+            binder.bind(ZkCoordinator.class).in(ManageLifecycleLast.class);
             binder.bind(QuerySegmentWalker.class).to(ServerManager.class).in(LazySingleton.class);
 
 
