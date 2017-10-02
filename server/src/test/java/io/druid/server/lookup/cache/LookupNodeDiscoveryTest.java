@@ -28,7 +28,6 @@ import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.discovery.LookupNodeService;
 import io.druid.server.DruidNode;
 import io.druid.server.http.HostAndPortWithScheme;
-import io.druid.server.initialization.ServerConfig;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -53,21 +52,21 @@ public class LookupNodeDiscoveryTest
             .andReturn(druidNodeDiscovery);
 
     DiscoveryDruidNode node1 = new DiscoveryDruidNode(
-        new DruidNode("s1", "h1", 8080, null, new ServerConfig()),
+        new DruidNode("s1", "h1", 8080, null, true, false),
         DruidNodeDiscoveryProvider.NODE_TYPE_HISTORICAL,
         ImmutableMap.of(
             LookupNodeService.DISCOVERY_SERVICE_KEY, new LookupNodeService("tier1"))
     );
 
     DiscoveryDruidNode node2 = new DiscoveryDruidNode(
-        new DruidNode("s2", "h2", 8080, null, new ServerConfig()),
+        new DruidNode("s2", "h2", 8080, null, true, false),
         DruidNodeDiscoveryProvider.NODE_TYPE_PEON,
         ImmutableMap.of(
             LookupNodeService.DISCOVERY_SERVICE_KEY, new LookupNodeService("tier1"))
     );
 
     DiscoveryDruidNode node3 = new DiscoveryDruidNode(
-        new DruidNode("s3", "h3", 8080, null, new ServerConfig()),
+        new DruidNode("s3", "h3", 8080, null, true, false),
         DruidNodeDiscoveryProvider.NODE_TYPE_PEON,
         ImmutableMap.of(
             LookupNodeService.DISCOVERY_SERVICE_KEY, new LookupNodeService("tier2"))

@@ -17,44 +17,28 @@
  * under the License.
  */
 
-package io.druid.java.util.common.parsers;
+package io.druid.data.input.avro;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.jayway.jsonpath.Configuration;
-import com.jayway.jsonpath.JsonPath;
-import net.thisptr.jackson.jq.JsonQuery;
-import net.thisptr.jackson.jq.exception.JsonQueryException;
+import com.jayway.jsonpath.TypeRef;
+import com.jayway.jsonpath.spi.mapper.MappingProvider;
 
-
-public class FlattenExpr
+/**
+ * MappingProvider for JsonPath + Avro.
+ */
+public class GenericAvroMappingProvider implements MappingProvider
 {
-  private JsonPath jsonPathExpr;
-  private JsonQuery jsonQueryExpr;
-
-
-  FlattenExpr(JsonPath jsonPathExpr)
+  @Override
+  public <T> T map(final Object o, final Class<T> aClass, final Configuration configuration)
   {
-    this.jsonPathExpr = jsonPathExpr;
+    // Not used by us.
+    throw new UnsupportedOperationException();
   }
 
-  FlattenExpr(JsonQuery jsonQueryExpr)
+  @Override
+  public <T> T map(final Object o, final TypeRef<T> typeRef, final Configuration configuration)
   {
-    this.jsonQueryExpr = jsonQueryExpr;
-  }
-
-  public JsonNode readPath(JsonNode document, Configuration jsonConfig)
-  {
-    return this.jsonPathExpr.read(document, jsonConfig);
-  }
-
-  public JsonNode readJq(JsonNode document)
-  {
-    try {
-      return this.jsonQueryExpr.apply(document).get(0);
-    }
-    catch (JsonQueryException e) {
-      // ignore errors.
-    }
-    return null;
+    // Not used by us.
+    throw new UnsupportedOperationException();
   }
 }

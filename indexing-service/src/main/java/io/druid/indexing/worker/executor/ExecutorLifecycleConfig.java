@@ -94,10 +94,10 @@ public class ExecutorLifecycleConfig
 
   public InputStream getParentStream()
   {
-   if ("stdin".equals(parentStreamName)) {
-     return System.in;
-   } else {
-     throw new ISE("Unknown stream name[%s]", parentStreamName);
-   }
+    if ("stdin".equals(parentStreamName)) {
+      return System.in;
+    } else {
+      throw new ISE("Unknown stream name[%s]", parentStreamName);
+    }
   }
 }

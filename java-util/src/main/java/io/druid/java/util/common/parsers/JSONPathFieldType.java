@@ -17,16 +17,28 @@
  * under the License.
  */
 
-package io.druid.client.cache;
+package io.druid.java.util.common.parsers;
 
-import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+import io.druid.java.util.common.StringUtils;
 
-@JsonTypeName("caffeine")
-public class CaffeineCacheProvider extends CaffeineCacheConfig implements CacheProvider
+public enum JSONPathFieldType
 {
+  ROOT,
+  PATH,
+  JQ;
+
+  @JsonValue
   @Override
-  public Cache get()
+  public String toString()
   {
-    return CaffeineCache.create(this);
+    return StringUtils.toLowerCase(this.name());
+  }
+
+  @JsonCreator
+  public static JSONPathFieldType fromString(String name)
+  {
+    return valueOf(StringUtils.toUpperCase(name));
   }
 }

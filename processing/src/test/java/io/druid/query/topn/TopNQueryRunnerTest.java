@@ -21,7 +21,6 @@ package io.druid.query.topn;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -162,14 +161,7 @@ public class TopNQueryRunnerTest
             new TopNQueryRunnerFactory(
                 new StupidPool<ByteBuffer>(
                     "TopNQueryRunnerFactory-bufferPool",
-                    new Supplier<ByteBuffer>()
-                    {
-                      @Override
-                      public ByteBuffer get()
-                      {
-                        return ByteBuffer.allocate(20000);
-                      }
-                    }
+                    () -> ByteBuffer.allocate(20000)
                 ),
                 new TopNQueryQueryToolChest(
                     new TopNQueryConfig(),

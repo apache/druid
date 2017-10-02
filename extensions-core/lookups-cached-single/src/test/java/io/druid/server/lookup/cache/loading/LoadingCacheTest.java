@@ -46,14 +46,8 @@ public class LoadingCacheTest
   public static Collection<Object[]> inputData()
   {
     return Arrays.asList(new Object[][]{
-        {new OnHeapLoadingCache<>(4, 1000, null, null, null)}, {
-        new OffHeapLoadingCache(
-            0,
-            0L,
-            0L,
-            0L
-        )
-    }
+        {new OnHeapLoadingCache<>(4, 1000, null, null, null)},
+        {new OffHeapLoadingCache(0, 0L, 0L, 0L)}
     });
   }
 

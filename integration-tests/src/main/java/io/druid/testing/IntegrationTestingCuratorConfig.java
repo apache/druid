@@ -34,7 +34,7 @@ public class IntegrationTestingCuratorConfig extends CuratorConfig
   @Inject
   public IntegrationTestingCuratorConfig (IntegrationTestingConfig config)
   {
-     this.config = config;
+    this.config = config;
   }
 
   @Override

@@ -121,12 +121,14 @@ public class OrcIndexGeneratorJobTest
   private final Interval interval = Intervals.of("2014-10-22T00:00:00Z/P1D");
   private File dataRoot;
   private File outputRoot;
-  private Integer[][][] shardInfoForEachSegment = new Integer[][][]{{
-      {0, 4},
-      {1, 4},
-      {2, 4},
-      {3, 4}
-  }};
+  private Integer[][][] shardInfoForEachSegment = new Integer[][][]{
+      {
+          {0, 4},
+          {1, 4},
+          {2, 4},
+          {3, 4}
+      }
+  };
   private final InputRowParser inputRowParser = new OrcHadoopInputRowParser(
       new TimeAndDimsParseSpec(
           new TimestampSpec("timestamp", "yyyyMMddHH", null),

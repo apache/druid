@@ -104,7 +104,7 @@ public class GoogleStorageDruidModule implements DruidModule
   @Provides
   @LazySingleton
   public GoogleStorage getGoogleStorage(final GoogleAccountConfig config)
-    throws IOException, GeneralSecurityException
+      throws IOException, GeneralSecurityException
   {
     LOG.info("Building Cloud Storage Client...");
 

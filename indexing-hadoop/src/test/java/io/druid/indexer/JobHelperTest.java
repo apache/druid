@@ -54,9 +54,8 @@ import java.util.Map;
 public class JobHelperTest
 {
 
-  public final
   @Rule
-  TemporaryFolder temporaryFolder = new TemporaryFolder();
+  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   private HadoopDruidIndexerConfig config;
   private File tmpDir;

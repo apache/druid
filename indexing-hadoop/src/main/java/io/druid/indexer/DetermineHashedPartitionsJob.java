@@ -137,9 +137,8 @@ public class DetermineHashedPartitionsJob implements Jobby
           throw new ISE("Path[%s] didn't exist!?", intervalInfoPath);
         }
         List<Interval> intervals = config.JSON_MAPPER.readValue(
-            Utils.openInputStream(groupByJob, intervalInfoPath), new TypeReference<List<Interval>>()
-        {
-        }
+            Utils.openInputStream(groupByJob, intervalInfoPath),
+            new TypeReference<List<Interval>>() {}
         );
         config.setGranularitySpec(
             new UniformGranularitySpec(
@@ -162,9 +161,8 @@ public class DetermineHashedPartitionsJob implements Jobby
         }
         if (Utils.exists(groupByJob, fileSystem, partitionInfoPath)) {
           final Long numRows = config.JSON_MAPPER.readValue(
-              Utils.openInputStream(groupByJob, partitionInfoPath), new TypeReference<Long>()
-          {
-          }
+              Utils.openInputStream(groupByJob, partitionInfoPath),
+              new TypeReference<Long>() {}
           );
 
           log.info("Found approximately [%,d] rows in data.", numRows);
@@ -272,11 +270,9 @@ public class DetermineHashedPartitionsJob implements Jobby
         }
         interval = maybeInterval.get();
       }
-      hyperLogLogs.get(interval)
-                  .add(
-                      hashFunction.hashBytes(HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsBytes(groupKey))
-                                  .asBytes()
-                  );
+      hyperLogLogs
+          .get(interval)
+          .add(hashFunction.hashBytes(HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsBytes(groupKey)).asBytes());
     }
 
     @Override

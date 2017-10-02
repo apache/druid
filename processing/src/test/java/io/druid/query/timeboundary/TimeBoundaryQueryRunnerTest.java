@@ -22,7 +22,6 @@ package io.druid.query.timeboundary;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
 import com.google.common.io.CharSource;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
@@ -59,6 +58,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  */
@@ -240,7 +240,7 @@ public class TimeBoundaryQueryRunnerTest
                                                 .dataSource("testing")
                                                 .bound(TimeBoundaryQuery.MAX_TIME)
                                                 .build();
-    Map<String, Object> context = new MapMaker().makeMap();
+    Map<String, Object> context = new ConcurrentHashMap<>();
     context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
     Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
         runner.run(QueryPlus.wrap(timeBoundaryQuery), context),
@@ -262,7 +262,7 @@ public class TimeBoundaryQueryRunnerTest
                                                 .dataSource("testing")
                                                 .bound(TimeBoundaryQuery.MIN_TIME)
                                                 .build();
-    Map<String, Object> context = new MapMaker().makeMap();
+    Map<String, Object> context = new ConcurrentHashMap<>();
     context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
     Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
         runner.run(QueryPlus.wrap(timeBoundaryQuery), context),
