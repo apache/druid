@@ -237,6 +237,7 @@ public final class DimensionHandlerUtils
     return strategyFactory.makeColumnSelectorStrategy(capabilities, selector);
   }
 
+  @Nullable
   public static Long convertObjectToLong(@Nullable Object valObj)
   {
     if (valObj == null) {
@@ -254,6 +255,7 @@ public final class DimensionHandlerUtils
     }
   }
 
+  @Nullable
   public static Float convertObjectToFloat(@Nullable Object valObj)
   {
     if (valObj == null) {
@@ -271,6 +273,7 @@ public final class DimensionHandlerUtils
     }
   }
 
+  @Nullable
   public static Double convertObjectToDouble(@Nullable Object valObj)
   {
     if (valObj == null) {
@@ -282,8 +285,7 @@ public final class DimensionHandlerUtils
     } else if (valObj instanceof Number) {
       return ((Number) valObj).doubleValue();
     } else if (valObj instanceof String) {
-      Double doubleValue = Doubles.tryParse((String) valObj);
-      return doubleValue == null ? ZERO_DOUBLE : doubleValue;
+      return Doubles.tryParse((String) valObj);
     } else {
       throw new ParseException("Unknown type[%s]", valObj.getClass());
     }

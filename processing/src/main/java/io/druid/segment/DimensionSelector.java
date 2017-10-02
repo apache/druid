@@ -118,34 +118,28 @@ public interface DimensionSelector extends ColumnValueSelector, HotLoopCallee
   @Nullable
   IdLookup idLookup();
 
-  /**
-   * @deprecated always throws {@link UnsupportedOperationException}
-   */
   @Deprecated
   @Override
   default float getFloat()
   {
-    throw new UnsupportedOperationException("DimensionSelector cannot be operated as numeric ColumnValueSelector");
+    // This is controversial, see https://github.com/druid-io/druid/issues/4888
+    return 0.0f;
   }
 
-  /**
-   * @deprecated always throws {@link UnsupportedOperationException}
-   */
   @Deprecated
   @Override
   default double getDouble()
   {
-    throw new UnsupportedOperationException("DimensionSelector cannot be operated as numeric ColumnValueSelector");
+    // This is controversial, see https://github.com/druid-io/druid/issues/4888
+    return 0.0;
   }
 
-  /**
-   * @deprecated always throws {@link UnsupportedOperationException}
-   */
   @Deprecated
   @Override
   default long getLong()
   {
-    throw new UnsupportedOperationException("DimensionSelector cannot be operated as numeric ColumnValueSelector");
+    // This is controversial, see https://github.com/druid-io/druid/issues/4888
+    return 0L;
   }
 
   /**
