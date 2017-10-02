@@ -22,6 +22,7 @@ package io.druid.segment.indexing;
 import com.google.common.base.Strings;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.DateTimes;
 import io.druid.math.expr.Expr;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.groupby.RowBasedColumnSelectorFactory;
@@ -126,7 +127,7 @@ public class Transformer
     {
       final Expr transform = transforms.get(Column.TIME_COLUMN_NAME);
       if (transform != null) {
-        return new DateTime(transform.eval(this::getValueFromRow).asLong());
+        return DateTimes.utc(transform.eval(this::getValueFromRow).asLong());
       } else {
         return row.getTimestamp();
       }
