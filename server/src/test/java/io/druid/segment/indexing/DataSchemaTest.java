@@ -28,6 +28,7 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.DurationGranularity;
@@ -39,7 +40,6 @@ import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.TestHelper;
 import io.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -163,14 +163,14 @@ public class DataSchemaTest
     final InputRow row1bb = parser.parse(
         ByteBuffer.wrap("{\"time\":\"2000-01-01\",\"dimA\":\"foo\"}".getBytes(Charsets.UTF_8))
     );
-    Assert.assertEquals(new DateTime("2000-01-01"), row1bb.getTimestamp());
+    Assert.assertEquals(DateTimes.of("2000-01-01"), row1bb.getTimestamp());
     Assert.assertEquals("foo", row1bb.getRaw("dimA"));
     Assert.assertEquals("foofoo", row1bb.getRaw("expr"));
 
     final InputRow row1string = parser.parse("{\"time\":\"2000-01-01\",\"dimA\":\"foo\"}");
-    Assert.assertEquals(new DateTime("2000-01-01"), row1bb.getTimestamp());
-    Assert.assertEquals("foo", row1bb.getRaw("dimA"));
-    Assert.assertEquals("foofoo", row1bb.getRaw("expr"));
+    Assert.assertEquals(DateTimes.of("2000-01-01"), row1string.getTimestamp());
+    Assert.assertEquals("foo", row1string.getRaw("dimA"));
+    Assert.assertEquals("foofoo", row1string.getRaw("expr"));
 
     final InputRow row2 = parser.parse(
         ByteBuffer.wrap("{\"time\":\"2000-01-01\",\"dimA\":\"x\"}".getBytes(Charsets.UTF_8))

@@ -27,10 +27,10 @@ import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.DateTimes;
 import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -40,7 +40,7 @@ public class TransformSpecTest
 {
   private static final MapInputRowParser PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(
-          new TimestampSpec("t", "auto", new DateTime("2000-01-01")),
+          new TimestampSpec("t", "auto", DateTimes.of("2000-01-01")),
           new DimensionsSpec(
               DimensionsSpec.getDefaultSchemas(ImmutableList.of("f", "x", "y")),
               null,
@@ -79,8 +79,8 @@ public class TransformSpecTest
     final InputRow row = parser.parse(ROW1);
 
     Assert.assertNotNull(row);
-    Assert.assertEquals(new DateTime("2000-01-01").getMillis(), row.getTimestampFromEpoch());
-    Assert.assertEquals(new DateTime("2000-01-01"), row.getTimestamp());
+    Assert.assertEquals(DateTimes.of("2000-01-01").getMillis(), row.getTimestampFromEpoch());
+    Assert.assertEquals(DateTimes.of("2000-01-01"), row.getTimestamp());
     Assert.assertEquals(ImmutableList.of("f", "x", "y"), row.getDimensions());
     Assert.assertEquals(ImmutableList.of("foo"), row.getDimension("x"));
     Assert.assertEquals(3.0, row.getDoubleMetric("b"), 0);
@@ -128,8 +128,8 @@ public class TransformSpecTest
     final InputRow row = parser.parse(ROW1);
 
     Assert.assertNotNull(row);
-    Assert.assertEquals(new DateTime("1970-01-01T05:00:00Z"), row.getTimestamp());
-    Assert.assertEquals(new DateTime("1970-01-01T05:00:00Z").getMillis(), row.getTimestampFromEpoch());
+    Assert.assertEquals(DateTimes.of("1970-01-01T05:00:00Z"), row.getTimestamp());
+    Assert.assertEquals(DateTimes.of("1970-01-01T05:00:00Z").getMillis(), row.getTimestampFromEpoch());
   }
 
   @Test
@@ -146,7 +146,7 @@ public class TransformSpecTest
     final InputRow row = parser.parse(ROW1);
 
     Assert.assertNotNull(row);
-    Assert.assertEquals(new DateTime("2000-01-01T01:00:00Z"), row.getTimestamp());
-    Assert.assertEquals(new DateTime("2000-01-01T01:00:00Z").getMillis(), row.getTimestampFromEpoch());
+    Assert.assertEquals(DateTimes.of("2000-01-01T01:00:00Z"), row.getTimestamp());
+    Assert.assertEquals(DateTimes.of("2000-01-01T01:00:00Z").getMillis(), row.getTimestampFromEpoch());
   }
 }
