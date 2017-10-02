@@ -17,52 +17,32 @@
  * under the License.
  */
 
-package io.druid.server;
+package io.druid.sql.calcite.rel;
 
-import com.fasterxml.jackson.annotation.JsonValue;
+import io.druid.java.util.common.StringUtils;
+import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.AggregateCall;
+import org.apache.calcite.rex.RexNode;
 
-import java.util.Map;
-import java.util.Objects;
-
-/**
- */
-public class QueryStats
+public class CannotBuildQueryException extends RuntimeException
 {
-  private final Map<String, Object> stats;
-
-  public QueryStats(Map<String, Object> stats)
+  public CannotBuildQueryException(String message)
   {
-    this.stats = stats;
+    super(message);
   }
 
-  @JsonValue
-  public Map<String, Object> getStats()
+  public CannotBuildQueryException(RelNode relNode)
   {
-    return stats;
+    super(StringUtils.nonStrictFormat("Cannot process rel[%s]", relNode));
   }
 
-  @Override
-  public boolean equals(final Object o)
+  public CannotBuildQueryException(RelNode relNode, RexNode rexNode)
   {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    final QueryStats that = (QueryStats) o;
-    return Objects.equals(stats, that.stats);
+    super(StringUtils.nonStrictFormat("Cannot translate reference[%s] from rel[%s]", rexNode, relNode));
   }
 
-  @Override
-  public int hashCode()
+  public CannotBuildQueryException(RelNode relNode, AggregateCall aggregateCall)
   {
-    return Objects.hash(stats);
-  }
-
-  @Override
-  public String toString()
-  {
-    return String.valueOf(stats);
+    super(StringUtils.nonStrictFormat("Cannot translate aggregator[%s] from rel[%s]", aggregateCall, relNode));
   }
 }
