@@ -19,39 +19,20 @@
 
 package io.druid.output;
 
+import com.google.common.annotations.VisibleForTesting;
 import io.druid.java.util.common.io.Closer;
-import org.apache.commons.io.FileUtils;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.channels.FileChannel;
-import java.nio.file.StandardOpenOption;
 
-public final class TmpFileOutputMedium implements OutputMedium
+@VisibleForTesting
+final class OnHeapMemoryOutputMedium implements OutputMedium
 {
-  private final File dir;
   private final Closer closer = Closer.create();
-
-  TmpFileOutputMedium(File outDir) throws IOException
-  {
-    File tmpOutputFilesDir = new File(outDir, "tmpOutputFiles");
-    FileUtils.forceMkdir(tmpOutputFilesDir);
-    closer.register(() -> FileUtils.deleteDirectory(tmpOutputFilesDir));
-    this.dir = tmpOutputFilesDir;
-  }
 
   @Override
   public OutputBytes makeOutputBytes() throws IOException
   {
-    File file = File.createTempFile("filePeon", null, dir);
-    FileChannel ch = FileChannel.open(
-        file.toPath(),
-        StandardOpenOption.READ,
-        StandardOpenOption.WRITE
-    );
-    closer.register(file::delete);
-    closer.register(ch);
-    return new FileOutputBytes(file, ch);
+    return new HeapByteBufferOutputBytes();
   }
 
   @Override
