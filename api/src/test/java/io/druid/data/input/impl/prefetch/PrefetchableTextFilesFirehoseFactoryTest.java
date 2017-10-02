@@ -22,6 +22,7 @@ package io.druid.data.input.impl.prefetch;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.io.CountingOutputStream;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.CSVParseSpec;
@@ -39,9 +40,11 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -56,6 +59,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
 {
   private static final List<File> FIREHOSE_TMP_DIRS = new ArrayList<>();
   private static File TEST_DIR;
+  private static long FILE_SIZE;
 
   private static final StringInputRowParser parser = new StringInputRowParser(
       new CSVParseSpec(
@@ -88,16 +92,17 @@ public class PrefetchableTextFilesFirehoseFactoryTest
     FileUtils.forceMkdir(TEST_DIR);
 
     for (int i = 0; i < 100; i++) {
-      // Each file is 1490 bytes
-      try (final Writer writer = Files.newBufferedWriter(
-          new File(TEST_DIR, "test_" + i).toPath(),
-          StandardCharsets.UTF_8
-      )
+      try (
+          CountingOutputStream cos = new CountingOutputStream(Files.newOutputStream(new File(TEST_DIR, "test_" + i).toPath()));
+          Writer writer = new BufferedWriter(new OutputStreamWriter(cos, StandardCharsets.UTF_8))
       ) {
         for (int j = 0; j < 100; j++) {
           final String a = (20171220 + i) + "," + i + "," + j + "\n";
           writer.write(a);
         }
+        writer.flush();
+        // Every file size must be same
+        FILE_SIZE = cos.getCount();
       }
     }
   }
@@ -327,7 +332,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
       final List<Row> rows = new ArrayList<>();
       try (Firehose firehose = factory.connect(parser, firehoseTmpDir)) {
         if (i > 0) {
-          Assert.assertEquals(2980, factory.getCacheManager().getTotalCachedBytes());
+          Assert.assertEquals(FILE_SIZE * 2, factory.getCacheManager().getTotalCachedBytes());
         }
 
         while (firehose.hasMore()) {
@@ -350,7 +355,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
       final List<Row> rows = new ArrayList<>();
       try (Firehose firehose = factory.connect(parser, firehoseTmpDir)) {
         if (i > 0) {
-          Assert.assertEquals(2980, factory.getCacheManager().getTotalCachedBytes());
+          Assert.assertEquals(FILE_SIZE * 2, factory.getCacheManager().getTotalCachedBytes());
         }
 
         while (firehose.hasMore()) {
