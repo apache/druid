@@ -23,16 +23,23 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Maps;
 import com.metamx.common.StringUtils;
+import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilterUtils;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
+import io.druid.segment.data.IndexedInts;
 import io.druid.segment.virtual.VirtualColumnCacheHelper;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 /**
  */
@@ -68,7 +75,129 @@ public class MapVirtualColumn implements VirtualColumn
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelectorFactory factory)
   {
-    return NilColumnValueSelector.instance();
+    final DimensionSelector keySelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(keyDimension));
+    final DimensionSelector valueSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(valueDimension));
+
+    final String subColumnName = VirtualColumns.splitColumnName(columnName).rhs;
+
+    if (subColumnName == null) {
+      return new MapVirtualColumnValueSelector<Map>(keySelector, valueSelector)
+      {
+        @Override
+        public Class<Map> classOfObject()
+        {
+          return Map.class;
+        }
+
+        @Override
+        public Map getObject()
+        {
+          final IndexedInts keyIndices = keySelector.getRow();
+          final IndexedInts valueIndices = valueSelector.getRow();
+          final int limit = Math.min(keyIndices.size(), valueIndices.size());
+          final Map<String, String> map = Maps.newHashMapWithExpectedSize(limit);
+          for (int i = 0; i < limit; i++) {
+            map.put(
+                keySelector.lookupName(keyIndices.get(i)),
+                valueSelector.lookupName(valueIndices.get(i))
+            );
+          }
+          return map;
+        }
+      };
+    }
+
+    IdLookup keyIdLookup = keySelector.idLookup();
+    if (keyIdLookup != null) {
+      final int keyId = keyIdLookup.lookupId(subColumnName);
+      if (keyId < 0) {
+        return NilColumnValueSelector.instance();
+      }
+      return new MapVirtualColumnValueSelector<String>(keySelector, valueSelector)
+      {
+        @Override
+        public Class<String> classOfObject()
+        {
+          return String.class;
+        }
+
+        @Nullable
+        @Override
+        public String getObject()
+        {
+          final IndexedInts keyIndices = keySelector.getRow();
+          final IndexedInts valueIndices = valueSelector.getRow();
+          final int limit = Math.min(keyIndices.size(), valueIndices.size());
+          for (int i = 0; i < limit; i++) {
+            if (keyIndices.get(i) == keyId) {
+              return valueSelector.lookupName(valueIndices.get(i));
+            }
+          }
+          return null;
+        }
+      };
+    } else {
+      return new MapVirtualColumnValueSelector<String>(keySelector, valueSelector)
+      {
+        @Override
+        public Class<String> classOfObject()
+        {
+          return String.class;
+        }
+
+        @Nullable
+        @Override
+        public String getObject()
+        {
+          final IndexedInts keyIndices = keySelector.getRow();
+          final IndexedInts valueIndices = valueSelector.getRow();
+          final int limit = Math.min(keyIndices.size(), valueIndices.size());
+          for (int i = 0; i < limit; i++) {
+            if (Objects.equals(keySelector.lookupName(keyIndices.get(i)), subColumnName)) {
+              return valueSelector.lookupName(valueIndices.get(i));
+            }
+          }
+          return null;
+        }
+      };
+    }
+  }
+
+  private static abstract class MapVirtualColumnValueSelector<T> implements ColumnValueSelector<T>
+  {
+    final DimensionSelector keySelector;
+    final DimensionSelector valueSelector;
+
+    private MapVirtualColumnValueSelector(DimensionSelector keySelector, DimensionSelector valueSelector)
+    {
+      this.keySelector = keySelector;
+      this.valueSelector = valueSelector;
+    }
+
+    @Override
+    public double getDouble()
+    {
+      return 0.0;
+    }
+
+    @Override
+    public float getFloat()
+    {
+      return 0.0f;
+    }
+
+    @Override
+    public long getLong()
+    {
+      return 0L;
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+      inspector.visit("keySelector", keySelector);
+      inspector.visit("valueSelector", valueSelector);
+    }
   }
 
   @Override
