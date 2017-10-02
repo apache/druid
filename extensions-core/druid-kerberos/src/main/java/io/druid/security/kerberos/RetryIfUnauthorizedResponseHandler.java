@@ -27,15 +27,13 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 public class RetryIfUnauthorizedResponseHandler<Intermediate, Final>
-  implements HttpResponseHandler<RetryResponseHolder<Intermediate>, RetryResponseHolder<Final>>
+    implements HttpResponseHandler<RetryResponseHolder<Intermediate>, RetryResponseHolder<Final>>
 {
   private static final Logger log = new Logger(RetryIfUnauthorizedResponseHandler.class);
   private final HttpResponseHandler<Intermediate, Final> httpResponseHandler;
 
 
-  public RetryIfUnauthorizedResponseHandler(
-    HttpResponseHandler<Intermediate, Final> httpResponseHandler
-  )
+  public RetryIfUnauthorizedResponseHandler(HttpResponseHandler<Intermediate, Final> httpResponseHandler)
   {
     this.httpResponseHandler = httpResponseHandler;
   }
@@ -55,7 +53,8 @@ public class RetryIfUnauthorizedResponseHandler<Intermediate, Final>
 
   @Override
   public ClientResponse<RetryResponseHolder<Intermediate>> handleChunk(
-    ClientResponse<RetryResponseHolder<Intermediate>> clientResponse, HttpChunk httpChunk
+      ClientResponse<RetryResponseHolder<Intermediate>> clientResponse,
+      HttpChunk httpChunk
   )
   {
     if (clientResponse.getObj().shouldRetry()) {

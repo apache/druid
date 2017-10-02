@@ -17,28 +17,32 @@
  * under the License.
  */
 
-package io.druid.data.input.impl;
+package io.druid.segment.data;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonValue;
-import io.druid.java.util.common.StringUtils;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntIterators;
 
-public enum JSONPathFieldType
+/**
+ * Doesn't extend {@link it.unimi.dsi.fastutil.ints.IntIterable} to avoid accidential for-each iteration with boxing.
+ */
+public interface BitmapValues
 {
-  ROOT,
-  PATH,
-  JQ;
-
-  @JsonValue
-  @Override
-  public String toString()
+  BitmapValues EMPTY = new BitmapValues()
   {
-    return StringUtils.toLowerCase(this.name());
-  }
+    @Override
+    public int size()
+    {
+      return 0;
+    }
 
-  @JsonCreator
-  public static JSONPathFieldType fromString(String name)
-  {
-    return valueOf(StringUtils.toUpperCase(name));
-  }
+    @Override
+    public IntIterator iterator()
+    {
+      return IntIterators.EMPTY_ITERATOR;
+    }
+  };
+
+  int size();
+
+  IntIterator iterator();
 }

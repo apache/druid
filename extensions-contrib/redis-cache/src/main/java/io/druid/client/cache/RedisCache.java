@@ -37,154 +37,154 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class RedisCache implements Cache
 {
-    private static final Logger log = new Logger(RedisCache.class);
+  private static final Logger log = new Logger(RedisCache.class);
 
-    private JedisPool pool;
-    private RedisCacheConfig config;
+  private JedisPool pool;
+  private RedisCacheConfig config;
 
-    private final AtomicLong hitCount = new AtomicLong(0);
-    private final AtomicLong missCount = new AtomicLong(0);
-    private final AtomicLong timeoutCount = new AtomicLong(0);
-    private final AtomicLong errorCount = new AtomicLong(0);
+  private final AtomicLong hitCount = new AtomicLong(0);
+  private final AtomicLong missCount = new AtomicLong(0);
+  private final AtomicLong timeoutCount = new AtomicLong(0);
+  private final AtomicLong errorCount = new AtomicLong(0);
 
-    private final AtomicLong priorRequestCount = new AtomicLong(0);
-    // both get、put and getBulk will increase request count by 1
-    private final AtomicLong totalRequestCount = new AtomicLong(0);
+  private final AtomicLong priorRequestCount = new AtomicLong(0);
+  // both get、put and getBulk will increase request count by 1
+  private final AtomicLong totalRequestCount = new AtomicLong(0);
 
-    private RedisCache(JedisPool pool, RedisCacheConfig config)
-    {
-        this.pool = pool;
-        this.config = config;
+  private RedisCache(JedisPool pool, RedisCacheConfig config)
+  {
+    this.pool = pool;
+    this.config = config;
+  }
+
+  public static RedisCache create(final RedisCacheConfig config)
+  {
+    JedisPoolConfig poolConfig = new JedisPoolConfig();
+    poolConfig.setMaxTotal(config.getMaxTotalConnections());
+    poolConfig.setMaxIdle(config.getMaxIdleConnections());
+    poolConfig.setMinIdle(config.getMinIdleConnections());
+
+    JedisPool pool = new JedisPool(poolConfig, config.getHost(), config.getPort(), config.getTimeout());
+    return new RedisCache(pool, config);
+  }
+
+  @Override
+  public byte[] get(NamedKey key)
+  {
+    totalRequestCount.incrementAndGet();
+
+    try (Jedis jedis = pool.getResource()) {
+      byte[] bytes = jedis.get(key.toByteArray());
+      if (bytes == null) {
+        missCount.incrementAndGet();
+        return null;
+      } else {
+        hitCount.incrementAndGet();
+        return bytes;
+      }
     }
-
-    public static RedisCache create(final RedisCacheConfig config)
-    {
-        JedisPoolConfig poolConfig = new JedisPoolConfig();
-        poolConfig.setMaxTotal(config.getMaxTotalConnections());
-        poolConfig.setMaxIdle(config.getMaxIdleConnections());
-        poolConfig.setMinIdle(config.getMinIdleConnections());
-
-        JedisPool pool = new JedisPool(poolConfig, config.getHost(), config.getPort(), config.getTimeout());
-        return new RedisCache(pool, config);
+    catch (JedisException e) {
+      if (e.getMessage().contains("Read timed out")) {
+        timeoutCount.incrementAndGet();
+      } else {
+        errorCount.incrementAndGet();
+      }
+      log.warn(e, "Exception pulling item from cache");
+      return null;
     }
+  }
 
-    @Override
-    public byte[] get(NamedKey key)
-    {
-        totalRequestCount.incrementAndGet();
+  @Override
+  public void put(NamedKey key, byte[] value)
+  {
+    totalRequestCount.incrementAndGet();
 
-        try (Jedis jedis = pool.getResource()) {
-            byte[] bytes = jedis.get(key.toByteArray());
-            if (bytes == null) {
-                missCount.incrementAndGet();
-                return null;
-            } else {
-                hitCount.incrementAndGet();
-                return bytes;
-            }
+    try (Jedis jedis = pool.getResource()) {
+      jedis.psetex(key.toByteArray(), config.getExpiration(), value);
+    }
+    catch (JedisException e) {
+      errorCount.incrementAndGet();
+      log.warn(e, "Exception pushing item to cache");
+    }
+  }
+
+  @Override
+  public Map<NamedKey, byte[]> getBulk(Iterable<NamedKey> keys)
+  {
+    totalRequestCount.incrementAndGet();
+
+    Map<NamedKey, byte[]> results = new HashMap<>();
+
+    try (Jedis jedis = pool.getResource()) {
+      List<NamedKey> namedKeys = Lists.newArrayList(keys);
+      List<byte[]> byteKeys = Lists.transform(namedKeys, NamedKey::toByteArray);
+
+      List<byte[]> byteValues = jedis.mget(byteKeys.toArray(new byte[0][]));
+
+      for (int i = 0; i < byteValues.size(); ++i) {
+        if (byteValues.get(i) != null) {
+          results.put(namedKeys.get(i), byteValues.get(i));
         }
-        catch (JedisException e) {
-            if (e.getMessage().contains("Read timed out")) {
-                timeoutCount.incrementAndGet();
-            } else {
-                errorCount.incrementAndGet();
-            }
-            log.warn(e, "Exception pulling item from cache");
-            return null;
-        }
+      }
+
+      hitCount.addAndGet(results.size());
+      missCount.addAndGet(namedKeys.size() - results.size());
+    }
+    catch (JedisException e) {
+      if (e.getMessage().contains("Read timed out")) {
+        timeoutCount.incrementAndGet();
+      } else {
+        errorCount.incrementAndGet();
+      }
+      log.warn(e, "Exception pulling items from cache");
     }
 
-    @Override
-    public void put(NamedKey key, byte[] value)
-    {
-        totalRequestCount.incrementAndGet();
+    return results;
+  }
 
-        try (Jedis jedis = pool.getResource()) {
-            jedis.psetex(key.toByteArray(), config.getExpiration(), value);
-        }
-        catch (JedisException e) {
-            errorCount.incrementAndGet();
-            log.warn(e, "Exception pushing item to cache");
-        }
+  @Override
+  public void close(String namespace)
+  {
+    // no resources to cleanup
+  }
+
+  @Override
+  public CacheStats getStats()
+  {
+    return new CacheStats(
+        hitCount.get(),
+        missCount.get(),
+        0,
+        0,
+        0,
+        timeoutCount.get(),
+        errorCount.get()
+    );
+  }
+
+  @Override
+  public boolean isLocal()
+  {
+    return false;
+  }
+
+  @Override
+  public void doMonitor(ServiceEmitter emitter)
+  {
+    final long priorCount = priorRequestCount.get();
+    final long totalCount = totalRequestCount.get();
+    final ServiceMetricEvent.Builder builder = ServiceMetricEvent.builder();
+    emitter.emit(builder.build("query/cache/redis/total/requests", totalCount));
+    emitter.emit(builder.build("query/cache/redis/delta/requests", totalCount - priorCount));
+    if (!priorRequestCount.compareAndSet(priorCount, totalCount)) {
+      log.error("Prior value changed while I was reporting! updating anyways");
+      priorRequestCount.set(totalCount);
     }
+  }
 
-    @Override
-    public Map<NamedKey, byte[]> getBulk(Iterable<NamedKey> keys)
-    {
-        totalRequestCount.incrementAndGet();
-
-        Map<NamedKey, byte[]> results = new HashMap<>();
-
-        try (Jedis jedis = pool.getResource()) {
-            List<NamedKey> namedKeys = Lists.newArrayList(keys);
-            List<byte[]> byteKeys = Lists.transform(namedKeys, NamedKey::toByteArray);
-
-            List<byte[]> byteValues = jedis.mget(byteKeys.toArray(new byte[0][]));
-
-            for (int i = 0; i < byteValues.size(); ++i) {
-                if (byteValues.get(i) != null) {
-                    results.put(namedKeys.get(i), byteValues.get(i));
-                }
-            }
-
-            hitCount.addAndGet(results.size());
-            missCount.addAndGet(namedKeys.size() - results.size());
-        }
-        catch (JedisException e) {
-            if (e.getMessage().contains("Read timed out")) {
-                timeoutCount.incrementAndGet();
-            } else {
-                errorCount.incrementAndGet();
-            }
-            log.warn(e, "Exception pulling items from cache");
-        }
-
-        return results;
-    }
-
-    @Override
-    public void close(String namespace)
-    {
-        // no resources to cleanup
-    }
-
-    @Override
-    public CacheStats getStats()
-    {
-        return new CacheStats(
-                hitCount.get(),
-                missCount.get(),
-                0,
-                0,
-                0,
-                timeoutCount.get(),
-                errorCount.get()
-        );
-    }
-
-    @Override
-    public boolean isLocal()
-    {
-        return false;
-    }
-
-    @Override
-    public void doMonitor(ServiceEmitter emitter)
-    {
-        final long priorCount = priorRequestCount.get();
-        final long totalCount = totalRequestCount.get();
-        final ServiceMetricEvent.Builder builder = ServiceMetricEvent.builder();
-        emitter.emit(builder.build("query/cache/redis/total/requests", totalCount));
-        emitter.emit(builder.build("query/cache/redis/delta/requests", totalCount - priorCount));
-        if (!priorRequestCount.compareAndSet(priorCount, totalCount)) {
-            log.error("Prior value changed while I was reporting! updating anyways");
-            priorRequestCount.set(totalCount);
-        }
-    }
-
-    @VisibleForTesting
-    static RedisCache create(final JedisPool pool, final RedisCacheConfig config)
-    {
-        return new RedisCache(pool, config);
-    }
+  @VisibleForTesting
+  static RedisCache create(final JedisPool pool, final RedisCacheConfig config)
+  {
+    return new RedisCache(pool, config);
+  }
 }

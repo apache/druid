@@ -203,12 +203,6 @@ public class ZkCoordinatorTest extends CuratorTestBase
           }
 
           @Override
-          public int getNumLoadingThreads()
-          {
-            return 5;
-          }
-
-          @Override
           public int getAnnounceIntervalMillis()
           {
             return 50;
@@ -491,12 +485,6 @@ public class ZkCoordinatorTest extends CuratorTestBase
                   public File getInfoDir()
                   {
                     return infoDir;
-                  }
-
-                  @Override
-                  public int getNumLoadingThreads()
-                  {
-                    return 5;
                   }
 
                   @Override

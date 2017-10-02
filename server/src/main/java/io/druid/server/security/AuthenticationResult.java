@@ -19,8 +19,8 @@
 
 package io.druid.server.security;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import javax.annotation.Nullable;
+import java.util.Map;
 
 /**
  * An AuthenticationResult contains information about a successfully authenticated request.
@@ -37,25 +37,35 @@ public class AuthenticationResult
    */
   private final String authorizerName;
 
-  @JsonCreator
+  /**
+   * parameter containing additional context information from an Authenticator
+   */
+  @Nullable
+  private final Map<String, Object> context;
+
   public AuthenticationResult(
-      @JsonProperty("identity") final String identity,
-      @JsonProperty("authorizerName") final String authorizerName
+      final String identity,
+      final String authorizerName,
+      final Map<String, Object> context
   )
   {
     this.identity = identity;
     this.authorizerName = authorizerName;
+    this.context = context;
   }
 
-  @JsonProperty
   public String getIdentity()
   {
     return identity;
   }
 
-  @JsonProperty
   public String getAuthorizerName()
   {
     return authorizerName;
+  }
+
+  public Map<String, Object> getContext()
+  {
+    return context;
   }
 }

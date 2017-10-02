@@ -16,43 +16,30 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package io.druid.data.input.avro;
+package io.druid.data.input.parquet;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Lists;
+import com.google.common.base.Preconditions;
 import io.druid.java.util.common.StringUtils;
-import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.util.Utf8;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 public class GenericRecordAsMap implements Map<String, Object>
 {
   private final GenericRecord record;
-  private final boolean fromPigAvroStorage;
   private final boolean binaryAsString;
 
-  private static final Function<Object, String> PIG_AVRO_STORAGE_ARRAY_TO_STRING_INCLUDING_NULL = new Function<Object, String>()
+  public GenericRecordAsMap(
+      GenericRecord record,
+      boolean binaryAsString
+  )
   {
-    @Nullable
-    @Override
-    public String apply(Object input)
-    {
-      return String.valueOf(((GenericRecord) input).get(0));
-    }
-  };
-
-  public GenericRecordAsMap(GenericRecord record, boolean fromPigAvroStorage, boolean binaryAsString)
-  {
-    this.record = record;
-    this.fromPigAvroStorage = fromPigAvroStorage;
+    this.record = Preconditions.checkNotNull(record, "record");
     this.binaryAsString = binaryAsString;
   }
 
@@ -102,9 +89,6 @@ public class GenericRecordAsMap implements Map<String, Object>
   public Object get(Object key)
   {
     Object field = record.get(key.toString());
-    if (fromPigAvroStorage && field instanceof GenericData.Array) {
-      return Lists.transform((List) field, PIG_AVRO_STORAGE_ARRAY_TO_STRING_INCLUDING_NULL);
-    }
     if (field instanceof ByteBuffer) {
       if (binaryAsString) {
         return StringUtils.fromUtf8(((ByteBuffer) field).array());

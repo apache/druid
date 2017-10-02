@@ -17,45 +17,28 @@
  * under the License.
  */
 
-package io.druid.segment.data;
+package io.druid.java.util.common.parsers;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+import io.druid.java.util.common.StringUtils;
 
-import io.druid.segment.IntIteratorUtils;
-import it.unimi.dsi.fastutil.ints.AbstractIntIterator;
-
-/**
- */
-public class IndexedIntsIterator extends AbstractIntIterator
+public enum JSONPathFieldType
 {
-  private final IndexedInts baseInts;
-  private final int size;
+  ROOT,
+  PATH,
+  JQ;
 
-  private int currIndex = 0;
-
-  public IndexedIntsIterator(
-      IndexedInts baseInts
-  )
+  @JsonValue
+  @Override
+  public String toString()
   {
-    this.baseInts = baseInts;
-
-    size = baseInts.size();
+    return StringUtils.toLowerCase(this.name());
   }
 
-  @Override
-  public boolean hasNext()
+  @JsonCreator
+  public static JSONPathFieldType fromString(String name)
   {
-    return currIndex < size;
-  }
-
-  @Override
-  public int nextInt()
-  {
-    return baseInts.get(currIndex++);
-  }
-
-  @Override
-  public int skip(int n)
-  {
-    return IntIteratorUtils.skip(this, n);
+    return valueOf(StringUtils.toUpperCase(name));
   }
 }

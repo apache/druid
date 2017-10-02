@@ -280,11 +280,7 @@ public class SimpleProvisioningStrategyTest
         )
     ).times(2);
     EasyMock.expect(runner.markWorkersLazy(EasyMock.<Predicate<ImmutableWorkerInfo>>anyObject(), EasyMock.anyInt()))
-            .andReturn(
-                Collections.<Worker>singletonList(
-                    new TestZkWorker(testTask).getWorker()
-                )
-            );
+            .andReturn(Collections.singletonList(new TestZkWorker(testTask).getWorker()));
     EasyMock.expect(runner.getLazyWorkers()).andReturn(Lists.<Worker>newArrayList());
     EasyMock.replay(runner);
 
@@ -324,12 +320,8 @@ public class SimpleProvisioningStrategyTest
         )
     ).times(2);
     EasyMock.expect(runner.getLazyWorkers()).andReturn(Lists.<Worker>newArrayList()).times(2);
-    EasyMock.expect(runner.markWorkersLazy(EasyMock.<Predicate<ImmutableWorkerInfo>>anyObject(), EasyMock.anyInt()))
-            .andReturn(
-                Collections.singletonList(
-                    new TestZkWorker(testTask).getWorker()
-                )
-            );
+    EasyMock.expect(runner.markWorkersLazy(EasyMock.anyObject(), EasyMock.anyInt()))
+            .andReturn(Collections.singletonList(new TestZkWorker(testTask).getWorker()));
     EasyMock.replay(runner);
 
     Provisioner provisioner = strategy.makeProvisioner(runner);
@@ -376,10 +368,8 @@ public class SimpleProvisioningStrategyTest
         )
     ).times(2);
     EasyMock.expect(runner.getLazyWorkers()).andReturn(Lists.<Worker>newArrayList());
-    EasyMock.expect(runner.markWorkersLazy(EasyMock.<Predicate<ImmutableWorkerInfo>>anyObject(), EasyMock.anyInt()))
-            .andReturn(
-                Collections.<Worker>emptyList()
-            );
+    EasyMock.expect(runner.markWorkersLazy(EasyMock.anyObject(), EasyMock.anyInt()))
+            .andReturn(Collections.emptyList());
     EasyMock.replay(runner);
 
     Provisioner provisioner = strategy.makeProvisioner(runner);
@@ -422,10 +412,8 @@ public class SimpleProvisioningStrategyTest
         )
     ).times(3);
     EasyMock.expect(runner.getLazyWorkers()).andReturn(Lists.<Worker>newArrayList());
-    EasyMock.expect(runner.markWorkersLazy(EasyMock.<Predicate<ImmutableWorkerInfo>>anyObject(), EasyMock.anyInt()))
-            .andReturn(
-                Collections.<Worker>emptyList()
-            );
+    EasyMock.expect(runner.markWorkersLazy(EasyMock.anyObject(), EasyMock.anyInt()))
+            .andReturn(Collections.emptyList());
     EasyMock.replay(runner);
 
     Provisioner provisioner = strategy.makeProvisioner(runner);

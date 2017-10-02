@@ -19,7 +19,6 @@
 
 package io.druid.server.coordinator.helper;
 
-import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.client.DruidDataSource;
@@ -171,7 +170,7 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
     );
 
     log.info("Load Queues:");
-    for (MinMaxPriorityQueue<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
+    for (Iterable<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
       for (ServerHolder serverHolder : serverHolders) {
         ImmutableDruidServer server = serverHolder.getServer();
         LoadQueuePeon queuePeon = serverHolder.getPeon();
@@ -199,34 +198,32 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
     // Emit coordinator metrics
     params
         .getLoadManagementPeons()
-        .forEach(
-            (final String serverName, final LoadQueuePeon queuePeon) -> {
-              emitter.emit(
-                  new ServiceMetricEvent.Builder()
-                      .setDimension(DruidMetrics.SERVER, serverName).build(
-                      "segment/loadQueue/size", queuePeon.getLoadQueueSize()
-                  )
-              );
-              emitter.emit(
-                  new ServiceMetricEvent.Builder()
-                      .setDimension(DruidMetrics.SERVER, serverName).build(
-                      "segment/loadQueue/failed", queuePeon.getAndResetFailedAssignCount()
-                  )
-              );
-              emitter.emit(
-                  new ServiceMetricEvent.Builder()
-                      .setDimension(DruidMetrics.SERVER, serverName).build(
-                      "segment/loadQueue/count", queuePeon.getSegmentsToLoad().size()
-                  )
-              );
-              emitter.emit(
-                  new ServiceMetricEvent.Builder()
-                      .setDimension(DruidMetrics.SERVER, serverName).build(
-                      "segment/dropQueue/count", queuePeon.getSegmentsToDrop().size()
-                  )
-              );
-            }
-        );
+        .forEach((final String serverName, final LoadQueuePeon queuePeon) -> {
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.SERVER, serverName).build(
+                  "segment/loadQueue/size", queuePeon.getLoadQueueSize()
+              )
+          );
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.SERVER, serverName).build(
+                  "segment/loadQueue/failed", queuePeon.getAndResetFailedAssignCount()
+              )
+          );
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.SERVER, serverName).build(
+                  "segment/loadQueue/count", queuePeon.getSegmentsToLoad().size()
+              )
+          );
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.SERVER, serverName).build(
+                  "segment/dropQueue/count", queuePeon.getSegmentsToDrop().size()
+              )
+          );
+        });
 
     coordinator.getSegmentAvailability().object2LongEntrySet().forEach(
         (final Object2LongMap.Entry<String> entry) -> {
@@ -266,23 +263,21 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
 
     allSegments
         .collect(Collectors.groupingBy(DataSegment::getDataSource))
-        .forEach(
-            (final String name, final List<DataSegment> segments) -> {
-              final long size = segments.stream().mapToLong(DataSegment::getSize).sum();
-              emitter.emit(
-                  new ServiceMetricEvent.Builder()
-                      .setDimension(DruidMetrics.DATASOURCE, name).build(
-                      "segment/size", size
-                  )
-              );
-              emitter.emit(
-                  new ServiceMetricEvent.Builder()
-                      .setDimension(DruidMetrics.DATASOURCE, name).build(
-                      "segment/count", segments.size()
-                  )
-              );
-            }
-        );
+        .forEach((final String name, final List<DataSegment> segments) -> {
+          final long size = segments.stream().mapToLong(DataSegment::getSize).sum();
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DATASOURCE, name).build(
+                  "segment/size", size
+              )
+          );
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DATASOURCE, name).build(
+                  "segment/count", segments.size()
+              )
+          );
+        });
 
     return params;
   }

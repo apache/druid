@@ -55,6 +55,6 @@ public class LookupExtractionModule implements DruidModule
 
   public static byte[] getRandomCacheKey()
   {
-   return StringUtils.toUtf8(UUID.randomUUID().toString());
+    return StringUtils.toUtf8(UUID.randomUUID().toString());
   }
 }

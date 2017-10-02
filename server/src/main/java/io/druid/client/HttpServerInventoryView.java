@@ -25,7 +25,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.FutureCallback;
@@ -91,11 +90,11 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
   private final LifecycleLock lifecycleLock = new LifecycleLock();
 
-  private final ConcurrentMap<ServerRemovedCallback, Executor> serverCallbacks = new MapMaker().makeMap();
-  private final ConcurrentMap<SegmentCallback, Executor> segmentCallbacks = new MapMaker().makeMap();
+  private final ConcurrentMap<ServerRemovedCallback, Executor> serverCallbacks = new ConcurrentHashMap<>();
+  private final ConcurrentMap<SegmentCallback, Executor> segmentCallbacks = new ConcurrentHashMap<>();
 
-  private final ConcurrentMap<SegmentCallback, Predicate<Pair<DruidServerMetadata, DataSegment>>> segmentPredicates = new MapMaker()
-      .makeMap();
+  private final ConcurrentMap<SegmentCallback, Predicate<Pair<DruidServerMetadata, DataSegment>>> segmentPredicates =
+      new ConcurrentHashMap<>();
   private final Predicate<Pair<DruidServerMetadata, DataSegment>> defaultFilter;
   private volatile Predicate<Pair<DruidServerMetadata, DataSegment>> finalPredicate;
 

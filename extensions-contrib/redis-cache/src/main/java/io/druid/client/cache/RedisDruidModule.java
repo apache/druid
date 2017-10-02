@@ -29,18 +29,15 @@ import java.util.List;
 
 public class RedisDruidModule implements DruidModule
 {
-    @Override
-    public void configure(Binder binder)
-    {
+  @Override
+  public void configure(Binder binder)
+  {
+    // do nothing
+  }
 
-    }
-
-    @Override
-    public List<? extends Module> getJacksonModules()
-    {
-        return ImmutableList.of(
-                new SimpleModule("DruidRedisCache")
-                        .registerSubtypes(RedisCacheProvider.class)
-        );
-    }
+  @Override
+  public List<? extends Module> getJacksonModules()
+  {
+    return ImmutableList.of(new SimpleModule("DruidRedisCache").registerSubtypes(RedisCacheProvider.class));
+  }
 }
