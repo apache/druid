@@ -61,7 +61,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
   private static final String SCHEME = "http";
 
   @Nullable
-  static DefaultWorkerBehaviorConfig getWorkerBehaviorConfig(
+  static DefaultWorkerBehaviorConfig getDefaultWorkerBehaviorConfig(
       Supplier<WorkerBehaviorConfig> workerConfigRef,
       String action,
       EmittingLogger log
@@ -155,7 +155,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       Collection<ImmutableWorkerInfo> workers = runner.getWorkers();
       log.debug("Workers: %d %s", workers.size(), workers);
       boolean didProvision = false;
-      final DefaultWorkerBehaviorConfig workerConfig = getWorkerBehaviorConfig(workerConfigRef, "provision", log);
+      final DefaultWorkerBehaviorConfig workerConfig = getDefaultWorkerBehaviorConfig(workerConfigRef, "provision", log);
       if (workerConfig == null) {
         return false;
       }
@@ -331,7 +331,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     {
       Collection<ImmutableWorkerInfo> zkWorkers = runner.getWorkers();
       log.debug("Workers: %d [%s]", zkWorkers.size(), zkWorkers);
-      final DefaultWorkerBehaviorConfig workerConfig = getWorkerBehaviorConfig(workerConfigRef, "terminate", log);
+      final DefaultWorkerBehaviorConfig workerConfig = getDefaultWorkerBehaviorConfig(workerConfigRef, "terminate", log);
       if (workerConfig == null) {
         return false;
       }
