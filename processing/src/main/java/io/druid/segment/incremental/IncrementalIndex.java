@@ -141,14 +141,33 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         if (!isComplexMetric || !deserializeComplexMetrics) {
           return baseSelectorFactory.makeColumnValueSelector(column);
         } else {
+          ColumnValueSelector<?> baseSelector = baseSelectorFactory.makeColumnValueSelector(column);
           final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
           if (serde == null) {
             throw new ISE("Don't know how to handle type[%s]", typeName);
           }
 
           final ComplexMetricExtractor extractor = serde.getExtractor();
-          return new ObjectColumnSelector()
+          return new ColumnValueSelector()
           {
+            @Override
+            public long getLong()
+            {
+              return baseSelector.getLong();
+            }
+
+            @Override
+            public float getFloat()
+            {
+              return baseSelector.getFloat();
+            }
+
+            @Override
+            public double getDouble()
+            {
+              return baseSelector.getDouble();
+            }
+
             @Override
             public Class classOfObject()
             {
@@ -164,6 +183,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
             @Override
             public void inspectRuntimeShape(RuntimeShapeInspector inspector)
             {
+              inspector.visit("baseSelector", baseSelector);
               inspector.visit("in", in);
               inspector.visit("extractor", extractor);
             }
