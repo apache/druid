@@ -42,7 +42,7 @@ public class SketchAggregator implements Aggregator
 
   private void initUnion()
   {
-    union = new SynchronizedUnion((Union) SetOperation.builder().build(size, Family.UNION));
+    union = new SynchronizedUnion((Union) SetOperation.builder().setNominalEntries(size).build(Family.UNION));
   }
 
   @Override

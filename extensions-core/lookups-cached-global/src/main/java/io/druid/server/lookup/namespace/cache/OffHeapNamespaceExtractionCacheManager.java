@@ -25,6 +25,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.server.lookup.namespace.NamespaceExtractionConfig;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.mapdb.HTreeMap;
@@ -132,9 +133,13 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
   private AtomicInteger cacheCount = new AtomicInteger(0);
 
   @Inject
-  public OffHeapNamespaceExtractionCacheManager(Lifecycle lifecycle, ServiceEmitter serviceEmitter)
+  public OffHeapNamespaceExtractionCacheManager(
+      Lifecycle lifecycle,
+      ServiceEmitter serviceEmitter,
+      NamespaceExtractionConfig config
+  )
   {
-    super(lifecycle, serviceEmitter);
+    super(lifecycle, serviceEmitter, config);
     try {
       tmpFile = File.createTempFile("druidMapDB", getClass().getCanonicalName());
       log.info("Using file [%s] for mapDB off heap namespace cache", tmpFile.getAbsolutePath());

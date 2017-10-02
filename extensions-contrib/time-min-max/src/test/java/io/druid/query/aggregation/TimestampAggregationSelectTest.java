@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -32,7 +33,6 @@ import io.druid.query.Result;
 import io.druid.query.select.SelectResultValue;
 import io.druid.segment.ColumnSelectorFactory;
 import org.easymock.EasyMock;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -65,8 +65,8 @@ public class TimestampAggregationSelectTest
   {
     return Iterables.transform(
         ImmutableList.of(
-            ImmutableList.of("timeMin", "tmin", TimestampMinAggregatorFactory.class, DateTime.parse("2011-01-12T01:00:00.000Z").getMillis()),
-            ImmutableList.of("timeMax", "tmax", TimestampMaxAggregatorFactory.class, DateTime.parse("2011-01-31T01:00:00.000Z").getMillis())
+            ImmutableList.of("timeMin", "tmin", TimestampMinAggregatorFactory.class, DateTimes.of("2011-01-12T01:00:00.000Z").getMillis()),
+            ImmutableList.of("timeMax", "tmax", TimestampMaxAggregatorFactory.class, DateTimes.of("2011-01-31T01:00:00.000Z").getMillis())
         ),
         new Function<List<?>, Object[]>()
         {

@@ -29,6 +29,9 @@ import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.parsers.JSONPathFieldSpec;
+import io.druid.java.util.common.parsers.JSONPathFieldType;
+import io.druid.java.util.common.parsers.JSONPathSpec;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -226,7 +229,7 @@ public class InputRowParserSerdeTest
     List<JSONPathFieldSpec> fieldSpecs = parsedSpec.getFields();
     Assert.assertEquals(JSONPathFieldType.ROOT, fieldSpecs.get(0).getType());
     Assert.assertEquals("parseThisRootField", fieldSpecs.get(0).getName());
-    Assert.assertEquals(null, fieldSpecs.get(0).getExpr());
+    Assert.assertEquals("parseThisRootField", fieldSpecs.get(0).getExpr());
   }
 
 }
