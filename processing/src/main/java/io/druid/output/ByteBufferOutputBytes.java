@@ -35,6 +35,9 @@ import java.util.stream.Collectors;
 
 public abstract class ByteBufferOutputBytes extends OutputBytes
 {
+  /**
+   * There is no reason why 64K is chosen. Other power of 2 between 4K and 64K could be more reasonable.
+   */
   static final int BUFFER_SIZE = 64 * 1024;
 
   final ArrayList<ByteBuffer> buffers = new ArrayList<>();

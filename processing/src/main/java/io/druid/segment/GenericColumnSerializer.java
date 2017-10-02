@@ -27,7 +27,7 @@ import java.io.IOException;
 @ExtensionPoint
 public interface GenericColumnSerializer extends Serializer
 {
-  public void open() throws IOException;
+  void open() throws IOException;
 
-  public void serialize(Object obj) throws IOException;
+  void serialize(Object obj) throws IOException;
 }

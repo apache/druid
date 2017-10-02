@@ -60,7 +60,7 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
     }
   }
 
-  protected void setupEncodedValueWriter(OutputMedium outputMedium) throws IOException
+  private void setupEncodedValueWriter(OutputMedium outputMedium) throws IOException
   {
     final CompressionStrategy metCompression = indexSpec.getMetricCompression();
     this.serializer = DoubleColumnSerializer.create(outputMedium, dimensionName, metCompression);
