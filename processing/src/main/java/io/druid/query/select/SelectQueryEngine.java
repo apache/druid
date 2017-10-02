@@ -93,17 +93,17 @@ public class SelectQueryEngine
   public interface SelectColumnSelectorStrategy<ValueSelectorType> extends ColumnSelectorStrategy
   {
     /**
-     * Read the current row from dimSelector and add the row values for a dimension to the result map.
+     * Read the current row from selector and add the row values for a dimension to the result map.
      *
      * Multi-valued rows should be added to the result as a List, single value rows should be added as a single object.
      *
      * @param outputName Output name for this dimension in the select query being served
-     * @param dimSelector Dimension value selector
+     * @param selector Dimension value selector
      * @param resultMap Row value map for the current row being retrieved by the select query
      */
     void addRowValuesToSelectResult(
         String outputName,
-        ValueSelectorType dimSelector,
+        ValueSelectorType selector,
         Map<String, Object> resultMap
     );
   }
