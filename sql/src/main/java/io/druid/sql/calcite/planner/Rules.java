@@ -255,6 +255,7 @@ public class Rules
   // accessible through Programs.standard (which we don't want, since it also adds Enumerable rules).
   private static class DecorrelateAndTrimFieldsProgram implements Program
   {
+    @Override
     public RelNode run(
         RelOptPlanner planner,
         RelNode rel,
