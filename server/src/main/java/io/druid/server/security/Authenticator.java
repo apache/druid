@@ -51,7 +51,9 @@ public interface Authenticator extends ServletFilterHolder
    * <p>
    * If the authentication succeeds, the Filter should set the "Druid-Authentication-Result" attribute in the request,
    * containing an AuthenticationResult that represents the authenticated identity of the requester, along with
-   * the name of the Authorizer instance that should authorize the request.
+   * the name of the Authorizer instance that should authorize the request. An Authenticator may choose to
+   * add a Map<String, Object> context to the authentication result, containing additional information to be
+   * used by the Authorizer. The contents of this map are left for Authenticator/Authorizer implementors to decide.
    * <p>
    * If the "Druid-Authentication-Result" attribute is already set (i.e., request has been authenticated by an
    * earlier Filter), this Filter should skip any authentication checks and proceed to the next Filter.
