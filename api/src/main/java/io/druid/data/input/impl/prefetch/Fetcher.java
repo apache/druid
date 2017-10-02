@@ -286,7 +286,7 @@ public class Fetcher<ObjectType> implements Iterator<OpenedObject<ObjectType>>
       }
     } else {
       final ObjectType object = objects.get(nextFetchIndex);
-      LOG.info("Reading [%d]the object[%s]", nextFetchIndex, object);
+      LOG.info("Reading [%d]th object[%s]", nextFetchIndex, object);
       nextFetchIndex++;
       return new OpenedObject<>(object, openObjectFunction.open(object), getNoopCloser());
     }

@@ -30,6 +30,7 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.StringUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.hamcrest.CoreMatchers;
@@ -59,7 +60,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
 {
   private static final List<File> FIREHOSE_TMP_DIRS = new ArrayList<>();
   private static File TEST_DIR;
-  private static long FILE_SIZE;
+  private static long FILE_SIZE = -1;
 
   private static final StringInputRowParser parser = new StringInputRowParser(
       new CSVParseSpec(
@@ -93,16 +94,22 @@ public class PrefetchableTextFilesFirehoseFactoryTest
 
     for (int i = 0; i < 100; i++) {
       try (
-          CountingOutputStream cos = new CountingOutputStream(Files.newOutputStream(new File(TEST_DIR, "test_" + i).toPath()));
+          CountingOutputStream cos = new CountingOutputStream(
+              Files.newOutputStream(new File(TEST_DIR, "test_" + i).toPath())
+          );
           Writer writer = new BufferedWriter(new OutputStreamWriter(cos, StandardCharsets.UTF_8))
       ) {
         for (int j = 0; j < 100; j++) {
-          final String a = (20171220 + i) + "," + i + "," + j + "\n";
+          final String a = StringUtils.format("%d,%03d,%03d\n", (20171220 + i), i, j);
           writer.write(a);
         }
         writer.flush();
         // Every file size must be same
-        FILE_SIZE = cos.getCount();
+        if (FILE_SIZE == -1) {
+          FILE_SIZE = cos.getCount();
+        } else {
+          Assert.assertEquals(FILE_SIZE, cos.getCount());
+        }
       }
     }
   }
@@ -136,8 +143,8 @@ public class PrefetchableTextFilesFirehoseFactoryTest
       for (int j = 0; j < 100; j++) {
         final Row row = rows.get(i * 100 + j);
         Assert.assertEquals(DateTimes.utc(20171220 + i), row.getTimestamp());
-        Assert.assertEquals(String.valueOf(i), row.getDimension("a").get(0));
-        Assert.assertEquals(String.valueOf(j), row.getDimension("b").get(0));
+        Assert.assertEquals(i, Integer.valueOf(row.getDimension("a").get(0)).intValue());
+        Assert.assertEquals(j, Integer.valueOf(row.getDimension("b").get(0)).intValue());
       }
     }
   }
@@ -157,6 +164,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
     );
     FileUtils.forceDelete(firehoseTempDir);
     FileUtils.forceMkdir(firehoseTempDir);
+    FIREHOSE_TMP_DIRS.add(firehoseTempDir);
     return firehoseTempDir;
   }
 
