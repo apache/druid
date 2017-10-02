@@ -29,7 +29,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -88,6 +87,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -108,7 +108,7 @@ public class RealtimePlumber implements Plumber
   private final SegmentPublisher segmentPublisher;
   private final SegmentHandoffNotifier handoffNotifier;
   private final Object handoffCondition = new Object();
-  private final Map<Long, Sink> sinks = Maps.newConcurrentMap();
+  private final Map<Long, Sink> sinks = new ConcurrentHashMap<>();
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline = new VersionedIntervalTimeline<String, Sink>(
       String.CASE_INSENSITIVE_ORDER
   );

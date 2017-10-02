@@ -19,11 +19,11 @@
 
 package io.druid.query;
 
-import com.google.common.collect.Maps;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -38,7 +38,7 @@ public class ReflectionLoaderThingy<T>
     return new ReflectionLoaderThingy<K>(interfaceClass);
   }
 
-  Map<Class<?>, AtomicReference<T>> toolChestMap = Maps.newConcurrentMap();
+  Map<Class<?>, AtomicReference<T>> toolChestMap = new ConcurrentHashMap<>();
 
   private final Class<T> interfaceClass;
 

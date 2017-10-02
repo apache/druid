@@ -208,6 +208,11 @@ public interface QueryMetrics<QueryType extends Query<?>>
   void postFilters(List<Filter> postFilters);
 
   /**
+   * Sets identity of the requester for a query. See {@code AuthenticationResult}.
+   */
+  void identity(String identity);
+
+  /**
    * Creates a {@link BitmapResultFactory} which may record some information along bitmap construction from {@link
    * #preFilters(List)}. The returned BitmapResultFactory may add some dimensions to this QueryMetrics from it's {@link
    * BitmapResultFactory#toImmutableBitmap(Object)} method. See {@link BitmapResultFactory} Javadoc for more

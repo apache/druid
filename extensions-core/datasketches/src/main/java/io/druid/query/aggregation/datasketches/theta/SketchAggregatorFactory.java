@@ -109,7 +109,7 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   {
     return new ObjectAggregateCombiner<SketchHolder>()
     {
-      private final Union union = (Union) SetOperation.builder().build(size, Family.UNION);
+      private final Union union = (Union) SetOperation.builder().setNominalEntries(size).build(Family.UNION);
       private final SketchHolder combined = SketchHolder.of(union);
 
       @Override

@@ -90,6 +90,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -112,7 +113,7 @@ public class AppenderatorImpl implements Appenderator
   private final IndexIO indexIO;
   private final IndexMerger indexMerger;
   private final Cache cache;
-  private final Map<SegmentIdentifier, Sink> sinks = Maps.newConcurrentMap();
+  private final Map<SegmentIdentifier, Sink> sinks = new ConcurrentHashMap<>();
   private final Set<SegmentIdentifier> droppingSinks = Sets.newConcurrentHashSet();
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline = new VersionedIntervalTimeline<>(
       String.CASE_INSENSITIVE_ORDER

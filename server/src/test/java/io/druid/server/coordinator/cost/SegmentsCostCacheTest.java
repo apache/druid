@@ -20,7 +20,6 @@
 package io.druid.server.coordinator.cost;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import io.druid.java.util.common.DateTimes;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
@@ -31,6 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
@@ -184,7 +184,7 @@ public class SegmentsCostCacheTest
         dataSource,
         interval,
         UUID.randomUUID().toString(),
-        Maps.<String, Object>newConcurrentMap(),
+        new ConcurrentHashMap<>(),
         Lists.<String>newArrayList(),
         Lists.<String>newArrayList(),
         null,

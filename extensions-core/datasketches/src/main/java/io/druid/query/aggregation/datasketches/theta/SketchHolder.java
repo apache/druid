@@ -24,7 +24,6 @@ import com.google.common.collect.Ordering;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Longs;
 import com.yahoo.memory.Memory;
-import com.yahoo.memory.NativeMemory;
 import com.yahoo.sketches.Family;
 import com.yahoo.sketches.theta.AnotB;
 import com.yahoo.sketches.theta.Intersection;
@@ -187,7 +186,7 @@ public class SketchHolder
       holder2.invalidateCache();
       return holder2;
     } else {
-      Union union = (Union) SetOperation.builder().build(nomEntries, Family.UNION);
+      Union union = (Union) SetOperation.builder().setNominalEntries(nomEntries).build(Family.UNION);
       holder1.updateUnion(union);
       holder2.updateUnion(union);
       return SketchHolder.of(union);
@@ -227,7 +226,7 @@ public class SketchHolder
 
   private static Sketch deserializeFromByteArray(byte[] data)
   {
-    return deserializeFromMemory(new NativeMemory(data));
+    return deserializeFromMemory(Memory.wrap(data));
   }
 
   private static Sketch deserializeFromMemory(Memory mem)
@@ -255,13 +254,13 @@ public class SketchHolder
     //the final stages of query processing, ordered sketch would be of no use.
     switch (func) {
       case UNION:
-        Union union = (Union) SetOperation.builder().build(sketchSize, Family.UNION);
+        Union union = (Union) SetOperation.builder().setNominalEntries(sketchSize).build(Family.UNION);
         for (Object o : holders) {
           ((SketchHolder) o).updateUnion(union);
         }
         return SketchHolder.of(union);
       case INTERSECT:
-        Intersection intersection = (Intersection) SetOperation.builder().build(sketchSize, Family.INTERSECTION);
+        Intersection intersection = (Intersection) SetOperation.builder().setNominalEntries(sketchSize).build(Family.INTERSECTION);
         for (Object o : holders) {
           intersection.update(((SketchHolder) o).getSketch());
         }
@@ -277,7 +276,7 @@ public class SketchHolder
 
         Sketch result = ((SketchHolder) holders[0]).getSketch();
         for (int i = 1; i < holders.length; i++) {
-          AnotB anotb = (AnotB) SetOperation.builder().build(sketchSize, Family.A_NOT_B);
+          AnotB anotb = (AnotB) SetOperation.builder().setNominalEntries(sketchSize).build(Family.A_NOT_B);
           anotb.update(result, ((SketchHolder) holders[i]).getSketch());
           result = anotb.getResult(false, null);
         }

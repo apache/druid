@@ -20,8 +20,6 @@
 package io.druid.indexing.test;
 
 import com.google.common.base.Predicate;
-import com.google.common.collect.Maps;
-
 import io.druid.client.DruidServer;
 import io.druid.client.FilteredServerInventoryView;
 import io.druid.client.ServerView;
@@ -30,12 +28,13 @@ import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 
 public class TestServerView implements FilteredServerInventoryView, ServerView.SegmentCallback
 {
-  final ConcurrentMap<ServerView.SegmentCallback, Pair<Predicate<Pair<DruidServerMetadata, DataSegment>>, Executor>> callbacks = Maps.newConcurrentMap();
+  final ConcurrentMap<ServerView.SegmentCallback, Pair<Predicate<Pair<DruidServerMetadata, DataSegment>>, Executor>> callbacks = new ConcurrentHashMap<>();
 
   @Override
   public void registerSegmentCallback(

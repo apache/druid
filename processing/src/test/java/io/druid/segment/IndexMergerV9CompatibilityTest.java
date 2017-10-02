@@ -25,6 +25,7 @@ import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.JodaUtils;
 import io.druid.output.OffHeapMemoryOutputMediumFactory;
 import io.druid.output.OutputMediumFactory;
@@ -37,7 +38,6 @@ import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.commons.io.FileUtils;
-import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -69,7 +69,7 @@ public class IndexMergerV9CompatibilityTest
     );
   }
 
-  private static final long TIMESTAMP = DateTime.parse("2014-01-01").getMillis();
+  private static final long TIMESTAMP = DateTimes.of("2014-01-01").getMillis();
   private static final AggregatorFactory[] DEFAULT_AGG_FACTORIES = new AggregatorFactory[]{
       new CountAggregatorFactory(
           "count"
