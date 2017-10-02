@@ -318,20 +318,20 @@ public class ExpressionsTest
         rexBuilder.makeCall(
             new DateTruncOperatorConversion().calciteOperator(),
             rexBuilder.makeLiteral("hour"),
-            timestampLiteral(new DateTime("2000-02-03T04:05:06Z"))
+            timestampLiteral(DateTimes.of("2000-02-03T04:05:06Z"))
         ),
         DruidExpression.fromExpression("timestamp_floor(949550706000,'PT1H','','UTC')"),
-        new DateTime("2000-02-03T04:00:00").getMillis()
+        DateTimes.of("2000-02-03T04:00:00").getMillis()
     );
 
     testExpression(
         rexBuilder.makeCall(
             new DateTruncOperatorConversion().calciteOperator(),
             rexBuilder.makeLiteral("DAY"),
-            timestampLiteral(new DateTime("2000-02-03T04:05:06Z"))
+            timestampLiteral(DateTimes.of("2000-02-03T04:05:06Z"))
         ),
         DruidExpression.fromExpression("timestamp_floor(949550706000,'P1D','','UTC')"),
-        new DateTime("2000-02-03T00:00:00").getMillis()
+        DateTimes.of("2000-02-03T00:00:00").getMillis()
     );
   }
 
