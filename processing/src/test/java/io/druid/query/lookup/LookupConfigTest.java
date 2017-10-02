@@ -39,7 +39,7 @@ public class LookupConfigTest
   @Test
   public void TestSerDesr() throws IOException
   {
-    LookupConfig lookupConfig = new LookupConfig();
+    LookupConfig lookupConfig = new LookupConfig(temporaryFolder.newFile().getAbsolutePath());
     Assert.assertEquals(lookupConfig, mapper.reader(LookupConfig.class).readValue(mapper.writeValueAsString(lookupConfig)));
   }
 }

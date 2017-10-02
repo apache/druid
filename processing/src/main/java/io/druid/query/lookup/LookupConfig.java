@@ -19,7 +19,9 @@
 
 package io.druid.query.lookup;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Strings;
 
 public class LookupConfig
 {
@@ -28,7 +30,7 @@ public class LookupConfig
   private String snapshotWorkingDir;
 
   @JsonProperty("enableLookupSyncOnStartup")
-  private boolean enableLookupSyncOnStartup = false;
+  private boolean enableLookupSyncOnStartup = true;
 
   @JsonProperty("numLookupLoadingThreads")
   private int numLookupLoadingThreads = Runtime.getRuntime().availableProcessors() / 2;
@@ -39,9 +41,17 @@ public class LookupConfig
    * @param enableLookupSyncOnStartup decides whether the lookup synchronization process should be enabled at startup
    */
 
+  @JsonCreator
+  public LookupConfig(
+      @JsonProperty("snapshotWorkingDir") String snapshotWorkingDir
+  )
+  {
+    this.snapshotWorkingDir = Strings.nullToEmpty(snapshotWorkingDir);
+  }
+
   public String getSnapshotWorkingDir()
   {
-    return (snapshotWorkingDir == null ? "" : snapshotWorkingDir);
+    return snapshotWorkingDir;
   }
 
   public int getNumLookupLoadingThreads()
