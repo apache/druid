@@ -84,7 +84,7 @@ public class PreResponseAuthorizationCheckFilter implements Filter
     filterChain.doFilter(servletRequest, servletResponse);
 
     Boolean authInfoChecked = (Boolean) servletRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED);
-    if (authInfoChecked == null && !errorOverridesMissingAuth(response.getStatus())) {
+    if (authInfoChecked == null && statusIsSuccess(response.getStatus())) {
       // Note: rather than throwing an exception here, it would be nice to blank out the original response
       // since the request didn't have any authorization checks performed. However, this breaks proxying
       // (e.g. OverlordServletProxy), so this is not implemented for now.
@@ -164,9 +164,9 @@ public class PreResponseAuthorizationCheckFilter implements Filter
     }
   }
 
-  private static boolean errorOverridesMissingAuth(int status)
+  private static boolean statusIsSuccess(int status)
   {
-    return status == Response.SC_INTERNAL_SERVER_ERROR;
+    return 200 <= status && status < 300;
   }
 
   public static void sendJsonError(HttpServletResponse resp, int error, String errorJson, OutputStream outputStream)
