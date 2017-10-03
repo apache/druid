@@ -38,8 +38,9 @@ import io.druid.indexing.overlord.RemoteTaskRunner;
 import io.druid.indexing.overlord.RemoteTaskRunnerWorkItem;
 import io.druid.indexing.overlord.ZkWorker;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
-import io.druid.indexing.overlord.setup.FillCapacityWorkerSelectStrategy;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import io.druid.indexing.overlord.setup.FillCapacityWorkerSelectStrategy;
+import io.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
 import io.druid.jackson.DefaultObjectMapper;
@@ -85,7 +86,7 @@ public class PendingTaskBasedProvisioningStrategyTest
         .setMaxScalingStep(2);
 
     workerConfig = new AtomicReference<>(
-        new WorkerBehaviorConfig(
+        new DefaultWorkerBehaviorConfig(
             new FillCapacityWorkerSelectStrategy(null),
             autoScaler
         )

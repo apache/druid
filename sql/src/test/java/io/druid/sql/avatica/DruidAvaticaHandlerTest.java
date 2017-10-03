@@ -41,7 +41,6 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.DruidNode;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.planner.Calcites;
@@ -50,7 +49,6 @@ import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.planner.PlannerFactory;
 import io.druid.sql.calcite.schema.DruidSchema;
 import io.druid.sql.calcite.util.CalciteTests;
-import io.druid.sql.calcite.util.InputDataSource;
 import io.druid.sql.calcite.util.QueryLogHook;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.calcite.avatica.AvaticaClientRuntimeException;
@@ -67,7 +65,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
-import org.junit.rules.TestName;
 
 import java.net.InetSocketAddress;
 import java.sql.Connection;
@@ -114,9 +111,6 @@ public class DruidAvaticaHandlerTest
   @Rule
   public QueryLogHook queryLogHook = QueryLogHook.create();
 
-  @Rule
-  public TestName testName = new TestName();
-
   private SpecificSegmentsQuerySegmentWalker walker;
   private Server server;
   private Connection client;
@@ -129,7 +123,7 @@ public class DruidAvaticaHandlerTest
   public void setUp() throws Exception
   {
     Calcites.setSystemProperties();
-    walker = CalciteTests.createMockWalker(getClass().getMethod(testName.getMethodName()), temporaryFolder.newFolder());
+    walker = CalciteTests.createMockWalker(temporaryFolder.newFolder());
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
@@ -168,7 +162,7 @@ public class DruidAvaticaHandlerTest
     );
     final DruidAvaticaHandler handler = new DruidAvaticaHandler(
         druidMeta,
-        new DruidNode("dummy", "dummy", 1, null, new ServerConfig()),
+        new DruidNode("dummy", "dummy", 1, null, true, false),
         new AvaticaMonitor()
     );
     final int port = new Random().nextInt(9999) + 10000;
@@ -293,7 +287,7 @@ public class DruidAvaticaHandlerTest
         ImmutableList.of(
             ImmutableMap.of(
                 "PLAN",
-                "DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"context\":{\"skipEmptyBuckets\":true}}])\n"
+                "DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"context\":{\"skipEmptyBuckets\":true}}], signature=[{a0:LONG}])\n"
             )
         ),
         getRows(resultSet)
@@ -325,7 +319,6 @@ public class DruidAvaticaHandlerTest
   }
 
   @Test
-  @InputDataSource(names = {"foo", "foo2", "lineitem"})
   public void testDatabaseMetaDataTables() throws Exception
   {
     final DatabaseMetaData metaData = client.getMetaData();
@@ -340,12 +333,6 @@ public class DruidAvaticaHandlerTest
             ROW(
                 Pair.of("TABLE_CAT", ""),
                 Pair.of("TABLE_NAME", "foo2"),
-                Pair.of("TABLE_SCHEM", "druid"),
-                Pair.of("TABLE_TYPE", "TABLE")
-            ),
-            ROW(
-                Pair.of("TABLE_CAT", ""),
-                Pair.of("TABLE_NAME", "lineitem"),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             )
@@ -634,7 +621,7 @@ public class DruidAvaticaHandlerTest
 
     final DruidAvaticaHandler handler = new DruidAvaticaHandler(
         smallFrameDruidMeta,
-        new DruidNode("dummy", "dummy", 1, null, new ServerConfig()),
+        new DruidNode("dummy", "dummy", 1, null, true, false),
         new AvaticaMonitor()
     );
     final int port = new Random().nextInt(9999) + 20000;

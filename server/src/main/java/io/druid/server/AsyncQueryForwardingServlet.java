@@ -181,7 +181,10 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     request.setAttribute(HOST_ATTRIBUTE, defaultServer.getHost());
     request.setAttribute(SCHEME_ATTRIBUTE, defaultServer.getScheme());
 
-    final boolean isQueryEndpoint = request.getRequestURI().startsWith("/druid/v2");
+    // The Router does not have the ability to look inside SQL queries and route them intelligently, so just treat
+    // them as a generic request.
+    final boolean isQueryEndpoint = request.getRequestURI().startsWith("/druid/v2")
+                                    && !request.getRequestURI().startsWith("/druid/v2/sql");
 
     if (isQueryEndpoint && HttpMethod.DELETE.is(request.getMethod())) {
       // query cancellation request

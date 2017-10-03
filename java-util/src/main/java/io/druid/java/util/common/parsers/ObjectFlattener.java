@@ -17,20 +17,11 @@
  * under the License.
  */
 
-package io.druid.sql.calcite.util;
+package io.druid.java.util.common.parsers;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.util.Map;
 
-/**
- * Unit tests based on {@link CalciteTests} use this annotation to indicate which input sources are used in them.
- * See {@link io.druid.sql.calcite.CalciteQueryTest#testNestedGroupByForLineitem} as an example.
- */
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.METHOD})
-public @interface InputDataSource
+public interface ObjectFlattener<T>
 {
-  String[] names() default {"foo"};
+  Map<String, Object> flatten(T obj);
 }

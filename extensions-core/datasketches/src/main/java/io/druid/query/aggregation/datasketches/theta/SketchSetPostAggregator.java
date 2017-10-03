@@ -155,7 +155,7 @@ public class SketchSetPostAggregator implements PostAggregator
     if (!fields.equals(that.fields)) {
       return false;
     }
-    return func == that.func;
+    return func.equals(that.func);
 
   }
 

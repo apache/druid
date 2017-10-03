@@ -21,7 +21,6 @@ package io.druid.sql.avatica;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-
 import io.druid.java.util.common.DateTimes;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.security.AllowAllAuthenticator;
@@ -43,7 +42,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.junit.rules.TestName;
 
 import java.util.List;
 
@@ -55,9 +53,6 @@ public class DruidStatementTest
   @Rule
   public QueryLogHook queryLogHook = QueryLogHook.create();
 
-  @Rule
-  public TestName testName = new TestName();
-
   private SpecificSegmentsQuerySegmentWalker walker;
   private PlannerFactory plannerFactory;
 
@@ -65,7 +60,7 @@ public class DruidStatementTest
   public void setUp() throws Exception
   {
     Calcites.setSystemProperties();
-    walker = CalciteTests.createMockWalker(getClass().getMethod(testName.getMethodName()), temporaryFolder.newFolder());
+    walker = CalciteTests.createMockWalker(temporaryFolder.newFolder());
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidSchema druidSchema = CalciteTests.createMockSchema(
         walker,

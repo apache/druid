@@ -55,8 +55,8 @@ public class JSONPathParserTest
   @Test
   public void testSimple()
   {
-    List<JSONPathParser.FieldSpec> fields = new ArrayList<>();
-    final Parser<String, Object> jsonParser = new JSONPathParser(fields, true, null);
+    List<JSONPathFieldSpec> fields = new ArrayList<>();
+    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null);
     final Map<String, Object> jsonMap = jsonParser.parse(json);
     Assert.assertEquals(
         "jsonMap",
@@ -68,8 +68,8 @@ public class JSONPathParserTest
   @Test
   public void testWithNumbers()
   {
-    List<JSONPathParser.FieldSpec> fields = new ArrayList<>();
-    final Parser<String, Object> jsonParser = new JSONPathParser(fields, true, null);
+    List<JSONPathFieldSpec> fields = new ArrayList<>();
+    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null);
     final Map<String, Object> jsonMap = jsonParser.parse(numbersJson);
     Assert.assertEquals(
         "jsonMap",
@@ -81,8 +81,8 @@ public class JSONPathParserTest
   @Test
   public void testWithWhackyCharacters()
   {
-    List<JSONPathParser.FieldSpec> fields = new ArrayList<>();
-    final Parser<String, Object> jsonParser = new JSONPathParser(fields, true, null);
+    List<JSONPathFieldSpec> fields = new ArrayList<>();
+    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null);
     final Map<String, Object> jsonMap = jsonParser.parse(whackyCharacterJson);
     Assert.assertEquals(
         "jsonMap",
@@ -94,25 +94,25 @@ public class JSONPathParserTest
   @Test
   public void testNestingWithFieldDiscovery()
   {
-    List<JSONPathParser.FieldSpec> fields = new ArrayList<>();
-    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.ROOT, "baz", "baz"));
-    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.PATH, "nested-foo.bar1", "$.foo.bar1"));
-    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.PATH, "nested-foo.bar2", "$.foo.bar2"));
-    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.PATH, "heybarx0", "$.hey[0].barx"));
-    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.PATH, "met-array", "$.met.a"));
-    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.ROOT, "testListConvert2", "testListConvert2"));
-    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.ROOT, "testMapConvert", "testMapConvert"));
+    List<JSONPathFieldSpec> fields = new ArrayList<>();
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.ROOT, "baz", "baz"));
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.PATH, "nested-foo.bar1", "$.foo.bar1"));
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.PATH, "nested-foo.bar2", "$.foo.bar2"));
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.PATH, "heybarx0", "$.hey[0].barx"));
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.PATH, "met-array", "$.met.a"));
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.ROOT, "testListConvert2", "testListConvert2"));
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.ROOT, "testMapConvert", "testMapConvert"));
 
-    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.ROOT, "INVALID_ROOT", "INVALID_ROOT_EXPR"));
-    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.PATH, "INVALID_PATH", "INVALID_PATH_EXPR"));
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.ROOT, "INVALID_ROOT", "INVALID_ROOT_EXPR"));
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.PATH, "INVALID_PATH", "INVALID_PATH_EXPR"));
 
-    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.JQ, "jq-nested-foo.bar1", ".foo.bar1"));
-    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.JQ, "jq-nested-foo.bar2", ".foo.bar2"));
-    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.JQ, "jq-heybarx0", ".hey[0].barx"));
-    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.JQ, "jq-met-array", ".met.a"));
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq-nested-foo.bar1", ".foo.bar1"));
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq-nested-foo.bar2", ".foo.bar2"));
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq-heybarx0", ".hey[0].barx"));
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq-met-array", ".met.a"));
 
 
-    final Parser<String, Object> jsonParser = new JSONPathParser(fields, true, null);
+    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null);
     final Map<String, Object> jsonMap = jsonParser.parse(nestedJson);
 
     // Root fields
@@ -150,10 +150,10 @@ public class JSONPathParserTest
     Assert.assertEquals(ImmutableList.of(7L, 8L, 9L), jsonMap.get("jq-met-array"));
 
     // Fields that should not be discovered
-    Assert.assertNull(jsonMap.get("hey"));
-    Assert.assertNull(jsonMap.get("met"));
-    Assert.assertNull(jsonMap.get("ignore_me"));
-    Assert.assertNull(jsonMap.get("foo"));
+    Assert.assertFalse(jsonMap.containsKey("hey"));
+    Assert.assertFalse(jsonMap.containsKey("met"));
+    Assert.assertFalse(jsonMap.containsKey("ignore_me"));
+    Assert.assertFalse(jsonMap.containsKey("foo"));
 
     // Invalid fields
     Assert.assertNull(jsonMap.get("INVALID_ROOT"));
@@ -163,17 +163,17 @@ public class JSONPathParserTest
   @Test
   public void testNestingNoDiscovery()
   {
-    List<JSONPathParser.FieldSpec> fields = new ArrayList<>();
-    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.ROOT, "simpleVal", "simpleVal"));
-    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.ROOT, "timestamp", "timestamp"));
-    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.PATH, "nested-foo.bar2", "$.foo.bar2"));
-    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.PATH, "heybarx0", "$.hey[0].barx"));
-    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.PATH, "met-array", "$.met.a"));
-    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.JQ, "jq-nested-foo.bar2", ".foo.bar2"));
-    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.JQ, "jq-heybarx0", ".hey[0].barx"));
-    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.JQ, "jq-met-array", ".met.a"));
+    List<JSONPathFieldSpec> fields = new ArrayList<>();
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.ROOT, "simpleVal", "simpleVal"));
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.ROOT, "timestamp", "timestamp"));
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.PATH, "nested-foo.bar2", "$.foo.bar2"));
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.PATH, "heybarx0", "$.hey[0].barx"));
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.PATH, "met-array", "$.met.a"));
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq-nested-foo.bar2", ".foo.bar2"));
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq-heybarx0", ".hey[0].barx"));
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq-met-array", ".met.a"));
 
-    final Parser<String, Object> jsonParser = new JSONPathParser(fields, false, null);
+    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(false, fields), null);
     final Map<String, Object> jsonMap = jsonParser.parse(nestedJson);
 
     // Root fields
@@ -189,54 +189,54 @@ public class JSONPathParserTest
     Assert.assertEquals(ImmutableList.of(7L, 8L, 9L), jsonMap.get("jq-met-array"));
 
     // Fields that should not be discovered
-    Assert.assertNull(jsonMap.get("newmet"));
-    Assert.assertNull(jsonMap.get("foo.bar1"));
-    Assert.assertNull(jsonMap.get("baz"));
-    Assert.assertNull(jsonMap.get("blah"));
-    Assert.assertNull(jsonMap.get("nested-foo.bar1"));
-    Assert.assertNull(jsonMap.get("hey"));
-    Assert.assertNull(jsonMap.get("met"));
-    Assert.assertNull(jsonMap.get("ignore_me"));
-    Assert.assertNull(jsonMap.get("foo"));
+    Assert.assertFalse(jsonMap.containsKey("newmet"));
+    Assert.assertFalse(jsonMap.containsKey("foo.bar1"));
+    Assert.assertFalse(jsonMap.containsKey("baz"));
+    Assert.assertFalse(jsonMap.containsKey("blah"));
+    Assert.assertFalse(jsonMap.containsKey("nested-foo.bar1"));
+    Assert.assertFalse(jsonMap.containsKey("hey"));
+    Assert.assertFalse(jsonMap.containsKey("met"));
+    Assert.assertFalse(jsonMap.containsKey("ignore_me"));
+    Assert.assertFalse(jsonMap.containsKey("foo"));
   }
 
   @Test
   public void testRejectDuplicates()
   {
-    List<JSONPathParser.FieldSpec> fields = new ArrayList<>();
-    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.PATH, "met-array", "$.met.a"));
-    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.PATH, "met-array", "$.met.a"));
+    List<JSONPathFieldSpec> fields = new ArrayList<>();
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.PATH, "met-array", "$.met.a"));
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.PATH, "met-array", "$.met.a"));
 
     thrown.expect(IllegalArgumentException.class);
     thrown.expectMessage("Cannot have duplicate field definition: met-array");
 
-    final Parser<String, Object> jsonParser = new JSONPathParser(fields, false, null);
+    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(false, fields), null);
     final Map<String, Object> jsonMap = jsonParser.parse(nestedJson);
   }
 
   @Test
   public void testRejectDuplicates2()
   {
-    List<JSONPathParser.FieldSpec> fields = new ArrayList<>();
-    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.PATH, "met-array", "$.met.a"));
-    fields.add(new JSONPathParser.FieldSpec(JSONPathParser.FieldType.JQ, "met-array", ".met.a"));
+    List<JSONPathFieldSpec> fields = new ArrayList<>();
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.PATH, "met-array", "$.met.a"));
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.JQ, "met-array", ".met.a"));
 
     thrown.expect(IllegalArgumentException.class);
     thrown.expectMessage("Cannot have duplicate field definition: met-array");
 
-    final Parser<String, Object> jsonParser = new JSONPathParser(fields, false, null);
+    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(false, fields), null);
     final Map<String, Object> jsonMap = jsonParser.parse(nestedJson);
   }
 
   @Test
   public void testParseFail()
   {
-    List<JSONPathParser.FieldSpec> fields = new ArrayList<>();
+    List<JSONPathFieldSpec> fields = new ArrayList<>();
 
     thrown.expect(ParseException.class);
     thrown.expectMessage("Unable to parse row [" + notJson + "]");
 
-    final Parser<String, Object> jsonParser = new JSONPathParser(fields, true, null);
+    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null);
     final Map<String, Object> jsonMap = jsonParser.parse(notJson);
   }
 }
