@@ -28,7 +28,6 @@ import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.ResourceLimitExceededException;
-import io.druid.query.TableDataSource;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.sql.calcite.planner.PlannerContext;
 import org.apache.calcite.interpreter.BindableConvention;
@@ -59,13 +58,11 @@ import java.util.Set;
  */
 public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
 {
-  private static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("__subquery__");
-
-  private final DruidRel<?> left;
-  private final RelNode right;
   private final List<RexNode> leftExpressions;
   private final List<Integer> rightKeys;
   private final int maxSemiJoinRowsInMemory;
+  private DruidRel<?> left;
+  private RelNode right;
 
   private DruidSemiJoin(
       final RelOptCluster cluster,
@@ -225,6 +222,16 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
   public List<RelNode> getInputs()
   {
     return ImmutableList.of(right);
+  }
+
+  @Override
+  public void replaceInput(int ordinalInParent, RelNode p)
+  {
+    if (ordinalInParent != 0) {
+      throw new IndexOutOfBoundsException(StringUtils.format("Invalid ordinalInParent[%s]", ordinalInParent));
+    }
+    // 'right' is the only one Calcite concerns. See getInputs().
+    this.right = p;
   }
 
   @Override

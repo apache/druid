@@ -3333,6 +3333,64 @@ public class CalciteQueryTest
   }
 
   @Test
+  public void testNestedGroupBy() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + "    FLOOR(__time to hour) AS __time,\n"
+        + "    dim1,\n"
+        + "    COUNT(m2)\n"
+        + "FROM (\n"
+        + "    SELECT\n"
+        + "        MAX(__time) AS __time,\n"
+        + "        m2,\n"
+        + "        dim1\n"
+        + "    FROM druid.foo\n"
+        + "    WHERE 1=1\n"
+        + "        AND m1 = '5.0'\n"
+        + "    GROUP BY m2, dim1\n"
+        + ")\n"
+        + "GROUP BY FLOOR(__time to hour), dim1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(CalciteTests.DATASOURCE1)
+                                        .setInterval(QSS(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(DIMS(
+                                            new DefaultDimensionSpec("dim1", "d0"),
+                                            new DefaultDimensionSpec("m2", "d1", ValueType.DOUBLE)
+                                        ))
+                                        .setDimFilter(new SelectorDimFilter("m1", "5.0", null))
+                                        .setAggregatorSpecs(AGGS(new LongMaxAggregatorFactory("a0", "__time")))
+                                        .setContext(QUERY_CONTEXT_DEFAULT)
+                                        .build()
+                        )
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(DIMS(
+                            new ExtractionDimensionSpec(
+                                "a0",
+                                "_d0",
+                                ValueType.LONG,
+                                new TimeFormatExtractionFn(null, null, null, Granularities.HOUR, true)
+                            ),
+                            new DefaultDimensionSpec("d0", "_d1", ValueType.STRING)
+                        ))
+                        .setAggregatorSpecs(AGGS(
+                            new CountAggregatorFactory("_a0")
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[] {978393600000L, "def", 1L}
+        )
+    );
+  }
+
+  @Test
   public void testDoubleNestedGroupBy() throws Exception
   {
     testQuery(
