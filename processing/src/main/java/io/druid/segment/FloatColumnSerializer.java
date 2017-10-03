@@ -19,8 +19,13 @@
 
 package io.druid.segment;
 
+import com.google.common.primitives.Ints;
+import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
+import io.druid.segment.data.BitmapSerdeFactory;
+import io.druid.segment.data.ByteBufferWriter;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.FloatSupplierSerializer;
@@ -28,6 +33,7 @@ import io.druid.segment.data.IOPeon;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
@@ -36,29 +42,36 @@ public class FloatColumnSerializer implements GenericColumnSerializer
   public static FloatColumnSerializer create(
       IOPeon ioPeon,
       String filenameBase,
-      CompressedObjectStrategy.CompressionStrategy compression
+      CompressedObjectStrategy.CompressionStrategy compression,
+      BitmapSerdeFactory bitmapSerdeFactory
   )
   {
-    return new FloatColumnSerializer(ioPeon, filenameBase, IndexIO.BYTE_ORDER, compression);
+    return new FloatColumnSerializer(ioPeon, filenameBase, IndexIO.BYTE_ORDER, compression, bitmapSerdeFactory);
   }
 
   private final IOPeon ioPeon;
   private final String filenameBase;
   private final ByteOrder byteOrder;
   private final CompressedObjectStrategy.CompressionStrategy compression;
+  private final BitmapSerdeFactory bitmapSerdeFactory;
   private FloatSupplierSerializer writer;
+  private ByteBufferWriter<ImmutableBitmap> nullValueBitmapWriter;
+  private MutableBitmap nullRowsBitmap;
+  private int rowCount = 0;
 
   public FloatColumnSerializer(
       IOPeon ioPeon,
       String filenameBase,
       ByteOrder byteOrder,
-      CompressedObjectStrategy.CompressionStrategy compression
+      CompressedObjectStrategy.CompressionStrategy compression,
+      BitmapSerdeFactory bitmapSerdeFactory
   )
   {
     this.ioPeon = ioPeon;
     this.filenameBase = filenameBase;
     this.byteOrder = byteOrder;
     this.compression = compression;
+    this.bitmapSerdeFactory = bitmapSerdeFactory;
   }
 
   @Override
@@ -71,31 +84,52 @@ public class FloatColumnSerializer implements GenericColumnSerializer
         compression
     );
     writer.open();
+    nullValueBitmapWriter = new ByteBufferWriter<>(
+        ioPeon,
+        StringUtils.format("%s.nullBitmap", filenameBase),
+        bitmapSerdeFactory.getObjectStrategy()
+    );
+    nullValueBitmapWriter.open();
+    nullRowsBitmap = bitmapSerdeFactory.getBitmapFactory().makeEmptyMutableBitmap();
   }
 
   @Override
   public void serialize(@Nullable Object obj) throws IOException
   {
-    float val = (obj == null) ? 0 : ((Number) obj).floatValue();
-    writer.add(val);
+    if (obj == null) {
+      nullRowsBitmap.add(rowCount);
+      writer.add(0L);
+    } else {
+      writer.add(((Number) obj).floatValue());
+    }
+    rowCount++;
   }
 
   @Override
   public void close() throws IOException
   {
     writer.close();
+    nullValueBitmapWriter.write(bitmapSerdeFactory.getBitmapFactory().makeImmutableBitmap(nullRowsBitmap));
+    nullValueBitmapWriter.close();
   }
 
   @Override
   public long getSerializedSize()
   {
-    return writer.getSerializedSize();
+    long bitmapSize = nullRowsBitmap.isEmpty()
+                      ? 0L
+                      : nullValueBitmapWriter.getSerializedSize();
+    return Integer.BYTES + writer.getSerializedSize() + bitmapSize;
   }
 
   @Override
   public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
+    channel.write(ByteBuffer.wrap(Ints.toByteArray((int) writer.getSerializedSize())));
     writer.writeToChannel(channel, smoosher);
+    if (!nullRowsBitmap.isEmpty()) {
+      nullValueBitmapWriter.writeToChannel(channel, smoosher);
+    }
   }
 
 }

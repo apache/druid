@@ -112,8 +112,6 @@ public class ColumnDescriptor
   {
     private ValueType valueType = null;
     private Boolean hasMultipleValues = null;
-    private boolean hasNullValues = false;
-
     private final List<ColumnPartSerde> parts = Lists.newArrayList();
 
     public Builder setValueType(ValueType valueType)
@@ -133,12 +131,6 @@ public class ColumnDescriptor
         );
       }
       this.hasMultipleValues = hasMultipleValues;
-      return this;
-    }
-
-    public Builder setHasNullValues(boolean hasNullValues)
-    {
-      this.hasNullValues = hasNullValues || this.hasNullValues;
       return this;
     }
 

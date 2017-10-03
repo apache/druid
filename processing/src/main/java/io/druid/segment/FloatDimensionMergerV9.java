@@ -19,13 +19,10 @@
 
 package io.druid.segment;
 
-import io.druid.collections.bitmap.ImmutableBitmap;
-import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.java.util.common.io.Closer;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.ByteBufferWriter;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.IOPeon;
 import io.druid.segment.serde.FloatGenericColumnPartSerdeV2;
@@ -45,9 +42,6 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
   protected IOPeon ioPeon;
 
   private FloatColumnSerializer serializer;
-  private MutableBitmap nullRowsBitmap;
-  private int rowCount = 0;
-  private ByteBufferWriter<ImmutableBitmap> nullValueBitmapWriter;
 
   public FloatDimensionMergerV9(
       String dimensionName,
@@ -64,8 +58,6 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
     this.outDir = outDir;
     this.ioPeon = ioPeon;
     this.progress = progress;
-    this.nullRowsBitmap = indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap();
-
     try {
       setupEncodedValueWriter();
     }
@@ -77,7 +69,12 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
   protected void setupEncodedValueWriter() throws IOException
   {
     final CompressedObjectStrategy.CompressionStrategy metCompression = indexSpec.getMetricCompression();
-    this.serializer = FloatColumnSerializer.create(ioPeon, dimensionName, metCompression);
+    this.serializer = FloatColumnSerializer.create(
+        ioPeon,
+        dimensionName,
+        metCompression,
+        indexSpec.getBitmapSerdeFactory()
+    );
     serializer.open();
   }
 
@@ -96,22 +93,13 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
   @Override
   public void processMergedRow(Float rowValues) throws IOException
   {
-    if (rowValues == null) {
-      nullRowsBitmap.add(rowCount);
-    }
     serializer.serialize(rowValues);
-    rowCount++;
   }
 
   @Override
   public void writeIndexes(List<IntBuffer> segmentRowNumConversions, Closer closer) throws IOException
   {
-    this.nullValueBitmapWriter = IndexMergerV9.createNullRowsBitmapWriter(
-        ioPeon,
-        dimensionName,
-        nullRowsBitmap,
-        indexSpec
-    );
+    // floats have no indices to write
   }
 
   @Override
@@ -126,12 +114,10 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
     serializer.close();
     final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
     builder.setValueType(ValueType.FLOAT);
-    builder.setHasNullValues(!nullRowsBitmap.isEmpty());
     builder.addSerde(
         FloatGenericColumnPartSerdeV2.serializerBuilder()
                                      .withByteOrder(IndexIO.BYTE_ORDER)
                                      .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
-                                     .withNullValueBitmapWriter(nullValueBitmapWriter)
                                      .withDelegate(serializer)
                                      .build()
     );

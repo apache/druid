@@ -19,13 +19,10 @@
 
 package io.druid.segment;
 
-import io.druid.collections.bitmap.ImmutableBitmap;
-import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.java.util.common.io.Closer;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.ByteBufferWriter;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.IOPeon;
 import io.druid.segment.serde.DoubleGenericColumnPartSerdeV2;
@@ -44,10 +41,6 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
   protected final File outDir;
   protected IOPeon ioPeon;
   private DoubleColumnSerializer serializer;
-  private MutableBitmap nullRowsBitmap;
-  private int rowCount = 0;
-  private ByteBufferWriter<ImmutableBitmap> nullValueBitmapWriter;
-
 
   public DoubleDimensionMergerV9(
       String dimensionName,
@@ -64,7 +57,6 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
     this.outDir = outDir;
     this.ioPeon = ioPeon;
     this.progress = progress;
-    this.nullRowsBitmap = indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap();
 
     try {
       setupEncodedValueWriter();
@@ -77,7 +69,12 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
   protected void setupEncodedValueWriter() throws IOException
   {
     final CompressedObjectStrategy.CompressionStrategy metCompression = indexSpec.getMetricCompression();
-    this.serializer = DoubleColumnSerializer.create(ioPeon, dimensionName, metCompression);
+    this.serializer = DoubleColumnSerializer.create(
+        ioPeon,
+        dimensionName,
+        metCompression,
+        indexSpec.getBitmapSerdeFactory()
+    );
     serializer.open();
   }
 
@@ -87,13 +84,11 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
     serializer.close();
     final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
     builder.setValueType(ValueType.DOUBLE);
-    builder.setHasNullValues(!nullRowsBitmap.isEmpty());
     builder.addSerde(
         DoubleGenericColumnPartSerdeV2.serializerBuilder()
                                       .withByteOrder(IndexIO.BYTE_ORDER)
                                       .withDelegate(serializer)
                                       .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
-                                      .withNullValueBitmapWriter(nullValueBitmapWriter)
                                       .build()
     );
     return builder.build();
@@ -114,22 +109,13 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
   @Override
   public void processMergedRow(Double rowValues) throws IOException
   {
-    if (rowValues == null) {
-      nullRowsBitmap.add(rowCount);
-    }
     serializer.serialize(rowValues);
-    rowCount++;
   }
 
   @Override
   public void writeIndexes(List<IntBuffer> segmentRowNumConversions, Closer closer) throws IOException
   {
-    this.nullValueBitmapWriter = IndexMergerV9.createNullRowsBitmapWriter(
-        ioPeon,
-        dimensionName,
-        nullRowsBitmap,
-        indexSpec
-    );
+    // doubless have no indices to write
   }
 
   @Override

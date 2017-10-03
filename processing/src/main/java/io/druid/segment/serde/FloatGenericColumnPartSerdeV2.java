@@ -22,7 +22,6 @@ package io.druid.segment.serde;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Suppliers;
-import com.google.common.primitives.Ints;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
@@ -31,7 +30,6 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.data.BitmapSerde;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.ByteBufferSerializer;
-import io.druid.segment.data.ByteBufferWriter;
 import io.druid.segment.data.CompressedFloatsIndexedSupplier;
 
 import javax.annotation.Nullable;
@@ -90,7 +88,6 @@ public class FloatGenericColumnPartSerdeV2 implements ColumnPartSerde
     private ByteOrder byteOrder = null;
     private FloatColumnSerializer delegate = null;
     private BitmapSerdeFactory bitmapSerdeFactory = null;
-    private ByteBufferWriter<ImmutableBitmap> nullValueBitmapWriter = null;
 
     public SerializerBuilder withByteOrder(final ByteOrder byteOrder)
     {
@@ -110,12 +107,6 @@ public class FloatGenericColumnPartSerdeV2 implements ColumnPartSerde
       return this;
     }
 
-    public SerializerBuilder withNullValueBitmapWriter(ByteBufferWriter<ImmutableBitmap> nullValueBitmapWriter)
-    {
-      this.nullValueBitmapWriter = nullValueBitmapWriter;
-      return this;
-    }
-
     public FloatGenericColumnPartSerdeV2 build()
     {
       return new FloatGenericColumnPartSerdeV2(
@@ -124,27 +115,18 @@ public class FloatGenericColumnPartSerdeV2 implements ColumnPartSerde
         @Override
         public long numBytes()
         {
-          long size = delegate.getSerializedSize() + Ints.BYTES + Byte.BYTES;
-          if (nullValueBitmapWriter != null) {
-            size += nullValueBitmapWriter.getSerializedSize();
-          }
-          return size;
+          return delegate.getSerializedSize() + Byte.BYTES;
         }
 
         @Override
         public void write(WritableByteChannel channel, FileSmoosher fileSmoosher) throws IOException
         {
           channel.write(ByteBuffer.wrap(new byte[]{VERSION_ONE}));
-          channel.write(ByteBuffer.wrap(Ints.toByteArray((int) delegate.getSerializedSize())));
           delegate.writeToChannel(channel, fileSmoosher);
-          if (nullValueBitmapWriter != null) {
-            nullValueBitmapWriter.writeToChannel(channel, fileSmoosher);
-          }
         }
       }
       );
     }
-
 
   }
 
