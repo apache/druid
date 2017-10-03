@@ -269,7 +269,7 @@ public class KerberosAuthenticator implements Authenticator
           if (clientPrincipal != null) {
             request.setAttribute(
                 AuthConfig.DRUID_AUTHENTICATION_RESULT,
-                new AuthenticationResult(clientPrincipal, authorizerName)
+                new AuthenticationResult(clientPrincipal, authorizerName, null)
             );
           }
         }
@@ -511,7 +511,7 @@ public class KerberosAuthenticator implements Authenticator
   @Override
   public AuthenticationResult createEscalatedAuthenticationResult()
   {
-    return new AuthenticationResult(internalClientPrincipal, authorizerName);
+    return new AuthenticationResult(internalClientPrincipal, authorizerName, null);
   }
 
   private boolean isExcluded(String path)
