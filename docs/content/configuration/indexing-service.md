@@ -230,7 +230,7 @@ A limit config can be provided.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`type`|`equalDistributionWithLimit`.|required; must be `equalDistributionWithLimit`|
-|`limit`|JSON object mapping a task id prefix String name to an Integer means max slot those tasks can use.The priority of the prefix match is determined by their length.The longer the length, the higher the priority.|{}|
+|`limitConfig`|[Limit config](#limit) object|null|
 
 Example: This config indicates that up to one task with prefix `prefix1` can run, other tasks with prefix `prefix1` must be pending.
 
@@ -297,6 +297,15 @@ field. If not provided, the default is to not use affinity at all.
 |--------|-----------|-------|
 |`affinity`|JSON object mapping a datasource String name to a list of indexing service middleManager host:port String values. Druid doesn't perform DNS resolution, so the 'host' value must match what is configured on the middleManager and what the middleManager announces itself as (examine the Overlord logs to see what your middleManager announces itself as).|{}|
 |`strong`|With weak affinity (the default), tasks for a dataSource may be assigned to other middleManagers if their affinity-mapped middleManagers are not able to run all pending tasks in the queue for that dataSource. With strong affinity, tasks for a dataSource will only ever be assigned to their affinity-mapped middleManagers, and will wait in the pending queue if necessary.|false|
+
+##### Limit
+
+Limit configs can be provided to the _equalDistributionWithLimit_  strategy using the "limitConfig"
+field. If not provided, the default is to not use limit at all.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`limit`|JSON object mapping a task ID prefix to the maximum number of slots that such tasks can use. The priority of prefix matches is determined by their length. The longer the length, the higher the priority.|{}|
 
 #### Autoscaler
 

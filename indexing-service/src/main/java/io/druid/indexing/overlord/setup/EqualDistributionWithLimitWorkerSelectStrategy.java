@@ -61,40 +61,27 @@ public class EqualDistributionWithLimitWorkerSelectStrategy implements WorkerSel
   )
   {
 
-    Map<String, Integer> restSlots = new TreeMap<String, Integer>(
-        new Comparator<String>()
-        {
-          @Override
-          public int compare(String o1, String o2)
-          {
-            int diff = o2.length() - o1.length();
-            if (diff != 0) {
-              return diff;
-            }
-            return o1.compareTo(o2);
-          }
-        }
-    ) {
-      {
-        Map<String, Integer> configs = limitConfig.getLimit();
-        for (String taskIdPrefix: configs.keySet()) {
-          put(taskIdPrefix, configs.get(taskIdPrefix));
-        }
-      }
-    };
+    Map<String, Integer> rest = new TreeMap<String, Integer>(
+        Comparator.comparing(String::length).reversed().thenComparing(Comparator.naturalOrder())
+    );
+    Map<String, Integer> configs = limitConfig.getLimit();
+    for (String taskIdPrefix: configs.keySet()) {
+      rest.put(taskIdPrefix, configs.get(taskIdPrefix));
+    }
+
     for (ImmutableWorkerInfo zkWorker: zkWorkers.values()) {
       for (String taskId: zkWorker.getRunningTasks()) {
-        for (String taskIdPrefix: restSlots.keySet()) {
+        for (String taskIdPrefix: rest.keySet()) {
           if (taskId.startsWith(taskIdPrefix)) {
-            restSlots.put(taskIdPrefix, restSlots.get(taskIdPrefix) - 1);
+            rest.put(taskIdPrefix, rest.get(taskIdPrefix) - 1);
           }
         }
       }
     }
     String taskId = task.getId();
-    for (String taskIdPrefix: restSlots.keySet()) {
+    for (String taskIdPrefix: rest.keySet()) {
       if (taskId.startsWith(taskIdPrefix)) {
-        if (restSlots.getOrDefault(taskIdPrefix, 1) <= 0) {
+        if (rest.getOrDefault(taskIdPrefix, 1) <= 0) {
           return null;
         }
       }
