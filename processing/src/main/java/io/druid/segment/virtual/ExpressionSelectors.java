@@ -57,14 +57,14 @@ public class ExpressionSelectors
       @Override
       public long getLong()
       {
-        final ExprEval exprEval = baseSelector.get();
+        final ExprEval exprEval = baseSelector.getObject();
         return exprEval.isNull() ? nullValue : exprEval.asLong();
       }
 
       @Override
       public boolean isNull()
       {
-        return baseSelector.get().isNull() && nullValue == null;
+        return baseSelector.getObject().isNull() && nullValue == null;
       }
 
       @Override
@@ -88,14 +88,14 @@ public class ExpressionSelectors
       @Override
       public float getFloat()
       {
-        final ExprEval exprEval = baseSelector.get();
+        final ExprEval exprEval = baseSelector.getObject();
         return exprEval.isNull() ? nullValue : (float) exprEval.asDouble();
       }
 
       @Override
       public boolean isNull()
       {
-        return baseSelector.get().isNull() && nullValue == null;
+        return baseSelector.getObject().isNull() && nullValue == null;
       }
 
       @Override
@@ -119,14 +119,14 @@ public class ExpressionSelectors
       @Override
       public double getDouble()
       {
-        final ExprEval exprEval = baseSelector.get();
+        final ExprEval exprEval = baseSelector.getObject();
         return exprEval.isNull() ? nullValue : exprEval.asDouble();
       }
 
       @Override
       public boolean isNull()
       {
-        final ExprEval exprEval = baseSelector.get();
+        final ExprEval exprEval = baseSelector.getObject();
         return exprEval.isNull() && nullValue == null;
       }
 
@@ -153,7 +153,7 @@ public class ExpressionSelectors
         @Override
         protected String getValue()
         {
-          return NullHandlingHelper.defaultToNull(baseSelector.get().asString());
+          return NullHandlingHelper.defaultToNull(baseSelector.getObject().asString());
         }
 
         @Override
@@ -169,7 +169,7 @@ public class ExpressionSelectors
         @Override
         protected String getValue()
         {
-          return extractionFn.apply(NullHandlingHelper.defaultToNull(baseSelector.get().asString()));
+          return extractionFn.apply(NullHandlingHelper.defaultToNull(baseSelector.getObject().asString()));
         }
 
         @Override

@@ -39,9 +39,9 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.Offset;
+import io.druid.segment.historical.HistoricalColumnSelector;
 import io.druid.segment.historical.HistoricalCursor;
 import io.druid.segment.historical.HistoricalDimensionSelector;
-import io.druid.segment.historical.HistoricalColumnSelector;
 import io.druid.segment.historical.SingleValueHistoricalDimensionSelector;
 
 import java.nio.ByteBuffer;
@@ -98,8 +98,7 @@ public class PooledTopNAlgorithm
       new Generic2AggPooledTopNScannerPrototype();
   private static final Historical1AggPooledTopNScanner defaultHistorical1SimpleDoubleAggScanner =
       new Historical1SimpleDoubleAggPooledTopNScannerPrototype();
-  private static final
-  Historical1AggPooledTopNScanner defaultHistoricalSingleValueDimSelector1SimpleDoubleAggScanner =
+  private static final Historical1AggPooledTopNScanner defaultHistoricalSingleValueDimSelector1SimpleDoubleAggScanner =
       new HistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopNScannerPrototype();
 
   private interface ScanAndAggregate

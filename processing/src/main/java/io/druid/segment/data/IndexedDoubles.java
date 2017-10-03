@@ -41,7 +41,7 @@ public interface IndexedDoubles extends Closeable
 
   default DoubleColumnSelector makeDoubleColumnSelector(ReadableOffset offset, ImmutableBitmap nullValueBitmap)
   {
-    class HistoricalDoubleColumnSelector implements DoubleColumnSelector, HistoricalColumnSelector
+    class HistoricalDoubleColumnSelector implements DoubleColumnSelector, HistoricalColumnSelector<Double>
     {
       @Override
       public double getDouble()
@@ -74,7 +74,7 @@ public interface IndexedDoubles extends Closeable
 
   default FloatColumnSelector makeFloatColumnSelector(ReadableOffset offset, ImmutableBitmap nullValueBitmap)
   {
-    class HistoricalFloatColumnSelector implements FloatColumnSelector, HistoricalColumnSelector
+    class HistoricalFloatColumnSelector implements FloatColumnSelector, HistoricalColumnSelector<Float>
     {
 
       @Override
@@ -107,7 +107,7 @@ public interface IndexedDoubles extends Closeable
 
   default LongColumnSelector makeLongColumnSelector(ReadableOffset offset, ImmutableBitmap nullValueBitmap)
   {
-    class HistoricalLongColumnSelector implements LongColumnSelector, HistoricalColumnSelector
+    class HistoricalLongColumnSelector implements LongColumnSelector, HistoricalColumnSelector<Long>
     {
       @Override
       public long getLong()

@@ -347,7 +347,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
         for (int i = 0; i < size; i++) {
           final ObjectColumnSelector selector = selectorList[i];
           if (selector != null) {
-            final Object arg = selector.get();
+            final Object arg = selector.getObject();
             if (arg != null && arg.getClass().isArray()) {
               // Context.javaToJS on an array sort of works, although it returns false for Array.isArray(...) and
               // may have other issues too. Let's just copy the array and wrap that.

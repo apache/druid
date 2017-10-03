@@ -36,12 +36,11 @@ import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Self;
 import io.druid.initialization.Initialization;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.UriExtractionNamespace;
 import io.druid.server.DruidNode;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.server.lookup.namespace.cache.CacheScheduler;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import org.easymock.EasyMock;
@@ -406,7 +405,9 @@ public class NamespaceLookupExtractorFactoryTest
     final NamespaceLookupExtractorFactory f1 = new NamespaceLookupExtractorFactory(
         en1,
         scheduler
-    ), f2 = new NamespaceLookupExtractorFactory(en2, scheduler), f1b = new NamespaceLookupExtractorFactory(
+    );
+    final NamespaceLookupExtractorFactory f2 = new NamespaceLookupExtractorFactory(en2, scheduler);
+    final NamespaceLookupExtractorFactory f1b = new NamespaceLookupExtractorFactory(
         en1,
         scheduler
     );
@@ -523,7 +524,7 @@ public class NamespaceLookupExtractorFactoryTest
               public void configure(Binder binder)
               {
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null, null, new ServerConfig())
+                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null, null, true, false)
                 );
               }
             }

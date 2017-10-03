@@ -27,7 +27,7 @@
     </parent>
 
     <artifactId>druid</artifactId>
-    <version>0.11.0-SNAPSHOT</version>
+    <version>0.11.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>${project.groupId}:${project.artifactId}</name>
@@ -54,7 +54,7 @@
         <connection>scm:git:ssh://git@github.com/druid-io/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/druid-io/druid.git</developerConnection>
         <url>https://github.com/druid-io/druid.git</url>
-        <tag>0.11.0-SNAPSHOT</tag>
+        <tag>0.11.1-SNAPSHOT</tag>
     </scm>
 
     <properties>
@@ -79,7 +79,8 @@
         <!-- Cannot update to AWS SDK 1.11+ because of Jackson incompatibility.
         Need to update Druid to use Jackson 2.6+ -->
         <aws.sdk.version>1.10.77</aws.sdk.version>
-	<druid.null.handling.useDefaultValueForNull>true</druid.null.handling.useDefaultValueForNull>
+	      <druid.null.handling.useDefaultValueForNull>true</druid.null.handling.useDefaultValueForNull>
+        <caffeine.version>2.5.5</caffeine.version>
     </properties>
 
     <modules>
@@ -101,7 +102,6 @@
         <module>hll</module>
         <!-- Core extensions -->
         <module>extensions-core/avro-extensions</module>
-        <module>extensions-core/caffeine-cache</module>
         <module>extensions-core/datasketches</module>
         <module>extensions-core/druid-kerberos</module>
         <module>extensions-core/hdfs-storage</module>
@@ -746,6 +746,11 @@
                 <type>test-jar</type>
             </dependency>
             <dependency>
+                <groupId>com.github.ben-manes.caffeine</groupId>
+                <artifactId>caffeine</artifactId>
+                <version>${caffeine.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.easymock</groupId>
                 <artifactId>easymock</artifactId>
                 <version>3.4</version>
@@ -934,7 +939,11 @@
                     </bundledSignatures>
                     <signaturesFiles>
                         <signaturesFile>${session.executionRootDirectory}/codestyle/joda-time-forbidden-apis.txt</signaturesFile>
+                        <signaturesFile>${session.executionRootDirectory}/codestyle/druid-forbidden-apis.txt</signaturesFile>
                     </signaturesFiles>
+                    <excludes>
+                        <exclude>io/druid/java/util/common/DateTimes$UtcFormatter.class</exclude>
+                    </excludes>
                 </configuration>
                 <executions>
                     <execution>
@@ -1156,6 +1165,13 @@
     </build>
 
     <profiles>
+        <profile>
+            <id>spark2</id>
+            <properties>
+                <jackson.version>2.6.5</jackson.version>
+                <aws.sdk.version>1.11.143</aws.sdk.version>
+            </properties>
+        </profile>
         <profile>
             <id>strict</id>
             <build>

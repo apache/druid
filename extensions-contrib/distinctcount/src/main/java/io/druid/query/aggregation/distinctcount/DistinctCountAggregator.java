@@ -24,7 +24,6 @@ import io.druid.query.aggregation.Aggregator;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.data.IndexedInts;
-import org.roaringbitmap.IntIterator;
 
 public class DistinctCountAggregator implements Aggregator
 {
@@ -92,14 +91,7 @@ public class DistinctCountAggregator implements Aggregator
     if (NullHandlingHelper.useDefaultValuesForNull()) {
       return mutableBitmap.size();
     }
-    int retVal = 0;
-    IntIterator iterator = mutableBitmap.iterator();
-    while (iterator.hasNext()) {
-      String val = selector.lookupName(iterator.next());
-      if (val != null) {
-        retVal++;
-      }
-    }
-    return retVal;
+    int nullId = selector.idLookup().lookupId(null);
+    return mutableBitmap.get(nullId) ? mutableBitmap.size() - 1 : mutableBitmap.size();
   }
 }

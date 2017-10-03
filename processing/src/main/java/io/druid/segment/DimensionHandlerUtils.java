@@ -124,21 +124,24 @@ public final class DimensionHandlerUtils
    * Creates an array of ColumnSelectorPlus objects, selectors that handle type-specific operations within
    * query processing engines, using a strategy factory provided by the query engine. One ColumnSelectorPlus
    * will be created for each column specified in dimensionSpecs.
-   *
+   * <p>
    * The ColumnSelectorPlus provides access to a type strategy (e.g., how to group on a float column)
    * and a value selector for a single column.
-   *
+   * <p>
    * A caller should define a strategy factory that provides an interface for type-specific operations
    * in a query engine. See GroupByStrategyFactory for a reference.
    *
    * @param <ColumnSelectorStrategyClass> The strategy type created by the provided strategy factory.
-   * @param strategyFactory A factory provided by query engines that generates type-handling strategies
-   * @param dimensionSpecs The set of columns to generate ColumnSelectorPlus objects for
-   * @param columnSelectorFactory Used to create value selectors for columns.
+   * @param strategyFactory               A factory provided by query engines that generates type-handling strategies
+   * @param dimensionSpecs                The set of columns to generate ColumnSelectorPlus objects for
+   * @param columnSelectorFactory         Used to create value selectors for columns.
+   *
    * @return An array of ColumnSelectorPlus objects, in the order of the columns specified in dimensionSpecs
    */
   public static <ColumnSelectorStrategyClass extends ColumnSelectorStrategy>
+  //CHECKSTYLE.OFF: Indentation
   ColumnSelectorPlus<ColumnSelectorStrategyClass>[] createColumnSelectorPluses(
+      //CHECKSTYLE.ON: Indentation
       ColumnSelectorStrategyFactory<ColumnSelectorStrategyClass> strategyFactory,
       List<DimensionSpec> dimensionSpecs,
       ColumnSelectorFactory columnSelectorFactory
@@ -237,8 +240,8 @@ public final class DimensionHandlerUtils
     return strategyFactory.makeColumnSelectorStrategy(capabilities, selector);
   }
 
-  public static @Nullable
-  String convertObjectToString(@Nullable Object valObj)
+  @Nullable
+  public static String convertObjectToString(@Nullable Object valObj)
   {
     if (valObj == null) {
       return null;
@@ -246,8 +249,8 @@ public final class DimensionHandlerUtils
     return valObj.toString();
   }
 
-  public static @Nullable
-  Long convertObjectToLong(@Nullable Object valObj)
+  @Nullable
+  public static Long convertObjectToLong(@Nullable Object valObj)
   {
     if (valObj == null) {
       return null;
@@ -264,8 +267,8 @@ public final class DimensionHandlerUtils
     }
   }
 
-  public static @Nullable
-  Float convertObjectToFloat(@Nullable Object valObj)
+  @Nullable
+  public static Float convertObjectToFloat(@Nullable Object valObj)
   {
     if (valObj == null) {
       return null;
@@ -282,8 +285,8 @@ public final class DimensionHandlerUtils
     }
   }
 
-  public static @Nullable
-  Double convertObjectToDouble(@Nullable Object valObj)
+  @Nullable
+  public static Double convertObjectToDouble(@Nullable Object valObj)
   {
     if (valObj == null) {
       return null;
@@ -303,7 +306,7 @@ public final class DimensionHandlerUtils
 
   /**
    * Convert a string representing a decimal value to a long.
-   *
+   * <p>
    * If the decimal value is not an exact integral value (e.g. 42.0), or if the decimal value
    * is too large to be contained within a long, this function returns null.
    *

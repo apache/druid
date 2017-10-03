@@ -20,16 +20,15 @@
 package io.druid.segment.realtime.firehose;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-
 import io.druid.curator.discovery.ServiceAnnouncer;
-import io.druid.server.DruidNode;
 import io.druid.guice.annotations.RemoteChatHandler;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.server.DruidNode;
 import io.druid.server.initialization.ServerConfig;
 
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 
@@ -58,7 +57,7 @@ public class ServiceAnnouncingChatHandlerProvider implements ChatHandlerProvider
     this.node = node;
     this.serviceAnnouncer = serviceAnnouncer;
     this.serverConfig = serverConfig;
-    this.handlers = Maps.newConcurrentMap();
+    this.handlers = new ConcurrentHashMap<>();
     this.announcements = new ConcurrentSkipListSet<>();
   }
 
@@ -124,6 +123,6 @@ public class ServiceAnnouncingChatHandlerProvider implements ChatHandlerProvider
 
   private DruidNode makeDruidNode(String key)
   {
-    return new DruidNode(key, node.getHost(), node.getPlaintextPort(), node.getTlsPort(), serverConfig);
+    return new DruidNode(key, node.getHost(), node.getPlaintextPort(), node.getTlsPort(), node.isEnablePlaintextPort(), node.isEnableTlsPort());
   }
 }

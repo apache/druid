@@ -100,6 +100,7 @@ public class JettyServerModule extends JerseyServletModule
     binder.bind(GuiceContainer.class).to(DruidGuiceContainer.class);
     binder.bind(DruidGuiceContainer.class).in(Scopes.SINGLETON);
     binder.bind(CustomExceptionMapper.class).in(Singleton.class);
+    binder.bind(ForbiddenExceptionMapper.class).in(Singleton.class);
 
     serve("/*").with(DruidGuiceContainer.class);
 
@@ -195,13 +196,13 @@ public class JettyServerModule extends JerseyServletModule
 
     final List<ServerConnector> serverConnectors = new ArrayList<>();
 
-    if (config.isPlaintext()) {
+    if (node.isEnablePlaintextPort()) {
       log.info("Creating http connector with port [%d]", node.getPlaintextPort());
       final ServerConnector connector = new ServerConnector(server);
       connector.setPort(node.getPlaintextPort());
       serverConnectors.add(connector);
     }
-    if (config.isTls()) {
+    if (node.isEnableTlsPort()) {
       log.info("Creating https connector with port [%d]", node.getTlsPort());
       final SslContextFactory sslContextFactory;
       if (sslContextFactoryBinding == null) {

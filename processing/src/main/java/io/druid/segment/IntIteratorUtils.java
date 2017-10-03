@@ -43,7 +43,7 @@ public final class IntIteratorUtils
     }
     int skipped = 0;
     while (skipped < n && it.hasNext()) {
-      it.next();
+      it.nextInt();
       skipped++;
     }
     return skipped;

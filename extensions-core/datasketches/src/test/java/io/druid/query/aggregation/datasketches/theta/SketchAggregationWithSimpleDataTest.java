@@ -38,7 +38,6 @@ import io.druid.query.select.SelectResultValue;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.query.topn.DimensionAndMetricValueExtractor;
 import io.druid.query.topn.TopNResultValue;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -136,7 +135,7 @@ public class SketchAggregationWithSimpleDataTest
     Assert.assertEquals(
         ImmutableList.of(
             new MapBasedRow(
-                DateTime.parse("2014-10-19T00:00:00.000Z"),
+                DateTimes.of("2014-10-19T00:00:00.000Z"),
                 ImmutableMap
                     .<String, Object>builder()
                     .put("product", "product_3")
@@ -149,7 +148,7 @@ public class SketchAggregationWithSimpleDataTest
                     .build()
             ),
             new MapBasedRow(
-                DateTime.parse("2014-10-19T00:00:00.000Z"),
+                DateTimes.of("2014-10-19T00:00:00.000Z"),
                 ImmutableMap
                     .<String, Object>builder()
                     .put("product", "product_1")
@@ -162,7 +161,7 @@ public class SketchAggregationWithSimpleDataTest
                     .build()
             ),
             new MapBasedRow(
-                DateTime.parse("2014-10-19T00:00:00.000Z"),
+                DateTimes.of("2014-10-19T00:00:00.000Z"),
                 ImmutableMap
                     .<String, Object>builder()
                     .put("product", "product_2")
@@ -175,7 +174,7 @@ public class SketchAggregationWithSimpleDataTest
                     .build()
             ),
             new MapBasedRow(
-                DateTime.parse("2014-10-19T00:00:00.000Z"),
+                DateTimes.of("2014-10-19T00:00:00.000Z"),
                 ImmutableMap
                     .<String, Object>builder()
                     .put("product", "product_4")
@@ -188,7 +187,7 @@ public class SketchAggregationWithSimpleDataTest
                     .build()
             ),
             new MapBasedRow(
-                DateTime.parse("2014-10-19T00:00:00.000Z"),
+                DateTimes.of("2014-10-19T00:00:00.000Z"),
                 ImmutableMap
                     .<String, Object>builder()
                     .put("product", "product_5")

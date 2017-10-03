@@ -127,7 +127,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
           loadQueueLocation,
           true,
           true,
-          Execs.multiThreaded(config.getNumLoadingThreads(), "ZkCoordinator-%s")
+          Execs.singleThreaded("ZkCoordinator-%s")
       );
 
       try {

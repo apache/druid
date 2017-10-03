@@ -38,7 +38,7 @@ public class NullHandlingHelper
 
   // Using static injection to avoid adding JacksonInject annotations all over the code.
   @Inject
-  private static NullValueHandlingConfig INSTANCE = new NullValueHandlingConfig(true);
+  private static NullValueHandlingConfig INSTANCE = new NullValueHandlingConfig(false);
 
   public static boolean useDefaultValuesForNull()
   {

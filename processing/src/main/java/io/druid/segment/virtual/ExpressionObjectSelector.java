@@ -120,11 +120,11 @@ public class ExpressionObjectSelector implements ObjectColumnSelector<ExprEval>
     final Class<?> clazz = selector.classOfObject();
     if (Number.class.isAssignableFrom(clazz) || String.class.isAssignableFrom(clazz)) {
       // Number, String supported as-is.
-      return selector::get;
+      return selector::getObject;
     } else if (clazz.isAssignableFrom(Number.class) || clazz.isAssignableFrom(String.class)) {
       // Might be Numbers and Strings. Use a selector that double-checks.
       return () -> {
-        final Object val = selector.get();
+        final Object val = selector.getObject();
         if (val instanceof String) {
           return NullHandlingHelper.nullToDefault((String) val);
         } else if (val instanceof Number) {
@@ -146,7 +146,7 @@ public class ExpressionObjectSelector implements ObjectColumnSelector<ExprEval>
   }
 
   @Override
-  public ExprEval get()
+  public ExprEval getObject()
   {
     return expression.eval(bindings);
   }

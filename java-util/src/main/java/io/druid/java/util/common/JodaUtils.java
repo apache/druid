@@ -19,7 +19,6 @@
 
 package io.druid.java.util.common;
 
-import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -97,16 +96,7 @@ public class JodaUtils
 
   public static boolean overlaps(final Interval i, Iterable<Interval> intervals)
   {
-    return Iterables.any(
-        intervals, new Predicate<Interval>()
-    {
-      @Override
-      public boolean apply(Interval input)
-      {
-        return input.overlaps(i);
-      }
-    }
-    );
+    return Iterables.any(intervals, input -> input.overlaps(i));
 
   }
 

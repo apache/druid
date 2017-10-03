@@ -65,7 +65,7 @@ public class TimestampAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    Long value = TimestampAggregatorFactory.convertLong(timestampSpec, selector.get());
+    Long value = TimestampAggregatorFactory.convertLong(timestampSpec, selector.getObject());
 
     if (value != null) {
       most = comparator.compare(most, value) > 0 ? most : value;

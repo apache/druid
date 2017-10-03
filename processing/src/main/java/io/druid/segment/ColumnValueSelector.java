@@ -19,6 +19,8 @@
 
 package io.druid.segment;
 
+import javax.annotation.Nullable;
+
 /**
  * Base type for interfaces that manage column value selection, e.g. DimensionSelector, LongColumnSelector
  *
@@ -27,7 +29,7 @@ package io.druid.segment;
  * rollup aggregation during index merging. Additionally, it also has a {@link #isNull()} method which can be used to
  * check whether the column has null value or not.
  */
-public interface ColumnValueSelector
+public interface ColumnValueSelector<T>
 {
   /**
    * @return float column value, 0.0F if the value is null.
@@ -50,4 +52,9 @@ public interface ColumnValueSelector
    * @return true if the column value for is null
    */
   boolean isNull();
+
+  @Nullable
+  T getObject();
+
+  Class<T> classOfObject();
 }

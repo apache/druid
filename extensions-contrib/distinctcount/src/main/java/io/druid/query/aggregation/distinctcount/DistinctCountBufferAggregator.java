@@ -28,7 +28,6 @@ import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.data.IndexedInts;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import org.roaringbitmap.IntIterator;
 
 import java.nio.ByteBuffer;
 
@@ -114,14 +113,7 @@ public class DistinctCountBufferAggregator implements BufferAggregator
     if (NullHandlingHelper.useDefaultValuesForNull()) {
       return mutableBitmap.size();
     }
-    int retVal = 0;
-    IntIterator iterator = mutableBitmap.iterator();
-    while (iterator.hasNext()) {
-      String val = selector.lookupName(iterator.next());
-      if (val != null) {
-        retVal++;
-      }
-    }
-    return retVal;
+    int nullId = selector.idLookup().lookupId(null);
+    return mutableBitmap.get(nullId) ? mutableBitmap.size() - 1 : mutableBitmap.size();
   }
 }

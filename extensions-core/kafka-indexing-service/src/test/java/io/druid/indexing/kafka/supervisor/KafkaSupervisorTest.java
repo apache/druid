@@ -29,8 +29,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
-import io.druid.data.input.impl.JSONPathFieldSpec;
-import io.druid.data.input.impl.JSONPathSpec;
+import io.druid.java.util.common.parsers.JSONPathFieldSpec;
+import io.druid.java.util.common.parsers.JSONPathSpec;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
@@ -1819,7 +1819,10 @@ public class KafkaSupervisorTest extends EasyMockSupport
         skipOffsetGaps
     );
 
-    KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(null, null)
+    KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
+        null,
+        null
+    )
     {
       @Override
       public KafkaIndexTaskClient build(
@@ -1920,6 +1923,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             false
         ),
         ImmutableMap.<String, Object>of(),
+        null,
         null
     );
   }

@@ -49,8 +49,6 @@ import io.druid.segment.DimensionSelectorUtils;
 import io.druid.segment.IdLookup;
 import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.data.IndexedInts;
-import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.ints.IntIterators;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -141,12 +139,6 @@ public class CardinalityAggregatorTest
         public int get(int i)
         {
           return column.get(p)[i];
-        }
-
-        @Override
-        public IntIterator iterator()
-        {
-          return IntIterators.asIntIterator(Iterators.forArray(column.get(p)));
         }
 
         @Override

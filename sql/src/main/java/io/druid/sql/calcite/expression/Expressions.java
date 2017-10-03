@@ -377,6 +377,7 @@ public class Expressions
    * @param rowSignature   row signature of the dataSource to be filtered
    * @param expression     Calcite row expression
    */
+  @Nullable
   public static DimFilter toFilter(
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
@@ -421,6 +422,7 @@ public class Expressions
    * @param rowSignature   row signature of the dataSource to be filtered
    * @param rexNode        Calcite row expression
    */
+  @Nullable
   private static DimFilter toLeafFilter(
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
@@ -440,6 +442,7 @@ public class Expressions
   /**
    * Translates to a simple leaf filter, meaning one that hits just a single column and is not an expression filter.
    */
+  @Nullable
   private static DimFilter toSimpleLeafFilter(
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
@@ -634,6 +637,7 @@ public class Expressions
   /**
    * Translates to an "expression" type leaf filter. Used as a fallback if we can't use a simple leaf filter.
    */
+  @Nullable
   private static DimFilter toExpressionLeafFilter(
       final PlannerContext plannerContext,
       final RowSignature rowSignature,

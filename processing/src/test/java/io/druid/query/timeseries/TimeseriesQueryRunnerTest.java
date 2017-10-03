@@ -708,14 +708,12 @@ public class TimeseriesQueryRunnerTest
     noRowsResult.put("rows", 0L);
     noRowsResult.put("idx", NullHandlingHelper.useDefaultValuesForNull() ? 0L : null);
     for (Interval interval : iterable) {
-        lotsOfZeroes.add(
-                new Result<>(
-                        interval.getStart(),
-                        new TimeseriesResultValue(
-                            noRowsResult
-                        )
-                )
-        );
+      lotsOfZeroes.add(
+          new Result<>(
+              interval.getStart(),
+              new TimeseriesResultValue(noRowsResult)
+          )
+      );
     }
 
     List<Result<TimeseriesResultValue>> expectedResults1 = Lists.newArrayList(
@@ -955,18 +953,22 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(QueryRunnerTestHelper.dayGran)
-        .filters(new RegexDimFilter(QueryRunnerTestHelper.marketDimension, "^.p.*$", null)) // spot and upfront
-        .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(
-            Arrays.<AggregatorFactory>asList(
-                QueryRunnerTestHelper.rowsCount,
-                QueryRunnerTestHelper.indexLongSum,
-                QueryRunnerTestHelper.qualityUniques
-            )
-        )
-        .postAggregators(Collections.<PostAggregator>singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
-        .descending(descending)
-        .build();
+                                  .filters(new RegexDimFilter(
+                                      QueryRunnerTestHelper.marketDimension,
+                                      "^.p.*$",
+                                      null
+                                  )) // spot and upfront
+                                  .intervals(QueryRunnerTestHelper.firstToThird)
+                                  .aggregators(
+                                      Arrays.<AggregatorFactory>asList(
+                                          QueryRunnerTestHelper.rowsCount,
+                                          QueryRunnerTestHelper.indexLongSum,
+                                          QueryRunnerTestHelper.qualityUniques
+                                      )
+                                  )
+                                  .postAggregators(Collections.<PostAggregator>singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+                                  .descending(descending)
+                                  .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
@@ -1016,7 +1018,7 @@ public class TimeseriesQueryRunnerTest
                                       )
                                   )
                                   .postAggregators(Collections.<PostAggregator>singletonList(QueryRunnerTestHelper
-                                  .addRowsIndexConstant))
+                                                                                                 .addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
 
@@ -1068,7 +1070,7 @@ public class TimeseriesQueryRunnerTest
                                       )
                                   )
                                   .postAggregators(Collections.<PostAggregator>singletonList(QueryRunnerTestHelper
-                                  .addRowsIndexConstant))
+                                                                                                 .addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
 
@@ -1120,7 +1122,7 @@ public class TimeseriesQueryRunnerTest
                                       )
                                   )
                                   .postAggregators(Collections.<PostAggregator>singletonList(QueryRunnerTestHelper
-                                  .addRowsIndexConstant))
+                                                                                                 .addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
 
@@ -1180,7 +1182,7 @@ public class TimeseriesQueryRunnerTest
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(aggregatorFactoryList)
                                   .postAggregators(Collections.<PostAggregator>singletonList(QueryRunnerTestHelper
-                                  .addRowsIndexConstant))
+                                                                                                 .addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
 
@@ -1300,7 +1302,7 @@ public class TimeseriesQueryRunnerTest
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(QueryRunnerTestHelper.commonDoubleAggregators)
                                   .postAggregators(Collections.<PostAggregator>singletonList(QueryRunnerTestHelper
-                                  .addRowsIndexConstant))
+                                                                                                 .addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
 
@@ -1358,7 +1360,7 @@ public class TimeseriesQueryRunnerTest
                                       )
                                   )
                                   .postAggregators(Collections.<PostAggregator>singletonList(QueryRunnerTestHelper
-                                  .addRowsIndexConstant))
+                                                                                                 .addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
 
@@ -1422,7 +1424,7 @@ public class TimeseriesQueryRunnerTest
                                       )
                                   )
                                   .postAggregators(Collections.<PostAggregator>singletonList(QueryRunnerTestHelper
-                                  .addRowsIndexConstant))
+                                                                                                 .addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
 
@@ -1486,7 +1488,7 @@ public class TimeseriesQueryRunnerTest
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(aggregatorFactoryList)
                                   .postAggregators(Collections.<PostAggregator>singletonList(QueryRunnerTestHelper
-                                  .addRowsIndexConstant))
+                                                                                                 .addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
 
@@ -1532,7 +1534,7 @@ public class TimeseriesQueryRunnerTest
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(aggregatorFactoryList)
                                   .postAggregators(Collections.<PostAggregator>singletonList(QueryRunnerTestHelper
-                                  .addRowsIndexConstant))
+                                                                                                 .addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
 
@@ -1598,7 +1600,7 @@ public class TimeseriesQueryRunnerTest
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(aggregatorFactoryList)
                                   .postAggregators(Collections.<PostAggregator>singletonList(QueryRunnerTestHelper
-                                  .addRowsIndexConstant))
+                                                                                                 .addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
 
@@ -1644,7 +1646,7 @@ public class TimeseriesQueryRunnerTest
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(aggregatorFactoryList)
                                   .postAggregators(Collections.<PostAggregator>singletonList(QueryRunnerTestHelper
-                                  .addRowsIndexConstant))
+                                                                                                 .addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
 
@@ -1690,7 +1692,7 @@ public class TimeseriesQueryRunnerTest
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(aggregatorFactoryList)
                                   .postAggregators(Collections.<PostAggregator>singletonList(QueryRunnerTestHelper
-                                  .addRowsIndexConstant))
+                                                                                                 .addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
     Map<String, Object> resultMap = Maps.newHashMap();
@@ -1745,7 +1747,7 @@ public class TimeseriesQueryRunnerTest
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(aggregatorFactoryList)
                                   .postAggregators(Collections.<PostAggregator>singletonList(QueryRunnerTestHelper
-                                  .addRowsIndexConstant))
+                                                                                                 .addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
     Map<String, Object> resultMap = Maps.newHashMap();
@@ -2232,7 +2234,7 @@ public class TimeseriesQueryRunnerTest
                                       )
                                   )
                                   .postAggregators(Collections.<PostAggregator>singletonList(QueryRunnerTestHelper
-                                  .addRowsIndexConstant))
+                                                                                                 .addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
 
@@ -2283,7 +2285,7 @@ public class TimeseriesQueryRunnerTest
                                       )
                                   )
                                   .postAggregators(Collections.<PostAggregator>singletonList(QueryRunnerTestHelper
-                                  .addRowsIndexConstant))
+                                                                                                 .addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
 
@@ -2388,7 +2390,7 @@ public class TimeseriesQueryRunnerTest
                                       )
                                   )
                                   .postAggregators(Collections.<PostAggregator>singletonList(QueryRunnerTestHelper
-                                  .addRowsIndexConstant))
+                                                                                                 .addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
 
@@ -2506,7 +2508,7 @@ public class TimeseriesQueryRunnerTest
                                       )
                                   )
                                   .postAggregators(Collections.<PostAggregator>singletonList(QueryRunnerTestHelper
-                                  .addRowsIndexConstant))
+                                                                                                 .addRowsIndexConstant))
                                   .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
@@ -2553,7 +2555,11 @@ public class TimeseriesQueryRunnerTest
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .filters(
-                                      new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "upfront", lookupExtractionFn)
+                                      new SelectorDimFilter(
+                                          QueryRunnerTestHelper.marketDimension,
+                                          "upfront",
+                                          lookupExtractionFn
+                                      )
                                   )
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(
@@ -2564,7 +2570,7 @@ public class TimeseriesQueryRunnerTest
                                       )
                                   )
                                   .postAggregators(Collections.<PostAggregator>singletonList(QueryRunnerTestHelper
-                                  .addRowsIndexConstant))
+                                                                                                 .addRowsIndexConstant))
                                   .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(

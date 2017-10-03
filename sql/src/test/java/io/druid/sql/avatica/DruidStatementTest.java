@@ -24,6 +24,9 @@ import com.google.common.collect.Lists;
 import io.druid.java.util.common.DateTimes;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.segment.NullHandlingHelper;
+import io.druid.server.security.AllowAllAuthenticator;
+import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
@@ -72,6 +75,9 @@ public class DruidStatementTest
         operatorTable,
         macroTable,
         plannerConfig,
+        new AuthConfig(),
+        AuthTestUtils.TEST_AUTHENTICATOR_MAPPER,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper()
     );
   }
@@ -87,7 +93,8 @@ public class DruidStatementTest
   public void testSignature() throws Exception
   {
     final String sql = "SELECT * FROM druid.foo";
-    final DruidStatement statement = new DruidStatement("", 0, null, () -> {}).prepare(plannerFactory, sql, -1);
+    final DruidStatement statement = new DruidStatement("", 0, null, () -> {
+    }).prepare(plannerFactory, sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);
 
     // Check signature.
     final Meta.Signature signature = statement.getSignature();
@@ -126,7 +133,8 @@ public class DruidStatementTest
   public void testSelectAllInFirstFrame() throws Exception
   {
     final String sql = "SELECT __time, cnt, dim1, dim2, m1 FROM druid.foo";
-    final DruidStatement statement = new DruidStatement("", 0, null, () -> {}).prepare(plannerFactory, sql, -1);
+    final DruidStatement statement = new DruidStatement("", 0, null, () -> {
+    }).prepare(plannerFactory, sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);
 
     // First frame, ask for all rows.
     Meta.Frame frame = statement.execute().nextFrame(DruidStatement.START_OFFSET, 6);
@@ -161,7 +169,8 @@ public class DruidStatementTest
   public void testSelectSplitOverTwoFrames() throws Exception
   {
     final String sql = "SELECT __time, cnt, dim1, dim2, m1 FROM druid.foo";
-    final DruidStatement statement = new DruidStatement("", 0, null, () -> {}).prepare(plannerFactory, sql, -1);
+    final DruidStatement statement = new DruidStatement("", 0, null, () -> {
+    }).prepare(plannerFactory, sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);
 
     // First frame, ask for 2 rows.
     Meta.Frame frame = statement.execute().nextFrame(DruidStatement.START_OFFSET, 2);

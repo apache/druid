@@ -86,20 +86,21 @@ public class FloatGenericColumnPartSerde implements ColumnPartSerde
     public FloatGenericColumnPartSerde build()
     {
       return new FloatGenericColumnPartSerde(
-          byteOrder, new Serializer()
-      {
-        @Override
-        public long numBytes()
-        {
-          return delegate.getSerializedSize();
-        }
+          byteOrder,
+          new Serializer()
+          {
+            @Override
+            public long numBytes()
+            {
+              return delegate.getSerializedSize();
+            }
 
-        @Override
-        public void write(WritableByteChannel channel, FileSmoosher fileSmoosher) throws IOException
-        {
-          delegate.writeToChannel(channel, fileSmoosher);
-        }
-      }
+            @Override
+            public void write(WritableByteChannel channel, FileSmoosher fileSmoosher) throws IOException
+            {
+              delegate.writeToChannel(channel, fileSmoosher);
+            }
+          }
       );
     }
   }

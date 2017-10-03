@@ -240,7 +240,9 @@ public class JavaScriptAggregatorTest
   @Test
   public void testAggregateStrings()
   {
-    final TestObjectColumnSelector ocs = new TestObjectColumnSelector("what", null, new String[]{"hey", "there"});
+    final TestObjectColumnSelector ocs = new TestObjectColumnSelector<>(
+        new Object[]{"what", null, new String[]{"hey", "there"}}
+    );
     final JavaScriptAggregator agg = new JavaScriptAggregator(
         Collections.<ObjectColumnSelector>singletonList(ocs),
         JavaScriptAggregatorFactory.compileScript(

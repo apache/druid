@@ -109,21 +109,22 @@ public class LongGenericColumnPartSerdeV2 implements ColumnPartSerde
     public LongGenericColumnPartSerdeV2 build()
     {
       return new LongGenericColumnPartSerdeV2(
-          byteOrder, bitmapSerdeFactory, new Serializer()
-      {
-        @Override
-        public long numBytes()
-        {
-          return delegate.getSerializedSize() + Byte.BYTES;
-        }
+          byteOrder, bitmapSerdeFactory,
+          new Serializer()
+          {
+            @Override
+            public long numBytes()
+            {
+              return delegate.getSerializedSize() + Byte.BYTES;
+            }
 
-        @Override
-        public void write(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
-        {
-          channel.write(ByteBuffer.wrap(new byte[]{VERSION_ONE}));
-          delegate.writeToChannel(channel, smoosher);
-        }
-      }
+            @Override
+            public void write(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+            {
+              channel.write(ByteBuffer.wrap(new byte[]{VERSION_ONE}));
+              delegate.writeToChannel(channel, smoosher);
+            }
+          }
       );
     }
   }

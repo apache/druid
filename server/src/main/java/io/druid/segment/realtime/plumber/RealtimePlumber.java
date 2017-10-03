@@ -29,7 +29,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -88,6 +87,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -108,7 +108,7 @@ public class RealtimePlumber implements Plumber
   private final SegmentPublisher segmentPublisher;
   private final SegmentHandoffNotifier handoffNotifier;
   private final Object handoffCondition = new Object();
-  private final Map<Long, Sink> sinks = Maps.newConcurrentMap();
+  private final Map<Long, Sink> sinks = new ConcurrentHashMap<>();
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline = new VersionedIntervalTimeline<String, Sink>(
       String.CASE_INSENSITIVE_ORDER
   );
@@ -769,41 +769,38 @@ public class RealtimePlumber implements Plumber
         )
     );
 
-    ScheduledExecutors
-        .scheduleAtFixedRate(
-            scheduledExecutor,
-            new Duration(
-                System.currentTimeMillis(),
-                segmentGranularity.increment(truncatedNow).getMillis() + windowMillis
-            ),
-            new Duration(truncatedNow, segmentGranularity.increment(truncatedNow)),
-            new ThreadRenamingCallable<ScheduledExecutors.Signal>(
-                StringUtils.format(
-                    "%s-overseer-%d",
-                    schema.getDataSource(),
-                    config.getShardSpec().getPartitionNum()
-                )
-            )
-            {
-              @Override
-              public ScheduledExecutors.Signal doCall()
-              {
-                if (stopped) {
-                  log.info("Stopping merge-n-push overseer thread");
-                  return ScheduledExecutors.Signal.STOP;
-                }
-
-                mergeAndPush();
-
-                if (stopped) {
-                  log.info("Stopping merge-n-push overseer thread");
-                  return ScheduledExecutors.Signal.STOP;
-                } else {
-                  return ScheduledExecutors.Signal.REPEAT;
-                }
-              }
+    String threadName = StringUtils.format(
+        "%s-overseer-%d",
+        schema.getDataSource(),
+        config.getShardSpec().getPartitionNum()
+    );
+    ThreadRenamingCallable<ScheduledExecutors.Signal> threadRenamingCallable =
+        new ThreadRenamingCallable<ScheduledExecutors.Signal>(threadName)
+        {
+          @Override
+          public ScheduledExecutors.Signal doCall()
+          {
+            if (stopped) {
+              log.info("Stopping merge-n-push overseer thread");
+              return ScheduledExecutors.Signal.STOP;
             }
-        );
+
+            mergeAndPush();
+
+            if (stopped) {
+              log.info("Stopping merge-n-push overseer thread");
+              return ScheduledExecutors.Signal.STOP;
+            } else {
+              return ScheduledExecutors.Signal.REPEAT;
+            }
+          }
+        };
+    Duration initialDelay = new Duration(
+        System.currentTimeMillis(),
+        segmentGranularity.increment(truncatedNow).getMillis() + windowMillis
+    );
+    Duration rate = new Duration(truncatedNow, segmentGranularity.increment(truncatedNow));
+    ScheduledExecutors.scheduleAtFixedRate(scheduledExecutor, initialDelay, rate, threadRenamingCallable);
   }
 
   private void mergeAndPush()

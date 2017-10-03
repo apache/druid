@@ -20,8 +20,6 @@
 package io.druid.segment.data;
 
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.ints.IntIterators;
 
 import java.io.IOException;
 
@@ -54,12 +52,6 @@ public class ZeroIndexedInts implements IndexedInts
     // Skip range check in production, assume "index" was 0 like it really should have been.
     assert index == 0;
     return 0;
-  }
-
-  @Override
-  public IntIterator iterator()
-  {
-    return IntIterators.singleton(0);
   }
 
   @Override

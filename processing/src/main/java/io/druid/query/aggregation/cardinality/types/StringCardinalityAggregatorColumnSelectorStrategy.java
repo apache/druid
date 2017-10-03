@@ -25,7 +25,6 @@ import io.druid.query.aggregation.cardinality.CardinalityAggregator;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.data.IndexedInts;
-import it.unimi.dsi.fastutil.ints.IntIterator;
 
 import java.util.Arrays;
 
@@ -72,8 +71,9 @@ public class StringCardinalityAggregatorColumnSelectorStrategy
   @Override
   public void hashValues(DimensionSelector dimSelector, HyperLogLogCollector collector)
   {
-    for (IntIterator rowIt = dimSelector.getRow().iterator(); rowIt.hasNext(); ) {
-      int index = rowIt.nextInt();
+    IndexedInts row = dimSelector.getRow();
+    for (int i = 0; i < row.size(); i++) {
+      int index = row.get(i);
       final String value = dimSelector.lookupName(index);
       if (NullHandlingHelper.useDefaultValuesForNull() || value != null) {
         collector.add(CardinalityAggregator.hashFn.hashUnencodedChars(nullToSpecial(value)).asBytes());

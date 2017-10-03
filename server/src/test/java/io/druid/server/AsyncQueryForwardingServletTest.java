@@ -45,12 +45,15 @@ import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.Query;
 import io.druid.query.QueryToolChest;
 import io.druid.server.initialization.BaseJettyTest;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.router.QueryHostFinder;
+import io.druid.server.security.AllowAllAuthorizer;
+import io.druid.server.security.AuthTestUtils;
+import io.druid.server.security.Authorizer;
+import io.druid.server.security.AuthorizerMapper;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
@@ -109,9 +112,19 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                 JsonConfigProvider.bindInstance(
                     binder,
                     Key.get(DruidNode.class, Self.class),
-                    new DruidNode("test", "localhost", null, null, new ServerConfig())
+                    new DruidNode("test", "localhost", null, null, true, false)
                 );
                 binder.bind(JettyServerInitializer.class).to(ProxyJettyServerInit.class).in(LazySingleton.class);
+                binder.bind(AuthorizerMapper.class).toInstance(
+                    new AuthorizerMapper(null) {
+
+                      @Override
+                      public Authorizer getAuthorizer(String name)
+                      {
+                        return new AllowAllAuthorizer();
+                      }
+                    }
+                );
                 Jerseys.addResource(binder, SlowResource.class);
                 Jerseys.addResource(binder, ExceptionResource.class);
                 Jerseys.addResource(binder, DefaultResource.class);
@@ -238,7 +251,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                   // noop
                 }
               },
-              new DefaultGenericQueryMetricsFactory(jsonMapper)
+              new DefaultGenericQueryMetricsFactory(jsonMapper),
+              AuthTestUtils.TEST_AUTHENTICATOR_MAPPER
           )
           {
             @Override

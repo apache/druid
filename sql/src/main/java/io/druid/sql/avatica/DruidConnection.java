@@ -20,14 +20,20 @@
 package io.druid.sql.avatica;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -38,6 +44,9 @@ import java.util.concurrent.atomic.AtomicReference;
 public class DruidConnection
 {
   private static final Logger log = new Logger(DruidConnection.class);
+  private static final Set<String> SENSITIVE_CONTEXT_FIELDS = Sets.newHashSet(
+      "user", "password"
+  );
 
   private final String connectionId;
   private final int maxStatements;
@@ -74,13 +83,33 @@ public class DruidConnection
         throw new ISE("Too many open statements, limit is[%,d]", maxStatements);
       }
 
-      final DruidStatement statement = new DruidStatement(connectionId, statementId, context, () -> {
-        // onClose function for the statement
-        synchronized (statements) {
-          log.debug("Connection[%s] closed statement[%s].", connectionId, statementId);
-          statements.remove(statementId);
-        }
-      });
+      // remove sensitive fields from the context, only the connection's context needs to have authentication
+      // credentials
+      Map<String, Object> sanitizedContext = Maps.newHashMap();
+      sanitizedContext = Maps.filterEntries(
+          context,
+          new Predicate<Map.Entry<String, Object>>()
+          {
+            @Override
+            public boolean apply(@Nullable Map.Entry<String, Object> input)
+            {
+              return !SENSITIVE_CONTEXT_FIELDS.contains(input.getKey());
+            }
+          }
+      );
+
+      final DruidStatement statement = new DruidStatement(
+          connectionId,
+          statementId,
+          ImmutableSortedMap.copyOf(sanitizedContext),
+          () -> {
+            // onClose function for the statement
+            synchronized (statements) {
+              log.debug("Connection[%s] closed statement[%s].", connectionId, statementId);
+              statements.remove(statementId);
+            }
+          }
+      );
 
       statements.put(statementId, statement);
       log.debug("Connection[%s] opened statement[%s].", connectionId, statementId);
@@ -137,5 +166,10 @@ public class DruidConnection
       oldFuture.cancel(false);
     }
     return this;
+  }
+
+  public Map<String, Object> context()
+  {
+    return context;
   }
 }

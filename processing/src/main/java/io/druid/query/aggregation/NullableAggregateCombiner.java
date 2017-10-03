@@ -21,6 +21,8 @@ package io.druid.query.aggregation;
 
 import io.druid.segment.ColumnValueSelector;
 
+import javax.annotation.Nullable;
+
 /**
  * The result of a NullableAggregateCombiner will be null if all the values to be combined are null values or no values are combined at all.
  * If any of the value is non-null, the result would be the value of the delegate combiner.
@@ -80,5 +82,18 @@ public class NullableAggregateCombiner implements AggregateCombiner
   public boolean isNull()
   {
     return isNullResult;
+  }
+
+  @Nullable
+  @Override
+  public Object getObject()
+  {
+    return isNullResult ? null : delegate.getObject();
+  }
+
+  @Override
+  public Class classOfObject()
+  {
+    return delegate.classOfObject();
   }
 }

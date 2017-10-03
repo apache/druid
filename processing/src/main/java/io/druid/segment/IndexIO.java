@@ -163,12 +163,12 @@ public class IndexIO
       if (rb1.getRowNum() != rb2.getRowNum()) {
         throw new SegmentValidationException("Row number mismatch: [%d] vs [%d]", rb1.getRowNum(), rb2.getRowNum());
       }
-        try {
-          validateRowValues(dimHandlers, rb1, adapter1, rb2, adapter2);
-        }
-        catch (SegmentValidationException ex) {
-          throw new SegmentValidationException(ex, "Validation failure on row %d: [%s] vs [%s]", row, rb1, rb2);
-        }
+      try {
+        validateRowValues(dimHandlers, rb1, adapter1, rb2, adapter2);
+      }
+      catch (SegmentValidationException ex) {
+        throw new SegmentValidationException(ex, "Validation failure on row %d: [%s] vs [%s]", row, rb1, rb2);
+      }
     }
     if (it2.hasNext()) {
       throw new SegmentValidationException("Unexpected end of first adapter");
