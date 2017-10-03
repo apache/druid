@@ -150,6 +150,8 @@ public class PreResponseAuthorizationCheckFilter implements Filter
     log.makeAlert(errorMsg)
        .addData("uri", servletRequest.getRequestURI())
        .addData("method", servletRequest.getMethod())
+       .addData("remoteAddr", servletRequest.getRemoteAddr())
+       .addData("remoteHost", servletRequest.getRemoteHost())
        .emit();
 
     if (servletResponse.isCommitted()) {

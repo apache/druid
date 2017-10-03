@@ -115,6 +115,8 @@ public class PreResponseAuthorizationCheckFilterTest
     EasyMock.expect(resp.getStatus()).andReturn(200).once();
     EasyMock.expect(req.getRequestURI()).andReturn("uri").once();
     EasyMock.expect(req.getMethod()).andReturn("GET").once();
+    EasyMock.expect(req.getRemoteAddr()).andReturn("1.2.3.4").once();
+    EasyMock.expect(req.getRemoteHost()).andReturn("ahostname").once();
     EasyMock.expect(resp.isCommitted()).andReturn(true).once();
     resp.setStatus(403);
     EasyMock.expectLastCall().once();
