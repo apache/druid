@@ -36,11 +36,10 @@ public class LookupConfig
   private int numLookupLoadingThreads = Runtime.getRuntime().availableProcessors() / 2;
 
   /**
-   * @param snapshotWorkingDir working directory to store lookups snapshot file, passing null or empty string will disable the snapshot utility
-   * @param numLookupLoadingThreads number of threads for loading the lookups as part of the synchronization process
+   * @param snapshotWorkingDir        working directory to store lookups snapshot file, passing null or empty string will disable the snapshot utility
+   * @param numLookupLoadingThreads   number of threads for loading the lookups as part of the synchronization process
    * @param enableLookupSyncOnStartup decides whether the lookup synchronization process should be enabled at startup
    */
-
   @JsonCreator
   public LookupConfig(
       @JsonProperty("snapshotWorkingDir") String snapshotWorkingDir
@@ -64,7 +63,6 @@ public class LookupConfig
     return enableLookupSyncOnStartup;
   }
 
-
   @Override
   public boolean equals(Object o)
   {
@@ -77,7 +75,9 @@ public class LookupConfig
 
     LookupConfig that = (LookupConfig) o;
 
-    return getSnapshotWorkingDir().equals(that.getSnapshotWorkingDir());
+    return snapshotWorkingDir.equals(that.snapshotWorkingDir) &&
+           enableLookupSyncOnStartup == that.enableLookupSyncOnStartup &&
+           numLookupLoadingThreads == that.numLookupLoadingThreads;
 
   }
 
