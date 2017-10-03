@@ -22,6 +22,7 @@ package io.druid.server.initialization.jetty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.fasterxml.jackson.jaxrs.smile.JacksonSmileProvider;
+import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import com.google.inject.Binder;
 import com.google.inject.Binding;
@@ -48,6 +49,7 @@ import io.druid.guice.annotations.JSR311Resource;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Self;
 import io.druid.guice.annotations.Smile;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.RE;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
@@ -72,8 +74,10 @@ import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler;
 
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLEngine;
 import javax.servlet.ServletException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -147,14 +151,14 @@ public class JettyServerModule extends JerseyServletModule
       final TLSServerConfig TLSServerConfig
   )
   {
-    final Server server = makeJettyServer(
+    return makeAndInitializeServer(
+        injector,
+        lifecycle,
         node,
         config,
         TLSServerConfig,
         injector.getExistingBinding(Key.get(SslContextFactory.class))
     );
-    initializeServer(injector, lifecycle, server);
-    return server;
   }
 
   @Provides
@@ -175,7 +179,9 @@ public class JettyServerModule extends JerseyServletModule
     return provider;
   }
 
-  static Server makeJettyServer(
+  static Server makeAndInitializeServer(
+      Injector injector,
+      Lifecycle lifecycle,
       DruidNode node,
       ServerConfig config,
       TLSServerConfig tlsServerConfig,
@@ -216,9 +222,10 @@ public class JettyServerModule extends JerseyServletModule
       connector.setPort(node.getPlaintextPort());
       serverConnectors.add(connector);
     }
+
+    final SslContextFactory sslContextFactory;
     if (node.isEnableTlsPort()) {
       log.info("Creating https connector with port [%d]", node.getTlsPort());
-      final SslContextFactory sslContextFactory;
       if (sslContextFactoryBinding == null) {
         // Never trust all certificates by default
         sslContextFactory = new SslContextFactory(false);
@@ -229,8 +236,26 @@ public class JettyServerModule extends JerseyServletModule
         sslContextFactory.setKeyManagerFactoryAlgorithm(tlsServerConfig.getKeyManagerFactoryAlgorithm() == null
                                                         ? KeyManagerFactory.getDefaultAlgorithm()
                                                         : tlsServerConfig.getKeyManagerFactoryAlgorithm());
-        sslContextFactory.setKeyManagerPassword(tlsServerConfig.getKeyManagerPasswordProvider() == null ? null
-                                                : tlsServerConfig.getKeyManagerPasswordProvider().getPassword());
+        sslContextFactory.setKeyManagerPassword(tlsServerConfig.getKeyManagerPasswordProvider() == null ?
+                                                null : tlsServerConfig.getKeyManagerPasswordProvider().getPassword());
+        if (tlsServerConfig.getIncludeCipherSuites() != null && tlsServerConfig.getIncludeCipherSuites().size() > 0) {
+          sslContextFactory.setIncludeCipherSuites(
+              tlsServerConfig.getIncludeCipherSuites()
+                             .toArray(new String[tlsServerConfig.getIncludeCipherSuites().size()]));
+        }
+        if (tlsServerConfig.getExcludeCipherSuites() != null && tlsServerConfig.getExcludeCipherSuites().size() > 0) {
+          sslContextFactory.setExcludeCipherSuites(
+              tlsServerConfig.getExcludeCipherSuites()
+                             .toArray(new String[tlsServerConfig.getExcludeCipherSuites().size()]));
+        }
+        if (tlsServerConfig.getIncludeProtocols() != null && tlsServerConfig.getIncludeProtocols().size() > 0) {
+          sslContextFactory.setIncludeProtocols(
+              tlsServerConfig.getIncludeProtocols().toArray(new String[tlsServerConfig.getIncludeProtocols().size()]));
+        }
+        if (tlsServerConfig.getExcludeProtocols() != null && tlsServerConfig.getExcludeProtocols().size() > 0) {
+          sslContextFactory.setExcludeProtocols(
+              tlsServerConfig.getExcludeProtocols().toArray(new String[tlsServerConfig.getExcludeProtocols().size()]));
+        }
       } else {
         sslContextFactory = sslContextFactoryBinding.getProvider().get();
       }
@@ -246,6 +271,8 @@ public class JettyServerModule extends JerseyServletModule
       );
       connector.setPort(node.getTlsPort());
       serverConnectors.add(connector);
+    } else {
+      sslContextFactory = null;
     }
 
     final ServerConnector[] connectors = new ServerConnector[serverConnectors.size()];
@@ -266,11 +293,7 @@ public class JettyServerModule extends JerseyServletModule
 
     server.setConnectors(connectors);
 
-    return server;
-  }
-
-  static void initializeServer(Injector injector, Lifecycle lifecycle, final Server server)
-  {
+    // initialize server
     JettyServerInitializer initializer = injector.getInstance(JettyServerInitializer.class);
     try {
       initializer.initialize(server, injector);
@@ -286,6 +309,27 @@ public class JettyServerModule extends JerseyServletModule
           public void start() throws Exception
           {
             server.start();
+            if (node.isEnableTlsPort()) {
+              // Perform validation
+              Preconditions.checkNotNull(sslContextFactory);
+              final SSLEngine sslEngine = sslContextFactory.newSSLEngine();
+              if (sslEngine.getEnabledCipherSuites() == null || sslEngine.getEnabledCipherSuites().length == 0) {
+                throw new ISE(
+                    "No supported cipher suites found, supported suites [%s], configured suites include list: [%s] exclude list: [%s]",
+                    Arrays.toString(sslEngine.getSupportedCipherSuites()),
+                    tlsServerConfig.getIncludeCipherSuites(),
+                    tlsServerConfig.getExcludeCipherSuites()
+                );
+              }
+              if (sslEngine.getEnabledProtocols() == null || sslEngine.getEnabledProtocols().length == 0) {
+                throw new ISE(
+                    "No supported protocols found, supported protocols [%s], configured protocols include list: [%s] exclude list: [%s]",
+                    Arrays.toString(sslEngine.getSupportedProtocols()),
+                    tlsServerConfig.getIncludeProtocols(),
+                    tlsServerConfig.getExcludeProtocols()
+                );
+              }
+            }
           }
 
           @Override
@@ -300,6 +344,8 @@ public class JettyServerModule extends JerseyServletModule
           }
         }
     );
+
+    return server;
   }
 
   private static int getMaxJettyAcceptorsSelectorsNum(DruidNode druidNode)
