@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
@@ -433,7 +434,7 @@ public class LookupReferencesManager
   private void startLookups(List<LookupBean> lookupBeanList)
   {
     ImmutableMap.Builder<String, LookupExtractorFactoryContainer> builder = ImmutableMap.builder();
-    ListeningScheduledExecutorService executorService = MoreExecutors.listeningDecorator(
+    ListeningExecutorService executorService = MoreExecutors.listeningDecorator(
         Executors.newScheduledThreadPool(
             lookupConfig.getNumLookupLoadingThreads(),
             Execs.makeThreadFactory("LookupReferencesManager-Startup-%s")
