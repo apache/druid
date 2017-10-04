@@ -122,13 +122,14 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     }
 
     int numMergeIndex = 0;
+    Indexed<String> dimValueLookup = null;
     Indexed<String>[] dimValueLookups = new Indexed[adapters.size() + 1];
     for (int i = 0; i < adapters.size(); i++) {
       Indexed<String> dimValues = (Indexed) adapters.get(i).getDimValueLookup(dimensionName);
       if (!isNullColumn(dimValues)) {
         dimHasValues = true;
         hasNull |= dimValues.indexOf(null) >= 0;
-        dimValueLookups[i] = dimValues;
+        dimValueLookups[i] = dimValueLookup = dimValues;
         numMergeIndex++;
       } else {
         dimAbsentFromSomeIndex = true;
@@ -146,7 +147,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
      */
     if (convertMissingValues && !hasNull) {
       hasNull = true;
-      dimValueLookups[adapters.size()] = EMPTY_STR_DIM_VAL;
+      dimValueLookups[adapters.size()] = dimValueLookup = EMPTY_STR_DIM_VAL;
       numMergeIndex++;
     }
 
@@ -167,7 +168,6 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
       }
       cardinality = dictionaryMergeIterator.counter;
     } else if (numMergeIndex == 1) {
-      Indexed<String> dimValueLookup = dimValueLookups[0];
       writeDictionary(dimValueLookup);
       cardinality = dimValueLookup.size();
     }

@@ -47,7 +47,13 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>, S
           x -> x.encoding != CompressionFactory.LEGACY_LONG_ENCODING_FORMAT,
           x -> CompressionFactory.setEncodingFlag(x.compression.getId())
       )
-      .writeByte(x -> x.compression.getId());
+      .writeByte(x -> {
+        if (x.encoding == CompressionFactory.LEGACY_LONG_ENCODING_FORMAT) {
+          return x.compression.getId();
+        } else {
+          return x.encoding.getId();
+        }
+      });
 
   private final int totalSize;
   private final int sizePer;
