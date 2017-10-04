@@ -138,7 +138,7 @@ public class PreResponseAuthorizationCheckFilterTest
   public void testMissingAuthorizationCheckWithError() throws Exception
   {
     EmittingLogger.registerEmitter(EasyMock.createNiceMock(ServiceEmitter.class));
-    AuthenticationResult authenticationResult = new AuthenticationResult("so-very-valid", "so-very-valid", null);
+    AuthenticationResult authenticationResult = new AuthenticationResult("so-very-valid", "so-very-valid");
 
     HttpServletRequest req = EasyMock.createStrictMock(HttpServletRequest.class);
     HttpServletResponse resp = EasyMock.createStrictMock(HttpServletResponse.class);
