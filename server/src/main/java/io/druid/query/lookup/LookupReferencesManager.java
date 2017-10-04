@@ -27,11 +27,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.ListeningScheduledExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.http.client.response.FullResponseHolder;
@@ -56,14 +51,16 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Function;
+import java.util.stream.IntStream;
 
 /**
  * This class provide a basic {@link LookupExtractorFactory} references manager.
@@ -434,58 +431,57 @@ public class LookupReferencesManager
   private void startLookups(List<LookupBean> lookupBeanList)
   {
     ImmutableMap.Builder<String, LookupExtractorFactoryContainer> builder = ImmutableMap.builder();
-    ListeningExecutorService executorService = MoreExecutors.listeningDecorator(
-        Executors.newScheduledThreadPool(
-            lookupConfig.getNumLookupLoadingThreads(),
-            Execs.makeThreadFactory("LookupReferencesManager-Startup-%s")
-        )
+    ExecutorService executorService = Execs.multiThreaded(
+        lookupConfig.getNumLookupLoadingThreads(),
+        "LookupReferencesManager-Startup-%s"
     );
+    ExecutorCompletionService completionService = new ExecutorCompletionService(executorService);
     try {
-      List<ListenableFuture<Map.Entry>> futures = new ArrayList<>();
       LOG.info("Starting lookup loading process");
       for (LookupBean lookupBean : lookupBeanList) {
-        futures.add(
-            executorService.submit(
-                () -> {
+        completionService.submit(
+            () -> {
 
-                  LookupExtractorFactoryContainer container = lookupBean.getContainer();
-                  LOG.info(
-                      "Starting lookup [%s]:[%s]",
-                      lookupBean.getName(),
-                      container
-                  );
-                  if (container.getLookupExtractorFactory().start()) {
-                    LOG.info(
-                        "Started lookup [%s]:[%s]",
-                        lookupBean.getName(),
-                        container
-                    );
-                    return new AbstractMap.SimpleImmutableEntry<>(lookupBean.getName(), container);
-                  } else {
-                    LOG.error(
-                        "Failed to start lookup [%s]:[%s]",
-                        lookupBean.getName(),
-                        container
-                    );
-                    return null;
-                  }
-                }
-            )
+              LookupExtractorFactoryContainer container = lookupBean.getContainer();
+              LOG.info(
+                  "Starting lookup [%s]:[%s]",
+                  lookupBean.getName(),
+                  container
+              );
+              if (container.getLookupExtractorFactory().start()) {
+                LOG.info(
+                    "Started lookup [%s]:[%s]",
+                    lookupBean.getName(),
+                    container
+                );
+                return new AbstractMap.SimpleImmutableEntry<>(lookupBean.getName(), container);
+              } else {
+                LOG.error(
+                    "Failed to start lookup [%s]:[%s]",
+                    lookupBean.getName(),
+                    container
+                );
+                return null;
+              }
+            }
         );
       }
-      final ListenableFuture<List<Map.Entry>> futureList = Futures.allAsList(futures);
-      try {
-        futureList.get()
-                  .stream()
-                  .filter(Objects::nonNull)
-                  .forEach(builder::put);
-
-        stateRef.set(new LookupUpdateState(builder.build(), ImmutableList.of(), ImmutableList.of()));
-      }
-      catch (InterruptedException | ExecutionException ex) {
-        futureList.cancel(true);
-        throw ex;
-      }
+      IntStream.range(0, lookupBeanList.size())
+               .forEach(i -> {
+                 try {
+                   final Future<AbstractMap.SimpleImmutableEntry<String, LookupExtractorFactoryContainer>> completedFuture = completionService
+                       .take();
+                   final AbstractMap.SimpleImmutableEntry<String, LookupExtractorFactoryContainer> lookupResult = completedFuture
+                       .get();
+                   if (lookupResult != null) {
+                     builder.put(lookupResult);
+                   }
+                 }
+                 catch (InterruptedException | ExecutionException e) {
+                   LOG.error(e, "Lookup loading interrupted.");
+                 }
+               });
+      stateRef.set(new LookupUpdateState(builder.build(), ImmutableList.of(), ImmutableList.of()));
     }
     catch (Exception e) {
       LOG.error(e, "Failed to finish lookup load process.");
