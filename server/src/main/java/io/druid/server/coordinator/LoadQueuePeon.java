@@ -275,11 +275,11 @@ public class LoadQueuePeon
             public void process(WatchedEvent watchedEvent) throws Exception
             {
               switch (watchedEvent.getType()) {
-              case NodeDeleted:
-                entryRemoved(watchedEvent.getPath());
-                break;
-              default:
-                // do nothing
+                case NodeDeleted:
+                  entryRemoved(watchedEvent.getPath());
+                  break;
+                default:
+                  // do nothing
               }
             }
           }

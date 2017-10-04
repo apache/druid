@@ -59,7 +59,7 @@ public class LongLastAggregationTest
     combiningAggFactory = (LongLastAggregatorFactory) longLastAggFactory.getCombiningFactory();
     timeSelector = new TestLongColumnSelector(times);
     valueSelector = new TestLongColumnSelector(longValues);
-    objectSelector = new TestObjectColumnSelector(pairs);
+    objectSelector = new TestObjectColumnSelector<>(pairs);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
     EasyMock.expect(colSelectorFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME)).andReturn(timeSelector);
     EasyMock.expect(colSelectorFactory.makeLongColumnSelector("nilly")).andReturn(valueSelector);

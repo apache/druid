@@ -95,7 +95,8 @@ public class RowBasedGrouperHelper
       final Supplier<ByteBuffer> bufferSupplier,
       final LimitedTemporaryStorage temporaryStorage,
       final ObjectMapper spillMapper,
-      final AggregatorFactory[] aggregatorFactories
+      final AggregatorFactory[] aggregatorFactories,
+      final int mergeBufferSize
   )
   {
     return createGrouperAccumulatorPair(
@@ -111,7 +112,8 @@ public class RowBasedGrouperHelper
         null,
         UNKNOWN_THREAD_PRIORITY,
         false,
-        UNKNOWN_TIMEOUT
+        UNKNOWN_TIMEOUT,
+        mergeBufferSize
     );
   }
 
@@ -133,7 +135,8 @@ public class RowBasedGrouperHelper
       @Nullable final ListeningExecutorService grouperSorter,
       final int priority,
       final boolean hasQueryTimeout,
-      final long queryTimeoutAt
+      final long queryTimeoutAt,
+      final int mergeBufferSize
   )
   {
     // concurrencyHint >= 1 for concurrent groupers, -1 for single-threaded
@@ -186,7 +189,8 @@ public class RowBasedGrouperHelper
           spillMapper,
           true,
           limitSpec,
-          sortHasNonGroupingFields
+          sortHasNonGroupingFields,
+          mergeBufferSize
       );
     } else {
       grouper = new ConcurrentGrouper<>(
@@ -205,7 +209,8 @@ public class RowBasedGrouperHelper
           grouperSorter,
           priority,
           hasQueryTimeout,
-          queryTimeoutAt
+          queryTimeoutAt,
+          mergeBufferSize
       );
     }
 
@@ -520,7 +525,7 @@ public class RowBasedGrouperHelper
   }
 
   private static class InputRawSupplierColumnSelectorStrategyFactory
-    implements ColumnSelectorStrategyFactory<InputRawSupplierColumnSelectorStrategy>
+      implements ColumnSelectorStrategyFactory<InputRawSupplierColumnSelectorStrategy>
   {
     @Override
     public InputRawSupplierColumnSelectorStrategy makeColumnSelectorStrategy(
@@ -872,7 +877,7 @@ public class RowBasedGrouperHelper
 
         final StringComparator comparator = comparators.get(i);
 
-        if (isNumericField.get(i) && comparator == StringComparators.NUMERIC) {
+        if (isNumericField.get(i) && comparator.equals(StringComparators.NUMERIC)) {
           // use natural comparison
           cmp = lhs.compareTo(rhs);
         } else {
@@ -1107,7 +1112,7 @@ public class RowBasedGrouperHelper
           if (aggIndex >= 0) {
             final RowBasedKeySerdeHelper serdeHelper;
             final StringComparator cmp = orderSpec.getDimensionComparator();
-            final boolean cmpIsNumeric = cmp == StringComparators.NUMERIC;
+            final boolean cmpIsNumeric = cmp.equals(StringComparators.NUMERIC);
             final String typeName = aggregatorFactories[aggIndex].getTypeName();
             final int aggOffset = aggregatorOffsets[aggIndex] - Ints.BYTES;
 
@@ -1381,7 +1386,7 @@ public class RowBasedGrouperHelper
         final ValueType valType = valueTypes.get(i);
         final String dimName = dimensions.get(i).getOutputName();
         StringComparator cmp = DefaultLimitSpec.getComparatorForDimName(limitSpec, dimName);
-        final boolean cmpIsNumeric = cmp == StringComparators.NUMERIC;
+        final boolean cmpIsNumeric = cmp != null && cmp.equals(StringComparators.NUMERIC);
 
         RowBasedKeySerdeHelper helper;
         switch (valType) {

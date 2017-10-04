@@ -24,21 +24,21 @@ import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.Offset;
 import io.druid.segment.historical.HistoricalCursor;
 import io.druid.segment.historical.HistoricalDimensionSelector;
-import io.druid.segment.historical.HistoricalFloatColumnSelector;
+import io.druid.segment.historical.HistoricalColumnSelector;
 
 import java.nio.ByteBuffer;
 
 public class Historical1SimpleDoubleAggPooledTopNScannerPrototype
     implements Historical1AggPooledTopNScanner<
         HistoricalDimensionSelector,
-        HistoricalFloatColumnSelector,
+        HistoricalColumnSelector,
         SimpleDoubleBufferAggregator
     >
 {
   @Override
   public long scanAndAggregate(
       HistoricalDimensionSelector dimensionSelector,
-      HistoricalFloatColumnSelector metricSelector,
+      HistoricalColumnSelector metricSelector,
       SimpleDoubleBufferAggregator aggregator,
       int aggregatorSize,
       HistoricalCursor cursor,
@@ -52,7 +52,7 @@ public class Historical1SimpleDoubleAggPooledTopNScannerPrototype
     int positionToAllocate = 0;
     while (offset.withinBounds() && !Thread.currentThread().isInterrupted()) {
       int rowNum = offset.getOffset();
-      double metric = metricSelector.get(rowNum);
+      double metric = metricSelector.getDouble(rowNum);
       final IndexedInts dimValues = dimensionSelector.getRow(rowNum);
       final int dimSize = dimValues.size();
       for (int i = 0; i < dimSize; i++) {

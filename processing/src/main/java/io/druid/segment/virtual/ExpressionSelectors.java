@@ -57,7 +57,7 @@ public class ExpressionSelectors
       @Override
       public long getLong()
       {
-        final ExprEval exprEval = baseSelector.get();
+        final ExprEval exprEval = baseSelector.getObject();
         return exprEval.isNull() ? nullValue : exprEval.asLong();
       }
 
@@ -82,7 +82,7 @@ public class ExpressionSelectors
       @Override
       public float getFloat()
       {
-        final ExprEval exprEval = baseSelector.get();
+        final ExprEval exprEval = baseSelector.getObject();
         return exprEval.isNull() ? nullValue : (float) exprEval.asDouble();
       }
 
@@ -107,7 +107,7 @@ public class ExpressionSelectors
       @Override
       public double getDouble()
       {
-        final ExprEval exprEval = baseSelector.get();
+        final ExprEval exprEval = baseSelector.getObject();
         return exprEval.isNull() ? nullValue : exprEval.asDouble();
       }
 
@@ -134,7 +134,7 @@ public class ExpressionSelectors
         @Override
         protected String getValue()
         {
-          return Strings.emptyToNull(baseSelector.get().asString());
+          return Strings.emptyToNull(baseSelector.getObject().asString());
         }
 
         @Override
@@ -150,7 +150,7 @@ public class ExpressionSelectors
         @Override
         protected String getValue()
         {
-          return extractionFn.apply(Strings.emptyToNull(baseSelector.get().asString()));
+          return extractionFn.apply(Strings.emptyToNull(baseSelector.getObject().asString()));
         }
 
         @Override

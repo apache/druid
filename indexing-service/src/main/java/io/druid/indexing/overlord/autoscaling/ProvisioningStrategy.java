@@ -19,11 +19,13 @@
 
 package io.druid.indexing.overlord.autoscaling;
 
+import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.indexing.overlord.TaskRunner;
 
 /**
  * In general, the resource management is tied to the runner.
  */
+@ExtensionPoint
 public interface ProvisioningStrategy<T extends TaskRunner>
 {
   /**

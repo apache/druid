@@ -30,7 +30,6 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.CompressedPools;
 import net.jpountz.lz4.LZ4Factory;
-import net.jpountz.lz4.LZ4FastDecompressor;
 import net.jpountz.lz4.LZ4SafeDecompressor;
 import org.apache.commons.lang.ArrayUtils;
 
@@ -264,7 +263,6 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
   public static class LZ4Decompressor implements Decompressor
   {
     private static final LZ4SafeDecompressor lz4Safe = LZ4Factory.fastestInstance().safeDecompressor();
-    private static final LZ4FastDecompressor lz4Fast = LZ4Factory.fastestInstance().fastDecompressor();
     private static final LZ4Decompressor defaultDecompressor = new LZ4Decompressor();
 
     @Override
@@ -286,8 +284,17 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
     @Override
     public void decompress(ByteBuffer in, int numBytes, ByteBuffer out, int decompressedSize)
     {
-      // lz4Fast.decompress does not modify buffer positions
-      lz4Fast.decompress(in, in.position(), out, out.position(), decompressedSize);
+      // lz4Safe.decompress does not modify buffer positions.
+      // Using lz4Safe API for forward-compatibility with https://github.com/druid-io/druid/pull/4762, which doesn't
+      // always compressed blocks of the same size.
+      lz4Safe.decompress(
+          in,
+          in.position(),
+          numBytes,
+          out,
+          out.position(),
+          decompressedSize
+      );
       out.limit(out.position() + decompressedSize);
     }
   }

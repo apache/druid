@@ -315,7 +315,7 @@ public class SelectQueryEngine
       if (selector == null) {
         theEvent.put(metric, null);
       } else {
-        theEvent.put(metric, selector.get());
+        theEvent.put(metric, selector.getObject());
       }
     }
     return theEvent;

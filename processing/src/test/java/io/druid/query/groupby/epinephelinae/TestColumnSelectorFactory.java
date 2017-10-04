@@ -85,7 +85,7 @@ public class TestColumnSelectorFactory implements ColumnSelectorFactory
       }
 
       @Override
-      public Object get()
+      public Object getObject()
       {
         return row.get().getRaw(columnName);
       }

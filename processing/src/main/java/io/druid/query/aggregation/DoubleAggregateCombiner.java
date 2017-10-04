@@ -25,7 +25,7 @@ import io.druid.segment.DoubleColumnSelector;
 /**
  * Specialization of {@link AggregateCombiner} for primitive double aggregations.
  */
-public abstract class DoubleAggregateCombiner implements AggregateCombiner, DoubleColumnSelector
+public abstract class DoubleAggregateCombiner implements AggregateCombiner<Double>, DoubleColumnSelector
 {
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)

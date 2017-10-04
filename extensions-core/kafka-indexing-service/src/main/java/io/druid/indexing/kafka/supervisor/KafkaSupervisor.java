@@ -773,6 +773,9 @@ public class KafkaSupervisor implements Supervisor
     }
 
     List<PartitionInfo> partitions = topics.get(ioConfig.getTopic());
+    if (partitions == null) {
+      log.warn("No such topic [%s] found, list of discovered topics [%s]", ioConfig.getTopic(), topics.keySet());
+    }
     int numPartitions = (partitions != null ? partitions.size() : 0);
 
     log.debug("Found [%d] Kafka partitions for topic [%s]", numPartitions, ioConfig.getTopic());
@@ -1432,6 +1435,7 @@ public class KafkaSupervisor implements Supervisor
           taskTuningConfig,
           kafkaIOConfig,
           spec.getContext(),
+          null,
           null
       );
 

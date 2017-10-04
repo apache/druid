@@ -46,6 +46,7 @@ import io.druid.query.SegmentDescriptor;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.QueryableIndex;
+import io.druid.segment.ReferenceCountingSegment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
@@ -254,18 +255,15 @@ public class RealtimePlumberSchoolTest
 
   private void testPersist(final Object commitMetadata) throws Exception
   {
-    plumber.getSinks()
-           .put(
-               0L,
-               new Sink(
-                   Intervals.utc(0, TimeUnit.HOURS.toMillis(1)),
-                   schema,
-                   tuningConfig.getShardSpec(),
-                   DateTimes.of("2014-12-01T12:34:56.789").toString(),
-                   tuningConfig.getMaxRowsInMemory(),
-                   tuningConfig.isReportParseExceptions()
-               )
-           );
+    Sink sink = new Sink(
+        Intervals.utc(0, TimeUnit.HOURS.toMillis(1)),
+        schema,
+        tuningConfig.getShardSpec(),
+        DateTimes.of("2014-12-01T12:34:56.789").toString(),
+        tuningConfig.getMaxRowsInMemory(),
+        tuningConfig.isReportParseExceptions()
+    );
+    plumber.getSinks().put(0L, sink);
     Assert.assertNull(plumber.startJob());
 
     final InputRow row = EasyMock.createNiceMock(InputRow.class);
@@ -301,18 +299,15 @@ public class RealtimePlumberSchoolTest
   @Test(timeout = 60000)
   public void testPersistFails() throws Exception
   {
-    plumber.getSinks()
-           .put(
-               0L,
-               new Sink(
-                   Intervals.utc(0, TimeUnit.HOURS.toMillis(1)),
-                   schema,
-                   tuningConfig.getShardSpec(),
-                   DateTimes.of("2014-12-01T12:34:56.789").toString(),
-                   tuningConfig.getMaxRowsInMemory(),
-                   tuningConfig.isReportParseExceptions()
-               )
-           );
+    Sink sink = new Sink(
+        Intervals.utc(0, TimeUnit.HOURS.toMillis(1)),
+        schema,
+        tuningConfig.getShardSpec(),
+        DateTimes.of("2014-12-01T12:34:56.789").toString(),
+        tuningConfig.getMaxRowsInMemory(),
+        tuningConfig.isReportParseExceptions()
+    );
+    plumber.getSinks().put(0L, sink);
     plumber.startJob();
     final InputRow row = EasyMock.createNiceMock(InputRow.class);
     EasyMock.expect(row.getTimestampFromEpoch()).andReturn(0L);
@@ -358,18 +353,15 @@ public class RealtimePlumberSchoolTest
     Interval testInterval = new Interval(DateTimes.of("1970-01-01"), DateTimes.of("1971-01-01"));
 
     RealtimePlumber plumber2 = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema2, tuningConfig, metrics);
-    plumber2.getSinks()
-            .put(
-                0L,
-                new Sink(
-                    testInterval,
-                    schema2,
-                    tuningConfig.getShardSpec(),
-                    DateTimes.of("2014-12-01T12:34:56.789").toString(),
-                    tuningConfig.getMaxRowsInMemory(),
-                    tuningConfig.isReportParseExceptions()
-                )
-            );
+    Sink sink = new Sink(
+        testInterval,
+        schema2,
+        tuningConfig.getShardSpec(),
+        DateTimes.of("2014-12-01T12:34:56.789").toString(),
+        tuningConfig.getMaxRowsInMemory(),
+        tuningConfig.isReportParseExceptions()
+    );
+    plumber2.getSinks().put(0L, sink);
     Assert.assertNull(plumber2.startJob());
     final CountDownLatch doneSignal = new CountDownLatch(1);
     final Committer committer = new Committer()
@@ -425,17 +417,17 @@ public class RealtimePlumberSchoolTest
     Assert.assertEquals(0, hydrants.get(0).getCount());
     Assert.assertEquals(
         expectedInterval,
-        hydrants.get(0).getSegment().getDataInterval()
+        hydrants.get(0).getSegmentDataInterval()
     );
     Assert.assertEquals(2, hydrants.get(1).getCount());
     Assert.assertEquals(
         expectedInterval,
-        hydrants.get(1).getSegment().getDataInterval()
+        hydrants.get(1).getSegmentDataInterval()
     );
     Assert.assertEquals(4, hydrants.get(2).getCount());
     Assert.assertEquals(
         expectedInterval,
-        hydrants.get(2).getSegment().getDataInterval()
+        hydrants.get(2).getSegmentDataInterval()
     );
 
     /* Delete all the hydrants and reload, no sink should be created */
@@ -563,9 +555,15 @@ public class RealtimePlumberSchoolTest
 
     for (int i = 0; i < hydrants.size(); i++) {
       hydrant = hydrants.get(i);
-      qindex = hydrant.getSegment().asQueryableIndex();
-      Assert.assertEquals(i, hydrant.getCount());
-      Assert.assertEquals(expectedDims.get(i), ImmutableList.copyOf(qindex.getAvailableDimensions()));
+      ReferenceCountingSegment segment = hydrant.getIncrementedSegment();
+      try {
+        qindex = segment.asQueryableIndex();
+        Assert.assertEquals(i, hydrant.getCount());
+        Assert.assertEquals(expectedDims.get(i), ImmutableList.copyOf(qindex.getAvailableDimensions()));
+      }
+      finally {
+        segment.decrement();
+      }
     }
   }
 

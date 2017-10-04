@@ -179,7 +179,7 @@ public class IndexPersistBenchmark
 
     }
     finally {
-    FileUtils.deleteDirectory(tmpDir);
+      FileUtils.deleteDirectory(tmpDir);
     }
   }
 }

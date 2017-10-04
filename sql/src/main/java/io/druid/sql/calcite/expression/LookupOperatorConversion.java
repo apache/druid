@@ -62,7 +62,7 @@ public class LookupOperatorConversion implements SqlOperatorConversion
       final RexNode rexNode
   )
   {
-    return OperatorConversions.functionCall(
+    return OperatorConversions.convertCall(
         plannerContext,
         rowSignature,
         rexNode,

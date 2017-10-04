@@ -43,6 +43,8 @@ import io.druid.initialization.Initialization;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.jetty.JettyBindings;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
+import io.druid.server.security.AuthTestUtils;
+import io.druid.server.security.AuthorizerMapper;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -69,12 +71,13 @@ public class JettyQosTest extends BaseJettyTest
               public void configure(Binder binder)
               {
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test", "localhost", null, null, new ServerConfig())
+                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test", "localhost", null, null, true, false)
                 );
                 binder.bind(JettyServerInitializer.class).to(JettyServerInit.class).in(LazySingleton.class);
                 Jerseys.addResource(binder, SlowResource.class);
                 Jerseys.addResource(binder, ExceptionResource.class);
                 Jerseys.addResource(binder, DefaultResource.class);
+                binder.bind(AuthorizerMapper.class).toInstance(AuthTestUtils.TEST_AUTHORIZER_MAPPER);
                 JettyBindings.addQosFilter(binder, "/slow/*", 2);
                 final ServerConfig serverConfig = new ObjectMapper().convertValue(
                     ImmutableMap.of("numThreads", "10"),

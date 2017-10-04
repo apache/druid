@@ -25,7 +25,7 @@ import io.druid.segment.LongColumnSelector;
 /**
  * Specialization of {@link AggregateCombiner} for primitive long aggregations.
  */
-public abstract class LongAggregateCombiner implements AggregateCombiner, LongColumnSelector
+public abstract class LongAggregateCombiner implements AggregateCombiner<Long>, LongColumnSelector
 {
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)

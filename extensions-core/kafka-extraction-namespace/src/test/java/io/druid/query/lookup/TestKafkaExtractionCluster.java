@@ -28,6 +28,7 @@ import com.google.inject.Module;
 import com.google.inject.name.Names;
 import io.druid.guice.GuiceInjectors;
 import io.druid.initialization.Initialization;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.Closer;
@@ -45,7 +46,6 @@ import org.I0Itec.zkclient.ZkClient;
 import org.I0Itec.zkclient.exception.ZkException;
 import org.apache.curator.test.TestingServer;
 import org.apache.zookeeper.CreateMode;
-import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -134,7 +134,7 @@ public class TestKafkaExtractionCluster
 
     kafkaConfig = new KafkaConfig(serverProperties);
 
-    final long time = DateTime.parse("2015-01-01").getMillis();
+    final long time = DateTimes.of("2015-01-01").getMillis();
     kafkaServer = new KafkaServer(
         kafkaConfig,
         new Time()

@@ -317,8 +317,8 @@ public class BatchDataSegmentAnnouncerTest
           new SegmentChangeRequestHistory.Counter(-1, -1)
       ).get();
       Assert.assertEquals(testSegments.size(), snapshot.getRequests().size());
-    Assert.assertEquals(testSegments.size(), snapshot.getCounter().getCounter());
-  }
+      Assert.assertEquals(testSegments.size(), snapshot.getCounter().getCounter());
+    }
 
     segmentAnnouncer.unannounceSegments(testSegments);
 

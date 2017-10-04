@@ -171,7 +171,7 @@ public class MetadataTaskStorage implements TaskStorage
   @Override
   public Optional<Task> getTask(final String taskId)
   {
-      return handler.getEntry(taskId);
+    return handler.getEntry(taskId);
   }
 
   @Override

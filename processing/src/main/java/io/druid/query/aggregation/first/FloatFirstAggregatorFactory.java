@@ -124,7 +124,7 @@ public class FloatFirstAggregatorFactory extends AggregatorFactory
           @Override
           public void aggregate()
           {
-            SerializablePair<Long, Float> pair = (SerializablePair<Long, Float>) selector.get();
+            SerializablePair<Long, Float> pair = (SerializablePair<Long, Float>) selector.getObject();
             if (pair.lhs < firstTime) {
               firstTime = pair.lhs;
               firstValue = pair.rhs;
@@ -142,7 +142,7 @@ public class FloatFirstAggregatorFactory extends AggregatorFactory
           @Override
           public void aggregate(ByteBuffer buf, int position)
           {
-            SerializablePair<Long, Float> pair = (SerializablePair<Long, Float>) selector.get();
+            SerializablePair<Long, Float> pair = (SerializablePair<Long, Float>) selector.getObject();
             long firstTime = buf.getLong(position);
             if (pair.lhs < firstTime) {
               buf.putLong(position, pair.lhs);

@@ -166,7 +166,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
             }
 
             @Override
-            public Object get()
+            public Object getObject()
             {
               return extractor.extractValue(in.get(), column);
             }

@@ -51,6 +51,6 @@ public class TimeShiftOperatorConversion implements SqlOperatorConversion
       final RexNode rexNode
   )
   {
-    return OperatorConversions.functionCall(plannerContext, rowSignature, rexNode, "timestamp_shift");
+    return OperatorConversions.convertCall(plannerContext, rowSignature, rexNode, "timestamp_shift");
   }
 }

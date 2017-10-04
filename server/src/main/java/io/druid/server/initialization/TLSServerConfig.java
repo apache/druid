@@ -32,6 +32,9 @@ public class TLSServerConfig
   @JsonProperty
   private String certAlias;
 
+  @JsonProperty
+  private String keyManagerFactoryAlgorithm;
+
   @JsonProperty("keyStorePassword")
   private PasswordProvider keyStorePasswordProvider;
 
@@ -63,6 +66,11 @@ public class TLSServerConfig
     return keyManagerPasswordProvider;
   }
 
+  public String getKeyManagerFactoryAlgorithm()
+  {
+    return keyManagerFactoryAlgorithm;
+  }
+
   @Override
   public String toString()
   {
@@ -70,6 +78,7 @@ public class TLSServerConfig
            "keyStorePath='" + keyStorePath + '\'' +
            ", keyStoreType='" + keyStoreType + '\'' +
            ", certAlias='" + certAlias + '\'' +
+           ", keyManagerFactoryAlgorithm='" + keyManagerFactoryAlgorithm + '\'' +
            '}';
   }
 }

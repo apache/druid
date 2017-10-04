@@ -43,6 +43,7 @@ import javax.validation.Path;
 import javax.validation.Validator;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -93,7 +94,7 @@ public class JsonConfigurator
           value = propValue;
         }
 
-        jsonMap.put(prop.substring(propertyBase.length()), value);
+        hieraricalPutValue(propertyPrefix, prop, prop.substring(propertyBase.length()), value, jsonMap);
       }
     }
 
@@ -163,6 +164,43 @@ public class JsonConfigurator
     log.info("Loaded class[%s] from props[%s] as [%s]", clazz, propertyBase, config);
 
     return config;
+  }
+
+  private static void hieraricalPutValue(
+      String propertyPrefix,
+      String originalProperty,
+      String property,
+      Object value,
+      Map<String, Object> targetMap
+  )
+  {
+    int dotIndex = property.indexOf('.');
+    if (dotIndex < 0) {
+      targetMap.put(property, value);
+      return;
+    }
+    if (dotIndex == 0) {
+      throw new ProvisionException(StringUtils.format("Double dot in property: %s", originalProperty));
+    }
+    if (dotIndex == property.length() - 1) {
+      throw new ProvisionException(StringUtils.format("Dot at the end of property: %s", originalProperty));
+    }
+    String nestedKey = property.substring(0, dotIndex);
+    Object nested = targetMap.computeIfAbsent(nestedKey, k -> new HashMap<String, Object>());
+    if (!(nested instanceof Map)) {
+      // Clash is possible between properties, which are used to configure different objects: e. g.
+      // druid.emitter=parametrized is used to configure Emitter class, and druid.emitter.parametrized.xxx=yyy is used
+      // to configure ParametrizedUriEmitterConfig object. So skipping xxx=yyy key-value pair when configuring Emitter
+      // doesn't make any difference. That is why we just log this situation, instead of throwing an exception.
+      log.info(
+          "Skipping %s property: one of it's prefixes is also used as a property key. Prefix: %s",
+          originalProperty,
+          propertyPrefix
+      );
+      return;
+    }
+    Map<String, Object> nestedMap = (Map<String, Object>) nested;
+    hieraricalPutValue(propertyPrefix, originalProperty, property.substring(dotIndex + 1), value, nestedMap);
   }
 
   @VisibleForTesting

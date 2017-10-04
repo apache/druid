@@ -296,6 +296,14 @@ public class IngestSegmentFirehoseFactoryTimelineTest
       };
       SegmentHandoffNotifierFactory notifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
       EasyMock.replay(notifierFactory);
+      SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
+      {
+        @Override
+        public List<StorageLocationConfig> getLocations()
+        {
+          return Lists.newArrayList();
+        }
+      };
       final TaskToolboxFactory taskToolboxFactory = new TaskToolboxFactory(
           new TaskConfig(testCase.tmpDir.getAbsolutePath(), null, null, 50000, null, false, null, null),
           new TaskActionClientFactory()
@@ -318,17 +326,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
           null, // query executor service
           null, // monitor scheduler
           new SegmentLoaderFactory(
-              new SegmentLoaderLocalCacheManager(
-                  null,
-                  new SegmentLoaderConfig()
-                  {
-                    @Override
-                    public List<StorageLocationConfig> getLocations()
-                    {
-                      return Lists.newArrayList();
-                    }
-                  }, MAPPER
-              )
+              new SegmentLoaderLocalCacheManager(null, segmentLoaderConfig, MAPPER)
           ),
           MAPPER,
           INDEX_IO,

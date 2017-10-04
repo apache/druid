@@ -39,6 +39,7 @@ public class ExprMacroTest
           .put("y", 2)
           .put("z", 3.1)
           .put("CityOfAngels", "America/Los_Angeles")
+          .put("spacey", "  hey there  ")
           .build()
   );
 
@@ -133,6 +134,42 @@ public class ExprMacroTest
     assertExpr("timestamp_format(t)", "2000-02-03T04:05:06.000Z");
     assertExpr("timestamp_format(t,'yyyy-MM-dd HH:mm:ss')", "2000-02-03 04:05:06");
     assertExpr("timestamp_format(t,'yyyy-MM-dd HH:mm:ss','America/Los_Angeles')", "2000-02-02 20:05:06");
+  }
+
+  @Test
+  public void testTrim()
+  {
+    assertExpr("trim('')", null);
+    assertExpr("trim(concat(' ',x,' '))", "foo");
+    assertExpr("trim(spacey)", "hey there");
+    assertExpr("trim(spacey, '')", "  hey there  ");
+    assertExpr("trim(spacey, 'he ')", "y ther");
+    assertExpr("trim(spacey, spacey)", null);
+    assertExpr("trim(spacey, substring(spacey, 0, 4))", "y ther");
+  }
+
+  @Test
+  public void testLTrim()
+  {
+    assertExpr("ltrim('')", null);
+    assertExpr("ltrim(concat(' ',x,' '))", "foo ");
+    assertExpr("ltrim(spacey)", "hey there  ");
+    assertExpr("ltrim(spacey, '')", "  hey there  ");
+    assertExpr("ltrim(spacey, 'he ')", "y there  ");
+    assertExpr("ltrim(spacey, spacey)", null);
+    assertExpr("ltrim(spacey, substring(spacey, 0, 4))", "y there  ");
+  }
+
+  @Test
+  public void testRTrim()
+  {
+    assertExpr("rtrim('')", null);
+    assertExpr("rtrim(concat(' ',x,' '))", " foo");
+    assertExpr("rtrim(spacey)", "  hey there");
+    assertExpr("rtrim(spacey, '')", "  hey there  ");
+    assertExpr("rtrim(spacey, 'he ')", "  hey ther");
+    assertExpr("rtrim(spacey, spacey)", null);
+    assertExpr("rtrim(spacey, substring(spacey, 0, 4))", "  hey ther");
   }
 
   private void assertExpr(final String expression, final Object expectedResult)

@@ -56,7 +56,7 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
   public DoubleLastAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") final String fieldName
-      )
+  )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
@@ -115,7 +115,7 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
           @Override
           public void aggregate()
           {
-            SerializablePair<Long, Double> pair = (SerializablePair<Long, Double>) selector.get();
+            SerializablePair<Long, Double> pair = (SerializablePair<Long, Double>) selector.getObject();
             if (pair.lhs >= lastTime) {
               lastTime = pair.lhs;
               lastValue = pair.rhs;
@@ -133,7 +133,7 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
           @Override
           public void aggregate(ByteBuffer buf, int position)
           {
-            SerializablePair<Long, Double> pair = (SerializablePair<Long, Double>) selector.get();
+            SerializablePair<Long, Double> pair = (SerializablePair<Long, Double>) selector.getObject();
             long lastTime = buf.getLong(position);
             if (pair.lhs >= lastTime) {
               buf.putLong(position, pair.lhs);

@@ -45,10 +45,9 @@ public class MetadataTest
     Metadata metadata = new Metadata();
     metadata.put("k", "v");
 
-    AggregatorFactory[] aggregators = new AggregatorFactory[]
-        {
-            new LongSumAggregatorFactory("out", "in")
-        };
+    AggregatorFactory[] aggregators = new AggregatorFactory[] {
+        new LongSumAggregatorFactory("out", "in")
+    };
     metadata.setAggregators(aggregators);
     metadata.setQueryGranularity(Granularities.ALL);
     metadata.setRollup(Boolean.FALSE);

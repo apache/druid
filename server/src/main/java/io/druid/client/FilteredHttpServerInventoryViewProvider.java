@@ -24,8 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicates;
 import com.metamx.http.client.HttpClient;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
-import io.druid.guice.annotations.Client;
-import io.druid.guice.annotations.Json;
+import io.druid.guice.annotations.EscalatedClient;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.Pair;
 import io.druid.server.coordination.DruidServerMetadata;
@@ -39,18 +38,13 @@ public class FilteredHttpServerInventoryViewProvider implements FilteredServerIn
 {
   @JacksonInject
   @NotNull
-  @Client
+  @EscalatedClient
   HttpClient httpClient = null;
 
   @JacksonInject
   @NotNull
   @Smile
   ObjectMapper smileMapper = null;
-
-  @JacksonInject
-  @NotNull
-  @Json
-  ObjectMapper jsonMapper = null;
 
   @JacksonInject
   @NotNull
@@ -64,7 +58,7 @@ public class FilteredHttpServerInventoryViewProvider implements FilteredServerIn
   public HttpServerInventoryView get()
   {
     return new HttpServerInventoryView(
-        jsonMapper, smileMapper, httpClient,
+        smileMapper, httpClient,
         druidNodeDiscoveryProvider,
         Predicates.<Pair<DruidServerMetadata, DataSegment>>alwaysTrue(),
         config

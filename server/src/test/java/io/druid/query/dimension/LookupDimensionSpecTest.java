@@ -159,8 +159,7 @@ public class LookupDimensionSpecTest
   @Parameters
   public void testApply(DimensionSpec dimensionSpec, Map<String, String> map)
   {
-    for (Map.Entry<String, String> entry : map.entrySet()
-        ) {
+    for (Map.Entry<String, String> entry : map.entrySet()) {
       Assert.assertEquals(Strings.emptyToNull(entry.getValue()), dimensionSpec.getExtractionFn().apply(entry.getKey()));
     }
   }

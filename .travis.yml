@@ -20,11 +20,15 @@ matrix:
       # processing module test
     - sudo: false
       install: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn install -q -ff -DskipTests -B
+      before_script:
+        - unset _JAVA_OPTIONS
       script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -B -Pparallel-test -Dmaven.fork.count=2 -pl processing
 
       # non-processing modules test
     - sudo: false
       install: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn install -q -ff -DskipTests -B
+      before_script:
+        - unset _JAVA_OPTIONS
       script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -B -Pparallel-test -Dmaven.fork.count=2 -pl '!processing'
 
       # run integration tests
