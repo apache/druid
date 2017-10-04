@@ -305,7 +305,12 @@ public class CliPeon extends GuiceRunnable
 
         // Explicitly call lifecycle stop, dont rely on shutdown hook.
         lifecycle.stop();
-        Runtime.getRuntime().removeShutdownHook(hook);
+        try {
+          Runtime.getRuntime().removeShutdownHook(hook);
+        }
+        catch (IllegalStateException e) {
+          log.warn("Cannot remove shutdown hook, already shutting down");
+        }
       }
       catch (Throwable t) {
         log.error(t, "Error when starting up.  Failing.");
