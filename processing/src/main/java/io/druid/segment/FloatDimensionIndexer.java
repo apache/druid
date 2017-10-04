@@ -26,8 +26,9 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import io.druid.segment.incremental.TimeAndDimsHolder;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Float>
@@ -86,7 +87,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
 
   @Override
   public DimensionSelector makeDimensionSelector(
-      DimensionSpec spec, IncrementalIndexStorageAdapter.EntryHolder currEntry, IncrementalIndex.DimensionDesc desc
+      DimensionSpec spec, TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc
   )
   {
     return new FloatWrappingDimensionSelector(
@@ -97,7 +98,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
 
   @Override
   public LongColumnSelector makeLongColumnSelector(
-      final IncrementalIndexStorageAdapter.EntryHolder currEntry,
+      final TimeAndDimsHolder currEntry,
       final IncrementalIndex.DimensionDesc desc
   )
   {
@@ -105,7 +106,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
     class IndexerLongColumnSelector implements LongColumnSelector
     {
       @Override
-      public long get()
+      public long getLong()
       {
         final Object[] dims = currEntry.getKey().getDims();
 
@@ -129,7 +130,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
 
   @Override
   public FloatColumnSelector makeFloatColumnSelector(
-      final IncrementalIndexStorageAdapter.EntryHolder currEntry,
+      final TimeAndDimsHolder currEntry,
       final IncrementalIndex.DimensionDesc desc
   )
   {
@@ -137,12 +138,12 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
     class IndexerFloatColumnSelector implements FloatColumnSelector
     {
       @Override
-      public float get()
+      public float getFloat()
       {
         final Object[] dims = currEntry.getKey().getDims();
 
         if (dimIndex >= dims.length) {
-          return 0L;
+          return 0.0f;
         }
 
         return (Float) dims[dimIndex];
@@ -159,53 +160,52 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   }
 
   @Override
-  public ObjectColumnSelector makeObjectColumnSelector(
-      final DimensionSpec spec,
-      final IncrementalIndexStorageAdapter.EntryHolder currEntry,
+  public DoubleColumnSelector makeDoubleColumnSelector(
+      final TimeAndDimsHolder currEntry,
       final IncrementalIndex.DimensionDesc desc
   )
   {
     final int dimIndex = desc.getIndex();
-    class IndexerObjectColumnSelector implements ObjectColumnSelector
+    class IndexerDoubleColumnSelector implements DoubleColumnSelector
     {
       @Override
-      public Class classOfObject()
-      {
-        return Float.class;
-      }
-
-      @Override
-      public Object get()
+      public double getDouble()
       {
         final Object[] dims = currEntry.getKey().getDims();
 
         if (dimIndex >= dims.length) {
-          return 0L;
+          return 0.0;
         }
+        float floatVal = (Float) dims[dimIndex];
+        return (double) floatVal;
+      }
 
-        return dims[dimIndex];
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        // nothing to inspect
       }
     }
 
-    return new IndexerObjectColumnSelector();
+    return new IndexerDoubleColumnSelector();
   }
 
   @Override
-  public int compareUnsortedEncodedKeyComponents(Float lhs, Float rhs)
+  public int compareUnsortedEncodedKeyComponents(@Nullable Float lhs, @Nullable Float rhs)
   {
-    return lhs.compareTo(rhs);
+    return DimensionHandlerUtils.nullToZero(lhs).compareTo(DimensionHandlerUtils.nullToZero(rhs));
   }
 
   @Override
-  public boolean checkUnsortedEncodedKeyComponentsEqual(Float lhs, Float rhs)
+  public boolean checkUnsortedEncodedKeyComponentsEqual(@Nullable Float lhs, @Nullable Float rhs)
   {
-    return lhs.equals(rhs);
+    return DimensionHandlerUtils.nullToZero(lhs).equals(DimensionHandlerUtils.nullToZero(rhs));
   }
 
   @Override
-  public int getUnsortedEncodedKeyComponentHashCode(Float key)
+  public int getUnsortedEncodedKeyComponentHashCode(@Nullable Float key)
   {
-    return key.hashCode();
+    return DimensionHandlerUtils.nullToZero(key).hashCode();
   }
 
   @Override

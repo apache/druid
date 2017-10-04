@@ -39,7 +39,8 @@ public class LocalDataSegmentKiller implements DataSegmentKiller
   private final File storageDirectory;
 
   @Inject
-  public LocalDataSegmentKiller(LocalDataSegmentPusherConfig config) {
+  public LocalDataSegmentKiller(LocalDataSegmentPusherConfig config)
+  {
     this.storageDirectory = config.getStorageDirectory();
   }
 

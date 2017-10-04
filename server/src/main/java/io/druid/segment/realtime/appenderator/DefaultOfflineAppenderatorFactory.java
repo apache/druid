@@ -43,7 +43,8 @@ public class DefaultOfflineAppenderatorFactory implements AppenderatorFactory
       @JacksonInject ObjectMapper objectMapper,
       @JacksonInject IndexIO indexIO,
       @JacksonInject IndexMerger indexMerger
-  ) {
+  )
+  {
     this.dataSegmentPusher = dataSegmentPusher;
     this.objectMapper = objectMapper;
     this.indexIO = indexIO;

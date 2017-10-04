@@ -153,6 +153,9 @@ threads. You can adjust this as necessary to balance concurrency and memory usag
 historical nodes.
 - groupBy v1 supports using [chunkPeriod](query-context.html) to parallelize merging on the broker, whereas groupBy v2
 ignores chunkPeriod.
+- groupBy v2 supports both array-based aggregation and hash-based aggregation. The array-based aggregation is used only
+when the grouping key is a single indexed string column. In array-based aggregation, the dictionary-encoded value is used
+as the index, so the aggregated values in the array can be accessed directly without finding buckets based on hashing.
 
 #### Memory tuning and resource limits
 
@@ -246,6 +249,7 @@ When using the "v2" strategy, the following query context parameters apply:
 |`maxOnDiskStorage`|Can be used to lower the value of `druid.query.groupBy.maxOnDiskStorage` for this query.|
 |`sortByDimsFirst`|Sort the results first by dimension values and then by timestamp.|
 |`forcePushDownLimit`|When all fields in the orderby are part of the grouping key, the broker will push limit application down to the historical nodes. When the sorting order uses fields that are not in the grouping key, applying this optimization can result in approximate results with unknown accuracy, so this optimization is disabled by default in that case. Enabling this context flag turns on limit push down for limit/orderbys that contain non-grouping key columns.|
+|`forceHashAggregation`|Force to use hash-based aggregation.|
 
 When using the "v1" strategy, the following query context parameters apply:
 

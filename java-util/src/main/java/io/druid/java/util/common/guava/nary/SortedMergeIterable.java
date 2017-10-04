@@ -58,6 +58,6 @@ public class SortedMergeIterable<InType, OutType> implements Iterable<OutType>
   @Override
   public Iterator<OutType> iterator()
   {
-    return  SortedMergeIterator.create(lhs.iterator(), rhs.iterator(), comparator, fn);
+    return SortedMergeIterator.create(lhs.iterator(), rhs.iterator(), comparator, fn);
   }
 }

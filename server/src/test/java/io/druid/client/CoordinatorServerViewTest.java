@@ -26,9 +26,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-
 import io.druid.curator.CuratorTestBase;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
 import io.druid.query.TableDataSource;
 import io.druid.server.coordination.DruidServerMetadata;
@@ -107,14 +107,12 @@ public class CoordinatorServerViewTest extends CuratorTestBase
 
     TimelineLookup timeline = overlordServerView.getTimeline(new TableDataSource("test_overlord_server_view"));
     List<TimelineObjectHolder> serverLookupRes = (List<TimelineObjectHolder>) timeline.lookup(
-        new Interval(
-            "2014-10-20T00:00:00Z/P1D"
-        )
+        Intervals.of("2014-10-20T00:00:00Z/P1D")
     );
     Assert.assertEquals(1, serverLookupRes.size());
 
     TimelineObjectHolder<String, SegmentLoadInfo> actualTimelineObjectHolder = serverLookupRes.get(0);
-    Assert.assertEquals(new Interval("2014-10-20T00:00:00Z/P1D"), actualTimelineObjectHolder.getInterval());
+    Assert.assertEquals(Intervals.of("2014-10-20T00:00:00Z/P1D"), actualTimelineObjectHolder.getInterval());
     Assert.assertEquals("v1", actualTimelineObjectHolder.getVersion());
 
     PartitionHolder<SegmentLoadInfo> actualPartitionHolder = actualTimelineObjectHolder.getObject();
@@ -133,9 +131,9 @@ public class CoordinatorServerViewTest extends CuratorTestBase
 
     Assert.assertEquals(
         0,
-        ((List<TimelineObjectHolder>) timeline.lookup(new Interval("2014-10-20T00:00:00Z/P1D"))).size()
+        ((List<TimelineObjectHolder>) timeline.lookup(Intervals.of("2014-10-20T00:00:00Z/P1D"))).size()
     );
-    Assert.assertNull(timeline.findEntry(new Interval("2014-10-20T00:00:00Z/P1D"), "v1"));
+    Assert.assertNull(timeline.findEntry(Intervals.of("2014-10-20T00:00:00Z/P1D"), "v1"));
   }
 
   @Test
@@ -204,7 +202,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
             createExpected("2011-04-06/2011-04-09", "v3", druidServers.get(3), segments.get(3))
         ),
         (List<TimelineObjectHolder>) timeline.lookup(
-            new Interval(
+            Intervals.of(
                 "2011-04-01/2011-04-09"
             )
         )
@@ -225,11 +223,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
             createExpected("2011-04-03/2011-04-06", "v1", druidServers.get(1), segments.get(1)),
             createExpected("2011-04-06/2011-04-09", "v3", druidServers.get(3), segments.get(3))
         ),
-        (List<TimelineObjectHolder>) timeline.lookup(
-            new Interval(
-                "2011-04-01/2011-04-09"
-            )
-        )
+        (List<TimelineObjectHolder>) timeline.lookup(Intervals.of("2011-04-01/2011-04-09"))
     );
 
     // unannounce all the segments
@@ -243,7 +237,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
 
     Assert.assertEquals(
         0,
-        ((List<TimelineObjectHolder>) timeline.lookup(new Interval("2011-04-01/2011-04-09"))).size()
+        ((List<TimelineObjectHolder>) timeline.lookup(Intervals.of("2011-04-01/2011-04-09"))).size()
     );
   }
 
@@ -264,7 +258,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
       DataSegment segment
   )
   {
-    return Pair.of(new Interval(intervalStr), Pair.of(version, Pair.of(druidServer, segment)));
+    return Pair.of(Intervals.of(intervalStr), Pair.of(version, Pair.of(druidServer, segment)));
   }
 
   private void assertValues(
@@ -345,7 +339,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
   {
     return DataSegment.builder()
                       .dataSource("test_overlord_server_view")
-                      .interval(new Interval(intervalStr))
+                      .interval(Intervals.of(intervalStr))
                       .loadSpec(
                           ImmutableMap.<String, Object>of(
                               "type",

@@ -27,6 +27,7 @@ import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.indexing.overlord.ObjectMetadata;
 import io.druid.indexing.overlord.SegmentPublishResult;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
@@ -55,7 +56,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   private final ObjectMapper mapper = new DefaultObjectMapper();
   private final DataSegment defaultSegment = new DataSegment(
       "fooDataSource",
-      Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
+      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "version",
       ImmutableMap.<String, Object>of(),
       ImmutableList.of("dim1"),
@@ -67,7 +68,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   private final DataSegment defaultSegment2 = new DataSegment(
       "fooDataSource",
-      Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
+      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "version",
       ImmutableMap.<String, Object>of(),
       ImmutableList.of("dim1"),
@@ -79,7 +80,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   private final DataSegment defaultSegment3 = new DataSegment(
       "fooDataSource",
-      Interval.parse("2015-01-03T00Z/2015-01-04T00Z"),
+      Intervals.of("2015-01-03T00Z/2015-01-04T00Z"),
       "version",
       ImmutableMap.<String, Object>of(),
       ImmutableList.of("dim1"),
@@ -92,7 +93,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   // Overshadows defaultSegment, defaultSegment2
   private final DataSegment defaultSegment4 = new DataSegment(
       "fooDataSource",
-      Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
+      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "zversion",
       ImmutableMap.<String, Object>of(),
       ImmutableList.of("dim1"),
@@ -104,7 +105,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   private final DataSegment numberedSegment0of0 = new DataSegment(
       "fooDataSource",
-      Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
+      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "zversion",
       ImmutableMap.<String, Object>of(),
       ImmutableList.of("dim1"),
@@ -116,7 +117,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   private final DataSegment numberedSegment1of0 = new DataSegment(
       "fooDataSource",
-      Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
+      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "zversion",
       ImmutableMap.<String, Object>of(),
       ImmutableList.of("dim1"),
@@ -128,7 +129,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   private final DataSegment numberedSegment2of0 = new DataSegment(
       "fooDataSource",
-      Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
+      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "zversion",
       ImmutableMap.<String, Object>of(),
       ImmutableList.of("dim1"),
@@ -140,7 +141,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   private final DataSegment numberedSegment2of1 = new DataSegment(
       "fooDataSource",
-      Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
+      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "zversion",
       ImmutableMap.<String, Object>of(),
       ImmutableList.of("dim1"),
@@ -152,7 +153,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   private final DataSegment numberedSegment3of1 = new DataSegment(
       "fooDataSource",
-      Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
+      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "zversion",
       ImmutableMap.<String, Object>of(),
       ImmutableList.of("dim1"),
@@ -523,8 +524,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         coordinator.getUsedSegmentsForIntervals(
             defaultSegment.getDataSource(),
             ImmutableList.of(
-                Interval.parse("2015-01-03T00Z/2015-01-03T05Z"),
-                Interval.parse("2015-01-03T09Z/2015-01-04T00Z")
+                Intervals.of("2015-01-03T00Z/2015-01-03T05Z"),
+                Intervals.of("2015-01-03T09Z/2015-01-04T00Z")
             )
         )
     );
@@ -554,7 +555,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Set<DataSegment> actualSegments = ImmutableSet.copyOf(
         coordinator.getUsedSegmentsForInterval(
             defaultSegment.getDataSource(),
-            Interval.parse("2014-12-31T23:59:59.999Z/2015-01-01T00:00:00.001Z") // end is exclusive
+            Intervals.of("2014-12-31T23:59:59.999Z/2015-01-01T00:00:00.001Z") // end is exclusive
         )
     );
     Assert.assertEquals(
@@ -573,7 +574,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(
             coordinator.getUsedSegmentsForInterval(
                 defaultSegment.getDataSource(),
-                Interval.parse("2015-1-1T23:59:59.999Z/2015-02-01T00Z")
+                Intervals.of("2015-1-1T23:59:59.999Z/2015-02-01T00Z")
             )
         )
     );
@@ -701,7 +702,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(
             coordinator.getUnusedSegmentsForInterval(
                 defaultSegment.getDataSource(),
-                Interval.parse("2000/2999")
+                Intervals.of("2000/2999")
             )
         )
     );

@@ -69,7 +69,10 @@ public class PollingLookupTest
     @Override
     public Iterable fetchAll()
     {
-      if (callNumber == 0) {callNumber +=1; return firstLookupMap.entrySet();}
+      if (callNumber == 0) {
+        callNumber++;
+        return firstLookupMap.entrySet();
+      }
       return secondLookupMap.entrySet();
     }
 
@@ -108,12 +111,14 @@ public class PollingLookupTest
     });
   }
 
-  public PollingLookupTest(PollingCacheFactory pollingCacheFactory) {this.pollingCacheFactory = pollingCacheFactory;}
-
   private final PollingCacheFactory pollingCacheFactory;
   private final DataFetcher dataFetcher = new MockDataFetcher();
   private PollingLookup pollingLookup;
 
+  public PollingLookupTest(PollingCacheFactory pollingCacheFactory)
+  {
+    this.pollingCacheFactory = pollingCacheFactory;
+  }
 
   @Before
   public void setUp() throws InterruptedException

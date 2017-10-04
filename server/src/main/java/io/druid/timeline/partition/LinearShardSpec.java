@@ -46,7 +46,8 @@ public class LinearShardSpec implements ShardSpec
 
   @JsonProperty("partitionNum")
   @Override
-  public int getPartitionNum() {
+  public int getPartitionNum()
+  {
     return partitionNum;
   }
 
@@ -70,12 +71,14 @@ public class LinearShardSpec implements ShardSpec
   }
 
   @Override
-  public <T> PartitionChunk<T> createChunk(T obj) {
+  public <T> PartitionChunk<T> createChunk(T obj)
+  {
     return new LinearPartitionChunk<T>(partitionNum, obj);
   }
 
   @Override
-  public boolean isInChunk(long timestamp, InputRow inputRow) {
+  public boolean isInChunk(long timestamp, InputRow inputRow)
+  {
     return true;
   }
 

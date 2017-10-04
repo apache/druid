@@ -21,6 +21,7 @@ package io.druid.segment.loading;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.ISE;
 import org.hibernate.validator.constraints.NotEmpty;
 
 import java.io.File;
@@ -30,6 +31,8 @@ import java.util.List;
  */
 public class SegmentLoaderConfig
 {
+  private static final int DEFAULT_NUM_BOOTSTRAP_THREADS = 1;
+
   @JsonProperty
   @NotEmpty
   private List<StorageLocationConfig> locations = null;
@@ -42,9 +45,6 @@ public class SegmentLoaderConfig
 
   @JsonProperty("announceIntervalMillis")
   private int announceIntervalMillis = 0; // do not background announce
-
-  @JsonProperty("numLoadingThreads")
-  private int numLoadingThreads = 1;
 
   @JsonProperty("numBootstrapThreads")
   private Integer numBootstrapThreads = null;
@@ -72,18 +72,18 @@ public class SegmentLoaderConfig
     return announceIntervalMillis;
   }
 
-  public int getNumLoadingThreads()
+  public int getNumBootstrapThreads()
   {
-    return numLoadingThreads;
-  }
-
-  public int getNumBootstrapThreads() {
-    return numBootstrapThreads == null ? numLoadingThreads : numBootstrapThreads;
+    return numBootstrapThreads == null ? DEFAULT_NUM_BOOTSTRAP_THREADS : numBootstrapThreads;
   }
 
   public File getInfoDir()
   {
     if (infoDir == null) {
+
+      if (locations == null || locations.size() == 0) {
+        throw new ISE("You have no segment cache locations defined. Please configure druid.segmentCache.locations to use one or more locations.");
+      }
       infoDir = new File(locations.get(0).getPath(), "info_dir");
     }
 

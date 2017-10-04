@@ -19,7 +19,6 @@
 
 package io.druid.java.util.common.lifecycle;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -33,15 +32,31 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
 public class LifecycleTest
 {
+  private static final Lifecycle.Handler dummyHandler = new Lifecycle.Handler()
+  {
+    @Override
+    public void start() throws Exception
+    {
+      // do nothing
+    }
+
+    @Override
+    public void stop()
+    {
+      // do nothing
+    }
+  };
+
   @Test
   public void testConcurrentStartStopOnce() throws Exception
   {
@@ -49,8 +64,7 @@ public class LifecycleTest
     ListeningExecutorService executorService = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(numThreads));
 
     final Lifecycle lifecycle = new Lifecycle();
-    final AtomicLong startedCount = new AtomicLong(0L);
-    final AtomicLong failedCount = new AtomicLong(0L);
+    final AtomicLong handlerFailedCount = new AtomicLong(0L);
     final Lifecycle.Handler exceptionalHandler = new Lifecycle.Handler()
     {
       final AtomicBoolean started = new AtomicBoolean(false);
@@ -59,65 +73,48 @@ public class LifecycleTest
       public void start() throws Exception
       {
         if (!started.compareAndSet(false, true)) {
-          failedCount.incrementAndGet();
+          handlerFailedCount.incrementAndGet();
           throw new ISE("Already started");
         }
-        startedCount.incrementAndGet();
       }
 
       @Override
       public void stop()
       {
         if (!started.compareAndSet(true, false)) {
-          failedCount.incrementAndGet();
+          handlerFailedCount.incrementAndGet();
           throw new ISE("Not yet started started");
         }
       }
     };
     lifecycle.addHandler(exceptionalHandler);
     Collection<ListenableFuture<?>> futures = new ArrayList<>(numThreads);
-    final CyclicBarrier barrier = new CyclicBarrier(numThreads);
-    final AtomicBoolean started = new AtomicBoolean(false);
+    final AtomicBoolean threadsStartLatch = new AtomicBoolean(false);
+    final AtomicInteger threadFailedCount = new AtomicInteger(0);
     for (int i = 0; i < numThreads; ++i) {
       futures.add(
-          executorService.submit(
-              new Runnable()
-              {
-                @Override
-                public void run()
-                {
-                  try {
-                    for (int i = 0; i < 1024; ++i) {
-                      if (started.compareAndSet(false, true)) {
-                        lifecycle.start();
-                      }
-                      barrier.await();
-                      lifecycle.stop();
-                      barrier.await();
-                      started.set(false);
-                      barrier.await();
-                    }
-                  }
-                  catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw Throwables.propagate(e);
-                  }
-                  catch (Exception e) {
-                    throw Throwables.propagate(e);
-                  }
-                }
+          executorService.submit(() -> {
+            try {
+              while (!threadsStartLatch.get()) {
+                // await
               }
-          )
+              lifecycle.start();
+            }
+            catch (Exception e) {
+              threadFailedCount.incrementAndGet();
+            }
+          })
       );
     }
     try {
+      threadsStartLatch.set(true);
       Futures.allAsList(futures).get();
     }
     finally {
       lifecycle.stop();
     }
-    Assert.assertEquals(0, failedCount.get());
-    Assert.assertTrue(startedCount.get() > 0);
+    Assert.assertEquals(numThreads - 1, threadFailedCount.get());
+    Assert.assertEquals(0, handlerFailedCount.get());
     executorService.shutdownNow();
   }
 
@@ -125,7 +122,6 @@ public class LifecycleTest
   public void testStartStopOnce() throws Exception
   {
     final Lifecycle lifecycle = new Lifecycle();
-    final AtomicLong startedCount = new AtomicLong(0L);
     final AtomicLong failedCount = new AtomicLong(0L);
     Lifecycle.Handler exceptionalHandler = new Lifecycle.Handler()
     {
@@ -138,7 +134,6 @@ public class LifecycleTest
           failedCount.incrementAndGet();
           throw new ISE("Already started");
         }
-        startedCount.incrementAndGet();
       }
 
       @Override
@@ -155,9 +150,6 @@ public class LifecycleTest
     lifecycle.stop();
     lifecycle.stop();
     lifecycle.stop();
-    lifecycle.start();
-    lifecycle.stop();
-    Assert.assertEquals(2, startedCount.get());
     Assert.assertEquals(0, failedCount.get());
     Exception ex = null;
     try {
@@ -260,7 +252,7 @@ public class LifecycleTest
     private final List<Integer> orderOfStarts;
     private final List<Integer> orderOfStops;
 
-    public ObjectToBeLifecycled(
+    ObjectToBeLifecycled(
         int id,
         List<Integer> orderOfStarts,
         List<Integer> orderOfStops
@@ -281,6 +273,54 @@ public class LifecycleTest
     public void close()
     {
       orderOfStops.add(id);
+    }
+  }
+
+  @Test
+  public void testFailAddToLifecycleDuringStopMethod() throws Exception
+  {
+    CountDownLatch reachedStop = new CountDownLatch(1);
+    CountDownLatch stopper = new CountDownLatch(1);
+    Lifecycle.Handler stoppingHandler = new Lifecycle.Handler()
+    {
+      @Override
+      public void start() throws Exception
+      {
+        // do nothing
+      }
+
+      @Override
+      public void stop()
+      {
+        reachedStop.countDown();
+        try {
+          stopper.await();
+        }
+        catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    };
+    Lifecycle lifecycle = new Lifecycle();
+    lifecycle.addHandler(stoppingHandler);
+    lifecycle.start();
+    new Thread(lifecycle::stop).start(); // will stop at stoppingHandler.stop()
+    reachedStop.await();
+
+    try {
+      lifecycle.addHandler(dummyHandler);
+      Assert.fail("Expected exception");
+    }
+    catch (IllegalStateException e) {
+      Assert.assertTrue(e.getMessage().contains("Cannot add a handler"));
+    }
+
+    try {
+      lifecycle.addMaybeStartHandler(dummyHandler);
+      Assert.fail("Expected exception");
+    }
+    catch (IllegalStateException e) {
+      Assert.assertTrue(e.getMessage().contains("Cannot add a handler"));
     }
   }
 }

@@ -600,8 +600,7 @@ public class MemcachedCache implements Cache
       MemcachedClientIF.MAX_KEY_LENGTH
       - 40 // length of namespace hash
       - 40 // length of key hash
-      - 2  // length of separators
-      ;
+      - 2; // length of separators
 
   private static String computeKeyHash(String memcachedPrefix, NamedKey key)
   {

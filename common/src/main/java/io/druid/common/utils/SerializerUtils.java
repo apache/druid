@@ -24,7 +24,6 @@ import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-import io.druid.collections.IntList;
 import io.druid.java.util.common.StringUtils;
 
 import java.io.IOException;
@@ -213,15 +212,6 @@ public class SerializerUtils
 
     for (int value : ints) {
       writeInt(out, value);
-    }
-  }
-
-  public void writeInts(OutputStream out, IntList ints) throws IOException
-  {
-    writeInt(out, ints.length());
-
-    for (int i = 0; i < ints.length(); i++) {
-      writeInt(out, ints.get(i));
     }
   }
 

@@ -222,12 +222,10 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
           {
             if ((fetchFuture == null || fetchFuture.isDone())
                 && remainingBytes <= prefetchTriggerBytes) {
-              fetchFuture = fetchExecutor.submit(
-                  () -> {
-                    fetch();
-                    return null;
-                  }
-              );
+              fetchFuture = fetchExecutor.submit(() -> {
+                fetch();
+                return null;
+              });
             }
           }
 

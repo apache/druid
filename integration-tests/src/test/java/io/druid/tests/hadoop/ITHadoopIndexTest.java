@@ -106,7 +106,7 @@ public class ITHadoopIndexTest extends AbstractIndexerTest
         unloadAndKillData(BATCH_DATASOURCE);
       }
       catch (Exception e) {
-        LOG.warn(e, "exception while removing segments: [%s]");
+        LOG.warn(e, "exception while removing segments");
       }
     }
   }

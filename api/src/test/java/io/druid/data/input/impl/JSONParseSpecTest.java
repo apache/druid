@@ -19,19 +19,18 @@
 
 package io.druid.data.input.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import io.druid.TestObjectMapper;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 
-import org.junit.Assert;
-import org.junit.Test;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
-
-public class JSONParseSpecTest {
+public class JSONParseSpecTest
+{
   private final ObjectMapper jsonMapper = new TestObjectMapper();
 
   @Test

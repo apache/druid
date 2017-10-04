@@ -21,7 +21,6 @@ package io.druid.query.groupby.epinephelinae.column;
 
 import com.google.common.primitives.Floats;
 import io.druid.segment.ColumnValueSelector;
-import io.druid.segment.FloatColumnSelector;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
@@ -47,7 +46,19 @@ public class FloatGroupByColumnSelectorStrategy implements GroupByColumnSelector
   @Override
   public void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess)
   {
-    valuess[columnIndex] = ((FloatColumnSelector) selector).get();
+    valuess[columnIndex] = selector.getFloat();
+  }
+
+  @Override
+  public Object getOnlyValue(ColumnValueSelector selector)
+  {
+    return selector.getFloat();
+  }
+
+  @Override
+  public void writeToKeyBuffer(int keyBufferPosition, Object obj, ByteBuffer keyBuffer)
+  {
+    keyBuffer.putFloat(keyBufferPosition, (Float) obj);
   }
 
   @Override

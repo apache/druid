@@ -28,6 +28,7 @@ import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.testing.guice.TestClient;
@@ -144,10 +145,8 @@ public class EventReceiverFirehoseTestClient
       int expectedEventsPosted = 0;
       while ((s = reader.readLine()) != null) {
         events.add(
-            (Map<String, Object>) this.jsonMapper.readValue(
-                s, new TypeReference<Map<String, Object>>()
-                {
-                }
+            this.jsonMapper.readValue(
+                s, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
             )
         );
         ObjectMapper mapper = (totalEventsPosted % 2 == 0) ? jsonMapper : smileMapper;

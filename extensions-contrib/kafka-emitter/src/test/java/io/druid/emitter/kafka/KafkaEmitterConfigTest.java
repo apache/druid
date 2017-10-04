@@ -52,4 +52,19 @@ public class KafkaEmitterConfigTest
                                                           .readValue(kafkaEmitterConfigString);
     Assert.assertEquals(kafkaEmitterConfigExpected, kafkaEmitterConfig);
   }
+
+  @Test
+  public void testSerDeNotRequiredKafkaProducerConfig() throws IOException
+  {
+    KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("localhost:9092", "metricTest",
+                                                                   "alertTest", "clusterNameTest",
+                                                                   null
+    );
+    try {
+      KafkaEmitter emitter = new KafkaEmitter(kafkaEmitterConfig, mapper);
+    }
+    catch (NullPointerException e) {
+      Assert.fail();
+    }
+  }
 }

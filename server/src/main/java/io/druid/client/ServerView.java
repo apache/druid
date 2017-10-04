@@ -28,7 +28,7 @@ import java.util.concurrent.Executor;
  */
 public interface ServerView
 {
-  public void registerServerCallback(Executor exec, ServerCallback callback);
+  public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback);
   public void registerSegmentCallback(Executor exec, SegmentCallback callback);
 
   public enum CallbackAction
@@ -37,7 +37,7 @@ public interface ServerView
     UNREGISTER,
   }
 
-  public static interface ServerCallback
+  public static interface ServerRemovedCallback
   {
     /**
      * Called when a server is removed.

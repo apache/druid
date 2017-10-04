@@ -30,6 +30,6 @@ public class GranularUnprocessedPathSpecTest
     GranularUnprocessedPathSpec granularUnprocessedPathSpec = new GranularUnprocessedPathSpec();
     int maxBuckets = 5;
     granularUnprocessedPathSpec.setMaxBuckets(maxBuckets);
-    Assert.assertEquals(maxBuckets,granularUnprocessedPathSpec.getMaxBuckets());
+    Assert.assertEquals(maxBuckets, granularUnprocessedPathSpec.getMaxBuckets());
   }
 }

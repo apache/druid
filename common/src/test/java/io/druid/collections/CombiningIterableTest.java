@@ -49,8 +49,8 @@ public class CombiningIterableTest
         iterators,
         Ordering.<Integer>natural()
     );
-    Assert.assertEquals(mergedLists.size(),Iterables.size(actualIterable));
+    Assert.assertEquals(mergedLists.size(), Iterables.size(actualIterable));
     Set actualHashset = Sets.newHashSet(actualIterable);
-    Assert.assertEquals(actualHashset,mergedLists);
+    Assert.assertEquals(actualHashset, mergedLists);
   }
 }

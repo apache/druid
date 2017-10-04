@@ -90,7 +90,6 @@ public abstract class AbstractHttpClientProvider<HttpClientType> implements Prov
   {
     return injector.getProvider(configKey);
   }
-
   public Provider<Lifecycle> getLifecycleProvider()
   {
     return injector.getProvider(Lifecycle.class);

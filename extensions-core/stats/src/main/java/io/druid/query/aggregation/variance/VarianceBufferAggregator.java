@@ -75,6 +75,12 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
   }
 
   @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("VarianceBufferAggregator does not support getDouble()");
+  }
+
+  @Override
   public void close()
   {
   }
@@ -92,7 +98,7 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
     @Override
     public void aggregate(ByteBuffer buf, int position)
     {
-      float v = selector.get();
+      float v = selector.getFloat();
       long count = buf.getLong(position + COUNT_OFFSET) + 1;
       double sum = buf.getDouble(position + SUM_OFFSET) + v;
       buf.putLong(position, count);
@@ -124,7 +130,7 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
     @Override
     public void aggregate(ByteBuffer buf, int position)
     {
-      long v = selector.get();
+      long v = selector.getLong();
       long count = buf.getLong(position + COUNT_OFFSET) + 1;
       double sum = buf.getDouble(position + SUM_OFFSET) + v;
       buf.putLong(position, count);
@@ -156,7 +162,7 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
     @Override
     public void aggregate(ByteBuffer buf, int position)
     {
-      VarianceAggregatorCollector holder2 = (VarianceAggregatorCollector) selector.get();
+      VarianceAggregatorCollector holder2 = (VarianceAggregatorCollector) selector.getObject();
 
       long count = buf.getLong(position + COUNT_OFFSET);
       if (count == 0) {

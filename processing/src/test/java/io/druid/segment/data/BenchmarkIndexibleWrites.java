@@ -95,7 +95,8 @@ public class BenchmarkIndexibleWrites extends AbstractBenchmark
     }
 
     @Override
-    public void clear(){
+    public void clear()
+    {
       delegate.clear();
     }
   }
@@ -163,7 +164,7 @@ public class BenchmarkIndexibleWrites extends AbstractBenchmark
           // Any task who sees a resizeCount which changes between the start and stop of their critical section
           // should also try again
           resizeCount.incrementAndGet();
-          reference.set(Arrays.copyOf(reference.get(), reference.get().length<<1));
+          reference.set(Arrays.copyOf(reference.get(), reference.get().length << 1));
           resizeCount.incrementAndGet();
         }
       }
@@ -171,8 +172,8 @@ public class BenchmarkIndexibleWrites extends AbstractBenchmark
   }
 
   private final ConcurrentIndexible<Integer> concurrentIndexible;
-  private final Integer concurrentThreads = 1<<2;
-  private final Integer totalIndexSize = 1<<20;
+  private final Integer concurrentThreads = 1 << 2;
+  private final Integer totalIndexSize = 1 << 20;
 
   @BenchmarkOptions(warmupRounds = 100, benchmarkRounds = 100, clock = Clock.REAL_TIME, callgc = true)
   @Ignore @Test
@@ -218,7 +219,7 @@ public class BenchmarkIndexibleWrites extends AbstractBenchmark
     }
     Futures.allAsList(futures).get();
     Assert.assertTrue(StringUtils.format("Index too small %d, expected %d across %d loops", index.get(), totalIndexSize, loops), index.get() >= totalIndexSize);
-    for(int i = 0; i < index.get(); ++i){
+    for (int i = 0; i < index.get(); ++i) {
       Assert.assertEquals(i, concurrentIndexible.get(i).intValue());
     }
     concurrentIndexible.clear();
@@ -271,7 +272,7 @@ public class BenchmarkIndexibleWrites extends AbstractBenchmark
                     throw Throwables.propagate(e);
                   }
                   final Random rndGen = new Random();
-                  while(!done.get()){
+                  while (!done.get()) {
                     Integer idx = rndGen.nextInt(queryableIndex.get() + 1);
                     Assert.assertEquals(idx, concurrentIndexible.get(idx));
                   }
@@ -297,7 +298,7 @@ public class BenchmarkIndexibleWrites extends AbstractBenchmark
     executorService.shutdown();
 
     Assert.assertTrue(StringUtils.format("Index too small %d, expected %d across %d loops", index.get(), totalIndexSize, loops), index.get() >= totalIndexSize);
-    for(int i = 0; i < index.get(); ++i){
+    for (int i = 0; i < index.get(); ++i) {
       Assert.assertEquals(i, concurrentIndexible.get(i).intValue());
     }
     concurrentIndexible.clear();

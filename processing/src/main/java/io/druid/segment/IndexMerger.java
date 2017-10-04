@@ -29,11 +29,13 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.inject.ImplementedBy;
 import io.druid.common.utils.SerializerUtils;
+import io.druid.java.util.common.ByteBufferUtils;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.data.Indexed;
@@ -167,7 +169,7 @@ public interface IndexMerger
    *
    * @return the index output directory
    *
-   * @throws java.io.IOException if an IO error occurs persisting the index
+   * @throws IOException if an IO error occurs persisting the index
    */
   File persist(IncrementalIndex index, Interval dataInterval, File outDir, IndexSpec indexSpec) throws IOException;
 
@@ -418,9 +420,10 @@ public interface IndexMerger
     }
   }
 
-  class DictionaryMergeIterator implements Iterator<String>
+  class DictionaryMergeIterator implements CloseableIterator<String>
   {
     protected final IntBuffer[] conversions;
+    protected final List<Pair<ByteBuffer, Integer>> directBufferAllocations = Lists.newArrayList();
     protected final PriorityQueue<Pair<Integer, PeekingIterator<String>>> pQueue;
 
     protected int counter;
@@ -445,7 +448,11 @@ public interface IndexMerger
         }
         Indexed<String> indexed = dimValueLookups[i];
         if (useDirect) {
-          conversions[i] = ByteBuffer.allocateDirect(indexed.size() * Ints.BYTES).asIntBuffer();
+          int allocationSize = indexed.size() * Ints.BYTES;
+          log.info("Allocating dictionary merging direct buffer with size[%,d]", allocationSize);
+          final ByteBuffer conversionDirectBuffer = ByteBuffer.allocateDirect(allocationSize);
+          conversions[i] = conversionDirectBuffer.asIntBuffer();
+          directBufferAllocations.add(new Pair<>(conversionDirectBuffer, allocationSize));
         } else {
           conversions[i] = IntBuffer.allocate(indexed.size());
         }
@@ -522,6 +529,15 @@ public interface IndexMerger
     public void remove()
     {
       throw new UnsupportedOperationException("remove");
+    }
+    
+    @Override
+    public void close()
+    {
+      for (Pair<ByteBuffer, Integer> bufferAllocation : directBufferAllocations) {
+        log.info("Freeing dictionary merging direct buffer with size[%,d]", bufferAllocation.rhs);
+        ByteBufferUtils.free(bufferAllocation.lhs);
+      }
     }
   }
 }

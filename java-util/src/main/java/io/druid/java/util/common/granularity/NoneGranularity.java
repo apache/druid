@@ -42,23 +42,19 @@ public class NoneGranularity extends Granularity
   @Override
   public DateTime increment(DateTime time)
   {
-    return new DateTime(time.getMillis() + 1);
+    return time.plus(1);
   }
 
   @Override
   public DateTime decrement(DateTime time)
   {
-    return new DateTime(time.getMillis() - 1);
+    return time.minus(1);
   }
 
   @Override
   public DateTime bucketStart(DateTime time)
   {
-    if (time == null) {
-      return null;
-    }
-
-    return new DateTime(time.getMillis());
+    return time;
   }
 
   @Override

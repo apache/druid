@@ -19,11 +19,10 @@
 
 package io.druid.query.aggregation.first;
 
-import com.google.common.primitives.Longs;
 import io.druid.collections.SerializablePair;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.LongColumnSelector;
 
 import java.nio.ByteBuffer;
@@ -31,9 +30,9 @@ import java.nio.ByteBuffer;
 public class DoubleFirstBufferAggregator implements BufferAggregator
 {
   private final LongColumnSelector timeSelector;
-  private final FloatColumnSelector valueSelector;
+  private final DoubleColumnSelector valueSelector;
 
-  public DoubleFirstBufferAggregator(LongColumnSelector timeSelector, FloatColumnSelector valueSelector)
+  public DoubleFirstBufferAggregator(LongColumnSelector timeSelector, DoubleColumnSelector valueSelector)
   {
     this.timeSelector = timeSelector;
     this.valueSelector = valueSelector;
@@ -43,36 +42,42 @@ public class DoubleFirstBufferAggregator implements BufferAggregator
   public void init(ByteBuffer buf, int position)
   {
     buf.putLong(position, Long.MAX_VALUE);
-    buf.putDouble(position + Longs.BYTES, 0);
+    buf.putDouble(position + Long.BYTES, 0);
   }
 
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    long time = timeSelector.get();
+    long time = timeSelector.getLong();
     long firstTime = buf.getLong(position);
     if (time < firstTime) {
       buf.putLong(position, time);
-      buf.putDouble(position + Longs.BYTES, valueSelector.get());
+      buf.putDouble(position + Long.BYTES, valueSelector.getDouble());
     }
   }
 
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    return new SerializablePair<>(buf.getLong(position), buf.getDouble(position + Longs.BYTES));
+    return new SerializablePair<>(buf.getLong(position), buf.getDouble(position + Long.BYTES));
   }
 
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    return (float) buf.getDouble(position + Longs.BYTES);
+    return (float) buf.getDouble(position + Long.BYTES);
   }
 
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
-    return (long) buf.getDouble(position + Longs.BYTES);
+    return (long) buf.getDouble(position + Long.BYTES);
+  }
+
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return buf.getDouble(position + Long.BYTES);
   }
 
   @Override

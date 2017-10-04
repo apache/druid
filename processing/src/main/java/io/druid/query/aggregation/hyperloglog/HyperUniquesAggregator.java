@@ -43,7 +43,7 @@ public class HyperUniquesAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    collector.fold((HyperLogLogCollector) selector.get());
+    collector.fold((HyperLogLogCollector) selector.getObject());
   }
 
   @Override
@@ -70,6 +70,12 @@ public class HyperUniquesAggregator implements Aggregator
   public long getLong()
   {
     throw new UnsupportedOperationException("HyperUniquesAggregator does not support getLong()");
+  }
+
+  @Override
+  public double getDouble()
+  {
+    throw new UnsupportedOperationException("HyperUniquesAggregator does not support getDouble()");
   }
 
   @Override

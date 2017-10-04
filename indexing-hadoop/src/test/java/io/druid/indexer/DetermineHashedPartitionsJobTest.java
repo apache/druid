@@ -27,12 +27,12 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.indexer.partitions.HashedPartitionsSpec;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -147,7 +147,7 @@ public class DetermineHashedPartitionsJobTest
             new UniformGranularitySpec(
                 Granularities.DAY,
                 Granularities.NONE,
-                ImmutableList.of(new Interval(interval))
+                ImmutableList.of(Intervals.of(interval))
             ),
             HadoopDruidIndexerConfig.JSON_MAPPER
         ),

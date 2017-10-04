@@ -24,6 +24,7 @@ import com.google.common.collect.Iterables;
 import io.druid.benchmark.datagen.BenchmarkColumnSchema;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.SegmentGenerator;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -41,7 +42,6 @@ import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.ValueType;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
-import org.joda.time.Interval;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -89,7 +89,7 @@ public class ExpressionBenchmark
             BenchmarkColumnSchema.makeNormal("y", ValueType.FLOAT, false, 1, 0d, 0d, 10000d, false)
         ),
         ImmutableList.of(),
-        new Interval("2000/P1D"),
+        Intervals.of("2000/P1D"),
         false
     );
 
@@ -176,7 +176,7 @@ public class ExpressionBenchmark
         Sequences.map(
             cursors,
             cursor -> {
-              final BufferAggregator bufferAggregator = aggregatorFactory.apply(cursor);
+              final BufferAggregator bufferAggregator = aggregatorFactory.apply(cursor.getColumnSelectorFactory());
               bufferAggregator.init(aggregationBuffer, 0);
 
               while (!cursor.isDone()) {
@@ -215,8 +215,8 @@ public class ExpressionBenchmark
     @Override
     public void aggregate(final ByteBuffer buf, final int position)
     {
-      final float x = xSelector.get();
-      final double n = x > 0 ? x + 1 : ySelector.get() + 1;
+      final float x = xSelector.getFloat();
+      final double n = x > 0 ? x + 1 : ySelector.getFloat() + 1;
       buf.putDouble(0, buf.getDouble(position) + n);
     }
 
@@ -238,6 +238,11 @@ public class ExpressionBenchmark
       throw new UnsupportedOperationException();
     }
 
+    @Override
+    public double getDouble(ByteBuffer buf, int position)
+    {
+      throw new UnsupportedOperationException();
+    }
     @Override
     public void close()
     {

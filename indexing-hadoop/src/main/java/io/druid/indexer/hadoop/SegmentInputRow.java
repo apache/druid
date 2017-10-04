@@ -35,7 +35,8 @@ public class SegmentInputRow implements InputRow
 {
   private final InputRow delegate;
 
-  public SegmentInputRow(InputRow delegate){
+  public SegmentInputRow(InputRow delegate)
+  {
     this.delegate = delegate;
   }
 
@@ -79,6 +80,12 @@ public class SegmentInputRow implements InputRow
   public long getLongMetric(String metric)
   {
     return delegate.getLongMetric(metric);
+  }
+
+  @Override
+  public double getDoubleMetric(String metric)
+  {
+    return delegate.getDoubleMetric(metric);
   }
 
   @Override

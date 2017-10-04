@@ -51,7 +51,7 @@ public class HyperUniquesBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    HyperLogLogCollector collector = (HyperLogLogCollector) selector.get();
+    HyperLogLogCollector collector = (HyperLogLogCollector) selector.getObject();
 
     if (collector == null) {
       return;
@@ -96,6 +96,12 @@ public class HyperUniquesBufferAggregator implements BufferAggregator
   public long getLong(ByteBuffer buf, int position)
   {
     throw new UnsupportedOperationException("HyperUniquesBufferAggregator does not support getLong()");
+  }
+
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("HyperUniquesBufferAggregator does not support getDouble()");
   }
 
   @Override

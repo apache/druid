@@ -31,7 +31,7 @@ import io.druid.query.monomorphicprocessing.HotLoopCallee;
  */
 public interface ReadableOffset extends HotLoopCallee
 {
-    @CalledFromHotLoop
-    int getOffset();
+  @CalledFromHotLoop
+  int getOffset();
 }
 

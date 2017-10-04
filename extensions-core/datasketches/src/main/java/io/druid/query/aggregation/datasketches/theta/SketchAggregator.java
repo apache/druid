@@ -37,13 +37,13 @@ public class SketchAggregator implements Aggregator
   public SketchAggregator(ObjectColumnSelector selector, int size)
   {
     this.selector = selector;
-    union = new SynchronizedUnion((Union) SetOperation.builder().build(size, Family.UNION));
+    union = new SynchronizedUnion((Union) SetOperation.builder().setNominalEntries(size).build(Family.UNION));
   }
 
   @Override
   public void aggregate()
   {
-    Object update = selector.get();
+    Object update = selector.getObject();
     if (update == null) {
       return;
     }
@@ -76,6 +76,12 @@ public class SketchAggregator implements Aggregator
 
   @Override
   public long getLong()
+  {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @Override
+  public double getDouble()
   {
     throw new UnsupportedOperationException("Not implemented");
   }

@@ -65,16 +65,16 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
   {
-    return makeRunner(query);
+    return makeRunner(query, baseClient.getQueryRunnerForIntervals(query, intervals));
   }
 
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
   {
-    return makeRunner(query);
+    return makeRunner(query, baseClient.getQueryRunnerForSegments(query, specs));
   }
 
-  private <T> QueryRunner<T> makeRunner(Query<T> query)
+  private <T> QueryRunner<T> makeRunner(Query<T> query, QueryRunner<T> baseClientRunner)
   {
     QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
     PostProcessingOperator<T> postProcessing = objectMapper.convertValue(
@@ -87,7 +87,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     return new FluentQueryRunnerBuilder<>(toolChest)
         .create(
             new RetryQueryRunner<>(
-                baseClient,
+                baseClientRunner,
                 toolChest,
                 retryConfig,
                 objectMapper

@@ -21,16 +21,17 @@ package io.druid.query;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
+import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.timeline.LogicalSegment;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
- * The broker-side (also used by server in some cases) API for a specific Query type.  This API is still undergoing
- * evolution and is only semi-stable, so proprietary Query implementations should be ready for the potential
- * maintenance burden when upgrading versions.
+ * The broker-side (also used by server in some cases) API for a specific Query type.
  */
+@ExtensionPoint
 public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultType>>
 {
   /**
@@ -122,6 +123,7 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    *
    * @return A CacheStrategy that can be used to populate and read from the Cache
    */
+  @Nullable
   public <T> CacheStrategy<ResultType, T, QueryType> getCacheStrategy(QueryType query)
   {
     return null;

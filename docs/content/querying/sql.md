@@ -126,7 +126,10 @@ String functions accept strings, and return a type appropriate to the function.
 |`REGEXP_EXTRACT(expr, pattern, [index])`|Apply regular expression pattern and extract a capture group, or null if there is no match. If index is unspecified or zero, returns the substring that matched the pattern.|
 |`REPLACE(expr, pattern, replacement)`|Replaces pattern with replacement in expr, and returns the result.|
 |`SUBSTRING(expr, index, [length])`|Returns a substring of expr starting at index, with a max length, both measured in UTF-16 code units.|
-|`TRIM(expr)`|Returns expr with leading and trailing whitespace removed.|
+|`TRIM([BOTH | LEADING | TRAILING] [<chars> FROM] expr)`|Returns expr with characters removed from the leading, trailing, or both ends of "expr" if they are in "chars". If "chars" is not provided, it defaults to " " (a space). If the directional argument is not provided, it defaults to "BOTH".|
+|`BTRIM(expr[, chars])`|Alternate form of `TRIM(BOTH <chars> FROM <expr>`).|
+|`LTRIM(expr[, chars])`|Alternate form of `TRIM(LEADING <chars> FROM <expr>`).|
+|`RTRIM(expr[, chars])`|Alternate form of `TRIM(TRAILING <chars> FROM <expr>`).|
 |`UPPER(expr)`|Returns expr in all uppercase.|
 
 ### Time functions
@@ -207,13 +210,13 @@ Additionally, some Druid features are not supported by the SQL language. Some un
 
 ## Data types and casts
 
-Druid natively supports four main column types: "long" (64 bit signed int), "float" (32 bit float), "string" (UTF-8
-encoded strings), and "complex" (catch-all for more exotic data types like hyperUnique and approxHistogram columns).
-Timestamps (including the `__time` column) are stored as longs, with the value being the number of milliseconds since 1
-January 1970 UTC.
+Druid natively supports five basic column types: "long" (64 bit signed int), "float" (32 bit float), "double" (64 bit
+float) "string" (UTF-8 encoded strings), and "complex" (catch-all for more exotic data types like hyperUnique and
+approxHistogram columns). Timestamps (including the `__time` column) are stored as longs, with the value being the
+number of milliseconds since 1 January 1970 UTC.
 
-At runtime, Druid will widen floats to "double" (64 bit float) for certain features, like `SUM` aggregators. But this
-widening is not universal; some floating point operations retain 32 bit precision.
+At runtime, Druid may widen 32-bit floats to 64-bit for certain operators, like SUM aggregators. The reverse will not
+happen: 64-bit floats are not be narrowed to 32-bit.
 
 Druid generally treats NULLs and empty strings interchangeably, rather than according to the SQL standard. As such,
 Druid SQL only has partial support for NULLs. For example, the expressions `col IS NULL` and `col = ''` are equivalent,
@@ -238,10 +241,10 @@ converted to zeroes).
 |--------|------------------|-------------|-----|
 |CHAR|STRING|`''`||
 |VARCHAR|STRING|`''`|Druid STRING columns are reported as VARCHAR|
-|DECIMAL|FLOAT or DOUBLE|`0.0`|DECIMAL uses floating point, not fixed point math|
-|FLOAT|FLOAT or DOUBLE|`0.0`|Druid FLOAT columns are reported as FLOAT|
-|REAL|FLOAT or DOUBLE|`0.0`||
-|DOUBLE|FLOAT or DOUBLE|`0.0`||
+|DECIMAL|DOUBLE|`0.0`|DECIMAL uses floating point, not fixed point math|
+|FLOAT|FLOAT|`0.0`|Druid FLOAT columns are reported as FLOAT|
+|REAL|DOUBLE|`0.0`||
+|DOUBLE|DOUBLE|`0.0`|Druid DOUBLE columns are reported as DOUBLE|
 |BOOLEAN|LONG|`false`||
 |TINYINT|LONG|`0`||
 |SMALLINT|LONG|`0`||
@@ -253,7 +256,9 @@ converted to zeroes).
 
 ## Query execution
 
-Queries without aggregations will use Druid's [Select](select-query.html) native query type.
+Queries without aggregations will use Druid's [Scan](scan-query.html) or [Select](select-query.html) native query types.
+Scan is used whenever possible, as it is generally higher performance and more efficient than Select. However, Select
+is used in one case: when the query includes an `ORDER BY __time`, since Scan does not have a sorting feature.
 
 Aggregation queries (using GROUP BY, DISTINCT, or any aggregation functions) will use one of Druid's three native
 aggregation query types. Two (Timeseries and TopN) are specialized for specific types of aggregations, whereas the other

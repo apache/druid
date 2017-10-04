@@ -60,7 +60,7 @@ public class PollingLookup extends LookupExtractor
 
   private final ListenableFuture<?> pollFuture;
 
-  private final String id =  Integer.toHexString(System.identityHashCode(this));
+  private final String id = Integer.toHexString(System.identityHashCode(this));
 
   public PollingLookup(
       long pollPeriodMs,
@@ -215,7 +215,10 @@ public class PollingLookup extends LookupExtractor
     private final PollingCache pollingCache;
     private final AtomicLong refCounts = new AtomicLong(0L);
 
-    CacheRefKeeper(PollingCache pollingCache) {this.pollingCache = pollingCache;}
+    CacheRefKeeper(PollingCache pollingCache)
+    {
+      this.pollingCache = pollingCache;
+    }
 
     PollingCache getAndIncrementRef()
     {

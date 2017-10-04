@@ -20,12 +20,14 @@
 package io.druid.segment.loading;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.guice.annotations.ExtensionPoint;
 
 import java.io.File;
 
 /**
  * A means of pulling segment files into a destination directory
  */
+@ExtensionPoint
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public interface LoadSpec
 {
@@ -37,12 +39,17 @@ public interface LoadSpec
   public LoadSpecResult loadSegment(File destDir) throws SegmentLoadingException;
 
   // Hold interesting data about the results of the segment load
-  public static class LoadSpecResult{
+  public static class LoadSpecResult
+  {
     private final long size;
-    public LoadSpecResult(long size){
+
+    public LoadSpecResult(long size)
+    {
       this.size = size;
     }
-    public long getSize(){
+
+    public long getSize()
+    {
       return this.size;
     }
   }

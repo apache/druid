@@ -39,7 +39,7 @@ public final class NullStringObjectColumnSelector implements ObjectColumnSelecto
   }
 
   @Override
-  public String get()
+  public String getObject()
   {
     return null;
   }

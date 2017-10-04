@@ -23,11 +23,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.client.DirectDruidClient;
 import io.druid.client.DruidServer;
+import io.druid.java.util.common.Intervals;
 import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -51,7 +51,7 @@ public class ServerSelectorTest
     final ServerSelector selector = new ServerSelector(
         DataSegment.builder()
                    .dataSource("test_broker_server_view")
-                   .interval(new Interval("2012/2013"))
+                   .interval(Intervals.of("2012/2013"))
                    .loadSpec(
                        ImmutableMap.<String, Object>of(
                            "type",
@@ -78,8 +78,7 @@ public class ServerSelectorTest
         DataSegment.builder()
                    .dataSource(
                        "test_broker_server_view")
-                   .interval(new Interval(
-                       "2012/2013"))
+                   .interval(Intervals.of("2012/2013"))
                    .loadSpec(
                        ImmutableMap.<String, Object>of(
                            "type",

@@ -33,6 +33,7 @@ import io.druid.query.lookup.namespace.CacheGenerator;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.UriExtractionNamespace;
 import io.druid.query.lookup.namespace.UriExtractionNamespaceTest;
+import io.druid.server.lookup.namespace.NamespaceExtractionConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import org.joda.time.Period;
 import org.junit.After;
@@ -76,7 +77,11 @@ public class CacheSchedulerTest
         @Override
         public NamespaceExtractionCacheManager apply(@Nullable Lifecycle lifecycle)
         {
-          return new OnHeapNamespaceExtractionCacheManager(lifecycle, new NoopServiceEmitter());
+          return new OnHeapNamespaceExtractionCacheManager(
+              lifecycle,
+              new NoopServiceEmitter(),
+              new NamespaceExtractionConfig()
+          );
         }
       };
   public static final Function<Lifecycle, NamespaceExtractionCacheManager> CREATE_OFF_HEAP_CACHE_MANAGER =
@@ -86,7 +91,11 @@ public class CacheSchedulerTest
         @Override
         public NamespaceExtractionCacheManager apply(@Nullable Lifecycle lifecycle)
         {
-          return new OffHeapNamespaceExtractionCacheManager(lifecycle, new NoopServiceEmitter());
+          return new OffHeapNamespaceExtractionCacheManager(
+              lifecycle,
+              new NoopServiceEmitter(),
+              new NamespaceExtractionConfig()
+          );
         }
       };
 
@@ -138,7 +147,7 @@ public class CacheSchedulerTest
           final CacheScheduler scheduler
       ) throws InterruptedException
       {
-        Thread.sleep(2);// To make absolutely sure there is a unique currentTimeMillis
+        Thread.sleep(2); // To make absolutely sure there is a unique currentTimeMillis
         String version = Long.toString(System.currentTimeMillis());
         CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(id, version);
         // Don't actually read off disk because TravisCI doesn't like that
@@ -303,10 +312,9 @@ public class CacheSchedulerTest
     testDelete();
   }
 
-  public void testDelete()
-      throws InterruptedException, TimeoutException, ExecutionException
+  public void testDelete() throws InterruptedException, TimeoutException, ExecutionException
   {
-    final long period = 1_000L;// Give it some time between attempts to update
+    final long period = 1_000L; // Give it some time between attempts to update
     final UriExtractionNamespace namespace = getUriExtractionNamespace(period);
     CacheScheduler.Entry entry = scheduler.scheduleAndWait(namespace, 10_000);
     Assert.assertNotNull(entry);

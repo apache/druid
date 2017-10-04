@@ -17,7 +17,9 @@
  * under the License.
  */
 
-package io.druid.segment;import io.druid.segment.column.Column;
+package io.druid.segment;
+
+import io.druid.segment.column.Column;
 import io.druid.segment.data.Indexed;
 
 /**

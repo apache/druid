@@ -52,6 +52,12 @@ public abstract class LongBufferAggregator implements BufferAggregator
   }
 
   @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return (double) buf.getLong(position);
+  }
+
+  @Override
   public void close()
   {
     // no resources to cleanup

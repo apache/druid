@@ -30,8 +30,10 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
@@ -45,7 +47,6 @@ import io.druid.query.select.SelectQueryRunnerFactory;
 import io.druid.query.select.SelectResultValue;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -84,7 +85,7 @@ public class MapVirtualColumnTest
     );
 
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-        .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
+        .withMinTimestamp(DateTimes.of("2011-01-12T00:00:00.000Z").getMillis())
         .build();
     final IncrementalIndex index = new IncrementalIndex.Builder()
         .setIndexSchema(schema)
@@ -100,8 +101,8 @@ public class MapVirtualColumnTest
             Arrays.asList("ts", "dim", "keys", "values"),
             false,
             0
-        )
-        , "utf8"
+        ),
+        "utf8"
     );
 
     CharSource input = CharSource.wrap(
@@ -185,7 +186,7 @@ public class MapVirtualColumnTest
   private void checkSelectQuery(SelectQuery searchQuery, List<Map> expected) throws Exception
   {
     List<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(searchQuery, ImmutableMap.of()),
+        runner.run(QueryPlus.wrap(searchQuery), ImmutableMap.of()),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
     Assert.assertEquals(1, results.size());

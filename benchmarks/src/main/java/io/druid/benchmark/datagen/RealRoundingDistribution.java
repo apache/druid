@@ -86,7 +86,7 @@ public class RealRoundingDistribution extends AbstractIntegerDistribution
   public int sample()
   {
     double randomVal = realDist.sample();
-    Long longVal = Math.round(randomVal);
-    return longVal.intValue();
+    long longVal = Math.round(randomVal);
+    return (int) longVal;
   }
 }

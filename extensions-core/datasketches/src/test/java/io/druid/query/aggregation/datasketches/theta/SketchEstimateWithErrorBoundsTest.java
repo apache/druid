@@ -34,7 +34,7 @@ public class SketchEstimateWithErrorBoundsTest
   {
     ObjectMapper mapper = new DefaultObjectMapper();
 
-    SketchEstimateWithErrorBounds est = new SketchEstimateWithErrorBounds(100.0,101.5,98.5,2);
+    SketchEstimateWithErrorBounds est = new SketchEstimateWithErrorBounds(100.0, 101.5, 98.5, 2);
     
     Assert.assertEquals(est, mapper.readValue(
             mapper.writeValueAsString(est), SketchEstimateWithErrorBounds.class));

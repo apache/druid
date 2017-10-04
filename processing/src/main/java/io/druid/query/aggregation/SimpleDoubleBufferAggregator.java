@@ -21,20 +21,20 @@ package io.druid.query.aggregation;
 
 import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.DoubleColumnSelector;
 
 import java.nio.ByteBuffer;
 
 public abstract class SimpleDoubleBufferAggregator implements BufferAggregator
 {
-  protected final FloatColumnSelector selector;
+  protected final DoubleColumnSelector selector;
 
-  SimpleDoubleBufferAggregator(FloatColumnSelector selector)
+  SimpleDoubleBufferAggregator(DoubleColumnSelector selector)
   {
     this.selector = selector;
   }
 
-  public FloatColumnSelector getSelector()
+  public DoubleColumnSelector getSelector()
   {
     return selector;
   }
@@ -53,7 +53,7 @@ public abstract class SimpleDoubleBufferAggregator implements BufferAggregator
   @Override
   public final void aggregate(ByteBuffer buf, int position)
   {
-    aggregate(buf, position, (double) selector.get());
+    aggregate(buf, position, selector.getDouble());
   }
 
   @Override
@@ -72,6 +72,12 @@ public abstract class SimpleDoubleBufferAggregator implements BufferAggregator
   public final long getLong(ByteBuffer buf, int position)
   {
     return (long) buf.getDouble(position);
+  }
+
+  @Override
+  public double getDouble(ByteBuffer buffer, int position)
+  {
+    return buffer.getDouble(position);
   }
 
   @Override

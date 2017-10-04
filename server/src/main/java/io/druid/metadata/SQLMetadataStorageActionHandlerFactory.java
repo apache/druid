@@ -41,9 +41,9 @@ public class SQLMetadataStorageActionHandlerFactory implements MetadataStorageAc
   }
 
   @Override
-  public <A,B,C,D> MetadataStorageActionHandler<A,B,C,D> create(
+  public <A, B, C, D> MetadataStorageActionHandler<A, B, C, D> create(
       final String entryType,
-      MetadataStorageActionHandlerTypes<A,B,C,D> payloadTypes
+      MetadataStorageActionHandlerTypes<A, B, C, D> payloadTypes
   )
   {
     return new SQLMetadataStorageActionHandler<>(

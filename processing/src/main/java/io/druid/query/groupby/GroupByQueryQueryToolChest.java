@@ -210,7 +210,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
             makePreComputeManipulatorFn(
                 subquery,
                 MetricManipulatorFns.finalizing()
-            )
+            )::apply
         );
       } else {
         finalizingResults = subqueryResult;

@@ -47,7 +47,7 @@ public class HybridCache implements Cache
     byte[] res = level1.get(key);
     if (res == null) {
       res = level2.get(key);
-      if(res != null) {
+      if (res != null) {
         level1.put(key, res);
         hitCount.incrementAndGet();
         return res;
@@ -78,7 +78,7 @@ public class HybridCache implements Cache
 
     if (!remaining.isEmpty()) {
       Map<NamedKey, byte[]> res2 = level2.getBulk(remaining);
-      for(Map.Entry<NamedKey, byte[]> entry : res2.entrySet()) {
+      for (Map.Entry<NamedKey, byte[]> entry : res2.entrySet()) {
         level1.put(entry.getKey(), entry.getValue());
       }
 

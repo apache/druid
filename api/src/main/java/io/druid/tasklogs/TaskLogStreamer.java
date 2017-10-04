@@ -21,12 +21,14 @@ package io.druid.tasklogs;
 
 import com.google.common.base.Optional;
 import com.google.common.io.ByteSource;
+import io.druid.guice.annotations.ExtensionPoint;
 
 import java.io.IOException;
 
 /**
  * Something that knows how to stream logs for tasks.
  */
+@ExtensionPoint
 public interface TaskLogStreamer
 {
   /**

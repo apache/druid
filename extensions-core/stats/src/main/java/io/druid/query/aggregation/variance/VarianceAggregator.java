@@ -63,6 +63,12 @@ public abstract class VarianceAggregator implements Aggregator
     throw new UnsupportedOperationException("VarianceAggregator does not support getLong()");
   }
 
+  @Override
+  public double getDouble()
+  {
+    throw new UnsupportedOperationException("VarianceAggregator does not support getDouble()");
+  }
+
   public static final class FloatVarianceAggregator extends VarianceAggregator
   {
     private final FloatColumnSelector selector;
@@ -76,7 +82,7 @@ public abstract class VarianceAggregator implements Aggregator
     @Override
     public void aggregate()
     {
-      holder.add(selector.get());
+      holder.add(selector.getFloat());
     }
   }
 
@@ -93,7 +99,7 @@ public abstract class VarianceAggregator implements Aggregator
     @Override
     public void aggregate()
     {
-      holder.add(selector.get());
+      holder.add(selector.getLong());
     }
   }
 
@@ -110,7 +116,7 @@ public abstract class VarianceAggregator implements Aggregator
     @Override
     public void aggregate()
     {
-      VarianceAggregatorCollector.combineValues(holder, selector.get());
+      VarianceAggregatorCollector.combineValues(holder, selector.getObject());
     }
   }
 }

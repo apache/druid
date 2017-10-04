@@ -31,25 +31,25 @@ public class LoggerListener extends TestListenerAdapter
   @Override
   public void onTestFailure(ITestResult tr)
   {
-      LOG.info ("[%s] -- Test method failed", tr.getName());
+    LOG.info ("[%s] -- Test method failed", tr.getName());
   }
 
   @Override
   public void onTestSkipped(ITestResult tr)
   {
-      LOG.info ("[%s] -- Test method skipped", tr.getName());
+    LOG.info ("[%s] -- Test method skipped", tr.getName());
   }
 
   @Override
   public void onTestSuccess(ITestResult tr)
   {
-      LOG.info ("[%s] -- Test method passed", tr.getName());
+    LOG.info ("[%s] -- Test method passed", tr.getName());
   }
 
   @Override
   public void onTestStart(ITestResult tr)
   {
-      LOG.info ("[%s] -- TEST START", tr.getName() );
+    LOG.info ("[%s] -- TEST START", tr.getName());
   }
 
 }

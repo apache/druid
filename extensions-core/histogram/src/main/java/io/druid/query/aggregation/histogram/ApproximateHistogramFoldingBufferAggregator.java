@@ -71,7 +71,7 @@ public class ApproximateHistogramFoldingBufferAggregator implements BufferAggreg
     ApproximateHistogram h0 = ApproximateHistogram.fromBytesDense(mutationBuffer);
     h0.setLowerLimit(lowerLimit);
     h0.setUpperLimit(upperLimit);
-    ApproximateHistogram hNext = selector.get();
+    ApproximateHistogram hNext = selector.getObject();
     h0.foldFast(hNext, tmpBufferP, tmpBufferB);
 
     mutationBuffer.position(position);
@@ -98,6 +98,11 @@ public class ApproximateHistogramFoldingBufferAggregator implements BufferAggreg
     throw new UnsupportedOperationException("ApproximateHistogramFoldingBufferAggregator does not support getLong()");
   }
 
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("ApproximateHistogramFoldingBufferAggregator does not support getDouble()");
+  }
   @Override
   public void close()
   {

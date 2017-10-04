@@ -19,116 +19,81 @@
 
 package io.druid.indexing.common.actions;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.util.concurrent.Futures;
-import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
-import com.metamx.http.client.response.StatusResponseHandler;
-import com.metamx.http.client.response.StatusResponseHolder;
-import io.druid.client.selector.Server;
-import io.druid.curator.discovery.ServerDiscoverySelector;
+import com.metamx.http.client.response.FullResponseHolder;
+import io.druid.discovery.DruidLeaderClient;
 import io.druid.indexing.common.RetryPolicyConfig;
 import io.druid.indexing.common.RetryPolicyFactory;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import org.easymock.EasyMock;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.net.URL;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.easymock.EasyMock.anyObject;
-import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
 
 public class RemoteTaskActionClientTest
 {
-
-  private HttpClient httpClient;
-  private ServerDiscoverySelector selector;
-  private Server server;
+  private DruidLeaderClient druidLeaderClient;
   List<TaskLock> result = null;
   private ObjectMapper objectMapper = new DefaultObjectMapper();
 
   @Before
   public void setUp()
   {
-    httpClient = createMock(HttpClient.class);
-    selector = createMock(ServerDiscoverySelector.class);
-
-    server = new Server()
-    {
-
-      @Override
-      public String getScheme()
-      {
-        return "http";
-      }
-
-      @Override
-      public int getPort()
-      {
-        return 8080;
-      }
-
-      @Override
-      public String getHost()
-      {
-        return "localhost";
-      }
-
-      @Override
-      public String getAddress()
-      {
-        return "localhost";
-      }
-    };
+    druidLeaderClient = EasyMock.createMock(DruidLeaderClient.class);
 
     long now = System.currentTimeMillis();
 
     result = Collections.singletonList(new TaskLock(
         "groupId",
         "dataSource",
-        new Interval(now - 30 * 1000, now),
+        Intervals.utc(now - 30 * 1000, now),
         "version"
     ));
   }
 
   @Test
-  public void testSubmitSimple() throws JsonProcessingException
+  public void testSubmitSimple() throws Exception
   {
+    Request request = new Request(HttpMethod.POST, new URL("http://localhost:1234/xx"));
+    expect(druidLeaderClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/action"))
+        .andReturn(request);
+
     // return status code 200 and a list with size equals 1
     Map<String, Object> responseBody = new HashMap<String, Object>();
     responseBody.put("result", result);
     String strResult = objectMapper.writeValueAsString(responseBody);
-    StatusResponseHolder responseHolder = new StatusResponseHolder(
+    FullResponseHolder responseHolder = new FullResponseHolder(
         HttpResponseStatus.OK,
+        EasyMock.createNiceMock(HttpResponse.class),
         new StringBuilder().append(strResult)
     );
 
     // set up mocks
-    expect(selector.pick()).andReturn(server);
-    replay(selector);
+    expect(druidLeaderClient.go(request)).andReturn(responseHolder);
+    replay(druidLeaderClient);
 
-    expect(httpClient.go(anyObject(Request.class), anyObject(StatusResponseHandler.class))).andReturn(
-        Futures.immediateFuture(responseHolder)
-    );
-    replay(httpClient);
 
     Task task = new NoopTask("id", 0, 0, null, null, null);
     RemoteTaskActionClient client = new RemoteTaskActionClient(
-        task, httpClient, selector, new RetryPolicyFactory(
+        task, druidLeaderClient, new RetryPolicyFactory(
         new RetryPolicyConfig()
     ), objectMapper
     );
@@ -140,33 +105,35 @@ public class RemoteTaskActionClientTest
     }
 
     Assert.assertEquals(1, result.size());
-    EasyMock.verify(selector, httpClient);
+    EasyMock.verify(druidLeaderClient);
   }
 
   @Test(expected = IOException.class)
-  public void testSubmitWithIllegalStatusCode() throws IOException
+  public void testSubmitWithIllegalStatusCode() throws Exception
   {
     // return status code 400 and a list with size equals 1
+    Request request = new Request(HttpMethod.POST, new URL("http://localhost:1234/xx"));
+    expect(druidLeaderClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/action"))
+        .andReturn(request);
+
+    // return status code 200 and a list with size equals 1
     Map<String, Object> responseBody = new HashMap<String, Object>();
     responseBody.put("result", result);
     String strResult = objectMapper.writeValueAsString(responseBody);
-    StatusResponseHolder responseHolder = new StatusResponseHolder(
+    FullResponseHolder responseHolder = new FullResponseHolder(
         HttpResponseStatus.BAD_REQUEST,
+        EasyMock.createNiceMock(HttpResponse.class),
         new StringBuilder().append(strResult)
     );
 
     // set up mocks
-    expect(selector.pick()).andReturn(server);
-    replay(selector);
+    expect(druidLeaderClient.go(request)).andReturn(responseHolder);
+    replay(druidLeaderClient);
 
-    expect(httpClient.go(anyObject(Request.class), anyObject(StatusResponseHandler.class))).andReturn(
-        Futures.immediateFuture(responseHolder)
-    );
-    replay(httpClient);
 
     Task task = new NoopTask("id", 0, 0, null, null, null);
     RemoteTaskActionClient client = new RemoteTaskActionClient(
-        task, httpClient, selector, new RetryPolicyFactory(
+        task, druidLeaderClient, new RetryPolicyFactory(
         objectMapper.readValue("{\"maxRetryCount\":0}", RetryPolicyConfig.class)
     ), objectMapper
     );

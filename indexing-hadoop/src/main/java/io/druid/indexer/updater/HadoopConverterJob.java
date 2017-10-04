@@ -237,7 +237,7 @@ public class HadoopConverterJob
     }
     converterConfigIntoConfiguration(converterConfig, segments, jobConf);
 
-    jobConf.setNumReduceTasks(0);// Map only. Number of map tasks determined by input format
+    jobConf.setNumReduceTasks(0); // Map only. Number of map tasks determined by input format
     jobConf.setWorkingDirectory(new Path(converterConfig.getDistributedSuccessCache()));
 
     setJobName(jobConf, segments);
@@ -344,7 +344,7 @@ public class HadoopConverterJob
       }
     }
     catch (InterruptedException | ClassNotFoundException e) {
-      RuntimeException exception =  Throwables.propagate(e);
+      RuntimeException exception = Throwables.propagate(e);
       throwable = exception;
       throw exception;
     }
@@ -505,7 +505,7 @@ public class HadoopConverterJob
       final String tmpDirLoc = context.getConfiguration().get(TMP_FILE_LOC_KEY);
       final File tmpDir = Paths.get(tmpDirLoc).toFile();
 
-      final DataSegment segment  = Iterables.getOnlyElement(((DatasourceInputSplit) split).getSegments()).getSegment();
+      final DataSegment segment = Iterables.getOnlyElement(((DatasourceInputSplit) split).getSegments()).getSegment();
 
       final HadoopDruidConverterConfig config = converterConfigFromConfiguration(context.getConfiguration());
 

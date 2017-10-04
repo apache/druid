@@ -22,6 +22,7 @@ package io.druid.indexing.common.actions;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import io.druid.TestUtil;
+import io.druid.java.util.common.Intervals;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -37,7 +38,7 @@ public class SegmentListUsedActionTest
   @Test
   public void testSingleIntervalSerde() throws Exception
   {
-    Interval interval = Interval.parse("2014/2015");
+    Interval interval = Intervals.of("2014/2015");
 
     SegmentListUsedAction expected = new SegmentListUsedAction(
         "dataSource",
@@ -53,7 +54,7 @@ public class SegmentListUsedActionTest
   @Test
   public void testMultiIntervalSerde() throws Exception
   {
-    List<Interval> intervals = ImmutableList.of(Interval.parse("2014/2015"), Interval.parse("2016/2017"));
+    List<Interval> intervals = ImmutableList.of(Intervals.of("2014/2015"), Intervals.of("2016/2017"));
     SegmentListUsedAction expected = new SegmentListUsedAction(
         "dataSource",
         null,
@@ -71,6 +72,6 @@ public class SegmentListUsedActionTest
     String jsonStr = "{\"type\": \"segmentListUsed\", \"dataSource\": \"test\", \"interval\": \"2014/2015\"}";
     SegmentListUsedAction actual = (SegmentListUsedAction) MAPPER.readValue(jsonStr, TaskAction.class);
 
-    Assert.assertEquals(new SegmentListUsedAction("test", Interval.parse("2014/2015"), null), actual);
+    Assert.assertEquals(new SegmentListUsedAction("test", Intervals.of("2014/2015"), null), actual);
   }
 }

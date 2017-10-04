@@ -91,7 +91,8 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
     }
   }
 
-  public List<DruidServerMetadata> getCandidates(final int numCandidates) {
+  public List<DruidServerMetadata> getCandidates(final int numCandidates)
+  {
     synchronized (this) {
       if (numCandidates > 0) {
         return strategy.pick(servers, segment.get(), numCandidates)

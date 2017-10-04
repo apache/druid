@@ -20,6 +20,7 @@
 package io.druid.sql.calcite.planner;
 
 import com.google.common.collect.ImmutableMap;
+import io.druid.java.util.common.DateTimes;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprEval;
 import io.druid.math.expr.ExprType;
@@ -31,7 +32,6 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexExecutor;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.joda.time.DateTime;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -77,7 +77,7 @@ public class DruidRexExecutor implements RexExecutor
           literalValue = exprResult.asBoolean();
         } else if (sqlTypeName == SqlTypeName.DATE || sqlTypeName == SqlTypeName.TIMESTAMP) {
           literalValue = Calcites.jodaToCalciteCalendarLiteral(
-              new DateTime(exprResult.asLong()),
+              DateTimes.utc(exprResult.asLong()),
               plannerContext.getTimeZone()
           );
         } else if (SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName)) {

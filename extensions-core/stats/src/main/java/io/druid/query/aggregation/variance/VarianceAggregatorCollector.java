@@ -48,7 +48,8 @@ import java.util.Comparator;
  */
 public class VarianceAggregatorCollector
 {
-  public static boolean isVariancePop(String estimator) {
+  public static boolean isVariancePop(String estimator)
+  {
     return estimator != null && estimator.equalsIgnoreCase("population");
   }
 
@@ -73,29 +74,29 @@ public class VarianceAggregatorCollector
     }
   };
 
+  void fold(VarianceAggregatorCollector other)
+  {
+    if (other.count == 0) {
+      return;
+    }
+    if (this.count == 0) {
+      this.nvariance = other.nvariance;
+      this.count = other.count;
+      this.sum = other.sum;
+      return;
+    }
+    final double ratio = this.count / (double) other.count;
+    final double t = this.sum / ratio - other.sum;
+
+    this.nvariance += other.nvariance + (ratio / (this.count + other.count) * t * t);
+    this.count += other.count;
+    this.sum += other.sum;
+  }
+
   static Object combineValues(Object lhs, Object rhs)
   {
-    final VarianceAggregatorCollector holder1 = (VarianceAggregatorCollector) lhs;
-    final VarianceAggregatorCollector holder2 = (VarianceAggregatorCollector) rhs;
-
-    if (holder2.count == 0) {
-      return holder1;
-    }
-    if (holder1.count == 0) {
-      holder1.nvariance = holder2.nvariance;
-      holder1.count = holder2.count;
-      holder1.sum = holder2.sum;
-      return holder1;
-    }
-
-    final double ratio = holder1.count / (double) holder2.count;
-    final double t = holder1.sum / ratio - holder2.sum;
-
-    holder1.nvariance += holder2.nvariance + (ratio / (holder1.count + holder2.count) * t * t);
-    holder1.count += holder2.count;
-    holder1.sum += holder2.sum;
-
-    return holder1;
+    ((VarianceAggregatorCollector) lhs).fold((VarianceAggregatorCollector) rhs);
+    return lhs;
   }
 
   static int getMaxIntermediateSize()
@@ -117,6 +118,13 @@ public class VarianceAggregatorCollector
     count = 0;
     sum = 0;
     nvariance = 0;
+  }
+
+  void copyFrom(VarianceAggregatorCollector other)
+  {
+    this.count = other.count;
+    this.sum = other.sum;
+    this.nvariance = other.nvariance;
   }
 
   public VarianceAggregatorCollector(long count, double sum, double nvariance)

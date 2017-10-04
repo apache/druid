@@ -120,7 +120,8 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
     lock.lock();
     try {
       return objects.isEmpty() ? null : objects.pop();
-    } finally {
+    }
+    finally {
       lock.unlock();
     }
   }
@@ -138,7 +139,8 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
         nanos = notEnough.awaitNanos(nanos);
       }
       return objects.pop();
-    } finally {
+    }
+    finally {
       lock.unlock();
     }
   }
@@ -152,7 +154,8 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
         notEnough.await();
       }
       return objects.pop();
-    } finally {
+    }
+    finally {
       lock.unlock();
     }
   }
@@ -211,7 +214,8 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
         }
         return list;
       }
-    } finally {
+    }
+    finally {
       lock.unlock();
     }
   }
@@ -233,7 +237,8 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
         list.add(objects.pop());
       }
       return list;
-    } finally {
+    }
+    finally {
       lock.unlock();
     }
   }
@@ -251,7 +256,8 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
         list.add(objects.pop());
       }
       return list;
-    } finally {
+    }
+    finally {
       lock.unlock();
     }
   }
@@ -272,7 +278,8 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
       } else {
         throw new ISE("Cannot exceed pre-configured maximum size");
       }
-    } finally {
+    }
+    finally {
       lock.unlock();
     }
   }
@@ -290,7 +297,8 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
       } else {
         throw new ISE("Cannot exceed pre-configured maximum size");
       }
-    } finally {
+    }
+    finally {
       lock.unlock();
     }
   }

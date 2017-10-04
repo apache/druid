@@ -94,7 +94,6 @@ public class TopNQueryEngine
               @Override
               public Result<TopNResultValue> apply(Cursor input)
               {
-                log.debug("Running over cursor[%s]", adapter.getInterval(), input.getTime());
                 if (queryMetrics != null) {
                   queryMetrics.cursor(input);
                 }

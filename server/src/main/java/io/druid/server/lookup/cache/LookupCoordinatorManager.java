@@ -25,7 +25,6 @@ import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
@@ -47,17 +46,16 @@ import io.druid.audit.AuditInfo;
 import io.druid.common.config.JacksonConfigManager;
 import io.druid.concurrent.Execs;
 import io.druid.concurrent.LifecycleLock;
-import io.druid.guice.annotations.Global;
+import io.druid.discovery.DruidNodeDiscoveryProvider;
+import io.druid.guice.annotations.EscalatedGlobal;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StreamUtils;
 import io.druid.java.util.common.StringUtils;
-import io.druid.query.lookup.LookupModule;
 import io.druid.query.lookup.LookupsState;
 import io.druid.server.http.HostAndPortWithScheme;
-import io.druid.server.listener.announcer.ListenerDiscoverer;
 import io.druid.server.listener.resource.ListenerResource;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -109,7 +107,9 @@ public class LookupCoordinatorManager
 
   private static final EmittingLogger LOG = new EmittingLogger(LookupCoordinatorManager.class);
 
-  private final ListenerDiscoverer listenerDiscoverer;
+  private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
+  private LookupNodeDiscovery lookupNodeDiscovery;
+
   private final JacksonConfigManager configManager;
   private final LookupCoordinatorManagerConfig lookupCoordinatorManagerConfig;
   private final LookupsCommunicator lookupsCommunicator;
@@ -133,33 +133,40 @@ public class LookupCoordinatorManager
 
   @Inject
   public LookupCoordinatorManager(
-      final @Global HttpClient httpClient,
-      final ListenerDiscoverer listenerDiscoverer,
+      final @EscalatedGlobal HttpClient httpClient,
+      final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       final @Smile ObjectMapper smileMapper,
       final JacksonConfigManager configManager,
       final LookupCoordinatorManagerConfig lookupCoordinatorManagerConfig
   )
   {
     this(
-        listenerDiscoverer,
+        druidNodeDiscoveryProvider,
         configManager,
         lookupCoordinatorManagerConfig,
-        new LookupsCommunicator(httpClient, lookupCoordinatorManagerConfig, smileMapper)
+        new LookupsCommunicator(
+            httpClient,
+            lookupCoordinatorManagerConfig,
+            smileMapper
+        ),
+        null
     );
   }
 
   @VisibleForTesting
   LookupCoordinatorManager(
-      final ListenerDiscoverer listenerDiscoverer,
+      final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       final JacksonConfigManager configManager,
       final LookupCoordinatorManagerConfig lookupCoordinatorManagerConfig,
-      final LookupsCommunicator lookupsCommunicator
+      final LookupsCommunicator lookupsCommunicator,
+      final LookupNodeDiscovery lookupNodeDiscovery
   )
   {
-    this.listenerDiscoverer = listenerDiscoverer;
+    this.druidNodeDiscoveryProvider = druidNodeDiscoveryProvider;
     this.configManager = configManager;
     this.lookupCoordinatorManagerConfig = lookupCoordinatorManagerConfig;
     this.lookupsCommunicator = lookupsCommunicator;
+    this.lookupNodeDiscovery = lookupNodeDiscovery;
   }
 
   public boolean updateLookup(
@@ -194,7 +201,7 @@ public class LookupCoordinatorManager
       }
     }
 
-    synchronized(this) {
+    synchronized (this) {
       final Map<String, Map<String, LookupExtractorFactoryMapContainer>> priorSpec = getKnownLookups();
       if (priorSpec == null && !updateSpec.isEmpty()) {
         // To prevent accidentally erasing configs if we haven't updated our cache of the values
@@ -250,7 +257,7 @@ public class LookupCoordinatorManager
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(5, TimeUnit.SECONDS), "not started");
 
-    synchronized(this) {
+    synchronized (this) {
       final Map<String, Map<String, LookupExtractorFactoryMapContainer>> priorSpec = getKnownLookups();
       if (priorSpec == null) {
         LOG.warn("Requested delete lookup [%s]/[%s]. But no lookups exist!", tier, lookup);
@@ -275,35 +282,26 @@ public class LookupCoordinatorManager
     }
   }
 
-  public Collection<String> discoverTiers()
+  public Set<String> discoverTiers()
   {
-    try {
-      Preconditions.checkState(lifecycleLock.awaitStarted(5, TimeUnit.SECONDS), "not started");
-      return listenerDiscoverer.discoverChildren(LookupCoordinatorManager.LOOKUP_LISTEN_ANNOUNCE_KEY);
-    }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
-    }
+    Preconditions.checkState(lifecycleLock.awaitStarted(5, TimeUnit.SECONDS), "not started");
+    return lookupNodeDiscovery.getAllTiers();
   }
 
   public Collection<HostAndPort> discoverNodesInTier(String tier)
   {
-    try {
-      Preconditions.checkState(lifecycleLock.awaitStarted(5, TimeUnit.SECONDS), "not started");
-      return Collections2.transform(
-          listenerDiscoverer.getNodes(LookupModule.getTierListenerPath(tier)),
-          new Function<HostAndPortWithScheme, HostAndPort>()
+    Preconditions.checkState(lifecycleLock.awaitStarted(5, TimeUnit.SECONDS), "not started");
+    return Collections2.transform(
+        lookupNodeDiscovery.getNodesInTier(tier),
+        new Function<HostAndPortWithScheme, HostAndPort>()
+        {
+          @Override
+          public HostAndPort apply(HostAndPortWithScheme input)
           {
-            @Override
-            public HostAndPort apply(HostAndPortWithScheme input)
-            {
-              return input.getHostAndPort();
-            }
+            return input.getHostAndPort();
           }
-      );
-    } catch (IOException e) {
-      throw Throwables.propagate(e);
-    }
+        }
+    );
   }
 
   public Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> getLastKnownLookupsStateOnNodes()
@@ -339,13 +337,17 @@ public class LookupCoordinatorManager
   // coordinator becomes leader and drops leadership in quick succession.
   public void start()
   {
-    synchronized(lifecycleLock) {
+    synchronized (lifecycleLock) {
       if (!lifecycleLock.canStart()) {
         throw new ISE("LookupCoordinatorManager can't start.");
       }
 
       try {
         LOG.debug("Starting.");
+
+        if (lookupNodeDiscovery == null) {
+          lookupNodeDiscovery = new LookupNodeDiscovery(druidNodeDiscoveryProvider);
+        }
 
         //first ensure that previous executorService from last cycle of start/stop has finished completely.
         //so that we don't have multiple live executorService instances lying around doing lookup management.
@@ -521,7 +523,7 @@ public class LookupCoordinatorManager
         LOG.debug("Starting lookup mgmt for tier [%s].", tierEntry.getKey());
 
         final Map<String, LookupExtractorFactoryMapContainer> tierLookups = tierEntry.getValue();
-        for (final HostAndPortWithScheme node : listenerDiscoverer.getNodes(LookupModule.getTierListenerPath(tierEntry.getKey()))) {
+        for (final HostAndPortWithScheme node : lookupNodeDiscovery.getNodesInTier(tierEntry.getKey())) {
 
           LOG.debug(
               "Starting lookup mgmt for tier [%s] and host [%s:%s:%s].",
@@ -563,20 +565,21 @@ public class LookupCoordinatorManager
         allFuture.get(lookupCoordinatorManagerConfig.getAllHostTimeout().getMillis(), TimeUnit.MILLISECONDS)
                  .stream()
                  .filter(Objects::nonNull)
-                 .forEach(stateBuilder::put)
-        ;
+                 .forEach(stateBuilder::put);
         knownOldState.set(stateBuilder.build());
       }
       catch (InterruptedException ex) {
         allFuture.cancel(true);
         Thread.currentThread().interrupt();
         throw ex;
-      } catch (Exception ex) {
+      }
+      catch (Exception ex) {
         allFuture.cancel(true);
         throw ex;
       }
 
-    } catch (Exception ex) {
+    }
+    catch (Exception ex) {
       LOG.makeAlert(ex, "Failed to finish lookup management loop.").emit();
     }
 
@@ -760,10 +763,9 @@ public class LookupCoordinatorManager
                 response
             );
             return response;
-          } catch (IOException ex) {
-            throw new IOE(
-                ex, "Failed to parse update response from [%s]. response [%s]", url, result
-            );
+          }
+          catch (IOException ex) {
+            throw new IOE(ex, "Failed to parse update response from [%s]. response [%s]", url, result);
           }
         } else {
           final ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -808,17 +810,16 @@ public class LookupCoordinatorManager
                 LOOKUPS_STATE_TYPE_REFERENCE
             );
             LOG.debug(
-                "Get on [%s], Status: %s reason: [%s], Response [%s].", url, returnCode.get(), reasonString.get(),
+                "Get on [%s], Status: [%s] reason: [%s], Response [%s].",
+                url,
+                returnCode.get(),
+                reasonString.get(),
                 response
             );
             return response;
-          } catch(IOException ex) {
-            throw new IOE(
-                ex,
-                "Failed to parser GET lookups response from [%s]. response [%s].",
-                url,
-                result
-            );
+          }
+          catch (IOException ex) {
+            throw new IOE(ex, "Failed to parser GET lookups response from [%s]. response [%s].", url, result);
           }
         } else {
           final ByteArrayOutputStream baos = new ByteArrayOutputStream();

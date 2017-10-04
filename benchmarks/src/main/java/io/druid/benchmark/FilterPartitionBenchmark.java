@@ -44,6 +44,7 @@ import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.DruidDoublePredicate;
 import io.druid.query.filter.DruidFloatPredicate;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
@@ -513,7 +514,9 @@ public class FilterPartitionBenchmark
           {
             List<String> strings = new ArrayList<String>();
             List<DimensionSelector> selectors = new ArrayList<>();
-            selectors.add(input.makeDimensionSelector(new DefaultDimensionSpec("dimSequential", null)));
+            selectors.add(
+                input.getColumnSelectorFactory().makeDimensionSelector(new DefaultDimensionSpec("dimSequential", null))
+            );
             //selectors.add(input.makeDimensionSelector(new DefaultDimensionSpec("dimB", null)));
             while (!input.isDone()) {
               for (DimensionSelector selector : selectors) {
@@ -539,9 +542,9 @@ public class FilterPartitionBenchmark
           public List<Long> apply(Cursor input)
           {
             List<Long> longvals = new ArrayList<Long>();
-            LongColumnSelector selector = input.makeLongColumnSelector("sumLongSequential");
+            LongColumnSelector selector = input.getColumnSelectorFactory().makeLongColumnSelector("sumLongSequential");
             while (!input.isDone()) {
-              long rowval = selector.get();
+              long rowval = selector.getLong();
               blackhole.consume(rowval);
               input.advance();
             }
@@ -632,6 +635,12 @@ public class FilterPartitionBenchmark
           public DruidFloatPredicate makeFloatPredicate()
           {
             return DruidFloatPredicate.ALWAYS_FALSE;
+          }
+
+          @Override
+          public DruidDoublePredicate makeDoublePredicate()
+          {
+            return DruidDoublePredicate.ALWAYS_FALSE;
           }
         };
 

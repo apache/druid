@@ -29,6 +29,9 @@ import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
+import io.druid.query.aggregation.FloatMaxAggregatorFactory;
+import io.druid.query.aggregation.FloatMinAggregatorFactory;
+import io.druid.query.aggregation.FloatSumAggregatorFactory;
 import io.druid.query.aggregation.HistogramAggregatorFactory;
 import io.druid.query.aggregation.JavaScriptAggregatorFactory;
 import io.druid.query.aggregation.LongMaxAggregatorFactory;
@@ -37,12 +40,14 @@ import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
+import io.druid.query.aggregation.first.FloatFirstAggregatorFactory;
 import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.query.aggregation.hyperloglog.PreComputedHyperUniquesSerde;
 import io.druid.query.aggregation.last.DoubleLastAggregatorFactory;
+import io.druid.query.aggregation.last.FloatLastAggregatorFactory;
 import io.druid.query.aggregation.last.LongLastAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
@@ -81,7 +86,10 @@ public class AggregatorsModule extends SimpleModule
       @JsonSubTypes.Type(name = "count", value = CountAggregatorFactory.class),
       @JsonSubTypes.Type(name = "longSum", value = LongSumAggregatorFactory.class),
       @JsonSubTypes.Type(name = "doubleSum", value = DoubleSumAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "floatSum", value = FloatSumAggregatorFactory.class),
       @JsonSubTypes.Type(name = "doubleMax", value = DoubleMaxAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "floatMin", value = FloatMinAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "floatMax", value = FloatMaxAggregatorFactory.class),
       @JsonSubTypes.Type(name = "doubleMin", value = DoubleMinAggregatorFactory.class),
       @JsonSubTypes.Type(name = "longMax", value = LongMaxAggregatorFactory.class),
       @JsonSubTypes.Type(name = "longMin", value = LongMinAggregatorFactory.class),
@@ -92,8 +100,10 @@ public class AggregatorsModule extends SimpleModule
       @JsonSubTypes.Type(name = "filtered", value = FilteredAggregatorFactory.class),
       @JsonSubTypes.Type(name = "longFirst", value = LongFirstAggregatorFactory.class),
       @JsonSubTypes.Type(name = "doubleFirst", value = DoubleFirstAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "floatFirst", value = FloatFirstAggregatorFactory.class),
       @JsonSubTypes.Type(name = "longLast", value = LongLastAggregatorFactory.class),
-      @JsonSubTypes.Type(name = "doubleLast", value = DoubleLastAggregatorFactory.class)
+      @JsonSubTypes.Type(name = "doubleLast", value = DoubleLastAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "floatLast", value = FloatLastAggregatorFactory.class)
   })
   public static interface AggregatorFactoryMixin
   {

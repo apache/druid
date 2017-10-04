@@ -22,12 +22,12 @@ package io.druid.segment;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.ConciseBitmapFactory;
+import io.druid.java.util.common.Intervals;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.column.Column;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
 import org.apache.commons.io.FileUtils;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -53,7 +53,7 @@ public class EmptyIndexTest
           .buildOnheap();
 
       IncrementalIndexAdapter emptyIndexAdapter = new IncrementalIndexAdapter(
-          new Interval("2012-08-01/P3D"),
+          Intervals.of("2012-08-01/P3D"),
           emptyIndex,
           new ConciseBitmapFactory()
       );
@@ -69,7 +69,7 @@ public class EmptyIndexTest
 
       Assert.assertEquals("getDimensionNames", 0, Iterables.size(emptyQueryableIndex.getAvailableDimensions()));
       Assert.assertEquals("getMetricNames", 0, Iterables.size(emptyQueryableIndex.getColumnNames()));
-      Assert.assertEquals("getDataInterval", new Interval("2012-08-01/P3D"), emptyQueryableIndex.getDataInterval());
+      Assert.assertEquals("getDataInterval", Intervals.of("2012-08-01/P3D"), emptyQueryableIndex.getDataInterval());
       Assert.assertEquals(
           "getReadOnlyTimestamps",
           0,

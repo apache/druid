@@ -25,8 +25,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-
-import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
 import io.druid.timeline.partition.ImmutablePartitionHolder;
 import io.druid.timeline.partition.IntegerPartitionChunk;
@@ -86,7 +86,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-04-02/2011-04-06", "2", 1),
             createExpected("2011-04-06/2011-04-09", "3", 4)
         ),
-        timeline.lookup(new Interval("2011-04-01/2011-04-09"))
+        timeline.lookup(Intervals.of("2011-04-01/2011-04-09"))
     );
   }
 
@@ -95,7 +95,7 @@ public class VersionedIntervalTimelineTest
   {
     Assert.assertEquals(
         makeSingle(1),
-        timeline.remove(new Interval("2011-04-01/2011-04-09"), "2", makeSingle(1))
+        timeline.remove(Intervals.of("2011-04-01/2011-04-09"), "2", makeSingle(1))
     );
     assertValues(
         Arrays.asList(
@@ -104,7 +104,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-04-03/2011-04-06", "1", 3),
             createExpected("2011-04-06/2011-04-09", "3", 4)
         ),
-        timeline.lookup(new Interval("2011-04-01/2011-04-09"))
+        timeline.lookup(Intervals.of("2011-04-01/2011-04-09"))
     );
   }
 
@@ -113,11 +113,11 @@ public class VersionedIntervalTimelineTest
   {
     Assert.assertEquals(
         makeSingle(1),
-        timeline.remove(new Interval("2011-04-01/2011-04-09"), "2", makeSingle(1))
+        timeline.remove(Intervals.of("2011-04-01/2011-04-09"), "2", makeSingle(1))
     );
     Assert.assertEquals(
         makeSingle(2),
-        timeline.remove(new Interval("2011-04-01/2011-04-03"), "1", makeSingle(2))
+        timeline.remove(Intervals.of("2011-04-01/2011-04-03"), "1", makeSingle(2))
     );
     assertValues(
         Arrays.asList(
@@ -125,7 +125,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-04-03/2011-04-06", "1", 3),
             createExpected("2011-04-06/2011-04-09", "3", 4)
         ),
-        timeline.lookup(new Interval("2011-04-01/2011-04-09"))
+        timeline.lookup(Intervals.of("2011-04-01/2011-04-09"))
     );
   }
 
@@ -134,7 +134,7 @@ public class VersionedIntervalTimelineTest
   {
     Assert.assertEquals(
         makeSingle(1),
-        timeline.remove(new Interval("2011-04-01/2011-04-09"), "2", makeSingle(1))
+        timeline.remove(Intervals.of("2011-04-01/2011-04-09"), "2", makeSingle(1))
     );
     assertValues(
         Arrays.asList(
@@ -142,7 +142,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-04-02/2011-04-03", "1", 2),
             createExpected("2011-04-03/2011-04-05", "1", 3)
         ),
-        timeline.lookup(new Interval("2011-04-01/2011-04-05"))
+        timeline.lookup(Intervals.of("2011-04-01/2011-04-05"))
     );
 
     assertValues(
@@ -150,7 +150,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-04-02T18/2011-04-03", "1", 2),
             createExpected("2011-04-03/2011-04-04T01", "1", 3)
         ),
-        timeline.lookup(new Interval("2011-04-02T18/2011-04-04T01"))
+        timeline.lookup(Intervals.of("2011-04-02T18/2011-04-04T01"))
     );
   }
 
@@ -161,21 +161,21 @@ public class VersionedIntervalTimelineTest
         Collections.singletonList(
             createExpected("2011-05-01/2011-05-09", "4", 9)
         ),
-        timeline.lookup(new Interval("2011-05-01/2011-05-09"))
+        timeline.lookup(Intervals.of("2011-05-01/2011-05-09"))
     );
   }
 
   @Test
   public void testMay2() throws Exception
   {
-    Assert.assertNotNull(timeline.remove(new Interval("2011-05-01/2011-05-10"), "4", makeSingle(1)));
+    Assert.assertNotNull(timeline.remove(Intervals.of("2011-05-01/2011-05-10"), "4", makeSingle(1)));
     assertValues(
         Arrays.asList(
             createExpected("2011-05-01/2011-05-03", "2", 7),
             createExpected("2011-05-03/2011-05-04", "3", 8),
             createExpected("2011-05-04/2011-05-05", "2", 7)
         ),
-        timeline.lookup(new Interval("2011-05-01/2011-05-09"))
+        timeline.lookup(Intervals.of("2011-05-01/2011-05-09"))
     );
   }
 
@@ -184,25 +184,25 @@ public class VersionedIntervalTimelineTest
   {
     Assert.assertEquals(
         makeSingle(9),
-        timeline.remove(new Interval("2011-05-01/2011-05-10"), "4", makeSingle(9))
+        timeline.remove(Intervals.of("2011-05-01/2011-05-10"), "4", makeSingle(9))
     );
     Assert.assertEquals(
         makeSingle(7),
-        timeline.remove(new Interval("2011-05-01/2011-05-05"), "2", makeSingle(7))
+        timeline.remove(Intervals.of("2011-05-01/2011-05-05"), "2", makeSingle(7))
     );
     assertValues(
         Arrays.asList(
             createExpected("2011-05-01/2011-05-02", "1", 6),
             createExpected("2011-05-03/2011-05-04", "3", 8)
         ),
-        timeline.lookup(new Interval("2011-05-01/2011-05-09"))
+        timeline.lookup(Intervals.of("2011-05-01/2011-05-09"))
     );
   }
 
   @Test
   public void testInsertInWrongOrder() throws Exception
   {
-    DateTime overallStart = new DateTime().minus(Hours.TWO);
+    DateTime overallStart = DateTimes.nowUtc().minus(Hours.TWO);
 
     Assert.assertTrue(
         "These timestamps have to be at the end AND include now for this test to work.",
@@ -241,32 +241,32 @@ public class VersionedIntervalTimelineTest
   {
     Assert.assertEquals(
         new ImmutablePartitionHolder<Integer>(new PartitionHolder<Integer>(makeSingle(1))),
-        timeline.findEntry(new Interval("2011-10-01/2011-10-02"), "1")
+        timeline.findEntry(Intervals.of("2011-10-01/2011-10-02"), "1")
     );
 
     Assert.assertEquals(
         new ImmutablePartitionHolder<Integer>(new PartitionHolder<Integer>(makeSingle(1))),
-        timeline.findEntry(new Interval("2011-10-01/2011-10-01T10"), "1")
+        timeline.findEntry(Intervals.of("2011-10-01/2011-10-01T10"), "1")
     );
 
     Assert.assertEquals(
         new ImmutablePartitionHolder<Integer>(new PartitionHolder<Integer>(makeSingle(1))),
-        timeline.findEntry(new Interval("2011-10-01T02/2011-10-02"), "1")
+        timeline.findEntry(Intervals.of("2011-10-01T02/2011-10-02"), "1")
     );
 
     Assert.assertEquals(
         new ImmutablePartitionHolder<Integer>(new PartitionHolder<Integer>(makeSingle(1))),
-        timeline.findEntry(new Interval("2011-10-01T04/2011-10-01T17"), "1")
+        timeline.findEntry(Intervals.of("2011-10-01T04/2011-10-01T17"), "1")
     );
 
     Assert.assertEquals(
         null,
-        timeline.findEntry(new Interval("2011-10-01T04/2011-10-01T17"), "2")
+        timeline.findEntry(Intervals.of("2011-10-01T04/2011-10-01T17"), "2")
     );
 
     Assert.assertEquals(
         null,
-        timeline.findEntry(new Interval("2011-10-01T04/2011-10-02T17"), "1")
+        timeline.findEntry(Intervals.of("2011-10-01T04/2011-10-02T17"), "1")
     );
   }
 
@@ -280,7 +280,7 @@ public class VersionedIntervalTimelineTest
 
     Assert.assertEquals(
         new ImmutablePartitionHolder<Integer>(new PartitionHolder<Integer>(makeSingle(1))),
-        timeline.findEntry(new Interval("2011-01-02T02/2011-01-04"), "1")
+        timeline.findEntry(Intervals.of("2011-01-02T02/2011-01-04"), "1")
     );
   }
 
@@ -301,7 +301,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-10-04/2011-10-05", "4", 4),
             createExpected("2011-10-05/2011-10-06", "5", 5)
         ),
-        timeline.lookup(new Interval("2011-10-01/2011-10-06"))
+        timeline.lookup(Intervals.of("2011-10-01/2011-10-06"))
     );
   }
 
@@ -313,14 +313,14 @@ public class VersionedIntervalTimelineTest
     add("2011-10-06/2011-10-07", "6", IntegerPartitionChunk.make(null, 10, 0, 60));
     assertValues(
         ImmutableList.of(createExpected("2011-10-05/2011-10-06", "5", 5)),
-        timeline.lookup(new Interval("2011-10-05/2011-10-07"))
+        timeline.lookup(Intervals.of("2011-10-05/2011-10-07"))
     );
     Assert.assertTrue("Expected no overshadowed entries", timeline.findOvershadowed().isEmpty());
 
     add("2011-10-06/2011-10-07", "6", IntegerPartitionChunk.make(10, 20, 1, 61));
     assertValues(
         ImmutableList.of(createExpected("2011-10-05/2011-10-06", "5", 5)),
-        timeline.lookup(new Interval("2011-10-05/2011-10-07"))
+        timeline.lookup(Intervals.of("2011-10-05/2011-10-07"))
     );
     Assert.assertTrue("Expected no overshadowed entries", timeline.findOvershadowed().isEmpty());
 
@@ -337,7 +337,7 @@ public class VersionedIntervalTimelineTest
                 )
             )
         ),
-        timeline.lookup(new Interval("2011-10-05/2011-10-07"))
+        timeline.lookup(Intervals.of("2011-10-05/2011-10-07"))
     );
     Assert.assertTrue("Expected no overshadowed entries", timeline.findOvershadowed().isEmpty());
   }
@@ -368,10 +368,10 @@ public class VersionedIntervalTimelineTest
     testIncompletePartitionDoesNotOvershadow();
 
     final IntegerPartitionChunk<Integer> chunk = IntegerPartitionChunk.make(null, 10, 0, 60);
-    Assert.assertEquals(chunk, timeline.remove(new Interval("2011-10-05/2011-10-07"), "6", chunk));
+    Assert.assertEquals(chunk, timeline.remove(Intervals.of("2011-10-05/2011-10-07"), "6", chunk));
     assertValues(
         ImmutableList.of(createExpected("2011-10-05/2011-10-06", "5", 5)),
-        timeline.lookup(new Interval("2011-10-05/2011-10-07"))
+        timeline.lookup(Intervals.of("2011-10-05/2011-10-07"))
     );
     Assert.assertTrue("Expected no overshadowed entries", timeline.findOvershadowed().isEmpty());
   }
@@ -384,18 +384,18 @@ public class VersionedIntervalTimelineTest
         Collections.singletonList(
             createExpected("2011-05-01/2011-05-09", "5", 10)
         ),
-        timeline.lookup(new Interval("2011-05-01/2011-05-09"))
+        timeline.lookup(Intervals.of("2011-05-01/2011-05-09"))
     );
 
     Assert.assertEquals(
         makeSingle(10),
-        timeline.remove(new Interval("2011-05-01/2011-05-10"), "5", makeSingle(10))
+        timeline.remove(Intervals.of("2011-05-01/2011-05-10"), "5", makeSingle(10))
     );
     assertValues(
         Collections.singletonList(
             createExpected("2011-05-01/2011-05-09", "4", 9)
         ),
-        timeline.lookup(new Interval("2011-05-01/2011-05-09"))
+        timeline.lookup(Intervals.of("2011-05-01/2011-05-09"))
     );
 
     add("2011-05-01/2011-05-10", "5", 10);
@@ -403,18 +403,18 @@ public class VersionedIntervalTimelineTest
         Collections.singletonList(
             createExpected("2011-05-01/2011-05-09", "5", 10)
         ),
-        timeline.lookup(new Interval("2011-05-01/2011-05-09"))
+        timeline.lookup(Intervals.of("2011-05-01/2011-05-09"))
     );
 
     Assert.assertEquals(
         makeSingle(9),
-        timeline.remove(new Interval("2011-05-01/2011-05-10"), "4", makeSingle(9))
+        timeline.remove(Intervals.of("2011-05-01/2011-05-10"), "4", makeSingle(9))
     );
     assertValues(
         Collections.singletonList(
             createExpected("2011-05-01/2011-05-09", "5", 10)
         ),
-        timeline.lookup(new Interval("2011-05-01/2011-05-09"))
+        timeline.lookup(Intervals.of("2011-05-01/2011-05-09"))
     );
   }
 
@@ -454,7 +454,7 @@ public class VersionedIntervalTimelineTest
         Collections.singletonList(
             createExpected("2011-01-01/2011-01-10", "2", 2)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-10"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-10"))
     );
   }
 
@@ -475,7 +475,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-05/2011-01-15", "2", 3),
             createExpected("2011-01-15/2011-01-20", "1", 2)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-20"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-20"))
     );
   }
 
@@ -496,7 +496,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-05/2011-01-15", "2", 3),
             createExpected("2011-01-15/2011-01-20", "1", 2)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-20"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-20"))
     );
   }
 
@@ -515,7 +515,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-01/2011-01-05", "1", 1),
             createExpected("2011-01-05/2011-01-15", "2", 3)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-15"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-15"))
     );
   }
 
@@ -534,7 +534,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-01/2011-01-05", "1", 1),
             createExpected("2011-01-05/2011-01-15", "2", 3)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-15"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-15"))
     );
   }
 
@@ -553,7 +553,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-01/2011-01-10", "2", 1),
             createExpected("2011-01-10/2011-01-15", "1", 3)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-15"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-15"))
     );
   }
 
@@ -572,7 +572,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-01/2011-01-10", "2", 1),
             createExpected("2011-01-10/2011-01-15", "1", 3)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-15"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-15"))
     );
   }
 
@@ -592,7 +592,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-05/2011-01-15", "2", 3),
             createExpected("2011-01-15/2011-01-20", "1", 2)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-20"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-20"))
     );
   }
 
@@ -612,7 +612,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-05/2011-01-15", "2", 3),
             createExpected("2011-01-15/2011-01-20", "1", 2)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-20"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-20"))
     );
   }
 
@@ -632,7 +632,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-01/2011-01-15", "2", 3),
             createExpected("2011-01-15/2011-01-20", "1", 2)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-20"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-20"))
     );
   }
 
@@ -652,7 +652,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-01/2011-01-15", "2", 3),
             createExpected("2011-01-15/2011-01-20", "1", 2)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-20"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-20"))
     );
   }
 
@@ -674,7 +674,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-03/2011-01-06", "3", 3),
             createExpected("2011-01-06/2011-01-20", "2", 2)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-20"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-20"))
     );
   }
 
@@ -696,7 +696,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-03/2011-01-06", "3", 3),
             createExpected("2011-01-06/2011-01-20", "2", 2)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-20"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-20"))
     );
   }
 
@@ -718,7 +718,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-03/2011-01-06", "3", 3),
             createExpected("2011-01-06/2011-01-20", "2", 2)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-20"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-20"))
     );
   }
 
@@ -741,7 +741,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-06/2011-01-10", "2", 2),
             createExpected("2011-01-10/2011-01-20", "1", 1)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-20"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-20"))
     );
   }
 
@@ -764,7 +764,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-06/2011-01-10", "2", 2),
             createExpected("2011-01-10/2011-01-20", "1", 1)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-20"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-20"))
     );
   }
 
@@ -787,7 +787,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-06/2011-01-10", "2", 2),
             createExpected("2011-01-10/2011-01-20", "1", 1)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-20"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-20"))
     );
   }
 
@@ -811,7 +811,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-13/2011-01-15", "1", 2),
             createExpected("2011-01-15/2011-01-20", "1", 3)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-20"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-20"))
     );
   }
 
@@ -835,7 +835,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-13/2011-01-15", "1", 2),
             createExpected("2011-01-15/2011-01-20", "1", 3)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-20"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-20"))
     );
   }
 
@@ -855,7 +855,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-01/2011-01-10", "2", 2),
             createExpected("2011-01-10/2011-01-20", "2", 3)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-20"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-20"))
     );
   }
 
@@ -875,7 +875,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-01/2011-01-10", "2", 2),
             createExpected("2011-01-10/2011-01-20", "2", 3)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-20"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-20"))
     );
   }
 
@@ -897,7 +897,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-05/2011-01-15", "2", 2),
             createExpected("2011-01-15/2011-01-25", "3", 3)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-25"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-25"))
     );
   }
 
@@ -919,7 +919,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-05/2011-01-15", "2", 2),
             createExpected("2011-01-15/2011-01-25", "3", 3)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-25"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-25"))
     );
   }
 
@@ -941,7 +941,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-05/2011-01-13", "1", 1),
             createExpected("2011-01-13/2011-01-20", "2", 2)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-20"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-20"))
     );
   }
 
@@ -961,7 +961,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-01/2011-01-15", "2", 2),
             createExpected("2011-01-15/2011-01-20", "1", 1)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-20"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-20"))
     );
   }
 
@@ -983,7 +983,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-13/2011-01-17", "2", 3),
             createExpected("2011-01-17/2011-01-20", "1", 1)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-20"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-20"))
     );
   }
 
@@ -1005,7 +1005,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-13/2011-01-17", "2", 3),
             createExpected("2011-01-17/2011-01-20", "1", 1)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-20"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-20"))
     );
   }
 
@@ -1026,7 +1026,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-05/2011-01-15", "1", 1),
             createExpected("2011-01-15/2011-01-20", "2", 3)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-20"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-20"))
     );
   }
 
@@ -1047,7 +1047,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-05/2011-01-15", "1", 1),
             createExpected("2011-01-15/2011-01-20", "2", 3)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-20"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-20"))
     );
   }
 
@@ -1072,7 +1072,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-04/2011-01-05", "3", 3),
             createExpected("2011-01-05/2011-01-06", "4", 4)
         ),
-        timeline.lookup(new Interval("0000-01-01/3000-01-01"))
+        timeline.lookup(Intervals.of("0000-01-01/3000-01-01"))
     );
   }
 
@@ -1093,7 +1093,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-01T12/2011-01-02", "3", 3),
             createExpected("2011-01-02/3011-01-03", "1", 1)
         ),
-        timeline.lookup(new Interval("2011-01-01/3011-01-03"))
+        timeline.lookup(Intervals.of("2011-01-01/3011-01-03"))
     );
   }
 
@@ -1175,13 +1175,13 @@ public class VersionedIntervalTimelineTest
     add("2011-01-01/2011-01-20", "1", 1);
     add("2011-01-10/2011-01-15", "2", 2);
 
-    timeline.remove(new Interval("2011-01-10/2011-01-15"), "2", makeSingle(2));
+    timeline.remove(Intervals.of("2011-01-10/2011-01-15"), "2", makeSingle(2));
 
     assertValues(
         Collections.singletonList(
             createExpected("2011-01-01/2011-01-20", "1", 1)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-20"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-20"))
     );
   }
 
@@ -1194,7 +1194,7 @@ public class VersionedIntervalTimelineTest
     add("2011-01-10/2011-01-20", "2", 2);
     add("2011-01-20/2011-01-30", "3", 4);
 
-    timeline.remove(new Interval("2011-01-10/2011-01-20"), "2", makeSingle(2));
+    timeline.remove(Intervals.of("2011-01-10/2011-01-20"), "2", makeSingle(2));
 
     assertValues(
         Arrays.asList(
@@ -1202,7 +1202,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-20/2011-01-30", "3", 4)
 
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-30"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-30"))
     );
   }
 
@@ -1215,15 +1215,15 @@ public class VersionedIntervalTimelineTest
     add("2011-01-02/2011-01-03", "2", 2);
     add("2011-01-10/2011-01-14", "2", 3);
 
-    timeline.remove(new Interval("2011-01-02/2011-01-03"), "2", makeSingle(2));
-    timeline.remove(new Interval("2011-01-10/2011-01-14"), "2", makeSingle(3));
+    timeline.remove(Intervals.of("2011-01-02/2011-01-03"), "2", makeSingle(2));
+    timeline.remove(Intervals.of("2011-01-10/2011-01-14"), "2", makeSingle(3));
 
     assertValues(
         Collections.singletonList(
             createExpected("2011-01-01/2011-01-20", "1", 1)
 
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-20"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-20"))
     );
   }
 
@@ -1236,7 +1236,7 @@ public class VersionedIntervalTimelineTest
     add("2011-01-10/2011-01-15", "2", 2);
     add("2011-01-15/2011-01-20", "2", 3);
 
-    timeline.remove(new Interval("2011-01-15/2011-01-20"), "2", makeSingle(3));
+    timeline.remove(Intervals.of("2011-01-15/2011-01-20"), "2", makeSingle(3));
 
     assertValues(
         Arrays.asList(
@@ -1244,7 +1244,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-10/2011-01-15", "2", 2),
             createExpected("2011-01-15/2011-01-20", "1", 1)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-20"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-20"))
     );
   }
 
@@ -1255,14 +1255,14 @@ public class VersionedIntervalTimelineTest
 
     add("2011-01-01/2011-01-20", "1", 1);
     add("2011-01-10/2011-01-15", "2", 2);
-    timeline.remove(new Interval("2011-01-10/2011-01-15"), "2", makeSingle(2));
+    timeline.remove(Intervals.of("2011-01-10/2011-01-15"), "2", makeSingle(2));
     add("2011-01-01/2011-01-20", "1", 1);
 
     assertValues(
         Collections.singletonList(
             createExpected("2011-01-01/2011-01-20", "1", 1)
         ),
-        timeline.lookup(new Interval("2011-01-01/2011-01-20"))
+        timeline.lookup(Intervals.of("2011-01-01/2011-01-20"))
     );
   }
 
@@ -1271,11 +1271,11 @@ public class VersionedIntervalTimelineTest
   {
     Assert.assertNull(
         "Don't have it, should be null",
-        timeline.remove(new Interval("1970-01-01/2025-04-20"), "1", makeSingle(1))
+        timeline.remove(Intervals.of("1970-01-01/2025-04-20"), "1", makeSingle(1))
     );
     Assert.assertNull(
         "Don't have it, should be null",
-        timeline.remove(new Interval("2011-04-01/2011-04-09"), "version does not exist", makeSingle(1))
+        timeline.remove(Intervals.of("2011-04-01/2011-04-09"), "version does not exist", makeSingle(1))
     );
   }
 
@@ -1289,7 +1289,7 @@ public class VersionedIntervalTimelineTest
     add("2011-01-10/2011-01-15", "3", 3);
     add("2011-01-15/2011-01-20", "4", 4);
 
-    timeline.remove(new Interval("2011-01-15/2011-01-20"), "4", makeSingle(4));
+    timeline.remove(Intervals.of("2011-01-15/2011-01-20"), "4", makeSingle(4));
 
     assertValues(
         Arrays.asList(
@@ -1297,7 +1297,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-05/2011-01-10", "2", 2),
             createExpected("2011-01-10/2011-01-15", "3", 3)
         ),
-        timeline.lookup(new Interval(new DateTime(0), new DateTime(JodaUtils.MAX_INSTANT)))
+        timeline.lookup(new Interval(DateTimes.EPOCH, DateTimes.MAX))
     );
   }
 
@@ -1504,7 +1504,7 @@ public class VersionedIntervalTimelineTest
 
     add("2011-04-01/2011-04-09", "1", 1);
 
-    Assert.assertTrue(timeline.lookup(Interval.parse("1970/1980")).isEmpty());
+    Assert.assertTrue(timeline.lookup(Intervals.of("1970/1980")).isEmpty());
   }
 
   // https://github.com/druid-io/druid/issues/3010
@@ -1526,7 +1526,7 @@ public class VersionedIntervalTimelineTest
                            )
             )
         ),
-        timeline.lookup(new Interval("2011-04-01/2011-04-02"))
+        timeline.lookup(Intervals.of("2011-04-01/2011-04-02"))
     );
 
     add("2011-04-01/2011-04-02", "3", IntegerPartitionChunk.make(null, 1, 0, 110));
@@ -1540,7 +1540,7 @@ public class VersionedIntervalTimelineTest
                            )
             )
         ),
-        timeline.lookup(new Interval("2011-04-01/2011-04-02"))
+        timeline.lookup(Intervals.of("2011-04-01/2011-04-02"))
     );
     assertValues(
         Sets.newHashSet(
@@ -1564,7 +1564,7 @@ public class VersionedIntervalTimelineTest
                            )
             )
         ),
-        timeline.lookup(new Interval("2011-04-01/2011-04-02"))
+        timeline.lookup(Intervals.of("2011-04-01/2011-04-02"))
     );
   }
 
@@ -1579,58 +1579,58 @@ public class VersionedIntervalTimelineTest
     add("2011-04-15/2011-04-17", "1", new SingleElementPartitionChunk<Integer>(1));
     add("2011-04-17/2011-04-19", "1", new SingleElementPartitionChunk<Integer>(1));
 
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-03"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-05"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-06"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-07"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-08"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-09"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-10"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-30"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-01/2011-04-03"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-01/2011-04-05"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-01/2011-04-06"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-01/2011-04-07"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-01/2011-04-08"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-01/2011-04-09"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-01/2011-04-10"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-01/2011-04-30"), "0"));
 
-    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-06"), "0"));
-    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-07"), "0"));
-    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-08"), "0"));
-    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-09"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-06"), "1"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-07"), "1"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-08"), "1"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-09"), "1"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-06"), "2"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-07"), "2"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-08"), "2"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-09"), "2"));
+    Assert.assertTrue(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-06"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-07"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-08"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-09"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-06"), "1"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-07"), "1"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-08"), "1"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-09"), "1"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-06"), "2"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-07"), "2"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-08"), "2"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-09"), "2"));
 
-    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-07"), "0"));
-    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-08"), "0"));
-    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-09"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-10"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-30"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(Intervals.of("2011-04-06/2011-04-07"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(Intervals.of("2011-04-06/2011-04-08"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(Intervals.of("2011-04-06/2011-04-09"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-06/2011-04-10"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-06/2011-04-30"), "0"));
 
-    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-07/2011-04-08"), "0"));
-    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-07/2011-04-09"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-07/2011-04-10"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-07/2011-04-30"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(Intervals.of("2011-04-07/2011-04-08"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(Intervals.of("2011-04-07/2011-04-09"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-07/2011-04-10"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-07/2011-04-30"), "0"));
 
-    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-08/2011-04-09"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-08/2011-04-10"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-08/2011-04-30"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(Intervals.of("2011-04-08/2011-04-09"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-08/2011-04-10"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-08/2011-04-30"), "0"));
 
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-09/2011-04-10"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-09/2011-04-15"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-09/2011-04-17"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-09/2011-04-19"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-09/2011-04-30"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-09/2011-04-10"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-09/2011-04-15"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-09/2011-04-17"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-09/2011-04-19"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-09/2011-04-30"), "0"));
 
-    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-15/2011-04-16"), "0"));
-    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-15/2011-04-17"), "0"));
-    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-15/2011-04-18"), "0"));
-    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-15/2011-04-19"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-15/2011-04-20"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-15/2011-04-30"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(Intervals.of("2011-04-15/2011-04-16"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(Intervals.of("2011-04-15/2011-04-17"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(Intervals.of("2011-04-15/2011-04-18"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(Intervals.of("2011-04-15/2011-04-19"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-15/2011-04-20"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-15/2011-04-30"), "0"));
 
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-19/2011-04-20"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-21/2011-04-22"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-19/2011-04-20"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-21/2011-04-22"), "0"));
   }
 
   @Test
@@ -1645,77 +1645,77 @@ public class VersionedIntervalTimelineTest
     add("2011-04-17/2011-04-21", "11", new SingleElementPartitionChunk<Integer>(1));
 
 
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-03"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-05"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-06"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-07"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-08"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-09"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-10"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-11"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-30"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-01/2011-04-03"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-01/2011-04-05"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-01/2011-04-06"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-01/2011-04-07"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-01/2011-04-08"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-01/2011-04-09"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-01/2011-04-10"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-01/2011-04-11"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-01/2011-04-30"), "0"));
 
-    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-06"), "0"));
-    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-07"), "0"));
-    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-08"), "0"));
-    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-09"), "0"));
-    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-10"), "0"));
-    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-11"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-06"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-07"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-08"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-09"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-10"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-11"), "0"));
 
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-06"), "12"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-07"), "12"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-08"), "12"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-09"), "12"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-10"), "12"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-11"), "12"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-06"), "12"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-07"), "12"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-08"), "12"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-09"), "12"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-10"), "12"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-11"), "12"));
 
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-06"), "13"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-07"), "13"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-08"), "13"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-09"), "13"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-10"), "13"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-11"), "13"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-06"), "13"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-07"), "13"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-08"), "13"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-09"), "13"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-10"), "13"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-11"), "13"));
 
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-12"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-15"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-16"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-12"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-15"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-16"), "0"));
 
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-17"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-18"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-19"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-20"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-21"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-22"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-17"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-18"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-19"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-20"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-21"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-05/2011-04-22"), "0"));
 
-    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-07"), "0"));
-    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-08"), "0"));
-    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-09"), "0"));
-    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-10"), "0"));
-    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-11"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(Intervals.of("2011-04-06/2011-04-07"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(Intervals.of("2011-04-06/2011-04-08"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(Intervals.of("2011-04-06/2011-04-09"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(Intervals.of("2011-04-06/2011-04-10"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(Intervals.of("2011-04-06/2011-04-11"), "0"));
 
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-12"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-15"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-16"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-06/2011-04-12"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-06/2011-04-15"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-06/2011-04-16"), "0"));
 
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-17"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-18"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-19"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-20"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-21"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-22"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-06/2011-04-17"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-06/2011-04-18"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-06/2011-04-19"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-06/2011-04-20"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-06/2011-04-21"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-06/2011-04-22"), "0"));
 
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-12/2011-04-15"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-12/2011-04-16"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-12/2011-04-15"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-12/2011-04-16"), "0"));
 
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-12/2011-04-17"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-12/2011-04-18"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-12/2011-04-19"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-12/2011-04-20"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-12/2011-04-21"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-12/2011-04-22"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-12/2011-04-17"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-12/2011-04-18"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-12/2011-04-19"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-12/2011-04-20"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-12/2011-04-21"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-12/2011-04-22"), "0"));
 
-    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-15/2011-04-21"), "0"));
-    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-21/2011-04-22"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(Intervals.of("2011-04-15/2011-04-21"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(Intervals.of("2011-04-21/2011-04-22"), "0"));
   }
 
   private Pair<Interval, Pair<String, PartitionHolder<Integer>>> createExpected(
@@ -1738,7 +1738,7 @@ public class VersionedIntervalTimelineTest
   )
   {
     return Pair.of(
-        new Interval(intervalString),
+        Intervals.of(intervalString),
         Pair.of(version, new PartitionHolder<Integer>(values))
     );
   }
@@ -1750,17 +1750,17 @@ public class VersionedIntervalTimelineTest
 
   private void add(String interval, String version, Integer value)
   {
-    add(new Interval(interval), version, value);
+    add(Intervals.of(interval), version, value);
   }
 
   private void add(Interval interval, String version, Integer value)
   {
-    add(new Interval(interval), version, makeSingle(value));
+    add(interval, version, makeSingle(value));
   }
 
   private void add(String interval, String version, PartitionChunk<Integer> value)
   {
-    add(new Interval(interval), version, value);
+    add(Intervals.of(interval), version, value);
   }
 
   private void add(Interval interval, String version, PartitionChunk<Integer> value)

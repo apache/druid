@@ -133,9 +133,11 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                                       }
 
                                       return retVal;
-                                    } catch (QueryInterruptedException e) {
+                                    }
+                                    catch (QueryInterruptedException e) {
                                       throw Throwables.propagate(e);
-                                    } catch (Exception e) {
+                                    }
+                                    catch (Exception e) {
                                       log.error(e, "Exception with one of the sequences!");
                                       throw Throwables.propagate(e);
                                     }
@@ -157,17 +159,21 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                       futures.get(QueryContexts.getTimeout(query), TimeUnit.MILLISECONDS) :
                       futures.get()
               ).iterator();
-            } catch (InterruptedException e) {
+            }
+            catch (InterruptedException e) {
               log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
               futures.cancel(true);
               throw new QueryInterruptedException(e);
-            } catch (CancellationException e) {
+            }
+            catch (CancellationException e) {
               throw new QueryInterruptedException(e);
-            } catch (TimeoutException e) {
+            }
+            catch (TimeoutException e) {
               log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
               futures.cancel(true);
               throw new QueryInterruptedException(e);
-            } catch (ExecutionException e) {
+            }
+            catch (ExecutionException e) {
               throw Throwables.propagate(e.getCause());
             }
           }

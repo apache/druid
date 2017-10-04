@@ -19,10 +19,14 @@
 
 package io.druid.sql.calcite.planner;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import io.druid.guice.annotations.Json;
 import io.druid.math.expr.ExprMacroTable;
-import io.druid.query.QuerySegmentWalker;
-import io.druid.server.initialization.ServerConfig;
+import io.druid.server.QueryLifecycleFactory;
+import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthenticatorMapper;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.sql.calcite.rel.QueryMaker;
 import io.druid.sql.calcite.schema.DruidSchema;
 import org.apache.calcite.avatica.util.Casing;
@@ -49,39 +53,56 @@ public class PlannerFactory
       .setConformance(DruidConformance.instance())
       .build();
 
-  private final SchemaPlus rootSchema;
-  private final QuerySegmentWalker walker;
+  private final DruidSchema druidSchema;
+  private final QueryLifecycleFactory queryLifecycleFactory;
   private final DruidOperatorTable operatorTable;
   private final ExprMacroTable macroTable;
   private final PlannerConfig plannerConfig;
-  private final ServerConfig serverConfig;
+  private final ObjectMapper jsonMapper;
+
+  private final AuthConfig authConfig;
+  private final AuthorizerMapper authorizerMapper;
+  private final AuthenticatorMapper authenticatorMapper;
 
   @Inject
   public PlannerFactory(
-      final SchemaPlus rootSchema,
-      final QuerySegmentWalker walker,
+      final DruidSchema druidSchema,
+      final QueryLifecycleFactory queryLifecycleFactory,
       final DruidOperatorTable operatorTable,
       final ExprMacroTable macroTable,
       final PlannerConfig plannerConfig,
-      final ServerConfig serverConfig
+      final AuthConfig authConfig,
+      final AuthenticatorMapper authenticatorMapper,
+      final AuthorizerMapper authorizerMapper,
+      final @Json ObjectMapper jsonMapper
   )
   {
-    this.rootSchema = rootSchema;
-    this.walker = walker;
+    this.druidSchema = druidSchema;
+    this.queryLifecycleFactory = queryLifecycleFactory;
     this.operatorTable = operatorTable;
     this.macroTable = macroTable;
     this.plannerConfig = plannerConfig;
-    this.serverConfig = serverConfig;
+    this.authConfig = authConfig;
+    this.authorizerMapper = authorizerMapper;
+    this.authenticatorMapper = authenticatorMapper;
+    this.jsonMapper = jsonMapper;
   }
 
   public DruidPlanner createPlanner(final Map<String, Object> queryContext)
   {
-    final PlannerContext plannerContext = PlannerContext.create(operatorTable, macroTable, plannerConfig, queryContext);
-    final QueryMaker queryMaker = new QueryMaker(walker, plannerContext, serverConfig);
+    final SchemaPlus rootSchema = Calcites.createRootSchema(druidSchema);
+    final PlannerContext plannerContext = PlannerContext.create(
+        operatorTable,
+        macroTable,
+        plannerConfig,
+        authorizerMapper,
+        queryContext
+    );
+    final QueryMaker queryMaker = new QueryMaker(queryLifecycleFactory, plannerContext, jsonMapper);
+
     final FrameworkConfig frameworkConfig = Frameworks
         .newConfigBuilder()
         .parserConfig(PARSER_CONFIG)
-        .defaultSchema(rootSchema)
         .traitDefs(ConventionTraitDef.INSTANCE, RelCollationTraitDef.INSTANCE)
         .convertletTable(new DruidConvertletTable(plannerContext))
         .operatorTable(operatorTable)
@@ -90,8 +111,15 @@ public class PlannerFactory
         .context(Contexts.EMPTY_CONTEXT)
         .typeSystem(RelDataTypeSystem.DEFAULT)
         .defaultSchema(rootSchema.getSubSchema(DruidSchema.NAME))
+        .typeSystem(DruidTypeSystem.INSTANCE)
         .build();
 
-    return new DruidPlanner(Frameworks.getPlanner(frameworkConfig), plannerContext);
+    return new DruidPlanner(
+        Frameworks.getPlanner(frameworkConfig),
+        plannerContext,
+        authConfig,
+        authorizerMapper,
+        authenticatorMapper
+    );
   }
 }

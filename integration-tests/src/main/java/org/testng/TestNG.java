@@ -283,7 +283,7 @@ public class TestNG
    *
    * @see org.testng.reporters.TestHTMLReporter
    * @see org.testng.reporters.JUnitXMLReporter
-   * @see org.testng.reporters.XMLReporter
+   * @see XMLReporter
    */
   public void setUseDefaultListeners(boolean useDefaultListeners)
   {
@@ -329,17 +329,8 @@ public class TestNG
               s.getChildSuites().add(cSuite);
             }
           }
-          catch (FileNotFoundException e) {
-            e.printStackTrace(System.out);
-          }
-          catch (ParserConfigurationException e) {
-            e.printStackTrace(System.out);
-          }
-          catch (SAXException e) {
-            e.printStackTrace(System.out);
-          }
-          catch (IOException e) {
-            e.printStackTrace(System.out);
+          catch (ParserConfigurationException | SAXException | IOException e) {
+            LOGGER.error("", e);
           }
         }
 
@@ -366,17 +357,8 @@ public class TestNG
           }
         }
       }
-      catch (FileNotFoundException e) {
-        e.printStackTrace(System.out);
-      }
-      catch (IOException e) {
-        e.printStackTrace(System.out);
-      }
-      catch (ParserConfigurationException e) {
-        e.printStackTrace(System.out);
-      }
-      catch (SAXException e) {
-        e.printStackTrace(System.out);
+      catch (IOException | SAXException | ParserConfigurationException e) {
+        LOGGER.error("", e);
       }
       catch (Exception ex) {
         // Probably a Yaml exception, unnest it
@@ -453,14 +435,8 @@ public class TestNG
         m_suites.add(xmlSuite);
       }
     }
-    catch (ParserConfigurationException ex) {
-      ex.printStackTrace();
-    }
-    catch (SAXException ex) {
-      ex.printStackTrace();
-    }
-    catch (IOException ex) {
-      ex.printStackTrace();
+    catch (ParserConfigurationException | SAXException | IOException ex) {
+      LOGGER.error("", ex);
     }
   }
 
@@ -701,7 +677,7 @@ public class TestNG
    *
    * @param suites
    *
-   * @see org.testng.xml.XmlSuite
+   * @see XmlSuite
    */
   public void setXmlSuites(List<XmlSuite> suites)
   {
@@ -1148,25 +1124,21 @@ public class TestNG
 
     m_start = System.currentTimeMillis();
 
-    //
-    // Slave mode
-    //
     if (m_slavefileName != null) {
+      //
+      // Slave mode
+      //
       SuiteSlave slave = new SuiteSlave(m_slavefileName, this);
       slave.waitForSuites();
-    }
-
-    //
-    // Regular mode
-    //
-    else if (m_masterfileName == null) {
+    } else if (m_masterfileName == null) {
+      //
+      // Regular mode
+      //
       suiteRunners = runSuitesLocally();
-    }
-
-    //
-    // Master mode
-    //
-    else {
+    } else {
+      //
+      // Master mode
+      //
       SuiteDispatcher dispatcher = new SuiteDispatcher(m_masterfileName);
       suiteRunners = dispatcher.dispatch(
           getConfiguration(),
@@ -1185,15 +1157,10 @@ public class TestNG
     if (!m_hasTests) {
       setStatus(HAS_NO_TEST);
       if (TestRunner.getVerbose() > 1) {
-        System.err.println("[TestNG] No tests found. Nothing was run");
+        LOGGER.error("[TestNG] No tests found. Nothing was run");
         usage();
       }
     }
-  }
-
-  private void p(String string)
-  {
-    System.out.println("[TestNG] " + string);
   }
 
   private void runExecutionListeners(boolean start)
@@ -1235,8 +1202,7 @@ public class TestNG
         );
       }
       catch (Exception ex) {
-        System.err.println("[TestNG] Reporter " + reporter + " failed");
-        ex.printStackTrace(System.err);
+        LOGGER.error("[TestNG] Reporter " + reporter + " failed", ex);
       }
     }
   }
@@ -1509,7 +1475,7 @@ public class TestNG
     }
     catch (TestNGException ex) {
       if (TestRunner.getVerbose() > 1) {
-        ex.printStackTrace(System.out);
+        LOGGER.error("", ex);
       } else {
         error(ex.getMessage());
       }
@@ -1931,7 +1897,7 @@ public class TestNG
 
   static void exitWithError(String msg)
   {
-    System.err.println(msg);
+    LOGGER.error(msg);
     usage();
     System.exit(1);
   }
@@ -2116,7 +2082,7 @@ public class TestNG
     }
 
     /**
-     * @see org.testng.IConfigurationListener#onConfigurationFailure(org.testng.ITestResult)
+     * @see IConfigurationListener#onConfigurationFailure(ITestResult)
      */
     @Override
     public void onConfigurationFailure(ITestResult itr)
@@ -2125,7 +2091,7 @@ public class TestNG
     }
 
     /**
-     * @see org.testng.IConfigurationListener#onConfigurationSkip(org.testng.ITestResult)
+     * @see IConfigurationListener#onConfigurationSkip(ITestResult)
      */
     @Override
     public void onConfigurationSkip(ITestResult itr)
@@ -2134,7 +2100,7 @@ public class TestNG
     }
 
     /**
-     * @see org.testng.IConfigurationListener#onConfigurationSuccess(org.testng.ITestResult)
+     * @see IConfigurationListener#onConfigurationSuccess(ITestResult)
      */
     @Override
     public void onConfigurationSuccess(ITestResult itr)

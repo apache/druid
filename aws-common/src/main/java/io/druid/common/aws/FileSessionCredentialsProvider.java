@@ -32,48 +32,52 @@ import java.util.Properties;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public class FileSessionCredentialsProvider implements AWSCredentialsProvider {
+public class FileSessionCredentialsProvider implements AWSCredentialsProvider
+{
   private final String sessionCredentials;
   private volatile String sessionToken;
   private volatile String accessKey;
   private volatile String secretKey;
 
-  private final ScheduledExecutorService scheduler = Execs.scheduledSingleThreaded("FileSessionCredentialsProviderRefresh-%d");
+  private final ScheduledExecutorService scheduler =
+      Execs.scheduledSingleThreaded("FileSessionCredentialsProviderRefresh-%d");
 
-  public FileSessionCredentialsProvider(String sessionCredentials) {
+  public FileSessionCredentialsProvider(String sessionCredentials)
+  {
     this.sessionCredentials = sessionCredentials;
     refresh();
 
-    scheduler.scheduleAtFixedRate(new Runnable() {
-      @Override
-      public void run() {
-        refresh();
-      }
-    }, 1, 1, TimeUnit.HOURS); // refresh every hour
+    scheduler.scheduleAtFixedRate(this::refresh, 1, 1, TimeUnit.HOURS); // refresh every hour
   }
 
   @Override
-  public AWSCredentials getCredentials() {
-    return new AWSSessionCredentials() {
+  public AWSCredentials getCredentials()
+  {
+    return new AWSSessionCredentials()
+    {
       @Override
-      public String getSessionToken() {
+      public String getSessionToken()
+      {
         return sessionToken;
       }
 
       @Override
-      public String getAWSAccessKeyId() {
+      public String getAWSAccessKeyId()
+      {
         return accessKey;
       }
 
       @Override
-      public String getAWSSecretKey() {
+      public String getAWSSecretKey()
+      {
         return secretKey;
       }
     };
   }
 
   @Override
-  public void refresh() {
+  public void refresh()
+  {
     try {
       Properties props = new Properties();
       InputStream is = new FileInputStream(new File(sessionCredentials));
@@ -83,7 +87,8 @@ public class FileSessionCredentialsProvider implements AWSCredentialsProvider {
       sessionToken = props.getProperty("sessionToken");
       accessKey = props.getProperty("accessKey");
       secretKey = props.getProperty("secretKey");
-    } catch (IOException e) {
+    }
+    catch (IOException e) {
       throw new RuntimeException("cannot refresh AWS credentials", e);
     }
   }

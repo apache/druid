@@ -32,6 +32,7 @@ import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.LocalCacheProvider;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.MapUtils;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularities;
@@ -55,7 +56,7 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.search.SearchResultValue;
-import io.druid.query.search.search.SearchQuery;
+import io.druid.query.search.SearchQuery;
 import io.druid.segment.AbstractSegment;
 import io.druid.segment.IndexIO;
 import io.druid.segment.QueryableIndex;
@@ -157,19 +158,19 @@ public class ServerManagerTest
         segmentManager
     );
 
-    loadQueryable("test", "1", new Interval("P1d/2011-04-01"));
-    loadQueryable("test", "1", new Interval("P1d/2011-04-02"));
-    loadQueryable("test", "2", new Interval("P1d/2011-04-02"));
-    loadQueryable("test", "1", new Interval("P1d/2011-04-03"));
-    loadQueryable("test", "1", new Interval("P1d/2011-04-04"));
-    loadQueryable("test", "1", new Interval("P1d/2011-04-05"));
-    loadQueryable("test", "2", new Interval("PT1h/2011-04-04T01"));
-    loadQueryable("test", "2", new Interval("PT1h/2011-04-04T02"));
-    loadQueryable("test", "2", new Interval("PT1h/2011-04-04T03"));
-    loadQueryable("test", "2", new Interval("PT1h/2011-04-04T05"));
-    loadQueryable("test", "2", new Interval("PT1h/2011-04-04T06"));
-    loadQueryable("test2", "1", new Interval("P1d/2011-04-01"));
-    loadQueryable("test2", "1", new Interval("P1d/2011-04-02"));
+    loadQueryable("test", "1", Intervals.of("P1d/2011-04-01"));
+    loadQueryable("test", "1", Intervals.of("P1d/2011-04-02"));
+    loadQueryable("test", "2", Intervals.of("P1d/2011-04-02"));
+    loadQueryable("test", "1", Intervals.of("P1d/2011-04-03"));
+    loadQueryable("test", "1", Intervals.of("P1d/2011-04-04"));
+    loadQueryable("test", "1", Intervals.of("P1d/2011-04-05"));
+    loadQueryable("test", "2", Intervals.of("PT1h/2011-04-04T01"));
+    loadQueryable("test", "2", Intervals.of("PT1h/2011-04-04T02"));
+    loadQueryable("test", "2", Intervals.of("PT1h/2011-04-04T03"));
+    loadQueryable("test", "2", Intervals.of("PT1h/2011-04-04T05"));
+    loadQueryable("test", "2", Intervals.of("PT1h/2011-04-04T06"));
+    loadQueryable("test2", "1", Intervals.of("P1d/2011-04-01"));
+    loadQueryable("test2", "1", Intervals.of("P1d/2011-04-02"));
   }
 
   @Test
@@ -178,9 +179,9 @@ public class ServerManagerTest
     Future future = assertQueryable(
         Granularities.DAY,
         "test",
-        new Interval("P1d/2011-04-01"),
+        Intervals.of("P1d/2011-04-01"),
         ImmutableList.<Pair<String, Interval>>of(
-            new Pair<String, Interval>("1", new Interval("P1d/2011-04-01"))
+            new Pair<String, Interval>("1", Intervals.of("P1d/2011-04-01"))
         )
     );
     waitForTestVerificationAndCleanup(future);
@@ -188,10 +189,10 @@ public class ServerManagerTest
 
     future = assertQueryable(
         Granularities.DAY,
-        "test", new Interval("P2d/2011-04-02"),
+        "test", Intervals.of("P2d/2011-04-02"),
         ImmutableList.<Pair<String, Interval>>of(
-            new Pair<String, Interval>("1", new Interval("P1d/2011-04-01")),
-            new Pair<String, Interval>("2", new Interval("P1d/2011-04-02"))
+            new Pair<String, Interval>("1", Intervals.of("P1d/2011-04-01")),
+            new Pair<String, Interval>("2", Intervals.of("P1d/2011-04-02"))
         )
     );
     waitForTestVerificationAndCleanup(future);
@@ -201,7 +202,7 @@ public class ServerManagerTest
   public void testDelete1() throws Exception
   {
     final String dataSouce = "test";
-    final Interval interval = new Interval("2011-04-01/2011-04-02");
+    final Interval interval = Intervals.of("2011-04-01/2011-04-02");
 
     Future future = assertQueryable(
         Granularities.DAY,
@@ -226,50 +227,50 @@ public class ServerManagerTest
   @Test
   public void testDelete2() throws Exception
   {
-    loadQueryable("test", "3", new Interval("2011-04-04/2011-04-05"));
+    loadQueryable("test", "3", Intervals.of("2011-04-04/2011-04-05"));
 
     Future future = assertQueryable(
         Granularities.DAY,
-        "test", new Interval("2011-04-04/2011-04-06"),
+        "test", Intervals.of("2011-04-04/2011-04-06"),
         ImmutableList.<Pair<String, Interval>>of(
-            new Pair<String, Interval>("3", new Interval("2011-04-04/2011-04-05"))
+            new Pair<String, Interval>("3", Intervals.of("2011-04-04/2011-04-05"))
         )
     );
     waitForTestVerificationAndCleanup(future);
 
-    dropQueryable("test", "3", new Interval("2011-04-04/2011-04-05"));
-    dropQueryable("test", "1", new Interval("2011-04-04/2011-04-05"));
+    dropQueryable("test", "3", Intervals.of("2011-04-04/2011-04-05"));
+    dropQueryable("test", "1", Intervals.of("2011-04-04/2011-04-05"));
 
     future = assertQueryable(
         Granularities.HOUR,
-        "test", new Interval("2011-04-04/2011-04-04T06"),
+        "test", Intervals.of("2011-04-04/2011-04-04T06"),
         ImmutableList.<Pair<String, Interval>>of(
-            new Pair<String, Interval>("2", new Interval("2011-04-04T00/2011-04-04T01")),
-            new Pair<String, Interval>("2", new Interval("2011-04-04T01/2011-04-04T02")),
-            new Pair<String, Interval>("2", new Interval("2011-04-04T02/2011-04-04T03")),
-            new Pair<String, Interval>("2", new Interval("2011-04-04T04/2011-04-04T05")),
-            new Pair<String, Interval>("2", new Interval("2011-04-04T05/2011-04-04T06"))
-        )
-    );
-    waitForTestVerificationAndCleanup(future);
-
-    future = assertQueryable(
-        Granularities.HOUR,
-        "test", new Interval("2011-04-04/2011-04-04T03"),
-        ImmutableList.<Pair<String, Interval>>of(
-            new Pair<String, Interval>("2", new Interval("2011-04-04T00/2011-04-04T01")),
-            new Pair<String, Interval>("2", new Interval("2011-04-04T01/2011-04-04T02")),
-            new Pair<String, Interval>("2", new Interval("2011-04-04T02/2011-04-04T03"))
+            new Pair<String, Interval>("2", Intervals.of("2011-04-04T00/2011-04-04T01")),
+            new Pair<String, Interval>("2", Intervals.of("2011-04-04T01/2011-04-04T02")),
+            new Pair<String, Interval>("2", Intervals.of("2011-04-04T02/2011-04-04T03")),
+            new Pair<String, Interval>("2", Intervals.of("2011-04-04T04/2011-04-04T05")),
+            new Pair<String, Interval>("2", Intervals.of("2011-04-04T05/2011-04-04T06"))
         )
     );
     waitForTestVerificationAndCleanup(future);
 
     future = assertQueryable(
         Granularities.HOUR,
-        "test", new Interval("2011-04-04T04/2011-04-04T06"),
+        "test", Intervals.of("2011-04-04/2011-04-04T03"),
         ImmutableList.<Pair<String, Interval>>of(
-            new Pair<String, Interval>("2", new Interval("2011-04-04T04/2011-04-04T05")),
-            new Pair<String, Interval>("2", new Interval("2011-04-04T05/2011-04-04T06"))
+            new Pair<String, Interval>("2", Intervals.of("2011-04-04T00/2011-04-04T01")),
+            new Pair<String, Interval>("2", Intervals.of("2011-04-04T01/2011-04-04T02")),
+            new Pair<String, Interval>("2", Intervals.of("2011-04-04T02/2011-04-04T03"))
+        )
+    );
+    waitForTestVerificationAndCleanup(future);
+
+    future = assertQueryable(
+        Granularities.HOUR,
+        "test", Intervals.of("2011-04-04T04/2011-04-04T06"),
+        ImmutableList.<Pair<String, Interval>>of(
+            new Pair<String, Interval>("2", Intervals.of("2011-04-04T04/2011-04-04T05")),
+            new Pair<String, Interval>("2", Intervals.of("2011-04-04T05/2011-04-04T06"))
         )
     );
     waitForTestVerificationAndCleanup(future);
@@ -278,13 +279,13 @@ public class ServerManagerTest
   @Test
   public void testReferenceCounting() throws Exception
   {
-    loadQueryable("test", "3", new Interval("2011-04-04/2011-04-05"));
+    loadQueryable("test", "3", Intervals.of("2011-04-04/2011-04-05"));
 
     Future future = assertQueryable(
         Granularities.DAY,
-        "test", new Interval("2011-04-04/2011-04-06"),
+        "test", Intervals.of("2011-04-04/2011-04-06"),
         ImmutableList.<Pair<String, Interval>>of(
-            new Pair<String, Interval>("3", new Interval("2011-04-04/2011-04-05"))
+            new Pair<String, Interval>("3", Intervals.of("2011-04-04/2011-04-05"))
         )
     );
 
@@ -307,7 +308,7 @@ public class ServerManagerTest
     queryWaitLatch.countDown();
     future.get();
 
-    dropQueryable("test", "3", new Interval("2011-04-04/2011-04-05"));
+    dropQueryable("test", "3", Intervals.of("2011-04-04/2011-04-05"));
 
     for (SegmentForTesting segmentForTesting : factory.getAdapters()) {
       Assert.assertTrue(segmentForTesting.isClosed());
@@ -317,13 +318,13 @@ public class ServerManagerTest
   @Test
   public void testReferenceCountingWhileQueryExecuting() throws Exception
   {
-    loadQueryable("test", "3", new Interval("2011-04-04/2011-04-05"));
+    loadQueryable("test", "3", Intervals.of("2011-04-04/2011-04-05"));
 
     Future future = assertQueryable(
         Granularities.DAY,
-        "test", new Interval("2011-04-04/2011-04-06"),
+        "test", Intervals.of("2011-04-04/2011-04-06"),
         ImmutableList.<Pair<String, Interval>>of(
-            new Pair<String, Interval>("3", new Interval("2011-04-04/2011-04-05"))
+            new Pair<String, Interval>("3", Intervals.of("2011-04-04/2011-04-05"))
         )
     );
 
@@ -343,7 +344,7 @@ public class ServerManagerTest
       Assert.assertFalse(segmentForTesting.isClosed());
     }
 
-    dropQueryable("test", "3", new Interval("2011-04-04/2011-04-05"));
+    dropQueryable("test", "3", Intervals.of("2011-04-04/2011-04-05"));
 
     for (SegmentForTesting segmentForTesting : factory.getAdapters()) {
       Assert.assertFalse(segmentForTesting.isClosed());
@@ -360,13 +361,13 @@ public class ServerManagerTest
   @Test
   public void testMultipleDrops() throws Exception
   {
-    loadQueryable("test", "3", new Interval("2011-04-04/2011-04-05"));
+    loadQueryable("test", "3", Intervals.of("2011-04-04/2011-04-05"));
 
     Future future = assertQueryable(
         Granularities.DAY,
-        "test", new Interval("2011-04-04/2011-04-06"),
+        "test", Intervals.of("2011-04-04/2011-04-06"),
         ImmutableList.<Pair<String, Interval>>of(
-            new Pair<String, Interval>("3", new Interval("2011-04-04/2011-04-05"))
+            new Pair<String, Interval>("3", Intervals.of("2011-04-04/2011-04-05"))
         )
     );
 
@@ -386,8 +387,8 @@ public class ServerManagerTest
       Assert.assertFalse(segmentForTesting.isClosed());
     }
 
-    dropQueryable("test", "3", new Interval("2011-04-04/2011-04-05"));
-    dropQueryable("test", "3", new Interval("2011-04-04/2011-04-05"));
+    dropQueryable("test", "3", Intervals.of("2011-04-04/2011-04-05"));
+    dropQueryable("test", "3", Intervals.of("2011-04-04/2011-04-05"));
 
     for (SegmentForTesting segmentForTesting : factory.getAdapters()) {
       Assert.assertFalse(segmentForTesting.isClosed());
@@ -442,7 +443,7 @@ public class ServerManagerTest
           public void run()
           {
             Map<String, Object> context = new HashMap<String, Object>();
-            Sequence<Result<SearchResultValue>> seq = runner.run(query, context);
+            Sequence<Result<SearchResultValue>> seq = runner.run(QueryPlus.wrap(query), context);
             Sequences.toList(seq, Lists.<Result<SearchResultValue>>newArrayList());
             Iterator<SegmentForTesting> adaptersIter = factory.getAdapters().iterator();
 

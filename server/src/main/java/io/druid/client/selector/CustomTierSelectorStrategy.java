@@ -22,7 +22,6 @@ package io.druid.client.selector;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.collect.Maps;
-import com.google.common.primitives.Ints;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -48,16 +47,7 @@ public class CustomTierSelectorStrategy extends AbstractTierSelectorStrategy
       pos++;
     }
 
-    this.comparator = new Comparator<Integer>()
-    {
-      @Override
-      public int compare(Integer o1, Integer o2)
-      {
-        int pos1 = lookup.get(o1);
-        int pos2 = lookup.get(o2);
-        return Ints.compare(pos1, pos2);
-      }
-    };
+    this.comparator = Comparator.comparingInt(lookup::get);
   }
 
   @Override

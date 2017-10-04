@@ -26,6 +26,7 @@ import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.Provider;
 import com.google.inject.util.Types;
+import io.druid.guice.annotations.PublicApi;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.ParameterizedType;
@@ -48,7 +49,7 @@ import java.util.Properties;
  * <h3>Implementation</h3>
  * <br/>
  * The state of {@code <T>} is defined by the value of the property {@code propertyBase}.
- * This value is a json structure, decoded via {@link JsonConfigurator#configurate(java.util.Properties, String, Class)}.
+ * This value is a json structure, decoded via {@link JsonConfigurator#configurate(Properties, String, Class)}.
  * <br/>
  *
  * An example might be if DruidServerConfig.class were
@@ -76,6 +77,7 @@ import java.util.Properties;
  *
  * @param <T> type of config object to provide.
  */
+@PublicApi
 public class JsonConfigProvider<T> implements Provider<Supplier<T>>
 {
   @SuppressWarnings("unchecked")
@@ -146,11 +148,9 @@ public class JsonConfigProvider<T> implements Provider<Supplier<T>>
 
     if (bindKey.getAnnotationType() != null) {
       supplierKey = Key.get(supType, bindKey.getAnnotationType());
-    }
-    else if (bindKey.getAnnotation() != null) {
+    } else if (bindKey.getAnnotation() != null) {
       supplierKey = Key.get(supType, bindKey.getAnnotation());
-    }
-    else {
+    } else {
       supplierKey = Key.get(supType);
     }
 

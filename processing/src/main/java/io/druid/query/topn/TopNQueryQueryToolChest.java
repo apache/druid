@@ -249,8 +249,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                     );
 
                     // Put non-finalized aggregators before post-aggregators.
-                    for (int i = 0; i < aggFactoryNames.length; ++i) {
-                      final String name = aggFactoryNames[i];
+                    for (final String name : aggFactoryNames) {
                       values.put(name, input.getMetric(name));
                     }
 
@@ -444,8 +443,8 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
               return runner.run(queryPlus.withQuery(delegateTopNQuery), responseContext);
             }
           }
-        }
-        , this
+        },
+        this
     );
   }
 

@@ -42,6 +42,6 @@ public class LongMaxBufferAggregator extends LongBufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    buf.putLong(position, Math.max(buf.getLong(position), selector.get()));
+    buf.putLong(position, Math.max(buf.getLong(position), selector.getLong()));
   }
 }

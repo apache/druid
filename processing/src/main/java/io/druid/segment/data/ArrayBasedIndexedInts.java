@@ -22,8 +22,6 @@ package io.druid.segment.data;
 import io.druid.java.util.common.IAE;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import it.unimi.dsi.fastutil.ints.IntArrays;
-import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.ints.IntIterators;
 
 import java.io.IOException;
 
@@ -74,18 +72,6 @@ public final class ArrayBasedIndexedInts implements IndexedInts
       throw new IndexOutOfBoundsException("index: " + index + ", size: " + size);
     }
     return expansion[index];
-  }
-
-  @Override
-  public IntIterator iterator()
-  {
-    return IntIterators.wrap(expansion, 0, size);
-  }
-
-  @Override
-  public void fill(int index, int[] toFill)
-  {
-    throw new UnsupportedOperationException("fill not supported");
   }
 
   @Override

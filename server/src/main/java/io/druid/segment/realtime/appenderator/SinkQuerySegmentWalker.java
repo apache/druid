@@ -309,6 +309,6 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
 
   public static String makeHydrantCacheIdentifier(FireHydrant input)
   {
-    return input.getSegment().getIdentifier() + "_" + input.getCount();
+    return input.getSegmentIdentifier() + "_" + input.getCount();
   }
 }

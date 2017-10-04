@@ -22,7 +22,6 @@ package io.druid.client;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.ObjectCodec;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
@@ -30,8 +29,6 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-import com.google.common.collect.MapMaker;
-import com.google.common.collect.Maps;
 import com.google.common.io.ByteSource;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -43,14 +40,15 @@ import com.metamx.http.client.response.ClientResponse;
 import com.metamx.http.client.response.HttpResponseHandler;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
-import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.RE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.Query;
@@ -85,6 +83,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -104,7 +103,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
   private static final Logger log = new Logger(DirectDruidClient.class);
 
-  private static final Map<Class<? extends Query>, Pair<JavaType, JavaType>> typesMap = Maps.newConcurrentMap();
+  private static final Map<Class<? extends Query>, Pair<JavaType, JavaType>> typesMap = new ConcurrentHashMap<>();
 
   private final QueryToolChestWarehouse warehouse;
   private final QueryWatcher queryWatcher;
@@ -117,7 +116,10 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   private final AtomicInteger openConnections;
   private final boolean isSmile;
 
-  public static <T, QueryType extends Query<T>> QueryType withDefaultTimeoutAndMaxScatterGatherBytes(final QueryType query, ServerConfig serverConfig)
+  public static <T, QueryType extends Query<T>> QueryType withDefaultTimeoutAndMaxScatterGatherBytes(
+      final QueryType query,
+      ServerConfig serverConfig
+  )
   {
     return (QueryType) QueryContexts.withMaxScatterGatherBytes(
         QueryContexts.withDefaultTimeout(
@@ -128,9 +130,18 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     );
   }
 
+  /**
+   * Removes the magical fields added by {@link #makeResponseContextForQuery(Query, long)}.
+   */
+  public static void removeMagicResponseContextFields(Map<String, Object> responseContext)
+  {
+    responseContext.remove(DirectDruidClient.QUERY_FAIL_TIME);
+    responseContext.remove(DirectDruidClient.QUERY_TOTAL_BYTES_GATHERED);
+  }
+
   public static Map<String, Object> makeResponseContextForQuery(Query query, long startTimeMillis)
   {
-    final Map<String, Object> responseContext = new MapMaker().makeMap();
+    final Map<String, Object> responseContext = new ConcurrentHashMap<>();
     responseContext.put(
         DirectDruidClient.QUERY_FAIL_TIME,
         startTimeMillis + QueryContexts.getTimeout(query)
@@ -242,9 +253,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             if (responseContext != null) {
               context.putAll(
                   objectMapper.<Map<String, Object>>readValue(
-                      responseContext, new TypeReference<Map<String, Object>>()
-                      {
-                      }
+                      responseContext, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
                   )
               );
             }

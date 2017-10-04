@@ -145,7 +145,8 @@ public class SmooshedFileMapper implements Closeable
     for (MappedByteBuffer mappedByteBuffer : buffersList) {
       try {
         ByteBufferUtils.unmap(mappedByteBuffer);
-      } catch (Throwable t) {
+      }
+      catch (Throwable t) {
         if (thrown == null) {
           thrown = t;
         } else {

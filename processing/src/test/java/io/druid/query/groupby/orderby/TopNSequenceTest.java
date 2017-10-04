@@ -53,34 +53,36 @@ public class TopNSequenceTest
   private int limit;
 
   @Parameterized.Parameters
-  public static Collection<Object[]> makeTestData(){
-    Object[][] data = new Object[][] {
-      { ASC, RAW_ASC, RAW_ASC.size() - 2},
-      { ASC, RAW_ASC, RAW_ASC.size()},
-      { ASC, RAW_ASC, RAW_ASC.size() + 2},
-      { ASC, RAW_ASC, 0},
-      { ASC, SINGLE, 0},
-      { ASC, SINGLE, 1},
-      { ASC, SINGLE, 2},
-      { ASC, SINGLE, 3},
-      { ASC, EMPTY, 0},
-      { ASC, EMPTY, 1},
-      { DESC, RAW_DESC, RAW_DESC.size() - 2},
-      { DESC, RAW_DESC, RAW_DESC.size()},
-      { DESC, RAW_DESC, RAW_DESC.size() + 2},
-      { DESC, RAW_DESC, 0},
-      { DESC, RAW_DESC, 0},
-      { DESC, SINGLE, 1},
-      { DESC, SINGLE, 2},
-      { DESC, SINGLE, 3},
-      { DESC, EMPTY, 0},
-      { DESC, EMPTY, 1},
+  public static Collection<Object[]> makeTestData()
+  {
+    Object[][] data = new Object[][]{
+        {ASC, RAW_ASC, RAW_ASC.size() - 2},
+        {ASC, RAW_ASC, RAW_ASC.size()},
+        {ASC, RAW_ASC, RAW_ASC.size() + 2},
+        {ASC, RAW_ASC, 0},
+        {ASC, SINGLE, 0},
+        {ASC, SINGLE, 1},
+        {ASC, SINGLE, 2},
+        {ASC, SINGLE, 3},
+        {ASC, EMPTY, 0},
+        {ASC, EMPTY, 1},
+        {DESC, RAW_DESC, RAW_DESC.size() - 2},
+        {DESC, RAW_DESC, RAW_DESC.size()},
+        {DESC, RAW_DESC, RAW_DESC.size() + 2},
+        {DESC, RAW_DESC, 0},
+        {DESC, RAW_DESC, 0},
+        {DESC, SINGLE, 1},
+        {DESC, SINGLE, 2},
+        {DESC, SINGLE, 3},
+        {DESC, EMPTY, 0},
+        {DESC, EMPTY, 1}
     };
 
     return Arrays.asList(data);
   }
 
-  public TopNSequenceTest(Ordering<String> ordering, List<String> rawInput, int limit){
+  public TopNSequenceTest(Ordering<String> ordering, List<String> rawInput, int limit)
+  {
     this.ordering = ordering;
     this.rawInput = rawInput;
     this.limit = limit;

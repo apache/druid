@@ -33,6 +33,7 @@ import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.IAE;
@@ -57,6 +58,7 @@ import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.column.ColumnCapabilities;
@@ -78,6 +80,43 @@ import java.util.Set;
 // this class contains shared code between GroupByMergingQueryRunnerV2 and GroupByRowProcessor
 public class RowBasedGrouperHelper
 {
+  private static final int SINGLE_THREAD_CONCURRENCY_HINT = -1;
+  private static final int UNKNOWN_THREAD_PRIORITY = -1;
+  private static final long UNKNOWN_TIMEOUT = -1L;
+
+  /**
+   * Create a single-threaded grouper and accumulator.
+   */
+  public static Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, Row>> createGrouperAccumulatorPair(
+      final GroupByQuery query,
+      final boolean isInputRaw,
+      final Map<String, ValueType> rawInputRowSignature,
+      final GroupByQueryConfig config,
+      final Supplier<ByteBuffer> bufferSupplier,
+      final LimitedTemporaryStorage temporaryStorage,
+      final ObjectMapper spillMapper,
+      final AggregatorFactory[] aggregatorFactories,
+      final int mergeBufferSize
+  )
+  {
+    return createGrouperAccumulatorPair(
+        query,
+        isInputRaw,
+        rawInputRowSignature,
+        config,
+        bufferSupplier,
+        SINGLE_THREAD_CONCURRENCY_HINT,
+        temporaryStorage,
+        spillMapper,
+        aggregatorFactories,
+        null,
+        UNKNOWN_THREAD_PRIORITY,
+        false,
+        UNKNOWN_TIMEOUT,
+        mergeBufferSize
+    );
+  }
+
   /**
    * If isInputRaw is true, transformations such as timestamp truncation and extraction functions have not
    * been applied to the input rows yet, for example, in a nested query, if an extraction function is being
@@ -92,7 +131,12 @@ public class RowBasedGrouperHelper
       final int concurrencyHint,
       final LimitedTemporaryStorage temporaryStorage,
       final ObjectMapper spillMapper,
-      final AggregatorFactory[] aggregatorFactories
+      final AggregatorFactory[] aggregatorFactories,
+      @Nullable final ListeningExecutorService grouperSorter,
+      final int priority,
+      final boolean hasQueryTimeout,
+      final long queryTimeoutAt,
+      final int mergeBufferSize
   )
   {
     // concurrencyHint >= 1 for concurrent groupers, -1 for single-threaded
@@ -145,7 +189,8 @@ public class RowBasedGrouperHelper
           spillMapper,
           true,
           limitSpec,
-          sortHasNonGroupingFields
+          sortHasNonGroupingFields,
+          mergeBufferSize
       );
     } else {
       grouper = new ConcurrentGrouper<>(
@@ -160,7 +205,12 @@ public class RowBasedGrouperHelper
           spillMapper,
           concurrencyHint,
           limitSpec,
-          sortHasNonGroupingFields
+          sortHasNonGroupingFields,
+          grouperSorter,
+          priority,
+          hasQueryTimeout,
+          queryTimeoutAt,
+          mergeBufferSize
       );
     }
 
@@ -474,42 +524,8 @@ public class RowBasedGrouperHelper
     }
   }
 
-  private static class LongInputRawSupplierColumnSelectorStrategy
-      implements InputRawSupplierColumnSelectorStrategy<LongColumnSelector>
-  {
-    @Override
-    public Supplier<Comparable> makeInputRawSupplier(LongColumnSelector selector)
-    {
-      return new Supplier<Comparable>()
-      {
-        @Override
-        public Comparable get()
-        {
-          return selector.get();
-        }
-      };
-    }
-  }
-
-  private static class FloatInputRawSupplierColumnSelectorStrategy
-      implements InputRawSupplierColumnSelectorStrategy<FloatColumnSelector>
-  {
-    @Override
-    public Supplier<Comparable> makeInputRawSupplier(FloatColumnSelector selector)
-    {
-      return new Supplier<Comparable>()
-      {
-        @Override
-        public Comparable get()
-        {
-          return selector.get();
-        }
-      };
-    }
-  }
-
   private static class InputRawSupplierColumnSelectorStrategyFactory
-    implements ColumnSelectorStrategyFactory<InputRawSupplierColumnSelectorStrategy>
+      implements ColumnSelectorStrategyFactory<InputRawSupplierColumnSelectorStrategy>
   {
     @Override
     public InputRawSupplierColumnSelectorStrategy makeColumnSelectorStrategy(
@@ -517,13 +533,17 @@ public class RowBasedGrouperHelper
     )
     {
       ValueType type = capabilities.getType();
-      switch(type) {
+      switch (type) {
         case STRING:
           return new StringInputRawSupplierColumnSelectorStrategy();
         case LONG:
-          return new LongInputRawSupplierColumnSelectorStrategy();
+          return (InputRawSupplierColumnSelectorStrategy<LongColumnSelector>) columnSelector -> columnSelector::getLong;
         case FLOAT:
-          return new FloatInputRawSupplierColumnSelectorStrategy();
+          return (InputRawSupplierColumnSelectorStrategy<FloatColumnSelector>)
+              columnSelector -> columnSelector::getFloat;
+        case DOUBLE:
+          return (InputRawSupplierColumnSelectorStrategy<DoubleColumnSelector>)
+              columnSelector -> columnSelector::getDouble;
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", type);
       }
@@ -565,40 +585,29 @@ public class RowBasedGrouperHelper
       type = type == null ? ValueType.STRING : type;
       switch (type) {
         case STRING:
-          functions[i] = new Function<Comparable, Comparable>()
-          {
-            @Override
-            public Comparable apply(@Nullable Comparable input)
-            {
-              return input == null ? "" : input.toString();
-            }
-          };
+          functions[i] = input -> input == null ? "" : input.toString();
           break;
 
         case LONG:
-          functions[i] = new Function<Comparable, Comparable>()
-          {
-            @Override
-            public Comparable apply(@Nullable Comparable input)
-            {
-              final Long val = DimensionHandlerUtils.convertObjectToLong(input);
-              return val == null ? 0L : val;
-            }
+          functions[i] = input -> {
+            final Long val = DimensionHandlerUtils.convertObjectToLong(input);
+            return val == null ? 0L : val;
           };
           break;
 
         case FLOAT:
-          functions[i] = new Function<Comparable, Comparable>()
-          {
-            @Override
-            public Comparable apply(@Nullable Comparable input)
-            {
-              final Float val = DimensionHandlerUtils.convertObjectToFloat(input);
-              return val == null ? 0.f : val;
-            }
+          functions[i] = input -> {
+            final Float val = DimensionHandlerUtils.convertObjectToFloat(input);
+            return val == null ? 0.f : val;
           };
           break;
 
+        case DOUBLE:
+          functions[i] = input -> {
+            Double val = DimensionHandlerUtils.convertObjectToDouble(input);
+            return val == null ? 0.0 : val;
+          };
+          break;
         default:
           throw new IAE("invalid type: [%s]", type);
       }
@@ -722,7 +731,7 @@ public class RowBasedGrouperHelper
           needsReverses.add(needsReverse);
           aggFlags.add(false);
           final ValueType type = dimensions.get(dimIndex).getOutputType();
-          isNumericField.add(type == ValueType.LONG || type == ValueType.FLOAT);
+          isNumericField.add(ValueType.isNumeric(type));
           comparators.add(orderSpec.getDimensionComparator());
         } else {
           int aggIndex = OrderByColumnSpec.getAggIndexForOrderBy(orderSpec, Arrays.asList(aggregatorFactories));
@@ -731,7 +740,7 @@ public class RowBasedGrouperHelper
             needsReverses.add(needsReverse);
             aggFlags.add(true);
             final String typeName = aggregatorFactories[aggIndex].getTypeName();
-            isNumericField.add(typeName.equals("long") || typeName.equals("float"));
+            isNumericField.add(ValueType.isNumeric(ValueType.fromString(typeName)));
             comparators.add(orderSpec.getDimensionComparator());
           }
         }
@@ -743,7 +752,7 @@ public class RowBasedGrouperHelper
           aggFlags.add(false);
           needsReverses.add(false);
           final ValueType type = dimensions.get(i).getOutputType();
-          isNumericField.add(type == ValueType.LONG || type == ValueType.FLOAT);
+          isNumericField.add(ValueType.isNumeric(type));
           comparators.add(StringComparators.LEXICOGRAPHIC);
         }
       }
@@ -868,7 +877,7 @@ public class RowBasedGrouperHelper
 
         final StringComparator comparator = comparators.get(i);
 
-        if (isNumericField.get(i) && comparator == StringComparators.NUMERIC) {
+        if (isNumericField.get(i) && comparator.equals(StringComparators.NUMERIC)) {
           // use natural comparison
           cmp = lhs.compareTo(rhs);
         } else {
@@ -1103,7 +1112,7 @@ public class RowBasedGrouperHelper
           if (aggIndex >= 0) {
             final RowBasedKeySerdeHelper serdeHelper;
             final StringComparator cmp = orderSpec.getDimensionComparator();
-            final boolean cmpIsNumeric = cmp == StringComparators.NUMERIC;
+            final boolean cmpIsNumeric = cmp.equals(StringComparators.NUMERIC);
             final String typeName = aggregatorFactories[aggIndex].getTypeName();
             final int aggOffset = aggregatorOffsets[aggIndex] - Ints.BYTES;
 
@@ -1116,7 +1125,12 @@ public class RowBasedGrouperHelper
                 serdeHelper = new LimitPushDownLongRowBasedKeySerdeHelper(aggOffset, cmp);
               }
             } else if (typeName.equals("float")) {
-              // called "float", but the aggs really return doubles
+              if (cmpIsNumeric) {
+                serdeHelper = new FloatRowBasedKeySerdeHelper(aggOffset);
+              } else {
+                serdeHelper = new LimitPushDownFloatRowBasedKeySerdeHelper(aggOffset, cmp);
+              }
+            } else if (typeName.equals("double")) {
               if (cmpIsNumeric) {
                 serdeHelper = new DoubleRowBasedKeySerdeHelper(aggOffset);
               } else {
@@ -1179,7 +1193,7 @@ public class RowBasedGrouperHelper
                 return timeCompare;
               }
 
-              int cmp =  compareDimsInBuffersForNullFudgeTimestampForPushDown(
+              int cmp = compareDimsInBuffersForNullFudgeTimestampForPushDown(
                   adjustedSerdeHelpers,
                   needsReverses,
                   fieldCount,
@@ -1351,6 +1365,9 @@ public class RowBasedGrouperHelper
           case FLOAT:
             helper = new FloatRowBasedKeySerdeHelper(keyBufferPosition);
             break;
+          case DOUBLE:
+            helper = new DoubleRowBasedKeySerdeHelper(keyBufferPosition);
+            break;
           default:
             throw new IAE("invalid type: %s", valType);
         }
@@ -1369,7 +1386,7 @@ public class RowBasedGrouperHelper
         final ValueType valType = valueTypes.get(i);
         final String dimName = dimensions.get(i).getOutputName();
         StringComparator cmp = DefaultLimitSpec.getComparatorForDimName(limitSpec, dimName);
-        final boolean cmpIsNumeric = cmp == StringComparators.NUMERIC;
+        final boolean cmpIsNumeric = cmp != null && cmp.equals(StringComparators.NUMERIC);
 
         RowBasedKeySerdeHelper helper;
         switch (valType) {
@@ -1391,6 +1408,13 @@ public class RowBasedGrouperHelper
               helper = new FloatRowBasedKeySerdeHelper(keyBufferPosition);
             } else {
               helper = new LimitPushDownFloatRowBasedKeySerdeHelper(keyBufferPosition, cmp);
+            }
+            break;
+          case DOUBLE:
+            if (cmp == null || cmpIsNumeric) {
+              helper = new DoubleRowBasedKeySerdeHelper(keyBufferPosition);
+            } else {
+              helper = new LimitPushDownDoubleRowBasedKeySerdeHelper(keyBufferPosition, cmp);
             }
             break;
           default:

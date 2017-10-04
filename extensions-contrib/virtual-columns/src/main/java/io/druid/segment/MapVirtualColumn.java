@@ -81,7 +81,7 @@ public class MapVirtualColumn implements VirtualColumn
         }
 
         @Override
-        public Map get()
+        public Map getObject()
         {
           final IndexedInts keyIndices = keySelector.getRow();
           final IndexedInts valueIndices = valueSelector.getRow();
@@ -116,7 +116,7 @@ public class MapVirtualColumn implements VirtualColumn
         }
 
         @Override
-        public String get()
+        public String getObject()
         {
           final IndexedInts keyIndices = keySelector.getRow();
           final IndexedInts valueIndices = valueSelector.getRow();
@@ -142,7 +142,7 @@ public class MapVirtualColumn implements VirtualColumn
         }
 
         @Override
-        public String get()
+        public String getObject()
         {
           final IndexedInts keyIndices = keySelector.getRow();
           final IndexedInts valueIndices = valueSelector.getRow();
@@ -165,19 +165,25 @@ public class MapVirtualColumn implements VirtualColumn
   public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec, ColumnSelectorFactory factory)
   {
     // Could probably do something useful here if the column name is dot-style. But for now just return nothing.
-    return null;
+    return dimensionSpec.decorate(DimensionSelectorUtils.constantSelector(null, dimensionSpec.getExtractionFn()));
   }
 
   @Override
   public FloatColumnSelector makeFloatColumnSelector(String columnName, ColumnSelectorFactory factory)
   {
-    return null;
+    return ZeroFloatColumnSelector.instance();
   }
 
   @Override
   public LongColumnSelector makeLongColumnSelector(String columnName, ColumnSelectorFactory factory)
   {
-    return null;
+    return ZeroLongColumnSelector.instance();
+  }
+
+  @Override
+  public DoubleColumnSelector makeDoubleColumnSelector(String columnName, ColumnSelectorFactory factory)
+  {
+    return ZeroDoubleColumnSelector.instance();
   }
 
   @Override

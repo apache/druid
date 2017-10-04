@@ -19,11 +19,10 @@
 
 package io.druid.data.input;
 
-import org.joda.time.DateTime;
+import com.google.common.collect.ImmutableMap;
+import io.druid.java.util.common.DateTimes;
 import org.junit.Assert;
 import org.junit.Test;
-
-import com.google.common.collect.ImmutableMap;
 
 public class MapBasedRowTest
 {
@@ -31,8 +30,8 @@ public class MapBasedRowTest
   public void testGetLongMetricFromString()
   {
     MapBasedRow row = new MapBasedRow(
-        new DateTime(),
-        ImmutableMap.<String,Object>builder()
+        DateTimes.nowUtc(),
+        ImmutableMap.<String, Object>builder()
           .put("k0", "-1.2")
           .put("k1", "1.23")
           .put("k2", "1.8")

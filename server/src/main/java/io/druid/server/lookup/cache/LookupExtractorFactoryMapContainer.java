@@ -59,7 +59,8 @@ public class LookupExtractorFactoryMapContainer
     return lookupExtractorFactory;
   }
 
-  public boolean replaces(LookupExtractorFactoryMapContainer other) {
+  public boolean replaces(LookupExtractorFactoryMapContainer other)
+  {
     if (version == null && other.getVersion() == null) {
       return false;
     }

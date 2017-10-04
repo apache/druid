@@ -24,6 +24,7 @@ import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.spatial.search.Bound;
 import io.druid.query.BitmapResultFactory;
 import io.druid.query.filter.BitmapIndexSelector;
+import io.druid.query.filter.DruidDoublePredicate;
 import io.druid.query.filter.DruidFloatPredicate;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
@@ -93,6 +94,13 @@ public class SpatialFilter implements Filter
           {
             // SpatialFilter does not currently support floats
             return DruidFloatPredicate.ALWAYS_FALSE;
+          }
+
+          @Override
+          public DruidDoublePredicate makeDoublePredicate()
+          {
+            // SpatialFilter does not currently support doubles
+            return DruidDoublePredicate.ALWAYS_FALSE;
           }
         }
     );

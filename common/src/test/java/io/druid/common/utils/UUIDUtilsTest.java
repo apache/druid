@@ -45,15 +45,15 @@ public class UUIDUtilsTest
   {
     final ArrayList<String[]> args = new ArrayList<>();
     final List<String> possibleArgs = Lists.newArrayList("one", "two", null, "");
-    for (int i = 0; i < possibleArgs.size(); ++i) {
-      args.add(new String[]{possibleArgs.get(i)});
-      for (int j = 0; j < possibleArgs.size(); ++j) {
-        for (int k = 0; k < possibleArgs.size(); ++k) {
-          args.add(new String[]{possibleArgs.get(i), possibleArgs.get(j), possibleArgs.get(k)});
+    for (String possibleArg1 : possibleArgs) {
+      args.add(new String[]{possibleArg1});
+      for (String possibleArg2 : possibleArgs) {
+        for (String possibleArg3 : possibleArgs) {
+          args.add(new String[]{possibleArg1, possibleArg2, possibleArg3});
         }
       }
     }
-    for(String possibleArg : possibleArgs){
+    for (String possibleArg : possibleArgs) {
       args.add(new String[]{possibleArg});
     }
     return Collections2.transform(

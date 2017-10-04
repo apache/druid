@@ -24,11 +24,11 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 /**
  */
-@JsonTypeInfo(use= JsonTypeInfo.Id.NAME, property="action")
-@JsonSubTypes(value={
-    @JsonSubTypes.Type(name="load", value=SegmentChangeRequestLoad.class),
-    @JsonSubTypes.Type(name="drop", value=SegmentChangeRequestDrop.class),
-    @JsonSubTypes.Type(name="noop", value=SegmentChangeRequestNoop.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "action")
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "load", value = SegmentChangeRequestLoad.class),
+    @JsonSubTypes.Type(name = "drop", value = SegmentChangeRequestDrop.class),
+    @JsonSubTypes.Type(name = "noop", value = SegmentChangeRequestNoop.class)
 })
 public interface DataSegmentChangeRequest
 {

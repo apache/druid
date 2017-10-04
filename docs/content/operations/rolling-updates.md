@@ -13,7 +13,7 @@ following order:
 3. Middle Manager (if any)
 4. Standalone Real-time (if any)
 5. Broker
-6. Coordinator
+6. Coordinator ( or merged Coordinator+Overlord )
 
 ## Historical
 

@@ -22,6 +22,7 @@ package io.druid.query.topn;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -64,7 +65,7 @@ public class TopNBinaryFnTest
   final List<PostAggregator> postAggregators = Arrays.<PostAggregator>asList(
       addrowsindexconstant
   );
-  private final DateTime currTime = new DateTime();
+  private final DateTime currTime = DateTimes.nowUtc();
 
   private void assertTopNMergeResult(Object o1, Object o2)
   {

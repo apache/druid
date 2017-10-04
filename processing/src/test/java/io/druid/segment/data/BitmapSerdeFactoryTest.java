@@ -45,14 +45,14 @@ public class BitmapSerdeFactoryTest
     ObjectMapper mapper = new DefaultObjectMapper();
     final BitmapSerdeFactory roaringFactory = mapper.readValue("{\"type\":\"roaring\"}", BitmapSerdeFactory.class);
     Assert.assertTrue(roaringFactory instanceof RoaringBitmapSerdeFactory);
-    Assert.assertTrue(((RoaringBitmapSerdeFactory)roaringFactory).getCompressRunOnSerialization());
+    Assert.assertTrue(((RoaringBitmapSerdeFactory) roaringFactory).getCompressRunOnSerialization());
 
     final BitmapSerdeFactory compressingRoaringFactory = mapper.readValue(
         "{\"type\":\"roaring\", \"compressRunOnSerialization\":false}",
         BitmapSerdeFactory.class
     );
     Assert.assertTrue(compressingRoaringFactory instanceof RoaringBitmapSerdeFactory);
-    Assert.assertFalse(((RoaringBitmapSerdeFactory)compressingRoaringFactory).getCompressRunOnSerialization());
+    Assert.assertFalse(((RoaringBitmapSerdeFactory) compressingRoaringFactory).getCompressRunOnSerialization());
 
     Assert.assertTrue(mapper.readValue("{\"type\":\"concise\"}", BitmapSerdeFactory.class) instanceof ConciseBitmapSerdeFactory);
     Assert.assertTrue(mapper.readValue("{\"type\":\"BitmapSerde$SomeRandomClass\"}", BitmapSerdeFactory.class) instanceof ConciseBitmapSerdeFactory);

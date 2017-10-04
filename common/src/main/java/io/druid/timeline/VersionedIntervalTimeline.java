@@ -25,7 +25,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.UOE;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.timeline.partition.ImmutablePartitionHolder;
@@ -213,7 +213,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
   }
 
   @Override
-  public Iterable<TimelineObjectHolder<VersionType, ObjectType>> lookupWithIncompletePartitions(Interval interval)
+  public List<TimelineObjectHolder<VersionType, ObjectType>> lookupWithIncompletePartitions(Interval interval)
   {
     try {
       lock.readLock().lock();
@@ -288,7 +288,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
       }
 
       Interval lower = completePartitionsTimeline.floorKey(
-          new Interval(interval.getStartMillis(), JodaUtils.MAX_INSTANT)
+          new Interval(interval.getStart(), DateTimes.MAX)
       );
 
       if (lower == null || !lower.overlaps(interval)) {

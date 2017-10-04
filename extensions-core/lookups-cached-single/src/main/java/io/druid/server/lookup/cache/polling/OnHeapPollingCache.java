@@ -45,8 +45,8 @@ public class OnHeapPollingCache<K, V> implements PollingCache<K, V>
       immutableReverseMap = ImmutableMap.of();
     } else {
       ImmutableSet.Builder<V> setOfValuesBuilder = ImmutableSet.builder();
-      ImmutableMap.Builder<K, V>  mapBuilder = ImmutableMap.builder();
-      for (Map.Entry<K,V> entry: entries
+      ImmutableMap.Builder<K, V> mapBuilder = ImmutableMap.builder();
+      for (Map.Entry<K, V> entry: entries
            ) {
         setOfValuesBuilder.add(entry.getValue());
         mapBuilder.put(entry.getKey(), entry.getValue());
@@ -103,7 +103,7 @@ public class OnHeapPollingCache<K, V> implements PollingCache<K, V>
   public static class OnHeapPollingCacheProvider<K, V> implements PollingCacheFactory<K, V>
   {
     @Override
-    public PollingCache makeOf(Iterable<Map.Entry<K,V>> entries)
+    public PollingCache makeOf(Iterable<Map.Entry<K, V>> entries)
     {
       return new OnHeapPollingCache(entries);
     }

@@ -55,6 +55,12 @@ public final class NoopAggregator implements Aggregator
   }
 
   @Override
+  public double getDouble()
+  {
+    return 0;
+  }
+
+  @Override
   public void close()
   {
   }

@@ -22,6 +22,7 @@ package io.druid.query;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 
@@ -34,6 +35,7 @@ import java.util.Set;
 
 /**
  */
+@PublicApi
 public class Queries
 {
   public static List<PostAggregator> decoratePostAggregators(

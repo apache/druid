@@ -31,6 +31,7 @@ import org.testng.TestNGException;
 import org.testng.TestRunner;
 import org.testng.collections.Lists;
 import org.testng.internal.ClassHelper;
+import org.testng.log4testng.Logger;
 import org.testng.remote.strprotocol.GenericMessage;
 import org.testng.remote.strprotocol.IMessageSender;
 import org.testng.remote.strprotocol.MessageHelper;
@@ -59,6 +60,8 @@ import static org.testng.internal.Utils.defaultIfStringEmpty;
  */
 public class RemoteTestNG extends TestNG
 {
+  private static final Logger LOGGER = Logger.getLogger(TestNG.class);
+
   // The following constants are referenced by the Eclipse plug-in, make sure you
   // modify the plug-in as well if you change any of them.
   public static final String DEBUG_PORT = "12345";
@@ -134,7 +137,7 @@ public class RemoteTestNG extends TestNG
   private static void p(String s)
   {
     if (isVerbose()) {
-      System.out.println("[RemoteTestNG] " + s);
+      LOGGER.info("[RemoteTestNG] " + s);
     }
   }
 
@@ -177,8 +180,8 @@ public class RemoteTestNG extends TestNG
 
         int testCount = 0;
 
-        for (int i = 0; i < suites.size(); i++) {
-          testCount += (suites.get(i)).getTests().size();
+        for (XmlSuite suite : suites) {
+          testCount += suite.getTests().size();
         }
 
         GenericMessage gm = new GenericMessage(MessageHelper.GENERIC_SUITE_COUNT);
@@ -191,11 +194,11 @@ public class RemoteTestNG extends TestNG
 
         super.run();
       } else {
-        System.err.println("No test suite found. Nothing to run");
+        LOGGER.error("No test suite found. Nothing to run");
       }
     }
     catch (Throwable cause) {
-      cause.printStackTrace(System.err);
+      LOGGER.error("", cause);
     }
     finally {
       msh.shutDown();

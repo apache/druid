@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
+import io.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 
 /**
@@ -36,12 +37,14 @@ public abstract class TaskRunnerWorkItem
   private final DateTime createdTime;
   private final DateTime queueInsertionTime;
 
-  public TaskRunnerWorkItem(
-      String taskId,
-      ListenableFuture<TaskStatus> result
-  )
+  public TaskRunnerWorkItem(String taskId, ListenableFuture<TaskStatus> result)
   {
-    this(taskId, result, new DateTime(), new DateTime());
+    this(taskId, result, DateTimes.nowUtc());
+  }
+
+  private TaskRunnerWorkItem(String taskId, ListenableFuture<TaskStatus> result, DateTime createdTime)
+  {
+    this(taskId, result, createdTime, createdTime);
   }
 
   public TaskRunnerWorkItem(

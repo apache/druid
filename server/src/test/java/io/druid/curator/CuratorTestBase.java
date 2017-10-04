@@ -64,13 +64,11 @@ public class CuratorTestBase
     final String announcementsPath = zkPathsConfig.getAnnouncementsPath();
     final String inventoryPath = zkPathsConfig.getLiveSegmentsPath();
 
+    String zkPath = ZKPaths.makePath(announcementsPath, server.getHost());
     try {
       curator.create()
              .creatingParentsIfNeeded()
-             .forPath(
-                 ZKPaths.makePath(announcementsPath, server.getHost()),
-                 jsonMapper.writeValueAsBytes(server.getMetadata())
-             );
+             .forPath(zkPath, jsonMapper.writeValueAsBytes(server.getMetadata()));
       curator.create()
              .creatingParentsIfNeeded()
              .forPath(ZKPaths.makePath(inventoryPath, server.getHost()));
@@ -84,10 +82,7 @@ public class CuratorTestBase
        */
       try {
         curator.setData()
-               .forPath(
-                   ZKPaths.makePath(announcementsPath, server.getHost()),
-                   jsonMapper.writeValueAsBytes(server.getMetadata())
-               );
+               .forPath(zkPath, jsonMapper.writeValueAsBytes(server.getMetadata()));
         curator.setData()
                .forPath(ZKPaths.makePath(inventoryPath, server.getHost()));
       }
@@ -116,20 +111,12 @@ public class CuratorTestBase
       curator.create()
              .compressed()
              .withMode(CreateMode.EPHEMERAL)
-             .forPath(
-                 segmentAnnouncementPath,
-                 jsonMapper.writeValueAsBytes(
-                     ImmutableSet.<DataSegment>of(segment)
-                 )
-             );
+             .forPath(segmentAnnouncementPath, jsonMapper.writeValueAsBytes(ImmutableSet.of(segment)));
     }
     catch (KeeperException.NodeExistsException e) {
       try {
         curator.setData()
-               .forPath(
-                   segmentAnnouncementPath,
-                   jsonMapper.writeValueAsBytes(ImmutableSet.<DataSegment>of(segment))
-               );
+               .forPath(segmentAnnouncementPath, jsonMapper.writeValueAsBytes(ImmutableSet.of(segment)));
       }
       catch (Exception e1) {
         Throwables.propagate(e1);
@@ -156,9 +143,9 @@ public class CuratorTestBase
     try {
       curator.close();
       server.close();
-    } catch(IOException ex)
-    {
-      throw Throwables.propagate(ex);
+    }
+    catch (IOException ex) {
+      throw new RuntimeException(ex);
     }
   }
 

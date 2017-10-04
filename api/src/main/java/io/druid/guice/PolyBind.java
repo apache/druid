@@ -30,6 +30,7 @@ import com.google.inject.TypeLiteral;
 import com.google.inject.binder.ScopedBindingBuilder;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.util.Types;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
@@ -45,6 +46,7 @@ import java.util.Properties;
  * returned by the optionBinder() method.  Multiple different modules can call optionBinder and all options will be
  * reflected at injection time as long as equivalent interface Key objects are passed into the various methods.
  */
+@PublicApi
 public class PolyBind
 {
   /**
@@ -69,7 +71,7 @@ public class PolyBind
   }
 
   /**
-   * @deprecated use {@link #createChoiceWithDefault(com.google.inject.Binder, String, com.google.inject.Key, String)}
+   * @deprecated use {@link #createChoiceWithDefault(Binder, String, Key, String)}
    * instead. {@code defaultKey} argument is ignored.
    */
   @Deprecated
@@ -123,13 +125,11 @@ public class PolyBind
       return MapBinder.newMapBinder(
           binder, TypeLiteral.get(String.class), interfaceType, interfaceKey.getAnnotation()
       );
-    }
-    else if (interfaceKey.getAnnotationType() != null) {
+    } else if (interfaceKey.getAnnotationType() != null) {
       return MapBinder.newMapBinder(
           binder, TypeLiteral.get(String.class), interfaceType, interfaceKey.getAnnotationType()
       );
-    }
-    else {
+    } else {
       return MapBinder.newMapBinder(binder, TypeLiteral.get(String.class), interfaceType);
     }
   }
@@ -177,11 +177,9 @@ public class PolyBind
       final Map<String, Provider<T>> implsMap;
       if (key.getAnnotation() != null) {
         implsMap = (Map<String, Provider<T>>) injector.getInstance(Key.get(mapType, key.getAnnotation()));
-      }
-      else if (key.getAnnotationType() != null) {
+      } else if (key.getAnnotationType() != null) {
         implsMap = (Map<String, Provider<T>>) injector.getInstance(Key.get(mapType, key.getAnnotation()));
-      }
-      else {
+      } else {
         implsMap = (Map<String, Provider<T>>) injector.getInstance(Key.get(mapType));
       }
 

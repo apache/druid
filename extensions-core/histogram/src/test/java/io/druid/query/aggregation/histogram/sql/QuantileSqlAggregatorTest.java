@@ -26,7 +26,6 @@ import com.google.common.collect.Iterables;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
-import io.druid.query.QueryContexts;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
@@ -45,9 +44,8 @@ import io.druid.segment.TestHelper;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
-import io.druid.server.initialization.ServerConfig;
-import io.druid.sql.calcite.aggregation.SqlAggregator;
-import io.druid.sql.calcite.expression.SqlOperatorConversion;
+import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.filtration.Filtration;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
@@ -55,12 +53,12 @@ import io.druid.sql.calcite.planner.DruidPlanner;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.planner.PlannerFactory;
 import io.druid.sql.calcite.planner.PlannerResult;
+import io.druid.sql.calcite.schema.DruidSchema;
 import io.druid.sql.calcite.util.CalciteTests;
 import io.druid.sql.calcite.util.QueryLogHook;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
-import org.apache.calcite.schema.SchemaPlus;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -126,23 +124,22 @@ public class QuantileSqlAggregatorTest
     );
 
     final PlannerConfig plannerConfig = new PlannerConfig();
-    final SchemaPlus rootSchema = Calcites.createRootSchema(
-        CalciteTests.createMockSchema(
-            walker,
-            plannerConfig
-        )
-    );
+    final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig);
     final DruidOperatorTable operatorTable = new DruidOperatorTable(
-        ImmutableSet.<SqlAggregator>of(new QuantileSqlAggregator()),
-        ImmutableSet.<SqlOperatorConversion>of()
+        ImmutableSet.of(new QuantileSqlAggregator()),
+        ImmutableSet.of()
     );
+
     plannerFactory = new PlannerFactory(
-        rootSchema,
-        walker,
+        druidSchema,
+        CalciteTests.createMockQueryLifecycleFactory(walker),
         operatorTable,
         CalciteTests.createExprMacroTable(),
         plannerConfig,
-        new ServerConfig()
+        new AuthConfig(),
+        AuthTestUtils.TEST_AUTHENTICATOR_MAPPER,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        CalciteTests.getJsonMapper()
     );
   }
 
@@ -230,11 +227,7 @@ public class QuantileSqlAggregatorTest
                     new QuantilePostAggregator("a7", "a5:agg", 0.999f),
                     new QuantilePostAggregator("a8", "a8:agg", 0.50f)
                 ))
-                .context(ImmutableMap.<String, Object>of(
-                    "skipEmptyBuckets", true,
-                    QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
-                    QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
-                ))
+                .context(ImmutableMap.<String, Object>of("skipEmptyBuckets", true))
                 .build(),
           Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
       );
@@ -294,11 +287,7 @@ public class QuantileSqlAggregatorTest
                     new QuantilePostAggregator("a5", "a5:agg", 0.999f),
                     new QuantilePostAggregator("a6", "a4:agg", 0.999f)
                 ))
-                .context(ImmutableMap.<String, Object>of(
-                    "skipEmptyBuckets", true,
-                    QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
-                    QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
-                ))
+                .context(ImmutableMap.<String, Object>of("skipEmptyBuckets", true))
                 .build(),
           Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
       );

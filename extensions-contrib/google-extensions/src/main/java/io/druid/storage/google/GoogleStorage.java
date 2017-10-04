@@ -35,7 +35,7 @@ public class GoogleStorage
   }
 
   public void insert(final String bucket, final String path, AbstractInputStreamContent mediaContent) throws IOException
-   {
+  {
     Storage.Objects.Insert insertObject = storage.objects().insert(bucket, null, mediaContent);
     insertObject.setName(path);
     insertObject.getMediaHttpUploader().setDirectUploadEnabled(false);
@@ -58,7 +58,8 @@ public class GoogleStorage
   {
     try {
       return storage.objects().get(bucket, path).executeUsingHead().isSuccessStatusCode();
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       return false;
     }
   }

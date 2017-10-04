@@ -69,6 +69,12 @@ public class CountAggregator implements Aggregator
   }
 
   @Override
+  public double getDouble()
+  {
+    return (double) count;
+  }
+
+  @Override
   public Aggregator clone()
   {
     return new CountAggregator();

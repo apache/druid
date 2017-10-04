@@ -30,12 +30,12 @@ public class FloatCardinalityAggregatorColumnSelectorStrategy
   @Override
   public void hashRow(FloatColumnSelector dimSelector, Hasher hasher)
   {
-    hasher.putFloat(dimSelector.get());
+    hasher.putFloat(dimSelector.getFloat());
   }
 
   @Override
   public void hashValues(FloatColumnSelector dimSelector, HyperLogLogCollector collector)
   {
-    collector.add(CardinalityAggregator.hashFn.hashInt(Float.floatToIntBits(dimSelector.get())).asBytes());
+    collector.add(CardinalityAggregator.hashFn.hashInt(Float.floatToIntBits(dimSelector.getFloat())).asBytes());
   }
 }

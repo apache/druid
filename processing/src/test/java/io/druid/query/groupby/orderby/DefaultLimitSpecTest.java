@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -39,7 +40,6 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.ordering.StringComparators;
 import io.druid.segment.TestHelper;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -253,8 +253,8 @@ public class DefaultLimitSpecTest
         )
     );
     Assert.assertEquals(
-        (List)ImmutableList.of(testRowsList.get(2), testRowsList.get(0)),
-        (List)Sequences.toList(limitFn.apply(testRowsSequence), new ArrayList<Row>())
+        (List) ImmutableList.of(testRowsList.get(2), testRowsList.get(0)),
+        (List) Sequences.toList(limitFn.apply(testRowsSequence), new ArrayList<Row>())
     );
 
     // makes same result
@@ -264,8 +264,8 @@ public class DefaultLimitSpecTest
         ImmutableList.<PostAggregator>of(new ExpressionPostAggregator("k1", "1 + 1", null, TestExprMacroTable.INSTANCE))
     );
     Assert.assertEquals(
-        (List)ImmutableList.of(testRowsList.get(2), testRowsList.get(0)),
-        (List)Sequences.toList(limitFn.apply(testRowsSequence), new ArrayList<Row>())
+        (List) ImmutableList.of(testRowsList.get(2), testRowsList.get(0)),
+        (List) Sequences.toList(limitFn.apply(testRowsSequence), new ArrayList<Row>())
     );
   }
 
@@ -278,7 +278,6 @@ public class DefaultLimitSpecTest
       theVals.put(vals[i].toString(), vals[i + 1]);
     }
 
-    DateTime ts = new DateTime(timestamp);
-    return new MapBasedRow(ts, theVals);
+    return new MapBasedRow(DateTimes.of(timestamp), theVals);
   }
 }

@@ -33,11 +33,17 @@ public class GuiceInjectableValues extends InjectableValues
 {
   private final Injector injector;
 
-  public GuiceInjectableValues(Injector injector) {this.injector = injector;}
+  public GuiceInjectableValues(Injector injector)
+  {
+    this.injector = injector;
+  }
 
   @Override
   public Object findInjectableValue(
-      Object valueId, DeserializationContext ctxt, BeanProperty forProperty, Object beanInstance
+      Object valueId,
+      DeserializationContext ctxt,
+      BeanProperty forProperty,
+      Object beanInstance
   )
   {
     // From the docs:   "Object that identifies value to inject; may be a simple name or more complex identifier object,

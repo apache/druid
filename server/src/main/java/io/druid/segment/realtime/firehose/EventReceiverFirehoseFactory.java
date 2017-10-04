@@ -41,8 +41,16 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
+import io.druid.java.util.common.DateTimes;
 import io.druid.server.metrics.EventReceiverFirehoseMetric;
 import io.druid.server.metrics.EventReceiverFirehoseRegister;
+import io.druid.server.security.Access;
+import io.druid.server.security.Action;
+import io.druid.server.security.AuthorizationUtils;
+import io.druid.server.security.AuthorizerMapper;
+import io.druid.server.security.Resource;
+import io.druid.server.security.ResourceAction;
+import io.druid.server.security.ResourceType;
 import org.joda.time.DateTime;
 
 import javax.servlet.http.HttpServletRequest;
@@ -68,8 +76,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Builds firehoses that accept events through the {@link io.druid.segment.realtime.firehose.EventReceiver} interface. Can also register these
- * firehoses with an {@link io.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider}.
+ * Builds firehoses that accept events through the {@link EventReceiver} interface. Can also register these
+ * firehoses with an {@link ServiceAnnouncingChatHandlerProvider}.
  */
 public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRowParser>
 {
@@ -82,6 +90,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
   private final EventReceiverFirehoseRegister eventReceiverFirehoseRegister;
+  private final AuthorizerMapper authorizerMapper;
 
   @JsonCreator
   public EventReceiverFirehoseFactory(
@@ -90,7 +99,8 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
       @JacksonInject @Json ObjectMapper jsonMapper,
       @JacksonInject @Smile ObjectMapper smileMapper,
-      @JacksonInject EventReceiverFirehoseRegister eventReceiverFirehoseRegister
+      @JacksonInject EventReceiverFirehoseRegister eventReceiverFirehoseRegister,
+      @JacksonInject AuthorizerMapper authorizerMapper
   )
   {
     Preconditions.checkNotNull(serviceName, "serviceName");
@@ -101,6 +111,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
     this.jsonMapper = jsonMapper;
     this.smileMapper = smileMapper;
     this.eventReceiverFirehoseRegister = eventReceiverFirehoseRegister;
+    this.authorizerMapper = authorizerMapper;
   }
 
   @Override
@@ -165,6 +176,18 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
         @Context final HttpServletRequest req // used only to get request content-type
     )
     {
+      Access accessResult = AuthorizationUtils.authorizeResourceAction(
+          req,
+          new ResourceAction(
+              new Resource("STATE", ResourceType.STATE),
+            Action.WRITE
+          ),
+          authorizerMapper
+      );
+      if (!accessResult.isAllowed()) {
+        return Response.status(403).build();
+      }
+
       final String reqContentType = req.getContentType();
       final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(reqContentType);
       final String contentType = isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON;
@@ -319,11 +342,24 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
     @Consumes({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
     @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
     public Response shutdown(
-        @QueryParam("shutoffTime") final String shutoffTime
+        @QueryParam("shutoffTime") final String shutoffTime,
+        @Context final HttpServletRequest req
     )
     {
+      Access accessResult = AuthorizationUtils.authorizeResourceAction(
+          req,
+          new ResourceAction(
+              new Resource("STATE", ResourceType.STATE),
+              Action.WRITE
+          ),
+          authorizerMapper
+      );
+      if (!accessResult.isAllowed()) {
+        return Response.status(403).build();
+      }
+
       try {
-        DateTime shutoffAt = shutoffTime == null ? DateTime.now() : new DateTime(shutoffTime);
+        DateTime shutoffAt = shutoffTime == null ? DateTimes.nowUtc() : DateTimes.of(shutoffTime);
         log.info("Setting Firehose shutoffTime to %s", shutoffTime);
         exec.schedule(
             new Runnable()

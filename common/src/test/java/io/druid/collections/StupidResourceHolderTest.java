@@ -34,7 +34,7 @@ public class StupidResourceHolderTest
     String expected = "String";
     resourceHolder = StupidResourceHolder.create(expected);
     String actual = resourceHolder.get();
-    Assert.assertEquals(expected,actual);
+    Assert.assertEquals(expected, actual);
     resourceHolder.close();
   }
 }

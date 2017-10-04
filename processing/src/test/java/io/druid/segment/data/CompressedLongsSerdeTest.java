@@ -77,7 +77,8 @@ public class CompressedLongsSerdeTest
   private final long values8[] = {Long.MAX_VALUE, 0, 321, 15248425, 13523212136L, 63822, 3426, 96};
 
   // built test value with enough unique values to not use table encoding for auto strategy
-  private static long[] addUniques(long[] val) {
+  private static long[] addUniques(long[] val)
+  {
     long[] ret = new long[val.length + CompressionFactory.MAX_TABLE_SIZE];
     for (int i = 0; i < CompressionFactory.MAX_TABLE_SIZE; i++) {
       ret[i] = i;

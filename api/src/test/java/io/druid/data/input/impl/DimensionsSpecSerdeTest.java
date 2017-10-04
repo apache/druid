@@ -68,8 +68,8 @@ public class DimensionsSpecSerdeTest
 
     List<SpatialDimensionSchema> expectedSpatials = Arrays.asList(
         new SpatialDimensionSchema("DDT", null),
-        new SpatialDimensionSchema("DDT2", Arrays.asList("A","B")),
-        new SpatialDimensionSchema("IMPR", Arrays.asList("S","P","Q","R"))
+        new SpatialDimensionSchema("DDT2", Arrays.asList("A", "B")),
+        new SpatialDimensionSchema("IMPR", Arrays.asList("S", "P", "Q", "R"))
     );
 
     Assert.assertEquals(expected, actual);

@@ -36,7 +36,7 @@ public final class ZeroLongColumnSelector implements LongColumnSelector
   }
 
   @Override
-  public long get()
+  public long getLong()
   {
     return 0;
   }

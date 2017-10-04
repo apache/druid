@@ -28,6 +28,11 @@ import java.io.IOException;
 import java.util.Map;
 
 /**
+ * Direct interface to memory mapped segments. Not a public API for extensions; site specific queries should be
+ * using {@link StorageAdapter}.
+ *
+ * @see QueryableIndexStorageAdapter for query path adapter
+ * @see QueryableIndexIndexableAdapter for indexing path adapter
  */
 public interface QueryableIndex extends ColumnSelector, Closeable
 {
@@ -40,7 +45,7 @@ public interface QueryableIndex extends ColumnSelector, Closeable
 
   /**
    * The close method shouldn't actually be here as this is nasty. We will adjust it in the future.
-   * @throws java.io.IOException if an exception was thrown closing the index
+   * @throws IOException if an exception was thrown closing the index
    */
   //@Deprecated // This is still required for SimpleQueryableIndex. It should not go away unitl SimpleQueryableIndex is fixed
   @Override

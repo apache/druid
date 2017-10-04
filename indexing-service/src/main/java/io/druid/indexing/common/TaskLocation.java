@@ -67,7 +67,8 @@ public class TaskLocation
   }
 
   @JsonProperty
-  public int getTlsPort() {
+  public int getTlsPort()
+  {
     return tlsPort;
   }
 

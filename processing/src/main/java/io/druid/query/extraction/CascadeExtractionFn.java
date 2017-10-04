@@ -25,6 +25,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Bytes;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 
 public class CascadeExtractionFn implements ExtractionFn
@@ -40,14 +41,16 @@ public class CascadeExtractionFn implements ExtractionFn
           return new byte[0];
         }
 
+        @Nullable
         @Override
-        public String apply(Object value)
+        public String apply(@Nullable Object value)
         {
           return null;
         }
 
+        @Nullable
         @Override
-        public String apply(String value)
+        public String apply(@Nullable String value)
         {
           return null;
         }
@@ -113,13 +116,15 @@ public class CascadeExtractionFn implements ExtractionFn
   }
 
   @Override
-  public String apply(Object value)
+  @Nullable
+  public String apply(@Nullable Object value)
   {
     return chainedExtractionFn.apply(value);
   }
 
   @Override
-  public String apply(String value)
+  @Nullable
+  public String apply(@Nullable String value)
   {
     return chainedExtractionFn.apply(value);
   }
@@ -195,12 +200,14 @@ public class CascadeExtractionFn implements ExtractionFn
       return (child != null) ? Bytes.concat(fnCacheKey, child.getCacheKey()) : fnCacheKey;
     }
 
-    public String apply(Object value)
+    @Nullable
+    public String apply(@Nullable Object value)
     {
       return fn.apply((child != null) ? child.apply(value) : value);
     }
 
-    public String apply(String value)
+    @Nullable
+    public String apply(@Nullable String value)
     {
       return fn.apply((child != null) ? child.apply(value) : value);
     }

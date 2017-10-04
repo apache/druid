@@ -23,6 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.indexing.common.TestUtils;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
@@ -46,7 +48,8 @@ public class ConvertSegmentTaskTest
   public void testSerializationSimple() throws Exception
   {
     final String dataSource = "billy";
-    final Interval interval = new Interval(new DateTime().minus(1000), new DateTime());
+    DateTime start = DateTimes.nowUtc();
+    final Interval interval = new Interval(start.minus(1000), start);
 
     ConvertSegmentTask task = ConvertSegmentTask.create(dataSource, interval, null, false, true, null);
 
@@ -56,7 +59,7 @@ public class ConvertSegmentTaskTest
     DataSegment segment = new DataSegment(
         dataSource,
         interval,
-        new DateTime().toString(),
+        DateTimes.nowUtc().toString(),
         ImmutableMap.<String, Object>of(),
         ImmutableList.<String>of(),
         ImmutableList.<String>of(),
@@ -81,7 +84,7 @@ public class ConvertSegmentTaskTest
                   + "}";
     ConvertSegmentTask task = (ConvertSegmentTask) jsonMapper.readValue(json, Task.class);
     Assert.assertEquals("billy", task.getDataSource());
-    Assert.assertEquals(new Interval("2015-08-27T00:00:00.000Z/2015-08-28T00:00:00.000Z"), task.getInterval());
+    Assert.assertEquals(Intervals.of("2015-08-27T00:00:00.000Z/2015-08-28T00:00:00.000Z"), task.getInterval());
   }
 
   @Test
@@ -94,6 +97,6 @@ public class ConvertSegmentTaskTest
                   + "}";
     ConvertSegmentTask task = (ConvertSegmentTask) jsonMapper.readValue(json, Task.class);
     Assert.assertEquals("billy", task.getDataSource());
-    Assert.assertEquals(new Interval("2015-08-27T00:00:00.000Z/2015-08-28T00:00:00.000Z"), task.getInterval());
+    Assert.assertEquals(Intervals.of("2015-08-27T00:00:00.000Z/2015-08-28T00:00:00.000Z"), task.getInterval());
   }
 }

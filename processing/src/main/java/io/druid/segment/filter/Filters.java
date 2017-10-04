@@ -67,7 +67,8 @@ public class Filters
   public static final List<ValueType> FILTERABLE_TYPES = ImmutableList.of(
       ValueType.STRING,
       ValueType.LONG,
-      ValueType.FLOAT
+      ValueType.FLOAT,
+      ValueType.DOUBLE
   );
   private static final String CTX_KEY_USE_FILTER_CNF = "useFilterCNF";
 
@@ -335,7 +336,7 @@ public class Filters
   {
     long numMatchedRows = 0;
     for (int i = 0; i < bitmaps.size(); i++) {
-      final ImmutableBitmap bitmap = bitmapIndex.getBitmap(bitmaps.get(i));
+      final ImmutableBitmap bitmap = bitmapIndex.getBitmap(bitmaps.getInt(i));
       numMatchedRows += bitmap.size();
     }
 
@@ -454,7 +455,7 @@ public class Filters
       @Override
       public boolean matches()
       {
-        return predicate.applyLong(longSelector.get());
+        return predicate.applyLong(longSelector.getLong());
       }
 
       @Override

@@ -24,7 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 
-public class AzureTaskLogsConfig {
+public class AzureTaskLogsConfig
+{
   @JsonProperty
   @NotNull
   private String container = null;
@@ -37,25 +38,29 @@ public class AzureTaskLogsConfig {
   @Min(1)
   private int maxTries = 3;
 
-  public AzureTaskLogsConfig() {
-
+  public AzureTaskLogsConfig()
+  {
   }
 
-  public AzureTaskLogsConfig(String container, String prefix, int maxTries) {
+  public AzureTaskLogsConfig(String container, String prefix, int maxTries)
+  {
     this.container = container;
     this.prefix = prefix;
     this.maxTries = maxTries;
   }
 
-  public String getContainer() {
+  public String getContainer()
+  {
     return container;
   }
 
-  public String getPrefix() {
+  public String getPrefix()
+  {
     return prefix;
   }
 
-  public int getMaxTries() {
+  public int getMaxTries()
+  {
     return maxTries;
   }
 }

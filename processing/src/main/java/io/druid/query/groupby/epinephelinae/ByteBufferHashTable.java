@@ -238,7 +238,7 @@ public class ByteBufferHashTable
   {
     int offset = bucket * bucketSizeWithHash;
     tableBuffer.position(offset);
-    tableBuffer.putInt(keyHash | 0x80000000);
+    tableBuffer.putInt(Groupers.getUsedFlag(keyHash));
     tableBuffer.put(keyBuffer);
     size++;
 
@@ -292,7 +292,7 @@ public class ByteBufferHashTable
     final int startBucket = keyHash % buckets;
     int bucket = startBucket;
 
-outer:
+    outer:
     while (true) {
       final int bucketOffset = bucket * bucketSizeWithHash;
 

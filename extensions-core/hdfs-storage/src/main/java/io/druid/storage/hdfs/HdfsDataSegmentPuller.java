@@ -48,7 +48,6 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.concurrent.Callable;
 
 /**
@@ -194,7 +193,6 @@ public class HdfsDataSegmentPuller implements DataSegmentPuller, URIDataPuller
                   }
 
                   final RemoteIterator<LocatedFileStatus> children = fs.listFiles(path, false);
-                  final ArrayList<FileUtils.FileCopyResult> localChildren = new ArrayList<>();
                   final FileUtils.FileCopyResult result = new FileUtils.FileCopyResult();
                   while (children.hasNext()) {
                     final LocatedFileStatus child = children.next();

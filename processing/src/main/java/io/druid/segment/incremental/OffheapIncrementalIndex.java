@@ -126,7 +126,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       if (i == 0) {
         aggOffsetInBuffer[i] = 0;
       } else {
-        aggOffsetInBuffer[i] = aggOffsetInBuffer[i-1] + metrics[i-1].getMaxIntermediateSize();
+        aggOffsetInBuffer[i] = aggOffsetInBuffer[i - 1] + metrics[i - 1].getMaxIntermediateSize();
       }
     }
 
@@ -201,7 +201,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
           throw new IndexSizeExceededException("Maximum number of rows [%d] reached", maxRowCount);
         }
 
-        final Integer rowIndex = indexIncrement.getAndIncrement();
+        final int rowIndex = indexIncrement.getAndIncrement();
 
         // note that indexAndOffsets must be updated before facts, because as soon as we update facts
         // concurrent readers get hold of it and might ask for newly added row
@@ -223,7 +223,8 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       synchronized (agg) {
         try {
           agg.aggregate(aggBuffer, bufferOffset + aggOffsetInBuffer[i]);
-        } catch (ParseException e) {
+        }
+        catch (ParseException e) {
           // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
           if (reportParseExceptions) {
             throw new ParseException(e, "Encountered parse error for aggregator[%s]", getMetricAggs()[i].getName());
@@ -298,6 +299,15 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     int[] indexAndOffset = indexAndOffsets.get(rowOffset);
     ByteBuffer bb = aggBuffers.get(indexAndOffset[0]).get();
     return agg.get(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
+  }
+
+  @Override
+  public double getMetricDoubleValue(int rowOffset, int aggOffset)
+  {
+    BufferAggregator agg = getAggs()[aggOffset];
+    int[] indexAndOffset = indexAndOffsets.get(rowOffset);
+    ByteBuffer bb = aggBuffers.get(indexAndOffset[0]).get();
+    return agg.getDouble(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
   }
 
   /**

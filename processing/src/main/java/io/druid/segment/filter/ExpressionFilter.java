@@ -57,7 +57,7 @@ public class ExpressionFilter implements Filter
       @Override
       public boolean matches()
       {
-        return Evals.asBoolean(selector.get());
+        return Evals.asBoolean(selector.getLong());
       }
 
       @Override

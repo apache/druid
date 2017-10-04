@@ -48,7 +48,7 @@ public class LongMinAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    min = Math.min(min, selector.get());
+    min = Math.min(min, selector.getLong());
   }
 
   @Override
@@ -73,6 +73,12 @@ public class LongMinAggregator implements Aggregator
   public long getLong()
   {
     return min;
+  }
+
+  @Override
+  public double getDouble()
+  {
+    return (double) min;
   }
 
   @Override

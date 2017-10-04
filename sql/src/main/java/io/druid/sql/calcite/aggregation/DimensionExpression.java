@@ -20,6 +20,7 @@
 package io.druid.sql.calcite.aggregation;
 
 import com.google.common.collect.ImmutableList;
+import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
@@ -84,7 +85,7 @@ public class DimensionExpression
   @Nullable
   public String getVirtualColumnName()
   {
-    return expression.isSimpleExtraction() ? null : String.format("%s:v", outputName);
+    return expression.isSimpleExtraction() ? null : StringUtils.format("%s:v", outputName);
   }
 
   @Override

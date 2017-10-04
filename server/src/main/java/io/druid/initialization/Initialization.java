@@ -53,14 +53,20 @@ import io.druid.guice.ServerViewModule;
 import io.druid.guice.StartupLoggingModule;
 import io.druid.guice.StorageNodeModule;
 import io.druid.guice.annotations.Client;
+import io.druid.guice.annotations.EscalatedClient;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.HttpClientModule;
+import io.druid.guice.security.AuthenticatorModule;
+import io.druid.guice.security.AuthorizerModule;
 import io.druid.guice.security.DruidAuthModule;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
-import io.druid.server.initialization.EmitterModule;
+import io.druid.server.initialization.AuthenticatorHttpClientWrapperModule;
+import io.druid.server.initialization.AuthenticatorMapperModule;
+import io.druid.server.initialization.AuthorizerMapperModule;
+import io.druid.server.emitter.EmitterModule;
 import io.druid.server.initialization.jetty.JettyServerModule;
 import io.druid.server.metrics.MetricsModule;
 import org.apache.commons.io.FileUtils;
@@ -76,6 +82,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
@@ -122,8 +129,8 @@ public class Initialization
 
   /**
    * Look for implementations for the given class from both classpath and extensions directory, using {@link
-   * java.util.ServiceLoader}. A user should never put the same two extensions in classpath and extensions directory, if
-   * he/she does that, the one that is in the classpath will be loaded, the other will be ignored.
+   * ServiceLoader}. A user should never put the same two extensions in classpath and extensions directory, if he/she
+   * does that, the one that is in the classpath will be loaded, the other will be ignored.
    *
    * @param config        Extensions configuration
    * @param serviceClass  The class to look the implementations of (e.g., DruidModule)
@@ -219,7 +226,7 @@ public class Initialization
       throw new ISE("Root extensions directory [%s] is not a directory!?", rootExtensionsDir);
     }
     File[] extensionsToLoad;
-    final List<String> toLoad = config.getLoadList();
+    final LinkedHashSet<String> toLoad = config.getLoadList();
     if (toLoad == null) {
       extensionsToLoad = rootExtensionsDir.listFiles();
     } else {
@@ -306,8 +313,8 @@ public class Initialization
       String[] paths = cp.split(File.pathSeparator);
 
       List<URL> urls = new ArrayList<>();
-      for (int i = 0; i < paths.length; i++) {
-        File f = new File(paths[i]);
+      for (String path : paths) {
+        File f = new File(path);
         if ("*".equals(f.getName())) {
           File parentDir = f.getParentFile();
           if (parentDir.isDirectory()) {
@@ -326,11 +333,12 @@ public class Initialization
             }
           }
         } else {
-          urls.add(new File(paths[i]).toURI().toURL());
+          urls.add(new File(path).toURI().toURL());
         }
       }
       return urls;
-    } catch (IOException ex) {
+    }
+    catch (IOException ex) {
       throw Throwables.propagate(ex);
     }
   }
@@ -345,7 +353,9 @@ public class Initialization
         new LifecycleModule(),
         EmitterModule.class,
         HttpClientModule.global(),
+        HttpClientModule.escalatedGlobal(),
         new HttpClientModule("druid.broker.http", Client.class),
+        new HttpClientModule("druid.broker.http", EscalatedClient.class),
         new CuratorModule(),
         new AnnouncerModule(),
         new AWSModule(),
@@ -366,6 +376,11 @@ public class Initialization
         new FirehoseModule(),
         new ParsersModule(),
         new JavaScriptModule(),
+        new AuthenticatorModule(),
+        new AuthenticatorMapperModule(),
+        new AuthenticatorHttpClientWrapperModule(),
+        new AuthorizerModule(),
+        new AuthorizerMapperModule(),
         new StartupLoggingModule()
     );
 

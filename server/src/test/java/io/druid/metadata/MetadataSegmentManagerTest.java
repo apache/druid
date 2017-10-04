@@ -26,12 +26,12 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.java.util.common.StringUtils;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.StringUtils;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -49,7 +49,7 @@ public class MetadataSegmentManagerTest
 
   private final DataSegment segment1 = new DataSegment(
       "wikipedia",
-      new Interval("2012-03-15T00:00:00.000/2012-03-16T00:00:00.000"),
+      Intervals.of("2012-03-15T00:00:00.000/2012-03-16T00:00:00.000"),
       "2012-03-16T00:36:30.848Z",
       ImmutableMap.<String, Object>of(
           "type", "s3_zip",
@@ -65,7 +65,7 @@ public class MetadataSegmentManagerTest
 
   private final DataSegment segment2 = new DataSegment(
       "wikipedia",
-      new Interval("2012-01-05T00:00:00.000/2012-01-06T00:00:00.000"),
+      Intervals.of("2012-01-05T00:00:00.000/2012-01-06T00:00:00.000"),
       "2012-01-06T22:19:12.565Z",
       ImmutableMap.<String, Object>of(
           "type", "s3_zip",
@@ -154,12 +154,12 @@ public class MetadataSegmentManagerTest
 
     Assert.assertEquals(
         ImmutableList.of(segment2.getInterval()),
-        manager.getUnusedSegmentIntervals("wikipedia", new Interval("1970/3000"), 1)
+        manager.getUnusedSegmentIntervals("wikipedia", Intervals.of("1970/3000"), 1)
     );
 
     Assert.assertEquals(
         ImmutableList.of(segment2.getInterval(), segment1.getInterval()),
-        manager.getUnusedSegmentIntervals("wikipedia", new Interval("1970/3000"), 5)
+        manager.getUnusedSegmentIntervals("wikipedia", Intervals.of("1970/3000"), 5)
     );
   }
 }

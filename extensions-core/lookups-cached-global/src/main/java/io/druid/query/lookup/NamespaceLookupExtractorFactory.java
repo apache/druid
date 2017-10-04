@@ -238,4 +238,15 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   {
     return cacheScheduler;
   }
+
+  @Override
+  public String toString()
+  {
+    return "NamespaceLookupExtractorFactory{" +
+           "extractionNamespace=" + extractionNamespace +
+           ", firstCacheTimeout=" + firstCacheTimeout +
+           ", injective=" + injective +
+           ", extractorID='" + extractorID + '\'' +
+           '}';
+  }
 }

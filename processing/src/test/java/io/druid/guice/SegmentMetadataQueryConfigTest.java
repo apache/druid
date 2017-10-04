@@ -74,7 +74,7 @@ public class SegmentMetadataQueryConfigTest
     sb.append('[');
     while (it.hasNext()) {
       SegmentMetadataQuery.AnalysisType e = it.next();
-      sb.append("\""+e+"\"");
+      sb.append("\"" + e + "\"");
       if (it.hasNext()) {
         sb.append(',').append(' ');
       }

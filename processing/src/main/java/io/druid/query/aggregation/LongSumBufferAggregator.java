@@ -42,6 +42,6 @@ public class LongSumBufferAggregator extends LongBufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    buf.putLong(position, buf.getLong(position) + selector.get());
+    buf.putLong(position, buf.getLong(position) + selector.getLong());
   }
 }

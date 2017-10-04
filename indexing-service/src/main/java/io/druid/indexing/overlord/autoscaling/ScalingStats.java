@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Ordering;
+import io.druid.guice.annotations.PublicApi;
+import io.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 
 import java.util.Collections;
@@ -32,6 +34,7 @@ import java.util.List;
 
 /**
  */
+@PublicApi
 public class ScalingStats
 {
   public enum EVENT
@@ -65,29 +68,26 @@ public class ScalingStats
     }
   }
 
+  public void addAll(ScalingStats stats)
+  {
+    synchronized (lock) {
+      synchronized (stats.lock) {
+        recentEvents.addAll(stats.recentEvents);
+      }
+    }
+  }
+
   public void addProvisionEvent(AutoScalingData data)
   {
     synchronized (lock) {
-      recentEvents.add(
-          new ScalingEvent(
-              data,
-              new DateTime(),
-              EVENT.PROVISION
-          )
-      );
+      recentEvents.add(new ScalingEvent(data, DateTimes.nowUtc(), EVENT.PROVISION));
     }
   }
 
   public void addTerminateEvent(AutoScalingData data)
   {
     synchronized (lock) {
-      recentEvents.add(
-          new ScalingEvent(
-              data,
-              new DateTime(),
-              EVENT.TERMINATE
-          )
-      );
+      recentEvents.add(new ScalingEvent(data, DateTimes.nowUtc(), EVENT.TERMINATE));
     }
   }
 

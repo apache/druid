@@ -21,6 +21,8 @@ package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.base.Supplier;
 import com.google.common.primitives.Longs;
+import com.google.common.util.concurrent.MoreExecutors;
+import io.druid.concurrent.Execs;
 import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -30,6 +32,7 @@ import io.druid.query.groupby.epinephelinae.Grouper.KeySerde;
 import io.druid.query.groupby.epinephelinae.Grouper.KeySerdeFactory;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
@@ -48,6 +51,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class ConcurrentGrouperTest
 {
   private static final ExecutorService service = Executors.newFixedThreadPool(8);
+  private static final int BYTE_BUFFER_SIZE = 192;
 
   @AfterClass
   public static void teardown()
@@ -63,7 +67,7 @@ public class ConcurrentGrouperTest
     public ByteBuffer get()
     {
       if (called.compareAndSet(false, true)) {
-        return ByteBuffer.allocate(192);
+        return ByteBuffer.allocate(BYTE_BUFFER_SIZE);
       } else {
         throw new IAE("should be called once");
       }
@@ -178,9 +182,15 @@ public class ConcurrentGrouperTest
     {
       return null;
     }
+
+    @Override
+    public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
+    {
+      return null;
+    }
   };
 
-  @Test
+  @Test(timeout = 5000L)
   public void testAggregate() throws InterruptedException, ExecutionException
   {
     final ConcurrentGrouper<Long> grouper = new ConcurrentGrouper<>(
@@ -195,7 +205,12 @@ public class ConcurrentGrouperTest
         null,
         8,
         null,
-        false
+        false,
+        MoreExecutors.listeningDecorator(Execs.multiThreaded(4, "concurrent-grouper-test-%d")),
+        0,
+        false,
+        0,
+        BYTE_BUFFER_SIZE
     );
 
     Future<?>[] futures = new Future[8];

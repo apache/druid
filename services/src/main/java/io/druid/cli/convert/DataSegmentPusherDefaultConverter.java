@@ -45,11 +45,9 @@ public class DataSegmentPusherDefaultConverter implements PropertyConverter
     String type = null;
     if (Boolean.parseBoolean(props.getProperty("druid.pusher.local", "false"))) {
       type = "local";
-    }
-    else if (Boolean.parseBoolean(props.getProperty("druid.pusher.cassandra", "false"))) {
+    } else if (Boolean.parseBoolean(props.getProperty("druid.pusher.cassandra", "false"))) {
       type = "c*";
-    }
-    else if (Boolean.parseBoolean(props.getProperty("druid.pusher.hdfs", "false"))) {
+    } else if (Boolean.parseBoolean(props.getProperty("druid.pusher.hdfs", "false"))) {
       type = "hdfs";
     }
 

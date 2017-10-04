@@ -38,7 +38,7 @@ public class TimeseriesQueryTest
 {
   private static final ObjectMapper jsonMapper = TestHelper.getJsonMapper();
 
-  @Parameterized.Parameters(name="descending={0}")
+  @Parameterized.Parameters(name = "descending={0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     return QueryRunnerTestHelper.cartesian(Arrays.asList(false, true));

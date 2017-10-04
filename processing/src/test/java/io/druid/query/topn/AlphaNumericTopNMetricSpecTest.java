@@ -92,7 +92,8 @@ public class AlphaNumericTopNMetricSpecTest
   }
 
   @Test
-  public void testSerdeAlphaNumericTopNMetricSpec() throws IOException{
+  public void testSerdeAlphaNumericTopNMetricSpec() throws IOException
+  {
     AlphaNumericTopNMetricSpec expectedMetricSpec = new AlphaNumericTopNMetricSpec(null);
     AlphaNumericTopNMetricSpec expectedMetricSpec1 = new AlphaNumericTopNMetricSpec("test");
     String jsonSpec = "{\n"

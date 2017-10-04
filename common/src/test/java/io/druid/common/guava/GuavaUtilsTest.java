@@ -25,8 +25,15 @@ import org.junit.Test;
 
 public class GuavaUtilsTest
 {
+  enum MyEnum
+  {
+    ONE,
+    TWO,
+    BUCKLE_MY_SHOE
+  }
+
   @Test
-  public void testParsLong()
+  public void testParseLong()
   {
     Assert.assertNull(Longs.tryParse("+100"));
     Assert.assertNull(GuavaUtils.tryParseLong(""));
@@ -36,5 +43,14 @@ public class GuavaUtilsTest
     Assert.assertEquals((Object) Long.parseLong("+100"), GuavaUtils.tryParseLong("+100"));
     Assert.assertEquals((Object) Long.parseLong("-100"), GuavaUtils.tryParseLong("-100"));
     Assert.assertNotEquals(new Long(100), GuavaUtils.tryParseLong("+101"));
+  }
+
+  @Test
+  public void testGetEnumIfPresent()
+  {
+    Assert.assertEquals(MyEnum.ONE, GuavaUtils.getEnumIfPresent(MyEnum.class, "ONE"));
+    Assert.assertEquals(MyEnum.TWO, GuavaUtils.getEnumIfPresent(MyEnum.class, "TWO"));
+    Assert.assertEquals(MyEnum.BUCKLE_MY_SHOE, GuavaUtils.getEnumIfPresent(MyEnum.class, "BUCKLE_MY_SHOE"));
+    Assert.assertEquals(null, GuavaUtils.getEnumIfPresent(MyEnum.class, "buckle_my_shoe"));
   }
 }

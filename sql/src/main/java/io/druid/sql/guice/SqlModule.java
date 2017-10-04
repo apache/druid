@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Module;
-import com.google.inject.Provider;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
@@ -36,11 +35,14 @@ import io.druid.sql.avatica.AvaticaServerConfig;
 import io.druid.sql.avatica.DruidAvaticaHandler;
 import io.druid.sql.calcite.aggregation.ApproxCountDistinctSqlAggregator;
 import io.druid.sql.calcite.aggregation.SqlAggregator;
+import io.druid.sql.calcite.expression.BTrimOperatorConversion;
 import io.druid.sql.calcite.expression.CeilOperatorConversion;
 import io.druid.sql.calcite.expression.ExtractOperatorConversion;
 import io.druid.sql.calcite.expression.FloorOperatorConversion;
+import io.druid.sql.calcite.expression.LTrimOperatorConversion;
 import io.druid.sql.calcite.expression.LookupOperatorConversion;
 import io.druid.sql.calcite.expression.MillisToTimestampOperatorConversion;
+import io.druid.sql.calcite.expression.RTrimOperatorConversion;
 import io.druid.sql.calcite.expression.RegexpExtractOperatorConversion;
 import io.druid.sql.calcite.expression.SqlOperatorConversion;
 import io.druid.sql.calcite.expression.SubstringOperatorConversion;
@@ -51,13 +53,13 @@ import io.druid.sql.calcite.expression.TimeFormatOperatorConversion;
 import io.druid.sql.calcite.expression.TimeParseOperatorConversion;
 import io.druid.sql.calcite.expression.TimeShiftOperatorConversion;
 import io.druid.sql.calcite.expression.TimestampToMillisOperatorConversion;
+import io.druid.sql.calcite.expression.TrimOperatorConversion;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.schema.DruidSchema;
 import io.druid.sql.calcite.view.NoopViewManager;
 import io.druid.sql.calcite.view.ViewManager;
 import io.druid.sql.http.SqlResource;
-import org.apache.calcite.schema.SchemaPlus;
 
 import java.util.List;
 import java.util.Properties;
@@ -84,6 +86,10 @@ public class SqlModule implements Module
       .add(TimeParseOperatorConversion.class)
       .add(TimeShiftOperatorConversion.class)
       .add(TimestampToMillisOperatorConversion.class)
+      .add(TrimOperatorConversion.class)
+      .add(BTrimOperatorConversion.class)
+      .add(LTrimOperatorConversion.class)
+      .add(RTrimOperatorConversion.class)
       .build();
 
   private static final String PROPERTY_SQL_ENABLE = "druid.sql.enable";
@@ -106,8 +112,7 @@ public class SqlModule implements Module
       JsonConfigProvider.bind(binder, "druid.sql.planner", PlannerConfig.class);
       JsonConfigProvider.bind(binder, "druid.sql.avatica", AvaticaServerConfig.class);
       LifecycleModule.register(binder, DruidSchema.class);
-      binder.bind(ViewManager.class).to(NoopViewManager.class);
-      binder.bind(SchemaPlus.class).toProvider(SchemaPlusProvider.class);
+      binder.bind(ViewManager.class).to(NoopViewManager.class).in(LazySingleton.class);
 
       for (Class<? extends SqlAggregator> clazz : DEFAULT_AGGREGATOR_CLASSES) {
         SqlBindings.addAggregator(binder, clazz);
@@ -126,18 +131,6 @@ public class SqlModule implements Module
         JettyBindings.addHandler(binder, DruidAvaticaHandler.class);
         MetricsModule.register(binder, AvaticaMonitor.class);
       }
-    }
-  }
-
-  public static class SchemaPlusProvider implements Provider<SchemaPlus>
-  {
-    @Inject
-    private DruidSchema druidSchema;
-
-    @Override
-    public SchemaPlus get()
-    {
-      return Calcites.createRootSchema(druidSchema);
     }
   }
 

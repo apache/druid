@@ -39,9 +39,9 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.Offset;
+import io.druid.segment.historical.HistoricalColumnSelector;
 import io.druid.segment.historical.HistoricalCursor;
 import io.druid.segment.historical.HistoricalDimensionSelector;
-import io.druid.segment.historical.HistoricalFloatColumnSelector;
 import io.druid.segment.historical.SingleValueHistoricalDimensionSelector;
 
 import java.nio.ByteBuffer;
@@ -98,8 +98,7 @@ public class PooledTopNAlgorithm
       new Generic2AggPooledTopNScannerPrototype();
   private static final Historical1AggPooledTopNScanner defaultHistorical1SimpleDoubleAggScanner =
       new Historical1SimpleDoubleAggPooledTopNScannerPrototype();
-  private static final
-  Historical1AggPooledTopNScanner defaultHistoricalSingleValueDimSelector1SimpleDoubleAggScanner =
+  private static final Historical1AggPooledTopNScanner defaultHistoricalSingleValueDimSelector1SimpleDoubleAggScanner =
       new HistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopNScannerPrototype();
 
   private interface ScanAndAggregate
@@ -131,7 +130,7 @@ public class PooledTopNAlgorithm
           final Cursor cursor = params.getCursor();
           if (cursor instanceof HistoricalCursor && aggregator instanceof SimpleDoubleBufferAggregator) {
             if (params.getDimSelector() instanceof SingleValueHistoricalDimensionSelector &&
-                ((SimpleDoubleBufferAggregator) aggregator).getSelector() instanceof HistoricalFloatColumnSelector) {
+                ((SimpleDoubleBufferAggregator) aggregator).getSelector() instanceof HistoricalColumnSelector) {
               return scanAndAggregateHistorical1SimpleDoubleAgg(
                   params,
                   positions,
@@ -152,7 +151,7 @@ public class PooledTopNAlgorithm
           final Cursor cursor = params.getCursor();
           if (cursor instanceof HistoricalCursor && aggregator instanceof SimpleDoubleBufferAggregator) {
             if (params.getDimSelector() instanceof HistoricalDimensionSelector &&
-                ((SimpleDoubleBufferAggregator) aggregator).getSelector() instanceof HistoricalFloatColumnSelector) {
+                ((SimpleDoubleBufferAggregator) aggregator).getSelector() instanceof HistoricalColumnSelector) {
               return scanAndAggregateHistorical1SimpleDoubleAgg(
                   params,
                   positions,
@@ -458,7 +457,7 @@ public class PooledTopNAlgorithm
 
       final int dimSize = dimValues.size();
       final int dimExtra = dimSize % AGG_UNROLL_COUNT;
-      switch(dimExtra){
+      switch (dimExtra) {
         case 7:
           currentPosition = aggregateDimValue(
               positions,
@@ -675,7 +674,7 @@ public class PooledTopNAlgorithm
     }
     final int position = positions[dimIndex];
 
-    switch(aggExtra) {
+    switch (aggExtra) {
       case 7:
         theAggregators[6].aggregate(resultsBuf, position + aggregatorOffsets[6]);
         // fall through
@@ -699,13 +698,13 @@ public class PooledTopNAlgorithm
     }
     for (int j = aggExtra; j < aggSize; j += AGG_UNROLL_COUNT) {
       theAggregators[j].aggregate(resultsBuf, position + aggregatorOffsets[j]);
-      theAggregators[j+1].aggregate(resultsBuf, position + aggregatorOffsets[j+1]);
-      theAggregators[j+2].aggregate(resultsBuf, position + aggregatorOffsets[j+2]);
-      theAggregators[j+3].aggregate(resultsBuf, position + aggregatorOffsets[j+3]);
-      theAggregators[j+4].aggregate(resultsBuf, position + aggregatorOffsets[j+4]);
-      theAggregators[j+5].aggregate(resultsBuf, position + aggregatorOffsets[j+5]);
-      theAggregators[j+6].aggregate(resultsBuf, position + aggregatorOffsets[j+6]);
-      theAggregators[j+7].aggregate(resultsBuf, position + aggregatorOffsets[j+7]);
+      theAggregators[j + 1].aggregate(resultsBuf, position + aggregatorOffsets[j + 1]);
+      theAggregators[j + 2].aggregate(resultsBuf, position + aggregatorOffsets[j + 2]);
+      theAggregators[j + 3].aggregate(resultsBuf, position + aggregatorOffsets[j + 3]);
+      theAggregators[j + 4].aggregate(resultsBuf, position + aggregatorOffsets[j + 4]);
+      theAggregators[j + 5].aggregate(resultsBuf, position + aggregatorOffsets[j + 5]);
+      theAggregators[j + 6].aggregate(resultsBuf, position + aggregatorOffsets[j + 6]);
+      theAggregators[j + 7].aggregate(resultsBuf, position + aggregatorOffsets[j + 7]);
     }
     return currentPosition;
   }

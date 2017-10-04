@@ -32,6 +32,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.js.JavaScriptConfig;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.ObjectColumnSelector;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextAction;
@@ -50,8 +51,6 @@ import java.util.Objects;
 
 public class JavaScriptAggregatorFactory extends AggregatorFactory
 {
-  private static final byte CACHE_TYPE_ID = 0x6;
-
   private final String name;
   private final List<String> fieldNames;
   private final String fnAggregate;
@@ -140,6 +139,33 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   public Object combine(Object lhs, Object rhs)
   {
     return getCompiledScript().combine(((Number) lhs).doubleValue(), ((Number) rhs).doubleValue());
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    return new DoubleAggregateCombiner()
+    {
+      private double combined;
+
+      @Override
+      public void reset(ColumnValueSelector selector)
+      {
+        combined = selector.getDouble();
+      }
+
+      @Override
+      public void fold(ColumnValueSelector selector)
+      {
+        combined = getCompiledScript().combine(combined, selector.getDouble());
+      }
+
+      @Override
+      public double getDouble()
+      {
+        return combined;
+      }
+    };
   }
 
   @Override
@@ -240,7 +266,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
       byte[] sha1 = md.digest(StringUtils.toUtf8(fnAggregate + fnReset + fnCombine));
 
       return ByteBuffer.allocate(1 + fieldNameBytes.length + sha1.length)
-                       .put(CACHE_TYPE_ID)
+                       .put(AggregatorUtil.JS_CACHE_TYPE_ID)
                        .put(fieldNameBytes)
                        .put(sha1)
                        .array();
@@ -321,7 +347,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
         for (int i = 0; i < size; i++) {
           final ObjectColumnSelector selector = selectorList[i];
           if (selector != null) {
-            final Object arg = selector.get();
+            final Object arg = selector.getObject();
             if (arg != null && arg.getClass().isArray()) {
               // Context.javaToJS on an array sort of works, although it returns false for Array.isArray(...) and
               // may have other issues too. Let's just copy the array and wrap that.

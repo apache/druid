@@ -20,12 +20,12 @@
 package io.druid.realtime.firehose;
 
 import com.google.common.collect.Lists;
-
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.InputRowParser;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.segment.realtime.firehose.CombiningFirehoseFactory;
 import io.druid.utils.Runnables;
@@ -82,7 +82,7 @@ public class CombiningFirehoseFactoryTest
       @Override
       public DateTime getTimestamp()
       {
-        return new DateTime(timestamp);
+        return DateTimes.utc(timestamp);
       }
 
       @Override
@@ -102,6 +102,13 @@ public class CombiningFirehoseFactoryTest
       {
         return new Float(metricValue).longValue();
       }
+
+      @Override
+      public double getDoubleMetric(String metric)
+      {
+        return new Float(metricValue).doubleValue();
+      }
+
 
       @Override
       public Object getRaw(String dimension)

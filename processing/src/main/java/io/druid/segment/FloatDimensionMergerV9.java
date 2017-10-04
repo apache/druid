@@ -19,7 +19,6 @@
 
 package io.druid.segment;
 
-import com.google.common.base.Throwables;
 import io.druid.java.util.common.io.Closer;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnDescriptor;
@@ -62,8 +61,9 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
 
     try {
       setupEncodedValueWriter();
-    } catch (IOException ioe) {
-      Throwables.propagate(ioe);
+    }
+    catch (IOException ioe) {
+      throw new RuntimeException(ioe);
     }
   }
 

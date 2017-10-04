@@ -19,6 +19,7 @@
 
 package io.druid.segment.serde;
 
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.GenericColumnSerializer;
@@ -46,6 +47,7 @@ public class ComplexColumnSerializer implements GenericColumnSerializer
     this.strategy = strategy;
   }
 
+  @PublicApi
   public static ComplexColumnSerializer create(
       IOPeon ioPeon,
       String filenameBase,

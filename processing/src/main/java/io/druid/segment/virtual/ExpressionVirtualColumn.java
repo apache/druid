@@ -30,6 +30,7 @@ import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
@@ -100,9 +101,9 @@ public class ExpressionVirtualColumn implements VirtualColumn
       }
 
       @Override
-      public Object get()
+      public Object getObject()
       {
-        return baseSelector.get().value();
+        return baseSelector.getObject().value();
       }
     };
   }
@@ -156,6 +157,14 @@ public class ExpressionVirtualColumn implements VirtualColumn
   public boolean usesDotNotation()
   {
     return false;
+  }
+
+  @Override
+  public DoubleColumnSelector makeDoubleColumnSelector(
+      String columnName, ColumnSelectorFactory factory
+  )
+  {
+    return ExpressionSelectors.makeDoubleColumnSelector(factory, parsedExpression, 0.0d);
   }
 
   @Override

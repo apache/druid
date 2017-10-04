@@ -68,7 +68,7 @@ public class CoordinatorRedirectInfoTest
   {
     EasyMock.expect(druidCoordinator.getCurrentLeader()).andReturn(null).anyTimes();
     EasyMock.replay(druidCoordinator);
-    URL url = coordinatorRedirectInfo.getRedirectURL("http","query", "/request");
+    URL url = coordinatorRedirectInfo.getRedirectURL("http", "query", "/request");
     Assert.assertNull(url);
     EasyMock.verify(druidCoordinator);
   }

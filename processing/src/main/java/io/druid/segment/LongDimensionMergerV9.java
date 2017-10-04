@@ -62,7 +62,8 @@ public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
 
     try {
       setupEncodedValueWriter();
-    } catch (IOException ioe) {
+    }
+    catch (IOException ioe) {
       Throwables.propagate(ioe);
     }
   }

@@ -95,16 +95,16 @@ public class ExpressionVirtualColumnTest
     final ObjectColumnSelector selector = XPLUSY.makeObjectColumnSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW0);
-    Assert.assertEquals(null, selector.get());
+    Assert.assertEquals(null, selector.getObject());
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW1);
-    Assert.assertEquals(4.0d, selector.get());
+    Assert.assertEquals(4.0d, selector.getObject());
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW2);
-    Assert.assertEquals(5.1d, selector.get());
+    Assert.assertEquals(5.1d, selector.getObject());
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW3);
-    Assert.assertEquals(5L, selector.get());
+    Assert.assertEquals(5L, selector.getObject());
   }
 
   @Test
@@ -113,16 +113,16 @@ public class ExpressionVirtualColumnTest
     final LongColumnSelector selector = XPLUSY.makeLongColumnSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW0);
-    Assert.assertEquals(0L, selector.get());
+    Assert.assertEquals(0L, selector.getLong());
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW1);
-    Assert.assertEquals(4L, selector.get());
+    Assert.assertEquals(4L, selector.getLong());
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW2);
-    Assert.assertEquals(5L, selector.get());
+    Assert.assertEquals(5L, selector.getLong());
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW3);
-    Assert.assertEquals(5L, selector.get());
+    Assert.assertEquals(5L, selector.getLong());
   }
 
   @Test
@@ -131,16 +131,16 @@ public class ExpressionVirtualColumnTest
     final LongColumnSelector selector = ZCONCATX.makeLongColumnSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW0);
-    Assert.assertEquals(0L, selector.get());
+    Assert.assertEquals(0L, selector.getLong());
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW1);
-    Assert.assertEquals(4L, selector.get());
+    Assert.assertEquals(4L, selector.getLong());
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW2);
-    Assert.assertEquals(0L, selector.get());
+    Assert.assertEquals(0L, selector.getLong());
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW3);
-    Assert.assertEquals(0L, selector.get());
+    Assert.assertEquals(0L, selector.getLong());
   }
 
   @Test
@@ -149,16 +149,16 @@ public class ExpressionVirtualColumnTest
     final FloatColumnSelector selector = XPLUSY.makeFloatColumnSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW0);
-    Assert.assertEquals(0.0f, selector.get(), 0.0f);
+    Assert.assertEquals(0.0f, selector.getFloat(), 0.0f);
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW1);
-    Assert.assertEquals(4.0f, selector.get(), 0.0f);
+    Assert.assertEquals(4.0f, selector.getFloat(), 0.0f);
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW2);
-    Assert.assertEquals(5.1f, selector.get(), 0.0f);
+    Assert.assertEquals(5.1f, selector.getFloat(), 0.0f);
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW3);
-    Assert.assertEquals(5.0f, selector.get(), 0.0f);
+    Assert.assertEquals(5.0f, selector.getFloat(), 0.0f);
   }
 
   @Test
@@ -268,7 +268,7 @@ public class ExpressionVirtualColumnTest
     final LongColumnSelector selector = CONSTANT_LIKE.makeLongColumnSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW0);
-    Assert.assertEquals(1L, selector.get());
+    Assert.assertEquals(1L, selector.getLong());
   }
 
   @Test
@@ -277,16 +277,16 @@ public class ExpressionVirtualColumnTest
     final LongColumnSelector selector = ZLIKE.makeLongColumnSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW0);
-    Assert.assertEquals(0L, selector.get());
+    Assert.assertEquals(0L, selector.getLong());
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW1);
-    Assert.assertEquals(0L, selector.get());
+    Assert.assertEquals(0L, selector.getLong());
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW2);
-    Assert.assertEquals(1L, selector.get());
+    Assert.assertEquals(1L, selector.getLong());
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW3);
-    Assert.assertEquals(1L, selector.get());
+    Assert.assertEquals(1L, selector.getLong());
   }
 
   @Test

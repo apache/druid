@@ -33,12 +33,14 @@ import java.nio.charset.StandardCharsets;
 
 import static org.junit.Assert.assertEquals;
 
-public class TestFileSessionCredentialsProvider {
+public class TestFileSessionCredentialsProvider
+{
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
 
   @Test
-  public void test() throws IOException {
+  public void test() throws IOException
+  {
     File file = folder.newFile();
     try (BufferedWriter out = Files.newWriter(file, StandardCharsets.UTF_8)) {
       out.write("sessionToken=sessionTokenSample\nsecretKey=secretKeySample\naccessKey=accessKeySample\n");

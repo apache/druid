@@ -23,6 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.CacheStrategy;
@@ -45,8 +47,6 @@ import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.TestIndex;
 import io.druid.segment.VirtualColumns;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -69,13 +69,7 @@ public class TopNQueryQueryToolChestTest
                 new DefaultDimensionSpec("test", "test"),
                 new NumericTopNMetricSpec("metric1"),
                 3,
-                new MultipleIntervalSegmentSpec(
-                    ImmutableList.of(
-                        new Interval(
-                            "2015-01-01/2015-01-02"
-                        )
-                    )
-                ),
+                new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
                 null,
                 Granularities.ALL,
                 ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("metric1")),
@@ -86,7 +80,7 @@ public class TopNQueryQueryToolChestTest
 
     final Result<TopNResultValue> result = new Result<>(
         // test timestamps that result in integer size millis
-        new DateTime(123L),
+        DateTimes.utc(123L),
         new TopNResultValue(
             Arrays.asList(
                 ImmutableMap.<String, Object>of(
@@ -121,13 +115,7 @@ public class TopNQueryQueryToolChestTest
         new DefaultDimensionSpec("test", "test"),
         new NumericTopNMetricSpec("post"),
         3,
-        new MultipleIntervalSegmentSpec(
-            ImmutableList.of(
-                new Interval(
-                    "2015-01-01/2015-01-02"
-                )
-            )
-        ),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
         null,
         Granularities.ALL,
         ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("metric1")),
@@ -141,13 +129,7 @@ public class TopNQueryQueryToolChestTest
         new DefaultDimensionSpec("test", "test"),
         new NumericTopNMetricSpec("post"),
         3,
-        new MultipleIntervalSegmentSpec(
-            ImmutableList.of(
-                new Interval(
-                    "2015-01-01/2015-01-02"
-                )
-            )
-        ),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
         null,
         Granularities.ALL,
         ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("metric1")),
@@ -211,23 +193,25 @@ public class TopNQueryQueryToolChestTest
         .dimension(QueryRunnerTestHelper.placementishDimension)
         .metric(QueryRunnerTestHelper.indexMetric)
         .intervals(QueryRunnerTestHelper.fullOnInterval)
-        .aggregators(QueryRunnerTestHelper.commonAggregators);
+        .aggregators(QueryRunnerTestHelper.commonDoubleAggregators);
 
     TopNQuery query1 = builder.threshold(10).context(null).build();
     MockQueryRunner mockRunner = new MockQueryRunner(runner);
-    new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config)
-        .run(query1, ImmutableMap.<String, Object>of());
+    new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config).run(
+        QueryPlus.wrap(query1),
+        ImmutableMap.<String, Object>of()
+    );
     Assert.assertEquals(1000, mockRunner.query.getThreshold());
 
     TopNQuery query2 = builder.threshold(10).context(context).build();
 
     new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config)
-        .run(query2, ImmutableMap.<String, Object>of());
+        .run(QueryPlus.wrap(query2), ImmutableMap.<String, Object>of());
     Assert.assertEquals(500, mockRunner.query.getThreshold());
 
     TopNQuery query3 = builder.threshold(2000).context(context).build();
     new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config)
-        .run(query3, ImmutableMap.<String, Object>of());
+        .run(QueryPlus.wrap(query3), ImmutableMap.<String, Object>of());
     Assert.assertEquals(2000, mockRunner.query.getThreshold());
   }
 
@@ -248,7 +232,7 @@ public class TopNQueryQueryToolChestTest
     )
     {
       this.query = (TopNQuery) queryPlus.getQuery();
-      return query.run(runner, responseContext);
+      return runner.run(queryPlus, responseContext);
     }
   }
 }

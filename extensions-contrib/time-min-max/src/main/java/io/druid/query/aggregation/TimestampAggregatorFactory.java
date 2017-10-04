@@ -21,9 +21,12 @@ package io.druid.query.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Longs;
-import io.druid.java.util.common.StringUtils;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.StringUtils;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.ObjectColumnSelector;
 import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
@@ -36,8 +39,6 @@ import java.util.Objects;
 
 public class TimestampAggregatorFactory extends AggregatorFactory
 {
-  private static final byte CACHE_TYPE_ID = 31;
-
   final String name;
   final String fieldName;
   final String timeFormat;
@@ -84,7 +85,49 @@ public class TimestampAggregatorFactory extends AggregatorFactory
   @Override
   public Object combine(Object lhs, Object rhs)
   {
-    return TimestampAggregator.combineValues(lhs, rhs);
+    return TimestampAggregator.combineValues(comparator, lhs, rhs);
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    // TimestampAggregatorFactory.combine() delegates to TimestampAggregator.combineValues() and it doesn't check
+    // for nulls, so this AggregateCombiner neither.
+    return new LongAggregateCombiner()
+    {
+      private long result;
+
+      @Override
+      public void reset(ColumnValueSelector selector)
+      {
+        result = getTimestamp(selector);
+      }
+
+      private long getTimestamp(ColumnValueSelector selector)
+      {
+        if (selector instanceof ObjectColumnSelector) {
+          Object input = ((ObjectColumnSelector) selector).getObject();
+          return convertLong(timestampSpec, input);
+        } else {
+          return selector.getLong();
+        }
+      }
+
+      @Override
+      public void fold(ColumnValueSelector selector)
+      {
+        long other = getTimestamp(selector);
+        if (comparator.compare(result, other) <= 0) {
+          result = other;
+        }
+      }
+
+      @Override
+      public long getLong()
+      {
+        return result;
+      }
+    };
   }
 
   @Override
@@ -118,7 +161,7 @@ public class TimestampAggregatorFactory extends AggregatorFactory
   @Override
   public Object finalizeComputation(Object object)
   {
-    return new DateTime((long)object);
+    return DateTimes.utc((long) object);
   }
 
   @Override
@@ -152,7 +195,7 @@ public class TimestampAggregatorFactory extends AggregatorFactory
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
 
     return ByteBuffer.allocate(1 + fieldNameBytes.length)
-        .put(CACHE_TYPE_ID).put(fieldNameBytes).array();
+                     .put(AggregatorUtil.TIMESTAMP_CACHE_TYPE_ID).put(fieldNameBytes).array();
   }
 
   @Override
@@ -208,11 +251,11 @@ public class TimestampAggregatorFactory extends AggregatorFactory
   static Long convertLong(TimestampSpec timestampSpec, Object input)
   {
     if (input instanceof Number) {
-      return ((Number)input).longValue();
+      return ((Number) input).longValue();
     } else if (input instanceof DateTime) {
-      return ((DateTime)input).getMillis();
+      return ((DateTime) input).getMillis();
     } else if (input instanceof Timestamp) {
-      return ((Timestamp)input).getTime();
+      return ((Timestamp) input).getTime();
     } else if (input instanceof String) {
       return timestampSpec.parseDateTime(input).getMillis();
     }

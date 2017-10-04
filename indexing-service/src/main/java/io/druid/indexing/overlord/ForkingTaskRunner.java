@@ -32,7 +32,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.io.ByteSink;
 import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
@@ -53,16 +52,16 @@ import io.druid.indexing.common.tasklogs.LogUtils;
 import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import io.druid.indexing.worker.config.WorkerConfig;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IOE;
-import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.DruidMetrics;
 import io.druid.server.DruidNode;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.server.metrics.MonitorsConfig;
 import io.druid.tasklogs.TaskLogPusher;
 import io.druid.tasklogs.TaskLogStreamer;
@@ -83,6 +82,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
@@ -104,11 +104,10 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   private final ObjectMapper jsonMapper;
   private final PortFinder portFinder;
   private final PortFinder tlsPortFinder;
-  private final ServerConfig serverConfig;
   private final CopyOnWriteArrayList<Pair<TaskRunnerListener, Executor>> listeners = new CopyOnWriteArrayList<>();
 
   // Writes must be synchronized. This is only a ConcurrentMap so "informational" reads can occur without waiting.
-  private final Map<String, ForkingTaskRunnerWorkItem> tasks = Maps.newConcurrentMap();
+  private final Map<String, ForkingTaskRunnerWorkItem> tasks = new ConcurrentHashMap<>();
 
   private volatile boolean stopping = false;
 
@@ -120,8 +119,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
       Properties props,
       TaskLogPusher taskLogPusher,
       ObjectMapper jsonMapper,
-      @Self DruidNode node,
-      ServerConfig serverConfig
+      @Self DruidNode node
   )
   {
     this.config = config;
@@ -132,7 +130,6 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     this.node = node;
     this.portFinder = new PortFinder(config.getStartPort());
     this.tlsPortFinder = new PortFinder(config.getTlsStartPort());
-    this.serverConfig = serverConfig;
     this.exec = MoreExecutors.listeningDecorator(
         Execs.multiThreaded(workerConfig.getCapacity(), "forking-task-runner-%d")
     );
@@ -238,7 +235,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                         int tlsChildPort = -1;
                         int childChatHandlerPort = -1;
 
-                        if(serverConfig.isPlaintext()) {
+                        if (node.isEnablePlaintextPort()) {
                           if (config.isSeparateIngestionEndpoint()) {
                             Pair<Integer, Integer> portPair = portFinder.findTwoConsecutiveUnusedPorts();
                             childPort = portPair.lhs;
@@ -248,7 +245,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                           }
                         }
 
-                        if(serverConfig.isTls()) {
+                        if (node.isEnableTlsPort()) {
                           tlsChildPort = tlsPortFinder.findUnusedPort();
                         }
 
@@ -500,10 +497,10 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               }
                             }
 
-                            if(serverConfig.isPlaintext()) {
+                            if (node.isEnablePlaintextPort()) {
                               portFinder.markPortUnused(childPort);
                             }
-                            if(serverConfig.isTls()) {
+                            if (node.isEnableTlsPort()) {
                               tlsPortFinder.markPortUnused(tlsChildPort);
                             }
                             if (childChatHandlerPort > 0) {
@@ -560,7 +557,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
       }
     }
 
-    final DateTime start = new DateTime();
+    final DateTime start = DateTimes.nowUtc();
     final long timeout = new Interval(start, taskConfig.getGracefulShutdownTimeout()).toDurationMillis();
 
     // Things should be terminating now. Wait for it to happen so logs can be uploaded and all that good stuff.

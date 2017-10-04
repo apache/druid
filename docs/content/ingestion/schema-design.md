@@ -12,7 +12,7 @@ of OLAP data.
 For more detailed information:
 
 * Every row in Druid must have a timestamp. Data is always partitioned by time, and every query has a time filter. Query results can also be broken down by time buckets like minutes, hours, days, and so on.
-* Dimensions are fields that can be filtered on or grouped by. They are always single Strings, arrays of Strings, single Longs, or single Floats.
+* Dimensions are fields that can be filtered on or grouped by. They are always single Strings, arrays of Strings, single Longs, single Doubles or single Floats.
 * Metrics are fields that can be aggregated. They are often stored as numbers (integers or floats) but can also be stored as complex objects like HyperLogLog sketches or approximate histogram sketches.
 
 Typical production tables (or datasources as they are known in Druid) have fewer than 100 dimensions and fewer 
@@ -22,7 +22,7 @@ Below, we outline some best practices with schema design:
 
 ## Numeric dimensions
 
-If the user wishes to ingest a column as a numeric-typed dimension (Long or Float), it is necessary to specify the type of the column in the `dimensions` section of the `dimensionsSpec`. If the type is omitted, Druid will ingest a column as the default String type.
+If the user wishes to ingest a column as a numeric-typed dimension (Long, Double or Float), it is necessary to specify the type of the column in the `dimensions` section of the `dimensionsSpec`. If the type is omitted, Druid will ingest a column as the default String type.
 
 There are performance tradeoffs between string and numeric columns. Numeric columns are generally faster to group on
 than string columns. But unlike string columns, numeric columns don't have indexes, so they are generally slower to

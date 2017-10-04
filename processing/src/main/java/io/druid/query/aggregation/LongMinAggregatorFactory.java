@@ -28,6 +28,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.LongColumnSelector;
 
 import java.nio.ByteBuffer;
@@ -41,7 +42,6 @@ import java.util.Objects;
  */
 public class LongMinAggregatorFactory extends AggregatorFactory
 {
-  private static final byte CACHE_TYPE_ID = 0xB;
 
   private final String name;
   private final String fieldName;
@@ -100,6 +100,33 @@ public class LongMinAggregatorFactory extends AggregatorFactory
   public Object combine(Object lhs, Object rhs)
   {
     return LongMinAggregator.combineValues(lhs, rhs);
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    return new LongAggregateCombiner()
+    {
+      private long min;
+
+      @Override
+      public void reset(ColumnValueSelector selector)
+      {
+        min = selector.getLong();
+      }
+
+      @Override
+      public void fold(ColumnValueSelector selector)
+      {
+        min = Math.min(min, selector.getLong());
+      }
+
+      @Override
+      public long getLong()
+      {
+        return min;
+      }
+    };
   }
 
   @Override
@@ -170,7 +197,7 @@ public class LongMinAggregatorFactory extends AggregatorFactory
     byte[] expressionBytes = StringUtils.toUtf8WithNullToEmpty(expression);
 
     return ByteBuffer.allocate(2 + fieldNameBytes.length + expressionBytes.length)
-                     .put(CACHE_TYPE_ID)
+                     .put(AggregatorUtil.LONG_MIN_CACHE_TYPE_ID)
                      .put(fieldNameBytes)
                      .put(AggregatorUtil.STRING_SEPARATOR)
                      .put(expressionBytes)

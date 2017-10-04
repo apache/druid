@@ -29,19 +29,13 @@ public class RandomBalancerStrategy implements BalancerStrategy
   private final ReservoirSegmentSampler sampler = new ReservoirSegmentSampler();
 
   @Override
-  public ServerHolder findNewSegmentHomeReplicator(
-      DataSegment proposalSegment, List<ServerHolder> serverHolders
-  )
+  public ServerHolder findNewSegmentHomeReplicator(DataSegment proposalSegment, List<ServerHolder> serverHolders)
   {
-    if (serverHolders.size()==1)
-    {
+    if (serverHolders.size() == 1) {
       return null;
-    }
-    else
-    {
+    } else {
       ServerHolder holder = serverHolders.get(new Random().nextInt(serverHolders.size()));
-      while (holder.isServingSegment(proposalSegment))
-      {
+      while (holder.isServingSegment(proposalSegment)) {
         holder = serverHolders.get(new Random().nextInt(serverHolders.size()));
       }
       return holder;
@@ -49,9 +43,7 @@ public class RandomBalancerStrategy implements BalancerStrategy
   }
 
   @Override
-  public ServerHolder findNewSegmentHomeBalancer(
-      DataSegment proposalSegment, List<ServerHolder> serverHolders
-  )
+  public ServerHolder findNewSegmentHomeBalancer(DataSegment proposalSegment, List<ServerHolder> serverHolders)
   {
     return null;  //To change body of implemented methods use File | Settings | File Templates.
   }
@@ -63,9 +55,7 @@ public class RandomBalancerStrategy implements BalancerStrategy
   }
 
   @Override
-  public void emitStats(
-      String tier, CoordinatorStats stats, List<ServerHolder> serverHolderList
-  )
+  public void emitStats(String tier, CoordinatorStats stats, List<ServerHolder> serverHolderList)
   {
   }
 }

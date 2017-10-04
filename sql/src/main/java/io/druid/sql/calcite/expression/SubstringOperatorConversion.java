@@ -19,6 +19,7 @@
 
 package io.druid.sql.calcite.expression;
 
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.SubstringDimExtractionFn;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
@@ -65,7 +66,7 @@ public class SubstringOperatorConversion implements SqlOperatorConversion
 
     return input.map(
         simpleExtraction -> simpleExtraction.cascade(new SubstringDimExtractionFn(index, length < 0 ? null : length)),
-        expression -> String.format(
+        expression -> StringUtils.format(
             "substring(%s, %s, %s)",
             expression,
             DruidExpression.numberLiteral(index),

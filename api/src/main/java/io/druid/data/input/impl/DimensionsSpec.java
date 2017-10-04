@@ -28,7 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.parsers.ParserUtils;
 
 import javax.annotation.Nullable;
@@ -37,7 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-
+@PublicApi
 public class DimensionsSpec
 {
   private final List<DimensionSchema> dimensions;
@@ -101,7 +101,7 @@ public class DimensionsSpec
       dimensionSchemaMap.put(schema.getName(), schema);
     }
 
-    for(SpatialDimensionSchema spatialSchema : spatialDims) {
+    for (SpatialDimensionSchema spatialSchema : spatialDims) {
       DimensionSchema newSchema = DimensionsSpec.convertSpatialSchema(spatialSchema);
       this.dimensions.add(newSchema);
       dimensionSchemaMap.put(newSchema.getName(), newSchema);

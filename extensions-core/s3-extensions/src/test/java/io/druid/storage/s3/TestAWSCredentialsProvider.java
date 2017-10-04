@@ -25,6 +25,7 @@ import com.amazonaws.auth.AWSSessionCredentials;
 import com.google.common.io.Files;
 import io.druid.common.aws.AWSCredentialsConfig;
 import io.druid.guice.AWSModule;
+import io.druid.metadata.DefaultPasswordProvider;
 import org.easymock.EasyMock;
 import org.junit.Rule;
 import org.junit.Test;
@@ -47,8 +48,8 @@ public class TestAWSCredentialsProvider
   public void testWithFixedAWSKeys()
   {
     AWSCredentialsConfig config = EasyMock.createMock(AWSCredentialsConfig.class);
-    EasyMock.expect(config.getAccessKey()).andReturn("accessKeySample").atLeastOnce();
-    EasyMock.expect(config.getSecretKey()).andReturn("secretKeySample").atLeastOnce();
+    EasyMock.expect(config.getAccessKey()).andReturn(new DefaultPasswordProvider("accessKeySample")).atLeastOnce();
+    EasyMock.expect(config.getSecretKey()).andReturn(new DefaultPasswordProvider("secretKeySample")).atLeastOnce();
     EasyMock.replay(config);
 
     AWSCredentialsProvider provider = awsModule.getAWSCredentialsProvider(config);
@@ -67,8 +68,8 @@ public class TestAWSCredentialsProvider
   public void testWithFileSessionCredentials() throws IOException
   {
     AWSCredentialsConfig config = EasyMock.createMock(AWSCredentialsConfig.class);
-    EasyMock.expect(config.getAccessKey()).andReturn("");
-    EasyMock.expect(config.getSecretKey()).andReturn("");
+    EasyMock.expect(config.getAccessKey()).andReturn(new DefaultPasswordProvider(""));
+    EasyMock.expect(config.getSecretKey()).andReturn(new DefaultPasswordProvider(""));
     File file = folder.newFile();
     try (BufferedWriter out = Files.newWriter(file, StandardCharsets.UTF_8)) {
       out.write("sessionToken=sessionTokenSample\nsecretKey=secretKeySample\naccessKey=accessKeySample\n");

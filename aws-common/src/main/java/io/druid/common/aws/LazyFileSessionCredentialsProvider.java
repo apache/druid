@@ -19,6 +19,7 @@
 
 package io.druid.common.aws;
 
+import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 
 public class LazyFileSessionCredentialsProvider implements AWSCredentialsProvider
@@ -26,11 +27,13 @@ public class LazyFileSessionCredentialsProvider implements AWSCredentialsProvide
   private AWSCredentialsConfig config;
   private FileSessionCredentialsProvider provider;
 
-  public LazyFileSessionCredentialsProvider(AWSCredentialsConfig config) {
+  public LazyFileSessionCredentialsProvider(AWSCredentialsConfig config)
+  {
     this.config = config;
   }
 
-  private FileSessionCredentialsProvider getUnderlyingProvider() {
+  private FileSessionCredentialsProvider getUnderlyingProvider()
+  {
     if (provider == null) {
       synchronized (config) {
         if (provider == null) {
@@ -42,13 +45,14 @@ public class LazyFileSessionCredentialsProvider implements AWSCredentialsProvide
   }
 
   @Override
-  public com.amazonaws.auth.AWSCredentials getCredentials()
+  public AWSCredentials getCredentials()
   {
     return getUnderlyingProvider().getCredentials();
   }
 
   @Override
-  public void refresh() {
+  public void refresh()
+  {
     getUnderlyingProvider().refresh();
   }
 }

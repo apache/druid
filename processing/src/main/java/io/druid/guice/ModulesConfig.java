@@ -28,7 +28,7 @@ public class ModulesConfig
 {
   /**
    * Canonical class names of modules, which should not be loaded despite they are founded in extensions from {@link
-   * io.druid.guice.ExtensionsConfig#loadList} or the standard list of modules loaded by some node type, e. g. {@code
+   * ExtensionsConfig#loadList} or the standard list of modules loaded by some node type, e. g. {@code
    * CliPeon}.
    */
   @JsonProperty

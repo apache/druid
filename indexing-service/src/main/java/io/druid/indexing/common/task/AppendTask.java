@@ -27,6 +27,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.indexing.common.TaskToolbox;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.IndexMerger;
@@ -84,7 +85,7 @@ public class AppendTask extends MergeTaskBase
 
     final Iterable<SegmentToMergeHolder> segmentsToMerge = Iterables.concat(
         Iterables.transform(
-            timeline.lookup(new Interval("1000-01-01/3000-01-01")),
+            timeline.lookup(Intervals.of("1000-01-01/3000-01-01")),
             new Function<TimelineObjectHolder<String, DataSegment>, Iterable<SegmentToMergeHolder>>()
             {
               @Override

@@ -65,9 +65,15 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     MULTI_VALUE,
     MULTI_VALUE_V3;
 
-    public boolean isSet(int flags) { return (getMask() & flags) != 0; }
+    public boolean isSet(int flags)
+    {
+      return (getMask() & flags) != 0;
+    }
 
-    public int getMask() { return (1 << ordinal()); }
+    public int getMask()
+    {
+      return (1 << ordinal());
+    }
   }
 
   enum VERSION
@@ -296,15 +302,13 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
           rMultiValuedColumn = null;
         }
 
-        builder.setHasMultipleValues(hasMultipleValues)
-               .setDictionaryEncodedColumn(
-                   new DictionaryEncodedColumnSupplier(
-                       rDictionary,
-                       rSingleValuedColumn,
-                       rMultiValuedColumn,
-                       columnConfig.columnCacheSizeBytes()
-                   )
-               );
+        DictionaryEncodedColumnSupplier dictionaryEncodedColumnSupplier = new DictionaryEncodedColumnSupplier(
+            rDictionary,
+            rSingleValuedColumn,
+            rMultiValuedColumn,
+            columnConfig.columnCacheSizeBytes()
+        );
+        builder.setHasMultipleValues(hasMultipleValues).setDictionaryEncodedColumn(dictionaryEncodedColumnSupplier);
 
         GenericIndexed<ImmutableBitmap> rBitmaps = GenericIndexed.read(
             buffer, bitmapSerdeFactory.getObjectStrategy(), builder.getFileMapper()

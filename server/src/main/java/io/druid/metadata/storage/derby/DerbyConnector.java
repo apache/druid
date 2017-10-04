@@ -89,12 +89,16 @@ public class DerbyConnector extends SQLMetadataConnector
   }
 
   @Override
-  public String getQuoteString() {
+  public String getQuoteString()
+  {
     return QUOTE_STRING;
   }
 
   @Override
-  public DBI getDBI() { return dbi; }
+  public DBI getDBI()
+  {
+    return dbi;
+  }
 
   @Override
   protected int getStreamingFetchSize()
@@ -104,7 +108,10 @@ public class DerbyConnector extends SQLMetadataConnector
   }
 
   @Override
-  public String getValidationQuery() { return "VALUES 1"; }
+  public String getValidationQuery()
+  {
+    return "VALUES 1";
+  }
 
   @LifecycleStart
   public void start()

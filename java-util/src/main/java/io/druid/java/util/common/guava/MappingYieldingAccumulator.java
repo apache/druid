@@ -19,19 +19,20 @@
 
 package io.druid.java.util.common.guava;
 
-import com.google.common.base.Function;
+import java.util.function.Function;
 
 /**
 */
 public class MappingYieldingAccumulator<OutType, InType, MappedType> extends YieldingAccumulator<OutType, InType>
 {
-  private final Function<InType, MappedType> fn;
+  private final Function<? super InType, ? extends MappedType> fn;
   private final YieldingAccumulator<OutType, MappedType> baseAccumulator;
 
   public MappingYieldingAccumulator(
-      Function<InType, MappedType> fn,
+      Function<? super InType, ? extends MappedType> fn,
       YieldingAccumulator<OutType, MappedType> baseAccumulator
-  ) {
+  )
+  {
     this.fn = fn;
     this.baseAccumulator = baseAccumulator;
   }

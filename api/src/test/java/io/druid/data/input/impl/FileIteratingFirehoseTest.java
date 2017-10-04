@@ -61,7 +61,7 @@ public class FileIteratingFirehoseTest
     final List<Object[]> args = new ArrayList<>();
     for (int numSkipHeadRows = 0; numSkipHeadRows < 3; numSkipHeadRows++) {
       for (List<String> texts : inputTexts) {
-        args.add(new Object[] { texts, numSkipHeadRows });
+        args.add(new Object[] {texts, numSkipHeadRows});
       }
     }
 

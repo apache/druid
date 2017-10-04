@@ -33,6 +33,7 @@ import com.ircclouds.irc.api.state.IIRCState;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.logger.Logger;
 import org.joda.time.DateTime;
@@ -112,7 +113,7 @@ public class IrcFirehoseFactory implements FirehoseFactory<IrcInputRowParser>
           public void onChannelMessage(ChannelPrivMsg aMsg)
           {
             try {
-              queue.put(Pair.of(DateTime.now(), aMsg));
+              queue.put(Pair.of(DateTimes.nowUtc(), aMsg));
             }
             catch (InterruptedException e) {
               throw new RuntimeException("interrupted adding message to queue", e);

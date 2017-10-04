@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
@@ -39,7 +39,6 @@ import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Interval;
 
 import java.nio.ByteBuffer;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -52,7 +51,9 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
    * Prepend 0xFF before the analysisTypes as a separator to avoid
    * any potential confusion with string values.
    */
-  public static final byte[] ANALYSIS_TYPES_CACHE_PREFIX = new byte[] { (byte) 0xFF };
+  public static final byte[] ANALYSIS_TYPES_CACHE_PREFIX = new byte[] {(byte) 0xFF};
+
+  private static final QuerySegmentSpec DEFAULT_SEGMENT_SPEC = new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY);
 
   public enum AnalysisType
   {
@@ -80,13 +81,9 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
 
     public byte[] getCacheKey()
     {
-      return new byte[] { (byte) this.ordinal() };
+      return new byte[] {(byte) this.ordinal()};
     }
   }
-
-  public static final Interval DEFAULT_INTERVAL = new Interval(
-      JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT
-  );
 
   private final ColumnIncluderator toInclude;
   private final boolean merge;
@@ -106,13 +103,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
       @JsonProperty("lenientAggregatorMerge") Boolean lenientAggregatorMerge
   )
   {
-    super(
-        dataSource,
-        (querySegmentSpec == null) ? new MultipleIntervalSegmentSpec(Collections.singletonList(DEFAULT_INTERVAL))
-            : querySegmentSpec,
-        false,
-        context
-    );
+    super(dataSource, querySegmentSpec == null ? DEFAULT_SEGMENT_SPEC : querySegmentSpec, false, context);
 
     if (querySegmentSpec == null) {
       this.usingDefaultInterval = true;

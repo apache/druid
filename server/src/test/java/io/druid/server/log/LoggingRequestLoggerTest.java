@@ -20,11 +20,13 @@
 package io.druid.server.log;
 
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.LegacyDataSource;
@@ -37,6 +39,7 @@ import io.druid.server.QueryStats;
 import io.druid.server.RequestLogLine;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.Appender;
+import org.apache.logging.log4j.core.Logger;
 import org.apache.logging.log4j.core.appender.OutputStreamAppender;
 import org.apache.logging.log4j.core.layout.JsonLayout;
 import org.joda.time.DateTime;
@@ -61,7 +64,7 @@ public class LoggingRequestLoggerTest
   private static final ByteArrayOutputStream baos = new ByteArrayOutputStream();
   private static Appender appender;
 
-  final DateTime timestamp = DateTime.parse("2016-01-01T00:00:00Z");
+  final DateTime timestamp = DateTimes.of("2016-01-01T00:00:00Z");
   final String remoteAddr = "some.host.tld";
   final Map<String, Object> queryContext = ImmutableMap.<String, Object>of("foo", "bar");
   final Query query = new FakeQuery(
@@ -71,7 +74,7 @@ public class LoggingRequestLoggerTest
         @Override
         public List<Interval> getIntervals()
         {
-          return Collections.singletonList(Interval.parse("2016-01-01T00Z/2016-01-02T00Z"));
+          return Collections.singletonList(Intervals.of("2016-01-01T00Z/2016-01-02T00Z"));
         }
 
         @Override
@@ -98,7 +101,7 @@ public class LoggingRequestLoggerTest
         .setTarget(baos)
         .setLayout(JsonLayout.createLayout(false, true, false, true, true, Charsets.UTF_8))
         .build();
-    final org.apache.logging.log4j.core.Logger logger = (org.apache.logging.log4j.core.Logger)
+    final Logger logger = (Logger)
         LogManager.getLogger(LoggingRequestLogger.class);
     appender.start();
     logger.addAppender(appender);
@@ -113,7 +116,7 @@ public class LoggingRequestLoggerTest
   @AfterClass
   public static void tearDownStatic()
   {
-    final org.apache.logging.log4j.core.Logger logger = (org.apache.logging.log4j.core.Logger) LogManager.getLogger(
+    final Logger logger = (Logger) LogManager.getLogger(
         LoggingRequestLogger.class);
     logger.removeAppender(appender);
     appender.stop();
@@ -158,9 +161,7 @@ public class LoggingRequestLoggerTest
 
   private static Map<String, Object> readContextMap(byte[] bytes) throws Exception
   {
-    final Map<String, Object> rawMap = mapper.readValue(bytes, new TypeReference<Map<String, Object>>()
-    {
-    });
+    final Map<String, Object> rawMap = mapper.readValue(bytes, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
     final Object contextMap = rawMap.get("contextMap");
     if (contextMap == null) {
       return null;

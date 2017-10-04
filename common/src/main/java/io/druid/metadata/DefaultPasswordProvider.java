@@ -46,7 +46,8 @@ public class DefaultPasswordProvider implements PasswordProvider
   }
 
   @Override
-  public String toString() {
+  public String toString()
+  {
     return this.getClass().getCanonicalName();
   }
 

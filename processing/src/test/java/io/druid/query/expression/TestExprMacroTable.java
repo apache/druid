@@ -48,7 +48,10 @@ public class TestExprMacroTable extends ExprMacroTable
             new TimestampFloorExprMacro(),
             new TimestampFormatExprMacro(),
             new TimestampParseExprMacro(),
-            new TimestampShiftExprMacro()
+            new TimestampShiftExprMacro(),
+            new TrimExprMacro.BothTrimExprMacro(),
+            new TrimExprMacro.LeftTrimExprMacro(),
+            new TrimExprMacro.RightTrimExprMacro()
         )
     );
   }

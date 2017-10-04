@@ -69,20 +69,20 @@ public class RoaringBitmapSerdeFactory implements BitmapSerdeFactory
     return bitmapFactory;
   }
 
-  private static Ordering<WrappedImmutableRoaringBitmap> roaringComparator = new Ordering<WrappedImmutableRoaringBitmap>()
+  private static final Ordering<WrappedImmutableRoaringBitmap> RORING_COMPARATOR = new Ordering<WrappedImmutableRoaringBitmap>()
   {
     @Override
     public int compare(
         WrappedImmutableRoaringBitmap set1, WrappedImmutableRoaringBitmap set2
     )
     {
-      if (set1.size() == 0 && set2.size() == 0) {
+      if (set1.isEmpty() && set2.isEmpty()) {
         return 0;
       }
-      if (set1.size() == 0) {
+      if (set1.isEmpty()) {
         return -1;
       }
-      if (set2.size() == 0) {
+      if (set2.isEmpty()) {
         return 1;
       }
 
@@ -118,7 +118,7 @@ public class RoaringBitmapSerdeFactory implements BitmapSerdeFactory
     @Override
     public int compare(ImmutableBitmap o1, ImmutableBitmap o2)
     {
-      return roaringComparator.compare((WrappedImmutableRoaringBitmap) o1, (WrappedImmutableRoaringBitmap) o2);
+      return RORING_COMPARATOR.compare((WrappedImmutableRoaringBitmap) o1, (WrappedImmutableRoaringBitmap) o2);
     }
   }
 

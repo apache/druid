@@ -71,7 +71,7 @@ public class S3DataSegmentFinder implements DataSegmentFinder
           workingDirPath.length() == 0 ? config.getBaseKey() : workingDirPath,
           config.getMaxListingLength());
 
-      while(objectsIterator.hasNext()) {
+      while (objectsIterator.hasNext()) {
         StorageObject storageObject = objectsIterator.next();
         storageObject.closeDataInputStream();
 
@@ -113,11 +113,14 @@ public class S3DataSegmentFinder implements DataSegmentFinder
           }
         }
       }
-    } catch (ServiceException e) {
+    }
+    catch (ServiceException e) {
       throw new SegmentLoadingException(e, "Problem interacting with S3");
-    } catch (IOException e) {
+    }
+    catch (IOException e) {
       throw new SegmentLoadingException(e, "IO exception");
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       Throwables.propagateIfInstanceOf(e, SegmentLoadingException.class);
       Throwables.propagate(e);
     }

@@ -101,6 +101,8 @@ public class IndexGeneratorJob implements Jobby
   public static List<DataSegment> getPublishedSegments(HadoopDruidIndexerConfig config)
   {
     final Configuration conf = JobHelper.injectSystemProperties(new Configuration());
+    config.addJobProperties(conf);
+
     final ObjectMapper jsonMapper = HadoopDruidIndexerConfig.JSON_MAPPER;
 
     ImmutableList.Builder<DataSegment> publishedSegmentsBuilder = ImmutableList.builder();
@@ -436,6 +438,12 @@ public class IndexGeneratorJob implements Jobby
         }
 
         @Override
+        public double getDoubleMetric(String metric)
+        {
+          return row.getDoubleMetric(metric);
+        }
+
+        @Override
         public int compareTo(Row o)
         {
           return row.compareTo(o);
@@ -706,7 +714,7 @@ public class IndexGeneratorJob implements Jobby
         // ShardSpec to be published.
         final ShardSpec shardSpecForPublishing;
         if (config.isForceExtendableShardSpecs()) {
-          shardSpecForPublishing = new NumberedShardSpec(shardSpecForPartitioning.getPartitionNum(),config.getShardSpecCount(bucket));
+          shardSpecForPublishing = new NumberedShardSpec(shardSpecForPartitioning.getPartitionNum(), config.getShardSpecCount(bucket));
         } else {
           shardSpecForPublishing = shardSpecForPartitioning;
         }

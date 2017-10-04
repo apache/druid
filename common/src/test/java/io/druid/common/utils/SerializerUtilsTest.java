@@ -19,7 +19,6 @@
 
 package io.druid.common.utils;
 
-import io.druid.collections.IntList;
 import io.druid.java.util.common.StringUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -37,15 +36,15 @@ import java.nio.channels.WritableByteChannel;
 public class SerializerUtilsTest
 {
   private SerializerUtils serializerUtils;
-  private  final float delta = 0;
-  private  final String [] strings = {"1#","2","3"};
-  private  final int [] ints = {1,2,3};
-  private  final float [] floats = {1.1f,2,3};
-  private  final long [] longs = {3,2,1};
-  private  byte [] stringsByte;
-  private  byte [] intsByte;
-  private  byte [] floatsByte;
-  private  byte [] longsByte;
+  private final float delta = 0;
+  private final String[] strings = {"1#", "2", "3"};
+  private final int[] ints = {1, 2, 3};
+  private final float[] floats = {1.1f, 2, 3};
+  private final long[] longs = {3, 2, 1};
+  private byte[] stringsByte;
+  private byte[] intsByte;
+  private byte[] floatsByte;
+  private byte[] longsByte;
   private ByteArrayOutputStream outStream;
 
   @Before
@@ -54,10 +53,10 @@ public class SerializerUtilsTest
     ByteArrayOutputStream bos = new ByteArrayOutputStream();
     DataOutputStream out = new DataOutputStream(bos);
     out.writeInt(strings.length);
-    for (int i = 0;i < strings.length;i++) {
-      byte [] stringBytes = StringUtils.toUtf8(strings[i]);
+    for (String string : strings) {
+      byte[] stringBytes = StringUtils.toUtf8(string);
       out.writeInt(stringBytes.length);
-      out.write(StringUtils.toUtf8(strings[i]));
+      out.write(StringUtils.toUtf8(string));
     }
     out.close();
     stringsByte = bos.toByteArray();
@@ -65,8 +64,8 @@ public class SerializerUtilsTest
     bos = new ByteArrayOutputStream();
     out = new DataOutputStream(bos);
     out.writeInt(ints.length);
-    for (int i = 0;i < ints.length;i++) {
-      out.writeInt(ints[i]);
+    for (int e : ints) {
+      out.writeInt(e);
     }
     out.close();
     intsByte = bos.toByteArray();
@@ -74,8 +73,8 @@ public class SerializerUtilsTest
     bos = new ByteArrayOutputStream();
     out = new DataOutputStream(bos);
     out.writeInt(floats.length);
-    for (int i = 0;i < ints.length;i++) {
-      out.writeFloat(floats[i]);
+    for (float e : floats) {
+      out.writeFloat(e);
     }
     out.close();
     floatsByte = bos.toByteArray();
@@ -83,8 +82,8 @@ public class SerializerUtilsTest
     bos = new ByteArrayOutputStream();
     out = new DataOutputStream(bos);
     out.writeInt(longs.length);
-    for (int i = 0;i < longs.length;i++) {
-      out.writeLong(longs[i]);
+    for (long e : longs) {
+      out.writeLong(e);
     }
     out.close();
     longsByte = bos.toByteArray();
@@ -97,19 +96,7 @@ public class SerializerUtilsTest
   public void testWriteInts() throws IOException
   {
     serializerUtils.writeInts(outStream, ints);
-    byte [] actuals = outStream.toByteArray();
-    Assert.assertArrayEquals(intsByte, actuals);
-  }
-
-  @Test
-  public void testWriteIntList() throws IOException
-  {
-    IntList list = new IntList();
-    for (int i = 0;i < ints.length;i++) {
-      list.add(ints[i]);
-    }
-    serializerUtils.writeInts(outStream, list);
-    byte [] actuals = outStream.toByteArray();
+    byte[] actuals = outStream.toByteArray();
     Assert.assertArrayEquals(intsByte, actuals);
   }
 
@@ -117,7 +104,7 @@ public class SerializerUtilsTest
   public void testWriteFloats() throws IOException
   {
     serializerUtils.writeFloats(outStream, floats);
-    byte [] actuals = outStream.toByteArray();
+    byte[] actuals = outStream.toByteArray();
     Assert.assertArrayEquals(floatsByte, actuals);
   }
 
@@ -133,23 +120,23 @@ public class SerializerUtilsTest
     }
     float expected = serializerUtils.readFloat(inputstream);
     float actuals = floats[index];
-    Assert.assertEquals(expected, actuals,delta);
+    Assert.assertEquals(expected, actuals, delta);
   }
 
   @Test
   public void testWriteLongs() throws IOException
   {
     serializerUtils.writeLongs(outStream, longs);
-    byte [] actuals = outStream.toByteArray();
-    Assert.assertArrayEquals(longsByte,actuals);
+    byte[] actuals = outStream.toByteArray();
+    Assert.assertArrayEquals(longsByte, actuals);
   }
 
   @Test
   public void testWriteStrings() throws IOException
   {
     serializerUtils.writeStrings(outStream, strings);
-    byte [] actuals = outStream.toByteArray();
-    Assert.assertArrayEquals(stringsByte,actuals);
+    byte[] actuals = outStream.toByteArray();
+    Assert.assertArrayEquals(stringsByte, actuals);
   }
 
   @Test
@@ -170,7 +157,7 @@ public class SerializerUtilsTest
   public void testReadInts() throws IOException
   {
     ByteArrayInputStream inputstream = new ByteArrayInputStream(intsByte);
-    int [] actuals = serializerUtils.readInts(inputstream);
+    int[] actuals = serializerUtils.readInts(inputstream);
     inputstream.close();
     Assert.assertArrayEquals(ints, actuals);
   }
@@ -179,7 +166,7 @@ public class SerializerUtilsTest
   public void testReadFloats() throws IOException
   {
     ByteArrayInputStream inputstream = new ByteArrayInputStream(floatsByte);
-    float [] actuals = serializerUtils.readFloats(inputstream);
+    float[] actuals = serializerUtils.readFloats(inputstream);
     inputstream.close();
     Assert.assertArrayEquals(floats, actuals, delta);
   }
@@ -188,16 +175,16 @@ public class SerializerUtilsTest
   public void testReadLongs() throws IOException
   {
     ByteArrayInputStream inputstream = new ByteArrayInputStream(longsByte);
-    long  [] actuals = serializerUtils.readLongs(inputstream);
+    long[] actuals = serializerUtils.readLongs(inputstream);
     inputstream.close();
     Assert.assertArrayEquals(longs, actuals);
   }
 
   @Test 
-  public void testReadStrings()throws IOException
+  public void testReadStrings() throws IOException
   {
     ByteArrayInputStream inputstream = new ByteArrayInputStream(stringsByte);
-    String  [] actuals = serializerUtils.readStrings(inputstream);
+    String[] actuals = serializerUtils.readStrings(inputstream);
     inputstream.close();
     Assert.assertArrayEquals(strings, actuals);
   }
@@ -222,7 +209,7 @@ public class SerializerUtilsTest
     ByteBuffer buffer = ByteBuffer.allocate(stringsByte.length);
     buffer.put(stringsByte);
     buffer.flip();
-    String  [] actuals = serializerUtils.readStrings(buffer);
+    String[] actuals = serializerUtils.readStrings(buffer);
     Assert.assertArrayEquals(strings, actuals);
   }
 

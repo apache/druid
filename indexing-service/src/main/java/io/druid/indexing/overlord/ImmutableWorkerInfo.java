@@ -22,16 +22,19 @@ package io.druid.indexing.overlord;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.worker.Worker;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Set;
 
 /**
  * A snapshot of a Worker and its current state i.e tasks assigned to that worker.
  */
+@PublicApi
 public class ImmutableWorkerInfo
 {
   private final Worker worker;
@@ -39,6 +42,7 @@ public class ImmutableWorkerInfo
   private final ImmutableSet<String> availabilityGroups;
   private final ImmutableSet<String> runningTasks;
   private final DateTime lastCompletedTaskTime;
+  private final DateTime blacklistedUntil;
 
   @JsonCreator
   public ImmutableWorkerInfo(
@@ -46,7 +50,8 @@ public class ImmutableWorkerInfo
       @JsonProperty("currCapacityUsed") int currCapacityUsed,
       @JsonProperty("availabilityGroups") Set<String> availabilityGroups,
       @JsonProperty("runningTasks") Collection<String> runningTasks,
-      @JsonProperty("lastCompletedTaskTime") DateTime lastCompletedTaskTime
+      @JsonProperty("lastCompletedTaskTime") DateTime lastCompletedTaskTime,
+      @Nullable @JsonProperty("blacklistedUntil") DateTime blacklistedUntil
   )
   {
     this.worker = worker;
@@ -54,6 +59,18 @@ public class ImmutableWorkerInfo
     this.availabilityGroups = ImmutableSet.copyOf(availabilityGroups);
     this.runningTasks = ImmutableSet.copyOf(runningTasks);
     this.lastCompletedTaskTime = lastCompletedTaskTime;
+    this.blacklistedUntil = blacklistedUntil;
+  }
+
+  public ImmutableWorkerInfo(
+      Worker worker,
+      int currCapacityUsed,
+      Set<String> availabilityGroups,
+      Collection<String> runningTasks,
+      DateTime lastCompletedTaskTime
+  )
+  {
+    this(worker, currCapacityUsed, availabilityGroups, runningTasks, lastCompletedTaskTime, null);
   }
 
   @JsonProperty("worker")
@@ -74,7 +91,8 @@ public class ImmutableWorkerInfo
     return availabilityGroups;
   }
 
-  public int getAvailableCapacity() {
+  public int getAvailableCapacity()
+  {
     return getWorker().getCapacity() - getCurrCapacityUsed();
   }
 
@@ -88,6 +106,12 @@ public class ImmutableWorkerInfo
   public DateTime getLastCompletedTaskTime()
   {
     return lastCompletedTaskTime;
+  }
+
+  @JsonProperty
+  public DateTime getBlacklistedUntil()
+  {
+    return blacklistedUntil;
   }
 
   public boolean isValidVersion(String minVersion)
@@ -125,8 +149,12 @@ public class ImmutableWorkerInfo
     if (!runningTasks.equals(that.runningTasks)) {
       return false;
     }
-    return lastCompletedTaskTime.equals(that.lastCompletedTaskTime);
-
+    if (!lastCompletedTaskTime.equals(that.lastCompletedTaskTime)) {
+      return false;
+    }
+    return !(blacklistedUntil != null
+             ? !blacklistedUntil.equals(that.blacklistedUntil)
+             : that.blacklistedUntil != null);
   }
 
   @Override
@@ -137,6 +165,7 @@ public class ImmutableWorkerInfo
     result = 31 * result + availabilityGroups.hashCode();
     result = 31 * result + runningTasks.hashCode();
     result = 31 * result + lastCompletedTaskTime.hashCode();
+    result = 31 * result + (blacklistedUntil != null ? blacklistedUntil.hashCode() : 0);
     return result;
   }
 
@@ -149,6 +178,7 @@ public class ImmutableWorkerInfo
            ", availabilityGroups=" + availabilityGroups +
            ", runningTasks=" + runningTasks +
            ", lastCompletedTaskTime=" + lastCompletedTaskTime +
+           ", blacklistedUntil=" + blacklistedUntil +
            '}';
   }
 }

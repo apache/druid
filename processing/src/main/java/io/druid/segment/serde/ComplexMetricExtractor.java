@@ -20,9 +20,11 @@
 package io.druid.segment.serde;
 
 import io.druid.data.input.InputRow;
+import io.druid.guice.annotations.ExtensionPoint;
 
 /**
  */
+@ExtensionPoint
 public interface ComplexMetricExtractor
 {
   public Class<?> extractedClass();

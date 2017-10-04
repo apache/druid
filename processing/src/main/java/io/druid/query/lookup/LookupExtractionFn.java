@@ -81,11 +81,17 @@ public class LookupExtractionFn extends FunctionalExtraction
 
   @Override
   @JsonProperty
-  public boolean isRetainMissingValue() {return super.isRetainMissingValue();}
+  public boolean isRetainMissingValue()
+  {
+    return super.isRetainMissingValue();
+  }
 
   @Override
   @JsonProperty
-  public String getReplaceMissingValueWith() {return super.getReplaceMissingValueWith();}
+  public String getReplaceMissingValueWith()
+  {
+    return super.getReplaceMissingValueWith();
+  }
 
   @Override
   @JsonProperty

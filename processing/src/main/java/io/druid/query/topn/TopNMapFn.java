@@ -42,38 +42,27 @@ public class TopNMapFn
         return LONG_TRANSFORMER;
       case FLOAT:
         return FLOAT_TRANSFORMER;
+      case DOUBLE:
+        return DOUBLE_TRANSFORMER;
       default:
         throw new IAE("invalid type: %s", outputType);
     }
   }
 
-  private static Function<Object, Object> STRING_TRANSFORMER = new Function<Object, Object>()
-  {
-    @Override
-    public Object apply(Object input)
-    {
-      return Objects.toString(input, null);
-    }
+  private static Function<Object, Object> STRING_TRANSFORMER = input -> Objects.toString(input, null);
+
+  private static Function<Object, Object> LONG_TRANSFORMER = input -> {
+    final Long longVal = DimensionHandlerUtils.convertObjectToLong(input);
+    return longVal == null ? DimensionHandlerUtils.ZERO_LONG : longVal;
   };
 
-  private static Function<Object, Object> LONG_TRANSFORMER = new Function<Object, Object>()
-  {
-    @Override
-    public Object apply(Object input)
-    {
-      final Long longVal = DimensionHandlerUtils.convertObjectToLong(input);
-      return longVal == null ? 0L : longVal;
-    }
+  private static Function<Object, Object> FLOAT_TRANSFORMER = input -> {
+    final Float floatVal = DimensionHandlerUtils.convertObjectToFloat(input);
+    return floatVal == null ? DimensionHandlerUtils.ZERO_FLOAT : floatVal;
   };
-
-  private static Function<Object, Object> FLOAT_TRANSFORMER = new Function<Object, Object>()
-  {
-    @Override
-    public Object apply(Object input)
-    {
-      final Float floatVal = DimensionHandlerUtils.convertObjectToFloat(input);
-      return floatVal == null ? 0.0f : floatVal;
-    }
+  private static Function<Object, Object> DOUBLE_TRANSFORMER = input -> {
+    final Double doubleValue = DimensionHandlerUtils.convertObjectToDouble(input);
+    return doubleValue == null ? DimensionHandlerUtils.ZERO_DOUBLE : doubleValue;
   };
 
   private static final TopNColumnSelectorStrategyFactory STRATEGY_FACTORY = new TopNColumnSelectorStrategyFactory();
@@ -96,7 +85,7 @@ public class TopNMapFn
     final ColumnSelectorPlus selectorPlus = DimensionHandlerUtils.createColumnSelectorPlus(
         STRATEGY_FACTORY,
         query.getDimensionSpec(),
-        cursor
+        cursor.getColumnSelectorFactory()
     );
 
     if (selectorPlus.getSelector() == null) {

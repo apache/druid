@@ -22,6 +22,7 @@ package io.druid.server.http;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.io.ByteSource;
 import com.google.common.net.HostAndPort;
 import io.druid.audit.AuditInfo;
@@ -42,8 +43,8 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class LookupCoordinatorResourceTest
 {
@@ -147,7 +148,7 @@ public class LookupCoordinatorResourceTest
   @Test
   public void testDiscoveryGet()
   {
-    final List<String> tiers = ImmutableList.of();
+    final Set<String> tiers = ImmutableSet.of();
     final LookupCoordinatorManager lookupCoordinatorManager = EasyMock.createStrictMock(
         LookupCoordinatorManager.class);
     EasyMock.expect(lookupCoordinatorManager.discoverTiers()).andReturn(tiers).once();

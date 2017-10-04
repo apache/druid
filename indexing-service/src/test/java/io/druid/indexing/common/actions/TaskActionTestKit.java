@@ -80,7 +80,7 @@ public class TaskActionTestKit extends ExternalResource
   public void before()
   {
     taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(new Period("PT24H")));
-    taskLockbox = new TaskLockbox(taskStorage, 300);
+    taskLockbox = new TaskLockbox(taskStorage);
     testDerbyConnector = new TestDerbyConnector(
         Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
         Suppliers.ofInstance(metadataStorageTablesConfig)

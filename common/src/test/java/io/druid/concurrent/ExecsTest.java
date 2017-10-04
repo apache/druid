@@ -76,7 +76,7 @@ public class ExecsTest
           {
             for (int i = 0; i < nTasks; i++) {
               final int taskID = i;
-              System.out.println("Produced task" + taskID);
+              log.info("Produced task %d", taskID);
               blockingExecutor.submit(
                   new Runnable()
                   {

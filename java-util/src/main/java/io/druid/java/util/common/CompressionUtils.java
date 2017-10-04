@@ -324,7 +324,7 @@ public class CompressionUtils
   public static long gunzip(InputStream in, OutputStream out) throws IOException
   {
     try (GZIPInputStream gzipInputStream = gzipInputStream(in)) {
-      final long result =  ByteStreams.copy(gzipInputStream, out);
+      final long result = ByteStreams.copy(gzipInputStream, out);
       out.flush();
       return result;
     }
@@ -489,7 +489,7 @@ public class CompressionUtils
    *
    * @return fname without the ".gz" extension
    *
-   * @throws io.druid.java.util.common.IAE if fname is not a valid "*.gz" file name
+   * @throws IAE if fname is not a valid "*.gz" file name
    */
   public static String getGzBaseName(String fname)
   {

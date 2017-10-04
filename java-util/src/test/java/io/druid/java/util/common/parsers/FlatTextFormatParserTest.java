@@ -247,7 +247,7 @@ public class FlatTextFormatParserTest
     }
   }
 
-  private static String concat(FlatTextFormat format, String ... values)
+  private static String concat(FlatTextFormat format, String... values)
   {
     return Arrays.stream(values).collect(Collectors.joining(format.getDefaultDelimiter()));
   }

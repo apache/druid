@@ -197,14 +197,17 @@ public class VSizeIndexed implements IndexedMultivalue<IndexedInts>
     inspector.visit("theBuffer", theBuffer);
   }
 
-  public WritableSupplier<IndexedMultivalue<IndexedInts>> asWritableSupplier() {
+  public WritableSupplier<IndexedMultivalue<IndexedInts>> asWritableSupplier()
+  {
     return new VSizeIndexedSupplier(this);
   }
 
-  public static class VSizeIndexedSupplier implements WritableSupplier<IndexedMultivalue<IndexedInts>> {
+  public static class VSizeIndexedSupplier implements WritableSupplier<IndexedMultivalue<IndexedInts>>
+  {
     final VSizeIndexed delegate;
 
-    public VSizeIndexedSupplier(VSizeIndexed delegate) {
+    public VSizeIndexedSupplier(VSizeIndexed delegate)
+    {
       this.delegate = delegate;
     }
 

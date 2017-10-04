@@ -31,6 +31,7 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.guava.Sequence;
@@ -50,7 +51,6 @@ import io.druid.segment.IndexBuilder;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -69,11 +69,11 @@ public class SchemaEvolutionTest
 {
   private static final String DATA_SOURCE = "foo";
   private static final String TIMESTAMP_COLUMN = "t";
-  private static final double THIRTY_ONE_POINT_ONE = 31.100000381469727d;
+  private static final double THIRTY_ONE_POINT_ONE = 31.1d;
 
   public static List<Result<TimeseriesResultValue>> timeseriesResult(final Map<String, ?> map)
   {
-    return ImmutableList.of(new Result<>(new DateTime("2000"), new TimeseriesResultValue((Map<String, Object>) map)));
+    return ImmutableList.of(new Result<>(DateTimes.of("2000"), new TimeseriesResultValue((Map<String, Object>) map)));
   }
 
   public static List<InputRow> inputRowsWithDimensions(final List<String> dimensions)
@@ -123,7 +123,7 @@ public class SchemaEvolutionTest
             )
         ),
         (QueryToolChest<T, Query<T>>) factory.getToolchest()
-    ).run(query, Maps.<String, Object>newHashMap());
+    ).run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap());
     return Sequences.toList(results, Lists.<T>newArrayList());
   }
 
@@ -350,7 +350,7 @@ public class SchemaEvolutionTest
 
     // Only float(3) -- which we can't filter, but can aggregate
     Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("a", 19L, "b", 19.100000381469727, "c", 2L)),
+        timeseriesResult(ImmutableMap.of("a", 19L, "b", 19.1, "c", 2L)),
         runQuery(query, factory, ImmutableList.of(index3))
     );
 
@@ -364,7 +364,7 @@ public class SchemaEvolutionTest
     Assert.assertEquals(
         timeseriesResult(ImmutableMap.of(
             "a", 38L,
-            "b", 38.10000038146973,
+            "b", 38.1,
             "c", 6L
         )),
         runQuery(query, factory, ImmutableList.of(index1, index2, index3, index4))

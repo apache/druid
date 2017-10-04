@@ -54,7 +54,7 @@ public class FileUtils
    * @param shouldRetry Predicate indicating if an error is recoverable and should be retried.
    * @param maxAttempts The maximum number of assumed recoverable attempts to try before completely failing.
    *
-   * @throws java.lang.RuntimeException wrapping the inner exception on failure.
+   * @throws RuntimeException wrapping the inner exception on failure.
    */
   public static FileCopyResult retryCopy(
       final ByteSource byteSource,
@@ -135,7 +135,7 @@ public class FileUtils
 
   /**
    * Fully maps a file read-only in to memory as per
-   * {@link FileChannel#map(java.nio.channels.FileChannel.MapMode, long, long)}.
+   * {@link FileChannel#map(FileChannel.MapMode, long, long)}.
    *
    * <p>Files are mapped from offset 0 to its length.
    *

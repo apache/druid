@@ -35,7 +35,7 @@ public interface TaskStorage
    *
    * @param task task to add
    * @param status task status
-   * @throws io.druid.metadata.EntryExistsException if the task ID already exists
+   * @throws EntryExistsException if the task ID already exists
    */
   public void insert(Task task, TaskStatus status) throws EntryExistsException;
 

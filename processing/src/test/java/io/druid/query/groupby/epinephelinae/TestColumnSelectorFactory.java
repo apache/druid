@@ -23,9 +23,11 @@ import io.druid.data.input.Row;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.TestDoubleColumnSelector;
 import io.druid.segment.TestFloatColumnSelector;
 import io.druid.segment.TestLongColumnSelector;
 import io.druid.segment.column.ColumnCapabilities;
@@ -51,7 +53,7 @@ public class TestColumnSelectorFactory implements ColumnSelectorFactory
     return new TestFloatColumnSelector()
     {
       @Override
-      public float get()
+      public float getFloat()
       {
         return row.get().getFloatMetric(columnName);
       }
@@ -64,7 +66,7 @@ public class TestColumnSelectorFactory implements ColumnSelectorFactory
     return new TestLongColumnSelector()
     {
       @Override
-      public long get()
+      public long getLong()
       {
         return row.get().getLongMetric(columnName);
       }
@@ -83,7 +85,7 @@ public class TestColumnSelectorFactory implements ColumnSelectorFactory
       }
 
       @Override
-      public Object get()
+      public Object getObject()
       {
         return row.get().getRaw(columnName);
       }
@@ -94,5 +96,18 @@ public class TestColumnSelectorFactory implements ColumnSelectorFactory
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
     return null;
+  }
+
+  @Override
+  public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
+  {
+    return new TestDoubleColumnSelector()
+    {
+      @Override
+      public double getDouble()
+      {
+        return row.get().getFloatMetric(columnName);
+      }
+    };
   }
 }

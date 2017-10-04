@@ -147,6 +147,8 @@ public class MapLookupExtractorFactory implements LookupExtractorFactory
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Response getMap()
-    {return Response.ok(map).build();}
+    {
+      return Response.ok(map).build();
+    }
   }
 }

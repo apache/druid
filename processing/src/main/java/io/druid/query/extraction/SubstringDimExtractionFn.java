@@ -61,8 +61,9 @@ public class SubstringDimExtractionFn extends DimExtractionFn
                      .array();
   }
 
+  @Nullable
   @Override
-  public String apply(String dimValue)
+  public String apply(@Nullable String dimValue)
   {
     if (Strings.isNullOrEmpty(dimValue)) {
       return null;

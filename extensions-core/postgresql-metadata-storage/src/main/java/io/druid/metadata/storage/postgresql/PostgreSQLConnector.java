@@ -65,7 +65,8 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   }
 
   @Override
-  protected String getPayloadType() {
+  protected String getPayloadType()
+  {
     return PAYLOAD_TYPE;
   }
 
@@ -76,7 +77,8 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   }
 
   @Override
-  public String getQuoteString() {
+  public String getQuoteString()
+  {
     return QUOTE_STRING;
   }
 
@@ -90,10 +92,8 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   {
     if (canUpsert == null) {
       DatabaseMetaData metaData = handle.getConnection().getMetaData();
-      canUpsert = metaData.getDatabaseMajorVersion() > 9 || (
-          metaData.getDatabaseMajorVersion() == 9 &&
-          metaData.getDatabaseMinorVersion() >= 5
-      );
+      canUpsert = metaData.getDatabaseMajorVersion() > 9 ||
+                  (metaData.getDatabaseMajorVersion() == 9 && metaData.getDatabaseMinorVersion() >= 5);
     }
     return canUpsert;
   }
@@ -161,12 +161,15 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   }
 
   @Override
-  public DBI getDBI() { return dbi; }
+  public DBI getDBI()
+  {
+    return dbi;
+  }
 
   @Override
   protected boolean connectorIsTransientException(Throwable e)
   {
-    if(e instanceof SQLException) {
+    if (e instanceof SQLException) {
       final String sqlState = ((SQLException) e).getSQLState();
       // limited to errors that are likely to be resolved within a few retries
       // retry on connection errors and insufficient resources

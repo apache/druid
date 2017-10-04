@@ -104,7 +104,7 @@ public class FileTaskLogsTest
     //is necessary to separate 2 file creations by a timestamp that would result in only one
     //of them getting deleted
     Thread.sleep(1500);
-    long time = (System.currentTimeMillis()/1000)*1000;
+    long time = (System.currentTimeMillis() / 1000) * 1000;
     Assert.assertTrue(new File(logDir, "log1.log").lastModified() < time);
 
     Files.write("log2content", logFile, Charsets.UTF_8);

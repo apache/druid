@@ -106,7 +106,7 @@ public class IndexSpec
                                 "Unknown long encoding type[%s]", longEncoding);
 
     this.bitmapSerdeFactory = bitmapSerdeFactory != null ? bitmapSerdeFactory : new ConciseBitmapSerdeFactory();
-    this.dimensionCompression = dimensionCompression == null ?DEFAULT_DIMENSION_COMPRESSION : dimensionCompression;
+    this.dimensionCompression = dimensionCompression == null ? DEFAULT_DIMENSION_COMPRESSION : dimensionCompression;
     this.metricCompression = metricCompression == null ? DEFAULT_METRIC_COMPRESSION : metricCompression;
     this.longEncoding = longEncoding == null ? DEFAULT_LONG_ENCODING : longEncoding;
   }

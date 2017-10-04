@@ -27,7 +27,11 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
+import io.druid.discovery.DataNodeService;
+import io.druid.discovery.DruidNodeAnnouncer;
+import io.druid.discovery.LookupNodeService;
 import io.druid.guice.annotations.Processing;
+import io.druid.guice.annotations.RemoteChatHandler;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
@@ -39,6 +43,7 @@ import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentMover;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
+import io.druid.server.DruidNode;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.server.coordination.DataSegmentServerAnnouncer;
 
@@ -69,6 +74,10 @@ public class TaskToolboxFactory
   private final Cache cache;
   private final CacheConfig cacheConfig;
   private final IndexMergerV9 indexMergerV9;
+  private final DruidNodeAnnouncer druidNodeAnnouncer;
+  private final DruidNode druidNode;
+  private final LookupNodeService lookupNodeService;
+  private final DataNodeService dataNodeService;
 
   @Inject
   public TaskToolboxFactory(
@@ -90,7 +99,11 @@ public class TaskToolboxFactory
       IndexIO indexIO,
       Cache cache,
       CacheConfig cacheConfig,
-      IndexMergerV9 indexMergerV9
+      IndexMergerV9 indexMergerV9,
+      DruidNodeAnnouncer druidNodeAnnouncer,
+      @RemoteChatHandler DruidNode druidNode,
+      LookupNodeService lookupNodeService,
+      DataNodeService dataNodeService
   )
   {
     this.config = config;
@@ -112,6 +125,10 @@ public class TaskToolboxFactory
     this.cache = cache;
     this.cacheConfig = cacheConfig;
     this.indexMergerV9 = indexMergerV9;
+    this.druidNodeAnnouncer = druidNodeAnnouncer;
+    this.druidNode = druidNode;
+    this.lookupNodeService = lookupNodeService;
+    this.dataNodeService = dataNodeService;
   }
 
   public TaskToolbox build(Task task)
@@ -137,7 +154,11 @@ public class TaskToolboxFactory
         indexIO,
         cache,
         cacheConfig,
-        indexMergerV9
+        indexMergerV9,
+        druidNodeAnnouncer,
+        druidNode,
+        lookupNodeService,
+        dataNodeService
     );
   }
 }

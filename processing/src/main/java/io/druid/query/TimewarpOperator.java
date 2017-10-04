@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import io.druid.data.input.MapBasedRow;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -69,7 +70,7 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
   @Override
   public QueryRunner<T> postProcess(QueryRunner<T> baseQueryRunner)
   {
-    return postProcess(baseQueryRunner, DateTime.now().getMillis());
+    return postProcess(baseQueryRunner, DateTimes.nowUtc().getMillis());
   }
 
   public QueryRunner<T> postProcess(final QueryRunner<T> baseRunner, final long now)
@@ -84,7 +85,8 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
         final Interval interval = queryPlus.getQuery().getIntervals().get(0);
         final Interval modifiedInterval = new Interval(
             Math.min(interval.getStartMillis() + offset, now + offset),
-            Math.min(interval.getEndMillis() + offset, now + offset)
+            Math.min(interval.getEndMillis() + offset, now + offset),
+            interval.getChronology()
         );
         return Sequences.map(
             baseRunner.run(
@@ -102,18 +104,20 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
                   if (value instanceof TimeBoundaryResultValue) {
                     TimeBoundaryResultValue boundary = (TimeBoundaryResultValue) value;
 
-                    DateTime minTime = null;
+                    DateTime minTime;
                     try {
                       minTime = boundary.getMinTime();
-                    } catch (IllegalArgumentException e) {
+                    }
+                    catch (IllegalArgumentException e) {
+                      minTime = null;
                     }
 
                     final DateTime maxTime = boundary.getMaxTime();
 
                     return (T) ((TimeBoundaryQuery) queryPlus.getQuery()).buildResult(
-                        new DateTime(Math.min(res.getTimestamp().getMillis() - offset, now)),
+                        DateTimes.utc(Math.min(res.getTimestamp().getMillis() - offset, now)),
                         minTime != null ? minTime.minus(offset) : null,
-                        maxTime != null ? new DateTime(Math.min(maxTime.getMillis() - offset, now)) : null
+                        maxTime != null ? DateTimes.utc(Math.min(maxTime.getMillis() - offset, now)) : null
                     ).iterator().next();
                   }
                   return (T) new Result(res.getTimestamp().minus(offset), value);

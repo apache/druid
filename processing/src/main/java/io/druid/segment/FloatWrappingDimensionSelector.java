@@ -38,9 +38,9 @@ public class FloatWrappingDimensionSelector extends BaseSingleValueDimensionSele
   protected String getValue()
   {
     if (extractionFn == null) {
-      return String.valueOf(selector.get());
+      return String.valueOf(selector.getFloat());
     } else {
-      return extractionFn.apply(selector.get());
+      return extractionFn.apply(selector.getFloat());
     }
   }
 

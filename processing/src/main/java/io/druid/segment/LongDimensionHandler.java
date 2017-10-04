@@ -84,7 +84,12 @@ public class LongDimensionHandler implements DimensionHandler<Long, Long, Long>
   ) throws SegmentValidationException
   {
     if (!lhs.equals(rhs)) {
-      throw new SegmentValidationException("Dim [%s] value not equal. Expected [%s] found [%s]", lhs, rhs);
+      throw new SegmentValidationException(
+          "Dim [%s] value not equal. Expected [%s] found [%s]",
+          dimensionName,
+          lhs,
+          rhs
+      );
     }
   }
 

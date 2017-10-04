@@ -44,7 +44,7 @@ public class ToLowerCaseParser implements Parser<String, Object>
     for (Map.Entry<String, Object> entry : line.entrySet()) {
       String k = StringUtils.toLowerCase(entry.getKey());
 
-      if(retVal.containsKey(k)) {
+      if (retVal.containsKey(k)) {
         // Duplicate key, case-insensitively
         throw new ParseException("Unparseable row. Duplicate key found : [%s]", k);
       }

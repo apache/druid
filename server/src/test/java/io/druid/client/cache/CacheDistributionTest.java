@@ -53,7 +53,8 @@ public class CacheDistributionTest
   public static final int KEY_COUNT = 1_000_000;
 
   @Parameterized.Parameters(name = "repetitions={0}, hash={1}")
-  public static Iterable<Object[]> data() {
+  public static Iterable<Object[]> data()
+  {
     List<HashAlgorithm> hash = ImmutableList.of(
         DefaultHashAlgorithm.FNV1A_64_HASH, DefaultHashAlgorithm.KETAMA_HASH, MemcachedCache.MURMUR3_128
     );
@@ -80,7 +81,8 @@ public class CacheDistributionTest
   final int reps;
 
   @BeforeClass
-  public static void header() {
+  public static void header()
+  {
     System.out.printf(
         Locale.ENGLISH,
         "%25s\t%5s\t%10s\t%10s\t%10s\t%10s\t%10s\t%7s\t%5s%n",
@@ -122,12 +124,12 @@ public class CacheDistributionTest
 
     Map<MemcachedNode, AtomicLong> counter = Maps.newHashMap();
     long t = 0;
-    for(int i = 0; i < KEY_COUNT; ++i) {
+    for (int i = 0; i < KEY_COUNT; ++i) {
       final String k = DigestUtils.sha1Hex("abc" + i) + ":" + DigestUtils.sha1Hex("xyz" + i);
       long t0 = System.nanoTime();
       MemcachedNode node = locator.getPrimary(k);
       t += System.nanoTime() - t0;
-      if(counter.containsKey(node)) {
+      if (counter.containsKey(node)) {
         counter.get(node).incrementAndGet();
       } else {
         counter.put(node, new AtomicLong(1));
@@ -137,15 +139,16 @@ public class CacheDistributionTest
     long min = Long.MAX_VALUE;
     long max = 0;
     System.out.printf(Locale.ENGLISH, "%25s\t%5d\t", hash, reps);
-    for(AtomicLong count : counter.values()) {
+    for (AtomicLong count : counter.values()) {
       System.out.printf(Locale.ENGLISH, "%10d\t", count.get());
       min = Math.min(min, count.get());
       max = Math.max(max, count.get());
     }
-    System.out.printf(Locale.ENGLISH, "%7.2f\t%5.0f%n", (double) min / (double) max, (double)t / KEY_COUNT);
+    System.out.printf(Locale.ENGLISH, "%7.2f\t%5.0f%n", (double) min / (double) max, (double) t / KEY_COUNT);
   }
 
-  private static MemcachedNode dummyNode(String host, int port) {
+  private static MemcachedNode dummyNode(String host, int port)
+  {
     SocketAddress address = InetSocketAddress.createUnresolved(host, port);
     MemcachedNode node = EasyMock.createNiceMock(MemcachedNode.class);
     EasyMock.expect(node.getSocketAddress()).andReturn(address).anyTimes();

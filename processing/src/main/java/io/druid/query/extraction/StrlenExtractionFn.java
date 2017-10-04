@@ -21,6 +21,8 @@ package io.druid.query.extraction;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 
+import javax.annotation.Nullable;
+
 public class StrlenExtractionFn extends DimExtractionFn
 {
   private static final StrlenExtractionFn INSTANCE = new StrlenExtractionFn();
@@ -36,7 +38,7 @@ public class StrlenExtractionFn extends DimExtractionFn
   }
 
   @Override
-  public String apply(String value)
+  public String apply(@Nullable String value)
   {
     return String.valueOf(value == null ? 0 : value.length());
   }

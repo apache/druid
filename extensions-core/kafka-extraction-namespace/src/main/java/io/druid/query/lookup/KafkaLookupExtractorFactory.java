@@ -43,6 +43,7 @@ import kafka.consumer.ConsumerConfig;
 import kafka.consumer.KafkaStream;
 import kafka.consumer.Whitelist;
 import kafka.javaapi.consumer.ConsumerConnector;
+import kafka.javaapi.consumer.ZookeeperConsumerConnector;
 import kafka.message.MessageAndMetadata;
 import kafka.serializer.Decoder;
 
@@ -294,7 +295,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   // Overridden in tests
   ConsumerConnector buildConnector(Properties properties)
   {
-    return new kafka.javaapi.consumer.ZookeeperConsumerConnector(
+    return new ZookeeperConsumerConnector(
         new ConsumerConfig(properties)
     );
   }
@@ -342,8 +343,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     return !(getKafkaTopic().equals(that.getKafkaTopic())
              && getKafkaProperties().equals(that.getKafkaProperties())
              && getConnectTimeout() == that.getConnectTimeout()
-             && isInjective() == that.isInjective()
-    );
+             && isInjective() == that.isInjective());
   }
 
   @Nullable

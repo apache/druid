@@ -83,7 +83,7 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
     );
   }
 
-  private static final int[] MAX_VALUES = new int[] { 0xFF, 0xFFFF, 0xFFFFFF, 0x0FFFFFFF };
+  private static final int[] MAX_VALUES = new int[] {0xFF, 0xFFFF, 0xFFFFFF, 0x0FFFFFFF};
 
   public CompressedVSizeIntsIndexedSupplierTest(CompressedObjectStrategy.CompressionStrategy compressionStrategy, ByteOrder byteOrder)
   {
@@ -157,7 +157,7 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
   {
     vals = new int[totalSize];
     Random rand = new Random(0);
-    for(int i = 0; i < vals.length; ++i) {
+    for (int i = 0; i < vals.length; ++i) {
       // VSizeIndexed only allows positive values
       vals[i] = rand.nextInt(maxValue);
     }
@@ -208,12 +208,13 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
   @Test
   public void testChunkTooBig() throws Exception
   {
-    for(int maxValue : MAX_VALUES) {
+    for (int maxValue : MAX_VALUES) {
       final int maxChunkSize = CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(maxValue);
       try {
         setupLargeChunks(maxChunkSize + 1, 10 * (maxChunkSize + 1), maxValue);
         Assert.fail();
-      } catch(IllegalArgumentException e) {
+      }
+      catch (IllegalArgumentException e) {
         Assert.assertTrue("chunk too big for maxValue " + maxValue, true);
       }
     }

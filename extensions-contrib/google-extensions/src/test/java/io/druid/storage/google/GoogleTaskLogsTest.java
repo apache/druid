@@ -41,7 +41,8 @@ import java.nio.charset.StandardCharsets;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.expectLastCall;
 
-public class GoogleTaskLogsTest extends EasyMockSupport {
+public class GoogleTaskLogsTest extends EasyMockSupport
+{
   private static final String bucket = "test";
   private static final String prefix = "test/log";
   private static final String taskid = "taskid";
@@ -50,14 +51,16 @@ public class GoogleTaskLogsTest extends EasyMockSupport {
   private GoogleTaskLogs googleTaskLogs;
 
   @Before
-  public void before() {
+  public void before()
+  {
     storage = createMock(GoogleStorage.class);
     GoogleTaskLogsConfig config = new GoogleTaskLogsConfig(bucket, prefix);
     googleTaskLogs = new GoogleTaskLogs(config, storage);
   }
 
   @Test
-  public void testPushTaskLog() throws Exception {
+  public void testPushTaskLog() throws Exception
+  {
     final File tmpDir = Files.createTempDir();
 
     try {
@@ -74,13 +77,15 @@ public class GoogleTaskLogsTest extends EasyMockSupport {
       googleTaskLogs.pushTaskLog(taskid, logFile);
 
       verifyAll();
-    } finally {
+    }
+    finally {
       FileUtils.deleteDirectory(tmpDir);
     }
   }
 
   @Test
-  public void testStreamTaskLogWithoutOffset() throws Exception {
+  public void testStreamTaskLogWithoutOffset() throws Exception
+  {
     final String testLog = "hello this is a log";
 
     final String logPath = prefix + "/" + taskid;
@@ -100,7 +105,8 @@ public class GoogleTaskLogsTest extends EasyMockSupport {
   }
 
   @Test
-  public void testStreamTaskLogWithPositiveOffset() throws Exception {
+  public void testStreamTaskLogWithPositiveOffset() throws Exception
+  {
     final String testLog = "hello this is a log";
 
     final String logPath = prefix + "/" + taskid;
@@ -120,7 +126,8 @@ public class GoogleTaskLogsTest extends EasyMockSupport {
   }
 
   @Test
-  public void testStreamTaskLogWithNegative() throws Exception {
+  public void testStreamTaskLogWithNegative() throws Exception
+  {
     final String testLog = "hello this is a log";
 
     final String logPath = prefix + "/" + taskid;

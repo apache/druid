@@ -22,6 +22,7 @@ package io.druid.segment;
 import com.google.common.collect.ImmutableMap;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.data.CompressedObjectStrategy;
@@ -44,7 +45,7 @@ import java.util.Map;
 
 public class StringDimensionHandlerTest
 {
-  private static final Interval TEST_INTERVAL = Interval.parse("2015-01-01/2015-12-31");
+  private static final Interval TEST_INTERVAL = Intervals.of("2015-01-01/2015-12-31");
 
   private static final IndexSpec INDEX_SPEC = new IndexSpec(
       new ConciseBitmapSerdeFactory(),
@@ -60,7 +61,8 @@ public class StringDimensionHandlerTest
       List<String> dims,
       Map<String, Object> event1,
       Map<String, Object> event2
-  ) throws Exception {
+  ) throws Exception
+  {
     IncrementalIndex incrementalIndex1 = new IncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
@@ -100,7 +102,8 @@ public class StringDimensionHandlerTest
     return new Pair<>(adapter1, adapter2);
   }
 
-  private static void validate(IncrementalIndexAdapter adapter1, IncrementalIndexAdapter adapter2) throws Exception {
+  private static void validate(IncrementalIndexAdapter adapter1, IncrementalIndexAdapter adapter2) throws Exception
+  {
     Map<String, DimensionHandler> handlers = adapter1.getDimensionHandlers();
     Indexed<String> dimNames1 = adapter1.getDimensionNames();
     Indexed<String> dimNames2 = adapter2.getDimensionNames();
@@ -129,7 +132,8 @@ public class StringDimensionHandlerTest
   }
 
   @Test
-  public void testValidateSortedEncodedArrays() throws Exception {
+  public void testValidateSortedEncodedArrays() throws Exception
+  {
     Map<String, Object> event1 = ImmutableMap.<String, Object>of(
         "penguins", Arrays.asList("adelie", "emperor"),
         "predators", Arrays.asList("seal")
@@ -150,7 +154,8 @@ public class StringDimensionHandlerTest
   public ExpectedException exception = ExpectedException.none();
 
   @Test
-  public void testValidateSortedDifferentEncodedArrays() throws Exception {
+  public void testValidateSortedDifferentEncodedArrays() throws Exception
+  {
     Map<String, Object> event1 = ImmutableMap.<String, Object>of(
         "penguins", Arrays.asList("adelie", "emperor"),
         "predators", Collections.singletonList("seal")

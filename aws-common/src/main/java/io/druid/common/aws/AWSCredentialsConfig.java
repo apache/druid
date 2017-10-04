@@ -20,29 +20,34 @@
 package io.druid.common.aws;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.metadata.DefaultPasswordProvider;
+import io.druid.metadata.PasswordProvider;
 
 /**
  */
 public class AWSCredentialsConfig
 {
   @JsonProperty
-  private String accessKey = "";
+  private PasswordProvider accessKey = new DefaultPasswordProvider("");
 
   @JsonProperty
-  private String secretKey = "";
+  private PasswordProvider secretKey = new DefaultPasswordProvider("");
 
   @JsonProperty
   private String fileSessionCredentials = "";
 
-  public String getAccessKey()
+  public PasswordProvider getAccessKey()
   {
     return accessKey;
   }
 
-  public String getSecretKey()
+  public PasswordProvider getSecretKey()
   {
     return secretKey;
   }
 
-  public String getFileSessionCredentials() { return fileSessionCredentials; }
+  public String getFileSessionCredentials()
+  {
+    return fileSessionCredentials;
+  }
 }

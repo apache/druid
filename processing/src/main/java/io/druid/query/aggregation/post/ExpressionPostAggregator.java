@@ -53,7 +53,8 @@ public class ExpressionPostAggregator implements PostAggregator
         } else {
           return o1.compareTo(o2);
         }
-      });
+      }
+  );
 
   private final String name;
   private final String expression;

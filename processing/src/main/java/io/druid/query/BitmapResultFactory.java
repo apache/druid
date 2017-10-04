@@ -24,9 +24,9 @@ import io.druid.collections.bitmap.ImmutableBitmap;
 
 /**
  * BitmapResultFactory is an abstraction that allows to record something along with preFilter bitmap construction, and
- * emit this information as dimension(s) of query metrics. BitmapResultFactory is similar to {@link
- * io.druid.collections.bitmap.BitmapFactory}: it has the same methods with the exception that it accepts generic type
- * T (bitmap wrapper type) instead of {@link ImmutableBitmap}.
+ * emit this information as dimension(s) of query metrics. BitmapResultFactory is similar to {@link BitmapFactory}: it
+ * has the same methods with the exception that it accepts generic type T (bitmap wrapper type) instead of {@link
+ * ImmutableBitmap}.
  *
  * {@link DefaultBitmapResultFactory} is a no-op implementation, where "wrapper" type is {@code ImmutableBitmap} itself.
  *

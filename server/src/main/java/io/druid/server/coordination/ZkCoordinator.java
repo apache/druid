@@ -127,7 +127,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
           loadQueueLocation,
           true,
           true,
-          Execs.multiThreaded(config.getNumLoadingThreads(), "ZkCoordinator-%s")
+          Execs.singleThreaded("ZkCoordinator-%s")
       );
 
       try {
@@ -350,7 +350,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
       log.info("Loading segment %s", segment.getIdentifier());
       /*
          The lock below is used to prevent a race condition when the scheduled runnable in removeSegment() starts,
-         and if(segmentsToDelete.remove(segment)) returns true, in which case historical will start deleting segment
+         and if (segmentsToDelete.remove(segment)) returns true, in which case historical will start deleting segment
          files. At that point, it's possible that right after the "if" check, addSegment() is called and actually loads
          the segment, which makes dropping segment and downloading segment happen at the same time.
        */

@@ -63,7 +63,8 @@ public class ByteBufferIntList
     buffer.putInt(index * Ints.BYTES, val);
   }
 
-  public int get(int index) {
+  public int get(int index)
+  {
     return buffer.getInt(index * Ints.BYTES);
   }
 

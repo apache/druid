@@ -24,23 +24,9 @@ package io.druid.query.filter;
  */
 public interface DruidFloatPredicate
 {
-  DruidFloatPredicate ALWAYS_FALSE = new DruidFloatPredicate()
-  {
-    @Override
-    public boolean applyFloat(float input)
-    {
-      return false;
-    }
-  };
+  DruidFloatPredicate ALWAYS_FALSE = input -> false;
 
-  DruidFloatPredicate ALWAYS_TRUE = new DruidFloatPredicate()
-  {
-    @Override
-    public boolean applyFloat(float input)
-    {
-      return true;
-    }
-  };
+  DruidFloatPredicate ALWAYS_TRUE = input -> true;
 
 
   boolean applyFloat(float input);

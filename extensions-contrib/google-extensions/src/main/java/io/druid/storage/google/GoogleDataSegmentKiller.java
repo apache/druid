@@ -55,7 +55,7 @@ public class GoogleDataSegmentKiller implements DataSegmentKiller
       storage.delete(bucket, indexPath);
       storage.delete(bucket, descriptorPath);
     }
-    catch(IOException e) {
+    catch (IOException e) {
       throw new SegmentLoadingException(e, "Couldn't kill segment[%s]: [%s]", segment.getIdentifier(), e.getMessage());
     }
   }

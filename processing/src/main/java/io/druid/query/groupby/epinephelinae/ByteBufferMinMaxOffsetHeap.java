@@ -41,7 +41,7 @@ public class ByteBufferMinMaxOffsetHeap
   private final Comparator maxComparator;
   private final ByteBuffer buf;
   private final int limit;
-  private final LimitedBufferGrouper.BufferGrouperOffsetHeapIndexUpdater heapIndexUpdater;
+  private final LimitedBufferHashGrouper.BufferGrouperOffsetHeapIndexUpdater heapIndexUpdater;
 
   private int heapSize;
 
@@ -49,7 +49,7 @@ public class ByteBufferMinMaxOffsetHeap
       ByteBuffer buf,
       int limit,
       Comparator<Integer> minComparator,
-      LimitedBufferGrouper.BufferGrouperOffsetHeapIndexUpdater heapIndexUpdater
+      LimitedBufferHashGrouper.BufferGrouperOffsetHeapIndexUpdater heapIndexUpdater
   )
   {
     this.buf = buf;
@@ -84,7 +84,8 @@ public class ByteBufferMinMaxOffsetHeap
     }
   }
 
-  public int removeMin() {
+  public int removeMin()
+  {
     if (heapSize < 1) {
       throw new ISE("Empty heap");
     }
@@ -113,7 +114,8 @@ public class ByteBufferMinMaxOffsetHeap
     return minOffset;
   }
 
-  public int removeMax() {
+  public int removeMax()
+  {
     int maxOffset;
     if (heapSize < 1) {
       throw new ISE("Empty heap");
@@ -156,7 +158,8 @@ public class ByteBufferMinMaxOffsetHeap
     return maxOffset;
   }
 
-  public int removeAt(int deletedIndex) {
+  public int removeAt(int deletedIndex)
+  {
     if (heapSize < 1) {
       throw new ISE("Empty heap");
     }
@@ -185,15 +188,18 @@ public class ByteBufferMinMaxOffsetHeap
     return deletedOffset;
   }
 
-  public void setAt(int index, int newVal) {
+  public void setAt(int index, int newVal)
+  {
     buf.putInt(index * Ints.BYTES, newVal);
   }
 
-  public int getAt(int index) {
+  public int getAt(int index)
+  {
     return buf.getInt(index * Ints.BYTES);
   }
 
-  public int indexOf(int offset) {
+  public int indexOf(int offset)
+  {
     for (int i = 0; i < heapSize; i++) {
       int curOffset = buf.getInt(i * Ints.BYTES);
       if (curOffset == offset) {
@@ -203,14 +209,16 @@ public class ByteBufferMinMaxOffsetHeap
     return -1;
   }
 
-  public void removeOffset(int offset) {
+  public void removeOffset(int offset)
+  {
     int index = indexOf(offset);
     if (index > -1) {
       removeAt(index);
     }
   }
 
-  public int getHeapSize() {
+  public int getHeapSize()
+  {
     return heapSize;
   }
 
@@ -336,7 +344,8 @@ public class ByteBufferMinMaxOffsetHeap
     }
   }
 
-  private boolean isEvenLevel(int index) {
+  private boolean isEvenLevel(int index)
+  {
     int oneBased = index + 1;
     return (oneBased & EVEN_POWERS_OF_TWO) > (oneBased & ODD_POWERS_OF_TWO);
   }
@@ -346,7 +355,8 @@ public class ByteBufferMinMaxOffsetHeap
    * {@code index + len}, or {@code -1} if {@code index} is greater than
    * {@code size}.
    */
-  private int findMin(Comparator comparator, int index, int len) {
+  private int findMin(Comparator comparator, int index, int len)
+  {
     if (index >= heapSize) {
       return -1;
     }
@@ -363,14 +373,16 @@ public class ByteBufferMinMaxOffsetHeap
   /**
    * Returns the minimum child or {@code -1} if no child exists.
    */
-  private int findMinChild(Comparator comparator, int index) {
+  private int findMinChild(Comparator comparator, int index)
+  {
     return findMin(comparator, getLeftChildIndex(index), 2);
   }
 
   /**
    * Returns the minimum grand child or -1 if no grand child exists.
    */
-  private int findMinGrandChild(Comparator comparator, int index) {
+  private int findMinGrandChild(Comparator comparator, int index)
+  {
     int leftChildIndex = getLeftChildIndex(index);
     if (leftChildIndex < 0) {
       return -1;
@@ -378,22 +390,26 @@ public class ByteBufferMinMaxOffsetHeap
     return findMin(comparator, getLeftChildIndex(leftChildIndex), 4);
   }
 
-  private int getLeftChildIndex(int i) {
+  private int getLeftChildIndex(int i)
+  {
     return i * 2 + 1;
   }
 
-  private int getRightChildIndex(int i) {
+  private int getRightChildIndex(int i)
+  {
     return i * 2 + 2;
   }
 
-  private int getParentIndex(int i) {
+  private int getParentIndex(int i)
+  {
     if (i == 0) {
       return -1;
     }
     return (i - 1) / 2;
   }
 
-  private int getGrandparentIndex(int i) {
+  private int getGrandparentIndex(int i)
+  {
     if (i < 3) {
       return -1;
     }
@@ -403,7 +419,8 @@ public class ByteBufferMinMaxOffsetHeap
   /**
    * Returns the index of the max element.
    */
-  private int findMaxElementIndex() {
+  private int findMaxElementIndex()
+  {
     switch (heapSize) {
       case 1:
         return 0; // The lone element in the queue is the maximum.
@@ -419,7 +436,8 @@ public class ByteBufferMinMaxOffsetHeap
   }
 
   @VisibleForTesting
-  boolean isIntact() {
+  boolean isIntact()
+  {
     for (int i = 0; i < heapSize; i++) {
       if (!verifyIndex(i)) {
         return false;

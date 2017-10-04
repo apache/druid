@@ -35,7 +35,7 @@ public class HistogramAggregator implements Aggregator
     }
   };
 
-  static Object combineHistograms(Object lhs, Object rhs)
+  static Histogram combineHistograms(Object lhs, Object rhs)
   {
     return ((Histogram) lhs).fold((Histogram) rhs);
   }
@@ -53,7 +53,7 @@ public class HistogramAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    histogram.offer(selector.get());
+    histogram.offer(selector.getFloat());
   }
 
   @Override
@@ -78,6 +78,12 @@ public class HistogramAggregator implements Aggregator
   public long getLong()
   {
     throw new UnsupportedOperationException("HistogramAggregator does not support getLong()");
+  }
+
+  @Override
+  public double getDouble()
+  {
+    throw new UnsupportedOperationException("HistogramAggregator does not support getDouble()");
   }
 
   @Override

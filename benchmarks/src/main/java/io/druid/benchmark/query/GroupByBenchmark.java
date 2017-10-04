@@ -24,6 +24,7 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -49,14 +50,18 @@ import io.druid.offheap.OffheapBufferGenerator;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.DoubleMinAggregatorFactory;
+import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryEngine;
@@ -237,6 +242,53 @@ public class GroupByBenchmark
           .build();
 
       basicQueries.put("nested", queryA);
+    }
+
+    { // basic.filter
+      final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(
+          Collections.singletonList(basicSchema.getDataInterval())
+      );
+      // Use multiple aggregators to see how the number of aggregators impact to the query performance
+      List<AggregatorFactory> queryAggs = ImmutableList.of(
+          new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential"),
+          new LongSumAggregatorFactory("rows", "rows"),
+          new DoubleSumAggregatorFactory("sumFloatNormal", "sumFloatNormal"),
+          new DoubleMinAggregatorFactory("minFloatZipf", "minFloatZipf")
+      );
+      GroupByQuery queryA = GroupByQuery
+          .builder()
+          .setDataSource("blah")
+          .setQuerySegmentSpec(intervalSpec)
+          .setDimensions(ImmutableList.of(new DefaultDimensionSpec("dimUniform", null)))
+          .setAggregatorSpecs(queryAggs)
+          .setGranularity(Granularity.fromString(queryGranularity))
+          .setDimFilter(new BoundDimFilter("dimUniform", "0", "100", true, true, null, null, null))
+          .build();
+
+      basicQueries.put("filter", queryA);
+    }
+
+    { // basic.singleZipf
+      final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(
+          Collections.singletonList(basicSchema.getDataInterval())
+      );
+      // Use multiple aggregators to see how the number of aggregators impact to the query performance
+      List<AggregatorFactory> queryAggs = ImmutableList.of(
+          new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential"),
+          new LongSumAggregatorFactory("rows", "rows"),
+          new DoubleSumAggregatorFactory("sumFloatNormal", "sumFloatNormal"),
+          new DoubleMinAggregatorFactory("minFloatZipf", "minFloatZipf")
+      );
+      GroupByQuery queryA = GroupByQuery
+          .builder()
+          .setDataSource("blah")
+          .setQuerySegmentSpec(intervalSpec)
+          .setDimensions(ImmutableList.of(new DefaultDimensionSpec("dimZipf", null)))
+          .setAggregatorSpecs(queryAggs)
+          .setGranularity(Granularity.fromString(queryGranularity))
+          .build();
+
+      basicQueries.put("singleZipf", queryA);
     }
     SCHEMA_QUERY_MAP.put("basic", basicQueries);
 
@@ -521,7 +573,7 @@ public class GroupByBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(query, Maps.<String, Object>newHashMap());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap());
     return Sequences.toList(queryResult, Lists.<T>newArrayList());
   }
 
@@ -574,7 +626,7 @@ public class GroupByBenchmark
         (QueryToolChest) toolChest
     );
 
-    Sequence<Row> queryResult = theRunner.run(query, Maps.<String, Object>newHashMap());
+    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
     List<Row> results = Sequences.toList(queryResult, Lists.<Row>newArrayList());
 
     for (Row result : results) {
@@ -598,7 +650,7 @@ public class GroupByBenchmark
     final GroupByQuery spillingQuery = query.withOverriddenContext(
         ImmutableMap.<String, Object>of("bufferGrouperMaxSize", 4000)
     );
-    Sequence<Row> queryResult = theRunner.run(spillingQuery, Maps.<String, Object>newHashMap());
+    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(spillingQuery), Maps.newHashMap());
     List<Row> results = Sequences.toList(queryResult, Lists.<Row>newArrayList());
 
     for (Row result : results) {
@@ -625,7 +677,7 @@ public class GroupByBenchmark
         (QueryToolChest) toolChest
     );
 
-    Sequence<Row> queryResult = theRunner.run(query, Maps.<String, Object>newHashMap());
+    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap());
     List<Row> results = Sequences.toList(queryResult, Lists.<Row>newArrayList());
 
     for (Row result : results) {

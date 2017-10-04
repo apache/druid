@@ -82,11 +82,10 @@ public class PolyBindTest
             gogoSallyBinder.addBinding("a").to(GoA.class);
             gogoSallyBinder.addBinding("b").to(GoB.class);
 
-            PolyBind.createChoice(
-                binder, "billy", Key.get(Gogo.class, Names.named("reverse")), Key.get(GoB.class)
-            );
-            final MapBinder<String,Gogo> annotatedGogoBinder = PolyBind.optionBinder(
-                binder, Key.get(Gogo.class, Names.named("reverse"))
+            PolyBind.createChoice(binder, "billy", Key.get(Gogo.class, Names.named("reverse")), Key.get(GoB.class));
+            final MapBinder<String, Gogo> annotatedGogoBinder = PolyBind.optionBinder(
+                binder,
+                Key.get(Gogo.class, Names.named("reverse"))
             );
             annotatedGogoBinder.addBinding("a").to(GoB.class);
             annotatedGogoBinder.addBinding("b").to(GoA.class);

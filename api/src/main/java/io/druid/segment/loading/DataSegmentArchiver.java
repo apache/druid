@@ -19,10 +19,12 @@
 
 package io.druid.segment.loading;
 
+import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
 
+@ExtensionPoint
 public interface DataSegmentArchiver
 {
   /**

@@ -23,6 +23,7 @@ import com.google.common.primitives.Longs;
 import io.druid.concurrent.Execs;
 import io.druid.curator.CuratorTestBase;
 import io.druid.curator.announcement.Announcer;
+import io.druid.java.util.common.StringUtils;
 import io.druid.segment.CloserRule;
 import io.druid.server.http.HostAndPortWithScheme;
 import io.druid.server.initialization.ZkPathsConfig;
@@ -90,7 +91,7 @@ public class ListenerResourceAnnouncerTest extends CuratorTestBase
       }
     });
     Assert.assertNotNull(curator.checkExists().forPath(announcePath));
-    final String nodePath = ZKPaths.makePath(announcePath, String.format("%s:%s", node.getScheme(), node.getHostText()));
+    final String nodePath = ZKPaths.makePath(announcePath, StringUtils.format("%s:%s", node.getScheme(), node.getHostText()));
     Assert.assertNotNull(curator.checkExists().forPath(nodePath));
     Assert.assertEquals(Longs.BYTES, curator.getData().decompressed().forPath(nodePath).length);
     Assert.assertNull(curator.checkExists()
@@ -124,7 +125,7 @@ public class ListenerResourceAnnouncerTest extends CuratorTestBase
 
 
     announcer.announce(
-        EasyMock.eq(ZKPaths.makePath(announcePath, String.format("%s:%s", node.getScheme(), node.getHostText()))),
+        EasyMock.eq(ZKPaths.makePath(announcePath, StringUtils.format("%s:%s", node.getScheme(), node.getHostText()))),
         EasyMock.aryEq(resourceAnnouncer.getAnnounceBytes())
     );
     EasyMock.expectLastCall().once();

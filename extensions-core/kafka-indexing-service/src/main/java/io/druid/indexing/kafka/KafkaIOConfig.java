@@ -41,6 +41,7 @@ public class KafkaIOConfig implements IOConfig
   private final boolean useTransaction;
   private final boolean pauseAfterRead;
   private final Optional<DateTime> minimumMessageTime;
+  private final Optional<DateTime> maximumMessageTime;
   private final boolean skipOffsetGaps;
 
   @JsonCreator
@@ -52,6 +53,7 @@ public class KafkaIOConfig implements IOConfig
       @JsonProperty("useTransaction") Boolean useTransaction,
       @JsonProperty("pauseAfterRead") Boolean pauseAfterRead,
       @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
+      @JsonProperty("maximumMessageTime") DateTime maximumMessageTime,
       @JsonProperty("skipOffsetGaps") Boolean skipOffsetGaps
   )
   {
@@ -62,6 +64,7 @@ public class KafkaIOConfig implements IOConfig
     this.useTransaction = useTransaction != null ? useTransaction : DEFAULT_USE_TRANSACTION;
     this.pauseAfterRead = pauseAfterRead != null ? pauseAfterRead : DEFAULT_PAUSE_AFTER_READ;
     this.minimumMessageTime = Optional.fromNullable(minimumMessageTime);
+    this.maximumMessageTime = Optional.fromNullable(maximumMessageTime);
     this.skipOffsetGaps = skipOffsetGaps != null ? skipOffsetGaps : DEFAULT_SKIP_OFFSET_GAPS;
 
     Preconditions.checkArgument(
@@ -121,6 +124,12 @@ public class KafkaIOConfig implements IOConfig
   }
 
   @JsonProperty
+  public Optional<DateTime> getMaximumMessageTime()
+  {
+    return maximumMessageTime;
+  }
+
+  @JsonProperty
   public Optional<DateTime> getMinimumMessageTime()
   {
     return minimumMessageTime;
@@ -143,6 +152,7 @@ public class KafkaIOConfig implements IOConfig
            ", useTransaction=" + useTransaction +
            ", pauseAfterRead=" + pauseAfterRead +
            ", minimumMessageTime=" + minimumMessageTime +
+           ", maximumMessageTime=" + maximumMessageTime +
            ", skipOffsetGaps=" + skipOffsetGaps +
            '}';
   }

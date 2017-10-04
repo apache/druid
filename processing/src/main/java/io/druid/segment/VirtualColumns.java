@@ -127,6 +127,13 @@ public class VirtualColumns implements Cacheable
   private final Map<String, VirtualColumn> withDotSupport;
   private final Map<String, VirtualColumn> withoutDotSupport;
 
+  /**
+   * Returns true if a virtual column exists with a particular columnName.
+   *
+   * @param columnName the column name
+   *
+   * @return true or false
+   */
   public boolean exists(String columnName)
   {
     return getVirtualColumn(columnName) != null;
@@ -142,11 +149,21 @@ public class VirtualColumns implements Cacheable
     return withDotSupport.get(baseColumnName);
   }
 
+  /**
+   * Create an object selector.
+   *
+   * @param columnName column mame
+   * @param factory    base column selector factory
+   *
+   * @return selector
+   *
+   * @throws IllegalArgumentException if the virtual column does not exist (see {@link #exists(String)}
+   */
   public ObjectColumnSelector makeObjectColumnSelector(String columnName, ColumnSelectorFactory factory)
   {
     final VirtualColumn virtualColumn = getVirtualColumn(columnName);
     if (virtualColumn == null) {
-      return null;
+      throw new IAE("No such virtual column[%s]", columnName);
     } else {
       return Preconditions.checkNotNull(
           virtualColumn.makeObjectColumnSelector(columnName, factory),
@@ -157,36 +174,94 @@ public class VirtualColumns implements Cacheable
     }
   }
 
+  /**
+   * Create a dimension (string) selector.
+   *
+   * @param dimensionSpec the dimensionSpec for this selector
+   * @param factory       base column selector factory
+   *
+   * @return selector
+   *
+   * @throws IllegalArgumentException if the virtual column does not exist (see {@link #exists(String)}
+   */
   public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec, ColumnSelectorFactory factory)
   {
     final VirtualColumn virtualColumn = getVirtualColumn(dimensionSpec.getDimension());
     if (virtualColumn == null) {
-      return dimensionSpec.decorate(NullDimensionSelector.instance());
+      throw new IAE("No such virtual column[%s]", dimensionSpec.getDimension());
     } else {
       final DimensionSelector selector = virtualColumn.makeDimensionSelector(dimensionSpec, factory);
-      return selector == null ? dimensionSpec.decorate(NullDimensionSelector.instance()) : selector;
+      Preconditions.checkNotNull(selector, "selector");
+      return selector;
     }
   }
 
+  /**
+   * Create a float selector.
+   *
+   * @param columnName column mame
+   * @param factory    base column selector factory
+   *
+   * @return selector
+   *
+   * @throws IllegalArgumentException if the virtual column does not exist (see {@link #exists(String)}
+   */
   public FloatColumnSelector makeFloatColumnSelector(String columnName, ColumnSelectorFactory factory)
   {
     final VirtualColumn virtualColumn = getVirtualColumn(columnName);
     if (virtualColumn == null) {
-      return ZeroFloatColumnSelector.instance();
+      throw new IAE("No such virtual column[%s]", columnName);
     } else {
       final FloatColumnSelector selector = virtualColumn.makeFloatColumnSelector(columnName, factory);
-      return selector == null ? ZeroFloatColumnSelector.instance() : selector;
+      Preconditions.checkNotNull(selector, "selector");
+      return selector;
     }
   }
 
+  /**
+   * Create a long selector.
+   *
+   * @param columnName column mame
+   * @param factory    base column selector factory
+   *
+   * @return selector
+   *
+   * @throws IllegalArgumentException if the virtual column does not exist (see {@link #exists(String)}
+   */
   public LongColumnSelector makeLongColumnSelector(String columnName, ColumnSelectorFactory factory)
   {
     final VirtualColumn virtualColumn = getVirtualColumn(columnName);
     if (virtualColumn == null) {
-      return ZeroLongColumnSelector.instance();
+      throw new IAE("No such virtual column[%s]", columnName);
     } else {
       final LongColumnSelector selector = virtualColumn.makeLongColumnSelector(columnName, factory);
-      return selector == null ? ZeroLongColumnSelector.instance() : selector;
+      Preconditions.checkNotNull(selector, "selector");
+      return selector;
+    }
+  }
+
+  /**
+   * Create a double selector.
+   *
+   * @param columnName column mame
+   * @param factory    base column selector factory
+   *
+   * @return selector
+   *
+   * @throws IllegalArgumentException if the virtual column does not exist (see {@link #exists(String)}
+   */
+  public DoubleColumnSelector makeDoubleColumnSelector(
+      String columnName,
+      ColumnSelectorFactory factory
+  )
+  {
+    final VirtualColumn virtualColumn = getVirtualColumn(columnName);
+    if (virtualColumn == null) {
+      throw new IAE("No such virtual column[%s]", columnName);
+    } else {
+      final DoubleColumnSelector selector = virtualColumn.makeDoubleColumnSelector(columnName, factory);
+      Preconditions.checkNotNull(selector, "selector");
+      return selector;
     }
   }
 

@@ -57,7 +57,7 @@ public class LoadingLookupTest
   {
     EasyMock.expect(lookupCache.get(EasyMock.eq("key"), EasyMock.anyObject(Callable.class))).andReturn("value").once();
     EasyMock.replay(lookupCache);
-    Assert.assertEquals(ImmutableMap.of("key","value"), loadingLookup.applyAll(ImmutableSet.of("key")));
+    Assert.assertEquals(ImmutableMap.of("key", "value"), loadingLookup.applyAll(ImmutableSet.of("key")));
     EasyMock.verify(lookupCache);
   }
 
@@ -68,7 +68,7 @@ public class LoadingLookupTest
             .andReturn(Lists.newArrayList("key"))
             .once();
     EasyMock.replay(reverseLookupCache);
-    Assert.assertEquals(ImmutableMap.of("value",Lists.newArrayList("key")), loadingLookup.unapplyAll(ImmutableSet.<String>of("value")));
+    Assert.assertEquals(ImmutableMap.of("value", Lists.newArrayList("key")), loadingLookup.unapplyAll(ImmutableSet.<String>of("value")));
     EasyMock.verify(reverseLookupCache);
   }
 

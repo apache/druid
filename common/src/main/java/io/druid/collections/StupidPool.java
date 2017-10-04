@@ -118,7 +118,8 @@ public class StupidPool<T> implements NonBlockingPool<T>
   }
 
   @VisibleForTesting
-  long poolSize() {
+  long poolSize()
+  {
     return poolSize.get();
   }
 
@@ -163,7 +164,7 @@ public class StupidPool<T> implements NonBlockingPool<T>
     cleaner.clean();
     log.error(
         new ISE("Queue offer failed"),
-        "Could not offer object [%s] back into the queue in [%s], objectId [%s]",
+        "Could not offer object [%s] back into the queue, objectId [%s]",
         object,
         objectId
     );

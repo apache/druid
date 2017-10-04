@@ -19,6 +19,7 @@
 
 package io.druid.client.indexing;
 
+import io.druid.java.util.common.DateTimes;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -29,9 +30,10 @@ public class ClientConversionQueryTest
 {
   private ClientConversionQuery clientConversionQuery;
   private static final String DATA_SOURCE = "data_source";
-  private static final Interval INTERVAL = new Interval(new DateTime(), new DateTime().plus(1));
-  private static final DataSegment DATA_SEGMENT = new DataSegment(DATA_SOURCE, INTERVAL, new DateTime().toString(), null,
-      null, null, null, 0, 0);
+  public static final DateTime START = DateTimes.nowUtc();
+  private static final Interval INTERVAL = new Interval(START, START.plus(1));
+  private static final DataSegment DATA_SEGMENT =
+      new DataSegment(DATA_SOURCE, INTERVAL, START.toString(), null, null, null, null, 0, 0);
 
   @Test
   public void testGetType()
@@ -60,7 +62,7 @@ public class ClientConversionQueryTest
   {
     clientConversionQuery = new ClientConversionQuery(DATA_SEGMENT);
     Assert.assertEquals(DATA_SEGMENT, clientConversionQuery.getSegment());
-    clientConversionQuery = new ClientConversionQuery(DATA_SOURCE,INTERVAL);
+    clientConversionQuery = new ClientConversionQuery(DATA_SOURCE, INTERVAL);
     Assert.assertNull(clientConversionQuery.getSegment());
   }
 }

@@ -28,10 +28,14 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
+import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.NoopAggregator;
 import io.druid.query.aggregation.NoopBufferAggregator;
+import io.druid.query.aggregation.ObjectAggregateCombiner;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.ObjectColumnSelector;
 import org.apache.commons.codec.binary.Base64;
 
@@ -47,8 +51,6 @@ import java.util.Objects;
 @JsonTypeName("variance")
 public class VarianceAggregatorFactory extends AggregatorFactory
 {
-  protected static final byte CACHE_TYPE_ID = 16;
-
   protected final String fieldName;
   protected final String name;
   protected final String estimator;
@@ -137,6 +139,51 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public Object combine(Object lhs, Object rhs)
+  {
+    return VarianceAggregatorCollector.combineValues(lhs, rhs);
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    // VarianceAggregatorFactory.combine() delegates to VarianceAggregatorCollector.combineValues() and it doesn't check
+    // for nulls, so this AggregateCombiner neither.
+    return new ObjectAggregateCombiner<VarianceAggregatorCollector>()
+    {
+      private final VarianceAggregatorCollector combined = new VarianceAggregatorCollector();
+
+      @Override
+      public void reset(ColumnValueSelector selector)
+      {
+        @SuppressWarnings("unchecked")
+        VarianceAggregatorCollector first = ((ObjectColumnSelector<VarianceAggregatorCollector>) selector).getObject();
+        combined.copyFrom(first);
+      }
+
+      @Override
+      public void fold(ColumnValueSelector selector)
+      {
+        @SuppressWarnings("unchecked")
+        VarianceAggregatorCollector other = ((ObjectColumnSelector<VarianceAggregatorCollector>) selector).getObject();
+        combined.fold(other);
+      }
+
+      @Override
+      public Class<VarianceAggregatorCollector> classOfObject()
+      {
+        return VarianceAggregatorCollector.class;
+      }
+
+      @Override
+      public VarianceAggregatorCollector getObject()
+      {
+        return combined;
+      }
+    };
+  }
+
+  @Override
   public AggregatorFactory getCombiningFactory()
   {
     return new VarianceFoldingAggregatorFactory(name, name, estimator);
@@ -162,12 +209,6 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   public Comparator getComparator()
   {
     return VarianceAggregatorCollector.COMPARATOR;
-  }
-
-  @Override
-  public Object combine(Object lhs, Object rhs)
-  {
-    return VarianceAggregatorCollector.combineValues(lhs, rhs);
   }
 
   @Override
@@ -228,7 +269,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
     byte[] inputTypeBytes = StringUtils.toUtf8(inputType);
     return ByteBuffer.allocate(2 + fieldNameBytes.length + 1 + inputTypeBytes.length)
-                     .put(CACHE_TYPE_ID)
+                     .put(AggregatorUtil.VARIANCE_CACHE_TYPE_ID)
                      .put(isVariancePop ? (byte) 1 : 0)
                      .put(fieldNameBytes)
                      .put((byte) 0xFF)

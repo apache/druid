@@ -21,9 +21,9 @@ package io.druid.query.groupby;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.segment.TestHelper;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -65,7 +65,7 @@ public class GroupByQueryConfigTest
     final GroupByQueryConfig config2 = config.withOverrides(
         GroupByQuery.builder()
                     .setDataSource("test")
-                    .setInterval(new Interval("2000/P1D"))
+                    .setInterval(Intervals.of("2000/P1D"))
                     .setGranularity(Granularities.ALL)
                     .build()
     );
@@ -87,7 +87,7 @@ public class GroupByQueryConfigTest
     final GroupByQueryConfig config2 = config.withOverrides(
         GroupByQuery.builder()
                     .setDataSource("test")
-                    .setInterval(new Interval("2000/P1D"))
+                    .setInterval(Intervals.of("2000/P1D"))
                     .setGranularity(Granularities.ALL)
                     .setContext(
                         ImmutableMap.<String, Object>of(
