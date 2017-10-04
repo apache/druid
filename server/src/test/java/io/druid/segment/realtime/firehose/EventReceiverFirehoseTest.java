@@ -292,6 +292,15 @@ public class EventReceiverFirehoseTest
   @Test
   public void testProducerSequence() throws IOException
   {
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
+            .andReturn(null)
+            .anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
+            .anyTimes();
+    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    EasyMock.expectLastCall().anyTimes();
+
     String producerId = "producer";
 
     EasyMock.expect(req.getContentType()).andReturn("application/json").times(NUM_EVENTS);
@@ -342,6 +351,15 @@ public class EventReceiverFirehoseTest
   @Test
   public void testLowProducerSequence() throws IOException
   {
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
+            .andReturn(null)
+            .anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
+            .anyTimes();
+    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    EasyMock.expectLastCall().anyTimes();
+
     String producerId = "producer";
 
     EasyMock.expect(req.getContentType()).andReturn("application/json").times(NUM_EVENTS);
@@ -365,6 +383,15 @@ public class EventReceiverFirehoseTest
   @Test
   public void testMissingProducerSequence() throws IOException
   {
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
+            .andReturn(null)
+            .anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
+            .anyTimes();
+    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    EasyMock.expectLastCall().anyTimes();
+
     String producerId = "producer";
 
     EasyMock.expect(req.getContentType()).andReturn("application/json");
@@ -387,6 +414,15 @@ public class EventReceiverFirehoseTest
   @Test
   public void testNaNProducerSequence() throws IOException
   {
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
+            .andReturn(null)
+            .anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
+            .anyTimes();
+    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    EasyMock.expectLastCall().anyTimes();
+
     String producerId = "producer";
 
     EasyMock.expect(req.getContentType()).andReturn("application/json");
