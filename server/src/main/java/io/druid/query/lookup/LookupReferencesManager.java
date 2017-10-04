@@ -60,7 +60,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Function;
-import java.util.stream.IntStream;
 
 /**
  * This class provide a basic {@link LookupExtractorFactory} references manager.
@@ -436,55 +435,61 @@ public class LookupReferencesManager
         "LookupReferencesManager-Startup-%s"
     );
     ExecutorCompletionService completionService = new ExecutorCompletionService(executorService);
+    List<Future<Map.Entry>> futures = new ArrayList<>();
     try {
       LOG.info("Starting lookup loading process");
       for (LookupBean lookupBean : lookupBeanList) {
-        completionService.submit(
-            () -> {
-
-              LookupExtractorFactoryContainer container = lookupBean.getContainer();
-              LOG.info(
-                  "Starting lookup [%s]:[%s]",
-                  lookupBean.getName(),
-                  container
-              );
-              if (container.getLookupExtractorFactory().start()) {
-                LOG.info(
-                    "Started lookup [%s]:[%s]",
-                    lookupBean.getName(),
-                    container
-                );
-                return new AbstractMap.SimpleImmutableEntry<>(lookupBean.getName(), container);
-              } else {
-                LOG.error(
-                    "Failed to start lookup [%s]:[%s]",
-                    lookupBean.getName(),
-                    container
-                );
-                return null;
-              }
-            }
+        futures.add(
+            completionService.submit(
+                () -> {
+                  LookupExtractorFactoryContainer container = lookupBean.getContainer();
+                  LOG.info(
+                      "Starting lookup [%s]:[%s]",
+                      lookupBean.getName(),
+                      container
+                  );
+                  if (container.getLookupExtractorFactory().start()) {
+                    LOG.info(
+                        "Started lookup [%s]:[%s]",
+                        lookupBean.getName(),
+                        container
+                    );
+                    return new AbstractMap.SimpleImmutableEntry<>(lookupBean.getName(), container);
+                  } else {
+                    LOG.error(
+                        "Failed to start lookup [%s]:[%s]",
+                        lookupBean.getName(),
+                        container
+                    );
+                    return null;
+                  }
+                }
+            )
         );
       }
-      IntStream.range(0, lookupBeanList.size())
-               .forEach(i -> {
-                 try {
-                   final Future<AbstractMap.SimpleImmutableEntry<String, LookupExtractorFactoryContainer>> completedFuture = completionService
-                       .take();
-                   final AbstractMap.SimpleImmutableEntry<String, LookupExtractorFactoryContainer> lookupResult = completedFuture
-                       .get();
-                   if (lookupResult != null) {
-                     builder.put(lookupResult);
-                   }
-                 }
-                 catch (InterruptedException | ExecutionException e) {
-                   LOG.error(e, "Lookup loading interrupted.");
-                 }
-               });
+      for (int i = 0; i < futures.size(); i++) {
+        try {
+          final Future<AbstractMap.SimpleImmutableEntry<String, LookupExtractorFactoryContainer>> completedFuture = completionService
+              .take();
+          final AbstractMap.SimpleImmutableEntry<String, LookupExtractorFactoryContainer> lookupResult = completedFuture
+              .get();
+          if (lookupResult != null) {
+            builder.put(lookupResult);
+          }
+        }
+        catch (ExecutionException e) {
+          LOG.error(e, "Execution error during lookup loading.");
+        }
+      }
       stateRef.set(new LookupUpdateState(builder.build(), ImmutableList.of(), ImmutableList.of()));
     }
     catch (Exception e) {
       LOG.error(e, "Failed to finish lookup load process.");
+      for (Future future : futures) {
+        if (!future.isDone()) {
+          future.cancel(true);
+        }
+      }
     }
     finally {
       executorService.shutdownNow();
