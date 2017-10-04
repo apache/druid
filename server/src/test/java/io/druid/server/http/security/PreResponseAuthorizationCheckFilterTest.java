@@ -115,6 +115,8 @@ public class PreResponseAuthorizationCheckFilterTest
     EasyMock.expect(resp.getStatus()).andReturn(200).once();
     EasyMock.expect(req.getRequestURI()).andReturn("uri").once();
     EasyMock.expect(req.getMethod()).andReturn("GET").once();
+    EasyMock.expect(req.getRemoteAddr()).andReturn("1.2.3.4").once();
+    EasyMock.expect(req.getRemoteHost()).andReturn("ahostname").once();
     EasyMock.expect(resp.isCommitted()).andReturn(true).once();
     resp.setStatus(403);
     EasyMock.expectLastCall().once();
@@ -122,6 +124,30 @@ public class PreResponseAuthorizationCheckFilterTest
     EasyMock.expectLastCall().once();
     resp.setCharacterEncoding("UTF-8");
     EasyMock.expectLastCall().once();
+    EasyMock.replay(req, resp, filterChain, outputStream);
+
+    PreResponseAuthorizationCheckFilter filter = new PreResponseAuthorizationCheckFilter(
+        authenticators,
+        new DefaultObjectMapper()
+    );
+    filter.doFilter(req, resp, filterChain);
+    EasyMock.verify(req, resp, filterChain, outputStream);
+  }
+
+  @Test
+  public void testMissingAuthorizationCheckWithError() throws Exception
+  {
+    EmittingLogger.registerEmitter(EasyMock.createNiceMock(ServiceEmitter.class));
+    AuthenticationResult authenticationResult = new AuthenticationResult("so-very-valid", "so-very-valid");
+
+    HttpServletRequest req = EasyMock.createStrictMock(HttpServletRequest.class);
+    HttpServletResponse resp = EasyMock.createStrictMock(HttpServletResponse.class);
+    FilterChain filterChain = EasyMock.createNiceMock(FilterChain.class);
+    ServletOutputStream outputStream = EasyMock.createNiceMock(ServletOutputStream.class);
+
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(authenticationResult).once();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
+    EasyMock.expect(resp.getStatus()).andReturn(404).once();
     EasyMock.replay(req, resp, filterChain, outputStream);
 
     PreResponseAuthorizationCheckFilter filter = new PreResponseAuthorizationCheckFilter(
