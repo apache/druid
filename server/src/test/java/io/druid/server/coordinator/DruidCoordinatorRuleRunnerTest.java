@@ -22,8 +22,6 @@ package io.druid.server.coordinator;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.MinMaxPriorityQueue;
-import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -52,10 +50,14 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  */
@@ -143,56 +145,50 @@ public class DruidCoordinatorRuleRunnerTest
         null,
         ImmutableMap.of(
             "hot",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        new DruidServer(
-                            "serverHot",
-                            "hostHot",
-                            null,
-                            1000,
-                            ServerType.HISTORICAL,
-                            "hot",
-                            0
-                        ).toImmutableDruidServer(),
-                        mockPeon
-                    )
+            Stream.of(
+                new ServerHolder(
+                    new DruidServer(
+                        "serverHot",
+                        "hostHot",
+                        null,
+                        1000,
+                        ServerType.HISTORICAL,
+                        "hot",
+                        0
+                    ).toImmutableDruidServer(),
+                    mockPeon
                 )
-            ),
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder()))),
             "normal",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        new DruidServer(
-                            "serverNorm",
-                            "hostNorm",
-                            null,
-                            1000,
-                            ServerType.HISTORICAL,
-                            "normal",
-                            0
-                        ).toImmutableDruidServer(),
-                        mockPeon
-                    )
+            Stream.of(
+                new ServerHolder(
+                    new DruidServer(
+                        "serverNorm",
+                        "hostNorm",
+                        null,
+                        1000,
+                        ServerType.HISTORICAL,
+                        "normal",
+                        0
+                    ).toImmutableDruidServer(),
+                    mockPeon
                 )
-            ),
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder()))),
             "cold",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        new DruidServer(
-                            "serverCold",
-                            "hostCold",
-                            null,
-                            1000,
-                            ServerType.HISTORICAL,
-                            "cold",
-                            0
-                        ).toImmutableDruidServer(),
-                        mockPeon
-                    )
+            Stream.of(
+                new ServerHolder(
+                    new DruidServer(
+                        "serverCold",
+                        "hostCold",
+                        null,
+                        1000,
+                        ServerType.HISTORICAL,
+                        "cold",
+                        0
+                    ).toImmutableDruidServer(),
+                    mockPeon
                 )
-            )
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
         )
     );
 
@@ -258,51 +254,47 @@ public class DruidCoordinatorRuleRunnerTest
         null,
         ImmutableMap.of(
             "hot",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        new DruidServer(
-                            "serverHot",
-                            "hostHot",
-                            null,
-                            1000,
-                            ServerType.HISTORICAL,
-                            "hot",
-                            0
-                        ).toImmutableDruidServer(),
-                        mockPeon
-                    ),
-                    new ServerHolder(
-                        new DruidServer(
-                            "serverHot2",
-                            "hostHot2",
-                            null,
-                            1000,
-                            ServerType.HISTORICAL,
-                            "hot",
-                            0
-                        ).toImmutableDruidServer(),
-                        mockPeon
-                    )
+            Stream.of(
+                new ServerHolder(
+                    new DruidServer(
+                        "serverHot",
+                        "hostHot",
+                        null,
+                        1000,
+                        ServerType.HISTORICAL,
+                        "hot",
+                        0
+                    ).toImmutableDruidServer(),
+                    mockPeon
+                ),
+                new ServerHolder(
+                    new DruidServer(
+                        "serverHot2",
+                        "hostHot2",
+                        null,
+                        1000,
+                        ServerType.HISTORICAL,
+                        "hot",
+                        0
+                    ).toImmutableDruidServer(),
+                    mockPeon
                 )
-            ),
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder()))),
             "cold",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        new DruidServer(
-                            "serverCold",
-                            "hostCold",
-                            null,
-                            1000,
-                            ServerType.HISTORICAL,
-                            "cold",
-                            0
-                        ).toImmutableDruidServer(),
-                        mockPeon
-                    )
+            Stream.of(
+                new ServerHolder(
+                    new DruidServer(
+                        "serverCold",
+                        "hostCold",
+                        null,
+                        1000,
+                        ServerType.HISTORICAL,
+                        "cold",
+                        0
+                    ).toImmutableDruidServer(),
+                    mockPeon
                 )
-            )
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
         )
     );
 
@@ -379,31 +371,27 @@ public class DruidCoordinatorRuleRunnerTest
         null,
         ImmutableMap.of(
             "hot",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        new DruidServer(
-                            "serverHot",
-                            "hostHot",
-                            null,
-                            1000,
-                            ServerType.HISTORICAL,
-                            "hot",
-                            0
-                        ).toImmutableDruidServer(),
-                        mockPeon
-                    )
+            Stream.of(
+                new ServerHolder(
+                    new DruidServer(
+                        "serverHot",
+                        "hostHot",
+                        null,
+                        1000,
+                        ServerType.HISTORICAL,
+                        "hot",
+                        0
+                    ).toImmutableDruidServer(),
+                    mockPeon
                 )
-            ),
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder()))),
             "normal",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        normServer.toImmutableDruidServer(),
-                        mockPeon
-                    )
+            Stream.of(
+                new ServerHolder(
+                    normServer.toImmutableDruidServer(),
+                    mockPeon
                 )
-            )
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
         )
     );
 
@@ -466,22 +454,20 @@ public class DruidCoordinatorRuleRunnerTest
         null,
         ImmutableMap.of(
             "normal",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        new DruidServer(
-                            "serverNorm",
-                            "hostNorm",
-                            null,
-                            1000,
-                            ServerType.HISTORICAL,
-                            "normal",
-                            0
-                        ).toImmutableDruidServer(),
-                        mockPeon
-                    )
+            Stream.of(
+                new ServerHolder(
+                    new DruidServer(
+                        "serverNorm",
+                        "hostNorm",
+                        null,
+                        1000,
+                        ServerType.HISTORICAL,
+                        "normal",
+                        0
+                    ).toImmutableDruidServer(),
+                    mockPeon
                 )
-            )
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
         )
     );
 
@@ -524,28 +510,28 @@ public class DruidCoordinatorRuleRunnerTest
             )
         )
     ).atLeastOnce();
-    EasyMock.replay(databaseRuleManager);
+
+    EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).anyTimes();
+    EasyMock.replay(databaseRuleManager, mockPeon);
 
     DruidCluster druidCluster = new DruidCluster(
         null,
         ImmutableMap.of(
             "normal",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        new DruidServer(
-                            "serverNorm",
-                            "hostNorm",
-                            null,
-                            1000,
-                            ServerType.HISTORICAL,
-                            "normal",
-                            0
-                        ).toImmutableDruidServer(),
-                        mockPeon
-                    )
+            Stream.of(
+                new ServerHolder(
+                    new DruidServer(
+                        "serverNorm",
+                        "hostNorm",
+                        null,
+                        1000,
+                        ServerType.HISTORICAL,
+                        "normal",
+                        0
+                    ).toImmutableDruidServer(),
+                    mockPeon
                 )
-            )
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
         )
     );
 
@@ -560,7 +546,7 @@ public class DruidCoordinatorRuleRunnerTest
 
     ruleRunner.run(params);
 
-    EasyMock.verify(emitter);
+    EasyMock.verify(emitter, mockPeon);
   }
 
   @Test
@@ -605,14 +591,12 @@ public class DruidCoordinatorRuleRunnerTest
         null,
         ImmutableMap.of(
             "normal",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        server.toImmutableDruidServer(),
-                        mockPeon
-                    )
+            Stream.of(
+                new ServerHolder(
+                    server.toImmutableDruidServer(),
+                    mockPeon
                 )
-            )
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
         )
     );
 
@@ -689,18 +673,16 @@ public class DruidCoordinatorRuleRunnerTest
         null,
         ImmutableMap.of(
             "normal",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        server1.toImmutableDruidServer(),
-                        mockPeon
-                    ),
-                    new ServerHolder(
-                        server2.toImmutableDruidServer(),
-                        mockPeon
-                    )
+            Stream.of(
+                new ServerHolder(
+                    server1.toImmutableDruidServer(),
+                    mockPeon
+                ),
+                new ServerHolder(
+                    server2.toImmutableDruidServer(),
+                    mockPeon
                 )
-            )
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
         )
     );
 
@@ -779,23 +761,19 @@ public class DruidCoordinatorRuleRunnerTest
         null,
         ImmutableMap.of(
             "hot",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
+            Stream.of(
                     new ServerHolder(
                         server1.toImmutableDruidServer(),
                         mockPeon
-                    )
                 )
-            ),
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder()))),
             "normal",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        server2.toImmutableDruidServer(),
-                        mockPeon
-                    )
+            Stream.of(
+                new ServerHolder(
+                    server2.toImmutableDruidServer(),
+                    mockPeon
                 )
-            )
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
         )
     );
 
@@ -870,23 +848,19 @@ public class DruidCoordinatorRuleRunnerTest
         null,
         ImmutableMap.of(
             "hot",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        server1.toImmutableDruidServer(),
-                        mockPeon
-                    )
+            Stream.of(
+                new ServerHolder(
+                    server1.toImmutableDruidServer(),
+                    mockPeon
                 )
-            ),
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder()))),
             "normal",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        server2.toImmutableDruidServer(),
-                        mockPeon
-                    )
+            Stream.of(
+                new ServerHolder(
+                    server2.toImmutableDruidServer(),
+                    mockPeon
                 )
-            )
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
         )
     );
 
@@ -976,22 +950,20 @@ public class DruidCoordinatorRuleRunnerTest
         null,
         ImmutableMap.of(
             "normal",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        server1.toImmutableDruidServer(),
-                        mockPeon
-                    ),
-                    new ServerHolder(
-                        server2.toImmutableDruidServer(),
-                        anotherMockPeon
-                    ),
-                    new ServerHolder(
-                        server3.toImmutableDruidServer(),
-                        anotherMockPeon
-                    )
+            Stream.of(
+                new ServerHolder(
+                    server1.toImmutableDruidServer(),
+                    mockPeon
+                ),
+                new ServerHolder(
+                    server2.toImmutableDruidServer(),
+                    anotherMockPeon
+                ),
+                new ServerHolder(
+                    server3.toImmutableDruidServer(),
+                    anotherMockPeon
                 )
-            )
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
         )
     );
 
@@ -1050,34 +1022,32 @@ public class DruidCoordinatorRuleRunnerTest
         null,
         ImmutableMap.of(
             "hot",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        new DruidServer(
-                            "serverHot",
-                            "hostHot",
-                            null,
-                            1000,
-                            ServerType.HISTORICAL,
-                            "hot",
-                            0
-                        ).toImmutableDruidServer(),
-                        mockPeon
-                    ),
-                    new ServerHolder(
-                        new DruidServer(
-                            "serverHot2",
-                            "hostHot2",
-                            null,
-                            1000,
-                            ServerType.HISTORICAL,
-                            "hot",
-                            0
-                        ).toImmutableDruidServer(),
-                        mockPeon
-                    )
+            Stream.of(
+                new ServerHolder(
+                    new DruidServer(
+                        "serverHot",
+                        "hostHot",
+                        null,
+                        1000,
+                        ServerType.HISTORICAL,
+                        "hot",
+                        0
+                    ).toImmutableDruidServer(),
+                    mockPeon
+                ),
+                new ServerHolder(
+                    new DruidServer(
+                        "serverHot2",
+                        "hostHot2",
+                        null,
+                        1000,
+                        ServerType.HISTORICAL,
+                        "hot",
+                        0
+                    ).toImmutableDruidServer(),
+                    mockPeon
                 )
-            )
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
         )
     );
 
@@ -1178,39 +1148,35 @@ public class DruidCoordinatorRuleRunnerTest
         null,
         ImmutableMap.of(
             "hot",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        new DruidServer(
-                            "serverHot",
-                            "hostHot",
-                            null,
-                            1000,
-                            ServerType.HISTORICAL,
-                            "hot",
-                            0
-                        ).toImmutableDruidServer(),
-                        mockPeon
-                    )
+            Stream.of(
+                new ServerHolder(
+                    new DruidServer(
+                        "serverHot",
+                        "hostHot",
+                        null,
+                        1000,
+                        ServerType.HISTORICAL,
+                        "hot",
+                        1
+                    ).toImmutableDruidServer(),
+                    mockPeon
                 )
-            ),
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder()))),
             DruidServer.DEFAULT_TIER,
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        new DruidServer(
-                            "serverNorm",
-                            "hostNorm",
-                            null,
-                            1000,
-                            ServerType.HISTORICAL,
-                            DruidServer.DEFAULT_TIER,
-                            0
-                        ).toImmutableDruidServer(),
-                        mockPeon
-                    )
+            Stream.of(
+                new ServerHolder(
+                    new DruidServer(
+                        "serverNorm",
+                        "hostNorm",
+                        null,
+                        1000,
+                        ServerType.HISTORICAL,
+                        DruidServer.DEFAULT_TIER,
+                        0
+                    ).toImmutableDruidServer(),
+                    mockPeon
                 )
-            )
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
         )
     );
 
@@ -1303,18 +1269,16 @@ public class DruidCoordinatorRuleRunnerTest
         null,
         ImmutableMap.of(
             "normal",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        server1.toImmutableDruidServer(),
-                        mockPeon
-                    ),
-                    new ServerHolder(
-                        server2.toImmutableDruidServer(),
-                        mockPeon
-                    )
+            Stream.of(
+                new ServerHolder(
+                    server1.toImmutableDruidServer(),
+                    mockPeon
+                ),
+                new ServerHolder(
+                    server2.toImmutableDruidServer(),
+                    mockPeon
                 )
-            )
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
         )
     );
 
@@ -1388,22 +1352,20 @@ public class DruidCoordinatorRuleRunnerTest
         null,
         ImmutableMap.of(
             DruidServer.DEFAULT_TIER,
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        new DruidServer(
-                            "serverHot",
-                            "hostHot",
-                            null,
-                            1000,
-                            ServerType.HISTORICAL,
-                            DruidServer.DEFAULT_TIER,
-                            0
-                        ).toImmutableDruidServer(),
-                        mockPeon
-                    )
+            Stream.of(
+                new ServerHolder(
+                    new DruidServer(
+                        "serverHot",
+                        "hostHot",
+                        null,
+                        1000,
+                        ServerType.HISTORICAL,
+                        DruidServer.DEFAULT_TIER,
+                        0
+                    ).toImmutableDruidServer(),
+                    mockPeon
                 )
-            )
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
         )
     );
 
