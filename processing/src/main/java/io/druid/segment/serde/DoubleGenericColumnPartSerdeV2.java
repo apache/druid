@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Suppliers;
 import io.druid.collections.bitmap.ImmutableBitmap;
-import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.DoubleColumnSerializer;
 import io.druid.segment.column.ValueType;
@@ -41,7 +40,6 @@ import java.nio.channels.WritableByteChannel;
 
 public class DoubleGenericColumnPartSerdeV2 implements ColumnPartSerde
 {
-  static final byte VERSION_ONE = 0x1;
   private final ByteOrder byteOrder;
   private Serializer serialize;
   private final BitmapSerdeFactory bitmapSerdeFactory;
@@ -87,31 +85,25 @@ public class DoubleGenericColumnPartSerdeV2 implements ColumnPartSerde
   public Deserializer getDeserializer()
   {
     return (buffer, builder, columnConfig) -> {
-      byte versionFromBuffer = buffer.get();
+      int offset = buffer.getInt();
+      int initialPos = buffer.position();
+      final CompressedDoublesIndexedSupplier column = CompressedDoublesIndexedSupplier.fromByteBuffer(
+          buffer,
+          byteOrder,
+          builder.getFileMapper()
+      );
 
-      if (VERSION_ONE == versionFromBuffer) {
-        int offset = buffer.getInt();
-        int initialPos = buffer.position();
-        final CompressedDoublesIndexedSupplier column = CompressedDoublesIndexedSupplier.fromByteBuffer(
-            buffer,
-            byteOrder,
-            builder.getFileMapper()
-        );
-
-        buffer.position(initialPos + offset);
-        final ImmutableBitmap bitmap;
-        if (buffer.hasRemaining()) {
-          bitmap = ByteBufferSerializer.read(buffer, bitmapSerdeFactory.getObjectStrategy());
-          builder.setNullValueBitmap(Suppliers.ofInstance(bitmap));
-        } else {
-          bitmap = bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap();
-        }
-        builder.setType(ValueType.DOUBLE)
-               .setHasMultipleValues(false)
-               .setGenericColumn(new DoubleGenericColumnSupplier(column, bitmap));
+      buffer.position(initialPos + offset);
+      final ImmutableBitmap bitmap;
+      if (buffer.hasRemaining()) {
+        bitmap = ByteBufferSerializer.read(buffer, bitmapSerdeFactory.getObjectStrategy());
+        builder.setNullValueBitmap(Suppliers.ofInstance(bitmap));
       } else {
-        throw new IAE("Unknown version[%d]", (int) versionFromBuffer);
+        bitmap = bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap();
       }
+      builder.setType(ValueType.DOUBLE)
+             .setHasMultipleValues(false)
+             .setGenericColumn(new DoubleGenericColumnSupplier(column, bitmap));
     };
   }
 
