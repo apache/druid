@@ -31,7 +31,7 @@ values for the below mentioned configs among others provided by Java implementat
 |`druid.server.https.certAlias`|Alias of TLS/SSL certificate for the connector.|none|yes|
 |`druid.server.https.keyStorePassword`|The [Password Provider](../operations/password-provider.html) or String password for the Key Store.|none|yes|
 
-Following table contains non-mandatory advanced configuration options, users should be careful while setting these and use them only if they know what they are doing.
+Following table contains non-mandatory advanced configuration options, use caution.
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|--------|

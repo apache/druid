@@ -238,21 +238,21 @@ public class JettyServerModule extends JerseyServletModule
                                                         : tlsServerConfig.getKeyManagerFactoryAlgorithm());
         sslContextFactory.setKeyManagerPassword(tlsServerConfig.getKeyManagerPasswordProvider() == null ?
                                                 null : tlsServerConfig.getKeyManagerPasswordProvider().getPassword());
-        if (tlsServerConfig.getIncludeCipherSuites() != null && tlsServerConfig.getIncludeCipherSuites().size() > 0) {
+        if (tlsServerConfig.getIncludeCipherSuites() != null) {
           sslContextFactory.setIncludeCipherSuites(
               tlsServerConfig.getIncludeCipherSuites()
                              .toArray(new String[tlsServerConfig.getIncludeCipherSuites().size()]));
         }
-        if (tlsServerConfig.getExcludeCipherSuites() != null && tlsServerConfig.getExcludeCipherSuites().size() > 0) {
+        if (tlsServerConfig.getExcludeCipherSuites() != null) {
           sslContextFactory.setExcludeCipherSuites(
               tlsServerConfig.getExcludeCipherSuites()
                              .toArray(new String[tlsServerConfig.getExcludeCipherSuites().size()]));
         }
-        if (tlsServerConfig.getIncludeProtocols() != null && tlsServerConfig.getIncludeProtocols().size() > 0) {
+        if (tlsServerConfig.getIncludeProtocols() != null) {
           sslContextFactory.setIncludeProtocols(
               tlsServerConfig.getIncludeProtocols().toArray(new String[tlsServerConfig.getIncludeProtocols().size()]));
         }
-        if (tlsServerConfig.getExcludeProtocols() != null && tlsServerConfig.getExcludeProtocols().size() > 0) {
+        if (tlsServerConfig.getExcludeProtocols() != null) {
           sslContextFactory.setExcludeProtocols(
               tlsServerConfig.getExcludeProtocols().toArray(new String[tlsServerConfig.getExcludeProtocols().size()]));
         }
