@@ -21,6 +21,7 @@ package io.druid.output;
 
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
+import io.druid.java.util.common.StringUtils;
 import org.apache.commons.io.IOUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -77,8 +78,28 @@ public class OutputBytesTest
     verifyContents(outputBytes, "12345abc");
   }
 
+  @Test
+  public void testCrossBufferRandomAccess() throws IOException
+  {
+    OutputBytes outputBytes = outputMedium.makeOutputBytes();
+    for (int i = 0; i < ByteBufferOutputBytes.BUFFER_SIZE; i++) {
+      outputBytes.write('0');
+    }
+    outputBytes.write('1');
+    outputBytes.write('2');
+    outputBytes.write('3');
+    ByteBuffer bb = ByteBuffer.allocate(4);
+    outputBytes.readFully(ByteBufferOutputBytes.BUFFER_SIZE - 1, bb);
+    bb.flip();
+    Assert.assertEquals("0123", StringUtils.fromUtf8(bb));
+  }
+
   private void verifyContents(OutputBytes outputBytes, String expected) throws IOException
   {
     Assert.assertEquals(expected, IOUtils.toString(outputBytes.asInputStream(), StandardCharsets.US_ASCII));
+    ByteBuffer bb = ByteBuffer.allocate((int) outputBytes.size());
+    outputBytes.readFully(0, bb);
+    bb.flip();
+    Assert.assertEquals(expected, StringUtils.fromUtf8(bb));
   }
 }

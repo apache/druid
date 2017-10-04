@@ -22,12 +22,14 @@ package io.druid.output;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 
 /**
  * Appendable byte sequence for temporary storage. Methods inherited from {@link OutputStream}, {@link
  * WritableByteChannel} and {@link #writeInt(int)} append to the sequence. Methods {@link
- * #writeTo(WritableByteChannel)} and {@link #asInputStream()} allow to write the sequence somewhere else.
+ * #writeTo(WritableByteChannel)} and {@link #asInputStream()} allow to write the sequence somewhere else. {@link
+ * #readFully} allows to access the sequence randomly.
  *
  * OutputBytes is a resource that is managed by {@link OutputMedium}, so it's own {@link #close()} method does nothing.
  * However OutputBytes should appear closed, i. e. {@link #isOpen()} returns false, after the parental OutputMedium is
@@ -55,6 +57,15 @@ public abstract class OutputBytes extends OutputStream implements WritableByteCh
    * InputStream must be closed properly after it's used up.
    */
   public abstract InputStream asInputStream() throws IOException;
+
+  /**
+   * Reads bytes from the byte sequences, represented by this OutputBytes, at the random position, into the given
+   * buffer.
+   *
+   * @throws RuntimeException if the byte sequences from the given pos ends before all bytes are read
+   * @throws IllegalArgumentException if the given pos is negative
+   */
+  public abstract void readFully(long pos, ByteBuffer buffer) throws IOException;
 
   /**
    * @deprecated does nothing.

@@ -24,9 +24,11 @@ import com.google.common.io.ByteSource;
 import com.google.common.primitives.Ints;
 import io.druid.io.ByteBufferInputStream;
 import io.druid.io.Channels;
+import io.druid.java.util.common.IAE;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
@@ -196,6 +198,38 @@ public abstract class ByteBufferOutputBytes extends OutputBytes
       out.put(buffer);
       // switch back to the initial state
       buffer.limit(buffer.capacity());
+    }
+  }
+
+  @Override
+  public void readFully(long pos, ByteBuffer buffer)
+  {
+    checkOpen();
+    if (pos < 0 || pos > size) {
+      throw new IAE("pos %d out of range [%d, %d]", pos, 0, size);
+    }
+    int ourBufferIndex = Ints.checkedCast(pos / BUFFER_SIZE);
+    int ourBufferOffset = Ints.checkedCast(pos % BUFFER_SIZE);
+    for (int bytesLeft = buffer.remaining(); bytesLeft > 0;) {
+      int bytesToWrite = Math.min(BUFFER_SIZE - ourBufferOffset, bytesLeft);
+      ByteBuffer ourBuffer = buffers.get(ourBufferIndex);
+      int ourBufferPosition = ourBuffer.position();
+      if (bytesToWrite > ourBufferPosition - ourBufferOffset) {
+        throw new BufferUnderflowException();
+      }
+      try {
+        ourBuffer.position(ourBufferOffset);
+        ourBuffer.limit(ourBufferOffset + bytesToWrite);
+        buffer.put(ourBuffer);
+      }
+      finally {
+        // switch back to the initial state
+        ourBuffer.limit(ourBuffer.capacity());
+        ourBuffer.position(ourBufferPosition);
+      }
+      ourBufferIndex++;
+      ourBufferOffset = 0;
+      bytesLeft -= bytesToWrite;
     }
   }
 

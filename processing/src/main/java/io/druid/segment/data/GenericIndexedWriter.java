@@ -34,6 +34,7 @@ import io.druid.segment.serde.Serializer;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
 
+import javax.annotation.Nullable;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -63,7 +64,7 @@ public class GenericIndexedWriter<T> implements Serializer
       .writeByte(
           x -> x.objectsSorted ? GenericIndexed.REVERSE_LOOKUP_ALLOWED : GenericIndexed.REVERSE_LOOKUP_DISALLOWED
       )
-      .writeInt(x -> x.bagSizePower())
+      .writeInt(GenericIndexedWriter::bagSizePower)
       .writeInt(x -> x.numWritten)
       .writeInt(x -> x.fileNameByteArray.length)
       .writeByteArray(x -> x.fileNameByteArray);
@@ -143,6 +144,8 @@ public class GenericIndexedWriter<T> implements Serializer
   private int numWritten = 0;
   private boolean requireMultipleFiles = false;
   private LongList headerOutLong;
+
+  private final ByteBuffer getOffsetBuffer = ByteBuffer.allocate(Integer.BYTES);
 
   public GenericIndexedWriter(OutputMedium outputMedium, String filenameBase, ObjectStrategy<T> strategy)
   {
@@ -224,6 +227,37 @@ public class GenericIndexedWriter<T> implements Serializer
 
     if (objectsSorted) {
       prevObject = objectToWrite;
+    }
+  }
+
+  @Nullable
+  public T get(int index) throws IOException
+  {
+    long startOffset;
+    if (index == 0) {
+      startOffset = Integer.BYTES;
+    } else {
+      startOffset = getOffset(index - 1) + Integer.BYTES;
+    }
+    long endOffset = getOffset(index);
+    int valueSize = Ints.checkedCast(endOffset - startOffset);
+    if (valueSize == 0) {
+      return null;
+    }
+    ByteBuffer bb = ByteBuffer.allocate(valueSize);
+    valuesOut.readFully(startOffset, bb);
+    bb.clear();
+    return strategy.fromByteBuffer(bb, valueSize);
+  }
+
+  private long getOffset(int index) throws IOException
+  {
+    if (!requireMultipleFiles) {
+      getOffsetBuffer.clear();
+      headerOut.readFully(index * (long) Integer.BYTES, getOffsetBuffer);
+      return getOffsetBuffer.getInt(0);
+    } else {
+      return headerOutLong.getLong(index);
     }
   }
 

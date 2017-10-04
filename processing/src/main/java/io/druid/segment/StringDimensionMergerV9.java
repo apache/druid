@@ -73,8 +73,6 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
 
   private String dimensionName;
   private GenericIndexedWriter<String> dictionaryWriter;
-  /** This field is used only for spatial indexes */
-  private List<String> dictionary;
   private String firstDictionaryValue;
   private int dictionarySize;
   private GenericIndexedWriter<ImmutableBitmap> bitmapWriter;
@@ -154,10 +152,6 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
 
     String dictFilename = StringUtils.format("%s.dim_values", dimensionName);
     dictionaryWriter = new GenericIndexedWriter<>(outputMedium, dictFilename, GenericIndexed.STRING_STRATEGY);
-    boolean hasSpatial = capabilities.hasSpatialIndexes();
-    if (hasSpatial) {
-      dictionary = new ArrayList<>();
-    }
     firstDictionaryValue = null;
     dictionarySize = 0;
     dictionaryWriter.open();
@@ -165,7 +159,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     cardinality = 0;
     if (numMergeIndex > 1) {
       dictionaryMergeIterator = new IndexMerger.DictionaryMergeIterator(dimValueLookups, true);
-      writeDictionary(() -> dictionaryMergeIterator, hasSpatial);
+      writeDictionary(() -> dictionaryMergeIterator);
       for (int i = 0; i < adapters.size(); i++) {
         if (dimValueLookups[i] != null && dictionaryMergeIterator.needConversion(i)) {
           dimConversions.set(i, dictionaryMergeIterator.conversions[i]);
@@ -174,7 +168,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
       cardinality = dictionaryMergeIterator.counter;
     } else if (numMergeIndex == 1) {
       Indexed<String> dimValueLookup = dimValueLookups[0];
-      writeDictionary(dimValueLookup, hasSpatial);
+      writeDictionary(dimValueLookup);
       cardinality = dimValueLookup.size();
     }
 
@@ -188,16 +182,13 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     setupEncodedValueWriter();
   }
 
-  private void writeDictionary(Iterable<String> dictionaryValues, boolean hasSpatial) throws IOException
+  private void writeDictionary(Iterable<String> dictionaryValues) throws IOException
   {
     for (String value : dictionaryValues) {
       dictionaryWriter.write(value);
       value = Strings.emptyToNull(value);
       if (dictionarySize == 0) {
         firstDictionaryValue = value;
-      }
-      if (hasSpatial) {
-        dictionary.add(value);
       }
       dictionarySize++;
     }
@@ -386,7 +377,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     bitmapWriter.write(bmpFactory.makeImmutableBitmap(mergedIndexes));
 
     if (hasSpatial) {
-      String dimVal = dictionary.get(dictId);
+      String dimVal = dictionaryWriter.get(dictId);
       if (dimVal != null) {
         List<String> stringCoords = Lists.newArrayList(SPLITTER.split(dimVal));
         float[] coords = new float[stringCoords.size()];

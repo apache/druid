@@ -21,11 +21,13 @@ package io.druid.output;
 
 import com.google.common.io.ByteStreams;
 import io.druid.io.Channels;
+import io.druid.java.util.common.IAE;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
@@ -117,6 +119,19 @@ final class FileOutputBytes extends OutputBytes
     }
     finally {
       ch.position(ch.size());
+    }
+  }
+
+  @Override
+  public void readFully(long pos, ByteBuffer buffer) throws IOException
+  {
+    flush();
+    if (pos < 0 || pos > ch.size()) {
+      throw new IAE("pos %d out of range [%d, %d]", pos, 0, ch.size());
+    }
+    ch.read(buffer, pos);
+    if (buffer.remaining() > 0) {
+      throw new BufferUnderflowException();
     }
   }
 

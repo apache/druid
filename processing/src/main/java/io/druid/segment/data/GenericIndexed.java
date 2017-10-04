@@ -19,6 +19,7 @@
 
 package io.druid.segment.data;
 
+import com.google.common.base.Strings;
 import com.google.common.primitives.Ints;
 import io.druid.collections.ResourceHolder;
 import io.druid.common.utils.SerializerUtils;
@@ -105,7 +106,7 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
     @Override
     public byte[] toBytes(String val)
     {
-      if (val == null) {
+      if (Strings.isNullOrEmpty(val)) {
         return ByteArrays.EMPTY_ARRAY;
       }
       return StringUtils.toUtf8(val);

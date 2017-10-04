@@ -25,7 +25,7 @@ import io.druid.java.util.common.io.Closer;
 import java.io.IOException;
 
 @VisibleForTesting
-final class OnHeapMemoryOutputMedium implements OutputMedium
+public final class OnHeapMemoryOutputMedium implements OutputMedium
 {
   private final Closer closer = Closer.create();
 
