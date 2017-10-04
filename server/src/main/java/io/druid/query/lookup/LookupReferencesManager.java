@@ -490,9 +490,7 @@ public class LookupReferencesManager
     catch (Exception e) {
       LOG.error(e, "Failed to finish lookup load process.");
       for (Future future : futures) {
-        if (!future.isDone()) {
           future.cancel(true);
-        }
       }
     }
     finally {
