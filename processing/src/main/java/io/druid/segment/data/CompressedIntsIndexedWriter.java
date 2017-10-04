@@ -19,12 +19,11 @@
 
 package io.druid.segment.data;
 
-import com.google.common.primitives.Ints;
-import io.druid.io.Channels;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.output.OutputMedium;
 import io.druid.segment.IndexIO;
+import io.druid.segment.serde.MetaSerdeHelper;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -37,6 +36,12 @@ import java.nio.channels.WritableByteChannel;
 public class CompressedIntsIndexedWriter extends SingleValueIndexedIntsWriter
 {
   private static final byte VERSION = CompressedIntsIndexedSupplier.VERSION;
+
+  private static final MetaSerdeHelper<CompressedIntsIndexedWriter> metaSerdeHelper = MetaSerdeHelper
+      .firstWriteByte((CompressedIntsIndexedWriter x) -> VERSION)
+      .writeInt(x -> x.numInserted)
+      .writeInt(x -> x.chunkFactor)
+      .writeByte(x -> x.compression.getId());
 
   public static CompressedIntsIndexedWriter create(
       final OutputMedium outputMedium,
@@ -72,7 +77,12 @@ public class CompressedIntsIndexedWriter extends SingleValueIndexedIntsWriter
         chunkFactor,
         byteOrder,
         compression,
-        GenericIndexedWriter.ofCompressedByteBuffers(outputMedium, filenameBase, compression, chunkFactor * Ints.BYTES)
+        GenericIndexedWriter.ofCompressedByteBuffers(
+            outputMedium,
+            filenameBase,
+            compression,
+            chunkFactor * Integer.BYTES
+        )
     );
   }
 
@@ -89,7 +99,7 @@ public class CompressedIntsIndexedWriter extends SingleValueIndexedIntsWriter
     this.flattener = flattener;
     CompressionStrategy.Compressor compressor = compression.getCompressor();
     Closer closer = outputMedium.getCloser();
-    this.endBuffer = compressor.allocateInBuffer(chunkFactor * Ints.BYTES, closer).order(byteOrder);
+    this.endBuffer = compressor.allocateInBuffer(chunkFactor * Integer.BYTES, closer).order(byteOrder);
     this.numInserted = 0;
   }
 
@@ -102,9 +112,13 @@ public class CompressedIntsIndexedWriter extends SingleValueIndexedIntsWriter
   @Override
   protected void addValue(int val) throws IOException
   {
+    if (endBuffer == null) {
+      throw new IllegalStateException("written out already");
+    }
     if (!endBuffer.hasRemaining()) {
-      endBuffer.clear();
+      endBuffer.rewind();
       flattener.write(endBuffer);
+      endBuffer.clear();
     }
     endBuffer.putInt(val);
     numInserted++;
@@ -114,39 +128,25 @@ public class CompressedIntsIndexedWriter extends SingleValueIndexedIntsWriter
   public long getSerializedSize() throws IOException
   {
     writeEndBuffer();
-    return metaSize() + flattener.getSerializedSize();
+    return metaSerdeHelper.size(this) + flattener.getSerializedSize();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     writeEndBuffer();
-
-    ByteBuffer meta = ByteBuffer.allocate(metaSize());
-    meta.put(VERSION);
-    meta.putInt(numInserted);
-    meta.putInt(chunkFactor);
-    meta.put(compression.getId());
-    meta.flip();
-
-    Channels.writeFully(channel, meta);
+    metaSerdeHelper.writeTo(channel, this);
     flattener.writeTo(channel, smoosher);
   }
 
   private void writeEndBuffer() throws IOException
   {
-    if (endBuffer != null && numInserted > 0) {
+    if (endBuffer != null) {
       endBuffer.flip();
-      flattener.write(endBuffer);
+      if (endBuffer.remaining() > 0) {
+        flattener.write(endBuffer);
+      }
       endBuffer = null;
     }
-  }
-
-  private int metaSize()
-  {
-    return 1 +             // version
-           Ints.BYTES +    // numInserted
-           Ints.BYTES +    // chunkFactor
-           1;              // compression id
   }
 }

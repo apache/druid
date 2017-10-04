@@ -21,7 +21,6 @@ package io.druid.segment.data;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
-import io.druid.io.Channels;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
@@ -30,6 +29,7 @@ import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedWriter;
 import io.druid.output.OutputBytes;
 import io.druid.output.OutputMedium;
+import io.druid.segment.serde.MetaSerdeHelper;
 import io.druid.segment.serde.Serializer;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
@@ -49,6 +49,25 @@ import java.nio.channels.WritableByteChannel;
 public class GenericIndexedWriter<T> implements Serializer
 {
   private static int PAGE_SIZE = 4096;
+
+  private static final MetaSerdeHelper<GenericIndexedWriter> singleFileMetaSerdeHelper = MetaSerdeHelper
+      .firstWriteByte((GenericIndexedWriter x) -> GenericIndexed.VERSION_ONE)
+      .writeByte(
+          x -> x.objectsSorted ? GenericIndexed.REVERSE_LOOKUP_ALLOWED : GenericIndexed.REVERSE_LOOKUP_DISALLOWED
+      )
+      .writeInt(x -> Ints.checkedCast(x.headerOut.size() + x.valuesOut.size() + Integer.BYTES))
+      .writeInt(x -> x.numWritten);
+
+  private static final MetaSerdeHelper<GenericIndexedWriter> multiFileMetaSerdeHelper = MetaSerdeHelper
+      .firstWriteByte((GenericIndexedWriter x) -> GenericIndexed.VERSION_TWO)
+      .writeByte(
+          x -> x.objectsSorted ? GenericIndexed.REVERSE_LOOKUP_ALLOWED : GenericIndexed.REVERSE_LOOKUP_DISALLOWED
+      )
+      .writeInt(x -> x.bagSizePower())
+      .writeInt(x -> x.numWritten)
+      .writeInt(x -> x.fileNameByteArray.length)
+      .writeByteArray(x -> x.fileNameByteArray);
+
 
   static GenericIndexedWriter<ByteBuffer> ofCompressedByteBuffers(
       final OutputMedium outputMedium,
@@ -187,6 +206,8 @@ public class GenericIndexedWriter<T> implements Serializer
     }
 
     ++numWritten;
+    // for compatibility with the format (see GenericIndexed javadoc for description of the format), but this field is
+    // unused.
     valuesOut.writeInt(0);
     strategy.writeTo(objectToWrite, valuesOut);
 
@@ -210,9 +231,10 @@ public class GenericIndexedWriter<T> implements Serializer
   public long getSerializedSize() throws IOException
   {
     if (requireMultipleFiles) {
-      return metaSize();
+      // for multi-file version (version 2), getSerializedSize() returns number of bytes in meta file.
+      return multiFileMetaSerdeHelper.size(this);
     } else {
-      return metaSize() + headerOut.size() + valuesOut.size();
+      return singleFileMetaSerdeHelper.size(this) + headerOut.size() + valuesOut.size();
     }
   }
 
@@ -220,7 +242,7 @@ public class GenericIndexedWriter<T> implements Serializer
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     if (requireMultipleFiles) {
-      closeMultiFiles(channel, smoosher);
+      writeToMultiFiles(channel, smoosher);
     } else {
       writeToSingleFile(channel);
     }
@@ -242,19 +264,12 @@ public class GenericIndexedWriter<T> implements Serializer
         numBytesWritten
     );
 
-    ByteBuffer meta = ByteBuffer.allocate(metaSize());
-    meta.put(GenericIndexed.VERSION_ONE);
-    meta.put(objectsSorted ? GenericIndexed.REVERSE_LOOKUP_ALLOWED : GenericIndexed.REVERSE_LOOKUP_DISALLOWED);
-    meta.putInt(Ints.checkedCast(numBytesWritten + Integer.BYTES));
-    meta.putInt(numWritten);
-    meta.flip();
-
-    Channels.writeFully(channel, meta);
+    singleFileMetaSerdeHelper.writeTo(channel, this);
     headerOut.writeTo(channel);
     valuesOut.writeTo(channel);
   }
 
-  private void closeMultiFiles(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  private void writeToMultiFiles(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     Preconditions.checkState(
         headerOutLong.size() == numWritten,
@@ -273,15 +288,7 @@ public class GenericIndexedWriter<T> implements Serializer
     }
 
     int bagSizePower = bagSizePower();
-    ByteBuffer meta = ByteBuffer.allocate(metaSize());
-    meta.put(GenericIndexed.VERSION_TWO);
-    meta.put(objectsSorted ? GenericIndexed.REVERSE_LOOKUP_ALLOWED : GenericIndexed.REVERSE_LOOKUP_DISALLOWED);
-    meta.putInt(bagSizePower);
-    meta.putInt(numWritten);
-    meta.putInt(fileNameByteArray.length);
-    meta.put(fileNameByteArray);
-    meta.flip();
-    Channels.writeFully(channel, meta);
+    multiFileMetaSerdeHelper.writeTo(channel, this);
 
     long previousValuePosition = 0;
     int bagSize = 1 << bagSizePower;
@@ -372,22 +379,6 @@ public class GenericIndexedWriter<T> implements Serializer
       }
     }
     return true;
-  }
-
-  private int metaSize()
-  {
-    // for version 2 getSerializedSize() returns number of bytes in meta file.
-    if (!requireMultipleFiles) {
-      return 2 + // version and sorted flag
-             Ints.BYTES + // numBytesWritten
-             Ints.BYTES; // numWritten
-    } else {
-      return 2 + // version and sorted flag
-             Ints.BYTES + // numElements as log base 2.
-             Ints.BYTES + // number of files
-             Ints.BYTES + // column name Size
-             fileNameByteArray.length;
-    }
   }
 
   private void writeHeaderLong(FileSmoosher smoosher, int bagSizePower)

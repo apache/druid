@@ -19,18 +19,22 @@
 
 package io.druid.segment.data;
 
-import com.google.common.primitives.Ints;
-import io.druid.io.Channels;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.output.OutputBytes;
 import io.druid.output.OutputMedium;
+import io.druid.segment.serde.MetaSerdeHelper;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 
 public class EntireLayoutLongSupplierSerializer implements LongSupplierSerializer
 {
+  private static final MetaSerdeHelper<EntireLayoutLongSupplierSerializer> metaSerdeHelper = MetaSerdeHelper
+      .firstWriteByte((EntireLayoutLongSupplierSerializer x) -> CompressedLongsIndexedSupplier.VERSION)
+      .writeInt(x -> x.numInserted)
+      .writeInt(x -> 0)
+      .writeSomething(CompressionFactory.longEncodingWriter(x -> x.writer, x -> CompressionStrategy.NONE));
+
   private final CompressionFactory.LongEncodingWriter writer;
   private final OutputMedium outputMedium;
   private OutputBytes valuesOut;
@@ -67,27 +71,14 @@ public class EntireLayoutLongSupplierSerializer implements LongSupplierSerialize
   public long getSerializedSize() throws IOException
   {
     writer.flush();
-    return metaSize() + valuesOut.size();
+    return metaSerdeHelper.size(this) + valuesOut.size();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     writer.flush();
-
-    ByteBuffer meta = ByteBuffer.allocate(metaSize());
-    meta.put(CompressedLongsIndexedSupplier.version);
-    meta.putInt(numInserted);
-    meta.putInt(0);
-    writer.putMeta(meta, CompressionStrategy.NONE);
-    meta.flip();
-
-    Channels.writeFully(channel, meta);
+    metaSerdeHelper.writeTo(channel, this);
     valuesOut.writeTo(channel);
-  }
-
-  private int metaSize()
-  {
-    return 1 + Ints.BYTES + Ints.BYTES + writer.metaSize();
   }
 }

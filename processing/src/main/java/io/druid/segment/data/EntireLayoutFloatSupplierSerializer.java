@@ -19,19 +19,23 @@
 
 package io.druid.segment.data;
 
-import com.google.common.primitives.Ints;
-import io.druid.io.Channels;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.output.OutputBytes;
 import io.druid.output.OutputMedium;
+import io.druid.segment.serde.MetaSerdeHelper;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
 public class EntireLayoutFloatSupplierSerializer implements FloatSupplierSerializer
 {
+  private static final MetaSerdeHelper<EntireLayoutFloatSupplierSerializer> metaSerdeHelper = MetaSerdeHelper
+      .firstWriteByte((EntireLayoutFloatSupplierSerializer x) -> CompressedFloatsIndexedSupplier.VERSION)
+      .writeInt(x -> x.numInserted)
+      .writeInt(x -> 0)
+      .writeByte(x -> CompressionStrategy.NONE.getId());
+
   private final boolean isLittleEndian;
   private final OutputMedium outputMedium;
   private OutputBytes valuesOut;
@@ -71,25 +75,13 @@ public class EntireLayoutFloatSupplierSerializer implements FloatSupplierSeriali
   @Override
   public long getSerializedSize() throws IOException
   {
-    return metaSize() + valuesOut.size();
+    return metaSerdeHelper.size(this) + valuesOut.size();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    ByteBuffer meta = ByteBuffer.allocate(metaSize());
-    meta.put(CompressedFloatsIndexedSupplier.version);
-    meta.putInt(numInserted);
-    meta.putInt(0);
-    meta.put(CompressionStrategy.NONE.getId());
-    meta.flip();
-
-    Channels.writeFully(channel, meta);
+    metaSerdeHelper.writeTo(channel, this);
     valuesOut.writeTo(channel);
-  }
-
-  private int metaSize()
-  {
-    return 1 + Ints.BYTES + Ints.BYTES + 1;
   }
 }

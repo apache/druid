@@ -20,11 +20,13 @@
 package io.druid.segment.data;
 
 import com.google.common.primitives.Ints;
+import io.druid.common.utils.ByteUtils;
 import io.druid.io.Channels;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.output.HeapByteBufferOutputBytes;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.serde.MetaSerdeHelper;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntLists;
@@ -38,6 +40,11 @@ import java.nio.channels.WritableByteChannel;
 public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInts>, WritableSupplier<IndexedInts>
 {
   public static final byte VERSION = 0x0;
+
+  private static final MetaSerdeHelper<VSizeIndexedInts> metaSerdeHelper = MetaSerdeHelper
+      .firstWriteByte((VSizeIndexedInts x) -> VERSION)
+      .writeByte(x -> ByteUtils.checkedCast(x.numBytes))
+      .writeInt(x -> x.buffer.remaining());
 
   public static VSizeIndexedInts fromArray(int[] array)
   {
@@ -166,26 +173,14 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
   @Override
   public long getSerializedSize() throws IOException
   {
-    return metaSize() + buffer.remaining();
+    return metaSerdeHelper.size(this) + buffer.remaining();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    ByteBuffer meta = ByteBuffer.allocate(metaSize());
-    meta.put(VERSION);
-    meta.put((byte) numBytes);
-    meta.putInt(buffer.remaining());
-    meta.flip();
-
-    Channels.writeFully(channel, meta);
+    metaSerdeHelper.writeTo(channel, this);
     Channels.writeFully(channel, buffer.asReadOnlyBuffer());
-  }
-
-  private int metaSize()
-  {
-    // version, numBytes, size
-    return 1 + 1 + Ints.BYTES;
   }
 
   @Override

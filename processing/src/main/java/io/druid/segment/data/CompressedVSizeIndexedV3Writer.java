@@ -90,6 +90,9 @@ public class CompressedVSizeIndexedV3Writer extends MultiValueIndexedIntsWriter
   @Override
   protected void addValues(IntList vals) throws IOException
   {
+    if (lastOffsetWritten) {
+      throw new IllegalStateException("written out already");
+    }
     if (vals == null) {
       vals = IntLists.EMPTY_LIST;
     }

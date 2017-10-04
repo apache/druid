@@ -248,7 +248,7 @@ public enum CompressionStrategy
         out.flip();
       }
       catch (IOException e) {
-        log.error(e, "Error decompressing data");
+        throw new RuntimeException(e);
       }
     }
 

@@ -19,13 +19,11 @@
 
 package io.druid.segment.data;
 
-import com.google.common.primitives.Floats;
-import com.google.common.primitives.Ints;
-import io.druid.io.Channels;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.output.OutputMedium;
 import io.druid.segment.CompressedPools;
+import io.druid.segment.serde.MetaSerdeHelper;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -34,6 +32,12 @@ import java.nio.channels.WritableByteChannel;
 
 public class BlockLayoutFloatSupplierSerializer implements FloatSupplierSerializer
 {
+  private static final MetaSerdeHelper<BlockLayoutFloatSupplierSerializer> metaSerdeHelper = MetaSerdeHelper
+      .firstWriteByte((BlockLayoutFloatSupplierSerializer x) -> CompressedFloatsIndexedSupplier.VERSION)
+      .writeInt(x -> x.numInserted)
+      .writeInt(x -> CompressedPools.BUFFER_SIZE / Float.BYTES)
+      .writeByte(x -> x.compression.getId());
+
   private final GenericIndexedWriter<ByteBuffer> flattener;
   private final CompressionStrategy compression;
 
@@ -74,9 +78,13 @@ public class BlockLayoutFloatSupplierSerializer implements FloatSupplierSerializ
   @Override
   public void add(float value) throws IOException
   {
+    if (endBuffer == null) {
+      throw new IllegalStateException("written out already");
+    }
     if (!endBuffer.hasRemaining()) {
-      endBuffer.clear();
+      endBuffer.rewind();
       flattener.write(endBuffer);
+      endBuffer.clear();
     }
     endBuffer.putFloat(value);
     ++numInserted;
@@ -86,36 +94,25 @@ public class BlockLayoutFloatSupplierSerializer implements FloatSupplierSerializ
   public long getSerializedSize() throws IOException
   {
     writeEndBuffer();
-    return metaSize() + flattener.getSerializedSize();
+    return metaSerdeHelper.size(this) + flattener.getSerializedSize();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     writeEndBuffer();
-
-    ByteBuffer meta = ByteBuffer.allocate(metaSize());
-    meta.put(CompressedFloatsIndexedSupplier.version);
-    meta.putInt(numInserted);
-    meta.putInt(CompressedPools.BUFFER_SIZE / Floats.BYTES);
-    meta.put(compression.getId());
-    meta.flip();
-
-    Channels.writeFully(channel, meta);
+    metaSerdeHelper.writeTo(channel, this);
     flattener.writeTo(channel, smoosher);
   }
 
   private void writeEndBuffer() throws IOException
   {
-    if (endBuffer != null && numInserted > 0) {
+    if (endBuffer != null) {
       endBuffer.flip();
-      flattener.write(endBuffer);
+      if (endBuffer.remaining() > 0) {
+        flattener.write(endBuffer);
+      }
       endBuffer = null;
     }
-  }
-
-  private int metaSize()
-  {
-    return 1 + Ints.BYTES + Ints.BYTES + 1;
   }
 }

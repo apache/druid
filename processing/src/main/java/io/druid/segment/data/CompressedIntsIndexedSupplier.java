@@ -24,13 +24,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.io.Closeables;
 import com.google.common.primitives.Ints;
 import io.druid.collections.ResourceHolder;
-import io.druid.io.Channels;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.CompressedPools;
+import io.druid.segment.serde.MetaSerdeHelper;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 import java.io.IOException;
@@ -45,6 +45,11 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
   public static final byte VERSION = 0x2;
   public static final int MAX_INTS_IN_BUFFER = CompressedPools.BUFFER_SIZE / Ints.BYTES;
 
+  private static MetaSerdeHelper<CompressedIntsIndexedSupplier> metaSerdeHelper = MetaSerdeHelper
+      .firstWriteByte((CompressedIntsIndexedSupplier x) -> VERSION)
+      .writeInt(x -> x.totalSize)
+      .writeInt(x -> x.sizePer)
+      .writeByte(x -> x.compression.getId());
 
   private final int totalSize;
   private final int sizePer;
@@ -100,29 +105,14 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
   @Override
   public long getSerializedSize() throws IOException
   {
-    return metaSize() + baseIntBuffers.getSerializedSize();
+    return metaSerdeHelper.size(this) + baseIntBuffers.getSerializedSize();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    ByteBuffer meta = ByteBuffer.allocate(metaSize());
-    meta.put(VERSION);
-    meta.putInt(totalSize);
-    meta.putInt(sizePer);
-    meta.put(compression.getId());
-    meta.flip();
-
-    Channels.writeFully(channel, meta);
+    metaSerdeHelper.writeTo(channel, this);
     baseIntBuffers.writeTo(channel, smoosher);
-  }
-
-  private int metaSize()
-  {
-    return 1 + // version
-           4 + // totalSize
-           4 + // sizePer
-           1;  // compressionId
   }
 
   @VisibleForTesting

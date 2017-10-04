@@ -20,12 +20,14 @@
 package io.druid.segment.data;
 
 import com.google.common.primitives.Ints;
+import io.druid.common.utils.ByteUtils;
 import io.druid.io.Channels;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.output.HeapByteBufferOutputBytes;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.serde.MetaSerdeHelper;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -36,7 +38,13 @@ import java.util.Iterator;
  */
 public class VSizeIndexed implements IndexedMultivalue<IndexedInts>, WritableSupplier<IndexedMultivalue<IndexedInts>>
 {
-  private static final byte version = 0x1;
+  private static final byte VERSION = 0x1;
+
+  private static final MetaSerdeHelper<VSizeIndexed> metaSerdeHelper = MetaSerdeHelper
+      .firstWriteByte((VSizeIndexed x) -> VERSION)
+      .writeByte(x -> ByteUtils.checkedCast(x.numBytes))
+      .writeInt(x -> Ints.checkedCast(x.theBuffer.remaining() + (long) Integer.BYTES))
+      .writeInt(x -> x.size);
 
   public static VSizeIndexed fromIterable(Iterable<VSizeIndexedInts> objectsIterable)
   {
@@ -150,26 +158,14 @@ public class VSizeIndexed implements IndexedMultivalue<IndexedInts>, WritableSup
   @Override
   public long getSerializedSize() throws IOException
   {
-    return metaSize() + (long) theBuffer.remaining();
+    return metaSerdeHelper.size(this) + (long) theBuffer.remaining();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    ByteBuffer meta = ByteBuffer.allocate(metaSize());
-    meta.put(version);
-    meta.put((byte) numBytes);
-    meta.putInt(theBuffer.remaining() + 4);
-    meta.putInt(size);
-    meta.flip();
-
-    Channels.writeFully(channel, meta);
+    metaSerdeHelper.writeTo(channel, this);
     Channels.writeFully(channel, theBuffer.asReadOnlyBuffer());
-  }
-
-  private int metaSize()
-  {
-    return 1 + 1 + Ints.BYTES + Ints.BYTES;
   }
 
   @Override
@@ -182,7 +178,7 @@ public class VSizeIndexed implements IndexedMultivalue<IndexedInts>, WritableSup
   {
     byte versionFromBuffer = buffer.get();
 
-    if (version == versionFromBuffer) {
+    if (VERSION == versionFromBuffer) {
       int numBytes = buffer.get();
       int size = buffer.getInt();
       ByteBuffer bufferToUse = buffer.asReadOnlyBuffer();

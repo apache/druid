@@ -80,6 +80,10 @@ public class IntermediateLongSupplierSerializer implements LongSupplierSerialize
   @Override
   public void add(long value) throws IOException
   {
+    //noinspection VariableNotUsedInsideIf
+    if (delegate != null) {
+      throw new IllegalStateException("written out already");
+    }
     tempOut.add(value);
     ++numInserted;
     if (uniqueValues.size() <= CompressionFactory.MAX_TABLE_SIZE && !uniqueValues.containsKey(value)) {
@@ -96,6 +100,7 @@ public class IntermediateLongSupplierSerializer implements LongSupplierSerialize
 
   private void makeDelegate() throws IOException
   {
+    //noinspection VariableNotUsedInsideIf
     if (delegate != null) {
       return;
     }

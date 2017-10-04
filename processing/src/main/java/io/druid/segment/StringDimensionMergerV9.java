@@ -65,31 +65,32 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
 {
   private static final Logger log = new Logger(StringDimensionMergerV9.class);
 
-  protected static final Indexed<String> EMPTY_STR_DIM_VAL = new ArrayIndexed<>(new String[]{""}, String.class);
-  protected static final int[] EMPTY_STR_DIM_ARRAY = new int[]{0};
-  protected static final Splitter SPLITTER = Splitter.on(",");
+  private static final Indexed<String> EMPTY_STR_DIM_VAL = new ArrayIndexed<>(new String[]{""}, String.class);
+  private static final int[] EMPTY_STR_DIM_ARRAY = new int[]{0};
+  private static final Splitter SPLITTER = Splitter.on(",");
 
   private IndexedIntsWriter encodedValueWriter;
 
-  protected String dimensionName;
-  protected GenericIndexedWriter<String> dictionaryWriter;
-  protected List<String> dictionary;
-  protected String firstDictionaryValue;
-  protected int dictionarySize;
-  protected GenericIndexedWriter<ImmutableBitmap> bitmapWriter;
-  protected ByteBufferWriter<ImmutableRTree> spatialWriter;
-  protected ArrayList<IntBuffer> dimConversions;
-  protected int cardinality = 0;
-  protected boolean convertMissingValues = false;
-  protected boolean hasNull = false;
-  protected MutableBitmap nullRowsBitmap;
+  private String dimensionName;
+  private GenericIndexedWriter<String> dictionaryWriter;
+  /** This field is used only for spatial indexes */
+  private List<String> dictionary;
+  private String firstDictionaryValue;
+  private int dictionarySize;
+  private GenericIndexedWriter<ImmutableBitmap> bitmapWriter;
+  private ByteBufferWriter<ImmutableRTree> spatialWriter;
+  private ArrayList<IntBuffer> dimConversions;
+  private int cardinality = 0;
+  private boolean convertMissingValues = false;
+  private boolean hasNull = false;
+  private MutableBitmap nullRowsBitmap;
   private final OutputMedium outputMedium;
-  protected int rowCount = 0;
-  protected ColumnCapabilities capabilities;
-  protected List<IndexableAdapter> adapters;
-  protected ProgressIndicator progress;
-  protected final IndexSpec indexSpec;
-  protected IndexMerger.DictionaryMergeIterator dictionaryMergeIterator;
+  private int rowCount = 0;
+  private ColumnCapabilities capabilities;
+  private List<IndexableAdapter> adapters;
+  private ProgressIndicator progress;
+  private final IndexSpec indexSpec;
+  private IndexMerger.DictionaryMergeIterator dictionaryMergeIterator;
 
   public StringDimensionMergerV9(
       String dimensionName,
@@ -123,14 +124,13 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     }
 
     int numMergeIndex = 0;
-    Indexed<String> dimValueLookup = null;
     Indexed<String>[] dimValueLookups = new Indexed[adapters.size() + 1];
     for (int i = 0; i < adapters.size(); i++) {
       Indexed<String> dimValues = (Indexed) adapters.get(i).getDimValueLookup(dimensionName);
       if (!isNullColumn(dimValues)) {
         dimHasValues = true;
         hasNull |= dimValues.indexOf(null) >= 0;
-        dimValueLookups[i] = dimValueLookup = dimValues;
+        dimValueLookups[i] = dimValues;
         numMergeIndex++;
       } else {
         dimAbsentFromSomeIndex = true;
@@ -148,7 +148,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
      */
     if (convertMissingValues && !hasNull) {
       hasNull = true;
-      dimValueLookups[adapters.size()] = dimValueLookup = EMPTY_STR_DIM_VAL;
+      dimValueLookups[adapters.size()] = EMPTY_STR_DIM_VAL;
       numMergeIndex++;
     }
 
@@ -165,20 +165,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     cardinality = 0;
     if (numMergeIndex > 1) {
       dictionaryMergeIterator = new IndexMerger.DictionaryMergeIterator(dimValueLookups, true);
-
-      while (dictionaryMergeIterator.hasNext()) {
-        String value = dictionaryMergeIterator.next();
-        dictionaryWriter.write(value);
-        value = Strings.emptyToNull(value);
-        if (dictionarySize == 0) {
-          firstDictionaryValue = value;
-        }
-        if (hasSpatial) {
-          dictionary.add(value);
-        }
-        dictionarySize++;
-      }
-
+      writeDictionary(() -> dictionaryMergeIterator, hasSpatial);
       for (int i = 0; i < adapters.size(); i++) {
         if (dimValueLookups[i] != null && dictionaryMergeIterator.needConversion(i)) {
           dimConversions.set(i, dictionaryMergeIterator.conversions[i]);
@@ -186,17 +173,8 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
       }
       cardinality = dictionaryMergeIterator.counter;
     } else if (numMergeIndex == 1) {
-      for (String value : dimValueLookup) {
-        dictionaryWriter.write(value);
-        value = Strings.emptyToNull(value);
-        if (dictionarySize == 0) {
-          firstDictionaryValue = value;
-        }
-        if (hasSpatial) {
-          dictionary.add(value);
-        }
-        dictionarySize++;
-      }
+      Indexed<String> dimValueLookup = dimValueLookups[0];
+      writeDictionary(dimValueLookup, hasSpatial);
       cardinality = dimValueLookup.size();
     }
 
@@ -208,6 +186,21 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     );
 
     setupEncodedValueWriter();
+  }
+
+  private void writeDictionary(Iterable<String> dictionaryValues, boolean hasSpatial) throws IOException
+  {
+    for (String value : dictionaryValues) {
+      dictionaryWriter.write(value);
+      value = Strings.emptyToNull(value);
+      if (dictionarySize == 0) {
+        firstDictionaryValue = value;
+      }
+      if (hasSpatial) {
+        dictionary.add(value);
+      }
+      dictionarySize++;
+    }
   }
 
   protected void setupEncodedValueWriter() throws IOException

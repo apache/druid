@@ -24,6 +24,7 @@ import io.druid.io.Channels;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import io.druid.segment.serde.MetaSerdeHelper;
 import io.druid.segment.serde.Serializer;
 
 import java.io.IOException;
@@ -36,8 +37,17 @@ import java.nio.channels.WritableByteChannel;
 public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>, Serializer
 {
   public static final byte LZF_VERSION = 0x1;
-  public static final byte version = 0x2;
+  public static final byte VERSION = 0x2;
 
+  private static final MetaSerdeHelper<CompressedLongsIndexedSupplier> metaSerdeHelper = MetaSerdeHelper
+      .firstWriteByte((CompressedLongsIndexedSupplier x) -> VERSION)
+      .writeInt(x -> x.totalSize)
+      .writeInt(x -> x.sizePer)
+      .maybeWriteByte(
+          x -> x.encoding != CompressionFactory.LEGACY_LONG_ENCODING_FORMAT,
+          x -> CompressionFactory.setEncodingFlag(x.compression.getId())
+      )
+      .writeByte(x -> x.compression.getId());
 
   private final int totalSize;
   private final int sizePer;
@@ -77,31 +87,14 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>, S
   @Override
   public long getSerializedSize() throws IOException
   {
-    return metaSize() + (long) buffer.remaining();
+    return metaSerdeHelper.size(this) + (long) buffer.remaining();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    ByteBuffer meta = ByteBuffer.allocate(metaSize());
-    meta.put(version);
-    meta.putInt(totalSize);
-    meta.putInt(sizePer);
-    if (encoding == CompressionFactory.LEGACY_LONG_ENCODING_FORMAT) {
-      meta.put(compression.getId());
-    } else {
-      meta.put(CompressionFactory.setEncodingFlag(compression.getId()));
-      meta.put(encoding.getId());
-    }
-    meta.flip();
-
-    Channels.writeFully(channel, meta);
+    metaSerdeHelper.writeTo(channel, this);
     Channels.writeFully(channel, buffer.asReadOnlyBuffer());
-  }
-
-  private int metaSize()
-  {
-    return 1 + 4 + 4 + 1 + (encoding == CompressionFactory.LEGACY_LONG_ENCODING_FORMAT ? 0 : 1);
   }
 
   public static CompressedLongsIndexedSupplier fromByteBuffer(
@@ -112,12 +105,12 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>, S
   {
     byte versionFromBuffer = buffer.get();
 
-    if (versionFromBuffer == LZF_VERSION || versionFromBuffer == version) {
+    if (versionFromBuffer == LZF_VERSION || versionFromBuffer == VERSION) {
       final int totalSize = buffer.getInt();
       final int sizePer = buffer.getInt();
       CompressionStrategy compression = CompressionStrategy.LZF;
       CompressionFactory.LongEncodingFormat encoding = CompressionFactory.LEGACY_LONG_ENCODING_FORMAT;
-      if (versionFromBuffer == version) {
+      if (versionFromBuffer == VERSION) {
         byte compressionId = buffer.get();
         if (CompressionFactory.hasEncodingFlag(compressionId)) {
           encoding = CompressionFactory.LongEncodingFormat.forId(buffer.get());

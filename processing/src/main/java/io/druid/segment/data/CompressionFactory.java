@@ -27,11 +27,13 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.output.OutputBytes;
 import io.druid.output.OutputMedium;
+import io.druid.segment.serde.MetaSerdeHelper;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Map;
+import java.util.function.Function;
 
 /**
  * Compression of metrics is done by using a combination of {@link CompressionStrategy}
@@ -252,6 +254,27 @@ public class CompressionFactory
      * Get the number of bytes required to encoding the given number of values
      */
     int getNumBytes(int values);
+  }
+
+  static <T> MetaSerdeHelper.FieldWriter<T> longEncodingWriter(
+      Function<T, LongEncodingWriter> getWriter,
+      Function<T, CompressionStrategy> getCompressionStrategy
+  )
+  {
+    return new MetaSerdeHelper.FieldWriter<T>()
+    {
+      @Override
+      public void writeTo(ByteBuffer buffer, T x) throws IOException
+      {
+        getWriter.apply(x).putMeta(buffer, getCompressionStrategy.apply(x));
+      }
+
+      @Override
+      public int size(T x)
+      {
+        return getWriter.apply(x).metaSize();
+      }
+    };
   }
 
   public interface LongEncodingReader

@@ -31,7 +31,7 @@ import java.nio.channels.WritableByteChannel;
 public class CompressedDoublesIndexedSupplier implements Supplier<IndexedDoubles>
 {
   public static final byte LZF_VERSION = 0x1;
-  public static final byte version = 0x2;
+  public static final byte VERSION = 0x2;
 
   private final int totalSize;
   private final int sizePer;
@@ -64,11 +64,11 @@ public class CompressedDoublesIndexedSupplier implements Supplier<IndexedDoubles
   {
     byte versionFromBuffer = buffer.get();
 
-    if (versionFromBuffer == LZF_VERSION || versionFromBuffer == version) {
+    if (versionFromBuffer == LZF_VERSION || versionFromBuffer == VERSION) {
       final int totalSize = buffer.getInt();
       final int sizePer = buffer.getInt();
       CompressionStrategy compression = CompressionStrategy.LZF;
-      if (versionFromBuffer == version) {
+      if (versionFromBuffer == VERSION) {
         byte compressionId = buffer.get();
         compression = CompressionStrategy.forId(compressionId);
       }
@@ -102,7 +102,7 @@ public class CompressedDoublesIndexedSupplier implements Supplier<IndexedDoubles
 
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
-    channel.write(ByteBuffer.wrap(new byte[]{version}));
+    channel.write(ByteBuffer.wrap(new byte[]{VERSION}));
     channel.write(ByteBuffer.wrap(Ints.toByteArray(totalSize)));
     channel.write(ByteBuffer.wrap(Ints.toByteArray(sizePer)));
     channel.write(ByteBuffer.wrap(new byte[]{compression.getId()}));

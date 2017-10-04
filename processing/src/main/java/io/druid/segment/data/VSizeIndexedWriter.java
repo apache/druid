@@ -21,14 +21,13 @@ package io.druid.segment.data;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
-import io.druid.io.Channels;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.output.OutputBytes;
 import io.druid.output.OutputMedium;
+import io.druid.segment.serde.MetaSerdeHelper;
 import it.unimi.dsi.fastutil.ints.IntList;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 
 /**
@@ -37,6 +36,12 @@ import java.nio.channels.WritableByteChannel;
 public class VSizeIndexedWriter extends MultiValueIndexedIntsWriter
 {
   private static final byte VERSION = 0x1;
+
+  private static final MetaSerdeHelper<VSizeIndexedWriter> metaSerdeHelper = MetaSerdeHelper
+      .firstWriteByte((VSizeIndexedWriter x) -> VERSION)
+      .writeByte(x -> VSizeIndexedInts.getNumBytesForMax(x.maxId))
+      .writeInt(x -> Ints.checkedCast(x.headerOut.size() + x.valuesOut.size() + Integer.BYTES))
+      .writeInt(x -> x.numWritten);
 
   private enum WriteInt
   {
@@ -101,6 +106,9 @@ public class VSizeIndexedWriter extends MultiValueIndexedIntsWriter
   @Override
   protected void addValues(IntList ints) throws IOException
   {
+    if (numBytesForMaxWritten) {
+      throw new IllegalStateException("written out already");
+    }
     if (ints != null) {
       for (int i = 0; i < ints.size(); i++) {
         int value = ints.getInt(i);
@@ -116,7 +124,7 @@ public class VSizeIndexedWriter extends MultiValueIndexedIntsWriter
   public long getSerializedSize() throws IOException
   {
     writeNumBytesForMax();
-    return metaSize() + headerOut.size() + valuesOut.size();
+    return metaSerdeHelper.size(this) + headerOut.size() + valuesOut.size();
   }
 
   @Override
@@ -134,17 +142,12 @@ public class VSizeIndexedWriter extends MultiValueIndexedIntsWriter
         headerOut.size()
     );
     Preconditions.checkState(
-        numBytesWritten < Integer.MAX_VALUE, "Wrote[%s] bytes, which is too many.", numBytesWritten
+        numBytesWritten < Integer.MAX_VALUE - Integer.BYTES,
+        "Wrote[%s] bytes, which is too many.",
+        numBytesWritten
     );
 
-    ByteBuffer meta = ByteBuffer.allocate(metaSize());
-    meta.put(VERSION);
-    meta.put(VSizeIndexedInts.getNumBytesForMax(maxId));
-    meta.putInt((int) numBytesWritten + 4);
-    meta.putInt(numWritten);
-    meta.flip();
-
-    Channels.writeFully(channel, meta);
+    metaSerdeHelper.writeTo(channel, this);
     headerOut.writeTo(channel);
     valuesOut.writeTo(channel);
   }
@@ -156,13 +159,5 @@ public class VSizeIndexedWriter extends MultiValueIndexedIntsWriter
       valuesOut.write(new byte[4 - numBytesForMax]);
       numBytesForMaxWritten = true;
     }
-  }
-
-  private int metaSize()
-  {
-    return 1 +    // version
-           1 +    // numBytes
-           4 +    // numBytesWritten
-           4;     // numElements
   }
 }

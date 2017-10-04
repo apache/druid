@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import io.druid.io.Channels;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
+import io.druid.segment.serde.MetaSerdeHelper;
 import io.druid.segment.serde.Serializer;
 
 import java.io.IOException;
@@ -33,7 +34,13 @@ import java.nio.channels.WritableByteChannel;
 public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>, Serializer
 {
   public static final byte LZF_VERSION = 0x1;
-  public static final byte version = 0x2;
+  public static final byte VERSION = 0x2;
+
+  private static final MetaSerdeHelper<CompressedFloatsIndexedSupplier> metaSerdeHelper = MetaSerdeHelper
+      .firstWriteByte((CompressedFloatsIndexedSupplier x) -> VERSION)
+      .writeInt(x -> x.totalSize)
+      .writeInt(x -> x.sizePer)
+      .writeByte(x -> x.compression.getId());
 
   private final int totalSize;
   private final int sizePer;
@@ -70,37 +77,25 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>,
   @Override
   public long getSerializedSize() throws IOException
   {
-    return metaSize() + (long) buffer.remaining();
+    return metaSerdeHelper.size(this) + (long) buffer.remaining();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    ByteBuffer meta = ByteBuffer.allocate(metaSize());
-    meta.put(version);
-    meta.putInt(totalSize);
-    meta.putInt(sizePer);
-    meta.put(compression.getId());
-    meta.flip();
-
-    Channels.writeFully(channel, meta);
+    metaSerdeHelper.writeTo(channel, this);
     Channels.writeFully(channel, buffer.asReadOnlyBuffer());
-  }
-
-  private int metaSize()
-  {
-    return 1 + 4 + 4 + 1;
   }
 
   public static CompressedFloatsIndexedSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
   {
     byte versionFromBuffer = buffer.get();
 
-    if (versionFromBuffer == LZF_VERSION || versionFromBuffer == version) {
+    if (versionFromBuffer == LZF_VERSION || versionFromBuffer == VERSION) {
       final int totalSize = buffer.getInt();
       final int sizePer = buffer.getInt();
       CompressionStrategy compression = CompressionStrategy.LZF;
-      if (versionFromBuffer == version) {
+      if (versionFromBuffer == VERSION) {
         byte compressionId = buffer.get();
         compression = CompressionStrategy.forId(compressionId);
       }

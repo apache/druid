@@ -19,11 +19,10 @@
 
 package io.druid.segment.data;
 
-import com.google.common.primitives.Ints;
-import io.druid.io.Channels;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.output.OutputMedium;
 import io.druid.segment.CompressedPools;
+import io.druid.segment.serde.MetaSerdeHelper;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -32,14 +31,18 @@ import java.nio.channels.WritableByteChannel;
 
 public class BlockLayoutLongSupplierSerializer implements LongSupplierSerializer
 {
-  private final OutputMedium outputMedium;
+  private static final MetaSerdeHelper<BlockLayoutLongSupplierSerializer> metaSerdeHelper = MetaSerdeHelper
+      .firstWriteByte((BlockLayoutLongSupplierSerializer x) -> CompressedLongsIndexedSupplier.VERSION)
+      .writeInt(x -> x.numInserted)
+      .writeInt(x -> x.sizePer)
+      .writeSomething(CompressionFactory.longEncodingWriter(x -> x.writer, x -> x.compression));
+
   private final int sizePer;
   private final CompressionFactory.LongEncodingWriter writer;
   private final GenericIndexedWriter<ByteBuffer> flattener;
-  private final ByteOrder byteOrder;
   private final CompressionStrategy compression;
   private int numInserted = 0;
-  private int numInsertedForNextFlush = 0;
+  private int numInsertedForNextFlush;
 
   private ByteBuffer endBuffer = null;
 
@@ -51,13 +54,15 @@ public class BlockLayoutLongSupplierSerializer implements LongSupplierSerializer
       CompressionStrategy compression
   )
   {
-    this.outputMedium = outputMedium;
     this.sizePer = writer.getBlockSize(CompressedPools.BUFFER_SIZE);
     int bufferSize = writer.getNumBytes(sizePer);
     this.flattener = GenericIndexedWriter.ofCompressedByteBuffers(outputMedium, filenameBase, compression, bufferSize);
-    this.byteOrder = byteOrder;
     this.writer = writer;
     this.compression = compression;
+    CompressionStrategy.Compressor compressor = compression.getCompressor();
+    endBuffer = compressor.allocateInBuffer(writer.getNumBytes(sizePer), outputMedium.getCloser()).order(byteOrder);
+    writer.setBuffer(endBuffer);
+    numInsertedForNextFlush = sizePer;
   }
 
   @Override
@@ -75,18 +80,15 @@ public class BlockLayoutLongSupplierSerializer implements LongSupplierSerializer
   @Override
   public void add(long value) throws IOException
   {
+    if (endBuffer == null) {
+      throw new IllegalStateException("written out already");
+    }
     if (numInserted == numInsertedForNextFlush) {
       numInsertedForNextFlush += sizePer;
-      if (endBuffer != null) {
-        writer.flush();
-        endBuffer.flip();
-        flattener.write(endBuffer);
-        endBuffer.clear();
-      } else {
-        CompressionStrategy.Compressor compressor = compression.getCompressor();
-        endBuffer = compressor.allocateInBuffer(writer.getNumBytes(sizePer), outputMedium.getCloser()).order(byteOrder);
-        writer.setBuffer(endBuffer);
-      }
+      writer.flush();
+      endBuffer.flip();
+      flattener.write(endBuffer);
+      endBuffer.clear();
     }
 
     writer.write(value);
@@ -97,37 +99,26 @@ public class BlockLayoutLongSupplierSerializer implements LongSupplierSerializer
   public long getSerializedSize() throws IOException
   {
     writeEndBuffer();
-    return metaSize() + flattener.getSerializedSize();
+    return metaSerdeHelper.size(this) + flattener.getSerializedSize();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     writeEndBuffer();
-
-    ByteBuffer meta = ByteBuffer.allocate(metaSize());
-    meta.put(CompressedLongsIndexedSupplier.version);
-    meta.putInt(numInserted);
-    meta.putInt(sizePer);
-    writer.putMeta(meta, compression);
-    meta.flip();
-
-    Channels.writeFully(channel, meta);
+    metaSerdeHelper.writeTo(channel, this);
     flattener.writeTo(channel, smoosher);
   }
 
   private void writeEndBuffer() throws IOException
   {
-    if (endBuffer != null && numInserted > 0) {
+    if (endBuffer != null) {
       writer.flush();
       endBuffer.flip();
-      flattener.write(endBuffer);
+      if (endBuffer.remaining() > 0) {
+        flattener.write(endBuffer);
+      }
       endBuffer = null;
     }
-  }
-
-  private int metaSize()
-  {
-    return 1 + Ints.BYTES + Ints.BYTES + writer.metaSize();
   }
 }

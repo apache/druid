@@ -20,10 +20,11 @@
 package io.druid.segment.data;
 
 import com.google.common.primitives.Ints;
-import io.druid.io.Channels;
+import io.druid.common.utils.ByteUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.output.OutputBytes;
 import io.druid.output.OutputMedium;
+import io.druid.segment.serde.MetaSerdeHelper;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -35,6 +36,11 @@ import java.nio.channels.WritableByteChannel;
 public class VSizeIndexedIntsWriter extends SingleValueIndexedIntsWriter
 {
   private static final byte VERSION = VSizeIndexedInts.VERSION;
+
+  private static final MetaSerdeHelper<VSizeIndexedIntsWriter> metaSerdeHelper = MetaSerdeHelper
+      .firstWriteByte((VSizeIndexedIntsWriter x) -> VERSION)
+      .writeByte(x -> ByteUtils.checkedCast(x.numBytes))
+      .writeInt(x -> Ints.checkedCast(x.valuesOut.size()));
 
   private final OutputMedium outputMedium;
   private final int numBytes;
@@ -58,6 +64,9 @@ public class VSizeIndexedIntsWriter extends SingleValueIndexedIntsWriter
   @Override
   protected void addValue(int val) throws IOException
   {
+    if (bufPaddingWritten) {
+      throw new IllegalStateException("written out already");
+    }
     helperBuffer.putInt(0, val);
     valuesOut.write(helperBuffer.array(), Ints.BYTES - numBytes, numBytes);
   }
@@ -66,21 +75,14 @@ public class VSizeIndexedIntsWriter extends SingleValueIndexedIntsWriter
   public long getSerializedSize() throws IOException
   {
     writeBufPadding();
-    return metaSize() + valuesOut.size();
+    return metaSerdeHelper.size(this) + valuesOut.size();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     writeBufPadding();
-
-    ByteBuffer meta = ByteBuffer.allocate(metaSize());
-    meta.put(VERSION);
-    meta.put((byte) numBytes);
-    meta.putInt(Ints.checkedCast(valuesOut.size()));
-    meta.flip();
-
-    Channels.writeFully(channel, meta);
+    metaSerdeHelper.writeTo(channel, this);
     valuesOut.writeTo(channel);
   }
 
@@ -91,12 +93,5 @@ public class VSizeIndexedIntsWriter extends SingleValueIndexedIntsWriter
       valuesOut.write(bufPadding);
       bufPaddingWritten = true;
     }
-  }
-
-  private int metaSize()
-  {
-    return 1 +         // version
-           1 +         // numBytes
-           Ints.BYTES; // dataLen
   }
 }

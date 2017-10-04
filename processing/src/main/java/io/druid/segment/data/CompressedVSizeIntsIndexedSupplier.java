@@ -25,13 +25,14 @@ import com.google.common.io.Closeables;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Shorts;
 import io.druid.collections.ResourceHolder;
-import io.druid.io.Channels;
+import io.druid.common.utils.ByteUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.CompressedPools;
+import io.druid.segment.serde.MetaSerdeHelper;
 import it.unimi.dsi.fastutil.ints.IntList;
 
 import java.io.IOException;
@@ -45,6 +46,13 @@ import java.util.Iterator;
 public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<IndexedInts>
 {
   public static final byte VERSION = 0x2;
+
+  private static final MetaSerdeHelper<CompressedVSizeIntsIndexedSupplier> metaSerdeHelper = MetaSerdeHelper
+      .firstWriteByte((CompressedVSizeIntsIndexedSupplier x) -> VERSION)
+      .writeByte(x -> ByteUtils.checkedCast(x.numBytes))
+      .writeInt(x -> x.totalSize)
+      .writeInt(x -> x.sizePer)
+      .writeByte(x -> x.compression.getId());
 
   private final int totalSize;
   private final int sizePer;
@@ -126,31 +134,14 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
   @Override
   public long getSerializedSize() throws IOException
   {
-    return metaSize() + baseBuffers.getSerializedSize();
+    return metaSerdeHelper.size(this) + baseBuffers.getSerializedSize();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    ByteBuffer meta = ByteBuffer.allocate(metaSize());
-    meta.put(VERSION);
-    meta.put((byte) numBytes);
-    meta.putInt(totalSize);
-    meta.putInt(sizePer);
-    meta.put(compression.getId());
-    meta.flip();
-
-    Channels.writeFully(channel, meta);
+    metaSerdeHelper.writeTo(channel, this);
     baseBuffers.writeTo(channel, smoosher);
-  }
-
-  private int metaSize()
-  {
-    return 1 +             // version
-           1 +             // numBytes
-           Ints.BYTES + // totalSize
-           Ints.BYTES + // sizePer
-           1;              // compression id
   }
 
   @VisibleForTesting

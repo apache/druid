@@ -32,6 +32,7 @@ import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.output.HeapByteBufferOutputBytes;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.serde.MetaSerdeHelper;
 import io.druid.segment.serde.Serializer;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 
@@ -78,6 +79,13 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
   static final byte VERSION_TWO = 0x2;
   static final byte REVERSE_LOOKUP_ALLOWED = 0x1;
   static final byte REVERSE_LOOKUP_DISALLOWED = 0x0;
+
+  private static final MetaSerdeHelper<GenericIndexed> metaSerdeHelper = MetaSerdeHelper
+      .firstWriteByte((GenericIndexed x) -> VERSION_ONE)
+      .writeByte(x -> x.allowReverseLookup ? REVERSE_LOOKUP_ALLOWED : REVERSE_LOOKUP_DISALLOWED)
+      .writeInt(x -> Ints.checkedCast(x.theBuffer.remaining() + (long) Integer.BYTES))
+      .writeInt(x -> x.size);
+
   private static final SerializerUtils SERIALIZER_UTILS = new SerializerUtils();
 
   public static final ObjectStrategy<String> STRING_STRATEGY = new CacheableObjectStrategy<String>()
@@ -517,7 +525,7 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
 
   private long getSerializedSizeVersionOne()
   {
-    return metaSize() + theBuffer.remaining();
+    return metaSerdeHelper.size(this) + (long) theBuffer.remaining();
   }
 
   private T getVersionOne(int index)
@@ -536,14 +544,6 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
       endOffset = headerBuffer.getInt(headerPosition + Ints.BYTES);
     }
     return copyBufferAndGet(firstValueBuffer, startOffset, endOffset);
-  }
-
-  private int metaSize()
-  {
-    return 1 // version byte
-           + 1 // allowReverseLookup flag
-           + Ints.BYTES // numBytesUsed
-           + Ints.BYTES; // numElements
   }
 
   private BufferIndexed singleThreadedVersionOne()
@@ -582,14 +582,7 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
 
   private void writeToVersionOne(WritableByteChannel channel) throws IOException
   {
-    ByteBuffer meta = ByteBuffer.allocate(metaSize());
-    meta.put(VERSION_ONE);
-    meta.put(allowReverseLookup ? REVERSE_LOOKUP_ALLOWED : REVERSE_LOOKUP_DISALLOWED);
-    meta.putInt(theBuffer.remaining() + 4);
-    meta.putInt(size);
-    meta.flip();
-
-    Channels.writeFully(channel, meta);
+    metaSerdeHelper.writeTo(channel, this);
     Channels.writeFully(channel, theBuffer.asReadOnlyBuffer());
   }
 
