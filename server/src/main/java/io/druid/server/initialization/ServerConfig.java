@@ -39,8 +39,7 @@ public class ServerConfig
   private int queueSize = Integer.MAX_VALUE;
 
   @JsonProperty
-  @Min(1)
-  private int maxActiveRequests = Integer.MAX_VALUE;
+  private boolean enableRequestLimit = false;
 
   @JsonProperty
   @NotNull
@@ -64,9 +63,9 @@ public class ServerConfig
     return queueSize;
   }
 
-  public int getMaxActiveRequests()
+  public boolean isEnableRequestLimit()
   {
-    return maxActiveRequests;
+    return enableRequestLimit;
   }
 
   public Period getMaxIdleTime()
@@ -95,6 +94,8 @@ public class ServerConfig
     }
     ServerConfig that = (ServerConfig) o;
     return numThreads == that.numThreads &&
+           queueSize == that.queueSize &&
+           enableRequestLimit == that.enableRequestLimit &&
            defaultQueryTimeout == that.defaultQueryTimeout &&
            maxScatterGatherBytes == that.maxScatterGatherBytes &&
            Objects.equals(maxIdleTime, that.maxIdleTime);
@@ -103,17 +104,13 @@ public class ServerConfig
   @Override
   public int hashCode()
   {
-    return Objects.hash(numThreads, maxIdleTime, defaultQueryTimeout, maxScatterGatherBytes);
-  }
-
-  @Override
-  public String toString()
-  {
-    return "ServerConfig{" +
-           "numThreads=" + numThreads +
-           ", maxIdleTime=" + maxIdleTime +
-           ", defaultQueryTimeout=" + defaultQueryTimeout +
-           ", maxScatterGatherBytes=" + maxScatterGatherBytes +
-           '}';
+    return Objects.hash(
+        numThreads,
+        queueSize,
+        enableRequestLimit,
+        maxIdleTime,
+        defaultQueryTimeout,
+        maxScatterGatherBytes
+    );
   }
 }

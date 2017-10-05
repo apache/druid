@@ -20,6 +20,7 @@
 package io.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
@@ -68,9 +69,14 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
     final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
 
-    if (serverConfig.getMaxActiveRequests() < Integer.MAX_VALUE) {
-      log.info("Adding LimitRequestsFilter with maxActiveRequests [%d].", serverConfig.getMaxActiveRequests());
-      root.addFilter(new FilterHolder(new LimitRequestsFilter(serverConfig.getMaxActiveRequests())),
+    // Add LimitRequestsFilter as first in the chain if enabled.
+    if (serverConfig.isEnableRequestLimit()) {
+      Preconditions.checkArgument(
+          serverConfig.getNumThreads() > 1,
+          "numThreads must be > 1 to enable Request Limit Filter."
+      );
+      log.info("Enabling Request Limit Filter with limit [%d].", serverConfig.getNumThreads()-1);
+      root.addFilter(new FilterHolder(new LimitRequestsFilter(serverConfig.getNumThreads()-1)),
                      "/*", null
       );
     }

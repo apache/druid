@@ -22,11 +22,9 @@ package io.druid.server.initialization.jetty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.fasterxml.jackson.jaxrs.smile.JacksonSmileProvider;
-import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
 import com.google.inject.Binder;
 import com.google.inject.Binding;
-import com.google.inject.ConfigurationException;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -86,6 +84,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class JettyServerModule extends JerseyServletModule
 {
+  // This is the maximum number of threads used by jetty acceptors and selectors
+  public static final int MAX_ACCEPTOR_SELECTOR_THREADS = 16;
+
   private static final Logger log = new Logger(JettyServerModule.class);
 
   private static final AtomicInteger activeConnections = new AtomicInteger();
@@ -184,16 +185,20 @@ public class JettyServerModule extends JerseyServletModule
       Binding<SslContextFactory> sslContextFactoryBinding
   )
   {
+    // MAX_ACCEPTOR_SELECTOR_THREADS is added so that config.getNumThreads() has meaning, "number of threads
+    // that concurrently handle the requests".
+    int numServerThreads = config.getNumThreads() + MAX_ACCEPTOR_SELECTOR_THREADS;
+
     final QueuedThreadPool threadPool;
     if (config.getQueueSize() == Integer.MAX_VALUE) {
       threadPool = new QueuedThreadPool();
-      threadPool.setMinThreads(config.getNumThreads());
-      threadPool.setMaxThreads(config.getNumThreads());
+      threadPool.setMinThreads(numServerThreads);
+      threadPool.setMaxThreads(numServerThreads);
     } else {
       threadPool = new QueuedThreadPool(
-          config.getNumThreads(),
-          config.getNumThreads(),
-          60000,
+          numServerThreads,
+          numServerThreads,
+          60000, // same default is used in other case when threadPool = new QueuedThreadPool()
           new LinkedBlockingQueue<>(config.getQueueSize())
       );
     }
@@ -273,8 +278,8 @@ public class JettyServerModule extends JerseyServletModule
     try {
       initializer.initialize(server, injector);
     }
-    catch (ConfigurationException e) {
-      throw new ProvisionException(Iterables.getFirst(e.getErrorMessages(), null).getMessage());
+    catch (Exception e) {
+      throw new ProvisionException(e.getMessage());
     }
 
     lifecycle.addHandler(
