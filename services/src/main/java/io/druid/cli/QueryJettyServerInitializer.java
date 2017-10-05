@@ -77,8 +77,8 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
           serverConfig.getNumThreads() > 1,
           "numThreads must be > 1 to enable Request Limit Filter."
       );
-      log.info("Enabling Request Limit Filter with limit [%d].", serverConfig.getNumThreads()-1);
-      root.addFilter(new FilterHolder(new LimitRequestsFilter(serverConfig.getNumThreads()-1)),
+      log.info("Enabling Request Limit Filter with limit [%d].", serverConfig.getNumThreads() - 1);
+      root.addFilter(new FilterHolder(new LimitRequestsFilter(serverConfig.getNumThreads() - 1)),
                      "/*", null
       );
     }
