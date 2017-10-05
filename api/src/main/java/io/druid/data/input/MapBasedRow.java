@@ -112,7 +112,9 @@ public class MapBasedRow implements Row
       return null;
     }
 
-    if (metricValue instanceof Number) {
+    if (metricValue instanceof Float) {
+      return (Float) metricValue;
+    } else if (metricValue instanceof Number) {
       return ((Number) metricValue).floatValue();
     } else if (metricValue instanceof String) {
       try {
@@ -136,7 +138,9 @@ public class MapBasedRow implements Row
       return null;
     }
 
-    if (metricValue instanceof Number) {
+    if (metricValue instanceof Long) {
+      return (Long) metricValue;
+    } else if (metricValue instanceof Number) {
       return ((Number) metricValue).longValue();
     } else if (metricValue instanceof String) {
       try {
@@ -161,7 +165,9 @@ public class MapBasedRow implements Row
       return null;
     }
 
-    if (metricValue instanceof Number) {
+    if (metricValue instanceof Double) {
+      return (Double) metricValue;
+    } else if (metricValue instanceof Number) {
       return ((Number) metricValue).doubleValue();
     } else if (metricValue instanceof String) {
       try {

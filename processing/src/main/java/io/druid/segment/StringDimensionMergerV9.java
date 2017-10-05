@@ -20,6 +20,7 @@
 package io.druid.segment;
 
 import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.io.ByteStreams;
@@ -57,7 +58,6 @@ import io.druid.segment.serde.DictionaryEncodedColumnPartSerde;
 import it.unimi.dsi.fastutil.ints.AbstractIntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterable;
 import it.unimi.dsi.fastutil.ints.IntIterator;
-import org.apache.logging.log4j.util.Strings;
 
 import javax.annotation.Nonnull;
 import java.io.Closeable;
@@ -409,7 +409,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
 
     if (hasSpatial) {
       String dimVal = dimVals.get(dictId);
-      if (Strings.isNotEmpty(dimVal)) {
+      if (!Strings.isNullOrEmpty(dimVal)) {
         List<String> stringCoords = Lists.newArrayList(SPLITTER.split(dimVal));
         float[] coords = new float[stringCoords.size()];
         for (int j = 0; j < coords.length; j++) {

@@ -101,6 +101,6 @@ public class NullableBufferAggregator implements BufferAggregator
   @Override
   public void close()
   {
-    // Nothing to close.
+    delegate.close();
   }
 }
