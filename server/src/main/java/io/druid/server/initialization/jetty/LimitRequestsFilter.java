@@ -75,6 +75,6 @@ public class LimitRequestsFilter implements Filter
   @Override
   public void destroy()
   {
-    
+
   }
 }
