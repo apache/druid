@@ -101,20 +101,9 @@ public class EventReceiverFirehoseTest
   @Test
   public void testSingleThread() throws IOException
   {
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
-            .andReturn(null)
-            .anyTimes();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
-            .anyTimes();
-    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
-    EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(req.getContentType()).andReturn("application/json").times(NUM_EVENTS);
-    EasyMock.expect(req.getHeader("X-Firehose-Producer-Id")).andReturn(null).times(NUM_EVENTS);
-    EasyMock.replay(req);
-
     for (int i = 0; i < NUM_EVENTS; ++i) {
-      final InputStream inputStream = IOUtils.toInputStream(inputRow);
+      setUpRequestExpectations(null, null);
+      final InputStream inputStream = IOUtils.toInputStream(inputRow, StandardCharsets.UTF_8);
       firehose.addAll(inputStream, req);
       Assert.assertEquals(i + 1, firehose.getCurrentBufferSize());
       inputStream.close();
@@ -173,7 +162,7 @@ public class EventReceiverFirehoseTest
           public Boolean call() throws Exception
           {
             for (int i = 0; i < NUM_EVENTS; ++i) {
-              final InputStream inputStream = IOUtils.toInputStream(inputRow);
+              final InputStream inputStream = IOUtils.toInputStream(inputRow, StandardCharsets.UTF_8);
               firehose.addAll(inputStream, req);
               inputStream.close();
             }
@@ -183,7 +172,7 @@ public class EventReceiverFirehoseTest
     );
 
     for (int i = 0; i < NUM_EVENTS; ++i) {
-      final InputStream inputStream = IOUtils.toInputStream(inputRow);
+      final InputStream inputStream = IOUtils.toInputStream(inputRow, StandardCharsets.UTF_8);
       firehose.addAll(inputStream, req);
       inputStream.close();
     }
@@ -292,28 +281,10 @@ public class EventReceiverFirehoseTest
   @Test
   public void testProducerSequence() throws IOException
   {
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
-            .andReturn(null)
-            .anyTimes();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
-            .anyTimes();
-    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
-    EasyMock.expectLastCall().anyTimes();
-
-    String producerId = "producer";
-
-    EasyMock.expect(req.getContentType()).andReturn("application/json").times(NUM_EVENTS);
-    EasyMock.expect(req.getHeader("X-Firehose-Producer-Id")).andReturn(producerId).times(NUM_EVENTS);
-
     for (int i = 0; i < NUM_EVENTS; ++i) {
-      EasyMock.expect(req.getHeader("X-Firehose-Producer-Seq")).andReturn(String.valueOf(i));
-    }
+      setUpRequestExpectations("producer", String.valueOf(i));
 
-    EasyMock.replay(req);
-
-    for (int i = 0; i < NUM_EVENTS; ++i) {
-      final InputStream inputStream = IOUtils.toInputStream(inputRow);
+      final InputStream inputStream = IOUtils.toInputStream(inputRow, StandardCharsets.UTF_8);
       firehose.addAll(inputStream, req);
       Assert.assertEquals(i + 1, firehose.getCurrentBufferSize());
       inputStream.close();
@@ -351,23 +322,9 @@ public class EventReceiverFirehoseTest
   @Test
   public void testLowProducerSequence() throws IOException
   {
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
-            .andReturn(null)
-            .anyTimes();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
-            .anyTimes();
-    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
-    EasyMock.expectLastCall().anyTimes();
-
-    String producerId = "producer";
-
-    EasyMock.expect(req.getContentType()).andReturn("application/json").times(NUM_EVENTS);
-    EasyMock.expect(req.getHeader("X-Firehose-Producer-Id")).andReturn(producerId).times(NUM_EVENTS);
-    EasyMock.expect(req.getHeader("X-Firehose-Producer-Seq")).andReturn("1").times(NUM_EVENTS);
-    EasyMock.replay(req);
-
     for (int i = 0; i < NUM_EVENTS; ++i) {
+      setUpRequestExpectations("producer", "1");
+
       final InputStream inputStream = IOUtils.toInputStream(inputRow, StandardCharsets.UTF_8);
       final Response response = firehose.addAll(inputStream, req);
       Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
@@ -383,21 +340,7 @@ public class EventReceiverFirehoseTest
   @Test
   public void testMissingProducerSequence() throws IOException
   {
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
-            .andReturn(null)
-            .anyTimes();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
-            .anyTimes();
-    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
-    EasyMock.expectLastCall().anyTimes();
-
-    String producerId = "producer";
-
-    EasyMock.expect(req.getContentType()).andReturn("application/json");
-    EasyMock.expect(req.getHeader("X-Firehose-Producer-Id")).andReturn(producerId);
-    EasyMock.expect(req.getHeader("X-Firehose-Producer-Seq")).andReturn(null);
-    EasyMock.replay(req);
+    setUpRequestExpectations("producer", null);
 
     final InputStream inputStream = IOUtils.toInputStream(inputRow, StandardCharsets.UTF_8);
     final Response response = firehose.addAll(inputStream, req);
@@ -412,23 +355,35 @@ public class EventReceiverFirehoseTest
   }
 
   @Test
+  public void testTooManyProducerIds() throws IOException
+  {
+    for (int i = 0; i < EventReceiverFirehoseFactory.MAX_FIREHOSE_PRODUCERS - 1; i++) {
+      setUpRequestExpectations("producer-" + i, "0");
+
+      final InputStream inputStream = IOUtils.toInputStream(inputRow, StandardCharsets.UTF_8);
+      final Response response = firehose.addAll(inputStream, req);
+      Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+      inputStream.close();
+      Assert.assertTrue(firehose.hasMore());
+      Assert.assertNotNull(firehose.nextRow());
+    }
+
+    setUpRequestExpectations("toomany", "0");
+
+    final InputStream inputStream = IOUtils.toInputStream(inputRow, StandardCharsets.UTF_8);
+    final Response response = firehose.addAll(inputStream, req);
+    Assert.assertEquals(Response.Status.FORBIDDEN.getStatusCode(), response.getStatus());
+    inputStream.close();
+
+    EasyMock.verify(req);
+
+    firehose.close();
+  }
+
+  @Test
   public void testNaNProducerSequence() throws IOException
   {
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
-            .andReturn(null)
-            .anyTimes();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
-            .anyTimes();
-    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
-    EasyMock.expectLastCall().anyTimes();
-
-    String producerId = "producer";
-
-    EasyMock.expect(req.getContentType()).andReturn("application/json");
-    EasyMock.expect(req.getHeader("X-Firehose-Producer-Id")).andReturn(producerId);
-    EasyMock.expect(req.getHeader("X-Firehose-Producer-Seq")).andReturn("foo");
-    EasyMock.replay(req);
+    setUpRequestExpectations("producer", "foo");
 
     final InputStream inputStream = IOUtils.toInputStream(inputRow, StandardCharsets.UTF_8);
     final Response response = firehose.addAll(inputStream, req);
@@ -440,5 +395,27 @@ public class EventReceiverFirehoseTest
     EasyMock.verify(req);
 
     firehose.close();
+  }
+
+  private void setUpRequestExpectations(String producerId, String producerSequenceValue)
+  {
+    EasyMock.reset(req);
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
+            .andReturn(null)
+            .anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
+            .anyTimes();
+    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    EasyMock.expectLastCall().anyTimes();
+
+    EasyMock.expect(req.getContentType()).andReturn("application/json");
+    EasyMock.expect(req.getHeader("X-Firehose-Producer-Id")).andReturn(producerId);
+
+    if (producerId != null) {
+      EasyMock.expect(req.getHeader("X-Firehose-Producer-Seq")).andReturn(producerSequenceValue);
+    }
+
+    EasyMock.replay(req);
   }
 }

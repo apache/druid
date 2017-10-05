@@ -83,8 +83,10 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRowParser>
 {
+  public static final int MAX_FIREHOSE_PRODUCERS = 10_000;
+
   private static final EmittingLogger log = new EmittingLogger(EventReceiverFirehoseFactory.class);
-  private static final int DEFAULT_BUFFER_SIZE = 100000;
+  private static final int DEFAULT_BUFFER_SIZE = 100_000;
 
   private final String serviceName;
   private final int bufferSize;
@@ -436,6 +438,19 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
       }
 
       Long producerSequence = producerSequences.computeIfAbsent(producerId, key -> Long.MIN_VALUE);
+
+      if (producerSequences.size() >= MAX_FIREHOSE_PRODUCERS) {
+        return Optional.of(
+            Response.status(Response.Status.FORBIDDEN)
+                    .entity(
+                        ImmutableMap.<String, Object>of(
+                            "error",
+                            "Too many individual producer IDs for this firehose.  Max is " + MAX_FIREHOSE_PRODUCERS
+                        )
+                    )
+                    .build()
+        );
+      }
 
       try {
         Long newSequence = Long.parseLong(sequenceValue);
