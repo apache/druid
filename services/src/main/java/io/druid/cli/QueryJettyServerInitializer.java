@@ -71,6 +71,8 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
 
     // Add LimitRequestsFilter as first in the chain if enabled.
     if (serverConfig.isEnableRequestLimit()) {
+      //To reject xth request, limit should be set to x-1 because (x+1)st request wouldn't reach filter
+      // but rather wait on jetty queue.
       Preconditions.checkArgument(
           serverConfig.getNumThreads() > 1,
           "numThreads must be > 1 to enable Request Limit Filter."
