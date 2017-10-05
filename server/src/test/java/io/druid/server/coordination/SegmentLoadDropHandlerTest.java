@@ -28,7 +28,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Intervals;
-import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.IndexIO;
@@ -221,7 +220,7 @@ public class SegmentLoadDropHandlerTest
 
     final DataSegment segment = makeSegment("test", "1", Intervals.of("P1d/2011-04-01"));
 
-    segmentLoadDropHandler.removeSegment(segment, DataSegmentChangeCallback.NOOP, true);
+    segmentLoadDropHandler.removeSegment(segment, DataSegmentChangeCallback.NOOP);
 
     Assert.assertFalse(segmentsAnnouncedByMe.contains(segment));
 
@@ -260,7 +259,7 @@ public class SegmentLoadDropHandlerTest
 
     Assert.assertTrue(segmentsAnnouncedByMe.contains(segment));
 
-    segmentLoadDropHandler.removeSegment(segment, DataSegmentChangeCallback.NOOP, true);
+    segmentLoadDropHandler.removeSegment(segment, DataSegmentChangeCallback.NOOP);
 
     Assert.assertFalse(segmentsAnnouncedByMe.contains(segment));
 
@@ -463,19 +462,24 @@ public class SegmentLoadDropHandlerTest
         new SegmentChangeRequestDrop(segment2)
     );
 
-    ListenableFuture<List<Pair<DataSegmentChangeRequest, SegmentLoadDropHandler.Status>>> future = segmentLoadDropHandler
+    ListenableFuture<List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus>> future = segmentLoadDropHandler
         .processBatch(batch);
+
+    List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus> result = future.get();
+    Assert.assertEquals(SegmentLoadDropHandler.Status.PENDING, result.get(0).getStatus());
+    Assert.assertEquals(SegmentLoadDropHandler.Status.SUCCESS, result.get(1).getStatus());
 
     for (Runnable runnable : scheduledRunnable) {
       runnable.run();
     }
 
-    List<Pair<DataSegmentChangeRequest, SegmentLoadDropHandler.Status>> result = future.get();
-    Assert.assertEquals(SegmentLoadDropHandler.Status.SUCCESS, result.get(0).rhs);
-    Assert.assertEquals(SegmentLoadDropHandler.Status.PENDING, result.get(1).rhs);
+    result = segmentLoadDropHandler.processBatch(batch).get();
+    Assert.assertEquals(SegmentLoadDropHandler.Status.SUCCESS, result.get(0).getStatus());
+    Assert.assertEquals(SegmentLoadDropHandler.Status.SUCCESS, result.get(1).getStatus());
 
-    for (Pair<DataSegmentChangeRequest, SegmentLoadDropHandler.Status> p : segmentLoadDropHandler.processBatch(batch).get()) {
-      Assert.assertEquals(SegmentLoadDropHandler.Status.SUCCESS, p.rhs);
+
+    for (SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus e : segmentLoadDropHandler.processBatch(batch).get()) {
+      Assert.assertEquals(SegmentLoadDropHandler.Status.SUCCESS, e.getStatus());
     }
 
     segmentLoadDropHandler.stop();

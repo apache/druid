@@ -29,7 +29,6 @@ import com.metamx.emitter.EmittingLogger;
 import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
-import io.druid.java.util.common.Pair;
 import io.druid.server.coordination.BatchDataSegmentAnnouncer;
 import io.druid.server.coordination.DataSegmentChangeRequest;
 import io.druid.server.coordination.SegmentChangeRequestHistory;
@@ -245,7 +244,7 @@ public class SegmentListerResource
     }
 
     final ResponseContext context = createContext(req.getHeader("Accept"));
-    final ListenableFuture<List<Pair<DataSegmentChangeRequest, SegmentLoadDropHandler.Status>>> future = loadDropRequestHandler
+    final ListenableFuture<List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus>> future = loadDropRequestHandler
         .processBatch(changeRequestList);
 
     final AsyncContext asyncContext = req.startAsync();
@@ -281,15 +280,16 @@ public class SegmentListerResource
 
     Futures.addCallback(
         future,
-        new FutureCallback<List<Pair<DataSegmentChangeRequest, SegmentLoadDropHandler.Status>>>()
+        new FutureCallback<List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus>>()
         {
           @Override
-          public void onSuccess(List<Pair<DataSegmentChangeRequest, SegmentLoadDropHandler.Status>> result)
+          public void onSuccess(List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus> result)
           {
             try {
               HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
               response.setStatus(HttpServletResponse.SC_OK);
-              context.inputMapper.writerWithType(HttpLoadQueuePeon.RESPONSE_ENTITY_TYPE_REF).writeValue(asyncContext.getResponse().getOutputStream(), result);
+              context.inputMapper.writerWithType(HttpLoadQueuePeon.RESPONSE_ENTITY_TYPE_REF)
+                                 .writeValue(asyncContext.getResponse().getOutputStream(), result);
               asyncContext.complete();
             }
             catch (Exception ex) {
