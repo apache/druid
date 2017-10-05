@@ -111,7 +111,7 @@ public class LongGenericColumnPartSerdeV2 implements ColumnPartSerde
             @Override
             public long numBytes()
             {
-              return delegate.getSerializedSize() + Byte.BYTES;
+              return delegate.getSerializedSize();
             }
 
             @Override

@@ -34,7 +34,6 @@ import io.druid.segment.data.CompressedDoublesIndexedSupplier;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
@@ -146,13 +145,12 @@ public class DoubleGenericColumnPartSerdeV2 implements ColumnPartSerde
             @Override
             public long numBytes()
             {
-              return delegate.getSerializedSize() + Byte.BYTES;
+              return delegate.getSerializedSize();
             }
 
             @Override
             public void write(WritableByteChannel channel, FileSmoosher fileSmoosher) throws IOException
             {
-              channel.write(ByteBuffer.wrap(new byte[]{VERSION_ONE}));
               delegate.writeToChannel(channel, fileSmoosher);
             }
           }
