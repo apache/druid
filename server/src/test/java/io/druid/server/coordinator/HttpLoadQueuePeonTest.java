@@ -32,7 +32,6 @@ import io.druid.concurrent.Execs;
 import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscovery;
 import io.druid.java.util.common.Intervals;
-import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.RE;
 import io.druid.server.coordination.DataSegmentChangeRequest;
 import io.druid.server.coordination.SegmentLoadDropHandler;
@@ -195,9 +194,9 @@ public class HttpLoadQueuePeonTest
             request.getContent().array(), new TypeReference<List<DataSegmentChangeRequest>>() {}
         );
 
-        List<Pair<DataSegmentChangeRequest, SegmentLoadDropHandler.Status>> statuses = new ArrayList<>(changeRequests.size());
+        List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus> statuses = new ArrayList<>(changeRequests.size());
         for (DataSegmentChangeRequest cr : changeRequests) {
-          statuses.add(Pair.of(cr, SegmentLoadDropHandler.Status.SUCCESS));
+          statuses.add(new SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus(cr, SegmentLoadDropHandler.Status.SUCCESS));
         }
         return (ListenableFuture) Futures.immediateFuture(new ByteArrayInputStream(TestUtil.MAPPER.writerWithType(
             HttpLoadQueuePeon.RESPONSE_ENTITY_TYPE_REF).writeValueAsBytes(statuses)));

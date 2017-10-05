@@ -22,10 +22,13 @@ package io.druid.server.coordination;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.TestUtil;
 import io.druid.curator.CuratorTestBase;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Intervals;
 import io.druid.segment.IndexIO;
+import io.druid.segment.loading.SegmentLoaderConfig;
+import io.druid.server.SegmentManager;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
@@ -39,6 +42,7 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */
@@ -97,34 +101,33 @@ public class ZkCoordinatorTest extends CuratorTestBase
     CountDownLatch loadLatch = new CountDownLatch(1);
     CountDownLatch dropLatch = new CountDownLatch(1);
 
-    SegmentLoadDropHandler segmentLoadDropHandler = EasyMock.createStrictMock(SegmentLoadDropHandler.class);
-
-    EasyMock.expect(
-        segmentLoadDropHandler.getSyncLoadingHanlder()
-    ).andReturn(
-        new DataSegmentChangeHandler()
-        {
-
-          @Override
-          public void addSegment(DataSegment s, DataSegmentChangeCallback callback)
-          {
-            if (segment.getIdentifier().equals(s.getIdentifier())) {
-              loadLatch.countDown();
-              callback.execute();
-            }
-          }
-
-          @Override
-          public void removeSegment(DataSegment s, DataSegmentChangeCallback callback)
-          {
-            if (segment.getIdentifier().equals(s.getIdentifier())) {
-              dropLatch.countDown();
-              callback.execute();
-            }
-          }
+    SegmentLoadDropHandler segmentLoadDropHandler = new SegmentLoadDropHandler(
+        TestUtil.MAPPER,
+        new SegmentLoaderConfig(),
+        EasyMock.createNiceMock(DataSegmentAnnouncer.class),
+        EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
+        EasyMock.createNiceMock(SegmentManager.class),
+        EasyMock.createNiceMock(ScheduledExecutorService.class)
+    )
+    {
+      @Override
+      public void addSegment(DataSegment s, DataSegmentChangeCallback callback)
+      {
+        if (segment.getIdentifier().equals(s.getIdentifier())) {
+          loadLatch.countDown();
+          callback.execute();
         }
-    );
-    EasyMock.replay(segmentLoadDropHandler);
+      }
+
+      @Override
+      public void removeSegment(DataSegment s, DataSegmentChangeCallback callback)
+      {
+        if (segment.getIdentifier().equals(s.getIdentifier())) {
+          dropLatch.countDown();
+          callback.execute();
+        }
+      }
+    };
 
     zkCoordinator = new ZkCoordinator(
         segmentLoadDropHandler,
@@ -156,7 +159,5 @@ public class ZkCoordinatorTest extends CuratorTestBase
     }
 
     zkCoordinator.stop();
-
-    EasyMock.verify(segmentLoadDropHandler);
   }
 }

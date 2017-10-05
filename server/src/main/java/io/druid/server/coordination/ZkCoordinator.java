@@ -62,7 +62,7 @@ public class ZkCoordinator
       CuratorFramework curator
   )
   {
-    this.dataSegmentChangeHandler = loadDropHandler.getSyncLoadingHanlder();
+    this.dataSegmentChangeHandler = loadDropHandler;
     this.jsonMapper = jsonMapper;
     this.zkPaths = zkPaths;
     this.me = me;
