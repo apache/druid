@@ -145,7 +145,7 @@ public class PvaluefromZscorePostAggregator implements PostAggregator
   @Override
   public int hashCode()
   {
-    int result = name != null ? name.hashCode() : 0;
+    int result = name.hashCode();
     result = 31 * result + zScore.hashCode();
     return result;
   }

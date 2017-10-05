@@ -37,19 +37,13 @@ public class PvaluefromZscorePostAggregatorTest
 
     pvaluefromZscorePostAggregator = new PvaluefromZscorePostAggregator("pvalue", zscore);
 
-    System.out.print("zscore = " + zscore + "\n");
-
     double pvalue = ((Number) pvaluefromZscorePostAggregator.compute(ImmutableMap.of(
         "zscore",
         -1783.8762354220219
     ))).doubleValue();
 
-    System.out.print("pvalue = " + pvalue + "\n");
-
     /* Assert P-value is positive and very small */
     Assert.assertTrue(pvalue >= 0 && pvalue < 0.00001);
-
-    System.out.print(pvaluefromZscorePostAggregator.toString());
   }
 
   @Test

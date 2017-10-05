@@ -70,8 +70,6 @@ public class ZtestPostAggregatorTest
     Assert.assertEquals(-1783.8762354220219,
                         zscore, 0.0001
     );
-
-    System.out.print(ztestPostAggregator.toString());
   }
 
   @Test

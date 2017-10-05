@@ -209,7 +209,7 @@ public class ZtestPostAggregator implements PostAggregator
   @Override
   public int hashCode()
   {
-    int result = name != null ? name.hashCode() : 0;
+    int result = name.hashCode();
     result = 31 * result + successCount1.hashCode();
     result = 31 * result + sample1Size.hashCode();
     result = 31 * result + successCount2.hashCode();
