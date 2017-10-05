@@ -149,6 +149,12 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   }
 
   @Override
+  public void identity(String identity)
+  {
+    delegateQueryMetrics.identity(identity);
+  }
+
+  @Override
   public BitmapResultFactory<?> makeBitmapResultFactory(BitmapFactory factory)
   {
     return delegateQueryMetrics.makeBitmapResultFactory(factory);
