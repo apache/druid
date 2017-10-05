@@ -327,9 +327,9 @@ public class DetermineHashedPartitionsJob implements Jobby
       Interval interval;
 
       if (determineIntervals) {
-        interval = config.getGranularitySpec().getSegmentGranularity().bucket(new DateTime(key.get()));
+        interval = config.getGranularitySpec().getSegmentGranularity().bucket(DateTimes.utc(key.get()));
       } else {
-        Optional<Interval> intervalOptional = config.getGranularitySpec().bucketInterval(new DateTime(key.get()));
+        Optional<Interval> intervalOptional = config.getGranularitySpec().bucketInterval(DateTimes.utc(key.get()));
 
         if (!intervalOptional.isPresent()) {
           throw new ISE("WTF?! No bucket found for timestamp: %s", key.get());
