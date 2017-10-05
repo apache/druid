@@ -27,6 +27,7 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.indexer.partitions.HashedPartitionsSpec;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.granularity.PeriodGranularity;
@@ -137,7 +138,7 @@ public class DetermineHashedPartitionsJobTest
 
     ImmutableList<Interval> intervals = null;
     if (interval != null) {
-      intervals = ImmutableList.of(new Interval(interval));
+      intervals = ImmutableList.of(Intervals.of(interval));
     }
 
     HadoopIngestionSpec ingestionSpec = new HadoopIngestionSpec(
