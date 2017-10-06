@@ -131,19 +131,21 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
   {
     if (Strings.isNullOrEmpty(filter)) {
       return StringUtils.format(
-          "SELECT %s, %s FROM %s",
+          "SELECT %s, %s FROM %s WHERE %s IS NOT NULL",
           keyColumn,
           valueColumn,
-          table
+          table,
+          valueColumn
       );
     }
 
     return StringUtils.format(
-        "SELECT %s, %s FROM %s WHERE %s",
+        "SELECT %s, %s FROM %s WHERE %s AND %s IS NOT NULL",
         keyColumn,
         valueColumn,
         table,
-        filter
+        filter,
+        valueColumn
     );
   }
 
