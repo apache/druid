@@ -76,6 +76,7 @@ public interface ObjectColumnSelector<T> extends ColumnValueSelector<T>
    * objects.
    */
   @Deprecated
+  @Override
   default boolean isNull()
   {
     T value = getObject();
