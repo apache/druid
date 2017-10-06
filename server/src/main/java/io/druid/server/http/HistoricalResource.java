@@ -52,4 +52,16 @@ public class HistoricalResource
   {
     return Response.ok(ImmutableMap.of("cacheInitialized", coordinator.isStarted())).build();
   }
+
+  @GET
+  @Path("/loadStatusCode")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getLoadStatusCode()
+  {
+    if (coordinator.isStarted()) {
+      return Response.ok(ImmutableMap.of()).build();
+    } else {
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
+    }
+  }
 }
