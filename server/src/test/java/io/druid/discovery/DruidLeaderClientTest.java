@@ -52,7 +52,9 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -60,12 +62,16 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.io.IOException;
 import java.net.URI;
 
 /**
  */
 public class DruidLeaderClientTest extends BaseJettyTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   private DiscoveryDruidNode discoveryDruidNode;
   private HttpClient httpClient;
 
@@ -124,6 +130,31 @@ public class DruidLeaderClientTest extends BaseJettyTest
     Request request = druidLeaderClient.makeRequest(HttpMethod.POST, "/simple/direct");
     request.setContent("hello".getBytes("UTF-8"));
     Assert.assertEquals("hello", druidLeaderClient.go(request).getContent());
+  }
+
+  @Test
+  public void testNoLeaderFound() throws Exception
+  {
+    DruidNodeDiscovery druidNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
+    EasyMock.expect(druidNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of());
+
+    DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType("nodetype")).andReturn(druidNodeDiscovery);
+
+    EasyMock.replay(druidNodeDiscovery, druidNodeDiscoveryProvider);
+
+    DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
+        httpClient,
+        druidNodeDiscoveryProvider,
+        "nodetype",
+        "/simple/leader",
+        EasyMock.createNiceMock(ServerDiscoverySelector.class)
+    );
+    druidLeaderClient.start();
+
+    expectedException.expect(IOException.class);
+    expectedException.expectMessage("No known server");
+    druidLeaderClient.makeRequest(HttpMethod.POST, "/simple/direct");
   }
 
   @Test
