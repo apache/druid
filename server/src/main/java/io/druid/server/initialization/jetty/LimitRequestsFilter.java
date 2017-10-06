@@ -77,4 +77,9 @@ public class LimitRequestsFilter implements Filter
   {
 
   }
+
+  public int getActiveRequestsCount()
+  {
+    return activeRequestsCount.get();
+  }
 }

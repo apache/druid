@@ -35,7 +35,7 @@ import java.util.concurrent.CountDownLatch;
  */
 public class LimitRequestsFilterTest
 {
-  @Test
+  @Test(timeout = 5000L)
   public void testSimple() throws Exception
   {
     LimitRequestsFilter filter = new LimitRequestsFilter(2);
@@ -51,6 +51,10 @@ public class LimitRequestsFilterTest
         EasyMock.createStrictMock(ServletRequest.class),
         EasyMock.createStrictMock(HttpServletResponse.class)
     );
+
+    while (filter.getActiveRequestsCount() != 2) {
+      Thread.sleep(100);
+    }
 
     //now further requests should fail
     HttpServletResponse resp = EasyMock.createMock(HttpServletResponse.class);
@@ -75,6 +79,10 @@ public class LimitRequestsFilterTest
     //release one of the pending requests
     latch1.countDown();
 
+    while (filter.getActiveRequestsCount() != 1) {
+      Thread.sleep(100);
+    }
+
     //now requests should go through
     FilterChain chain = EasyMock.createMock(FilterChain.class);
     chain.doFilter(EasyMock.anyObject(), EasyMock.anyObject());
@@ -96,6 +104,10 @@ public class LimitRequestsFilterTest
     EasyMock.verify(chain);
 
     latch2.countDown();
+
+    while (filter.getActiveRequestsCount() != 0) {
+      Thread.sleep(100);
+    }
   }
 
   private CountDownLatch createAndStartRequestThread(LimitRequestsFilter filter, ServletRequest req, HttpServletResponse resp)
