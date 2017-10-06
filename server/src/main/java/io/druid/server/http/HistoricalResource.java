@@ -54,12 +54,11 @@ public class HistoricalResource
   }
 
   @GET
-  @Path("/loadStatusCode")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Path("/readiness")
   public Response getLoadStatusCode()
   {
     if (coordinator.isStarted()) {
-      return Response.ok(ImmutableMap.of()).build();
+      return Response.ok().build();
     } else {
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
     }

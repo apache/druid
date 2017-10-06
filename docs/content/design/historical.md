@@ -54,7 +54,7 @@ Returns JSON of the form `{"cacheInitialized":<value>}`, where value is either `
 segments in the local cache have been loaded. This can be used to know when a historical node is ready
 to be queried after a restart.
 
-* `/druid/historical/v1/loadStatusCode`
+* `/druid/historical/v1/readiness`
 
-Similar to `/druid/historical/v1/loadstatus`, but instead or returning JSON with a flag, responses 200 OK with an
-empty JSON `{}` body, if segments in the local cache have been loaded, and 503 SERVICE UNAVAILABLE, if they haven't.
+Similar to `/druid/historical/v1/loadstatus`, but instead or returning JSON with a flag, responses 200 OK if segments
+in the local cache have been loaded, and 503 SERVICE UNAVAILABLE, if they haven't.
