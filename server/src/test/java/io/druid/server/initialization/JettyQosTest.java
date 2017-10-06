@@ -96,7 +96,7 @@ public class JettyQosTest extends BaseJettyTest
   {
     // Just make sure the injector stuff for this test is actually working.
     Assert.assertEquals(
-        10,
+        18,
         ((QueuedThreadPool) server.getThreadPool()).getMaxThreads()
     );
   }
