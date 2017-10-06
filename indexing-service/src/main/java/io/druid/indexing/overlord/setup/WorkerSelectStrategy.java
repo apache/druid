@@ -22,6 +22,7 @@ package io.druid.indexing.overlord.setup;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.ImmutableMap;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
@@ -31,7 +32,7 @@ import javax.annotation.Nullable;
 /**
  * The {@link io.druid.indexing.overlord.RemoteTaskRunner} uses this class to select a worker to assign tasks to.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = FillCapacityWorkerSelectStrategy.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = EqualDistributionWorkerSelectStrategy.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "fillCapacity", value = FillCapacityWorkerSelectStrategy.class),
     @JsonSubTypes.Type(name = "fillCapacityWithAffinity", value = FillCapacityWithAffinityWorkerSelectStrategy.class),
@@ -39,6 +40,7 @@ import javax.annotation.Nullable;
     @JsonSubTypes.Type(name = "equalDistributionWithAffinity", value = EqualDistributionWithAffinityWorkerSelectStrategy.class),
     @JsonSubTypes.Type(name = "javascript", value = JavaScriptWorkerSelectStrategy.class)
 })
+@PublicApi
 public interface WorkerSelectStrategy
 {
   /**

@@ -25,7 +25,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
@@ -48,6 +47,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -67,7 +67,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   private final AtomicLong counter = new AtomicLong(0);
 
   private final Set<SegmentZNode> availableZNodes = new ConcurrentSkipListSet<SegmentZNode>();
-  private final Map<DataSegment, SegmentZNode> segmentLookup = Maps.newConcurrentMap();
+  private final Map<DataSegment, SegmentZNode> segmentLookup = new ConcurrentHashMap<>();
   private final Function<DataSegment, DataSegment> segmentTransformer;
 
   private final SegmentChangeRequestHistory changes = new SegmentChangeRequestHistory();

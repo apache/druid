@@ -19,7 +19,10 @@
 
 package io.druid.indexing.overlord.autoscaling;
 
-interface Provisioner
+import io.druid.guice.annotations.PublicApi;
+
+@PublicApi
+public interface Provisioner
 {
   boolean doTerminate();
 

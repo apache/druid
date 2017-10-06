@@ -25,7 +25,6 @@ import io.druid.curator.CuratorTestBase;
 import io.druid.discovery.DruidLeaderSelector;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.DruidNode;
-import io.druid.server.initialization.ServerConfig;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
@@ -60,7 +59,7 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
 
     CuratorDruidLeaderSelector leaderSelector1 = new CuratorDruidLeaderSelector(
         curator,
-        new DruidNode("s1", "h1", 8080, null, new ServerConfig()),
+        new DruidNode("s1", "h1", 8080, null, true, false),
         latchPath
     );
     leaderSelector1.registerListener(
@@ -92,7 +91,7 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
 
     CuratorDruidLeaderSelector leaderSelector2 = new CuratorDruidLeaderSelector(
         curator,
-        new DruidNode("s2", "h2", 8080, null, new ServerConfig()),
+        new DruidNode("s2", "h2", 8080, null, true, false),
         latchPath
     );
     leaderSelector2.registerListener(
@@ -132,7 +131,7 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
 
     CuratorDruidLeaderSelector leaderSelector3 = new CuratorDruidLeaderSelector(
         curator,
-        new DruidNode("s3", "h3", 8080, null, new ServerConfig()),
+        new DruidNode("s3", "h3", 8080, null, true, false),
         latchPath
     );
     leaderSelector3.registerListener(

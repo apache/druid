@@ -46,7 +46,14 @@ public class ApproximateHistogramTest
       -6.553f, 2.178f
   };
   static final float[] VALUES5 = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-  static final float[] VALUES6 = {1f, 1.5f, 2f, 2.5f, 3f, 3.5f, 4f, 4.5f, 5f, 5.5f, 6f, 6.5f, 7f, 7.5f, 8f, 8.5f, 9f, 9.5f, 10f};
+  static final float[] VALUES6 = {
+      1f, 1.5f, 2f, 2.5f, 3f, 3.5f, 4f, 4.5f, 5f, 5.5f, 6f, 6.5f, 7f, 7.5f, 8f, 8.5f, 9f, 9.5f, 10f
+  };
+
+  // Based on the example from https://metamarkets.com/2013/histograms/
+  // This dataset can make getQuantiles() return values exceeding max
+  // for example: q=0.95 returns 25.16 when max=25
+  static final float[] VALUES7 = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 12, 12, 15, 20, 25, 25, 25};
 
   protected ApproximateHistogram buildHistogram(int size, float[] values)
   {
@@ -394,33 +401,68 @@ public class ApproximateHistogramTest
   }
 
   @Test
+  public void testQuantileBetweenMinMax()
+  {
+    ApproximateHistogram h = buildHistogram(20, VALUES7);
+
+    Assert.assertTrue(
+        "min value incorrect",
+        VALUES7[0] == h.min()
+    );
+    Assert.assertTrue(
+        "max value incorrect",
+        VALUES7[VALUES7.length - 1] == h.max()
+    );
+
+    Assert.assertArrayEquals(
+        "expected quantiles match actual quantiles",
+        new float[]{1.8f, 3.6f, 5.4f, 7.2f, 9f, 11.05f, 12.37f, 17f, 23.5f},
+        h.getQuantiles(new float[]{.1f, .2f, .3f, .4f, .5f, .6f, .7f, .8f, .9f}),
+        0.1f
+    );
+
+    // Test for outliers (0.05f and 0.95f, which should be min <= value <= max)
+    Assert.assertArrayEquals(
+        "expected quantiles match actual quantiles",
+        new float[]{h.min(), h.max()},
+        h.getQuantiles(new float[]{.05f, .95f}),
+        0.1f
+    );
+  }
+
+  @Test
   public void testQuantileBigger()
   {
     ApproximateHistogram h = buildHistogram(5, VALUES5);
     Assert.assertArrayEquals(
         "expected quantiles match actual quantiles",
         new float[]{4.5f},
-        h.getQuantiles(new float[]{.5f}), 0.1f
+        h.getQuantiles(new float[]{.5f}),
+        0.1f
     );
     Assert.assertArrayEquals(
         "expected quantiles match actual quantiles",
         new float[]{2.83f, 6.17f},
-        h.getQuantiles(new float[]{.333f, .666f}), 0.1f
+        h.getQuantiles(new float[]{.333f, .666f}),
+        0.1f
     );
     Assert.assertArrayEquals(
         "expected quantiles match actual quantiles",
         new float[]{2f, 4.5f, 7f},
-        h.getQuantiles(new float[]{.25f, .5f, .75f}), 0.1f
+        h.getQuantiles(new float[]{.25f, .5f, .75f}),
+        0.1f
     );
     Assert.assertArrayEquals(
         "expected quantiles match actual quantiles",
         new float[]{1.5f, 3.5f, 5.5f, 7.5f},
-        h.getQuantiles(new float[]{.2f, .4f, .6f, .8f}), 0.1f
+        h.getQuantiles(new float[]{.2f, .4f, .6f, .8f}),
+        0.1f
     );
     Assert.assertArrayEquals(
         "expected quantiles match actual quantiles",
         new float[]{1f, 1.5f, 2.5f, 3.5f, 4.5f, 5.5f, 6.5f, 7.5f, 8.5f},
-        h.getQuantiles(new float[]{.1f, .2f, .3f, .4f, .5f, .6f, .7f, .8f, .9f}), 0.1f
+        h.getQuantiles(new float[]{.1f, .2f, .3f, .4f, .5f, .6f, .7f, .8f, .9f}),
+        0.1f
     );
   }
 
@@ -436,22 +478,26 @@ public class ApproximateHistogramTest
     Assert.assertArrayEquals(
         "expected quantiles match actual quantiles",
         new float[]{493.5f},
-        h.getQuantiles(new float[]{.5f}), 0.1f
+        h.getQuantiles(new float[]{.5f}),
+        0.1f
     );
     Assert.assertArrayEquals(
         "expected quantiles match actual quantiles",
         new float[]{327.5f, 662f},
-        h.getQuantiles(new float[]{.333f, .666f}), 0.1f
+        h.getQuantiles(new float[]{.333f, .666f}),
+        0.1f
     );
     Assert.assertArrayEquals(
         "expected quantiles match actual quantiles",
         new float[]{244.5f, 493.5f, 746f},
-        h.getQuantiles(new float[]{.25f, .5f, .75f}), 0.1f
+        h.getQuantiles(new float[]{.25f, .5f, .75f}),
+        0.1f
     );
     Assert.assertArrayEquals(
         "expected quantiles match actual quantiles",
         new float[]{96.5f, 196.53f, 294.5f, 395.5f, 493.5f, 597f, 696f, 795f, 895.25f},
-        h.getQuantiles(new float[]{.1f, .2f, .3f, .4f, .5f, .6f, .7f, .8f, .9f}), 0.1f
+        h.getQuantiles(new float[]{.1f, .2f, .3f, .4f, .5f, .6f, .7f, .8f, .9f}),
+        0.1f
     );
   }
 
@@ -506,13 +552,15 @@ public class ApproximateHistogramTest
     Assert.assertArrayEquals(
         "expected counts match actual counts",
         new double[]{1f, 2f, 1f, 1f, 0f, 1f, 1f, 1f},
-        h2.getCounts(), 0.1f
+        h2.getCounts(),
+        0.1f
     );
 
     Assert.assertArrayEquals(
         "expected breaks match actual breaks",
         new double[]{-5.05f, 0f, .05f, .1f, .15f, .9f, .95f, 1f, 2.05f},
-        h2.getBreaks(), 0.1f
+        h2.getBreaks(),
+        0.1f
     );
   }
 
@@ -526,13 +574,15 @@ public class ApproximateHistogramTest
     Assert.assertArrayEquals(
         "expected counts match actual counts",
         new double[]{2f, 4f},
-        h2.getCounts(), 0.1f
+        h2.getCounts(),
+        0.1f
     );
 
     Assert.assertArrayEquals(
         "expected breaks match actual breaks",
         new double[]{-1f, 0f, 1f},
-        h2.getBreaks(), 0.1f
+        h2.getBreaks(),
+        0.1f
     );
   }
 
@@ -553,7 +603,8 @@ public class ApproximateHistogramTest
     Assert.assertArrayEquals(
         "expected breaks match actual breaks",
         new double[]{-0.2f, 0.5f, 0.7f, 0.9f},
-        h3.getBreaks(), 0.1f
+        h3.getBreaks(),
+        0.1f
     );
   }
 

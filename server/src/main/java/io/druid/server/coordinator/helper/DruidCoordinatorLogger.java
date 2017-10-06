@@ -19,7 +19,6 @@
 
 package io.druid.server.coordinator.helper;
 
-import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.client.DruidDataSource;
@@ -171,7 +170,7 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
     );
 
     log.info("Load Queues:");
-    for (MinMaxPriorityQueue<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
+    for (Iterable<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
       for (ServerHolder serverHolder : serverHolders) {
         ImmutableDruidServer server = serverHolder.getServer();
         LoadQueuePeon queuePeon = serverHolder.getPeon();
