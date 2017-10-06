@@ -21,6 +21,7 @@ package io.druid.discovery;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.FullResponseHandler;
@@ -30,10 +31,12 @@ import io.druid.concurrent.LifecycleLock;
 import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.RE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.common.logger.Logger;
+import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
@@ -58,7 +61,7 @@ public class DruidLeaderClient
 {
   private final Logger log = new Logger(DruidLeaderClient.class);
 
-  private static final int MAX_RETRIES = 3;
+  private static final int MAX_RETRIES = 5;
 
   private final HttpClient httpClient;
   private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
@@ -135,9 +138,17 @@ public class DruidLeaderClient
       final FullResponseHolder fullResponseHolder;
 
       try {
-        fullResponseHolder = httpClient.go(request, new FullResponseHandler(Charsets.UTF_8)).get();
+        try {
+          fullResponseHolder = httpClient.go(request, new FullResponseHandler(Charsets.UTF_8)).get();
+        }
+        catch (ExecutionException e) {
+          // Unwrap IOExceptions and ChannelExceptions, re-throw others
+          Throwables.propagateIfInstanceOf(e.getCause(), IOException.class);
+          Throwables.propagateIfInstanceOf(e.getCause(), ChannelException.class);
+          throw new RE(e, "HTTP request to[%s] failed", request.getUrl());
+        }
       }
-      catch (ExecutionException ex) {
+      catch (IOException | ChannelException ex) {
         // can happen if the node is stopped.
         log.info("Request[%s] failed with msg [%s].", request.getUrl(), ex.getMessage());
         log.debug(ex, "Request[%s] failed.", request.getUrl());
@@ -240,7 +251,7 @@ public class DruidLeaderClient
     );
 
     if (leader == null) {
-      throw new IOE("No known leader");
+      throw new IOE("No known server");
     } else {
       return leader;
     }

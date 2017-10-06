@@ -153,7 +153,7 @@ public class DruidLeaderClientTest extends BaseJettyTest
     druidLeaderClient.start();
 
     expectedException.expect(IOException.class);
-    expectedException.expectMessage("No known leader");
+    expectedException.expectMessage("No known server");
     druidLeaderClient.makeRequest(HttpMethod.POST, "/simple/direct");
   }
 
