@@ -28,6 +28,7 @@ import com.metamx.http.client.response.FullResponseHolder;
 import io.druid.client.selector.Server;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.curator.discovery.ServerDiscoverySelector;
+import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
@@ -36,6 +37,8 @@ import io.druid.java.util.common.logger.Logger;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
+import javax.annotation.Nullable;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Iterator;
@@ -47,9 +50,9 @@ import java.util.concurrent.atomic.AtomicReference;
  * This class facilitates interaction with Coordinator/Overlord leader nodes. Instance of this class is injected
  * via Guice with annotations @Coordinator or @IndexingService .
  * Usage:
- *   Request request = druidLeaderClient.makeRequest(HttpMethod, requestPath)
- *   request.setXXX(..)
- *   FullResponseHolder responseHolder = druidLeaderClient.go(request)
+ * Request request = druidLeaderClient.makeRequest(HttpMethod, requestPath)
+ * request.setXXX(..)
+ * FullResponseHolder responseHolder = druidLeaderClient.go(request)
  */
 public class DruidLeaderClient
 {
@@ -112,13 +115,19 @@ public class DruidLeaderClient
     log.info("Stopped.");
   }
 
-  public Request makeRequest(HttpMethod httpMethod, String urlPath) throws MalformedURLException
+  /**
+   * Make a Request object aimed at the leader. Throws IOException if the leader cannot be located.
+   */
+  public Request makeRequest(HttpMethod httpMethod, String urlPath) throws IOException
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
     return new Request(httpMethod, new URL(StringUtils.format("%s%s", getCurrentKnownLeader(true), urlPath)));
   }
 
-  public FullResponseHolder go(Request request) throws InterruptedException
+  /**
+   * Executes a Request object aimed at the leader. Throws IOException if the leader cannot be located.
+   */
+  public FullResponseHolder go(Request request) throws IOException, InterruptedException
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
     for (int counter = 0; counter < MAX_RETRIES; counter++) {
@@ -142,16 +151,18 @@ public class DruidLeaderClient
           } else {
             request = withUrl(
                 request,
-                new URL(StringUtils.format("%s%s?%s",
-                                      getCurrentKnownLeader(false),
-                                      request.getUrl().getPath(),
-                                      request.getUrl().getQuery()
+                new URL(StringUtils.format(
+                    "%s%s?%s",
+                    getCurrentKnownLeader(false),
+                    request.getUrl().getPath(),
+                    request.getUrl().getQuery()
                 ))
             );
           }
           continue;
         }
         catch (MalformedURLException e) {
+          // Not an IOException; this is our own fault.
           throw new ISE(
               e,
               "failed to build url with path[%] and query string [%s].",
@@ -164,7 +175,7 @@ public class DruidLeaderClient
       if (HttpResponseStatus.TEMPORARY_REDIRECT.equals(fullResponseHolder.getResponse().getStatus())) {
         String redirectUrlStr = fullResponseHolder.getResponse().headers().get("Location");
         if (redirectUrlStr == null) {
-          throw new ISE("No redirect location is found in response from url[%s].", request.getUrl());
+          throw new IOE("No redirect location is found in response from url[%s].", request.getUrl());
         }
 
         log.info("Request[%s] received redirect response to location [%s].", request.getUrl(), redirectUrlStr);
@@ -174,7 +185,7 @@ public class DruidLeaderClient
           redirectUrl = new URL(redirectUrlStr);
         }
         catch (MalformedURLException ex) {
-          throw new ISE(
+          throw new IOE(
               ex,
               "Malformed redirect location is found in response from url[%s], new location[%s].",
               request.getUrl(),
@@ -196,7 +207,7 @@ public class DruidLeaderClient
       }
     }
 
-    throw new ISE("Retries exhausted, couldn't fulfill request to [%s].", request.getUrl());
+    throw new IOE("Retries exhausted, couldn't fulfill request to [%s].", request.getUrl());
   }
 
   public String findCurrentLeader()
@@ -221,14 +232,21 @@ public class DruidLeaderClient
     }
   }
 
-  private String getCurrentKnownLeader(final boolean cached)
+  private String getCurrentKnownLeader(final boolean cached) throws IOException
   {
-    return currentKnownLeader.accumulateAndGet(
+    final String leader = currentKnownLeader.accumulateAndGet(
         null,
         (current, given) -> current == null || !cached ? pickOneHost() : current
     );
+
+    if (leader == null) {
+      throw new IOE("No known leader");
+    } else {
+      return leader;
+    }
   }
 
+  @Nullable
   private String pickOneHost()
   {
     Server server = serverDiscoverySelector.pick();
@@ -251,7 +269,7 @@ public class DruidLeaderClient
       );
     }
 
-    throw new ISE("Couldn't find any servers.");
+    return null;
   }
 
   private Request withUrl(Request old, URL url)
