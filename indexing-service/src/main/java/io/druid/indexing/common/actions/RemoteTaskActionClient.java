@@ -77,17 +77,10 @@ public class RemoteTaskActionClient implements TaskActionClient
 
         log.info("Submitting action for task[%s] to overlord: [%s].", task.getId(), taskAction);
 
-        try {
-          fullResponseHolder = druidLeaderClient.go(
-              druidLeaderClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/action")
-                               .setContent(MediaType.APPLICATION_JSON, dataToSend)
-          );
-        }
-        catch (Exception e) {
-          Throwables.propagateIfInstanceOf(e.getCause(), IOException.class);
-          Throwables.propagateIfInstanceOf(e.getCause(), ChannelException.class);
-          throw Throwables.propagate(e);
-        }
+        fullResponseHolder = druidLeaderClient.go(
+            druidLeaderClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/action")
+                             .setContent(MediaType.APPLICATION_JSON, dataToSend)
+        );
 
         if (fullResponseHolder.getStatus().getCode() / 100 == 2) {
           final Map<String, Object> responseDict = jsonMapper.readValue(
@@ -119,6 +112,9 @@ public class RemoteTaskActionClient implements TaskActionClient
             throw Throwables.propagate(e2);
           }
         }
+      }
+      catch (InterruptedException e) {
+        throw new RuntimeException(e);
       }
     }
   }
