@@ -24,6 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.base.Supplier;
 import com.metamx.http.client.HttpClient;
+import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.overlord.autoscaling.ResourceManagementSchedulerConfig;
@@ -55,6 +57,7 @@ public class RemoteTaskRunnerFactoryTest
   private TestingCluster testingCluster;
   private CuratorFramework cf;
   private ObjectMapper jsonMapper;
+  private ServiceEmitter emitter;
 
 
   @Before
@@ -73,6 +76,7 @@ public class RemoteTaskRunnerFactoryTest
                                 .build();
     cf.start();
     cf.blockUntilConnected();
+    emitter = new NoopServiceEmitter();
   }
 
   @After
@@ -132,7 +136,8 @@ public class RemoteTaskRunnerFactoryTest
             workerBehaviorConfig,
             resourceManagementSchedulerConfig,
             executorFactory
-        )
+        ),
+        emitter
     );
     Assert.assertEquals(1, executorCount.get());
     RemoteTaskRunner remoteTaskRunner1 = factory.build();

@@ -24,6 +24,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.metamx.http.client.HttpClient;
+import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.common.guava.DSuppliers;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.cache.PathChildrenCacheFactory;
@@ -41,6 +42,7 @@ import io.druid.indexing.worker.Worker;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.server.initialization.ZkPathsConfig;
+import io.druid.server.metrics.NoopServiceEmitter;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
@@ -124,7 +126,8 @@ public class RemoteTaskRunnerTestUtils
         null,
         DSuppliers.of(new AtomicReference<>(WorkerBehaviorConfig.defaultConfig())),
         ScheduledExecutors.fixed(1, "Remote-Task-Runner-Cleanup--%d"),
-        new NoopResourceManagementStrategy<WorkerTaskRunner>()
+        new NoopResourceManagementStrategy<WorkerTaskRunner>(),
+        new NoopServiceEmitter()
     );
 
     remoteTaskRunner.start();
@@ -221,7 +224,8 @@ public class RemoteTaskRunnerTestUtils
         HttpClient httpClient,
         Supplier<WorkerBehaviorConfig> workerConfigRef,
         ScheduledExecutorService cleanupExec,
-        ResourceManagementStrategy<WorkerTaskRunner> resourceManagement
+        ResourceManagementStrategy<WorkerTaskRunner> resourceManagement,
+        ServiceEmitter emitter
     )
     {
       super(
@@ -233,7 +237,8 @@ public class RemoteTaskRunnerTestUtils
           httpClient,
           workerConfigRef,
           cleanupExec,
-          resourceManagement
+          resourceManagement,
+          emitter
       );
     }
 

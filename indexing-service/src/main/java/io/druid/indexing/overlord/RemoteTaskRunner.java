@@ -44,6 +44,8 @@ import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.metamx.emitter.EmittingLogger;
+import com.metamx.emitter.service.ServiceEmitter;
+import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.InputStreamResponseHandler;
@@ -139,6 +141,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   private final PathChildrenCache workerPathCache;
   private final HttpClient httpClient;
   private final Supplier<WorkerBehaviorConfig> workerConfigRef;
+  private final ServiceEmitter emitter;
 
   // all workers that exist in ZK
   private final ConcurrentMap<String, ZkWorker> zkWorkers = new ConcurrentHashMap<>();
@@ -186,7 +189,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       HttpClient httpClient,
       Supplier<WorkerBehaviorConfig> workerConfigRef,
       ScheduledExecutorService cleanupExec,
-      ResourceManagementStrategy<WorkerTaskRunner> resourceManagement
+      ResourceManagementStrategy<WorkerTaskRunner> resourceManagement,
+      ServiceEmitter emitter
   )
   {
     this.jsonMapper = jsonMapper;
@@ -204,6 +208,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     this.workerConfigRef = workerConfigRef;
     this.cleanupExec = MoreExecutors.listeningDecorator(cleanupExec);
     this.resourceManagement = resourceManagement;
+    this.emitter = emitter;
     this.runPendingTasksExec = Execs.multiThreaded(
         config.getPendingTasksRunnerNumThreads(),
         "rtr-pending-tasks-runner-%d"
@@ -853,6 +858,28 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       RemoteTaskRunnerWorkItem newWorkItem = workItem.withWorker(theZkWorker.getWorker(), null);
       runningTasks.put(task.getId(), newWorkItem);
       log.info("Task %s switched from pending to running (on [%s])", task.getId(), newWorkItem.getWorker().getHost());
+       
+      if (task.getId().lastIndexOf('_') != -1){
+          String createdTime = task.getId().substring(task.getId().lastIndexOf('_') + 1);
+          try {
+              long assignedTime = System.currentTimeMillis() - DateTime.parse(createdTime).getMillis();
+              
+              final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()
+                  .setDimension("task", task.getId())
+                  .setDimension("dataSource", task.getDataSource())
+                  .setDimension("taskType", task.getType());
+              
+              log.info("Metric: task/assign/time, task id: [%s], taskStatus: [%s], value:[%d]",
+                       task.getId(), task.getType(), assignedTime);
+              emitter.emit(metricBuilder.build("task/assign/time", assignedTime));
+          } catch (Exception DateTimeParseException){
+              log.warn("The task's Id does NOT include the time when the task created. task Id:[%s]", task.getId());
+         }
+          
+      }
+      
+     
+
       TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.running(task.getId()));
 
       // Syncing state with Zookeeper - don't assign new tasks until the task we just assigned is actually running

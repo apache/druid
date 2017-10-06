@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import com.metamx.http.client.HttpClient;
+import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.curator.cache.PathChildrenCacheFactory;
 import io.druid.guice.annotations.Global;
 import io.druid.indexing.overlord.autoscaling.NoopResourceManagementStrategy;
@@ -48,6 +49,7 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunn
   private final ResourceManagementSchedulerConfig resourceManagementSchedulerConfig;
   private final ResourceManagementStrategy resourceManagementStrategy;
   private final ScheduledExecutorFactory factory;
+  private final ServiceEmitter emitter;
 
   @Inject
   public RemoteTaskRunnerFactory(
@@ -59,7 +61,8 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunn
       final Supplier<WorkerBehaviorConfig> workerConfigRef,
       final ScheduledExecutorFactory factory,
       final ResourceManagementSchedulerConfig resourceManagementSchedulerConfig,
-      final ResourceManagementStrategy resourceManagementStrategy
+      final ResourceManagementStrategy resourceManagementStrategy,
+      final ServiceEmitter emitter
   )
   {
     this.curator = curator;
@@ -71,6 +74,7 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunn
     this.resourceManagementSchedulerConfig = resourceManagementSchedulerConfig;
     this.resourceManagementStrategy = resourceManagementStrategy;
     this.factory = factory;
+    this.emitter = emitter;
   }
 
   @Override
@@ -87,7 +91,7 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunn
         factory.create(1, "RemoteTaskRunner-Scheduled-Cleanup--%d"),
         resourceManagementSchedulerConfig.isDoAutoscale()
         ? resourceManagementStrategy
-        : new NoopResourceManagementStrategy<>()
+        : new NoopResourceManagementStrategy<>(), emitter
     );
   }
 }
