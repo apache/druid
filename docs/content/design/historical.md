@@ -56,5 +56,5 @@ to be queried after a restart.
 
 * `/druid/historical/v1/readiness`
 
-Similar to `/druid/historical/v1/loadstatus`, but instead or returning JSON with a flag, responses 200 OK if segments
+Similar to `/druid/historical/v1/loadstatus`, but instead of returning JSON with a flag, responses 200 OK if segments
 in the local cache have been loaded, and 503 SERVICE UNAVAILABLE, if they haven't.

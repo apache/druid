@@ -55,7 +55,7 @@ public class HistoricalResource
 
   @GET
   @Path("/readiness")
-  public Response getLoadStatusCode()
+  public Response getReadiness()
   {
     if (coordinator.isStarted()) {
       return Response.ok().build();
