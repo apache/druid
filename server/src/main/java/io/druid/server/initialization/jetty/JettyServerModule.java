@@ -22,16 +22,13 @@ package io.druid.server.initialization.jetty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.fasterxml.jackson.jaxrs.smile.JacksonSmileProvider;
-import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
 import com.google.inject.Binder;
 import com.google.inject.Binding;
-import com.google.inject.ConfigurationException;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Provides;
-import com.google.inject.ProvisionException;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
@@ -51,6 +48,7 @@ import io.druid.guice.annotations.JSR311Resource;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Self;
 import io.druid.guice.annotations.Smile;
+import io.druid.java.util.common.RE;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.DruidNode;
@@ -79,6 +77,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -183,9 +182,24 @@ public class JettyServerModule extends JerseyServletModule
       Binding<SslContextFactory> sslContextFactoryBinding
   )
   {
-    final QueuedThreadPool threadPool = new QueuedThreadPool();
-    threadPool.setMinThreads(config.getNumThreads());
-    threadPool.setMaxThreads(config.getNumThreads());
+    // adjusting to make config.getNumThreads() mean, "number of threads
+    // that concurrently handle the requests".
+    int numServerThreads = config.getNumThreads() + getMaxJettyAcceptorsSelectorsNum(node);
+
+    final QueuedThreadPool threadPool;
+    if (config.getQueueSize() == Integer.MAX_VALUE) {
+      threadPool = new QueuedThreadPool();
+      threadPool.setMinThreads(numServerThreads);
+      threadPool.setMaxThreads(numServerThreads);
+    } else {
+      threadPool = new QueuedThreadPool(
+          numServerThreads,
+          numServerThreads,
+          60000, // same default is used in other case when threadPool = new QueuedThreadPool()
+          new LinkedBlockingQueue<>(config.getQueueSize())
+      );
+    }
+
     threadPool.setDaemon(true);
 
     final Server server = new Server(threadPool);
@@ -261,8 +275,8 @@ public class JettyServerModule extends JerseyServletModule
     try {
       initializer.initialize(server, injector);
     }
-    catch (ConfigurationException e) {
-      throw new ProvisionException(Iterables.getFirst(e.getErrorMessages(), null).getMessage());
+    catch (Exception e) {
+      throw new RE(e, "server initialization exception");
     }
 
     lifecycle.addHandler(
@@ -286,6 +300,14 @@ public class JettyServerModule extends JerseyServletModule
           }
         }
     );
+  }
+
+  private static int getMaxJettyAcceptorsSelectorsNum(DruidNode druidNode)
+  {
+    // This computation is based on Jetty v9.3.19 which uses upto 8(4 acceptors and 4 selectors) threads per
+    // ServerConnector
+    int numServerConnector = (druidNode.isEnablePlaintextPort() ? 1 : 0) + (druidNode.isEnableTlsPort() ? 1 : 0);
+    return numServerConnector * 8;
   }
 
   @Provides

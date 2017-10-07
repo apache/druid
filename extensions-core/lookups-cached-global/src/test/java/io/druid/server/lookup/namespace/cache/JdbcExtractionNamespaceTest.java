@@ -52,6 +52,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -335,19 +336,20 @@ public class JdbcExtractionNamespaceTest
       throws InterruptedException
   {
     final String query;
+    final String statementVal = val != null ? "'%s'" : "%s";
     if (tsColumn == null) {
       handle.createStatement(
           StringUtils.format("DELETE FROM %s WHERE %s='%s'", tableName, keyName, key)
       ).setQueryTimeout(1).execute();
       query = StringUtils.format(
-          "INSERT INTO %s (%s, %s, %s) VALUES ('%s', '%s', '%s')",
+          "INSERT INTO %s (%s, %s, %s) VALUES ('%s', '%s', " + statementVal + ")",
           tableName,
           filterColumn, keyName, valName,
           filter, key, val
       );
     } else {
       query = StringUtils.format(
-          "INSERT INTO %s (%s, %s, %s, %s) VALUES ('%s', '%s', '%s', '%s')",
+          "INSERT INTO %s (%s, %s, %s, %s) VALUES ('%s', '%s', '%s', " + statementVal + ")",
           tableName,
           tsColumn, filterColumn, keyName, valName,
           updateTs, filter, key, val
@@ -442,6 +444,19 @@ public class JdbcExtractionNamespaceTest
       assertUpdated(entry, "foo", "bar");
       insertValues(handleRef, "foo", "baz", null, "2900-01-01 00:00:00");
       assertUpdated(entry, "foo", "baz");
+    }
+  }
+
+  @Test(timeout = 60_000L)
+  public void testIgnoresNullValues()
+          throws NoSuchFieldException, IllegalAccessException, ExecutionException, InterruptedException
+  {
+    try (final CacheScheduler.Entry entry = ensureEntry()) {
+      insertValues(handleRef, "fooz", null, null, "2900-01-01 00:00:00");
+      waitForUpdates(1_000L, 2L);
+      Thread.sleep(100);
+      Set set = entry.getCache().keySet();
+      Assert.assertFalse(set.contains("fooz"));
     }
   }
 
