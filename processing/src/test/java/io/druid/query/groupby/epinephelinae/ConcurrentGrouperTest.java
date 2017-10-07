@@ -47,10 +47,14 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -59,11 +63,20 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+@RunWith(Parameterized.class)
 public class ConcurrentGrouperTest
 {
   private static final ExecutorService SERVICE = Executors.newFixedThreadPool(8);
   private static final TestResourceHolder TEST_RESOURCE_HOLDER = new TestResourceHolder(256);
-  private static final int BYTE_BUFFER_SIZE = 256;
+
+  @Parameters(name = "bufferSize={0}")
+  public static Collection<Object[]> constructorFeeder()
+  {
+    return ImmutableList.of(
+        new Object[]{1024 * 32},
+        new Object[]{1024 * 1024}
+    );
+  }
 
   @AfterClass
   public static void teardown()
@@ -73,22 +86,6 @@ public class ConcurrentGrouperTest
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  private static final Supplier<ByteBuffer> BUFFER_SUPPLIER = new Supplier<ByteBuffer>()
-  {
-    private final AtomicBoolean called = new AtomicBoolean(false);
-    private ByteBuffer buffer;
-
-    @Override
-    public ByteBuffer get()
-    {
-      if (called.compareAndSet(false, true)) {
-        buffer = ByteBuffer.allocate(BYTE_BUFFER_SIZE);
-      }
-
-      return buffer;
-    }
-  };
 
   private static final Supplier<ResourceHolder<ByteBuffer>> COMBINE_BUFFER_SUPPLIER = new Supplier<ResourceHolder<ByteBuffer>>()
   {
@@ -107,6 +104,7 @@ public class ConcurrentGrouperTest
 
   static class TestResourceHolder implements ResourceHolder<ByteBuffer>
   {
+    private boolean taken;
     private boolean closed;
     private ByteBuffer buffer;
 
@@ -118,6 +116,7 @@ public class ConcurrentGrouperTest
     @Override
     public ByteBuffer get()
     {
+      taken = true;
       return buffer;
     }
 
@@ -262,17 +261,38 @@ public class ConcurrentGrouperTest
     }
   };
 
+  private Supplier<ByteBuffer> bufferSupplier;
+
+  public ConcurrentGrouperTest(int bufferSize)
+  {
+    bufferSupplier = new Supplier<ByteBuffer>()
+    {
+      private final AtomicBoolean called = new AtomicBoolean(false);
+      private ByteBuffer buffer;
+
+      @Override
+      public ByteBuffer get()
+      {
+        if (called.compareAndSet(false, true)) {
+          buffer = ByteBuffer.allocate(bufferSize);
+        }
+
+        return buffer;
+      }
+    };
+  }
+
   @Test()
   public void testAggregate() throws InterruptedException, ExecutionException, IOException
   {
     final ConcurrentGrouper<Long> grouper = new ConcurrentGrouper<>(
-        BUFFER_SUPPLIER,
+        bufferSupplier,
         COMBINE_BUFFER_SUPPLIER,
         KEY_SERDE_FACTORY,
         KEY_SERDE_FACTORY,
         null_factory,
         new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
-        24,
+        1024,
         0.7f,
         1,
         new LimitedTemporaryStorage(temporaryFolder.newFolder(), 1024 * 1024),
@@ -313,7 +333,7 @@ public class ConcurrentGrouperTest
     final List<Entry<Long>> actual = Lists.newArrayList(iterator);
     iterator.close();
 
-    Assert.assertTrue(TEST_RESOURCE_HOLDER.closed);
+    Assert.assertTrue(!TEST_RESOURCE_HOLDER.taken || TEST_RESOURCE_HOLDER.closed);
 
     final List<Entry<Long>> expected = new ArrayList<>();
     for (long i = 0; i < numRows; i++) {

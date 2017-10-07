@@ -35,7 +35,6 @@ import java.nio.ByteBuffer;
 import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.function.Predicate;
 
 /**
  * A streaming grouper which can aggregate sorted inputs.  This grouper can aggregate while its iterator is being
@@ -70,6 +69,7 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
   // spinlocks to prevent the writing thread from being blocked if the iterator of this grouper is not consumed due to
   // some failures which potentially makes the whole system being paused.
   private final long queryTimeoutAtNs;
+  private final boolean hasQueryTimeout;
 
   // Below variables are initialized when init() is called.
   private ByteBuffer buffer;
@@ -151,9 +151,10 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
 
     // queryTimeoutAtMs comes from System.currentTimeMillis(), but we should use System.nanoTime() to check timeout in
     // this class. See increaseWriteIndex() and increaseReadIndex().
-    final long timeoutNs = queryTimeoutAtMs == QueryContexts.NO_TIMEOUT ?
-                           DEFAULT_TIMEOUT_NS :
-                           TimeUnit.MILLISECONDS.toNanos(queryTimeoutAtMs - System.currentTimeMillis());
+    this.hasQueryTimeout = queryTimeoutAtMs != QueryContexts.NO_TIMEOUT;
+    final long timeoutNs = hasQueryTimeout ?
+                           TimeUnit.MILLISECONDS.toNanos(queryTimeoutAtMs - System.currentTimeMillis()) :
+                           QueryContexts.NO_TIMEOUT;
 
     this.queryTimeoutAtNs = System.nanoTime() + timeoutNs;
   }
@@ -281,10 +282,16 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
    */
   private void increaseWriteIndex()
   {
+    final long startAtNs = System.nanoTime();
+    final long queryTimeoutAtNs = getQueryTimeoutAtNs(startAtNs);
+    final long spinTimeoutAtNs = startAtNs + SPIN_FOR_TIMEOUT_THRESHOLD_NS;
+    long timeoutNs = queryTimeoutAtNs - startAtNs;
+    long spinTimeoutNs = SPIN_FOR_TIMEOUT_THRESHOLD_NS;
+
     // In the below, we check that the array is full and wait for at least one slot to become available.
     //
     // nextReadIndex is a volatile variable and the changes on it are continuously checked until they are seen in
-    // waitFor(). See the following links.
+    // the while loop. See the following links.
     // * http://docs.oracle.com/javase/specs/jls/se7/html/jls-8.html#jls-8.3.1.4
     // * http://docs.oracle.com/javase/specs/jls/se7/html/jls-17.html#jls-17.4.5
     // * https://stackoverflow.com/questions/11761552/detailed-semantics-of-volatile-regarding-timeliness-of-visibility
@@ -292,20 +299,39 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
     if (curWriteIndex == maxNumSlots - 1) {
       // We additionally check that nextReadIndex is -1 here because the writing thread should wait for the reading
       // thread to start reading only when the writing thread tries to overwrite the first slot for the first time.
-      waitFor(
-          notUsed -> (nextReadIndex == -1 || nextReadIndex == 0) && !Thread.currentThread().isInterrupted(),
-          queryTimeoutAtNs
-      );
+
+      // The below condition is checked in a while loop instead of using a lock to avoid frequent thread park.
+      while ((nextReadIndex == -1 || nextReadIndex == 0) && !Thread.currentThread().isInterrupted()) {
+        if (timeoutNs <= 0L) {
+          throw new RuntimeException(new TimeoutException());
+        }
+        // Thread.yield() should not be called from the very beginning
+        if (spinTimeoutNs <= 0L) {
+          Thread.yield();
+        }
+        long now = System.nanoTime();
+        timeoutNs = queryTimeoutAtNs - now;
+        spinTimeoutNs = spinTimeoutAtNs - now;
+      }
 
       // Changes on nextReadIndex happens-before changing curWriteIndex.
       curWriteIndex = 0;
     } else {
       final int nextWriteIndex = curWriteIndex + 1;
 
-      waitFor(
-          notUsed -> (nextWriteIndex == nextReadIndex) && !Thread.currentThread().isInterrupted(),
-          queryTimeoutAtNs
-      );
+      // The below condition is checked in a while loop instead of using a lock to avoid frequent thread park.
+      while ((nextWriteIndex == nextReadIndex) && !Thread.currentThread().isInterrupted()) {
+        if (timeoutNs <= 0L) {
+          throw new RuntimeException(new TimeoutException());
+        }
+        // Thread.yield() should not be called from the very beginning
+        if (spinTimeoutNs <= 0L) {
+          Thread.yield();
+        }
+        long now = System.nanoTime();
+        timeoutNs = queryTimeoutAtNs - now;
+        spinTimeoutNs = spinTimeoutAtNs - now;
+      }
 
       // Changes on nextReadIndex happens-before changing curWriteIndex.
       curWriteIndex = nextWriteIndex;
@@ -430,15 +456,31 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
         // Check that the array is empty and wait for at least one slot to become available.
         //
         // curWriteIndex is a volatile variable and the changes on it are continuously checked until they are seen in
-        // waitFor(). See the following links.
+        // the while loop. See the following links.
         // * http://docs.oracle.com/javase/specs/jls/se7/html/jls-8.html#jls-8.3.1.4
         // * http://docs.oracle.com/javase/specs/jls/se7/html/jls-17.html#jls-17.4.5
         // * https://stackoverflow.com/questions/11761552/detailed-semantics-of-volatile-regarding-timeliness-of-visibility
-        waitFor(
-            notUsed -> (curWriteIndex == -1 || target == curWriteIndex) &&
-               !finished && !Thread.currentThread().isInterrupted(),
-            queryTimeoutAtNs
-        );
+
+        final long startAtNs = System.nanoTime();
+        final long queryTimeoutAtNs = getQueryTimeoutAtNs(startAtNs);
+        final long spinTimeoutAtNs = startAtNs + SPIN_FOR_TIMEOUT_THRESHOLD_NS;
+        long timeoutNs = queryTimeoutAtNs - startAtNs;
+        long spinTimeoutNs = SPIN_FOR_TIMEOUT_THRESHOLD_NS;
+
+        // The below condition is checked in a while loop instead of using a lock to avoid frequent thread park.
+        while ((curWriteIndex == -1 || target == curWriteIndex) &&
+               !finished && !Thread.currentThread().isInterrupted()) {
+          if (timeoutNs <= 0L) {
+            throw new RuntimeException(new TimeoutException());
+          }
+          // Thread.yield() should not be called from the very beginning
+          if (spinTimeoutNs <= 0L) {
+            Thread.yield();
+          }
+          long now = System.nanoTime();
+          timeoutNs = queryTimeoutAtNs - now;
+          spinTimeoutNs = spinTimeoutAtNs - now;
+        }
 
         // Changes on curWriteIndex happens-before changing nextReadIndex.
         nextReadIndex = target;
@@ -452,31 +494,9 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
     };
   }
 
-  /**
-   * Wait while the given predicate is true.  Throws an exception the current nano time is greater than the given
-   * timeout.
-   */
-  private static void waitFor(Predicate<Void> predicate, long queryTimeoutAtNs)
+  private long getQueryTimeoutAtNs(long startAtNs)
   {
-    final long startAt = System.nanoTime();
-    final long spinTimeoutAt = startAt + SPIN_FOR_TIMEOUT_THRESHOLD_NS;
-    long timeoutNs = queryTimeoutAtNs - startAt;
-    long spinTimeoutNs = SPIN_FOR_TIMEOUT_THRESHOLD_NS;
-
-    // In the below, we check that the predicate is true and wait for it becomes false.
-    // This is done in a while loop instead of using a lock to avoid frequent thread park.
-    while (predicate.test(null)) {
-      if (timeoutNs <= 0L) {
-        throw new RuntimeException(new TimeoutException());
-      }
-      // Thread.yield() should not be called from the very beginning
-      if (spinTimeoutNs <= 0L) {
-        Thread.yield();
-      }
-      long now = System.nanoTime();
-      timeoutNs = queryTimeoutAtNs - now;
-      spinTimeoutNs = spinTimeoutAt - now;
-    }
+    return hasQueryTimeout ? queryTimeoutAtNs : startAtNs + DEFAULT_TIMEOUT_NS;
   }
 
   /**
