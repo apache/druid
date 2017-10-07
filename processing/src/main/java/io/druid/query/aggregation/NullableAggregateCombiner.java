@@ -51,8 +51,8 @@ public class NullableAggregateCombiner implements AggregateCombiner
   @Override
   public void fold(ColumnValueSelector selector)
   {
-    boolean isCurrentValNull = selector.isNull();
-    if (!isCurrentValNull) {
+    boolean isNotNull = !selector.isNull();
+    if (isNotNull) {
       if (isNullResult) {
         isNullResult = false;
       }

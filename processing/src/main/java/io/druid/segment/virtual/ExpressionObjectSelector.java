@@ -22,6 +22,7 @@ package io.druid.segment.virtual;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Maps;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprEval;
@@ -114,7 +115,8 @@ public class ExpressionObjectSelector implements ObjectColumnSelector<ExprEval>
   static Supplier<Object> supplierFromObjectSelector(final ObjectColumnSelector selector)
   {
     if (selector == null) {
-      return null;
+      // Missing column.
+      return Suppliers.ofInstance(NullHandlingHelper.nullToDefault((String) null));
     }
 
     final Class<?> clazz = selector.classOfObject();

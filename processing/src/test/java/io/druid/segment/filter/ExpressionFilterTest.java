@@ -193,7 +193,11 @@ public class ExpressionFilterTest extends BaseFilterTest
   @Test
   public void testMissingColumn()
   {
-    assertFilterMatches(EDF("missing == null"), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
+    if (NullHandlingHelper.useDefaultValuesForNull()) {
+      assertFilterMatches(EDF("missing == ''"), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
+    } else {
+      assertFilterMatches(EDF("missing == null"), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
+    }
     assertFilterMatches(EDF("missing == '1'"), ImmutableList.of());
     assertFilterMatches(EDF("missing == 2"), ImmutableList.of());
     assertFilterMatches(EDF("missing < '2'"), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));

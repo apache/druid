@@ -33,8 +33,8 @@ import java.nio.ByteBuffer;
 
 public class NullableBufferAggregator implements BufferAggregator
 {
-  public static final byte IS_NULL_BYTE = (byte) 1;
-  public static final byte IS_NOT_NULL_BYTE = (byte) 0;
+  private static final byte IS_NULL_BYTE = (byte) 1;
+  private static final byte IS_NOT_NULL_BYTE = (byte) 0;
   private final BufferAggregator delegate;
   private final ColumnValueSelector selector;
 
@@ -55,8 +55,8 @@ public class NullableBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    boolean isCurrentValNull = selector.isNull();
-    if (!isCurrentValNull) {
+    boolean isNotNull = !selector.isNull();
+    if (isNotNull) {
       if (buf.get(position) == IS_NULL_BYTE) {
         buf.put(position, IS_NOT_NULL_BYTE);
       }

@@ -44,8 +44,8 @@ public class NullableAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    boolean isCurrentValNull = selector.isNull();
-    if (!isCurrentValNull) {
+    boolean isNotNull = !selector.isNull();
+    if (isNotNull) {
       if (isNullResult) {
         isNullResult = false;
       }

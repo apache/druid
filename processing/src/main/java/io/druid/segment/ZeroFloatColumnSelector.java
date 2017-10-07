@@ -48,6 +48,7 @@ public final class ZeroFloatColumnSelector implements FloatColumnSelector, Histo
     return 0.0;
   }
 
+  @Override
   public boolean isNull()
   {
     return false;
