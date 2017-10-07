@@ -79,7 +79,7 @@ public class SynchronizedUnion implements Union
   }
 
   @Override
-  public void update(char[] chars)
+  public synchronized void update(char[] chars)
   {
     delegate.update(chars);
   }
@@ -115,7 +115,7 @@ public class SynchronizedUnion implements Union
   }
 
   @Override
-  public boolean isSameResource(Memory mem)
+  public synchronized boolean isSameResource(Memory mem)
   {
     return delegate.isSameResource(mem);
   }

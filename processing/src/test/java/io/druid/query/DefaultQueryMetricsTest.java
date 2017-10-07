@@ -66,7 +66,6 @@ public class DefaultQueryMetricsTest
         .filters(new SelectorDimFilter("tags", "t3", null))
         .build();
     queryMetrics.query(query);
-
     queryMetrics.reportQueryTime(0).emit(serviceEmitter);
     Map<String, Object> actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
     Assert.assertEquals(12, actualEvent.size());

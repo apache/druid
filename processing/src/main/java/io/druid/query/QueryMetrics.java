@@ -22,6 +22,7 @@ package io.druid.query;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.query.filter.Filter;
+import io.druid.query.search.SearchQueryMetricsFactory;
 import org.joda.time.Interval;
 
 import java.util.List;
@@ -110,30 +111,35 @@ import java.util.List;
  *
  * Making subinterfaces of QueryMetrics for emitting custom dimensions and/or metrics for specific query types
  * -----------------------------------------------------------------------------------------------------------
- * If a query type (e. g. {@link io.druid.query.search.SearchQuery} (it's runners) needs to emit custom
- * dimensions and/or metrics which doesn't make sense for all other query types, the following steps should be executed:
- *  1. Create `interface SearchQueryMetrics extends QueryMetrics` (here and below "Search" is the query type) with
- *  additional methods (see "Adding new methods" section above).
+ * If a query type (e. g. {@link io.druid.query.metadata.metadata.SegmentMetadataQuery} (it's runners) needs to emit
+ * custom dimensions and/or metrics which doesn't make sense for all other query types, the following steps should be
+ * executed:
  *
- *  2. Create `class DefaultSearchQueryMetrics implements SearchQueryMetrics`. This class should implement extra methods
- *  from SearchQueryMetrics interfaces with empty bodies, AND DELEGATE ALL OTHER METHODS TO A QueryMetrics OBJECT,
- *  provided as a sole parameter in DefaultSearchQueryMetrics constructor.
+ *  1. Create `interface SegmentMetadataQueryMetrics extends QueryMetrics` (here and below "SegmentMetadata" is the
+ *  query type) with additional methods (see "Adding new methods" section above).
  *
- *  3. Create `interface SearchQueryMetricsFactory` with a single method
- *  `SearchQueryMetrics makeMetrics(SearchQuery query);`.
+ *  2. Create `class DefaultSegmentMetadataQueryMetrics implements SegmentMetadataQueryMetrics`. This class should
+ *  implement extra methods from SegmentMetadataQueryMetrics interfaces with empty bodies, AND DELEGATE ALL OTHER
+ *  METHODS TO A QueryMetrics OBJECT, provided as a sole parameter in DefaultSegmentMetadataQueryMetrics constructor.
  *
- *  4. Create `class DefaultSearchQueryMetricsFactory implements SearchQueryMetricsFactory`, which accepts {@link
- *  GenericQueryMetricsFactory} as injected constructor parameter, and implements makeMetrics() as
- *  `return new DefaultSearchQueryMetrics(genericQueryMetricsFactory.makeMetrics(query));`
+ *  NOTE: query(), dataSource(), queryType(), interval(), hasFilters(), duration() and queryId() methods or any
+ *  "pre-query-execution-time" methods should either have a empty body or throw exception.
  *
- *  5. Inject and use SearchQueryMetricsFactory instead of {@link GenericQueryMetricsFactory} in {@link
- *  io.druid.query.search.SearchQueryQueryToolChest}.
+ *  3. Create `interface SegmentMetadataQueryMetricsFactory` with a single method
+ *  `SegmentMetadataQueryMetrics makeMetrics(SegmentMetadataQuery query);`.
  *
- *  6. Establish injection of SearchQueryMetricsFactory using config and provider method in QueryToolChestModule
- *  (see how it is done in QueryToolChestModule for existing query types with custom metrics, e. g. {@link
- *  io.druid.query.topn.TopNQueryMetricsFactory}), if the query type belongs to the core druid-processing, e. g.
- *  SearchQuery. If the query type defined in an extension, you can specify
- *  `binder.bind(ScanQueryMetricsFactory.class).to(DefaultScanQueryMetricsFactory.class)` in the extension's
+ *  4. Create `class DefaultSegmentMetadataQueryMetricsFactory implements SegmentMetadataQueryMetricsFactory`,
+ *  which accepts {@link GenericQueryMetricsFactory} as injected constructor parameter, and implements makeMetrics() as
+ *  `return new DefaultSegmentMetadataQueryMetrics(genericQueryMetricsFactory.makeMetrics(query));`
+ *
+ *  5. Inject and use SegmentMetadataQueryMetricsFactory instead of {@link GenericQueryMetricsFactory} in
+ *  {@link io.druid.query.metadata.SegmentMetadataQueryQueryToolChest}.
+ *
+ *  6. Establish injection of SegmentMetadataQueryMetricsFactory using config and provider method in
+ *  QueryToolChestModule (see how it is done in {@link io.druid.guice.QueryToolChestModule} for existing query types
+ *  with custom metrics, e. g. {@link SearchQueryMetricsFactory}), if the query type
+ *  belongs to the core druid-processing, e. g. SegmentMetadataQuery. If the query type defined in an extension, you
+ *  can specify `binder.bind(ScanQueryMetricsFactory.class).to(DefaultScanQueryMetricsFactory.class)` in the extension's
  *  Guice module, if the query type is defined in an extension, e. g. ScanQuery. Or establish similar configuration,
  *  as for the core query types.
  *
@@ -145,6 +151,9 @@ import java.util.List;
  * same time as the whole QueryMetrics abstraction and their default implementations have to actually emit more
  * dimensions than the default generic QueryMetrics. So those subinterfaces shouldn't be taken as direct examples for
  * following the plan specified above.
+ *
+ * Refer {@link SearchQueryMetricsFactory}
+ * and {@link io.druid.query.select.SelectQueryMetricsFactory} as an implementation example of this procedure.
  *
  * @param <QueryType>
  */
