@@ -124,13 +124,18 @@ public class StringInputRowParser implements ByteBufferInputRowParser
     return theMap;
   }
 
-  public void startFileFromBeginning()
+  public void initializeParser()
   {
     if (parser == null) {
       // parser should be created when it is really used to avoid unnecessary initialization of the underlying
       // parseSpec.
       parser = parseSpec.makeParser();
     }
+  }
+
+  public void startFileFromBeginning()
+  {
+    initializeParser();
     parser.startFileFromBeginning();
   }
 
@@ -143,11 +148,7 @@ public class StringInputRowParser implements ByteBufferInputRowParser
   @Nullable
   private Map<String, Object> parseString(@Nullable String inputString)
   {
-    if (parser == null) {
-      // parser should be created when it is really used to avoid unnecessary initialization of the underlying
-      // parseSpec.
-      parser = parseSpec.makeParser();
-    }
+    initializeParser();
     return parser.parse(inputString);
   }
 
