@@ -37,4 +37,9 @@ public interface TimeseriesQueryMetrics extends QueryMetrics<TimeseriesQuery>
    * method.
    */
   void numComplexMetrics(TimeseriesQuery query);
+
+  /**
+   * Sets the granularity of {@link TimeseriesQuery#getGranularity()} of the given query as dimension.
+   */
+  void granularity(TimeseriesQuery query);
 }

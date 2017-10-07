@@ -31,6 +31,7 @@ import com.google.common.io.ByteSource;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import io.druid.audit.AuditEntry;
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
 import io.druid.common.config.JacksonConfigManager;
@@ -291,14 +292,12 @@ public class OverlordResource
     Interval theInterval = interval == null ? null : Intervals.of(interval);
     if (theInterval == null && count != null) {
       try {
-        return Response.ok(
-            auditManager.fetchAuditHistory(
-                WorkerBehaviorConfig.CONFIG_KEY,
-                WorkerBehaviorConfig.CONFIG_KEY,
-                count
-            )
-        )
-                       .build();
+        List<AuditEntry> workerEntryList = auditManager.fetchAuditHistory(
+            WorkerBehaviorConfig.CONFIG_KEY,
+            WorkerBehaviorConfig.CONFIG_KEY,
+            count
+        );
+        return Response.ok(workerEntryList).build();
       }
       catch (IllegalArgumentException e) {
         return Response.status(Response.Status.BAD_REQUEST)
@@ -306,14 +305,12 @@ public class OverlordResource
                        .build();
       }
     }
-    return Response.ok(
-        auditManager.fetchAuditHistory(
-            WorkerBehaviorConfig.CONFIG_KEY,
-            WorkerBehaviorConfig.CONFIG_KEY,
-            theInterval
-        )
-    )
-                   .build();
+    List<AuditEntry> workerEntryList = auditManager.fetchAuditHistory(
+        WorkerBehaviorConfig.CONFIG_KEY,
+        WorkerBehaviorConfig.CONFIG_KEY,
+        theInterval
+    );
+    return Response.ok(workerEntryList).build();
   }
 
   @POST

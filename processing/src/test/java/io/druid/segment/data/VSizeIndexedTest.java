@@ -79,7 +79,7 @@ public class VSizeIndexedTest
       Assert.assertEquals(ints.length, vSizeIndexedInts.size());
       Assert.assertEquals(1, vSizeIndexedInts.getNumBytes());
       for (int j = 0; j < ints.length; j++) {
-          Assert.assertEquals(ints[j], vSizeIndexedInts.get(j));
+        Assert.assertEquals(ints[j], vSizeIndexedInts.get(j));
       }
     }
   }

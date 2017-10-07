@@ -96,7 +96,7 @@ public class BrokerServerView implements TimelineServerView
     this.baseView = baseView;
     this.tierSelectorStrategy = tierSelectorStrategy;
     this.emitter = emitter;
-    this.clients = Maps.newConcurrentMap();
+    this.clients = new ConcurrentHashMap<>();
     this.selectors = Maps.newHashMap();
     this.timelines = Maps.newHashMap();
 

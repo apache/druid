@@ -43,7 +43,6 @@ import io.druid.server.coordination.SegmentChangeRequestHistory;
 import io.druid.server.coordination.SegmentChangeRequestLoad;
 import io.druid.server.coordination.SegmentChangeRequestsSnapshot;
 import io.druid.server.coordination.ServerType;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -162,7 +161,7 @@ public class HttpServerInventoryViewTest
     );
 
     DiscoveryDruidNode druidNode = new DiscoveryDruidNode(
-        new DruidNode("service", "host", 8080, null, new ServerConfig()),
+        new DruidNode("service", "host", 8080, null, true, false),
         DruidNodeDiscoveryProvider.NODE_TYPE_HISTORICAL,
         ImmutableMap.of(
             DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0)

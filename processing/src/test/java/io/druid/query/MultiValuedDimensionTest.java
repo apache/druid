@@ -36,7 +36,6 @@ import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregationTestHelper;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
@@ -73,6 +72,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -156,14 +156,7 @@ public class MultiValuedDimensionTest
         .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
         .setGranularity(Granularities.ALL)
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("tags", "tags")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                new AggregatorFactory[]
-                    {
-                        new CountAggregatorFactory("count")
-                    }
-            )
-        )
+        .setAggregatorSpecs(Collections.singletonList(new CountAggregatorFactory("count")))
         .build();
 
     Sequence<Row> result = helper.runQueryOnSegmentsObjs(
@@ -197,17 +190,8 @@ public class MultiValuedDimensionTest
         .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
         .setGranularity(Granularities.ALL)
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("tags", "tags")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                new AggregatorFactory[]
-                    {
-                        new CountAggregatorFactory("count")
-                    }
-            )
-        )
-        .setDimFilter(
-            new SelectorDimFilter("tags", "t3", null)
-        )
+        .setAggregatorSpecs(Collections.singletonList(new CountAggregatorFactory("count")))
+        .setDimFilter(new SelectorDimFilter("tags", "t3", null))
         .build();
 
     Sequence<Row> result = helper.runQueryOnSegmentsObjs(
@@ -245,17 +229,8 @@ public class MultiValuedDimensionTest
                 )
             )
         )
-        .setAggregatorSpecs(
-            Arrays.asList(
-                new AggregatorFactory[]
-                    {
-                        new CountAggregatorFactory("count")
-                    }
-            )
-        )
-        .setDimFilter(
-            new SelectorDimFilter("tags", "t3", null)
-        )
+        .setAggregatorSpecs(Collections.singletonList(new CountAggregatorFactory("count")))
+        .setDimFilter(new SelectorDimFilter("tags", "t3", null))
         .build();
 
     Sequence<Row> result = helper.runQueryOnSegmentsObjs(
@@ -286,13 +261,7 @@ public class MultiValuedDimensionTest
         ))
         .metric("count")
         .intervals(QueryRunnerTestHelper.fullOnInterval)
-        .aggregators(
-            Arrays.asList(
-                new AggregatorFactory[]
-                    {
-                        new CountAggregatorFactory("count")
-                    }
-            ))
+        .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
         .threshold(5)
         .filters(new SelectorDimFilter("tags", "t3", null)).build();
 

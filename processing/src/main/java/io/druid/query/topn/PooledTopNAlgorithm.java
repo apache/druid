@@ -98,8 +98,7 @@ public class PooledTopNAlgorithm
       new Generic2AggPooledTopNScannerPrototype();
   private static final Historical1AggPooledTopNScanner defaultHistorical1SimpleDoubleAggScanner =
       new Historical1SimpleDoubleAggPooledTopNScannerPrototype();
-  private static final
-  Historical1AggPooledTopNScanner defaultHistoricalSingleValueDimSelector1SimpleDoubleAggScanner =
+  private static final Historical1AggPooledTopNScanner defaultHistoricalSingleValueDimSelector1SimpleDoubleAggScanner =
       new HistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopNScannerPrototype();
 
   private interface ScanAndAggregate

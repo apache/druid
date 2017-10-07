@@ -599,7 +599,7 @@ public class IndexTaskTest
     File tmpDir = temporaryFolder.newFolder();
     File tmpFile = File.createTempFile("druid", "index", tmpDir);
 
-   populateRollupTestData(tmpFile);
+    populateRollupTestData(tmpFile);
 
     IndexTask indexTask = new IndexTask(
         null,
@@ -885,73 +885,95 @@ public class IndexTaskTest
 
     indexTask.run(
         new TaskToolbox(
-            null, new TaskActionClient()
-        {
-          @Override
-          public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
-          {
-            if (taskAction instanceof LockListAction) {
-              return (RetType) Collections.singletonList(
-                  new TaskLock(
-                      "", "", null, DateTimes.nowUtc().toString()
-                  )
-              );
-            }
+            null,
+            new TaskActionClient()
+            {
+              @Override
+              public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
+              {
+                if (taskAction instanceof LockListAction) {
+                  return (RetType) Collections.singletonList(
+                      new TaskLock(
+                          "", "", null, DateTimes.nowUtc().toString()
+                      )
+                  );
+                }
 
-            if (taskAction instanceof LockAcquireAction) {
-              return (RetType) new TaskLock(
-                  "groupId",
-                  "test",
-                  ((LockAcquireAction) taskAction).getInterval(),
-                  DateTimes.nowUtc().toString()
-              );
-            }
+                if (taskAction instanceof LockAcquireAction) {
+                  return (RetType) new TaskLock(
+                      "groupId",
+                      "test",
+                      ((LockAcquireAction) taskAction).getInterval(),
+                      DateTimes.nowUtc().toString()
+                  );
+                }
 
-            if (taskAction instanceof SegmentTransactionalInsertAction) {
-              return (RetType) new SegmentPublishResult(
-                  ((SegmentTransactionalInsertAction) taskAction).getSegments(),
-                  true
-              );
-            }
+                if (taskAction instanceof SegmentTransactionalInsertAction) {
+                  return (RetType) new SegmentPublishResult(
+                      ((SegmentTransactionalInsertAction) taskAction).getSegments(),
+                      true
+                  );
+                }
 
-            if (taskAction instanceof SegmentAllocateAction) {
-              SegmentAllocateAction action = (SegmentAllocateAction) taskAction;
-              Interval interval = action.getPreferredSegmentGranularity().bucket(action.getTimestamp());
-              ShardSpec shardSpec = new NumberedShardSpec(segmentAllocatePartitionCounter++, 0);
-              return (RetType) new SegmentIdentifier(action.getDataSource(), interval, "latestVersion", shardSpec);
-            }
+                if (taskAction instanceof SegmentAllocateAction) {
+                  SegmentAllocateAction action = (SegmentAllocateAction) taskAction;
+                  Interval interval = action.getPreferredSegmentGranularity().bucket(action.getTimestamp());
+                  ShardSpec shardSpec = new NumberedShardSpec(segmentAllocatePartitionCounter++, 0);
+                  return (RetType) new SegmentIdentifier(action.getDataSource(), interval, "latestVersion", shardSpec);
+                }
 
-            return null;
-          }
-        }, null, new DataSegmentPusher()
-        {
-          @Deprecated
-          @Override
-          public String getPathForHadoop(String dataSource)
-          {
-            return getPathForHadoop();
-          }
+                return null;
+              }
+            },
+            null,
+            new DataSegmentPusher()
+            {
+              @Deprecated
+              @Override
+              public String getPathForHadoop(String dataSource)
+              {
+                return getPathForHadoop();
+              }
 
-          @Override
-          public String getPathForHadoop()
-          {
-            return null;
-          }
+              @Override
+              public String getPathForHadoop()
+              {
+                return null;
+              }
 
-          @Override
-          public DataSegment push(File file, DataSegment segment) throws IOException
-          {
-            segments.add(segment);
-            return segment;
-          }
+              @Override
+              public DataSegment push(File file, DataSegment segment) throws IOException
+              {
+                segments.add(segment);
+                return segment;
+              }
 
-          @Override
-          public Map<String, Object> makeLoadSpec(URI uri)
-          {
-            throw new UnsupportedOperationException();
-          }
-        }, null, null, null, null, null, null, null, null, null, null, jsonMapper, temporaryFolder.newFolder(),
-            indexIO, null, null, indexMergerV9, null, null, null, null
+              @Override
+              public Map<String, Object> makeLoadSpec(URI uri)
+              {
+                throw new UnsupportedOperationException();
+              }
+            },
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            jsonMapper,
+            temporaryFolder.newFolder(),
+            indexIO,
+            null,
+            null,
+            indexMergerV9,
+            null,
+            null,
+            null,
+            null
         )
     );
 

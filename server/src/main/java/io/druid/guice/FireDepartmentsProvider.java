@@ -43,11 +43,7 @@ public class FireDepartmentsProvider implements Provider<List<FireDepartment>>
   {
     try {
       this.fireDepartments.addAll(
-          (List<FireDepartment>) jsonMapper.readValue(
-              config.getSpecFile(), new TypeReference<List<FireDepartment>>()
-          {
-          }
-          )
+          jsonMapper.readValue(config.getSpecFile(), new TypeReference<List<FireDepartment>>() {})
       );
     }
     catch (Exception e) {

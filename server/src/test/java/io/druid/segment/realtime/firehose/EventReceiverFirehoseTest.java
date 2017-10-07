@@ -281,7 +281,7 @@ public class EventReceiverFirehoseTest
 
     firehose.shutdown(DateTimes.nowUtc().plusMillis(100).toString(), req);
     while (!firehose.isClosed()) {
-     Thread.sleep(50);
+      Thread.sleep(50);
     }
   }
 }

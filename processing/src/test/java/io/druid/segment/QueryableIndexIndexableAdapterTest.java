@@ -19,11 +19,11 @@
 
 package io.druid.segment;
 
+import io.druid.segment.data.BitmapValues;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.data.IncrementalIndexTest;
-import io.druid.segment.data.IndexedInts;
 import io.druid.segment.incremental.IncrementalIndex;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -69,10 +69,10 @@ public class QueryableIndexIndexableAdapterTest
     IndexableAdapter adapter = new QueryableIndexIndexableAdapter(index);
     String dimension = "dim1";
     //null is added to all dimensions with value
-    IndexedInts indexedInts = adapter.getBitmapIndex(dimension, 0);
+    BitmapValues bitmapValues = adapter.getBitmapValues(dimension, 0);
     for (int i = 0; i < adapter.getDimValueLookup(dimension).size(); i++) {
-      indexedInts = adapter.getBitmapIndex(dimension, i);
-      Assert.assertEquals(1, indexedInts.size());
+      bitmapValues = adapter.getBitmapValues(dimension, i);
+      Assert.assertEquals(1, bitmapValues.size());
     }
   }
 }

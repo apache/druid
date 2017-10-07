@@ -68,13 +68,13 @@ public class DoubleGenericColumnPartSerde implements ColumnPartSerde
   {
     return (buffer, builder, columnConfig) -> {
       final CompressedDoublesIndexedSupplier column = CompressedDoublesIndexedSupplier.fromByteBuffer(
-            buffer,
-            byteOrder,
-            builder.getFileMapper()
-        );
-        builder.setType(ValueType.DOUBLE)
-               .setHasMultipleValues(false)
-               .setGenericColumn(new DoubleGenericColumnSupplier(column));
+          buffer,
+          byteOrder,
+          builder.getFileMapper()
+      );
+      builder.setType(ValueType.DOUBLE)
+             .setHasMultipleValues(false)
+             .setGenericColumn(new DoubleGenericColumnSupplier(column));
 
     };
   }
@@ -89,8 +89,7 @@ public class DoubleGenericColumnPartSerde implements ColumnPartSerde
     private ByteOrder byteOrder = null;
     private DoubleColumnSerializer delegate = null;
 
-    public
-    SerializerBuilder withByteOrder(final ByteOrder byteOrder)
+    public SerializerBuilder withByteOrder(final ByteOrder byteOrder)
     {
       this.byteOrder = byteOrder;
       return this;

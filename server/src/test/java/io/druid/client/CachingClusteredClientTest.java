@@ -2472,8 +2472,7 @@ public class CachingClusteredClientTest
     );
   }
 
-  private Iterable<Result<TimeseriesResultValue>> makeTimeResults
-      (Object... objects)
+  private Iterable<Result<TimeseriesResultValue>> makeTimeResults(Object... objects)
   {
     if (objects.length % 3 != 0) {
       throw new ISE("makeTimeResults must be passed arguments in groups of 3, got[%d]", objects.length);
@@ -2501,8 +2500,7 @@ public class CachingClusteredClientTest
     return retVal;
   }
 
-  private Iterable<BySegmentResultValueClass<TimeseriesResultValue>> makeBySegmentTimeResults
-      (Object... objects)
+  private Iterable<BySegmentResultValueClass<TimeseriesResultValue>> makeBySegmentTimeResults(Object... objects)
   {
     if (objects.length % 5 != 0) {
       throw new ISE("makeTimeResults must be passed arguments in groups of 5, got[%d]", objects.length);
@@ -2532,8 +2530,7 @@ public class CachingClusteredClientTest
     return retVal;
   }
 
-  private Iterable<Result<TimeseriesResultValue>> makeRenamedTimeResults
-      (Object... objects)
+  private Iterable<Result<TimeseriesResultValue>> makeRenamedTimeResults(Object... objects)
   {
     if (objects.length % 3 != 0) {
       throw new ISE("makeTimeResults must be passed arguments in groups of 3, got[%d]", objects.length);
@@ -2557,8 +2554,7 @@ public class CachingClusteredClientTest
     return retVal;
   }
 
-  private Iterable<Result<TopNResultValue>> makeTopNResultsWithoutRename
-      (Object... objects)
+  private Iterable<Result<TopNResultValue>> makeTopNResultsWithoutRename(Object... objects)
   {
     return makeTopNResults(
         Lists.newArrayList(
@@ -2574,8 +2570,7 @@ public class CachingClusteredClientTest
     );
   }
 
-  private Iterable<Result<TopNResultValue>> makeTopNResults
-      (List<String> names, Object... objects)
+  private Iterable<Result<TopNResultValue>> makeTopNResults(List<String> names, Object... objects)
   {
     Preconditions.checkArgument(names.size() == 7);
     List<Result<TopNResultValue>> retVal = Lists.newArrayList();
@@ -2611,8 +2606,7 @@ public class CachingClusteredClientTest
     return retVal;
   }
 
-  private Iterable<Result<TopNResultValue>> makeRenamedTopNResults
-      (Object... objects)
+  private Iterable<Result<TopNResultValue>> makeRenamedTopNResults(Object... objects)
   {
     return makeTopNResults(
         Lists.newArrayList(
@@ -2628,8 +2622,7 @@ public class CachingClusteredClientTest
     );
   }
 
-  private Iterable<Result<SearchResultValue>> makeSearchResults
-      (String dim, Object... objects)
+  private Iterable<Result<SearchResultValue>> makeSearchResults(String dim, Object... objects)
   {
     List<Result<SearchResultValue>> retVal = Lists.newArrayList();
     int index = 0;

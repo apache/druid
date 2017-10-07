@@ -2898,13 +2898,11 @@ public class GroupByQueryRunnerTest
     );
 
     // Now try it with an expression based aggregator.
-    builder.setLimit(Integer.MAX_VALUE)
-           .setAggregatorSpecs(
-               Arrays.asList(
-                   QueryRunnerTestHelper.rowsCount,
-                   new DoubleSumAggregatorFactory("idx", null, "index / 2 + indexMin", TestExprMacroTable.INSTANCE)
-               )
-           );
+    List<AggregatorFactory> aggregatorSpecs = Arrays.asList(
+        QueryRunnerTestHelper.rowsCount,
+        new DoubleSumAggregatorFactory("idx", null, "index / 2 + indexMin", TestExprMacroTable.INSTANCE)
+    );
+    builder.setLimit(Integer.MAX_VALUE).setAggregatorSpecs(aggregatorSpecs);
 
     expectedResults = GroupByQueryRunnerTestHelper.createExpectedRows(
         new String[]{"__time", "alias", "rows", "idx"},
@@ -2930,16 +2928,17 @@ public class GroupByQueryRunnerTest
     );
 
     // Now try it with an expression virtual column.
-    builder.setLimit(Integer.MAX_VALUE)
-           .setVirtualColumns(
-               new ExpressionVirtualColumn("expr", "index / 2 + indexMin", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
-           )
-           .setAggregatorSpecs(
-               Arrays.asList(
-                   QueryRunnerTestHelper.rowsCount,
-                   new DoubleSumAggregatorFactory("idx", "expr")
-               )
-           );
+    ExpressionVirtualColumn expressionVirtualColumn = new ExpressionVirtualColumn(
+        "expr",
+        "index / 2 + indexMin",
+        ValueType.FLOAT,
+        TestExprMacroTable.INSTANCE
+    );
+    List<AggregatorFactory> aggregatorSpecs2 = Arrays.asList(
+        QueryRunnerTestHelper.rowsCount,
+        new DoubleSumAggregatorFactory("idx", "expr")
+    );
+    builder.setLimit(Integer.MAX_VALUE).setVirtualColumns(expressionVirtualColumn).setAggregatorSpecs(aggregatorSpecs2);
 
     TestHelper.assertExpectedObjects(
         expectedResults,

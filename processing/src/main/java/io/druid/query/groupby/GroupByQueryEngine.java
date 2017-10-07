@@ -196,8 +196,9 @@ public class GroupByQueryEngine
           newKey.putInt(MISSING_VALUE);
           unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
         } else {
-          for (Integer dimValue : row) {
+          for (int i = 0; i < row.size(); i++) {
             ByteBuffer newKey = key.duplicate();
+            int dimValue = row.get(i);
             newKey.putInt(dimValue);
             unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
           }

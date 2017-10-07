@@ -92,10 +92,9 @@ final class LimitedSequence<T> extends YieldingSequenceBase<T>
     @Override
     public boolean isDone()
     {
-      return subYielder.isDone() || (
-          !limitedAccumulator.withinThreshold() && (!limitedAccumulator.yielded()
-                                                    || limitedAccumulator.isInterruptYield())
-      );
+      return subYielder.isDone() ||
+             (!limitedAccumulator.withinThreshold() &&
+              (!limitedAccumulator.yielded() || limitedAccumulator.isInterruptYield()));
     }
 
     @Override

@@ -25,7 +25,6 @@ import com.google.common.collect.Maps;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DimensionHandler;
 import io.druid.segment.DimensionIndexer;
 import io.druid.segment.IndexableAdapter;
@@ -33,14 +32,12 @@ import io.druid.segment.IntIteratorUtils;
 import io.druid.segment.Metadata;
 import io.druid.segment.Rowboat;
 import io.druid.segment.column.ColumnCapabilities;
-import io.druid.segment.data.EmptyIndexedInts;
+import io.druid.segment.data.BitmapValues;
 import io.druid.segment.data.Indexed;
-import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.ListIndexed;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.joda.time.Interval;
 
-import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -223,31 +220,31 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   }
 
   @Override
-  public IndexedInts getBitmapIndex(String dimension, int index)
+  public BitmapValues getBitmapValues(String dimension, int index)
   {
     DimensionAccessor accessor = accessors.get(dimension);
     if (accessor == null) {
-      return EmptyIndexedInts.EMPTY_INDEXED_INTS;
+      return BitmapValues.EMPTY;
     }
     ColumnCapabilities capabilities = accessor.dimensionDesc.getCapabilities();
     DimensionIndexer indexer = accessor.dimensionDesc.getIndexer();
 
     if (!capabilities.hasBitmapIndexes()) {
-      return EmptyIndexedInts.EMPTY_INDEXED_INTS;
+      return BitmapValues.EMPTY;
     }
 
     final int id = (Integer) indexer.getUnsortedEncodedValueFromSorted(index);
     if (id < 0 || id >= indexer.getCardinality()) {
-      return EmptyIndexedInts.EMPTY_INDEXED_INTS;
+      return BitmapValues.EMPTY;
     }
 
     MutableBitmap bitmapIndex = accessor.invertedIndexes[id];
 
     if (bitmapIndex == null) {
-      return EmptyIndexedInts.EMPTY_INDEXED_INTS;
+      return BitmapValues.EMPTY;
     }
 
-    return new BitmapIndexedInts(bitmapIndex);
+    return new MutableBitmapValues(bitmapIndex);
   }
 
   @Override
@@ -262,12 +259,11 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     return index.getCapabilities(column);
   }
 
-  static class BitmapIndexedInts implements IndexedInts
+  static class MutableBitmapValues implements BitmapValues
   {
-
     private final MutableBitmap bitmapIndex;
 
-    BitmapIndexedInts(MutableBitmap bitmapIndex)
+    MutableBitmapValues(MutableBitmap bitmapIndex)
     {
       this.bitmapIndex = bitmapIndex;
     }
@@ -279,27 +275,9 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     }
 
     @Override
-    public int get(int index)
-    {
-      // Slow for concise bitmaps, but is fast with roaring bitmaps, so it's just not supported.
-      throw new UnsupportedOperationException("Not supported.");
-    }
-
-    @Override
     public IntIterator iterator()
     {
       return IntIteratorUtils.fromRoaringBitmapIntIterator(bitmapIndex.iterator());
-    }
-
-    @Override
-    public void close() throws IOException
-    {
-    }
-
-    @Override
-    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-    {
-      inspector.visit("bitmapIndex", bitmapIndex);
     }
   }
 

@@ -551,7 +551,7 @@ public class RowBasedGrouperHelper
   }
 
   private static class InputRawSupplierColumnSelectorStrategyFactory
-    implements ColumnSelectorStrategyFactory<InputRawSupplierColumnSelectorStrategy>
+      implements ColumnSelectorStrategyFactory<InputRawSupplierColumnSelectorStrategy>
   {
     @Override
     public InputRawSupplierColumnSelectorStrategy makeColumnSelectorStrategy(
@@ -924,7 +924,7 @@ public class RowBasedGrouperHelper
 
         final StringComparator comparator = comparators.get(i);
 
-        if (isNumericField.get(i) && comparator == StringComparators.NUMERIC) {
+        if (isNumericField.get(i) && comparator.equals(StringComparators.NUMERIC)) {
           // use natural comparison
           cmp = lhs.compareTo(rhs);
         } else {
@@ -1439,7 +1439,7 @@ public class RowBasedGrouperHelper
 
     private static boolean isPrimitiveComparable(boolean pushLimitDown, @Nullable StringComparator stringComparator)
     {
-      return !pushLimitDown || stringComparator == null || stringComparator == StringComparators.NUMERIC;
+      return !pushLimitDown || stringComparator == null || stringComparator.equals(StringComparators.NUMERIC);
     }
 
     private abstract class AbstractStringRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper

@@ -138,7 +138,9 @@ public final class DimensionHandlerUtils
    * @return An array of ColumnSelectorPlus objects, in the order of the columns specified in dimensionSpecs
    */
   public static <ColumnSelectorStrategyClass extends ColumnSelectorStrategy>
+  //CHECKSTYLE.OFF: Indentation
   ColumnSelectorPlus<ColumnSelectorStrategyClass>[] createColumnSelectorPluses(
+      //CHECKSTYLE.ON: Indentation
       ColumnSelectorStrategyFactory<ColumnSelectorStrategyClass> strategyFactory,
       List<DimensionSpec> dimensionSpecs,
       ColumnSelectorFactory columnSelectorFactory

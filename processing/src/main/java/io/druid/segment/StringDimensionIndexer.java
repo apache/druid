@@ -555,7 +555,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   @Override
   public LongColumnSelector makeLongColumnSelector(TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc)
   {
-     return ZeroLongColumnSelector.instance();
+    return ZeroLongColumnSelector.instance();
   }
 
   @Override

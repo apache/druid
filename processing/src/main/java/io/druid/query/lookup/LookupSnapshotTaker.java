@@ -83,7 +83,7 @@ public class LookupSnapshotTaker
   public synchronized void takeSnapshot(List<LookupBean> lookups)
   {
     try {
-       objectMapper.writeValue(persistFile, lookups);
+      objectMapper.writeValue(persistFile, lookups);
     }
     catch (IOException e) {
       throw new ISE(e, "Exception during serialization of lookups using file [%s]", persistFile.getAbsolutePath());

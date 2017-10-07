@@ -157,56 +157,53 @@ public class FlushingPlumber extends RealtimePlumber
         )
     );
 
-    ScheduledExecutors
-        .scheduleAtFixedRate(
-            flushScheduledExec,
-            new Duration(
-                System.currentTimeMillis(),
-                schema.getGranularitySpec().getSegmentGranularity().increment(truncatedNow).getMillis() + windowMillis
-            ),
-            new Duration(truncatedNow, segmentGranularity.increment(truncatedNow)),
-            new ThreadRenamingCallable<ScheduledExecutors.Signal>(
-                StringUtils.format(
-                    "%s-flusher-%d",
-                    getSchema().getDataSource(),
-                    getConfig().getShardSpec().getPartitionNum()
-                )
-            )
-            {
-              @Override
-              public ScheduledExecutors.Signal doCall()
-              {
-                if (stopped) {
-                  log.info("Stopping flusher thread");
-                  return ScheduledExecutors.Signal.STOP;
-                }
+    String threadName = StringUtils.format(
+        "%s-flusher-%d",
+        getSchema().getDataSource(),
+        getConfig().getShardSpec().getPartitionNum()
+    );
+    ThreadRenamingCallable<ScheduledExecutors.Signal> threadRenamingCallable =
+        new ThreadRenamingCallable<ScheduledExecutors.Signal>(threadName)
+        {
+          @Override
+          public ScheduledExecutors.Signal doCall()
+          {
+            if (stopped) {
+              log.info("Stopping flusher thread");
+              return ScheduledExecutors.Signal.STOP;
+            }
 
-                long minTimestamp = segmentGranularity.bucketStart(
-                    getRejectionPolicy().getCurrMaxTime().minus(windowMillis)
-                ).getMillis();
+            long minTimestamp = segmentGranularity.bucketStart(
+                getRejectionPolicy().getCurrMaxTime().minus(windowMillis)
+            ).getMillis();
 
-                List<Map.Entry<Long, Sink>> sinksToPush = Lists.newArrayList();
-                for (Map.Entry<Long, Sink> entry : getSinks().entrySet()) {
-                  final Long intervalStart = entry.getKey();
-                  if (intervalStart < minTimestamp) {
-                    log.info("Adding entry[%s] to flush.", entry);
-                    sinksToPush.add(entry);
-                  }
-                }
-
-                for (final Map.Entry<Long, Sink> entry : sinksToPush) {
-                  flushAfterDuration(entry.getKey(), entry.getValue());
-                }
-
-                if (stopped) {
-                  log.info("Stopping flusher thread");
-                  return ScheduledExecutors.Signal.STOP;
-                } else {
-                  return ScheduledExecutors.Signal.REPEAT;
-                }
+            List<Map.Entry<Long, Sink>> sinksToPush = Lists.newArrayList();
+            for (Map.Entry<Long, Sink> entry : getSinks().entrySet()) {
+              final Long intervalStart = entry.getKey();
+              if (intervalStart < minTimestamp) {
+                log.info("Adding entry[%s] to flush.", entry);
+                sinksToPush.add(entry);
               }
             }
-        );
+
+            for (final Map.Entry<Long, Sink> entry : sinksToPush) {
+              flushAfterDuration(entry.getKey(), entry.getValue());
+            }
+
+            if (stopped) {
+              log.info("Stopping flusher thread");
+              return ScheduledExecutors.Signal.STOP;
+            } else {
+              return ScheduledExecutors.Signal.REPEAT;
+            }
+          }
+        };
+    Duration initialDelay = new Duration(
+        System.currentTimeMillis(),
+        schema.getGranularitySpec().getSegmentGranularity().increment(truncatedNow).getMillis() + windowMillis
+    );
+    Duration rate = new Duration(truncatedNow, segmentGranularity.increment(truncatedNow));
+    ScheduledExecutors.scheduleAtFixedRate(flushScheduledExec, initialDelay, rate, threadRenamingCallable);
   }
 
   @Override

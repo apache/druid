@@ -667,14 +667,14 @@ public class TimeseriesQueryRunnerTest
         new Interval(DateTimes.of("2011-04-14T01"), DateTimes.of("2011-04-15"))
     );
     for (Interval interval : iterable) {
-        lotsOfZeroes.add(
-                new Result<>(
-                        interval.getStart(),
-                        new TimeseriesResultValue(
-                                ImmutableMap.<String, Object>of("rows", 0L, "idx", 0L)
-                        )
-                )
-        );
+      lotsOfZeroes.add(
+              new Result<>(
+                      interval.getStart(),
+                      new TimeseriesResultValue(
+                              ImmutableMap.<String, Object>of("rows", 0L, "idx", 0L)
+                      )
+              )
+      );
     }
 
     List<Result<TimeseriesResultValue>> expectedResults1 = Lists.newArrayList(

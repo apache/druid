@@ -78,9 +78,7 @@ public class FilteredAggregatorTest
         new SelectorDimFilter("dim", "a", null)
     );
 
-    FilteredAggregator agg = (FilteredAggregator) factory.factorize(
-     makeColumnSelector(selector)
-    );
+    FilteredAggregator agg = (FilteredAggregator) factory.factorize(makeColumnSelector(selector));
 
     double expectedFirst = new Float(values[0]).doubleValue();
     double expectedSecond = new Float(values[1]).doubleValue() + expectedFirst;

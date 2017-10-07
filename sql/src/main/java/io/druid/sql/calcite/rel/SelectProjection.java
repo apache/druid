@@ -20,31 +20,26 @@
 package io.druid.sql.calcite.rel;
 
 import io.druid.segment.VirtualColumn;
-import org.apache.calcite.rel.core.Project;
+import io.druid.sql.calcite.table.RowSignature;
 
 import java.util.List;
 import java.util.Objects;
 
 public class SelectProjection
 {
-  private final Project calciteProject;
   private final List<String> directColumns;
   private final List<VirtualColumn> virtualColumns;
+  private final RowSignature outputRowSignature;
 
   public SelectProjection(
-      final Project calciteProject,
       final List<String> directColumns,
-      final List<VirtualColumn> virtualColumns
+      final List<VirtualColumn> virtualColumns,
+      final RowSignature outputRowSignature
   )
   {
-    this.calciteProject = calciteProject;
     this.directColumns = directColumns;
     this.virtualColumns = virtualColumns;
-  }
-
-  public Project getCalciteProject()
-  {
-    return calciteProject;
+    this.outputRowSignature = outputRowSignature;
   }
 
   public List<String> getDirectColumns()
@@ -57,6 +52,11 @@ public class SelectProjection
     return virtualColumns;
   }
 
+  public RowSignature getOutputRowSignature()
+  {
+    return outputRowSignature;
+  }
+
   @Override
   public boolean equals(final Object o)
   {
@@ -67,24 +67,24 @@ public class SelectProjection
       return false;
     }
     final SelectProjection that = (SelectProjection) o;
-    return Objects.equals(calciteProject, that.calciteProject) &&
-           Objects.equals(directColumns, that.directColumns) &&
-           Objects.equals(virtualColumns, that.virtualColumns);
+    return Objects.equals(directColumns, that.directColumns) &&
+           Objects.equals(virtualColumns, that.virtualColumns) &&
+           Objects.equals(outputRowSignature, that.outputRowSignature);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(calciteProject, directColumns, virtualColumns);
+    return Objects.hash(directColumns, virtualColumns, outputRowSignature);
   }
 
   @Override
   public String toString()
   {
     return "SelectProjection{" +
-           "calciteProject=" + calciteProject +
-           ", directColumns=" + directColumns +
+           "directColumns=" + directColumns +
            ", virtualColumns=" + virtualColumns +
+           ", outputRowSignature=" + outputRowSignature +
            '}';
   }
 }
