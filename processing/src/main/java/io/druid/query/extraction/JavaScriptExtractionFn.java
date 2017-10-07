@@ -67,6 +67,7 @@ public class JavaScriptExtractionFn implements ExtractionFn
 
   private final String function;
   private final boolean injective;
+  private final JavaScriptConfig config;
 
   // This variable is lazily initialized to avoid unnecessary JavaScript compilation during JSON serde
   private Function<Object, String> fn;
@@ -79,10 +80,10 @@ public class JavaScriptExtractionFn implements ExtractionFn
   )
   {
     Preconditions.checkNotNull(function, "function must not be null");
-    Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
 
     this.function = function;
     this.injective = injective;
+    this.config = config;
   }
 
   @JsonProperty
@@ -111,8 +112,26 @@ public class JavaScriptExtractionFn implements ExtractionFn
   @Nullable
   public String apply(@Nullable Object value)
   {
-    fn = fn == null ? compile(function) : fn;
+    checkAndCompileScript();
     return Strings.emptyToNull(fn.apply(value));
+  }
+
+  /**
+   * {@link #apply(Object)} can be called by multiple threads, so this function should be thread-safe to avoid extra
+   * script compilation.
+   */
+  private void checkAndCompileScript()
+  {
+    if (fn == null) {
+      synchronized (config) {
+        if (fn == null) {
+          // JavaScript configuration should be checked when it's actually used because someone might still want Druid
+          // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
+          Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
+          fn = compile(function);
+        }
+      }
+    }
   }
 
   @Override

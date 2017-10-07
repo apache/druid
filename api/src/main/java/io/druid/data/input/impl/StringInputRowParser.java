@@ -43,10 +43,10 @@ public class StringInputRowParser implements ByteBufferInputRowParser
 
   private final ParseSpec parseSpec;
   private final MapInputRowParser mapParser;
-  private final Parser<String, Object> parser;
   private final Charset charset;
 
-  private CharBuffer chars = null;
+  private Parser<String, Object> parser;
+  private CharBuffer chars;
 
   @JsonCreator
   public StringInputRowParser(
@@ -56,7 +56,6 @@ public class StringInputRowParser implements ByteBufferInputRowParser
   {
     this.parseSpec = parseSpec;
     this.mapParser = new MapInputRowParser(parseSpec);
-    this.parser = parseSpec.makeParser();
 
     if (encoding != null) {
       this.charset = Charset.forName(encoding);
@@ -126,6 +125,11 @@ public class StringInputRowParser implements ByteBufferInputRowParser
 
   public void startFileFromBeginning()
   {
+    if (parser == null) {
+      // parser should be created when it is really used to avoid unnecessary initialization of the underlying
+      // parseSpec.
+      parser = parseSpec.makeParser();
+    }
     parser.startFileFromBeginning();
   }
 
@@ -138,6 +142,11 @@ public class StringInputRowParser implements ByteBufferInputRowParser
   @Nullable
   private Map<String, Object> parseString(@Nullable String inputString)
   {
+    if (parser == null) {
+      // parser should be created when it is really used to avoid unnecessary initialization of the underlying
+      // parseSpec.
+      parser = parseSpec.makeParser();
+    }
     return parser.parse(inputString);
   }
 

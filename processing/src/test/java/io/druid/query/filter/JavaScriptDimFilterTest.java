@@ -98,9 +98,11 @@ public class JavaScriptDimFilterTest
   @Test
   public void testToFilterNotAllowed()
   {
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage("JavaScript is disabled");
     JavaScriptDimFilter javaScriptDimFilter = new JavaScriptDimFilter("dim", FN1, null, new JavaScriptConfig(false));
 
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage("JavaScript is disabled");
+    javaScriptDimFilter.toFilter();
+    Assert.assertTrue(false);
   }
 }

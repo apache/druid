@@ -75,7 +75,6 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
     Preconditions.checkNotNull(fnAggregate, "Must have a valid, non-null fnAggregate");
     Preconditions.checkNotNull(fnReset, "Must have a valid, non-null fnReset");
     Preconditions.checkNotNull(fnCombine, "Must have a valid, non-null fnCombine");
-    Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
 
     this.name = name;
     this.fieldNames = fieldNames;
@@ -89,7 +88,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(final ColumnSelectorFactory columnFactory)
   {
-    checkCompiledScript();
+    checkAndCompileScript();
     return new JavaScriptAggregator(
         Lists.transform(
             fieldNames,
@@ -109,7 +108,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(final ColumnSelectorFactory columnSelectorFactory)
   {
-    checkCompiledScript();
+    checkAndCompileScript();
     return new JavaScriptBufferAggregator(
         Lists.transform(
             fieldNames,
@@ -135,7 +134,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   @Override
   public Object combine(Object lhs, Object rhs)
   {
-    checkCompiledScript();
+    checkAndCompileScript();
     return compiledScript.combine(((Number) lhs).doubleValue(), ((Number) rhs).doubleValue());
   }
 
@@ -155,7 +154,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
       @Override
       public void fold(ColumnValueSelector selector)
       {
-        checkCompiledScript();
+        checkAndCompileScript();
         combined = compiledScript.combine(combined, selector.getDouble());
       }
 
@@ -299,9 +298,22 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
            '}';
   }
 
-  private void checkCompiledScript()
+  /**
+   * This class can be used by multiple threads, so this function should be thread-safe to avoid extra
+   * script compilation.
+   */
+  private void checkAndCompileScript()
   {
-    compiledScript = compiledScript == null ? compileScript(fnAggregate, fnReset, fnCombine) : compiledScript;
+    if (compiledScript == null) {
+      synchronized (config) {
+        if (compiledScript == null) {
+          // JavaScript configuration should be checked when it's actually used because someone might still want Druid
+          // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
+          Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
+          compiledScript = compileScript(fnAggregate, fnReset, fnCombine);
+        }
+      }
+    }
   }
 
   @VisibleForTesting

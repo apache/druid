@@ -64,10 +64,13 @@ public class JavaScriptExtractionFnTest
   @Test
   public void testJavascriptNotAllowed()
   {
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage("JavaScript is disabled");
     String function = "function(str) { return str.substring(0,3); }";
     ExtractionFn extractionFn = new JavaScriptExtractionFn(function, false, new JavaScriptConfig(false));
+
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage("JavaScript is disabled");
+    extractionFn.apply("hey");
+    Assert.assertTrue(false);
   }
 
   @Test

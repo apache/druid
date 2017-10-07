@@ -48,7 +48,6 @@ public class JavaScriptParseSpec extends ParseSpec
   )
   {
     super(timestampSpec, dimensionsSpec);
-    Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
 
     this.function = function;
     this.config = config;
@@ -68,6 +67,9 @@ public class JavaScriptParseSpec extends ParseSpec
   @Override
   public Parser<String, Object> makeParser()
   {
+    // JavaScript configuration should be checked when it's actually used because someone might still want Druid
+    // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
+    Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
     parser = parser == null ? new JavaScriptParser(function) : parser;
     return parser;
   }

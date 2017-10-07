@@ -40,6 +40,7 @@ public class JavaScriptDimFilter implements DimFilter
   private final String dimension;
   private final String function;
   private final ExtractionFn extractionFn;
+  private final JavaScriptConfig config;
 
   // This variable is lazily initialized to avoid unnecessary JavaScript compilation during JSON serde
   private JavaScriptPredicateFactory predicateFactory;
@@ -54,10 +55,10 @@ public class JavaScriptDimFilter implements DimFilter
   {
     Preconditions.checkArgument(dimension != null, "dimension must not be null");
     Preconditions.checkArgument(function != null, "function must not be null");
-    Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
     this.dimension = dimension;
     this.function = function;
     this.extractionFn = extractionFn;
+    this.config = config;
   }
 
   @JsonProperty
@@ -104,10 +105,26 @@ public class JavaScriptDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    predicateFactory = predicateFactory == null ?
-                       new JavaScriptPredicateFactory(function, extractionFn) :
-                       predicateFactory;
+    checkAndCreatePredicateFactory();
     return new JavaScriptFilter(dimension, predicateFactory);
+  }
+
+  /**
+   * This class can be used by multiple threads, so this function should be thread-safe to avoid extra
+   * script compilation.
+   */
+  private void checkAndCreatePredicateFactory()
+  {
+    if (predicateFactory == null) {
+      synchronized (config) {
+        if (predicateFactory == null) {
+          // JavaScript configuration should be checked when it's actually used because someone might still want Druid
+          // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
+          Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
+          predicateFactory = new JavaScriptPredicateFactory(function, extractionFn);
+        }
+      }
+    }
   }
 
   @Override
