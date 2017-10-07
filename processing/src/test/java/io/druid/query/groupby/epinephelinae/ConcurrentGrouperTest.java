@@ -68,6 +68,14 @@ public class ConcurrentGrouperTest
 {
   private static final ExecutorService SERVICE = Executors.newFixedThreadPool(8);
   private static final TestResourceHolder TEST_RESOURCE_HOLDER = new TestResourceHolder(256);
+  private static final KeySerdeFactory<Long> KEY_SERDE_FACTORY = new TestKeySerdeFactory();
+  private static final Supplier<ResourceHolder<ByteBuffer>> COMBINE_BUFFER_SUPPLIER = new TestBufferSupplier();
+  private static final ColumnSelectorFactory NULL_FACTORY = new TestColumnSelectorFactory();
+
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  private Supplier<ByteBuffer> bufferSupplier;
 
   @Parameters(name = "bufferSize={0}")
   public static Collection<Object[]> constructorFeeder()
@@ -84,23 +92,87 @@ public class ConcurrentGrouperTest
     SERVICE.shutdown();
   }
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  private static final Supplier<ResourceHolder<ByteBuffer>> COMBINE_BUFFER_SUPPLIER = new Supplier<ResourceHolder<ByteBuffer>>()
+  public ConcurrentGrouperTest(int bufferSize)
   {
-    private final AtomicBoolean called = new AtomicBoolean(false);
-
-    @Override
-    public ResourceHolder<ByteBuffer> get()
+    bufferSupplier = new Supplier<ByteBuffer>()
     {
-      if (called.compareAndSet(false, true)) {
-        return TEST_RESOURCE_HOLDER;
-      } else {
-        throw new IAE("should be called once");
+      private final AtomicBoolean called = new AtomicBoolean(false);
+      private ByteBuffer buffer;
+
+      @Override
+      public ByteBuffer get()
+      {
+        if (called.compareAndSet(false, true)) {
+          buffer = ByteBuffer.allocate(bufferSize);
+        }
+
+        return buffer;
       }
+    };
+  }
+
+  @Test()
+  public void testAggregate() throws InterruptedException, ExecutionException, IOException
+  {
+    final ConcurrentGrouper<Long> grouper = new ConcurrentGrouper<>(
+        bufferSupplier,
+        COMBINE_BUFFER_SUPPLIER,
+        KEY_SERDE_FACTORY,
+        KEY_SERDE_FACTORY,
+        NULL_FACTORY,
+        new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
+        1024,
+        0.7f,
+        1,
+        new LimitedTemporaryStorage(temporaryFolder.newFolder(), 1024 * 1024),
+        new DefaultObjectMapper(),
+        8,
+        null,
+        false,
+        MoreExecutors.listeningDecorator(SERVICE),
+        0,
+        false,
+        0,
+        4
+    );
+    grouper.init();
+
+    final int numRows = 1000;
+
+    Future<?>[] futures = new Future[8];
+
+    for (int i = 0; i < 8; i++) {
+      futures[i] = SERVICE.submit(new Runnable()
+      {
+        @Override
+        public void run()
+        {
+          for (long i = 0; i < numRows; i++) {
+            grouper.aggregate(i);
+          }
+        }
+      });
     }
-  };
+
+    for (Future eachFuture : futures) {
+      eachFuture.get();
+    }
+
+    final CloseableIterator<Entry<Long>> iterator = grouper.iterator(true);
+    final List<Entry<Long>> actual = Lists.newArrayList(iterator);
+    iterator.close();
+
+    Assert.assertTrue(!TEST_RESOURCE_HOLDER.taken || TEST_RESOURCE_HOLDER.closed);
+
+    final List<Entry<Long>> expected = new ArrayList<>();
+    for (long i = 0; i < numRows; i++) {
+      expected.add(new Entry<>(i, new Object[]{8L}));
+    }
+
+    Assert.assertEquals(expected, actual);
+
+    grouper.close();
+  }
 
   static class TestResourceHolder implements ResourceHolder<ByteBuffer>
   {
@@ -127,7 +199,7 @@ public class ConcurrentGrouperTest
     }
   }
 
-  static final KeySerdeFactory<Long> KEY_SERDE_FACTORY = new KeySerdeFactory<Long>()
+  static class TestKeySerdeFactory implements KeySerdeFactory<Long>
   {
     @Override
     public long getMaxDictionarySize()
@@ -220,9 +292,24 @@ public class ConcurrentGrouperTest
         }
       };
     }
-  };
+  }
 
-  private static final ColumnSelectorFactory null_factory = new ColumnSelectorFactory()
+  private static class TestBufferSupplier implements Supplier<ResourceHolder<ByteBuffer>>
+  {
+    private final AtomicBoolean called = new AtomicBoolean(false);
+
+    @Override
+    public ResourceHolder<ByteBuffer> get()
+    {
+      if (called.compareAndSet(false, true)) {
+        return TEST_RESOURCE_HOLDER;
+      } else {
+        throw new IAE("should be called once");
+      }
+    }
+  }
+
+  private static class TestColumnSelectorFactory implements ColumnSelectorFactory
   {
     @Override
     public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
@@ -259,89 +346,5 @@ public class ConcurrentGrouperTest
     {
       return null;
     }
-  };
-
-  private Supplier<ByteBuffer> bufferSupplier;
-
-  public ConcurrentGrouperTest(int bufferSize)
-  {
-    bufferSupplier = new Supplier<ByteBuffer>()
-    {
-      private final AtomicBoolean called = new AtomicBoolean(false);
-      private ByteBuffer buffer;
-
-      @Override
-      public ByteBuffer get()
-      {
-        if (called.compareAndSet(false, true)) {
-          buffer = ByteBuffer.allocate(bufferSize);
-        }
-
-        return buffer;
-      }
-    };
-  }
-
-  @Test()
-  public void testAggregate() throws InterruptedException, ExecutionException, IOException
-  {
-    final ConcurrentGrouper<Long> grouper = new ConcurrentGrouper<>(
-        bufferSupplier,
-        COMBINE_BUFFER_SUPPLIER,
-        KEY_SERDE_FACTORY,
-        KEY_SERDE_FACTORY,
-        null_factory,
-        new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
-        1024,
-        0.7f,
-        1,
-        new LimitedTemporaryStorage(temporaryFolder.newFolder(), 1024 * 1024),
-        new DefaultObjectMapper(),
-        8,
-        null,
-        false,
-        MoreExecutors.listeningDecorator(SERVICE),
-        0,
-        false,
-        0,
-        4
-    );
-    grouper.init();
-
-    final int numRows = 1000;
-
-    Future<?>[] futures = new Future[8];
-
-    for (int i = 0; i < 8; i++) {
-      futures[i] = SERVICE.submit(new Runnable()
-      {
-        @Override
-        public void run()
-        {
-          for (long i = 0; i < numRows; i++) {
-            grouper.aggregate(i);
-          }
-        }
-      });
-    }
-
-    for (Future eachFuture : futures) {
-      eachFuture.get();
-    }
-
-    final CloseableIterator<Entry<Long>> iterator = grouper.iterator(true);
-    final List<Entry<Long>> actual = Lists.newArrayList(iterator);
-    iterator.close();
-
-    Assert.assertTrue(!TEST_RESOURCE_HOLDER.taken || TEST_RESOURCE_HOLDER.closed);
-
-    final List<Entry<Long>> expected = new ArrayList<>();
-    for (long i = 0; i < numRows; i++) {
-      expected.add(new Entry<>(i, new Object[]{8L}));
-    }
-
-    Assert.assertEquals(expected, actual);
-
-    grouper.close();
   }
 }

@@ -27,8 +27,10 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
+import io.druid.query.groupby.epinephelinae.ConcurrentGrouperTest.TestKeySerdeFactory;
 import io.druid.query.groupby.epinephelinae.ConcurrentGrouperTest.TestResourceHolder;
 import io.druid.query.groupby.epinephelinae.Grouper.Entry;
+import io.druid.query.groupby.epinephelinae.Grouper.KeySerdeFactory;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
@@ -46,6 +48,7 @@ public class ParallelCombinerTest
   private static final int THREAD_NUM = 8;
   private static final ExecutorService SERVICE = Execs.multiThreaded(THREAD_NUM, "parallel-combiner-test-%d");
   private static final TestResourceHolder TEST_RESOURCE_HOLDER = new TestResourceHolder(512);
+  private static final KeySerdeFactory<Long> KEY_SERDE_FACTORY = new TestKeySerdeFactory();
 
   private static final Supplier<ResourceHolder<ByteBuffer>> COMBINE_BUFFER_SUPPLIER =
       new Supplier<ResourceHolder<ByteBuffer>>()
@@ -111,7 +114,7 @@ public class ParallelCombinerTest
     final ParallelCombiner<Long> combiner = new ParallelCombiner<>(
         COMBINE_BUFFER_SUPPLIER,
         new AggregatorFactory[]{new CountAggregatorFactory("cnt").getCombiningFactory()},
-        ConcurrentGrouperTest.KEY_SERDE_FACTORY,
+        KEY_SERDE_FACTORY,
         MoreExecutors.listeningDecorator(SERVICE),
         false,
         THREAD_NUM,
