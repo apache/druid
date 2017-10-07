@@ -44,6 +44,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -413,7 +414,7 @@ public class LookupReferencesManager
 
   private List<LookupBean> getLookupsListFromLookupConfig()
   {
-    List<LookupBean> lookupBeanList = new ArrayList<>();
+    List<LookupBean> lookupBeanList;
     if (lookupConfig.getEnableLookupSyncOnStartup()) {
       String tier = lookupListeningAnnouncerConfig.getLookupTier();
       lookupBeanList = getLookupListFromCoordinator(tier);
@@ -506,7 +507,7 @@ public class LookupReferencesManager
   }
 
   private FullResponseHolder fetchLookupsForTier(String tier)
-      throws ExecutionException, InterruptedException, MalformedURLException
+      throws ExecutionException, InterruptedException, MalformedURLException, IOException
   {
     return druidLeaderClient.go(
         druidLeaderClient.makeRequest(
