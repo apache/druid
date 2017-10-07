@@ -19,6 +19,7 @@
 
 package io.druid.segment.indexing;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -35,14 +36,20 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.segment.TestHelper;
 import io.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
+import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.Arrays;
 import java.util.Map;
 
 public class DataSchemaTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   private final ObjectMapper jsonMapper = TestHelper.getJsonMapper();
 
   @Test
@@ -200,13 +207,14 @@ public class DataSchemaTest
         DataSchema.class
     );
 
-    try {
-      schema.getParser();
-      Assert.fail("should've failed to get parser.");
-    }
-    catch (IllegalArgumentException ex) {
+    expectedException.expect(CoreMatchers.instanceOf(IllegalArgumentException.class));
+    expectedException.expectCause(CoreMatchers.instanceOf(JsonMappingException.class));
+    expectedException.expectMessage(
+        "Instantiation of [simple type, class io.druid.data.input.impl.StringInputRowParser] value failed: parseSpec"
+    );
 
-    }
+    // Jackson creates a default type parser (StringInputRowParser) for an invalid type.
+    schema.getParser();
   }
 
   @Test

@@ -22,6 +22,7 @@ package io.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
+import com.google.common.base.Preconditions;
 import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.parsers.ParseException;
@@ -54,7 +55,7 @@ public class StringInputRowParser implements ByteBufferInputRowParser
       @JsonProperty("encoding") String encoding
   )
   {
-    this.parseSpec = parseSpec;
+    this.parseSpec = Preconditions.checkNotNull(parseSpec, "parseSpec");
     this.mapParser = new MapInputRowParser(parseSpec);
 
     if (encoding != null) {
