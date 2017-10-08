@@ -123,11 +123,12 @@ public class JavaScriptExtractionFn implements ExtractionFn
   private void checkAndCompileScript()
   {
     if (fn == null) {
+      // JavaScript configuration should be checked when it's actually used because someone might still want Druid
+      // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
+      Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
+
       synchronized (config) {
         if (fn == null) {
-          // JavaScript configuration should be checked when it's actually used because someone might still want Druid
-          // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
-          Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
           fn = compile(function);
         }
       }

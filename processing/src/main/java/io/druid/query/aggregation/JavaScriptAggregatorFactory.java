@@ -305,11 +305,12 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   private void checkAndCompileScript()
   {
     if (compiledScript == null) {
+      // JavaScript configuration should be checked when it's actually used because someone might still want Druid
+      // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
+      Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
+
       synchronized (config) {
         if (compiledScript == null) {
-          // JavaScript configuration should be checked when it's actually used because someone might still want Druid
-          // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
-          Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
           compiledScript = compileScript(fnAggregate, fnReset, fnCombine);
         }
       }

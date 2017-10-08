@@ -139,14 +139,15 @@ public class JavaScriptPostAggregator implements PostAggregator
   private void checkAndCompileScript()
   {
     if (fn == null) {
+      // JavaScript configuration should be checked when it's actually used because someone might still want Druid
+      // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
+      Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
+
       // Synchronizing here can degrade the performance significantly because this method is called per input row.
       // However, early compilation of JavaScript functions can occur some memory issues due to unnecessary compilation
       // involving Java class generation each time, and thus this will be better.
       synchronized (config) {
         if (fn == null) {
-          // JavaScript configuration should be checked when it's actually used because someone might still want Druid
-          // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
-          Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
           fn = compile(function);
         }
       }

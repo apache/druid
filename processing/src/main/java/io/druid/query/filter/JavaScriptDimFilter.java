@@ -116,11 +116,12 @@ public class JavaScriptDimFilter implements DimFilter
   private void checkAndCreatePredicateFactory()
   {
     if (predicateFactory == null) {
+      // JavaScript configuration should be checked when it's actually used because someone might still want Druid
+      // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
+      Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
+
       synchronized (config) {
         if (predicateFactory == null) {
-          // JavaScript configuration should be checked when it's actually used because someone might still want Druid
-          // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
-          Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
           predicateFactory = new JavaScriptPredicateFactory(function, extractionFn);
         }
       }
