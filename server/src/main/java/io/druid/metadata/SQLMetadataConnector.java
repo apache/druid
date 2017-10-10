@@ -230,7 +230,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  UNIQUE (sequence_name_prev_id_sha1)\n"
                 + ")",
                 tableName, getPayloadType(), getQuoteString()
-            )
+            ),
+            StringUtils.format("CREATE INDEX idx_%1$s_sequence_name ON %1$s(sequence_name)", tableName)
         )
     );
   }
@@ -274,8 +275,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + ")",
                 tableName, getPayloadType(), getQuoteString()
             ),
-            StringUtils.format("CREATE INDEX idx_%1$s_datasource ON %1$s(dataSource)", tableName),
-            StringUtils.format("CREATE INDEX idx_%1$s_used ON %1$s(used)", tableName)
+            StringUtils.format("CREATE INDEX idx_%1$s_datasource_used_time ON %1$s(dataSource,used,start,end)", tableName)
         )
     );
   }
