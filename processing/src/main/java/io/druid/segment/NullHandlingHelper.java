@@ -30,15 +30,21 @@ import io.druid.query.aggregation.NullableBufferAggregator;
 
 public class NullHandlingHelper
 {
+  private static String NULL_HANDLING_CONFIG_STRING = "druid.null.handling.useDefaultValueForNull";
+
   // use these values to ensure that convertObjectToLong(), convertObjectToDouble() and convertObjectToFloat()
   // return the same boxed object when returning a constant zero.
   public static final Double ZERO_DOUBLE = 0.0d;
   public static final Float ZERO_FLOAT = 0.0f;
   public static final Long ZERO_LONG = 0L;
 
-  // Using static injection to avoid adding JacksonInject annotations all over the code.
+  // INSTANCE is injected using static injection to avoid adding JacksonInject annotations all over the code.
+  // See NullHandlingModule for details.
+  // The default system property is supposed to be used only in tests.
   @Inject
-  private static NullValueHandlingConfig INSTANCE = new NullValueHandlingConfig(true);
+  private static NullValueHandlingConfig INSTANCE = new NullValueHandlingConfig(
+      Boolean.valueOf(System.getProperty(NULL_HANDLING_CONFIG_STRING, "true"))
+  );
 
   public static boolean useDefaultValuesForNull()
   {
