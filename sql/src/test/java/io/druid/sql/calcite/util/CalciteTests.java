@@ -25,6 +25,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -94,14 +95,13 @@ import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.NoopRequestLogger;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthTestUtils;
-import io.druid.sql.calcite.aggregation.SqlAggregator;
 import io.druid.sql.calcite.expression.SqlOperatorConversion;
+import io.druid.sql.calcite.expression.builtin.LookupOperatorConversion;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.schema.DruidSchema;
 import io.druid.sql.calcite.view.NoopViewManager;
 import io.druid.sql.calcite.view.ViewManager;
-import io.druid.sql.guice.SqlModule;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.DateTime;
@@ -384,18 +384,9 @@ public class CalciteTests
   public static DruidOperatorTable createOperatorTable()
   {
     try {
-      final Set<SqlAggregator> aggregators = new HashSet<>();
       final Set<SqlOperatorConversion> extractionOperators = new HashSet<>();
-
-      for (Class<? extends SqlAggregator> clazz : SqlModule.DEFAULT_AGGREGATOR_CLASSES) {
-        aggregators.add(INJECTOR.getInstance(clazz));
-      }
-
-      for (Class<? extends SqlOperatorConversion> clazz : SqlModule.DEFAULT_OPERATOR_CONVERSION_CLASSES) {
-        extractionOperators.add(INJECTOR.getInstance(clazz));
-      }
-
-      return new DruidOperatorTable(aggregators, extractionOperators);
+      extractionOperators.add(INJECTOR.getInstance(LookupOperatorConversion.class));
+      return new DruidOperatorTable(ImmutableSet.of(), extractionOperators);
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
