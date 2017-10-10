@@ -121,13 +121,10 @@ public class CoordinatorResourceTestClient
     return (status.containsKey(dataSource) && status.get(dataSource) == 100.0);
   }
 
-  public void unloadSegmentsForDataSource(String dataSource, Interval interval)
+  public void unloadSegmentsForDataSource(String dataSource)
   {
     try {
-      makeRequest(
-          HttpMethod.DELETE,
-          StringUtils.format("%sdatasources/%s/intervals/%s", getCoordinatorURL(), dataSource, interval)
-      );
+      makeRequest(HttpMethod.DELETE, StringUtils.format("%sdatasources/%s", getCoordinatorURL(), dataSource));
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
