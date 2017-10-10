@@ -19,22 +19,26 @@
 
 package io.druid.sql.calcite.expression;
 
-import io.druid.java.util.common.StringUtils;
-import io.druid.query.extraction.SubstringDimExtractionFn;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
-import org.apache.calcite.rex.RexCall;
-import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 
-public class SubstringOperatorConversion implements SqlOperatorConversion
+public class DirectOperatorConversion implements SqlOperatorConversion
 {
+  private final SqlOperator operator;
+  private final String druidFunctionName;
+
+  public DirectOperatorConversion(final SqlOperator operator, final String druidFunctionName)
+  {
+    this.operator = operator;
+    this.druidFunctionName = druidFunctionName;
+  }
+
   @Override
   public SqlOperator calciteOperator()
   {
-    return SqlStdOperatorTable.SUBSTRING;
+    return operator;
   }
 
   @Override
@@ -44,34 +48,11 @@ public class SubstringOperatorConversion implements SqlOperatorConversion
       final RexNode rexNode
   )
   {
-    // Can't simply pass-through operands, since SQL standard args don't match what Druid's expression language wants.
-    // SQL is 1-indexed, Druid is 0-indexed.
-
-    final RexCall call = (RexCall) rexNode;
-    final DruidExpression input = Expressions.toDruidExpression(
+    return OperatorConversions.convertCall(
         plannerContext,
         rowSignature,
-        call.getOperands().get(0)
-    );
-    if (input == null) {
-      return null;
-    }
-    final int index = RexLiteral.intValue(call.getOperands().get(1)) - 1;
-    final int length;
-    if (call.getOperands().size() > 2) {
-      length = RexLiteral.intValue(call.getOperands().get(2));
-    } else {
-      length = -1;
-    }
-
-    return input.map(
-        simpleExtraction -> simpleExtraction.cascade(new SubstringDimExtractionFn(index, length < 0 ? null : length)),
-        expression -> StringUtils.format(
-            "substring(%s, %s, %s)",
-            expression,
-            DruidExpression.numberLiteral(index),
-            DruidExpression.numberLiteral(length)
-        )
+        rexNode,
+        operands -> DruidExpression.fromExpression(DruidExpression.functionCall(druidFunctionName, operands))
     );
   }
 }

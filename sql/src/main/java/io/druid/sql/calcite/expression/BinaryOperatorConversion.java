@@ -19,29 +19,28 @@
 
 package io.druid.sql.calcite.expression;
 
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.SqlFunction;
-import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.type.SqlTypeFamily;
-import org.apache.calcite.sql.type.SqlTypeName;
 
-public class TimeShiftOperatorConversion implements SqlOperatorConversion
+public class BinaryOperatorConversion implements SqlOperatorConversion
 {
-  private static final SqlFunction SQL_FUNCTION = OperatorConversions
-      .operatorBuilder("TIME_SHIFT")
-      .operandTypes(SqlTypeFamily.TIMESTAMP, SqlTypeFamily.CHARACTER, SqlTypeFamily.INTEGER, SqlTypeFamily.CHARACTER)
-      .requiredOperands(3)
-      .returnType(SqlTypeName.TIMESTAMP)
-      .functionCategory(SqlFunctionCategory.TIMEDATE)
-      .build();
+  private final SqlOperator operator;
+  private final String druidOperator;
+
+  public BinaryOperatorConversion(final SqlOperator operator, final String druidOperator)
+  {
+    this.operator = operator;
+    this.druidOperator = druidOperator;
+  }
 
   @Override
   public SqlOperator calciteOperator()
   {
-    return SQL_FUNCTION;
+    return operator;
   }
 
   @Override
@@ -51,6 +50,24 @@ public class TimeShiftOperatorConversion implements SqlOperatorConversion
       final RexNode rexNode
   )
   {
-    return OperatorConversions.convertCall(plannerContext, rowSignature, rexNode, "timestamp_shift");
+    return OperatorConversions.convertCall(
+        plannerContext,
+        rowSignature,
+        rexNode,
+        operands -> {
+          if (operands.size() != 2) {
+            throw new ISE("WTF?! Got binary operator[%s] with %s args?", operator.getName(), operands.size());
+          }
+
+          return DruidExpression.fromExpression(
+              StringUtils.format(
+                  "(%s %s %s)",
+                  operands.get(0).getExpression(),
+                  druidOperator,
+                  operands.get(1).getExpression()
+              )
+          );
+        }
+    );
   }
 }
