@@ -102,7 +102,6 @@ public class GroupByQuery extends BaseQuery<Row>
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
 
-  private final Function<Sequence<Row>, Sequence<Row>> limitFn;
   private final boolean applyLimitPushDown;
   private final Function<Sequence<Row>, Sequence<Row>> postProcessingFn;
 
