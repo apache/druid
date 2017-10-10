@@ -113,11 +113,10 @@ public class Fetcher<T> implements Iterator<OpenedObject<T>>
     this.prefetchEnabled = maxFetchCapacityBytes > 0;
     this.numRemainingObjects = objects.size();
 
-    if (cacheManager.isInitialized()) {
-      // (*) If cache is initialized, put all cached files to the queue.
-      fetchedFiles.addAll(cacheManager.getFiles());
-      nextFetchIndex = cacheManager.getNumFiles();
-    }
+    // (*) If cache is initialized, put all cached files to the queue.
+    this.fetchedFiles.addAll(cacheManager.getFiles());
+    this.nextFetchIndex = fetchedFiles.size();
+
     if (prefetchEnabled) {
       fetchIfNeeded(0L);
     }

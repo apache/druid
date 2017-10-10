@@ -54,11 +54,6 @@ class CacheManager<T>
     return maxCacheCapacityBytes > 0;
   }
 
-  boolean isInitialized()
-  {
-    return !files.isEmpty();
-  }
-
   boolean cacheable()
   {
     // maxCacheCapacityBytes is a rough limit, so if totalCachedBytes is larger than it, no more caching is
@@ -87,11 +82,6 @@ class CacheManager<T>
   List<FetchedFile<T>> getFiles()
   {
     return files;
-  }
-
-  int getNumFiles()
-  {
-    return files.size();
   }
 
   @VisibleForTesting

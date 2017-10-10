@@ -201,7 +201,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
 
             return new ResourceCloseableLineIterator(
                 new InputStreamReader(stream, StandardCharsets.UTF_8),
-                openedObject
+                openedObject.getResourceCloser()
             );
           }
         },

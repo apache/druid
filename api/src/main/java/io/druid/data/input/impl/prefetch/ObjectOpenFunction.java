@@ -22,7 +22,7 @@ package io.druid.data.input.impl.prefetch;
 import java.io.IOException;
 import java.io.InputStream;
 
-interface ObjectOpenFunction<ObjectType>
+interface ObjectOpenFunction<T>
 {
-  InputStream open(ObjectType object) throws IOException;
+  InputStream open(T object) throws IOException;
 }

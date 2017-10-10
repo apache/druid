@@ -26,10 +26,14 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * A class containing meta information about opened object.  This class is used by
- * {@link PrefetchableTextFilesFirehoseFactory}.
+ * A class containing meta information about an opened object.  This class is used to put related objects together.  It
+ * contains an original object, an objectStream from the object, and a resourceCloser which knows how to release
+ * associated resources on closing.
+ *
+ * {@link PrefetchableTextFilesFirehoseFactory.ResourceCloseableLineIterator} consumes the objectStream and closes
+ * it with the resourceCloser.
  */
-class OpenedObject<T> implements Closeable
+class OpenedObject<T>
 {
   // Original object
   private final T object;
@@ -60,9 +64,8 @@ class OpenedObject<T> implements Closeable
     return objectStream;
   }
 
-  @Override
-  public void close() throws IOException
+  Closeable getResourceCloser()
   {
-    resourceCloser.close();
+    return resourceCloser;
   }
 }
