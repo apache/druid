@@ -38,56 +38,59 @@ public class NullHandlingHelper
 
   // Using static injection to avoid adding JacksonInject annotations all over the code.
   @Inject
-  private static NullValueHandlingConfig INSTANCE = new NullValueHandlingConfig(true);
+  private static boolean useDefaultValuesForNull = Boolean.valueOf(System.getProperty(
+      "druid.null.handling.useDefaultValueForNull",
+      "true"
+  ));
 
   public static boolean useDefaultValuesForNull()
   {
-    return INSTANCE.isUseDefaultValuesForNull();
+    return useDefaultValuesForNull;
   }
 
   public static String nullToDefault(String value)
   {
-    return INSTANCE.isUseDefaultValuesForNull() ? Strings.nullToEmpty(value) : value;
+    return useDefaultValuesForNull ? Strings.nullToEmpty(value) : value;
   }
 
   public static String defaultToNull(String value)
   {
-    return INSTANCE.isUseDefaultValuesForNull() ? Strings.emptyToNull(value) : value;
+    return useDefaultValuesForNull ? Strings.emptyToNull(value) : value;
   }
 
   public static boolean isNullOrDefault(String value)
   {
-    return INSTANCE.isUseDefaultValuesForNull() ? Strings.isNullOrEmpty(value) : value == null;
+    return useDefaultValuesForNull ? Strings.isNullOrEmpty(value) : value == null;
   }
 
   public static Long nullToDefault(Long value)
   {
-    return INSTANCE.isUseDefaultValuesForNull() && value == null ? ZERO_LONG : value;
+    return useDefaultValuesForNull && value == null ? ZERO_LONG : value;
   }
 
   public static Double nullToDefault(Double value)
   {
-    return INSTANCE.isUseDefaultValuesForNull() && value == null ? ZERO_DOUBLE : value;
+    return useDefaultValuesForNull && value == null ? ZERO_DOUBLE : value;
   }
 
   public static Float nullToDefault(Float value)
   {
-    return INSTANCE.isUseDefaultValuesForNull() && value == null ? ZERO_FLOAT : value;
+    return useDefaultValuesForNull && value == null ? ZERO_FLOAT : value;
   }
 
   public static Aggregator getNullableAggregator(Aggregator aggregator, ColumnValueSelector selector)
   {
-    return INSTANCE.isUseDefaultValuesForNull() ? aggregator : new NullableAggregator(aggregator, selector);
+    return useDefaultValuesForNull ? aggregator : new NullableAggregator(aggregator, selector);
   }
 
   public static BufferAggregator getNullableAggregator(BufferAggregator aggregator, ColumnValueSelector selector)
   {
-    return INSTANCE.isUseDefaultValuesForNull() ? aggregator : new NullableBufferAggregator(aggregator, selector);
+    return useDefaultValuesForNull ? aggregator : new NullableBufferAggregator(aggregator, selector);
   }
 
   public static AggregateCombiner getNullableCombiner(AggregateCombiner combiner)
   {
-    return INSTANCE.isUseDefaultValuesForNull() ? combiner : new NullableAggregateCombiner(combiner);
+    return useDefaultValuesForNull ? combiner : new NullableAggregateCombiner(combiner);
   }
 
   public static int extraAggregatorBytes()

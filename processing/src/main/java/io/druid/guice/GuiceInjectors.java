@@ -42,7 +42,6 @@ public class GuiceInjectors
         new JacksonModule(),
         new PropertiesModule(Arrays.asList("common.runtime.properties", "runtime.properties")),
         new ConfigModule(),
-        new NullHandlingModule(),
         new Module()
         {
           @Override
