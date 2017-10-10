@@ -44,7 +44,7 @@ public class Worker
       @JsonProperty("version") String version
   )
   {
-    this.scheme = scheme;
+    this.scheme = scheme == null ? "http" : scheme; // needed for backwards compatibility with older workers (pre-#4270)
     this.host = host;
     this.ip = ip;
     this.capacity = capacity;
