@@ -43,8 +43,5 @@ public interface QueryWatcher
    * @param query a query, which may be a subset of a larger query, as long as the underlying queryId is unchanged
    * @param future the future holding the execution status of the query
    */
-  public void registerQuery(
-      @SuppressWarnings("unused") Query query, // false positive, see https://youtrack.jetbrains.com/issue/IDEA-180281
-      @SuppressWarnings("unused") ListenableFuture future // false positive, same as above
-  );
+  public void registerQuery(Query query, ListenableFuture future);
 }
