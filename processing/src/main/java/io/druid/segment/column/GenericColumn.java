@@ -37,9 +37,6 @@ public interface GenericColumn extends HotLoopCallee, Closeable
   public boolean hasMultipleValues();
 
   @CalledFromHotLoop
-  public String getStringSingleValueRow(int rowNum);
-
-  @CalledFromHotLoop
   float getFloatSingleValueRow(int rowNum);
   FloatColumnSelector makeFloatSingleValueRowSelector(ReadableOffset offset);
 

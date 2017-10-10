@@ -620,18 +620,14 @@ public class FilterPartitionTest extends BaseFilterTest
         ImmutableList.of("2", "3", "7")
     );
 
-    DimFilter dimFilter3 = new OrDimFilter(Arrays.<DimFilter>asList(
+    DimFilter dimFilter3 = new OrDimFilter(
         dimFilter1,
         dimFilter2,
-        new AndDimFilter(Arrays.<DimFilter>asList(
+        new AndDimFilter(
             new NoBitmapSelectorDimFilter("dim1", "super-1", JS_EXTRACTION_FN),
             new SelectorDimFilter("dim2", "super-foo", JS_EXTRACTION_FN)
         )
-        ))
     );
-
-    Filter filter3 = dimFilter3.toFilter();
-    Filter filter3CNF = Filters.convertToCNF(dimFilter3.toFilter());
 
     assertFilterMatches(
         dimFilter3,

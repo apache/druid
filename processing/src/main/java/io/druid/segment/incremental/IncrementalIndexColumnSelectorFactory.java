@@ -201,7 +201,7 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory
         @Override
         public long getLong()
         {
-          return timeAndDimsHolder.getKey().getTimestamp();
+          return timeAndDimsHolder.get().getTimestamp();
         }
 
         @Override
@@ -262,7 +262,7 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory
         @Override
         public Long getObject()
         {
-          return timeAndDimsHolder.getKey().getTimestamp();
+          return timeAndDimsHolder.get().getTimestamp();
         }
       };
     }
@@ -310,7 +310,7 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory
         @Override
         public Object getObject()
         {
-          IncrementalIndex.TimeAndDims key = timeAndDimsHolder.getKey();
+          IncrementalIndex.TimeAndDims key = timeAndDimsHolder.get();
           if (key == null) {
             return null;
           }

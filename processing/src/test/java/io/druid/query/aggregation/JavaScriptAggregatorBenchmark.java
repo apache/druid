@@ -27,6 +27,10 @@ import io.druid.segment.ObjectColumnSelector;
 
 import java.util.Map;
 
+
+/**
+ * TODO rewrite to use JMH and move to benchmarks project
+ */
 public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
 {
 
@@ -64,6 +68,7 @@ public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
     doubleAgg = new DoubleSumAggregator(selector);
   }
 
+  @SuppressWarnings("unused") // Supposedly called by Caliper
   public double timeJavaScriptDoubleSum(int reps)
   {
     double val = 0;
@@ -73,6 +78,7 @@ public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
     return val;
   }
 
+  @SuppressWarnings("unused") // Supposedly called by Caliper
   public double timeNativeDoubleSum(int reps)
   {
     double val = 0;
@@ -85,33 +91,6 @@ public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
   public static void main(String[] args) throws Exception
   {
     Runner.main(JavaScriptAggregatorBenchmark.class, args);
-  }
-
-  protected static class LoopingFloatColumnSelector extends TestFloatColumnSelector
-  {
-    private final float[] floats;
-    private long index = 0;
-
-    public LoopingFloatColumnSelector(float[] floats)
-    {
-      super(floats);
-      this.floats = floats;
-    }
-
-    @Override
-    public float getFloat()
-    {
-      return floats[(int) (index % floats.length)];
-    }
-
-    @Override
-    public void increment()
-    {
-      ++index;
-      if (index < 0) {
-        index = 0;
-      }
-    }
   }
 
   protected static class LoopingDoubleColumnSelector extends TestDoubleColumnSelectorImpl

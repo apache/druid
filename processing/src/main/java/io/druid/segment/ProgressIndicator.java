@@ -29,9 +29,11 @@ public interface ProgressIndicator
 
   public void stop();
 
-  public void startSection(String section);
+  public void startSection(
+      @SuppressWarnings("unused") String section // false positive, see https://youtrack.jetbrains.com/issue/IDEA-180281
+  );
 
-  public void progressSection(String section, String message);
-
-  public void stopSection(String section);
+  public void stopSection(
+      @SuppressWarnings("unused") String section // false positive, see https://youtrack.jetbrains.com/issue/IDEA-180281
+  );
 }

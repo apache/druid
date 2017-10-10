@@ -32,6 +32,7 @@ import javax.annotation.Nullable;
 @PublicApi
 public interface StorageAdapter extends CursorFactory
 {
+  @PublicApi
   public String getSegmentIdentifier();
   public Interval getInterval();
   public Indexed<String> getAvailableDimensions();

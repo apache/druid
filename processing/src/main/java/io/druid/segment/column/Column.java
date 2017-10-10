@@ -28,7 +28,7 @@ public interface Column
 
   public int getLength();
   public DictionaryEncodedColumn getDictionaryEncoding();
-  public RunLengthColumn getRunLengthColumn();
+
   public GenericColumn getGenericColumn();
   public ComplexColumn getComplexColumn();
   public BitmapIndex getBitmapIndex();

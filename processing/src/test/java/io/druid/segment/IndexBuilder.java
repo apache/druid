@@ -91,17 +91,6 @@ public class IndexBuilder
     return this;
   }
 
-  public IndexBuilder add(InputRow... rows)
-  {
-    return add(Arrays.asList(rows));
-  }
-
-  public IndexBuilder add(Iterable<InputRow> rows)
-  {
-    Iterables.addAll(this.rows, rows);
-    return this;
-  }
-
   public IndexBuilder rows(Iterable<InputRow> rows)
   {
     this.rows.clear();

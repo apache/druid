@@ -32,8 +32,6 @@ import java.nio.ByteBuffer;
  */
 public class SubstringDimExtractionFn extends DimExtractionFn
 {
-  private static final byte CACHE_TYPE_ID = 0x8;
-
   private final int index;
   private final int end;
 
@@ -55,7 +53,7 @@ public class SubstringDimExtractionFn extends DimExtractionFn
   public byte[] getCacheKey()
   {
     return ByteBuffer.allocate(1 + 8)
-                     .put(CACHE_TYPE_ID)
+                     .put(ExtractionCacheHelper.CACHE_TYPE_ID_SUBSTRING)
                      .putInt(this.index)
                      .putInt(this.end)
                      .array();

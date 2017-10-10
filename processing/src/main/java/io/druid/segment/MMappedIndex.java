@@ -22,20 +22,17 @@ package io.druid.segment;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.spatial.ImmutableRTree;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.VSizeIndexed;
 import org.joda.time.Interval;
 
-import java.io.IOException;
 import java.util.Map;
 
 /**
  */
 public class MMappedIndex
 {
-  private static final Logger log = new Logger(MMappedIndex.class);
 
   final GenericIndexed<String> availableDimensions;
   final GenericIndexed<String> availableMetrics;
@@ -73,11 +70,6 @@ public class MMappedIndex
     this.fileMapper = fileMapper;
   }
 
-  public CompressedLongsIndexedSupplier getTimestamps()
-  {
-    return timestamps;
-  }
-
   public GenericIndexed<String> getAvailableDimensions()
   {
     return availableDimensions;
@@ -86,11 +78,6 @@ public class MMappedIndex
   public GenericIndexed<String> getAvailableMetrics()
   {
     return availableMetrics;
-  }
-
-  public Map<String, MetricHolder> getMetrics()
-  {
-    return metrics;
   }
 
   public Interval getDataInterval()
@@ -134,10 +121,4 @@ public class MMappedIndex
     return fileMapper;
   }
 
-  public void close() throws IOException
-  {
-    if (fileMapper != null) {
-      fileMapper.close();
-    }
-  }
 }

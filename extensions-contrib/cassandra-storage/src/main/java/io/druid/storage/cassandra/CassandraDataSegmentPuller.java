@@ -22,7 +22,6 @@ package io.druid.storage.cassandra;
 import com.google.common.base.Predicates;
 import com.google.inject.Inject;
 import com.netflix.astyanax.recipes.storage.ChunkedStorage;
-import com.netflix.astyanax.recipes.storage.ObjectMetadata;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.FileUtils;
 import io.druid.java.util.common.ISE;
@@ -84,7 +83,7 @@ public class CassandraDataSegmentPuller extends CassandraStorage implements Data
             public FileUtils.FileCopyResult call() throws Exception
             {
               try (OutputStream os = new FileOutputStream(tmpFile)) {
-                final ObjectMetadata meta = ChunkedStorage
+                ChunkedStorage
                     .newReader(indexStorage, key, os)
                     .withBatchSize(BATCH_SIZE)
                     .withConcurrencyLevel(CONCURRENCY)

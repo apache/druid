@@ -56,12 +56,6 @@ public class IndexedFloatsGenericColumn implements GenericColumn
   }
 
   @Override
-  public String getStringSingleValueRow(int rowNum)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public float getFloatSingleValueRow(int rowNum)
   {
     return column.get(rowNum);

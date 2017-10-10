@@ -36,14 +36,12 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularities;
-import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.js.JavaScriptConfig;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.BySegmentResultValue;
 import io.druid.query.BySegmentResultValueClass;
-import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
@@ -1742,33 +1740,24 @@ public class TopNQueryRunnerTest
         .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
-    HashMap<String, Object> context = new HashMap<String, Object>();
     assertExpectedResults(
         Lists.<Result<TopNResultValue>>newArrayList(
             new Result<TopNResultValue>(
                 DateTimes.of("2011-04-01T00:00:00.000Z"),
                 new TopNResultValue(Lists.<Map<String, Object>>newArrayList())
             )
-        ), query
+        ),
+        query
     );
   }
 
   @Test
   public void testTopNWithNonExistentFilterMultiDim()
   {
-    AndDimFilter andDimFilter = Druids.newAndDimFilterBuilder()
-                                      .fields(
-                                          Lists.<DimFilter>newArrayList(
-                                              Druids.newSelectorDimFilterBuilder()
-                                                    .dimension(QueryRunnerTestHelper.marketDimension)
-                                                    .value("billyblank")
-                                                    .build(),
-                                              Druids.newSelectorDimFilterBuilder()
-                                                    .dimension(QueryRunnerTestHelper.qualityDimension)
-                                                    .value("mezzanine")
-                                                    .build()
-                                          )
-                                      ).build();
+    AndDimFilter andDimFilter = new AndDimFilter(
+        new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "billyblank", null),
+        new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "mezzanine", null)
+    );
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
@@ -2363,8 +2352,6 @@ public class TopNQueryRunnerTest
         .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
-
-    Granularity gran = Granularities.DAY;
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
@@ -3789,6 +3776,7 @@ public class TopNQueryRunnerTest
         )
     );
 
+    @SuppressWarnings("unused") // TODO: fix this test
     List<Result<BySegmentResultValueClass>> expectedResults = Collections.singletonList(
         new Result<BySegmentResultValueClass>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
@@ -5615,10 +5603,6 @@ public class TopNQueryRunnerTest
             new TopNResultValue(Arrays.asList())
         )
     );
-
-    final Sequence<Result<TopNResultValue>> retval = runWithMerge(query);
-    List<Result<TopNResultValue>> results = Sequences.toList(retval, Lists.<Result<TopNResultValue>>newArrayList());
-
     assertExpectedResults(expectedResults, query);
   }
 }

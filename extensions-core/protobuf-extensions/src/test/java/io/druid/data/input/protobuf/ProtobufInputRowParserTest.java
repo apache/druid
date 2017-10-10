@@ -73,6 +73,7 @@ public class ProtobufInputRowParserTest
   public void testShortMessageType() throws Exception
   {
     //configure parser with desc file, and specify which file name to use
+    @SuppressWarnings("unused") // expected to create parser without exception
     ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "prototest.desc", "ProtoTestEvent");
 
   }
@@ -82,6 +83,7 @@ public class ProtobufInputRowParserTest
   public void testLongMessageType() throws Exception
   {
     //configure parser with desc file, and specify which file name to use
+    @SuppressWarnings("unused") // expected to create parser without exception
     ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "prototest.desc", "prototest.ProtoTestEvent");
 
   }
@@ -91,6 +93,7 @@ public class ProtobufInputRowParserTest
   public void testBadProto() throws Exception
   {
     //configure parser with desc file
+    @SuppressWarnings("unused") // expected exception
     ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "prototest.desc", "BadName");
 
   }
@@ -99,6 +102,7 @@ public class ProtobufInputRowParserTest
   public void testMalformedDescriptorUrl() throws Exception
   {
     //configure parser with non existent desc file
+    @SuppressWarnings("unused") // expected exception
     ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "file:/nonexist.desc", "BadName");
   }
 
@@ -106,6 +110,7 @@ public class ProtobufInputRowParserTest
   public void testSingleDescriptorNoMessageType() throws Exception
   {
     // For the backward compatibility, protoMessageType allows null when the desc file has only one message type.
+    @SuppressWarnings("unused") // expected to create parser without exception
     ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "prototest.desc", null);
   }
 

@@ -29,15 +29,11 @@ public class ApproximateHistogramBufferAggregator implements BufferAggregator
 {
   private final FloatColumnSelector selector;
   private final int resolution;
-  private final float lowerLimit;
-  private final float upperLimit;
 
-  public ApproximateHistogramBufferAggregator(FloatColumnSelector selector, int resolution, float lowerLimit, float upperLimit)
+  public ApproximateHistogramBufferAggregator(FloatColumnSelector selector, int resolution)
   {
     this.selector = selector;
     this.resolution = resolution;
-    this.lowerLimit = lowerLimit;
-    this.upperLimit = upperLimit;
   }
 
   @Override

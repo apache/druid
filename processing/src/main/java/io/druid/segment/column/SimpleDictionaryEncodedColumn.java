@@ -195,7 +195,6 @@ public class SimpleDictionaryEncodedColumn
           return new SingleIndexedInt(getRowValue());
         }
 
-        @Override
         public int getRowValue()
         {
           return column.get(offset.getOffset());

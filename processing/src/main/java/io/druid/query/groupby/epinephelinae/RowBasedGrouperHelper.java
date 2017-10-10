@@ -209,8 +209,7 @@ public class RowBasedGrouperHelper
           grouperSorter,
           priority,
           hasQueryTimeout,
-          queryTimeoutAt,
-          mergeBufferSize
+          queryTimeoutAt
       );
     }
 
@@ -1022,7 +1021,6 @@ public class RowBasedGrouperHelper
             {
               final int cmp = compareDimsInBuffersForNullFudgeTimestamp(
                   serdeHelpers,
-                  sortableIds,
                   dimCount,
                   lhsBuffer,
                   rhsBuffer,
@@ -1050,7 +1048,6 @@ public class RowBasedGrouperHelper
 
               return compareDimsInBuffersForNullFudgeTimestamp(
                   serdeHelpers,
-                  sortableIds,
                   dimCount,
                   lhsBuffer,
                   rhsBuffer,
@@ -1244,7 +1241,6 @@ public class RowBasedGrouperHelper
 
     private static int compareDimsInBuffersForNullFudgeTimestamp(
         List<RowBasedKeySerdeHelper> serdeHelpers,
-        int[] sortableIds,
         int dimCount,
         ByteBuffer lhsBuffer,
         ByteBuffer rhsBuffer,

@@ -123,18 +123,6 @@ public class Node
     return calculateArea();
   }
 
-  public boolean contains(Node other)
-  {
-    Preconditions.checkArgument(getNumDims() == other.getNumDims());
-
-    for (int i = 0; i < getNumDims(); i++) {
-      if (other.getMinCoordinates()[i] < minCoordinates[i] || other.getMaxCoordinates()[i] > maxCoordinates[i]) {
-        return false;
-      }
-    }
-    return true;
-  }
-
   public boolean contains(float[] coords)
   {
     Preconditions.checkArgument(getNumDims() == coords.length);

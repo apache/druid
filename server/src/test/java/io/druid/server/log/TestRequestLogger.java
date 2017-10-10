@@ -50,10 +50,4 @@ public class TestRequestLogger implements RequestLogger
     }
   }
 
-  public void clear()
-  {
-    synchronized (logs) {
-      logs.clear();
-    }
-  }
 }

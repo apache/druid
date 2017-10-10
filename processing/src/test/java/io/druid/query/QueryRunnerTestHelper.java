@@ -53,7 +53,6 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.query.spec.SpecificSegmentSpec;
-import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesQueryEngine;
 import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import io.druid.query.timeseries.TimeseriesQueryRunnerFactory;
@@ -364,8 +363,7 @@ public class QueryRunnerTestHelper
 
   @SuppressWarnings("unchecked")
   public static Collection<?> makeUnionQueryRunners(
-      QueryRunnerFactory factory,
-      DataSource unionDataSource
+      QueryRunnerFactory factory
   )
       throws IOException
   {
@@ -601,15 +599,6 @@ public class QueryRunnerTestHelper
       builder.put(String.valueOf(keyvalues[i]), keyvalues[i + 1]);
     }
     return builder.build();
-  }
-
-  public static QueryRunnerFactoryConglomerate newConglomerate()
-  {
-    return new DefaultQueryRunnerFactoryConglomerate(
-        ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>builder()
-            .put(TimeseriesQuery.class, newTimeseriesQueryRunnerFactory())
-            .build()
-    );
   }
 
   public static TimeseriesQueryRunnerFactory newTimeseriesQueryRunnerFactory()

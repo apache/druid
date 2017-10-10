@@ -133,7 +133,7 @@ public class SelectQueryRunnerTest
         QueryRunnerTestHelper.makeQueryRunners(
             new SelectQueryRunnerFactory(
                 toolChest,
-                new SelectQueryEngine(configSupplier),
+                new SelectQueryEngine(),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
             )
         ),

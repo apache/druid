@@ -29,18 +29,15 @@ public class FloatFirstAggregator implements Aggregator
 
   private final FloatColumnSelector valueSelector;
   private final LongColumnSelector timeSelector;
-  private final String name;
 
   protected long firstTime;
   protected float firstValue;
 
   public FloatFirstAggregator(
-      String name,
       LongColumnSelector timeSelector,
       FloatColumnSelector valueSelector
   )
   {
-    this.name = name;
     this.valueSelector = valueSelector;
     this.timeSelector = timeSelector;
 

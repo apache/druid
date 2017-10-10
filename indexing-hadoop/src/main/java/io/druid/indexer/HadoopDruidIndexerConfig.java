@@ -310,12 +310,6 @@ public class HadoopDruidIndexerConfig
     return schema.getTuningConfig().isIgnoreInvalidRows();
   }
 
-  public void setVersion(String version)
-  {
-    this.schema = schema.withTuningConfig(schema.getTuningConfig().withVersion(version));
-    this.pathSpec = JSON_MAPPER.convertValue(schema.getIOConfig().getPathSpec(), PathSpec.class);
-  }
-
   public void setShardSpecs(Map<Long, List<HadoopyShardSpec>> shardSpecs)
   {
     this.schema = schema.withTuningConfig(schema.getTuningConfig().withShardSpecs(shardSpecs));

@@ -209,8 +209,7 @@ public class ConcurrentGrouperTest
         MoreExecutors.listeningDecorator(Execs.multiThreaded(4, "concurrent-grouper-test-%d")),
         0,
         false,
-        0,
-        BYTE_BUFFER_SIZE
+        0
     );
 
     Future<?>[] futures = new Future[8];

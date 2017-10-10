@@ -71,11 +71,6 @@ public class Evals
     return x ? 1D : 0D;
   }
 
-  public static String asString(boolean x)
-  {
-    return String.valueOf(x);
-  }
-
   public static boolean asBoolean(long x)
   {
     return x > 0;

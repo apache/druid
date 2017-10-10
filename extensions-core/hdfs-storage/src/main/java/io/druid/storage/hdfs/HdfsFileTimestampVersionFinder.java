@@ -110,9 +110,4 @@ public class HdfsFileTimestampVersionFinder extends HdfsDataSegmentPuller implem
     }
   }
 
-  @Override
-  public Class<URI> getDataDescriptorClass()
-  {
-    return URI.class;
-  }
 }

@@ -26,7 +26,6 @@ import io.druid.collections.NonBlockingPool;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.java.util.common.logger.Logger;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.extraction.ExtractionFn;
@@ -49,7 +48,6 @@ import java.util.List;
  */
 public class TopNQueryEngine
 {
-  private static final Logger log = new Logger(TopNQueryEngine.class);
 
   private final NonBlockingPool<ByteBuffer> bufferPool;
 

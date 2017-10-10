@@ -19,15 +19,10 @@
 
 package io.druid.timeline.partition;
 
-public class LinearPartitionChunk <T> implements PartitionChunk<T>
+public class LinearPartitionChunk<T> implements PartitionChunk<T>
 {
   private final int chunkNumber;
   private final T object;
-
-  public static <T> LinearPartitionChunk<T> make(int chunkNumber, T obj)
-  {
-    return new LinearPartitionChunk<T>(chunkNumber, obj);
-  }
 
   public LinearPartitionChunk(
       int chunkNumber,

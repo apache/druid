@@ -237,7 +237,7 @@ public class SelectBenchmark
             QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator(),
             selectConfigSupplier
         ),
-        new SelectQueryEngine(selectConfigSupplier),
+        new SelectQueryEngine(),
         QueryBenchmarkUtil.NOOP_QUERYWATCHER
     );
   }

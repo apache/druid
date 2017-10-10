@@ -113,7 +113,7 @@ public class VarianceAggregatorCollectorTest
         for (int i = 0; i < mergeOn; i++) {
           holders1.add(new VarianceAggregatorCollector());
           holders2.add(Pair.<VarianceBufferAggregator, ByteBuffer>of(
-                           new VarianceBufferAggregator.FloatVarianceAggregator("XX", valueHandOver),
+                           new VarianceBufferAggregator.FloatVarianceAggregator(valueHandOver),
                            ByteBuffer.allocate(VarianceAggregatorCollector.getMaxIntermediateSize())
                        ));
         }
@@ -129,7 +129,8 @@ public class VarianceAggregatorCollectorTest
         }
         ObjectHandOver collectHandOver = new ObjectHandOver();
         ByteBuffer buffer = ByteBuffer.allocate(VarianceAggregatorCollector.getMaxIntermediateSize());
-        VarianceBufferAggregator.ObjectVarianceAggregator merger = new VarianceBufferAggregator.ObjectVarianceAggregator("xxx", collectHandOver);
+        VarianceBufferAggregator.ObjectVarianceAggregator merger = new VarianceBufferAggregator.ObjectVarianceAggregator(
+            collectHandOver);
         for (int i = 0; i < mergeOn; i++) {
           collectHandOver.v = holders2.get(i).lhs.get(holders2.get(i).rhs, 0);
           merger.aggregate(buffer, 0);

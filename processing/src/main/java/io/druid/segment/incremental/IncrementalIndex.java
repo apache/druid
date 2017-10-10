@@ -466,23 +466,6 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     return row;
   }
 
-  private ValueType getTypeFromDimVal(Object dimVal)
-  {
-    Object singleVal;
-    if (dimVal instanceof List) {
-      List dimValList = (List) dimVal;
-      singleVal = dimValList.size() == 0 ? null : dimValList.get(0);
-    } else {
-      singleVal = dimVal;
-    }
-
-    if (singleVal == null) {
-      return null;
-    }
-
-    return TYPE_MAP.get(singleVal.getClass());
-  }
-
   public Map<String, ColumnCapabilitiesImpl> getColumnCapabilities()
   {
     return columnCapabilities;
@@ -755,11 +738,6 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   public List<String> getMetricNames()
   {
     return ImmutableList.copyOf(metricDescs.keySet());
-  }
-
-  public List<MetricDesc> getMetrics()
-  {
-    return ImmutableList.copyOf(metricDescs.values());
   }
 
   public Integer getMetricIndex(String metricName)

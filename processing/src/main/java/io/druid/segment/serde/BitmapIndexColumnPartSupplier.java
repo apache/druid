@@ -62,12 +62,6 @@ public class BitmapIndexColumnPartSupplier implements Supplier<BitmapIndex>
       }
 
       @Override
-      public boolean hasNulls()
-      {
-        return dictionary.indexOf(null) >= 0;
-      }
-
-      @Override
       public BitmapFactory getBitmapFactory()
       {
         return bitmapFactory;

@@ -211,11 +211,6 @@ public class ApproximateHistogram
     return binCount;
   }
 
-  public int capacity()
-  {
-    return size;
-  }
-
   public float[] positions()
   {
     return Arrays.copyOfRange(positions, 0, binCount);
@@ -405,16 +400,6 @@ public class ApproximateHistogram
   }
 
   /**
-   * Merges the bin in the given position with the next bin
-   *
-   * @param index index of the bin to merge, index must satisfy 0 &lt;= index &lt; binCount - 1
-   */
-  protected void merge(final int index)
-  {
-    mergeInsert(index, -1, 0, 0);
-  }
-
-  /**
    * Merges the bin in the mergeAt position with the bin in position mergeAt+1
    * and simultaneously inserts the given bin (v,c) as a new bin at position insertAt
    *
@@ -511,8 +496,8 @@ public class ApproximateHistogram
 
   /**
    * @param h               histogram to be merged into the current histogram
-   * @param mergedPositions temporary buffer of size greater or equal to this.capacity()
-   * @param mergedBins      temporary buffer of size greater or equal to this.capacity()
+   * @param mergedPositions temporary buffer of size greater or equal to {@link #size}
+   * @param mergedBins      temporary buffer of size greater or equal to {@link #size}
    *
    * @return returns this histogram with h folded into it
    */
@@ -1048,20 +1033,6 @@ public class ApproximateHistogram
     end--;
     siftDown(heap, reverseIndex, heapIndex, end, values);
     return count - 1;
-  }
-
-  private static int minIndex(float[] deltas, int lastValidIndex)
-  {
-    int minIndex = -1;
-    float min = Float.POSITIVE_INFINITY;
-    for (int k = 0; k < lastValidIndex; ++k) {
-      float value = deltas[k];
-      if (value < min) {
-        minIndex = k;
-        min = value;
-      }
-    }
-    return minIndex;
   }
 
   /**

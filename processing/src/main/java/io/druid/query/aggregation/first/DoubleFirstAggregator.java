@@ -29,18 +29,12 @@ public class DoubleFirstAggregator implements Aggregator
 
   private final DoubleColumnSelector valueSelector;
   private final LongColumnSelector timeSelector;
-  private final String name;
 
   protected long firstTime;
   protected double firstValue;
 
-  public DoubleFirstAggregator(
-      String name,
-      LongColumnSelector timeSelector,
-      DoubleColumnSelector valueSelector
-  )
+  public DoubleFirstAggregator(LongColumnSelector timeSelector, DoubleColumnSelector valueSelector)
   {
-    this.name = name;
     this.valueSelector = valueSelector;
     this.timeSelector = timeSelector;
 

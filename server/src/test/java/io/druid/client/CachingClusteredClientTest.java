@@ -92,9 +92,11 @@ import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.InDimFilter;
+import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
@@ -1618,31 +1620,17 @@ public class CachingClusteredClientTest
   @Test
   public void testTimeSeriesWithFilter() throws Exception
   {
-    DimFilter filter = Druids.newAndDimFilterBuilder()
-                             .fields(
-                                 Arrays.asList(
-                                     Druids.newOrDimFilterBuilder().fields(
-                                         Arrays.asList(
-                                             new SelectorDimFilter("dim0", "1", null),
-                                             new BoundDimFilter("dim0", "222", "333", false, false, false, null,
-                                                                StringComparators.LEXICOGRAPHIC
-                                             )
-                                         )
-                                     ).build(),
-                                     Druids.newAndDimFilterBuilder().fields(
-                                         Arrays.asList(
-                                             new InDimFilter("dim1", Arrays.asList("0", "1", "2", "3", "4"), null),
-                                             new BoundDimFilter("dim1", "0", "3", false, true, false, null,
-                                                                StringComparators.LEXICOGRAPHIC
-                                             ),
-                                             new BoundDimFilter("dim1", "1", "9999", true, false, false, null,
-                                                                StringComparators.LEXICOGRAPHIC
-                                             )
-                                         )
-                                     ).build()
-                                 )
-                             )
-                             .build();
+    DimFilter filter = new AndDimFilter(
+        new OrDimFilter(
+            new SelectorDimFilter("dim0", "1", null),
+            new BoundDimFilter("dim0", "222", "333", false, false, false, null, StringComparators.LEXICOGRAPHIC)
+        ),
+        new AndDimFilter(
+            new InDimFilter("dim1", Arrays.asList("0", "1", "2", "3", "4"), null),
+            new BoundDimFilter("dim1", "0", "3", false, true, false, null, StringComparators.LEXICOGRAPHIC),
+            new BoundDimFilter("dim1", "1", "9999", true, false, false, null, StringComparators.LEXICOGRAPHIC)
+        )
+    );
 
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
                                                         .dataSource(DATA_SOURCE)
@@ -1696,31 +1684,17 @@ public class CachingClusteredClientTest
   @Test
   public void testSingleDimensionPruning() throws Exception
   {
-    DimFilter filter = Druids.newAndDimFilterBuilder()
-                             .fields(
-                                 Arrays.asList(
-                                     Druids.newOrDimFilterBuilder().fields(
-                                         Arrays.asList(
-                                             new SelectorDimFilter("dim1", "a", null),
-                                             new BoundDimFilter("dim1", "from", "to", false, false, false, null,
-                                                                StringComparators.LEXICOGRAPHIC
-                                             )
-                                         )
-                                     ).build(),
-                                     Druids.newAndDimFilterBuilder().fields(
-                                         Arrays.asList(
-                                             new InDimFilter("dim2", Arrays.asList("a", "c", "e", "g"), null),
-                                             new BoundDimFilter("dim2", "aaa", "hi", false, false, false, null,
-                                                                StringComparators.LEXICOGRAPHIC
-                                             ),
-                                             new BoundDimFilter("dim2", "e", "zzz", true, true, false, null,
-                                                                StringComparators.LEXICOGRAPHIC
-                                             )
-                                         )
-                                     ).build()
-                                 )
-                             )
-                             .build();
+    DimFilter filter = new AndDimFilter(
+        new OrDimFilter(
+            new SelectorDimFilter("dim1", "a", null),
+            new BoundDimFilter("dim1", "from", "to", false, false, false, null, StringComparators.LEXICOGRAPHIC)
+        ),
+        new AndDimFilter(
+            new InDimFilter("dim2", Arrays.asList("a", "c", "e", "g"), null),
+            new BoundDimFilter("dim2", "aaa", "hi", false, false, false, null, StringComparators.LEXICOGRAPHIC),
+            new BoundDimFilter("dim2", "e", "zzz", true, true, false, null, StringComparators.LEXICOGRAPHIC)
+        )
+    );
 
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
                                                     .dataSource(DATA_SOURCE)

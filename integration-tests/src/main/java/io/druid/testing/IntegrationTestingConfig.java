@@ -31,8 +31,6 @@ public interface IntegrationTestingConfig
 
   public String getBrokerUrl();
 
-  public String getHistoricalUrl();
-
   public String getMiddleManagerHost();
 
   public String getZookeeperHosts();

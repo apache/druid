@@ -23,7 +23,6 @@ import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.TimeAndDimsHolder;
@@ -33,11 +32,6 @@ import java.util.List;
 
 public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, Double>
 {
-  @Override
-  public ValueType getValueType()
-  {
-    return ValueType.DOUBLE;
-  }
 
   @Override
   public Double processRowValsToUnsortedEncodedKeyComponent(Object dimValues)
@@ -46,12 +40,6 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
       throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
     }
     return DimensionHandlerUtils.convertObjectToDouble(dimValues);
-  }
-
-  @Override
-  public Double getSortedEncodedValueFromUnsorted(Double unsortedIntermediateValue)
-  {
-    return unsortedIntermediateValue;
   }
 
   @Override
@@ -103,7 +91,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
       @Override
       public long getLong()
       {
-        final Object[] dims = currEntry.getKey().getDims();
+        final Object[] dims = currEntry.get().getDims();
 
         if (dimIndex >= dims.length) {
           return 0L;
@@ -132,7 +120,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
       @Override
       public float getFloat()
       {
-        final Object[] dims = currEntry.getKey().getDims();
+        final Object[] dims = currEntry.get().getDims();
 
         if (dimIndex >= dims.length) {
           return 0.0f;
@@ -161,7 +149,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
       @Override
       public double getDouble()
       {
-        final Object[] dims = currEntry.getKey().getDims();
+        final Object[] dims = currEntry.get().getDims();
 
         if (dimIndex >= dims.length) {
           return 0.0;

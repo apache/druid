@@ -35,7 +35,6 @@ import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.IdLookup;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
-import io.druid.segment.SingleValueDimensionSelector;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
@@ -107,18 +106,12 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         throw new UnsupportedOperationException("time dimension must provide an extraction function");
       }
 
-      return new SingleValueDimensionSelector()
+      return new DimensionSelector()
       {
         @Override
         public IndexedInts getRow()
         {
           return ZeroIndexedInts.instance();
-        }
-
-        @Override
-        public int getRowValue()
-        {
-          return 0;
         }
 
         @Override

@@ -68,7 +68,6 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     return new FloatLastAggregator(
-        name,
         metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME),
         metricFactory.makeFloatColumnSelector(fieldName)
     );
@@ -110,7 +109,7 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
       public Aggregator factorize(ColumnSelectorFactory metricFactory)
       {
         final ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(name);
-        return new FloatLastAggregator(name, null, null)
+        return new FloatLastAggregator(null, null)
         {
           @Override
           public void aggregate()

@@ -83,7 +83,6 @@ public class SqlBenchmark
   private int rowsPerSegment;
 
   private static final Logger log = new Logger(SqlBenchmark.class);
-  private static final int RNG_SEED = 9999;
 
   private File tmpDir;
   private SegmentGenerator segmentGenerator;

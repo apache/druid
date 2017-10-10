@@ -22,10 +22,12 @@ package io.druid.segment.serde;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Supplier;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.DoubleColumnSerializer;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.CompressedDoublesIndexedSupplier;
+import io.druid.segment.data.IndexedDoubles;
 
 import java.io.IOException;
 import java.nio.ByteOrder;
@@ -67,7 +69,7 @@ public class DoubleGenericColumnPartSerde implements ColumnPartSerde
   public Deserializer getDeserializer()
   {
     return (buffer, builder, columnConfig) -> {
-      final CompressedDoublesIndexedSupplier column = CompressedDoublesIndexedSupplier.fromByteBuffer(
+      final Supplier<IndexedDoubles> column = CompressedDoublesIndexedSupplier.fromByteBuffer(
           buffer,
           byteOrder,
           builder.getFileMapper()

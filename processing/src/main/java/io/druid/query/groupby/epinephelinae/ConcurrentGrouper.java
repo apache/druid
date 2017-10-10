@@ -98,8 +98,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       final ListeningExecutorService grouperSorter,
       final int priority,
       final boolean hasQueryTimeout,
-      final long queryTimeoutAt,
-      final int mergeBufferSize
+      final long queryTimeoutAt
   )
   {
     Preconditions.checkArgument(concurrencyHint > 0, "concurrencyHint > 0");

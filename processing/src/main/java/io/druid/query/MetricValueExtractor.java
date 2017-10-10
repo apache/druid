@@ -44,12 +44,6 @@ public class MetricValueExtractor
     return value;
   }
 
-  public Float getFloatMetric(String name)
-  {
-    final Object retVal = value.get(name);
-    return retVal == null ? null : ((Number) retVal).floatValue();
-  }
-
   public Double getDoubleMetric(String name)
   {
     final Object retVal = value.get(name);

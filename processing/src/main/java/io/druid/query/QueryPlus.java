@@ -126,6 +126,6 @@ public final class QueryPlus<T>
 
   public Sequence<T> run(QuerySegmentWalker walker, Map<String, Object> context)
   {
-    return query.getRunner(walker, context).run(this, context);
+    return query.getRunner(walker).run(this, context);
   }
 }

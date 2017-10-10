@@ -271,8 +271,6 @@ public class CompressedVSizeIndexedV3WriterTest
           Longs.BYTES * 250000
       );
       CompressedVSizeIntsIndexedWriter valueWriter = new CompressedVSizeIntsIndexedWriter(
-          ioPeon,
-          "value",
           maxValue,
           valueChunkFactor,
           byteOrder,

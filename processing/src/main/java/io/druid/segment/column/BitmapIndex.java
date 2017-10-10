@@ -30,8 +30,6 @@ public interface BitmapIndex
 
   public String getValue(int index);
 
-  public boolean hasNulls();
-
   public BitmapFactory getBitmapFactory();
 
   /**

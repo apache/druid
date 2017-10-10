@@ -291,20 +291,7 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
         };
       }
       if (type == ValueType.STRING) {
-        return new ObjectColumnSelector<String>()
-        {
-          @Override
-          public Class<String> classOfObject()
-          {
-            return String.class;
-          }
-
-          @Override
-          public String getObject()
-          {
-            return columnVals.getStringSingleValueRow(offset.getOffset());
-          }
-        };
+        throw new IllegalStateException("Generic column's type couldn't be string");
       }
     }
 

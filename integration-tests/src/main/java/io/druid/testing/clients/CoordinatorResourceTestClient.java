@@ -126,11 +126,7 @@ public class CoordinatorResourceTestClient
     try {
       makeRequest(
           HttpMethod.DELETE,
-          StringUtils.format(
-              "%sdatasources/%s",
-              getCoordinatorURL(),
-              dataSource
-          )
+          StringUtils.format("%sdatasources/%s/intervals/%s", getCoordinatorURL(), dataSource, interval)
       );
     }
     catch (Exception e) {

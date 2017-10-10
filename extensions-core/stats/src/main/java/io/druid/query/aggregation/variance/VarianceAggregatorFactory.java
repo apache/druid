@@ -122,16 +122,14 @@ public class VarianceAggregatorFactory extends AggregatorFactory
     }
     if ("float".equalsIgnoreCase(inputType)) {
       return new VarianceBufferAggregator.FloatVarianceAggregator(
-          name,
           metricFactory.makeFloatColumnSelector(fieldName)
       );
     } else if ("long".equalsIgnoreCase(inputType)) {
       return new VarianceBufferAggregator.LongVarianceAggregator(
-          name,
           metricFactory.makeLongColumnSelector(fieldName)
       );
     } else if ("variance".equalsIgnoreCase(inputType)) {
-      return new VarianceBufferAggregator.ObjectVarianceAggregator(name, selector);
+      return new VarianceBufferAggregator.ObjectVarianceAggregator(selector);
     }
     throw new IAE(
         "Incompatible type for metric[%s], expected a float, long or variance, got a %s", fieldName, inputType

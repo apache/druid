@@ -39,8 +39,6 @@ public interface ImmutableBitmap
 
   public byte[] toBytes();
 
-  public int compareTo(ImmutableBitmap other);
-
   /**
    * @return True if this bitmap is empty (contains no set bit)
    */
@@ -56,15 +54,6 @@ public interface ImmutableBitmap
   public boolean get(int value);
 
   /**
-   * Compute the bitwise-or of this bitmap with another bitmap. A new bitmap is generated.
-   *
-   * Note that the other bitmap should be of the same class instance.
-   *
-   * @param otherBitmap other bitmap
-   */
-  public ImmutableBitmap union(ImmutableBitmap otherBitmap);
-
-  /**
    * Compute the bitwise-and of this bitmap with another bitmap. A new bitmap is generated.
    *
    * Note that the other bitmap should be of the same class instance.
@@ -73,12 +62,4 @@ public interface ImmutableBitmap
    */
   public ImmutableBitmap intersection(ImmutableBitmap otherBitmap);
 
-  /**
-   * Compute the bitwise-andNot of this bitmap with another bitmap. A new bitmap is generated.
-   *
-   * Note that the other bitmap should be of the same class instance.
-   *
-   * @param otherBitmap other bitmap
-   */
-  public ImmutableBitmap difference(ImmutableBitmap otherBitmap);
 }

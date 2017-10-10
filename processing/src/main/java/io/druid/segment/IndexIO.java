@@ -56,11 +56,11 @@ import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.ByteBufferSerializer;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
 import io.druid.segment.data.GenericIndexed;
+import io.druid.segment.data.ImmutableRTreeObjectStrategy;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIterable;
 import io.druid.segment.data.IndexedMultivalue;
-import io.druid.segment.data.IndexedRTree;
 import io.druid.segment.data.VSizeIndexed;
 import io.druid.segment.serde.BitmapIndexColumnPartSupplier;
 import io.druid.segment.serde.ComplexColumnPartSupplier;
@@ -389,7 +389,7 @@ public class IndexIO
             serializerUtils.readString(spatialBuffer),
             ByteBufferSerializer.read(
                 spatialBuffer,
-                new IndexedRTree.ImmutableRTreeObjectStrategy(bitmapSerdeFactory.getBitmapFactory())
+                new ImmutableRTreeObjectStrategy(bitmapSerdeFactory.getBitmapFactory())
             )
         );
       }
@@ -477,7 +477,7 @@ public class IndexIO
               metric,
               new ColumnBuilder()
                   .setType(ValueType.FLOAT)
-                  .setGenericColumn(new FloatGenericColumnSupplier(metricHolder.floatType, BYTE_ORDER))
+                  .setGenericColumn(new FloatGenericColumnSupplier(metricHolder.floatType))
                   .build()
           );
         } else if (metricHolder.getType() == MetricHolder.MetricType.COMPLEX) {
@@ -622,11 +622,6 @@ public class IndexIO
   public static File makeDimFile(File dir, String dimension)
   {
     return new File(dir, StringUtils.format("dim_%s.drd", dimension));
-  }
-
-  public static File makeNumericDimFile(File dir, String dimension, ByteOrder order)
-  {
-    return new File(dir, StringUtils.format("numeric_dim_%s_%s.drd", dimension, order));
   }
 
   public static File makeTimeFile(File dir, ByteOrder order)

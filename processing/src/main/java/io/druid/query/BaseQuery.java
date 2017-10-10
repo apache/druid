@@ -88,7 +88,7 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   }
 
   @Override
-  public QueryRunner<T> getRunner(QuerySegmentWalker walker, Map<String, Object> context)
+  public QueryRunner<T> getRunner(QuerySegmentWalker walker)
   {
     return querySegmentSpec.lookup(this, walker);
   }

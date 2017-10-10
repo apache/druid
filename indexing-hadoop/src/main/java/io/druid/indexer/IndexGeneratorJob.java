@@ -63,7 +63,6 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.InvalidJobConfException;
-import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.Partitioner;
@@ -135,24 +134,17 @@ public class IndexGeneratorJob implements Jobby
   }
 
   private final HadoopDruidIndexerConfig config;
-  private IndexGeneratorStats jobStats;
 
   public IndexGeneratorJob(
       HadoopDruidIndexerConfig config
   )
   {
     this.config = config;
-    this.jobStats = new IndexGeneratorStats();
   }
 
   protected void setReducerClass(final Job job)
   {
     job.setReducerClass(IndexGeneratorReducer.class);
-  }
-
-  public IndexGeneratorStats getJobStats()
-  {
-    return jobStats;
   }
 
   @Override
@@ -208,13 +200,7 @@ public class IndexGeneratorJob implements Jobby
       job.submit();
       log.info("Job %s submitted, status available at %s", job.getJobName(), job.getTrackingURL());
 
-      boolean success = job.waitForCompletion(true);
-
-      Counter invalidRowCount = job.getCounters()
-                                   .findCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER);
-      jobStats.setInvalidRowCount(invalidRowCount.getValue());
-
-      return success;
+      return job.waitForCompletion(true);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -274,7 +260,6 @@ public class IndexGeneratorJob implements Jobby
     @Override
     protected void innerMap(
         InputRow inputRow,
-        Object value,
         Context context,
         boolean reportParseExceptions
     ) throws IOException, InterruptedException
@@ -597,7 +582,7 @@ public class IndexGeneratorJob implements Jobby
                   }
                   catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                    throw new RejectedExecutionException("Got Interrupted while adding to the Queue");
+                    throw new RejectedExecutionException("Got Interrupted while adding to the Queue", e);
                   }
                 }
               }
@@ -799,21 +784,6 @@ public class IndexGeneratorJob implements Jobby
       if (outDir == null) {
         throw new InvalidJobConfException("Output directory not set.");
       }
-    }
-  }
-
-  public static class IndexGeneratorStats
-  {
-    private long invalidRowCount = 0;
-
-    public long getInvalidRowCount()
-    {
-      return invalidRowCount;
-    }
-
-    public void setInvalidRowCount(long invalidRowCount)
-    {
-      this.invalidRowCount = invalidRowCount;
     }
   }
 }

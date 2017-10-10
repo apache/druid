@@ -19,6 +19,7 @@
 
 package io.druid.firehose.cloudfiles;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.validation.constraints.NotNull;
@@ -37,10 +38,7 @@ public class CloudFilesBlob
   @NotNull
   private String region = null;
 
-  public CloudFilesBlob()
-  {
-  }
-
+  @JsonCreator
   public CloudFilesBlob(String container, String path, String region)
   {
     this.container = container;

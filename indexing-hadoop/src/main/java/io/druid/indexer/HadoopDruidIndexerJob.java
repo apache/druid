@@ -103,9 +103,4 @@ public class HadoopDruidIndexerJob implements Jobby
     }
     return publishedSegments;
   }
-
-  public IndexGeneratorJob.IndexGeneratorStats getIndexJobStats()
-  {
-    return indexJob.getJobStats();
-  }
 }

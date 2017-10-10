@@ -77,6 +77,7 @@ public class StupidPoolTest
     // Wait until dangling object string is returned to the pool
     for (int i = 0; i < 6000 && poolOfString.leakedObjectsCount() == 0; i++) {
       System.gc();
+      @SuppressWarnings("unused")
       byte[] garbage = new byte[10_000_000];
       Thread.sleep(10);
     }

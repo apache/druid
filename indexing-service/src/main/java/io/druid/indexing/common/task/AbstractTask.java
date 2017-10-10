@@ -59,11 +59,6 @@ public abstract class AbstractTask implements Task
     this(id, null, null, dataSource, context);
   }
 
-  protected AbstractTask(String id, String groupId, String dataSource, Map<String, Object> context)
-  {
-    this(id, groupId, null, dataSource, context);
-  }
-
   protected AbstractTask(
       String id,
       String groupId,

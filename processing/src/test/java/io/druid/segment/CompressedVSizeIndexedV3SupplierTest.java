@@ -72,7 +72,7 @@ public class CompressedVSizeIndexedV3SupplierTest extends CompressedVSizeIndexed
   }
 
   @Override
-  protected WritableSupplier<IndexedMultivalue<IndexedInts>> fromByteBuffer(ByteBuffer buffer, ByteOrder order)
+  protected WritableSupplier<IndexedMultivalue<IndexedInts>> fromByteBuffer(ByteBuffer buffer)
   {
     return CompressedVSizeIndexedV3Supplier.fromByteBuffer(
         buffer,

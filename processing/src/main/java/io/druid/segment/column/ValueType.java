@@ -23,7 +23,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import io.druid.java.util.common.StringUtils;
 
 /**
-*/
+ * Should be the same as {@link io.druid.data.input.impl.DimensionSchema.ValueType}.
+ * TODO merge them when druid-api is merged back into the main repo
+ */
 public enum ValueType
 {
   FLOAT,

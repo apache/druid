@@ -29,18 +29,12 @@ public class DoubleLastAggregator implements Aggregator
 
   private final DoubleColumnSelector valueSelector;
   private final LongColumnSelector timeSelector;
-  private final String name;
 
   protected long lastTime;
   protected double lastValue;
 
-  public DoubleLastAggregator(
-      String name,
-      LongColumnSelector timeSelector,
-      DoubleColumnSelector valueSelector
-  )
+  public DoubleLastAggregator(LongColumnSelector timeSelector, DoubleColumnSelector valueSelector)
   {
-    this.name = name;
     this.valueSelector = valueSelector;
     this.timeSelector = timeSelector;
 

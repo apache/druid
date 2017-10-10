@@ -247,6 +247,8 @@ public class HadoopIndexTask extends HadoopTask
     }
   }
 
+  /** Called indirectly in {@link HadoopIndexTask#run(TaskToolbox)}. */
+  @SuppressWarnings("unused")
   public static class HadoopIndexGeneratorInnerProcessing
   {
     public static String runTask(String[] args) throws Exception
@@ -284,6 +286,8 @@ public class HadoopIndexTask extends HadoopTask
     }
   }
 
+  /** Called indirectly in {@link HadoopIndexTask#run(TaskToolbox)}. */
+  @SuppressWarnings("unused")
   public static class HadoopDetermineConfigInnerProcessing
   {
     public static String runTask(String[] args) throws Exception

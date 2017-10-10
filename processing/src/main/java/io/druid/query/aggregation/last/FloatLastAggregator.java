@@ -34,7 +34,6 @@ public class FloatLastAggregator implements Aggregator
   protected float lastValue;
 
   public FloatLastAggregator(
-      String name,
       LongColumnSelector timeSelector,
       FloatColumnSelector valueSelector
   )

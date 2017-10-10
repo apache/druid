@@ -82,7 +82,6 @@ public class TimestampGroupByAggregationTest
   private final String aggType;
   private final String aggField;
   private final String groupByField;
-  private final Class<? extends TimestampAggregatorFactory> aggClass;
   private final DateTime expected;
   private final GroupByQueryConfig config;
 
@@ -90,7 +89,6 @@ public class TimestampGroupByAggregationTest
       String aggType,
       String aggField,
       String groupByField,
-      Class<? extends TimestampAggregatorFactory> aggClass,
       DateTime expected,
       GroupByQueryConfig config
   )
@@ -98,7 +96,6 @@ public class TimestampGroupByAggregationTest
     this.aggType = aggType;
     this.aggField = aggField;
     this.groupByField = groupByField;
-    this.aggClass = aggClass;
     this.expected = expected;
     this.config = config;
   }

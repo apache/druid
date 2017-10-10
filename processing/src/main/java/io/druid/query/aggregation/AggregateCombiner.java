@@ -48,6 +48,7 @@ public interface AggregateCombiner<T> extends ColumnValueSelector<T>
    * io.druid.segment.ObjectColumnSelector#getObject()} must not be modified, and must not become a subject for modification
    * during subsequent {@link #fold} calls.
    */
+  @SuppressWarnings("unused") // Going to be used when https://github.com/druid-io/druid/projects/2 is complete
   void reset(ColumnValueSelector selector);
 
   /**

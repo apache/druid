@@ -28,7 +28,6 @@ import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.ByteOrder;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 
@@ -45,7 +44,8 @@ public class EntireLayoutLongSupplierSerializer implements LongSupplierSerialize
   private int numInserted = 0;
 
   public EntireLayoutLongSupplierSerializer(
-      IOPeon ioPeon, String filenameBase, ByteOrder order,
+      IOPeon ioPeon,
+      String filenameBase,
       CompressionFactory.LongEncodingWriter writer
   )
   {
