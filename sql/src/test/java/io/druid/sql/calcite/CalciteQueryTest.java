@@ -781,6 +781,7 @@ public class CalciteQueryTest
   }
 
   @Test
+  @Ignore // Disabled since GROUP BY alias can confuse the validator; see DruidConformance::isGroupByAlias
   public void testGroupByAndOrderByAlias() throws Exception
   {
     testQuery(
@@ -809,6 +810,31 @@ public class CalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{1L, 6L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByExpressionAliasedAsOriginalColumnName() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + "FLOOR(__time TO MONTH) AS __time,\n"
+        + "COUNT(*)\n"
+        + "FROM druid.foo\n"
+        + "GROUP BY FLOOR(__time TO MONTH)",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.MONTH)
+                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{T("2000-01-01"), 3L},
+            new Object[]{T("2001-01-01"), 3L}
         )
     );
   }
