@@ -65,8 +65,8 @@ public class TimestampAggregationSelectTest
   {
     return Iterables.transform(
         ImmutableList.of(
-            ImmutableList.of("timeMin", "tmin", TimestampMinAggregatorFactory.class, DateTimes.of("2011-01-12T01:00:00.000Z").getMillis()),
-            ImmutableList.of("timeMax", "tmax", TimestampMaxAggregatorFactory.class, DateTimes.of("2011-01-31T01:00:00.000Z").getMillis())
+            ImmutableList.of("timeMin", "tmin", DateTimes.of("2011-01-12T01:00:00.000Z").getMillis()),
+            ImmutableList.of("timeMax", "tmax", DateTimes.of("2011-01-31T01:00:00.000Z").getMillis())
         ),
         new Function<List<?>, Object[]>()
         {
