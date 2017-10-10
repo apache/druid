@@ -29,7 +29,7 @@ import java.util.List;
 /**
  * A class managing cached files used by {@link PrefetchableTextFilesFirehoseFactory}.
  */
-class CacheManager<ObjectType>
+class CacheManager<T>
 {
   private static final Logger LOG = new Logger(CacheManager.class);
 
@@ -40,7 +40,7 @@ class CacheManager<ObjectType>
   // which makes the implementation complicated.
   private final long maxCacheCapacityBytes;
 
-  private final List<FetchedFile<ObjectType>> files = new ArrayList<>();
+  private final List<FetchedFile<T>> files = new ArrayList<>();
 
   private long totalCachedBytes;
 
@@ -66,7 +66,7 @@ class CacheManager<ObjectType>
     return totalCachedBytes < maxCacheCapacityBytes;
   }
 
-  FetchedFile<ObjectType> cache(FetchedFile<ObjectType> fetchedFile)
+  FetchedFile<T> cache(FetchedFile<T> fetchedFile)
   {
     if (!cacheable()) {
       throw new ISE(
@@ -76,7 +76,7 @@ class CacheManager<ObjectType>
       );
     }
 
-    final FetchedFile<ObjectType> cachedFile = fetchedFile.cache();
+    final FetchedFile<T> cachedFile = fetchedFile.cache();
     files.add(cachedFile);
     totalCachedBytes += cachedFile.length();
 
@@ -84,7 +84,7 @@ class CacheManager<ObjectType>
     return cachedFile;
   }
 
-  List<FetchedFile<ObjectType>> getFiles()
+  List<FetchedFile<T>> getFiles()
   {
     return files;
   }

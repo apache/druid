@@ -45,13 +45,13 @@ import java.util.concurrent.atomic.AtomicLong;
  * A file fetcher used by {@link PrefetchableTextFilesFirehoseFactory}.
  * See the javadoc of {@link PrefetchableTextFilesFirehoseFactory} for more details.
  */
-public class Fetcher<ObjectType> implements Iterator<OpenedObject<ObjectType>>
+public class Fetcher<T> implements Iterator<OpenedObject<T>>
 {
   private static final Logger LOG = new Logger(Fetcher.class);
   private static final String FETCH_FILE_PREFIX = "fetch-";
 
-  private final CacheManager<ObjectType> cacheManager;
-  private final List<ObjectType> objects;
+  private final CacheManager<T> cacheManager;
+  private final List<T> objects;
   private final ExecutorService fetchExecutor;
   private final File temporaryDirectory;
 
@@ -71,14 +71,14 @@ public class Fetcher<ObjectType> implements Iterator<OpenedObject<ObjectType>>
   // maximum retry for fetching an object from the remote site
   private final int maxFetchRetry;
 
-  private final LinkedBlockingQueue<FetchedFile<ObjectType>> fetchedFiles = new LinkedBlockingQueue<>();
+  private final LinkedBlockingQueue<FetchedFile<T>> fetchedFiles = new LinkedBlockingQueue<>();
 
   // Number of bytes of current fetched files.
   // This is updated when a file is successfully fetched, a fetched file is deleted, or a fetched file is
   // cached.
   private final AtomicLong fetchedBytes = new AtomicLong(0);
 
-  private final ObjectOpenFunction<ObjectType> openObjectFunction;
+  private final ObjectOpenFunction<T> openObjectFunction;
 
   private Future<Void> fetchFuture;
 
@@ -89,15 +89,15 @@ public class Fetcher<ObjectType> implements Iterator<OpenedObject<ObjectType>>
   private int numRemainingObjects;
 
   Fetcher(
-      CacheManager<ObjectType> cacheManager,
-      List<ObjectType> objects,
+      CacheManager<T> cacheManager,
+      List<T> objects,
       ExecutorService fetchExecutor,
       File temporaryDirectory,
       long maxFetchCapacityBytes,
       long prefetchTriggerBytes,
       long fetchTimeout,
       int maxFetchRetry,
-      ObjectOpenFunction<ObjectType> openObjectFunction
+      ObjectOpenFunction<T> openObjectFunction
   )
   {
     this.cacheManager = cacheManager;
@@ -150,7 +150,7 @@ public class Fetcher<ObjectType> implements Iterator<OpenedObject<ObjectType>>
   private void fetch() throws Exception
   {
     for (; nextFetchIndex < objects.size() && fetchedBytes.get() <= maxFetchCapacityBytes; nextFetchIndex++) {
-      final ObjectType object = objects.get(nextFetchIndex);
+      final T object = objects.get(nextFetchIndex);
       LOG.info("Fetching [%d]th object[%s], fetchedBytes[%d]", nextFetchIndex, object, fetchedBytes.get());
       final File outFile = File.createTempFile(FETCH_FILE_PREFIX, null, temporaryDirectory);
       fetchedBytes.addAndGet(download(object, outFile, 0));
@@ -168,7 +168,7 @@ public class Fetcher<ObjectType> implements Iterator<OpenedObject<ObjectType>>
    *
    * @return number of downloaded bytes
    */
-  private long download(ObjectType object, File outFile, int tryCount) throws IOException
+  private long download(T object, File outFile, int tryCount) throws IOException
   {
     try (final InputStream is = openObjectFunction.open(object);
          final CountingOutputStream cos = new CountingOutputStream(new FileOutputStream(outFile))) {
@@ -195,7 +195,7 @@ public class Fetcher<ObjectType> implements Iterator<OpenedObject<ObjectType>>
   }
 
   @Override
-  public OpenedObject<ObjectType> next()
+  public OpenedObject<T> next()
   {
     if (!hasNext()) {
       throw new NoSuchElementException();
@@ -206,7 +206,7 @@ public class Fetcher<ObjectType> implements Iterator<OpenedObject<ObjectType>>
     checkFetchException(false);
 
     try {
-      final OpenedObject<ObjectType> openedObject = prefetchEnabled ? openObjectFromLocal() : openObjectFromRemote();
+      final OpenedObject<T> openedObject = prefetchEnabled ? openObjectFromLocal() : openObjectFromRemote();
       numRemainingObjects--;
       return openedObject;
     }
@@ -234,9 +234,9 @@ public class Fetcher<ObjectType> implements Iterator<OpenedObject<ObjectType>>
     }
   }
 
-  private OpenedObject<ObjectType> openObjectFromLocal() throws IOException
+  private OpenedObject<T> openObjectFromLocal() throws IOException
   {
-    final FetchedFile<ObjectType> fetchedFile;
+    final FetchedFile<T> fetchedFile;
 
     if (!fetchedFiles.isEmpty()) {
       // If there are already fetched files, use them
@@ -257,13 +257,13 @@ public class Fetcher<ObjectType> implements Iterator<OpenedObject<ObjectType>>
         throw Throwables.propagate(e);
       }
     }
-    final FetchedFile<ObjectType> maybeCached = cacheIfPossible(fetchedFile);
+    final FetchedFile<T> maybeCached = cacheIfPossible(fetchedFile);
     // trigger fetch again for subsequent next() calls
     fetchIfNeeded(fetchedBytes.get());
     return new OpenedObject<>(maybeCached);
   }
 
-  private OpenedObject<ObjectType> openObjectFromRemote() throws IOException
+  private OpenedObject<T> openObjectFromRemote() throws IOException
   {
     if (fetchedFiles.size() > 0) {
       // If fetchedFiles is not empty even though prefetching is disabled, they should be cached files.
@@ -274,28 +274,28 @@ public class Fetcher<ObjectType> implements Iterator<OpenedObject<ObjectType>>
       try {
         // Since maxFetchCapacityBytes is 0, at most one file is fetched.
         fetch();
-        FetchedFile<ObjectType> fetchedFile = fetchedFiles.poll();
+        FetchedFile<T> fetchedFile = fetchedFiles.poll();
         if (fetchedFile == null) {
           throw new ISE("Cannot fetch object[%s]", objects.get(nextFetchIndex - 1));
         }
-        final FetchedFile<ObjectType> cached = cacheIfPossible(fetchedFile);
+        final FetchedFile<T> cached = cacheIfPossible(fetchedFile);
         return new OpenedObject<>(cached);
       }
       catch (Exception e) {
         throw Throwables.propagate(e);
       }
     } else {
-      final ObjectType object = objects.get(nextFetchIndex);
+      final T object = objects.get(nextFetchIndex);
       LOG.info("Reading [%d]th object[%s]", nextFetchIndex, object);
       nextFetchIndex++;
       return new OpenedObject<>(object, openObjectFunction.open(object), getNoopCloser());
     }
   }
 
-  private FetchedFile<ObjectType> cacheIfPossible(FetchedFile<ObjectType> fetchedFile)
+  private FetchedFile<T> cacheIfPossible(FetchedFile<T> fetchedFile)
   {
     if (cacheManager.cacheable()) {
-      final FetchedFile<ObjectType> cachedFile = cacheManager.cache(fetchedFile);
+      final FetchedFile<T> cachedFile = cacheManager.cache(fetchedFile);
       // If the fetchedFile is cached, make a room for fetching more data immediately.
       // This is because cache space and fetch space are separated.
       fetchedBytes.addAndGet(-fetchedFile.length());

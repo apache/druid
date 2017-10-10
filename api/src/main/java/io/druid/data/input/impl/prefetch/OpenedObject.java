@@ -29,28 +29,28 @@ import java.io.InputStream;
  * A class containing meta information about opened object.  This class is used by
  * {@link PrefetchableTextFilesFirehoseFactory}.
  */
-class OpenedObject<ObjectType> implements Closeable
+class OpenedObject<T> implements Closeable
 {
   // Original object
-  private final ObjectType object;
+  private final T object;
   // Input stream from the object
   private final InputStream objectStream;
   // Closer which is called when the file is not needed anymore. Usually this deletes the file except for cached files.
   private final Closeable resourceCloser;
 
-  OpenedObject(FetchedFile<ObjectType> fetchedFile) throws IOException
+  OpenedObject(FetchedFile<T> fetchedFile) throws IOException
   {
     this(fetchedFile.getObject(), FileUtils.openInputStream(fetchedFile.getFile()), fetchedFile.getResourceCloser());
   }
 
-  OpenedObject(ObjectType object, InputStream objectStream, Closeable resourceCloser)
+  OpenedObject(T object, InputStream objectStream, Closeable resourceCloser)
   {
     this.object = object;
     this.objectStream = objectStream;
     this.resourceCloser = resourceCloser;
   }
 
-  ObjectType getObject()
+  T getObject()
   {
     return object;
   }

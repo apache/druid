@@ -85,8 +85,8 @@ import java.util.concurrent.TimeUnit;
  * 3. If prefetch is disabled, the firehose returns a {@link LineIterator} which directly reads the stream opened by
  * {@link #openObjectStream}. If there is an IOException, it will throw it and the read will fail.
  */
-public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
-    extends AbstractTextFilesFirehoseFactory<ObjectType>
+public abstract class PrefetchableTextFilesFirehoseFactory<T>
+    extends AbstractTextFilesFirehoseFactory<T>
 {
   private static final Logger LOG = new Logger(PrefetchableTextFilesFirehoseFactory.class);
   private static final long DEFAULT_MAX_CACHE_CAPACITY_BYTES = 1024 * 1024 * 1024; // 1GB
@@ -94,13 +94,13 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
   private static final long DEFAULT_FETCH_TIMEOUT = 60_000; // 60 secs
   private static final int DEFAULT_MAX_FETCH_RETRY = 3;
 
-  private final CacheManager<ObjectType> cacheManager;
+  private final CacheManager<T> cacheManager;
   private final long maxFetchCapacityBytes;
   private final long prefetchTriggerBytes;
   private final long fetchTimeout;
   private final int maxFetchRetry;
 
-  private List<ObjectType> objects;
+  private List<T> objects;
 
   private static ExecutorService createFetchExecutor()
   {
@@ -133,7 +133,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
   }
 
   @VisibleForTesting
-  CacheManager<ObjectType> getCacheManager()
+  CacheManager<T> getCacheManager()
   {
     return cacheManager;
   }
@@ -160,7 +160,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
 
     // fetchExecutor is responsible for background data fetching
     final ExecutorService fetchExecutor = createFetchExecutor();
-    final Fetcher<ObjectType> fetcher = new Fetcher<>(
+    final Fetcher<T> fetcher = new Fetcher<>(
         cacheManager,
         objects,
         fetchExecutor,
@@ -188,7 +188,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<ObjectType>
               throw new NoSuchElementException();
             }
 
-            final OpenedObject<ObjectType> openedObject = fetcher.next();
+            final OpenedObject<T> openedObject = fetcher.next();
             final InputStream stream;
             try {
               stream = wrapObjectStream(

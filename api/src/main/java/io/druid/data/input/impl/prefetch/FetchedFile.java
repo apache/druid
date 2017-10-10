@@ -25,16 +25,16 @@ import java.io.File;
 /**
  * A class containing meta information about fetched objects.  This class used by {@link Fetcher}.
  */
-class FetchedFile<ObjectType>
+class FetchedFile<T>
 {
   // Original object
-  private final ObjectType object;
+  private final T object;
   // Fetched file stored in local disk
   private final File file;
   // Closer which is called when the file is not needed anymore. Usually this deletes the file except for cached files.
   private final Closeable resourceCloser;
 
-  FetchedFile(ObjectType object, File file, Closeable resourceCloser)
+  FetchedFile(T object, File file, Closeable resourceCloser)
   {
     this.object = object;
     this.file = file;
@@ -46,7 +46,7 @@ class FetchedFile<ObjectType>
     return file.length();
   }
 
-  ObjectType getObject()
+  T getObject()
   {
     return object;
   }
@@ -61,7 +61,7 @@ class FetchedFile<ObjectType>
     return resourceCloser;
   }
 
-  FetchedFile<ObjectType> cache()
+  FetchedFile<T> cache()
   {
     return new FetchedFile<>(object, file, () -> {});
   }
