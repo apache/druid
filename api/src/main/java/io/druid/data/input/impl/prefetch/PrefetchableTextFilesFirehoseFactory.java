@@ -21,7 +21,6 @@ package io.druid.data.input.impl.prefetch;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.druid.data.input.Firehose;
@@ -91,7 +90,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
   private static final Logger LOG = new Logger(PrefetchableTextFilesFirehoseFactory.class);
   private static final long DEFAULT_MAX_CACHE_CAPACITY_BYTES = 1024 * 1024 * 1024; // 1GB
   private static final long DEFAULT_MAX_FETCH_CAPACITY_BYTES = 1024 * 1024 * 1024; // 1GB
-  private static final long DEFAULT_FETCH_TIMEOUT = 60_000; // 60 secs
+  private static final long DEFAULT_FETCH_TIMEOUT_MS = TimeUnit.SECONDS.toMillis(60);
   private static final int DEFAULT_MAX_FETCH_RETRY = 3;
 
   private final CacheManager<T> cacheManager;
@@ -119,16 +118,16 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
       Integer maxFetchRetry
   )
   {
-    this.cacheManager = new CacheManager<>(maxCacheCapacityBytes == null
-                                           ? DEFAULT_MAX_CACHE_CAPACITY_BYTES
-                                           : maxCacheCapacityBytes);
+    this.cacheManager = new CacheManager<>(
+        maxCacheCapacityBytes == null ? DEFAULT_MAX_CACHE_CAPACITY_BYTES : maxCacheCapacityBytes
+    );
     this.maxFetchCapacityBytes = maxFetchCapacityBytes == null
                                  ? DEFAULT_MAX_FETCH_CAPACITY_BYTES
                                  : maxFetchCapacityBytes;
     this.prefetchTriggerBytes = prefetchTriggerBytes == null
                                 ? this.maxFetchCapacityBytes / 2
                                 : prefetchTriggerBytes;
-    this.fetchTimeout = fetchTimeout == null ? DEFAULT_FETCH_TIMEOUT : fetchTimeout;
+    this.fetchTimeout = fetchTimeout == null ? DEFAULT_FETCH_TIMEOUT_MS : fetchTimeout;
     this.maxFetchRetry = maxFetchRetry == null ? DEFAULT_MAX_FETCH_RETRY : maxFetchRetry;
   }
 
@@ -241,7 +240,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
         resourceCloser.close();
       }
       catch (IOException e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
   }

@@ -20,7 +20,6 @@
 package io.druid.data.input.impl.prefetch;
 
 import com.google.common.base.Throwables;
-import com.google.common.io.CountingOutputStream;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import org.apache.commons.io.IOUtils;
@@ -30,6 +29,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -171,9 +171,8 @@ public class Fetcher<T> implements Iterator<OpenedObject<T>>
   private long download(T object, File outFile, int tryCount) throws IOException
   {
     try (final InputStream is = openObjectFunction.open(object);
-         final CountingOutputStream cos = new CountingOutputStream(new FileOutputStream(outFile))) {
-      IOUtils.copy(is, cos);
-      return cos.getCount();
+         final OutputStream os = new FileOutputStream(outFile)) {
+      return IOUtils.copyLarge(is, os);
     }
     catch (IOException e) {
       final int nextTry = tryCount + 1;
