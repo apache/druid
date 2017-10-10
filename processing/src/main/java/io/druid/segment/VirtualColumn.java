@@ -114,9 +114,7 @@ public interface VirtualColumn extends Cacheable
    *
    * @return capabilities, must not be null
    */
-  ColumnCapabilities capabilities(
-      @SuppressWarnings("unused") String columnName // false-positive: https://youtrack.jetbrains.com/issue/IDEA-180281
-  );
+  ColumnCapabilities capabilities(String columnName);
 
   /**
    * Returns a list of columns that this virtual column will access. This may include the
