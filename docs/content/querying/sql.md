@@ -56,16 +56,17 @@ WHERE clause can also reference a subquery, like `WHERE col1 IN (SELECT foo FROM
 as [semi-joins](#query-execution), described below.
 
 The GROUP BY clause refers to columns in the FROM table. Using GROUP BY, DISTINCT, or any aggregation functions will
-trigger an aggregation query using one of Druid's [three native aggregation query types](#query-execution). The GROUP BY
-expression can be a column name, alias, or ordinal position (like `GROUP BY 2` to group by the second selected column).
+trigger an aggregation query using one of Druid's [three native aggregation query types](#query-execution). GROUP BY
+can refer to an expression or a select clause ordinal position (like `GROUP BY 2` to group by the second selected
+column).
 
 The HAVING clause refers to columns that are present after execution of GROUP BY. It can be used to filter on either
 grouping expressions or aggregated values. It can only be used together with GROUP BY.
 
 The ORDER BY clause refers to columns that are present after execution of GROUP BY. It can be used to order the results
-based on either grouping expressions or aggregated values. The ORDER BY expression can be a column name, alias, or
+based on either grouping expressions or aggregated values. ORDER BY can refer to an expression or a select clause
 ordinal position (like `ORDER BY 2` to order by the second selected column). For non-aggregation queries, ORDER BY
-is limited to ordering by the `__time` column. For aggregation queries, ORDER BY can order by any column.
+can only order by the `__time` column. For aggregation queries, ORDER BY can order by any column.
 
 The LIMIT clause can be used to limit the number of rows returned. It can be used with any query type. It is pushed down
 to data nodes for queries that run with the native TopN query type, but not the native GroupBy query type. Future
