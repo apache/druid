@@ -22,12 +22,12 @@ package io.druid.data.input.impl.prefetch;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.impl.AbstractTextFilesFirehoseFactory;
 import io.druid.data.input.impl.FileIteratingFirehose;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.logger.Logger;
 import org.apache.commons.io.LineIterator;
 
@@ -42,7 +42,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -101,15 +100,6 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
 
   private List<T> objects;
 
-  private static ExecutorService createFetchExecutor()
-  {
-    return Executors.newSingleThreadExecutor(
-        new ThreadFactoryBuilder()
-            .setNameFormat("firehose_fetch_%d")
-            .build()
-    );
-  }
-
   public PrefetchableTextFilesFirehoseFactory(
       Long maxCacheCapacityBytes,
       Long maxFetchCapacityBytes,
@@ -158,7 +148,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
     LOG.info("Create a new firehose for [%d] objects", objects.size());
 
     // fetchExecutor is responsible for background data fetching
-    final ExecutorService fetchExecutor = createFetchExecutor();
+    final ExecutorService fetchExecutor = Execs.singleThreaded("firehose_fetch_%d");
     final Fetcher<T> fetcher = new Fetcher<>(
         cacheManager,
         objects,
