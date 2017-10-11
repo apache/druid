@@ -65,7 +65,7 @@ import java.util.List;
  */
 @Command(
     name = "router",
-    description = "Experimental! Understands tiers and routes things to different brokers"
+    description = "Experimental! Understands tiers and routes things to different brokers, see http://druid.io/docs/latest/development/router.html for a description"
 )
 public class CliRouter extends ServerRunnable
 {

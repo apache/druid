@@ -106,7 +106,7 @@ import java.util.Set;
 @Command(
     name = "peon",
     description = "Runs a Peon, this is an individual forked \"task\" used as part of the indexing service. "
-                  + "This should rarely, if ever, be used directly."
+                  + "This should rarely, if ever, be used directly. See http://druid.io/docs/latest/design/peons.html for a description"
 )
 public class CliPeon extends GuiceRunnable
 {
