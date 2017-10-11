@@ -261,10 +261,12 @@ public class MetadataTaskStorage implements TaskStorage
         taskid
     );
 
-    // Even though these two operations are not atomically executed, the caller of replaceLock() is thread-safe and
-    // guarantees that two or more threads never call replaceLock() at the same time
-    removeLock(taskid, oldLock);
-    addLock(taskid, newLock);
+    final Long oldLockId = handler.getLockId(taskid, oldLock);
+    if (oldLockId == null) {
+      throw new ISE("Cannot find lock[%s]", oldLock);
+    }
+
+    handler.replaceLock(taskid, oldLockId, newLock);
   }
 
   @Override
@@ -273,16 +275,12 @@ public class MetadataTaskStorage implements TaskStorage
     Preconditions.checkNotNull(taskid, "taskid");
     Preconditions.checkNotNull(taskLockToRemove, "taskLockToRemove");
 
-    final Map<Long, TaskLock> taskLocks = getLocksWithIds(taskid);
-
-    for (final Map.Entry<Long, TaskLock> taskLockWithId : taskLocks.entrySet()) {
-      final long id = taskLockWithId.getKey();
-      final TaskLock taskLock = taskLockWithId.getValue();
-
-      if (taskLock.equals(taskLockToRemove)) {
-        log.info("Deleting TaskLock with id[%d]: %s", id, taskLock);
-        handler.removeLock(id);
-      }
+    final Long lockId = handler.getLockId(taskid, taskLockToRemove);
+    if (lockId == null) {
+      log.warn("Cannot find lock[%s]", taskLockToRemove);
+    } else {
+      log.info("Deleting TaskLock with id[%d]: %s", lockId, taskLockToRemove);
+      handler.removeLock(lockId);
     }
   }
 
