@@ -24,8 +24,6 @@ import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.task.Task;
 import org.joda.time.Interval;
 
-import java.util.List;
-
 /**
  * This class represents a critical action must be done while the task's lock is guaranteed to not be revoked in the
  * middle of the action.
@@ -37,7 +35,7 @@ import java.util.List;
  * Also, implementations should be finished as soon as possible because all methods in {@link TaskLockbox} are blocked
  * until this action is finished.
  *
- * @see TaskLockbox#doInCriticalSection(Task, List, CriticalAction)
+ * @see TaskLockbox#doInCriticalSection
  */
 public class CriticalAction<T>
 {
