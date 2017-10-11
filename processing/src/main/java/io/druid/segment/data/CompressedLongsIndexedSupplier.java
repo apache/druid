@@ -48,10 +48,10 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>, S
           x -> CompressionFactory.setEncodingFlag(x.compression.getId())
       )
       .writeByte(x -> {
-        if (x.encoding == CompressionFactory.LEGACY_LONG_ENCODING_FORMAT) {
-          return x.compression.getId();
-        } else {
+        if (x.encoding != CompressionFactory.LEGACY_LONG_ENCODING_FORMAT) {
           return x.encoding.getId();
+        } else {
+          return x.compression.getId();
         }
       });
 
