@@ -507,14 +507,13 @@ public class TaskLockbox
   public <T> T doInCriticalSection(
       Task task,
       List<Interval> intervals,
-      CriticalAction<T> actionOnValidLocks,
-      CriticalAction<T> actionOnInvalidLocks
+      CriticalAction<T> actions
   ) throws Exception
   {
     giant.lockInterruptibly();
 
     try {
-      return isTaskLocksValid(task, intervals) ? actionOnValidLocks.perform() : actionOnInvalidLocks.perform();
+      return actions.perform(isTaskLocksValid(task, intervals));
     }
     finally {
       giant.unlock();
@@ -572,7 +571,7 @@ public class TaskLockbox
       if (lock.isRevoked()) {
         log.warn("TaskLock[%s] is already revoked", lock);
       } else {
-        final TaskLock revokedLock = lock.revoke();
+        final TaskLock revokedLock = lock.revokedCopy();
         taskStorage.replaceLock(taskId, lock, revokedLock);
 
         final List<TaskLockPosse> possesHolder = running.get(task.getDataSource()).get(lock.getInterval());

@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
+import io.druid.indexing.overlord.CriticalAction;
 import io.druid.java.util.common.Intervals;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
@@ -97,11 +98,15 @@ public class SegmentInsertActionTest
     actionTestKit.getTaskLockbox().doInCriticalSection(
         task,
         Collections.singletonList(INTERVAL),
-        () -> action.perform(task, actionTestKit.getTaskActionToolbox()),
-        () -> {
-          Assert.fail();
-          return null;
-        }
+        CriticalAction.builder()
+                      .onValidLocks(() -> action.perform(task, actionTestKit.getTaskActionToolbox()))
+                      .onInvalidLocks(
+                           () -> {
+                             Assert.fail();
+                             return null;
+                           }
+                       )
+                      .build()
     );
 
     Assert.assertEquals(
@@ -126,11 +131,15 @@ public class SegmentInsertActionTest
     final Set<DataSegment> segments = actionTestKit.getTaskLockbox().doInCriticalSection(
         task,
         Collections.singletonList(INTERVAL),
-        () -> action.perform(task, actionTestKit.getTaskActionToolbox()),
-        () -> {
-          Assert.fail();
-          return null;
-        }
+        CriticalAction.<Set<DataSegment>>builder()
+                       .onValidLocks(() -> action.perform(task, actionTestKit.getTaskActionToolbox()))
+                       .onInvalidLocks(
+                           () -> {
+                             Assert.fail();
+                             return null;
+                           }
+                       )
+                       .build()
     );
 
     Assert.assertEquals(ImmutableSet.of(SEGMENT3), segments);

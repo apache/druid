@@ -72,7 +72,7 @@ public class TaskLock
     this(type, groupId, dataSource, interval, version, priority, false);
   }
 
-  public TaskLock revoke()
+  public TaskLock revokedCopy()
   {
     return new TaskLock(
         type,

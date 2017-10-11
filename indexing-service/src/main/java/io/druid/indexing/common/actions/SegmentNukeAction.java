@@ -26,6 +26,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableSet;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.indexing.common.task.Task;
+import io.druid.indexing.overlord.CriticalAction;
 import io.druid.java.util.common.ISE;
 import io.druid.query.DruidMetrics;
 import io.druid.timeline.DataSegment;
@@ -74,13 +75,19 @@ public class SegmentNukeAction implements TaskAction<Void>
       toolbox.getTaskLockbox().doInCriticalSection(
           task,
           intervals,
-          () -> {
-            toolbox.getIndexerMetadataStorageCoordinator().deleteSegments(segments);
-            return null;
-          },
-          () -> {
-            throw new ISE("Some locks for task[%s] are already revoked", task.getId());
-          }
+          CriticalAction.builder()
+                        .onValidLocks(
+                             () -> {
+                               toolbox.getIndexerMetadataStorageCoordinator().deleteSegments(segments);
+                               return null;
+                             }
+                         )
+                        .onInvalidLocks(
+                             () -> {
+                               throw new ISE("Some locks for task[%s] are already revoked", task.getId());
+                             }
+                         )
+                        .build()
       );
     }
     catch (Exception e) {

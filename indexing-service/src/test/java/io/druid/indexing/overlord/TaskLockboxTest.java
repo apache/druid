@@ -268,7 +268,11 @@ public class TaskLockboxTest
     Assert.assertTrue(lockbox.tryLock(TaskLockType.SHARED, task, interval).isOk());
 
     Assert.assertFalse(
-        lockbox.doInCriticalSection(task, Collections.singletonList(interval), () -> true, () -> false)
+        lockbox.doInCriticalSection(
+            task,
+            Collections.singletonList(interval),
+            CriticalAction.<Boolean>builder().onValidLocks(() -> true).onInvalidLocks(() -> false).build()
+        )
     );
   }
 
@@ -282,7 +286,11 @@ public class TaskLockboxTest
     Assert.assertNotNull(lock);
 
     Assert.assertTrue(
-        lockbox.doInCriticalSection(task, Collections.singletonList(interval), () -> true, () -> false)
+        lockbox.doInCriticalSection(
+            task,
+            Collections.singletonList(interval),
+            CriticalAction.<Boolean>builder().onValidLocks(() -> true).onInvalidLocks(() -> false).build()
+        )
     );
   }
 
@@ -297,7 +305,11 @@ public class TaskLockboxTest
     Assert.assertNotNull(lock);
 
     Assert.assertTrue(
-        lockbox.doInCriticalSection(task, Collections.singletonList(smallInterval), () -> true, () -> false)
+        lockbox.doInCriticalSection(
+            task,
+            Collections.singletonList(smallInterval),
+            CriticalAction.<Boolean>builder().onValidLocks(() -> true).onInvalidLocks(() -> false).build()
+        )
     );
   }
 
@@ -319,7 +331,11 @@ public class TaskLockboxTest
     Assert.assertNotNull(lock);
 
     Assert.assertTrue(
-        lockbox.doInCriticalSection(highPriorityTask, Collections.singletonList(interval), () -> true, () -> false)
+        lockbox.doInCriticalSection(
+            highPriorityTask,
+            Collections.singletonList(interval),
+            CriticalAction.<Boolean>builder().onValidLocks(() -> true).onInvalidLocks(() -> false).build()
+        )
     );
   }
 
@@ -340,7 +356,11 @@ public class TaskLockboxTest
     Assert.assertTrue(Iterables.getOnlyElement(lockbox.findLocksForTask(lowPriorityTask)).isRevoked());
 
     Assert.assertFalse(
-        lockbox.doInCriticalSection(lowPriorityTask, Collections.singletonList(interval), () -> true, () -> false)
+        lockbox.doInCriticalSection(
+            lowPriorityTask,
+            Collections.singletonList(interval),
+            CriticalAction.<Boolean>builder().onValidLocks(() -> true).onInvalidLocks(() -> false).build()
+        )
     );
   }
 

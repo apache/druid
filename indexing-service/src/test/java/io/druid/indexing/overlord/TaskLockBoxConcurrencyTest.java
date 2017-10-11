@@ -106,16 +106,22 @@ public class TaskLockBoxConcurrencyTest
       return lockbox.doInCriticalSection(
           lowPriorityTask,
           Collections.singletonList(interval),
-          () -> {
-            latch.countDown();
-            Thread.sleep(100);
-            intSupplier.set(intSupplier.get() + 1);
-            return intSupplier.get();
-          },
-          () -> {
-            Assert.fail();
-            return null;
-          }
+          CriticalAction.<Integer>builder()
+              .onValidLocks(
+                  () -> {
+                    latch.countDown();
+                    Thread.sleep(100);
+                    intSupplier.set(intSupplier.get() + 1);
+                    return intSupplier.get();
+                  }
+              )
+              .onInvalidLocks(
+                  () -> {
+                    Assert.fail();
+                    return null;
+                  }
+              )
+              .build()
       );
     });
 
@@ -130,15 +136,21 @@ public class TaskLockBoxConcurrencyTest
       return lockbox.doInCriticalSection(
           highPriorityTask,
           Collections.singletonList(interval),
-          () -> {
-            Thread.sleep(100);
-            intSupplier.set(intSupplier.get() + 1);
-            return intSupplier.get();
-          },
-          () -> {
-            Assert.fail();
-            return null;
-          }
+          CriticalAction.<Integer>builder()
+              .onValidLocks(
+                  () -> {
+                    Thread.sleep(100);
+                    intSupplier.set(intSupplier.get() + 1);
+                    return intSupplier.get();
+                  }
+              )
+              .onInvalidLocks(
+                  () -> {
+                    Assert.fail();
+                    return null;
+                  }
+              )
+              .build()
       );
     });
 
@@ -174,16 +186,22 @@ public class TaskLockBoxConcurrencyTest
     final Future<Integer> future1 = service.submit(() -> lockbox.doInCriticalSection(
         task,
         ImmutableList.of(intervals.get(0), intervals.get(1)),
-        () -> {
-          latch.countDown();
-          Thread.sleep(100);
-          intSupplier.set(intSupplier.get() + 1);
-          return intSupplier.get();
-        },
-        () -> {
-          Assert.fail();
-          return null;
-        }
+        CriticalAction.<Integer>builder()
+            .onValidLocks(
+                () -> {
+                  latch.countDown();
+                  Thread.sleep(100);
+                  intSupplier.set(intSupplier.get() + 1);
+                  return intSupplier.get();
+                }
+            )
+            .onInvalidLocks(
+                () -> {
+                  Assert.fail();
+                  return null;
+                }
+            )
+            .build()
     ));
 
     final Future<Integer> future2 = service.submit(() -> {
@@ -191,15 +209,21 @@ public class TaskLockBoxConcurrencyTest
       return lockbox.doInCriticalSection(
           task,
           ImmutableList.of(intervals.get(1), intervals.get(2)),
-          () -> {
-            Thread.sleep(100);
-            intSupplier.set(intSupplier.get() + 1);
-            return intSupplier.get();
-          },
-          () -> {
-            Assert.fail();
-            return null;
-          }
+          CriticalAction.<Integer>builder()
+              .onValidLocks(
+                  () -> {
+                    Thread.sleep(100);
+                    intSupplier.set(intSupplier.get() + 1);
+                    return intSupplier.get();
+                  }
+              )
+              .onInvalidLocks(
+                  () -> {
+                    Assert.fail();
+                    return null;
+                  }
+              )
+              .build()
       );
     });
 
