@@ -179,6 +179,7 @@ public class DruidJsonValidator extends GuiceRunnable
           logWriter.write("cannot find proper spec from 'file'.. regarding it as a json spec");
           parser = jsonMapper.readValue(jsonFile, StringInputRowParser.class);
         }
+        parser.initializeParser();
         if (resource != null) {
           final CharSource source;
           if (new File(resource).isFile()) {
