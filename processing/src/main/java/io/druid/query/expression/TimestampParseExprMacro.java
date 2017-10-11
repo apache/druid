@@ -19,14 +19,13 @@
 
 package io.druid.query.expression;
 
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprEval;
 import io.druid.math.expr.ExprMacroTable;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
-import org.joda.time.format.ISODateTimeFormat;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -56,9 +55,10 @@ public class TimestampParseExprMacro implements ExprMacroTable.ExprMacro
       timeZone = DateTimeZone.UTC;
     }
 
-    final DateTimeFormatter formatter = formatString == null
-                                        ? ISODateTimeFormat.dateTimeParser()
-                                        : DateTimeFormat.forPattern(formatString).withZone(timeZone);
+    final DateTimes.UtcFormatter formatter =
+        formatString == null
+        ? DateTimes.ISO_DATE_OR_TIME
+        : DateTimes.wrapFormatter(DateTimeFormat.forPattern(formatString).withZone(timeZone));
 
     class TimestampParseExpr implements Expr
     {
@@ -66,8 +66,13 @@ public class TimestampParseExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public ExprEval eval(final ObjectBinding bindings)
       {
+        final String value = arg.eval(bindings).asString();
+        if (value == null) {
+          return ExprEval.of(null);
+        }
+
         try {
-          return ExprEval.of(formatter.parseDateTime(arg.eval(bindings).asString()).getMillis());
+          return ExprEval.of(formatter.parse(value).getMillis());
         }
         catch (IllegalArgumentException e) {
           // Catch exceptions potentially thrown by formatter.parseDateTime. Our docs say that unparseable timestamps

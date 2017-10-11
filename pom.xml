@@ -27,7 +27,7 @@
     </parent>
 
     <artifactId>druid</artifactId>
-    <version>0.11.0-SNAPSHOT</version>
+    <version>0.11.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>${project.groupId}:${project.artifactId}</name>
@@ -54,15 +54,15 @@
         <connection>scm:git:ssh://git@github.com/druid-io/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/druid-io/druid.git</developerConnection>
         <url>https://github.com/druid-io/druid.git</url>
-        <tag>0.11.0-SNAPSHOT</tag>
+        <tag>0.11.1-SNAPSHOT</tag>
     </scm>
 
     <properties>
         <maven.compiler.target>1.8</maven.compiler.target>
         <apache.curator.version>4.0.0</apache.curator.version>
         <apache.curator.test.version>2.12.0</apache.curator.test.version>
-        <avatica.version>1.9.0</avatica.version>
-        <calcite.version>1.12.0</calcite.version>
+        <avatica.version>1.10.0</avatica.version>
+        <calcite.version>1.14.0</calcite.version>
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
         <jetty.version>9.3.19.v20170502</jetty.version>
@@ -938,7 +938,11 @@
                     </bundledSignatures>
                     <signaturesFiles>
                         <signaturesFile>${session.executionRootDirectory}/codestyle/joda-time-forbidden-apis.txt</signaturesFile>
+                        <signaturesFile>${session.executionRootDirectory}/codestyle/druid-forbidden-apis.txt</signaturesFile>
                     </signaturesFiles>
+                    <excludes>
+                        <exclude>io/druid/java/util/common/DateTimes$UtcFormatter.class</exclude>
+                    </excludes>
                 </configuration>
                 <executions>
                     <execution>

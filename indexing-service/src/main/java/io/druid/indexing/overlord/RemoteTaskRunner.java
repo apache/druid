@@ -747,7 +747,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       WorkerSelectStrategy strategy;
       if (workerConfig == null || workerConfig.getSelectStrategy() == null) {
         strategy = WorkerBehaviorConfig.DEFAULT_STRATEGY;
-        log.info("No worker selection strategy set. Using default of [%s]", strategy.getClass().getSimpleName());
+        log.debug("No worker selection strategy set. Using default of [%s]", strategy.getClass().getSimpleName());
       } else {
         strategy = workerConfig.getSelectStrategy();
       }

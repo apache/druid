@@ -27,6 +27,7 @@ import io.druid.query.Query;
 import org.joda.time.DateTime;
 
 import java.util.Arrays;
+import java.util.Objects;
 
 public class RequestLogLine
 {
@@ -79,5 +80,38 @@ public class RequestLogLine
   public QueryStats getQueryStats()
   {
     return queryStats;
+  }
+
+  @Override
+  public boolean equals(final Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    final RequestLogLine that = (RequestLogLine) o;
+    return Objects.equals(timestamp, that.timestamp) &&
+           Objects.equals(remoteAddr, that.remoteAddr) &&
+           Objects.equals(query, that.query) &&
+           Objects.equals(queryStats, that.queryStats);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(timestamp, remoteAddr, query, queryStats);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "RequestLogLine{" +
+           "timestamp=" + timestamp +
+           ", remoteAddr='" + remoteAddr + '\'' +
+           ", query=" + query +
+           ", queryStats=" + queryStats +
+           '}';
   }
 }

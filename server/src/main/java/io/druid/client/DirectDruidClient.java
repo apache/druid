@@ -29,8 +29,6 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-import com.google.common.collect.MapMaker;
-import com.google.common.collect.Maps;
 import com.google.common.io.ByteSource;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -42,10 +40,10 @@ import com.metamx.http.client.response.ClientResponse;
 import com.metamx.http.client.response.HttpResponseHandler;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
-import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.RE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.guava.Sequence;
@@ -85,6 +83,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -104,7 +103,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
   private static final Logger log = new Logger(DirectDruidClient.class);
 
-  private static final Map<Class<? extends Query>, Pair<JavaType, JavaType>> typesMap = Maps.newConcurrentMap();
+  private static final Map<Class<? extends Query>, Pair<JavaType, JavaType>> typesMap = new ConcurrentHashMap<>();
 
   private final QueryToolChestWarehouse warehouse;
   private final QueryWatcher queryWatcher;
@@ -142,7 +141,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
   public static Map<String, Object> makeResponseContextForQuery(Query query, long startTimeMillis)
   {
-    final Map<String, Object> responseContext = new MapMaker().makeMap();
+    final Map<String, Object> responseContext = new ConcurrentHashMap<>();
     responseContext.put(
         DirectDruidClient.QUERY_FAIL_TIME,
         startTimeMillis + QueryContexts.getTimeout(query)

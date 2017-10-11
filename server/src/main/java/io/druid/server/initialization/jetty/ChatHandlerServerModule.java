@@ -120,13 +120,13 @@ public class ChatHandlerServerModule implements Module
       @RemoteChatHandler TLSServerConfig TLSServerConfig
   )
   {
-    final Server server = JettyServerModule.makeJettyServer(
+    return JettyServerModule.makeAndInitializeServer(
+        injector,
+        lifecycle,
         node,
         config,
         TLSServerConfig,
         injector.getExistingBinding(Key.get(SslContextFactory.class))
     );
-    JettyServerModule.initializeServer(injector, lifecycle, server);
-    return server;
   }
 }

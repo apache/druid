@@ -21,6 +21,8 @@ package io.druid.server.initialization;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.metadata.PasswordProvider;
 
+import java.util.List;
+
 public class TLSServerConfig
 {
   @JsonProperty
@@ -32,14 +34,26 @@ public class TLSServerConfig
   @JsonProperty
   private String certAlias;
 
-  @JsonProperty
-  private String keyManagerFactoryAlgorithm;
-
   @JsonProperty("keyStorePassword")
   private PasswordProvider keyStorePasswordProvider;
 
   @JsonProperty("keyManagerPassword")
   private PasswordProvider keyManagerPasswordProvider;
+
+  @JsonProperty
+  private String keyManagerFactoryAlgorithm;
+
+  @JsonProperty
+  private List<String> includeCipherSuites;
+
+  @JsonProperty
+  private List<String> excludeCipherSuites;
+
+  @JsonProperty
+  private List<String> includeProtocols;
+
+  @JsonProperty
+  private List<String> excludeProtocols;
 
   public String getKeyStorePath()
   {
@@ -71,6 +85,26 @@ public class TLSServerConfig
     return keyManagerFactoryAlgorithm;
   }
 
+  public List<String> getIncludeCipherSuites()
+  {
+    return includeCipherSuites;
+  }
+
+  public List<String> getExcludeCipherSuites()
+  {
+    return excludeCipherSuites;
+  }
+
+  public List<String> getIncludeProtocols()
+  {
+    return includeProtocols;
+  }
+
+  public List<String> getExcludeProtocols()
+  {
+    return excludeProtocols;
+  }
+
   @Override
   public String toString()
   {
@@ -79,6 +113,10 @@ public class TLSServerConfig
            ", keyStoreType='" + keyStoreType + '\'' +
            ", certAlias='" + certAlias + '\'' +
            ", keyManagerFactoryAlgorithm='" + keyManagerFactoryAlgorithm + '\'' +
+           ", includeCipherSuites=" + includeCipherSuites +
+           ", excludeCipherSuites=" + excludeCipherSuites +
+           ", includeProtocols=" + includeProtocols +
+           ", excludeProtocols=" + excludeProtocols +
            '}';
   }
 }

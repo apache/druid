@@ -37,6 +37,7 @@ public class DefaultTimeseriesQueryMetrics extends DefaultQueryMetrics<Timeserie
     super.query(query);
     numMetrics(query);
     numComplexMetrics(query);
+    granularity(query);
   }
 
   @Override
@@ -50,5 +51,11 @@ public class DefaultTimeseriesQueryMetrics extends DefaultQueryMetrics<Timeserie
   {
     int numComplexAggs = DruidMetrics.findNumComplexAggs(query.getAggregatorSpecs());
     setDimension("numComplexMetrics", String.valueOf(numComplexAggs));
+  }
+
+  @Override
+  public void granularity(TimeseriesQuery query)
+  {
+    // Don't emit by default
   }
 }

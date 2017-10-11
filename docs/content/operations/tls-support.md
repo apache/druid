@@ -9,8 +9,8 @@ TLS Support
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.server.http.plaintext`|Enable/Disable HTTP connector.|`true`|
-|`druid.server.http.tls`|Enable/Disable HTTPS connector.|`false`|
+|`druid.enablePlaintextPort`|Enable/Disable HTTP connector.|`true`|
+|`druid.enableTlsPort`|Enable/Disable HTTPS connector.|`false`|
 
 Although not recommended but both HTTP and HTTPS connectors can be enabled at a time and respective ports are configurable using `druid.plaintextPort`
 and `druid.tlsPort` properties on each node. Please see `Configuration` section of individual nodes to check the valid and default values for these ports.
@@ -30,8 +30,17 @@ values for the below mentioned configs among others provided by Java implementat
 |`druid.server.https.keyStoreType`|The type of the key store.|none|yes|
 |`druid.server.https.certAlias`|Alias of TLS/SSL certificate for the connector.|none|yes|
 |`druid.server.https.keyStorePassword`|The [Password Provider](../operations/password-provider.html) or String password for the Key Store.|none|yes|
+
+Following table contains non-mandatory advanced configuration options, use caution.
+
+|Property|Description|Default|Required|
+|--------|-----------|-------|--------|
 |`druid.server.https.keyManagerFactoryAlgorithm`|Algorithm to use for creating KeyManager, more details [here](https://docs.oracle.com/javase/7/docs/technotes/guides/security/jsse/JSSERefGuide.html#KeyManager).|`javax.net.ssl.KeyManagerFactory.getDefaultAlgorithm()`|no|
 |`druid.server.https.keyManagerPassword`|The [Password Provider](../operations/password-provider.html) or String password for the Key Manager.|none|no|
+|`druid.server.https.includeCipherSuites`|List of cipher suite names to include. You can either use the exact cipher suite name or a regular expression.|Jetty's default include cipher list|no|
+|`druid.server.https.excludeCipherSuites`|List of cipher suite names to exclude. You can either use the exact cipher suite name or a regular expression.|Jetty's default exclude cipher list|no|
+|`druid.server.https.includeProtocols`|List of exact protocols names to include.|Jetty's default include protocol list|no|
+|`druid.server.https.excludeProtocols`|List of exact protocols names to exclude.|Jetty's default exclude protocol list|no|
 
 # Druid's internal communication over TLS
 
