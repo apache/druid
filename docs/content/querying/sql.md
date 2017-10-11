@@ -56,14 +56,17 @@ WHERE clause can also reference a subquery, like `WHERE col1 IN (SELECT foo FROM
 as [semi-joins](#query-execution), described below.
 
 The GROUP BY clause refers to columns in the FROM table. Using GROUP BY, DISTINCT, or any aggregation functions will
-trigger an aggregation query using one of Druid's [three native aggregation query types](#query-execution).
+trigger an aggregation query using one of Druid's [three native aggregation query types](#query-execution). GROUP BY
+can refer to an expression or a select clause ordinal position (like `GROUP BY 2` to group by the second selected
+column).
 
 The HAVING clause refers to columns that are present after execution of GROUP BY. It can be used to filter on either
 grouping expressions or aggregated values. It can only be used together with GROUP BY.
 
 The ORDER BY clause refers to columns that are present after execution of GROUP BY. It can be used to order the results
-based on either grouping expressions or aggregated values. The ORDER BY expression can be a column name, alias, or
-ordinal position (like `ORDER BY 2` to order by the second column). ORDER BY can only be used together with GROUP BY.
+based on either grouping expressions or aggregated values. ORDER BY can refer to an expression or a select clause
+ordinal position (like `ORDER BY 2` to order by the second selected column). For non-aggregation queries, ORDER BY
+can only order by the `__time` column. For aggregation queries, ORDER BY can order by any column.
 
 The LIMIT clause can be used to limit the number of rows returned. It can be used with any query type. It is pushed down
 to data nodes for queries that run with the native TopN query type, but not the native GroupBy query type. Future
@@ -107,6 +110,8 @@ Numeric functions will return 64 bit integers or 64 bit floats, depending on the
 |`LOG10(expr)`|Logarithm (base 10).|
 |`POW(expr, power)`|expr to a power.|
 |`SQRT(expr)`|Square root.|
+|`TRUNCATE(expr[, digits])`|Truncate expr to a specific number of decimal digits. If digits is negative, then this truncates that many places to the left of the decimal point. Digits defaults to zero if not specified.|
+|`TRUNC(expr[, digits])`|Synonym for `TRUNCATE`.|
 |`x + y`|Addition.|
 |`x - y`|Subtraction.|
 |`x * y`|Multiplication.|
@@ -120,12 +125,17 @@ String functions accept strings, and return a type appropriate to the function.
 |Function|Notes|
 |--------|-----|
 |`x \|\| y`|Concat strings x and y.|
-|`CHARACTER_LENGTH(expr)`|Length of expr in UTF-16 code units.|
+|`LENGTH(expr)`|Length of expr in UTF-16 code units.|
+|`CHAR_LENGTH(expr)`|Synonym for `LENGTH`.|
+|`CHARACTER_LENGTH(expr)`|Synonym for `LENGTH`.|
+|`STRLEN(expr)`|Synonym for `LENGTH`.|
 |`LOOKUP(expr, lookupName)`|Look up expr in a registered [query-time lookup table](lookups.html).|
 |`LOWER(expr)`|Returns expr in all lowercase.|
 |`REGEXP_EXTRACT(expr, pattern, [index])`|Apply regular expression pattern and extract a capture group, or null if there is no match. If index is unspecified or zero, returns the substring that matched the pattern.|
 |`REPLACE(expr, pattern, replacement)`|Replaces pattern with replacement in expr, and returns the result.|
+|`STRPOS(haystack, needle)`|Returns the index of needle within haystack, starting from 1. If the needle is not found, returns 0.|
 |`SUBSTRING(expr, index, [length])`|Returns a substring of expr starting at index, with a max length, both measured in UTF-16 code units.|
+|`SUBSTR(expr, index, [length])`|Synonym for SUBSTRING.|
 |`TRIM([BOTH | LEADING | TRAILING] [<chars> FROM] expr)`|Returns expr with characters removed from the leading, trailing, or both ends of "expr" if they are in "chars". If "chars" is not provided, it defaults to " " (a space). If the directional argument is not provided, it defaults to "BOTH".|
 |`BTRIM(expr[, chars])`|Alternate form of `TRIM(BOTH <chars> FROM <expr>`).|
 |`LTRIM(expr[, chars])`|Alternate form of `TRIM(LEADING <chars> FROM <expr>`).|
@@ -146,6 +156,7 @@ over the connection time zone.
 |--------|-----|
 |`CURRENT_TIMESTAMP`|Current timestamp in the connection's time zone.|
 |`CURRENT_DATE`|Current date in the connection's time zone.|
+|`DATE_TRUNC(<unit>, <timestamp_expr>)`|Rounds down a timestamp, returning it as a new timestamp. Unit can be 'milliseconds', 'second', 'minute', 'hour', 'day', 'week', 'month', 'quarter', 'year', 'decade', 'century', or 'millenium'.|
 |`TIME_FLOOR(<timestamp_expr>, <period>, [<origin>, [<timezone>]])`|Rounds down a timestamp, returning it as a new timestamp. Period can be any ISO8601 period, like P3M (quarters) or PT12H (half-days). The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". This function is similar to `FLOOR` but is more flexible.|
 |`TIME_SHIFT(<timestamp_expr>, <period>, <step>, [<timezone>])`|Shifts a timestamp by a period (step times), returning it as a new timestamp. Period can be any ISO8601 period. Step may be negative. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|
 |`TIME_EXTRACT(<timestamp_expr>, [<unit>, [<timezone>]])`|Extracts a time part from expr, returning it as a number. Unit can be EPOCH, SECOND, MINUTE, HOUR, DAY (day of month), DOW (day of week), DOY (day of year), WEEK (week of [week year](https://en.wikipedia.org/wiki/ISO_week_date)), MONTH (1 through 12), QUARTER (1 through 4), or YEAR. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". This function is similar to `EXTRACT` but is more flexible. Unit and time zone must be literals, and must be provided quoted, like `TIME_EXTRACT(__time, 'HOUR')` or `TIME_EXTRACT(__time, 'HOUR', 'America/Los_Angeles')`.|
@@ -168,6 +179,8 @@ over the connection time zone.
 |`x >= y`|Greater than or equal to.|
 |`x < y`|Less than.|
 |`x <= y`|Less than or equal to.|
+|`x BETWEEN y AND z`|Equivalent to `x >= y AND x <= z`.|
+|`x NOT BETWEEN y AND z`|Equivalent to `x < y OR x > z`.|
 |`x LIKE pattern [ESCAPE esc]`|True if x matches a SQL LIKE pattern (with an optional escape).|
 |`x NOT LIKE pattern [ESCAPE esc]`|True if x does not match a SQL LIKE pattern (with an optional escape).|
 |`x IS NULL`|True if x is NULL or empty string.|

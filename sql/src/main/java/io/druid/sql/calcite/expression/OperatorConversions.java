@@ -147,6 +147,12 @@ public class OperatorConversions
       return this;
     }
 
+    public OperatorBuilder returnTypeInference(final SqlReturnTypeInference returnTypeInference)
+    {
+      this.returnTypeInference = returnTypeInference;
+      return this;
+    }
+
     public OperatorBuilder functionCategory(final SqlFunctionCategory functionCategory)
     {
       this.functionCategory = functionCategory;

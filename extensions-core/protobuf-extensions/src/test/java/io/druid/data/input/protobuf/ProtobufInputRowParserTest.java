@@ -19,11 +19,13 @@
 
 package io.druid.data.input.protobuf;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
+import io.druid.data.input.impl.JavaScriptParseSpec;
 import io.druid.data.input.impl.ParseSpec;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.TimestampSpec;
@@ -31,10 +33,14 @@ import io.druid.java.util.common.parsers.JSONPathFieldSpec;
 import io.druid.java.util.common.parsers.JSONPathFieldType;
 import io.druid.java.util.common.parsers.JSONPathSpec;
 import io.druid.java.util.common.parsers.ParseException;
+import io.druid.js.JavaScriptConfig;
+import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
@@ -44,6 +50,9 @@ import static org.junit.Assert.assertEquals;
 
 public class ProtobufInputRowParserTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   private ParseSpec parseSpec;
 
   @Before
@@ -160,6 +169,32 @@ public class ProtobufInputRowParserTest
     assertEquals(47.11F, row.getMetric("someFloatColumn").floatValue(), 0.0);
     assertEquals(815.0F, row.getMetric("someIntColumn").floatValue(), 0.0);
     assertEquals(816.0F, row.getMetric("someLongColumn").floatValue(), 0.0);
+  }
+
+  @Test
+  public void testDisableJavaScript()
+  {
+    final JavaScriptParseSpec parseSpec = new JavaScriptParseSpec(
+        new TimestampSpec("timestamp", "auto", null),
+        new DimensionsSpec(
+            DimensionsSpec.getDefaultSchemas(
+                ImmutableList.of(
+                    "dim1",
+                    "dim2"
+                )
+            ),
+            null,
+            null
+        ),
+        "func",
+        new JavaScriptConfig(false)
+    );
+    final ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "prototest.desc", "ProtoTestEvent");
+
+    expectedException.expect(CoreMatchers.instanceOf(IllegalStateException.class));
+    expectedException.expectMessage("JavaScript is disabled");
+
+    parser.parse(ByteBuffer.allocate(1));
   }
 
   private void assertDimensionEquals(InputRow row, String dimension, Object expected)
