@@ -20,15 +20,11 @@
 package io.druid.sql.calcite.expression;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularity;
-import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.math.expr.ExprType;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.TimeFormatExtractionFn;
@@ -57,71 +53,19 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.joda.time.Interval;
-import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
 
 /**
  * A collection of functions for translating from Calcite expressions into Druid objects.
  */
 public class Expressions
 {
-  private static final Map<SqlOperator, String> DIRECT_CONVERSIONS = ImmutableMap.<SqlOperator, String>builder()
-      .put(SqlStdOperatorTable.ABS, "abs")
-      .put(SqlStdOperatorTable.CASE, "case_searched")
-      .put(SqlStdOperatorTable.CHAR_LENGTH, "strlen")
-      .put(SqlStdOperatorTable.CHARACTER_LENGTH, "strlen")
-      .put(SqlStdOperatorTable.CONCAT, "concat")
-      .put(SqlStdOperatorTable.EXP, "exp")
-      .put(SqlStdOperatorTable.DIVIDE_INTEGER, "div")
-      .put(SqlStdOperatorTable.LIKE, "like")
-      .put(SqlStdOperatorTable.LN, "log")
-      .put(SqlStdOperatorTable.LOWER, "lower")
-      .put(SqlStdOperatorTable.LOG10, "log10")
-      .put(SqlStdOperatorTable.POWER, "pow")
-      .put(SqlStdOperatorTable.REPLACE, "replace")
-      .put(SqlStdOperatorTable.SQRT, "sqrt")
-      .put(SqlStdOperatorTable.UPPER, "upper")
-      .build();
-
-  private static final Map<SqlOperator, String> UNARY_PREFIX_OPERATOR_MAP = ImmutableMap.<SqlOperator, String>builder()
-      .put(SqlStdOperatorTable.NOT, "!")
-      .put(SqlStdOperatorTable.UNARY_MINUS, "-")
-      .build();
-
-  private static final Map<SqlOperator, String> UNARY_SUFFIX_OPERATOR_MAP = ImmutableMap.<SqlOperator, String>builder()
-      .put(SqlStdOperatorTable.IS_NULL, "== ''")
-      .put(SqlStdOperatorTable.IS_NOT_NULL, "!= ''")
-      .put(SqlStdOperatorTable.IS_FALSE, "<= 0") // Matches Evals.asBoolean
-      .put(SqlStdOperatorTable.IS_NOT_TRUE, "<= 0") // Matches Evals.asBoolean
-      .put(SqlStdOperatorTable.IS_TRUE, "> 0") // Matches Evals.asBoolean
-      .put(SqlStdOperatorTable.IS_NOT_FALSE, "> 0") // Matches Evals.asBoolean
-      .build();
-
-  private static final Map<SqlOperator, String> BINARY_OPERATOR_MAP = ImmutableMap.<SqlOperator, String>builder()
-      .put(SqlStdOperatorTable.MULTIPLY, "*")
-      .put(SqlStdOperatorTable.MOD, "%")
-      .put(SqlStdOperatorTable.DIVIDE, "/")
-      .put(SqlStdOperatorTable.PLUS, "+")
-      .put(SqlStdOperatorTable.MINUS, "-")
-      .put(SqlStdOperatorTable.EQUALS, "==")
-      .put(SqlStdOperatorTable.NOT_EQUALS, "!=")
-      .put(SqlStdOperatorTable.GREATER_THAN, ">")
-      .put(SqlStdOperatorTable.GREATER_THAN_OR_EQUAL, ">=")
-      .put(SqlStdOperatorTable.LESS_THAN, "<")
-      .put(SqlStdOperatorTable.LESS_THAN_OR_EQUAL, "<=")
-      .put(SqlStdOperatorTable.AND, "&&")
-      .put(SqlStdOperatorTable.OR, "||")
-      .build();
-
   private Expressions()
   {
     // No instantiation.
@@ -207,131 +151,16 @@ public class Expressions
       }
 
       return DruidExpression.fromColumn(columnName);
-    } else if (kind == SqlKind.CAST || kind == SqlKind.REINTERPRET) {
-      // Translate casts.
-      final RexNode operand = ((RexCall) rexNode).getOperands().get(0);
-      final DruidExpression operandExpression = toDruidExpression(
-          plannerContext,
-          rowSignature,
-          operand
-      );
-      if (operandExpression == null) {
-        return null;
-      }
-
-      final SqlTypeName fromType = operand.getType().getSqlTypeName();
-      final SqlTypeName toType = rexNode.getType().getSqlTypeName();
-
-      if (SqlTypeName.CHAR_TYPES.contains(fromType) && SqlTypeName.DATETIME_TYPES.contains(toType)) {
-        // Cast strings to datetimes by parsing them from SQL format.
-        final DruidExpression timestampExpression = DruidExpression.fromFunctionCall(
-            "timestamp_parse",
-            ImmutableList.of(
-                operandExpression,
-                DruidExpression.fromExpression(DruidExpression.stringLiteral(dateTimeFormatString(toType)))
-            )
-        );
-
-        if (toType == SqlTypeName.DATE) {
-          return TimeFloorOperatorConversion.applyTimestampFloor(
-              timestampExpression,
-              new PeriodGranularity(Period.days(1), null, plannerContext.getTimeZone())
-          );
-        } else {
-          return timestampExpression;
-        }
-      } else if (SqlTypeName.DATETIME_TYPES.contains(fromType) && SqlTypeName.CHAR_TYPES.contains(toType)) {
-        // Cast datetimes to strings by formatting them in SQL format.
-        return DruidExpression.fromFunctionCall(
-            "timestamp_format",
-            ImmutableList.of(
-                operandExpression,
-                DruidExpression.fromExpression(DruidExpression.stringLiteral(dateTimeFormatString(fromType)))
-            )
-        );
-      } else {
-        // Handle other casts.
-        final ExprType fromExprType = exprTypeForValueType(Calcites.getValueTypeForSqlTypeName(fromType));
-        final ExprType toExprType = exprTypeForValueType(Calcites.getValueTypeForSqlTypeName(toType));
-
-        if (fromExprType == null || toExprType == null) {
-          // We have no runtime type for these SQL types.
-          return null;
-        }
-
-        final DruidExpression typeCastExpression;
-
-        if (fromExprType != toExprType) {
-          // Ignore casts for simple extractions (use Function.identity) since it is ok in many cases.
-          typeCastExpression = operandExpression.map(
-              Function.identity(),
-              expression -> StringUtils.format("CAST(%s, '%s')", expression, toExprType.toString())
-          );
-        } else {
-          typeCastExpression = operandExpression;
-        }
-
-        if (toType == SqlTypeName.DATE) {
-          // Floor to day when casting to DATE.
-          return TimeFloorOperatorConversion.applyTimestampFloor(
-              typeCastExpression,
-              new PeriodGranularity(Period.days(1), null, plannerContext.getTimeZone())
-          );
-        } else {
-          return typeCastExpression;
-        }
-      }
     } else if (rexNode instanceof RexCall) {
       final SqlOperator operator = ((RexCall) rexNode).getOperator();
 
       final SqlOperatorConversion conversion = plannerContext.getOperatorTable()
                                                              .lookupOperatorConversion(operator);
 
-      if (conversion != null) {
-        return conversion.toDruidExpression(plannerContext, rowSignature, rexNode);
-      }
-
-      final List<DruidExpression> operands = Expressions.toDruidExpressions(
-          plannerContext,
-          rowSignature,
-          ((RexCall) rexNode).getOperands()
-      );
-
-      if (operands == null) {
+      if (conversion == null) {
         return null;
-      } else if (UNARY_PREFIX_OPERATOR_MAP.containsKey(operator)) {
-        return DruidExpression.fromExpression(
-            StringUtils.format(
-                "(%s %s)",
-                UNARY_PREFIX_OPERATOR_MAP.get(operator),
-                Iterables.getOnlyElement(operands).getExpression()
-            )
-        );
-      } else if (UNARY_SUFFIX_OPERATOR_MAP.containsKey(operator)) {
-        return DruidExpression.fromExpression(
-            StringUtils.format(
-                "(%s %s)",
-                Iterables.getOnlyElement(operands).getExpression(),
-                UNARY_SUFFIX_OPERATOR_MAP.get(operator)
-            )
-        );
-      } else if (BINARY_OPERATOR_MAP.containsKey(operator)) {
-        if (operands.size() != 2) {
-          throw new ISE("WTF?! Got binary operator[%s] with %s args?", kind, operands.size());
-        }
-        return DruidExpression.fromExpression(
-            StringUtils.format(
-                "(%s %s %s)",
-                operands.get(0).getExpression(),
-                BINARY_OPERATOR_MAP.get(operator),
-                operands.get(1).getExpression()
-            )
-        );
-      } else if (DIRECT_CONVERSIONS.containsKey(operator)) {
-        final String functionName = DIRECT_CONVERSIONS.get(operator);
-        return DruidExpression.fromExpression(DruidExpression.functionCall(functionName, operands));
       } else {
-        return null;
+        return conversion.toDruidExpression(plannerContext, rowSignature, rexNode);
       }
     } else if (kind == SqlKind.LITERAL) {
       // Translate literal.
@@ -650,16 +479,5 @@ public class Expressions
     return druidExpression == null
            ? null
            : new ExpressionDimFilter(druidExpression.getExpression(), plannerContext.getExprMacroTable());
-  }
-
-  private static String dateTimeFormatString(final SqlTypeName sqlTypeName)
-  {
-    if (sqlTypeName == SqlTypeName.DATE) {
-      return "yyyy-MM-dd";
-    } else if (sqlTypeName == SqlTypeName.TIMESTAMP) {
-      return "yyyy-MM-dd HH:mm:ss";
-    } else {
-      throw new ISE("Unsupported DateTime type[%s]", sqlTypeName);
-    }
   }
 }

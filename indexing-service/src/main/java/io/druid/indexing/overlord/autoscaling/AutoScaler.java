@@ -21,8 +21,10 @@ package io.druid.indexing.overlord.autoscaling;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.indexing.overlord.autoscaling.ec2.EC2AutoScaler;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -32,6 +34,7 @@ import java.util.List;
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "ec2", value = EC2AutoScaler.class)
 })
+@ExtensionPoint
 public interface AutoScaler<T>
 {
   int getMinNumWorkers();
@@ -40,10 +43,13 @@ public interface AutoScaler<T>
 
   T getEnvConfig();
 
+  @Nullable
   AutoScalingData provision();
 
+  @Nullable
   AutoScalingData terminate(List<String> ips);
 
+  @Nullable
   AutoScalingData terminateWithIds(List<String> ids);
 
   /**

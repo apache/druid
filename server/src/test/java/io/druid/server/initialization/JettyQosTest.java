@@ -80,7 +80,7 @@ public class JettyQosTest extends BaseJettyTest
                 binder.bind(AuthorizerMapper.class).toInstance(AuthTestUtils.TEST_AUTHORIZER_MAPPER);
                 JettyBindings.addQosFilter(binder, "/slow/*", 2);
                 final ServerConfig serverConfig = new ObjectMapper().convertValue(
-                    ImmutableMap.of("numThreads", "10"),
+                    ImmutableMap.of("numThreads", "2"),
                     ServerConfig.class
                 );
                 binder.bind(ServerConfig.class).toInstance(serverConfig);
