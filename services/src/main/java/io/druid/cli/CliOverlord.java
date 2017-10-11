@@ -121,7 +121,9 @@ public class CliOverlord extends ServerRunnable
       "/console.html",
       "/old-console/*",
       "/images/*",
-      "/js/*"
+      "/js/*",
+      "/druid/indexer/v1/isLeader",
+      "/health"
   );
 
   public CliOverlord()
@@ -320,13 +322,15 @@ public class CliOverlord extends ServerRunnable
 
       List<Authenticator> authenticators = null;
       AuthenticationUtils.addSecuritySanityCheckFilter(root, jsonMapper);
+
+      // perform no-op authorization for these resources
+      AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
+
       authenticators = authenticatorMapper.getAuthenticatorChain();
       AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
 
       JettyServerInitUtils.addExtensionFilters(root, injector);
 
-      // perform no-op authorization for these static resources
-      AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
 
       // Check that requests were authorized before sending responses
       AuthenticationUtils.addPreResponseAuthorizationCheckFilter(
@@ -337,6 +341,7 @@ public class CliOverlord extends ServerRunnable
 
       // /status should not redirect, so add first
       root.addFilter(GuiceFilter.class, "/status/*", null);
+      root.addFilter(GuiceFilter.class, "/health/*", null);
 
       // redirect anything other than status to the current lead
       root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);

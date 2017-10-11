@@ -54,6 +54,7 @@ import io.druid.java.util.common.RE;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.DruidNode;
+import io.druid.server.HealthResource;
 import io.druid.server.StatusResource;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.TLSServerConfig;
@@ -109,6 +110,9 @@ public class JettyServerModule extends JerseyServletModule
 
     Jerseys.addResource(binder, StatusResource.class);
     binder.bind(StatusResource.class).in(LazySingleton.class);
+
+    Jerseys.addResource(binder, HealthResource.class);
+    binder.bind(HealthResource.class).in(LazySingleton.class);
 
     // Adding empty binding for ServletFilterHolders and Handlers so that injector returns an empty set if none
     // are provided by extensions.

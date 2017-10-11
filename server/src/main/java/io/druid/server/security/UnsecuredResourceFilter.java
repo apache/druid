@@ -27,6 +27,10 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import java.io.IOException;
 
+/**
+ * Sets necessary request attributes for requests sent to endpoints that don't need authentication or
+ * authorization checks. This Filter is placed before all Authenticators in the filter chain.
+ */
 public class UnsecuredResourceFilter implements Filter
 {
   @Override
@@ -40,6 +44,14 @@ public class UnsecuredResourceFilter implements Filter
       ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain
   ) throws IOException, ServletException
   {
+    // PreResponseAuthorizationCheckFilter checks that this attribute is set,
+    // but the value doesn't matter since we skip authorization checks for requests that go through this filter
+    servletRequest.setAttribute(
+        AuthConfig.DRUID_AUTHENTICATION_RESULT,
+        new AuthenticationResult(AuthConfig.ALLOW_ALL_NAME, AuthConfig.ALLOW_ALL_NAME, null)
+    );
+
+    // This request will not go to an Authorizer, so we need to set this for PreResponseAuthorizationCheckFilter
     servletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     filterChain.doFilter(servletRequest, servletResponse);
   }

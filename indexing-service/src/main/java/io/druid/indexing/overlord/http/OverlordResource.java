@@ -181,7 +181,6 @@ public class OverlordResource
 
   @GET
   @Path("/isLeader")
-  @ResourceFilters(StateResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
   public Response isLeader()
   {
