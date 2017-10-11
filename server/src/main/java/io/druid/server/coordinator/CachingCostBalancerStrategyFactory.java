@@ -25,7 +25,7 @@ import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.client.ServerInventoryView;
 import io.druid.client.ServerView;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.guice.ManageLifecycle;
 import io.druid.java.util.common.ISE;

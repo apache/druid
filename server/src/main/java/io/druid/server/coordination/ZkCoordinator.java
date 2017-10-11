@@ -27,7 +27,7 @@ import com.google.common.collect.Queues;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
