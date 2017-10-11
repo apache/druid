@@ -261,7 +261,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
     int ignored = 0;
     for (int i = 0; i < segmentsToLoad.length; i++) {
       File file = segmentsToLoad[i];
-      log.info("Loading segment cache file [%d/%d][%s].", i + 1, segmentsToLoad.length, file);
+      log.info("Loading segment cache file [%d/%d][%s].", i, segmentsToLoad.length, file);
       try {
         final DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
 
@@ -407,7 +407,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
                 try {
                   log.info(
                       "Loading segment[%d/%d][%s]",
-                      counter.incrementAndGet(),
+                      counter.getAndIncrement(),
                       numSegments,
                       segment.getIdentifier()
                   );
