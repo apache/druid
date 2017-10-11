@@ -49,6 +49,7 @@ public class Fetcher<T> implements Iterator<OpenedObject<T>>
 {
   private static final Logger LOG = new Logger(Fetcher.class);
   private static final String FETCH_FILE_PREFIX = "fetch-";
+  private static final int BUFFER_SIZE = 1024 * 4;
 
   private final CacheManager<T> cacheManager;
   private final List<T> objects;
@@ -79,6 +80,7 @@ public class Fetcher<T> implements Iterator<OpenedObject<T>>
   private final AtomicLong fetchedBytes = new AtomicLong(0);
 
   private final ObjectOpenFunction<T> openObjectFunction;
+  private final byte[] buffer;
 
   private Future<Void> fetchFuture;
 
@@ -109,6 +111,7 @@ public class Fetcher<T> implements Iterator<OpenedObject<T>>
     this.fetchTimeout = fetchTimeout;
     this.maxFetchRetry = maxFetchRetry;
     this.openObjectFunction = openObjectFunction;
+    this.buffer = new byte[BUFFER_SIZE];
 
     this.prefetchEnabled = maxFetchCapacityBytes > 0;
     this.numRemainingObjects = objects.size();
@@ -171,7 +174,7 @@ public class Fetcher<T> implements Iterator<OpenedObject<T>>
   {
     try (final InputStream is = openObjectFunction.open(object);
          final OutputStream os = new FileOutputStream(outFile)) {
-      return IOUtils.copyLarge(is, os);
+      return IOUtils.copyLarge(is, os, buffer);
     }
     catch (IOException e) {
       final int nextTry = tryCount + 1;
