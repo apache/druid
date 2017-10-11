@@ -62,7 +62,8 @@ public abstract class OutputBytes extends OutputStream implements WritableByteCh
    * Reads bytes from the byte sequences, represented by this OutputBytes, at the random position, into the given
    * buffer.
    *
-   * @throws RuntimeException if the byte sequences from the given pos ends before all bytes are read
+   * @throws java.nio.BufferUnderflowException if the byte sequence from the given pos ends before the given buffer
+   * is filled
    * @throws IllegalArgumentException if the given pos is negative
    */
   public abstract void readFully(long pos, ByteBuffer buffer) throws IOException;

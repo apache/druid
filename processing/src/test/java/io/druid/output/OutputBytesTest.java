@@ -29,6 +29,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -78,6 +79,15 @@ public class OutputBytesTest
     verifyContents(outputBytes, "12345abc");
   }
 
+  private void verifyContents(OutputBytes outputBytes, String expected) throws IOException
+  {
+    Assert.assertEquals(expected, IOUtils.toString(outputBytes.asInputStream(), StandardCharsets.US_ASCII));
+    ByteBuffer bb = ByteBuffer.allocate((int) outputBytes.size());
+    outputBytes.readFully(0, bb);
+    bb.flip();
+    Assert.assertEquals(expected, StringUtils.fromUtf8(bb));
+  }
+
   @Test
   public void testCrossBufferRandomAccess() throws IOException
   {
@@ -94,12 +104,19 @@ public class OutputBytesTest
     Assert.assertEquals("0123", StringUtils.fromUtf8(bb));
   }
 
-  private void verifyContents(OutputBytes outputBytes, String expected) throws IOException
+  @Test(expected = BufferUnderflowException.class)
+  public void testReadFullyUnderflow() throws IOException
   {
-    Assert.assertEquals(expected, IOUtils.toString(outputBytes.asInputStream(), StandardCharsets.US_ASCII));
-    ByteBuffer bb = ByteBuffer.allocate((int) outputBytes.size());
-    outputBytes.readFully(0, bb);
-    bb.flip();
-    Assert.assertEquals(expected, StringUtils.fromUtf8(bb));
+    OutputBytes outputBytes = outputMedium.makeOutputBytes();
+    outputBytes.write('1');
+    outputBytes.readFully(0, ByteBuffer.allocate(2));
+  }
+
+  @Test
+  public void testReadFullyEmptyAtTheEnd() throws IOException
+  {
+    OutputBytes outputBytes = outputMedium.makeOutputBytes();
+    outputBytes.write('1');
+    outputBytes.readFully(1, ByteBuffer.allocate(0));
   }
 }
