@@ -20,11 +20,15 @@
 package io.druid.indexing.overlord;
 
 import com.google.common.base.Preconditions;
+import io.druid.indexing.common.TaskLockType;
+import io.druid.indexing.common.task.Task;
+import org.joda.time.Interval;
+
+import java.util.List;
 
 /**
- * TODO: fix
- * This class represents an action must be done while the task's lock is guaranteed to not be revoked in the middle of
- * action.
+ * This class represents a critical action must be done while the task's lock is guaranteed to not be revoked in the
+ * middle of the action.
  *
  * Implementations must not change the lock state by calling {@link TaskLockbox#lock(TaskLockType, Task, Interval)},
  * {@link TaskLockbox#lock(TaskLockType, Task, Interval, long)}, {@link TaskLockbox#tryLock(TaskLockType, Task, Interval)},
@@ -33,7 +37,7 @@ import com.google.common.base.Preconditions;
  * Also, implementations should be finished as soon as possible because all methods in {@link TaskLockbox} are blocked
  * until this action is finished.
  *
- * @see TaskLockbox#doInCriticalSection(Task, List, CriticalAction, CriticalAction)
+ * @see TaskLockbox#doInCriticalSection(Task, List, CriticalAction)
  */
 public class CriticalAction<T>
 {

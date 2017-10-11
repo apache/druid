@@ -499,21 +499,20 @@ public class TaskLockbox
    * The given action should be finished as soon as possible because all other methods in this class are blocked until
    * this method is finished.
    *
-   * @param task                 task performing a critical action
-   * @param intervals            intervals
-   * @param actionOnValidLocks   action to be performed when all locks are valid
-   * @param actionOnInvalidLocks action to be performed when some locks are invalid
+   * @param task      task performing a critical action
+   * @param intervals intervals
+   * @param action    action to be performed inside of the critical section
    */
   public <T> T doInCriticalSection(
       Task task,
       List<Interval> intervals,
-      CriticalAction<T> actions
+      CriticalAction<T> action
   ) throws Exception
   {
     giant.lockInterruptibly();
 
     try {
-      return actions.perform(isTaskLocksValid(task, intervals));
+      return action.perform(isTaskLocksValid(task, intervals));
     }
     finally {
       giant.unlock();
