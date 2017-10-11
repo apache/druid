@@ -19,30 +19,28 @@
 
 package io.druid.sql.calcite.expression;
 
+import com.google.common.collect.Iterables;
+import io.druid.java.util.common.StringUtils;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.SqlFunction;
-import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.fun.SqlTrimFunction;
-import org.apache.calcite.sql.type.SqlTypeFamily;
-import org.apache.calcite.sql.type.SqlTypeName;
 
-public class LTrimOperatorConversion implements SqlOperatorConversion
+public class UnarySuffixOperatorConversion implements SqlOperatorConversion
 {
-  private static final SqlFunction SQL_FUNCTION = OperatorConversions
-      .operatorBuilder("LTRIM")
-      .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)
-      .returnType(SqlTypeName.VARCHAR)
-      .functionCategory(SqlFunctionCategory.STRING)
-      .requiredOperands(1)
-      .build();
+  private final SqlOperator operator;
+  private final String druidOperator;
+
+  public UnarySuffixOperatorConversion(final SqlOperator operator, final String druidOperator)
+  {
+    this.operator = operator;
+    this.druidOperator = druidOperator;
+  }
 
   @Override
   public SqlOperator calciteOperator()
   {
-    return SQL_FUNCTION;
+    return operator;
   }
 
   @Override
@@ -56,21 +54,13 @@ public class LTrimOperatorConversion implements SqlOperatorConversion
         plannerContext,
         rowSignature,
         rexNode,
-        druidExpressions -> {
-          if (druidExpressions.size() > 1) {
-            return TrimOperatorConversion.makeTrimExpression(
-                SqlTrimFunction.Flag.LEADING,
-                druidExpressions.get(0),
-                druidExpressions.get(1)
-            );
-          } else {
-            return TrimOperatorConversion.makeTrimExpression(
-                SqlTrimFunction.Flag.LEADING,
-                druidExpressions.get(0),
-                DruidExpression.fromExpression(DruidExpression.stringLiteral(" "))
-            );
-          }
-        }
+        operands -> DruidExpression.fromExpression(
+            StringUtils.format(
+                "(%s %s)",
+                Iterables.getOnlyElement(operands).getExpression(),
+                druidOperator
+            )
+        )
     );
   }
 }

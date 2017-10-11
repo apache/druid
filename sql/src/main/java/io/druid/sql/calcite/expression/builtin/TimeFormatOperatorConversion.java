@@ -17,13 +17,19 @@
  * under the License.
  */
 
-package io.druid.sql.calcite.expression;
+package io.druid.sql.calcite.expression.builtin;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.TimeFormatExtractionFn;
+import io.druid.sql.calcite.expression.DruidExpression;
+import io.druid.sql.calcite.expression.Expressions;
+import io.druid.sql.calcite.expression.ExtractionFns;
+import io.druid.sql.calcite.expression.OperatorConversions;
+import io.druid.sql.calcite.expression.SimpleExtraction;
+import io.druid.sql.calcite.expression.SqlOperatorConversion;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.rex.RexCall;

@@ -86,6 +86,14 @@ public class FunctionTest
   }
 
   @Test
+  public void testStrpos()
+  {
+    assertExpr("strpos(x, 'o')", 1L);
+    assertExpr("strpos(x, '')", 0L);
+    assertExpr("strpos(x, 'x')", -1L);
+  }
+
+  @Test
   public void testLower()
   {
     assertExpr("lower('FOO')", "foo");

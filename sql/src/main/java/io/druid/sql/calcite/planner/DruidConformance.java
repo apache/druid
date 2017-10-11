@@ -58,4 +58,24 @@ public class DruidConformance extends SqlAbstractConformance
     // For ORDER BY columnAlias (where columnAlias is a "column AS columnAlias")
     return true;
   }
+
+  @Override
+  public boolean isGroupByAlias()
+  {
+    // Disable GROUP BY columnAlias (where columnAlias is a "column AS columnAlias") since it causes ambiguity in the
+    // Calcite validator for queries like SELECT TRIM(x) AS x, COUNT(*) FROM druid.foo GROUP BY TRIM(x) ORDER BY TRIM(x)
+    return false;
+  }
+
+  @Override
+  public boolean isGroupByOrdinal()
+  {
+    return true;
+  }
+
+  @Override
+  public boolean isHavingAlias()
+  {
+    return true;
+  }
 }

@@ -17,8 +17,11 @@
  * under the License.
  */
 
-package io.druid.sql.calcite.expression;
+package io.druid.sql.calcite.expression.builtin;
 
+import io.druid.sql.calcite.expression.DruidExpression;
+import io.druid.sql.calcite.expression.OperatorConversions;
+import io.druid.sql.calcite.expression.SqlOperatorConversion;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.rex.RexNode;
@@ -28,13 +31,13 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 
-public class TimeParseOperatorConversion implements SqlOperatorConversion
+public class TimeShiftOperatorConversion implements SqlOperatorConversion
 {
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
-      .operatorBuilder("TIME_PARSE")
-      .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)
-      .requiredOperands(1)
-      .nullableReturnType(SqlTypeName.TIMESTAMP)
+      .operatorBuilder("TIME_SHIFT")
+      .operandTypes(SqlTypeFamily.TIMESTAMP, SqlTypeFamily.CHARACTER, SqlTypeFamily.INTEGER, SqlTypeFamily.CHARACTER)
+      .requiredOperands(3)
+      .returnType(SqlTypeName.TIMESTAMP)
       .functionCategory(SqlFunctionCategory.TIMEDATE)
       .build();
 
@@ -51,6 +54,6 @@ public class TimeParseOperatorConversion implements SqlOperatorConversion
       final RexNode rexNode
   )
   {
-    return OperatorConversions.convertCall(plannerContext, rowSignature, rexNode, "timestamp_parse");
+    return OperatorConversions.convertCall(plannerContext, rowSignature, rexNode, "timestamp_shift");
   }
 }

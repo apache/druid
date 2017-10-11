@@ -21,6 +21,7 @@ package io.druid.sql.calcite.table;
 
 import com.google.common.base.Preconditions;
 import io.druid.query.DataSource;
+import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.logical.LogicalTableScan;
@@ -30,6 +31,8 @@ import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.Statistic;
 import org.apache.calcite.schema.Statistics;
 import org.apache.calcite.schema.TranslatableTable;
+import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlNode;
 
 public class DruidTable implements TranslatableTable
 {
@@ -71,6 +74,23 @@ public class DruidTable implements TranslatableTable
   public RelDataType getRowType(final RelDataTypeFactory typeFactory)
   {
     return rowSignature.getRelDataType(typeFactory);
+  }
+
+  @Override
+  public boolean isRolledUp(final String column)
+  {
+    return false;
+  }
+
+  @Override
+  public boolean rolledUpColumnValidInsideAgg(
+      final String column,
+      final SqlCall call,
+      final SqlNode parent,
+      final CalciteConnectionConfig config
+  )
+  {
+    return true;
   }
 
   @Override
