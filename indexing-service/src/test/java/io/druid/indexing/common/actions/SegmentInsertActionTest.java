@@ -101,11 +101,11 @@ public class SegmentInsertActionTest
         CriticalAction.builder()
                       .onValidLocks(() -> action.perform(task, actionTestKit.getTaskActionToolbox()))
                       .onInvalidLocks(
-                           () -> {
-                             Assert.fail();
-                             return null;
-                           }
-                       )
+                          () -> {
+                            Assert.fail();
+                            return null;
+                          }
+                      )
                       .build()
     );
 
@@ -132,14 +132,14 @@ public class SegmentInsertActionTest
         task,
         Collections.singletonList(INTERVAL),
         CriticalAction.<Set<DataSegment>>builder()
-                       .onValidLocks(() -> action.perform(task, actionTestKit.getTaskActionToolbox()))
-                       .onInvalidLocks(
-                           () -> {
-                             Assert.fail();
-                             return null;
-                           }
-                       )
-                       .build()
+            .onValidLocks(() -> action.perform(task, actionTestKit.getTaskActionToolbox()))
+            .onInvalidLocks(
+                () -> {
+                  Assert.fail();
+                  return null;
+                }
+            )
+            .build()
     );
 
     Assert.assertEquals(ImmutableSet.of(SEGMENT3), segments);

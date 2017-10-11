@@ -77,16 +77,16 @@ public class SegmentMetadataUpdateAction implements TaskAction<Void>
           intervals,
           CriticalAction.builder()
                         .onValidLocks(
-                             () -> {
-                               toolbox.getIndexerMetadataStorageCoordinator().updateSegmentMetadata(segments);
-                               return null;
-                             }
-                         )
+                            () -> {
+                              toolbox.getIndexerMetadataStorageCoordinator().updateSegmentMetadata(segments);
+                              return null;
+                            }
+                        )
                         .onInvalidLocks(
-                             () -> {
-                               throw new ISE("Some locks for task[%s] are already revoked", task.getId());
-                             }
-                         )
+                            () -> {
+                              throw new ISE("Some locks for task[%s] are already revoked", task.getId());
+                            }
+                        )
                         .build()
       );
     }
