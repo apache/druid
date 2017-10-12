@@ -297,6 +297,26 @@ public class GroupByQueryRunnerTest
         return "v2SmallDictionary";
       }
     };
+    final GroupByQueryConfig v2ParallelCombineConfig = new GroupByQueryConfig()
+    {
+      @Override
+      public String getDefaultStrategy()
+      {
+        return GroupByStrategySelector.STRATEGY_V2;
+      }
+
+      @Override
+      public int getNumParallelCombineThreads()
+      {
+        return DEFAULT_PROCESSING_CONFIG.getNumThreads();
+      }
+
+      @Override
+      public String toString()
+      {
+        return "v2ParallelCombine";
+      }
+    };
 
     v1Config.setMaxIntermediateRows(10000);
     v1SingleThreadedConfig.setMaxIntermediateRows(10000);
@@ -306,7 +326,8 @@ public class GroupByQueryRunnerTest
         v1SingleThreadedConfig,
         v2Config,
         v2SmallBufferConfig,
-        v2SmallDictionaryConfig
+        v2SmallDictionaryConfig,
+        v2ParallelCombineConfig
     );
   }
 

@@ -218,15 +218,13 @@ public class RowBasedGrouperHelper
       );
 
       grouper = new ConcurrentGrouper<>(
+          querySpecificConfig,
           bufferSupplier,
           combineBufferSupplier,
           keySerdeFactory,
           combineKeySerdeFactory,
           columnSelectorFactory,
           aggregatorFactories,
-          querySpecificConfig.getBufferGrouperMaxSize(),
-          querySpecificConfig.getBufferGrouperMaxLoadFactor(),
-          querySpecificConfig.getBufferGrouperInitialBuckets(),
           temporaryStorage,
           spillMapper,
           concurrencyHint,
@@ -235,8 +233,7 @@ public class RowBasedGrouperHelper
           grouperSorter,
           priority,
           hasQueryTimeout,
-          queryTimeoutAt,
-          querySpecificConfig.getIntermediateCombineDegree()
+          queryTimeoutAt
       );
     }
 

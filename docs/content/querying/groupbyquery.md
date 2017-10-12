@@ -220,7 +220,8 @@ When using the "v2" strategy, the following runtime properties apply:
 |`druid.query.groupBy.maxOnDiskStorage`|Maximum amount of disk space to use, per-query, for spilling result sets to disk when either the merging buffer or the dictionary fills up. Queries that exceed this limit will fail. Set to zero to disable disk spilling.|0 (disabled)|
 |`druid.query.groupBy.singleThreaded`|Merge results using a single thread.|false|
 |`druid.query.groupBy.forceHashAggregation`|Force to use hash-based aggregation.|false|
-|`druid.query.groupBy.intermediateCombineDegree`|The number of intermediate nodes combined together in the combining tree. Higher degrees will need a less numer of threads which might be helpful to improve the query performance by reducing the overhead of too many threads if the server has sufficiently powerful cpu cores.|8|
+|`druid.query.groupBy.intermediateCombineDegree`|Number of intermediate nodes combined together in the combining tree. Higher degrees will need a less numer of threads which might be helpful to improve the query performance by reducing the overhead of too many threads if the server has sufficiently powerful cpu cores.|8|
+|`druid.query.groupBy.numParallelCombineThreads`|Hint for the number of parallel combining threads. This should be larger than 1 to turn on the parallel combining feature. The actual number of threads used for parallel combining is min(`druid.query.groupBy.numParallelCombineThreads`, `druid.processing.numThreads`).|1|
 
 This may require allocating more direct memory. The amount of direct memory needed by Druid is at least
 `druid.processing.buffer.sizeBytes * (druid.processing.numMergeBuffers + druid.processing.numThreads + 1)`. You can
@@ -252,6 +253,7 @@ When using the "v2" strategy, the following query context parameters apply:
 |`forcePushDownLimit`|When all fields in the orderby are part of the grouping key, the broker will push limit application down to the historical nodes. When the sorting order uses fields that are not in the grouping key, applying this optimization can result in approximate results with unknown accuracy, so this optimization is disabled by default in that case. Enabling this context flag turns on limit push down for limit/orderbys that contain non-grouping key columns.|
 |`forceHashAggregation`|Overrides the value of `druid.query.groupBy.forceHashAggregation` for this query.|
 |`intermediateCombineDegree`|Overrides the value of `druid.query.groupBy.intermediateCombineDegree` for this query.|
+|`numParallelCombineThreads`|Overrides the value of `druid.query.groupBy.numParallelCombineThreads` for this query.|
 
 When using the "v1" strategy, the following query context parameters apply:
 
