@@ -365,6 +365,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     {
       final Offset baseOffset = offset.clone();
 
+      // Column caches shared amongst all cursors in this sequence.
       final Map<String, DictionaryEncodedColumn> dictionaryColumnCache = new HashMap<>();
       final Map<String, GenericColumn> genericColumnCache = new HashMap<>();
       final Map<String, Object> objectColumnCache = new HashMap<>();
