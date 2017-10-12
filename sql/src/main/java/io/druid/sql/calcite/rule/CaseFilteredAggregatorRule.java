@@ -87,8 +87,12 @@ public class CaseFilteredAggregatorRule extends RelOptRule
     final RexBuilder rexBuilder = aggregate.getCluster().getRexBuilder();
     final List<AggregateCall> newCalls = new ArrayList<>(aggregate.getAggCallList().size());
     final List<RexNode> newProjects = new ArrayList<>(project.getChildExps());
-    final List<RexNode> newCasts = new ArrayList<>(aggregate.getAggCallList().size());
+    final List<RexNode> newCasts = new ArrayList<>(aggregate.getGroupCount() + aggregate.getAggCallList().size());
     final RelDataTypeFactory typeFactory = aggregate.getCluster().getTypeFactory();
+
+    for (int fieldNumber : aggregate.getGroupSet()) {
+      newCasts.add(rexBuilder.makeInputRef(project.getChildExps().get(fieldNumber).getType(), fieldNumber));
+    }
 
     for (AggregateCall aggregateCall : aggregate.getAggCallList()) {
       AggregateCall newCall = null;
