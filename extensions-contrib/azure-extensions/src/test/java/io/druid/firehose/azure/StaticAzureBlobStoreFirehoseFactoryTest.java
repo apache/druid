@@ -17,9 +17,7 @@
  * under the License.
  */
 
-package io.druid.firehose.s3;
-
-
+package io.druid.firehose.azure;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,34 +30,30 @@ import com.google.inject.Injector;
 import com.google.inject.Provides;
 import io.druid.initialization.DruidModule;
 import io.druid.jackson.DefaultObjectMapper;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
+import io.druid.storage.azure.AzureStorage;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.net.URI;
-import java.util.Arrays;
+import java.io.IOException;
 import java.util.List;
 
-/**
- */
-public class StaticS3FirehoseFactoryTest
+public class StaticAzureBlobStoreFirehoseFactoryTest
 {
-  private static final RestS3Service SERVICE = new RestS3Service(null);
+  private static final AzureStorage STORAGE = new AzureStorage(null);
 
   @Test
-  public void testSerde() throws Exception
+  public void testSerde() throws IOException
   {
-    final ObjectMapper mapper = createObjectMapper(new TestS3Module());
+    final ObjectMapper mapper = createObjectMapper(new TestModule());
 
-    final List<URI> uris = Arrays.asList(
-        new URI("s3://foo/bar/file.gz"),
-        new URI("s3://bar/foo/file2.gz")
+    final List<AzureBlob> blobs = ImmutableList.of(
+        new AzureBlob("foo", "bar"),
+        new AzureBlob("foo", "bar2")
     );
 
-    final StaticS3FirehoseFactory factory = new StaticS3FirehoseFactory(
-        SERVICE,
-        uris,
-        null,
+    final StaticAzureBlobStoreFirehoseFactory factory = new StaticAzureBlobStoreFirehoseFactory(
+        STORAGE,
+        blobs,
         2048L,
         1024L,
         512L,
@@ -67,9 +61,9 @@ public class StaticS3FirehoseFactoryTest
         5
     );
 
-    final StaticS3FirehoseFactory outputFact = mapper.readValue(
+    final StaticAzureBlobStoreFirehoseFactory outputFact = mapper.readValue(
         mapper.writeValueAsString(factory),
-        StaticS3FirehoseFactory.class
+        StaticAzureBlobStoreFirehoseFactory.class
     );
 
     Assert.assertEquals(factory, outputFact);
@@ -87,7 +81,7 @@ public class StaticS3FirehoseFactoryTest
     return injector.getInstance(ObjectMapper.class);
   }
 
-  private static class TestS3Module implements DruidModule
+  private static class TestModule implements DruidModule
   {
     @Override
     public List<? extends Module> getJacksonModules()
@@ -102,9 +96,9 @@ public class StaticS3FirehoseFactoryTest
     }
 
     @Provides
-    public RestS3Service getRestS3Service()
+    public AzureStorage getRestS3Service()
     {
-      return SERVICE;
+      return STORAGE;
     }
   }
 }
