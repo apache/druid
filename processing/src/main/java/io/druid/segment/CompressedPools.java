@@ -21,6 +21,7 @@ package io.druid.segment;
 
 import com.google.common.base.Supplier;
 import com.ning.compress.BufferRecycler;
+import io.druid.alloc.DirectMemoryAllocator;
 import io.druid.collections.NonBlockingPool;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
@@ -87,7 +88,7 @@ public class CompressedPools
         public ByteBuffer get()
         {
           log.info("Allocating new bigEndByteBuf[%,d]", counter.incrementAndGet());
-          return ByteBuffer.allocateDirect(BUFFER_SIZE).order(ByteOrder.BIG_ENDIAN);
+          return DirectMemoryAllocator.allocate(BUFFER_SIZE, "bigEndian compressed pool").order(ByteOrder.BIG_ENDIAN);
         }
       }
   );
@@ -102,7 +103,9 @@ public class CompressedPools
         public ByteBuffer get()
         {
           log.info("Allocating new littleEndByteBuf[%,d]", counter.incrementAndGet());
-          return ByteBuffer.allocateDirect(BUFFER_SIZE).order(ByteOrder.LITTLE_ENDIAN);
+          return DirectMemoryAllocator
+              .allocate(BUFFER_SIZE, "littleEndian compressed pool")
+              .order(ByteOrder.LITTLE_ENDIAN);
         }
       }
   );

@@ -20,6 +20,7 @@
 package io.druid.benchmark;
 
 import com.google.common.primitives.Ints;
+import io.druid.alloc.DirectMemoryAllocator;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressedVSizeIntsIndexedSupplier;
 import io.druid.segment.data.IndexedInts;
@@ -104,7 +105,7 @@ public class CompressedIndexedIntsBenchmark
 
   private static ByteBuffer serialize(WritableSupplier<IndexedInts> writableSupplier) throws IOException
   {
-    final ByteBuffer buffer = ByteBuffer.allocateDirect((int) writableSupplier.getSerializedSize());
+    final ByteBuffer buffer = DirectMemoryAllocator.allocate((int) writableSupplier.getSerializedSize(), "benchmark");
 
     WritableByteChannel channel = new WritableByteChannel()
     {
