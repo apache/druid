@@ -53,6 +53,14 @@ public class ServerConfig
   @Min(1)
   private long maxScatterGatherBytes = Long.MAX_VALUE;
 
+  @JsonProperty
+  @Min(1)
+  private long maxBufferSizeBytes = Long.MAX_VALUE;
+
+  @JsonProperty
+  @Min(1)
+  private long queryBufferingTimeout = 300_000;
+
   public int getNumThreads()
   {
     return numThreads;
@@ -83,6 +91,16 @@ public class ServerConfig
     return maxScatterGatherBytes;
   }
 
+  public long getMaxBufferSizeBytes()
+  {
+    return maxBufferSizeBytes;
+  }
+
+  public long getQueryBufferingTimeout()
+  {
+    return queryBufferingTimeout;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -98,6 +116,8 @@ public class ServerConfig
            enableRequestLimit == that.enableRequestLimit &&
            defaultQueryTimeout == that.defaultQueryTimeout &&
            maxScatterGatherBytes == that.maxScatterGatherBytes &&
+           maxBufferSizeBytes == that.maxBufferSizeBytes &&
+           queryBufferingTimeout == that.queryBufferingTimeout &&
            Objects.equals(maxIdleTime, that.maxIdleTime);
   }
 
@@ -105,12 +125,25 @@ public class ServerConfig
   public int hashCode()
   {
     return Objects.hash(
-        numThreads,
-        queueSize,
-        enableRequestLimit,
-        maxIdleTime,
-        defaultQueryTimeout,
-        maxScatterGatherBytes
+            numThreads,
+            maxIdleTime,
+            defaultQueryTimeout,
+            maxScatterGatherBytes,
+            maxBufferSizeBytes,
+            queryBufferingTimeout
     );
+  }
+
+  @Override
+  public String toString()
+  {
+    return "ServerConfig{" +
+           "numThreads=" + numThreads +
+           ", maxIdleTime=" + maxIdleTime +
+           ", defaultQueryTimeout=" + defaultQueryTimeout +
+           ", maxScatterGatherBytes=" + maxScatterGatherBytes +
+           ", maxBufferSizeBytes=" + maxBufferSizeBytes +
+           ", queryBufferingTimeout=" + queryBufferingTimeout +
+           '}';
   }
 }
