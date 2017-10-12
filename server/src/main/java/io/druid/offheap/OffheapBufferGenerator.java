@@ -21,6 +21,7 @@ package io.druid.offheap;
 
 import com.google.common.base.Supplier;
 
+import io.druid.alloc.DirectMemoryAllocator;
 import io.druid.java.util.common.logger.Logger;
 
 import java.nio.ByteBuffer;
@@ -50,6 +51,6 @@ public class OffheapBufferGenerator implements Supplier<ByteBuffer>
         computationBufferSize
     );
 
-    return ByteBuffer.allocateDirect(computationBufferSize);
+    return DirectMemoryAllocator.allocate(computationBufferSize, description);
   }
 }

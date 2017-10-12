@@ -22,6 +22,7 @@ package io.druid.benchmark;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import io.druid.alloc.DirectMemoryAllocator;
 import io.druid.segment.CompressedVSizeIndexedSupplier;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.IndexedInts;
@@ -135,7 +136,7 @@ public class CompressedVSizeIndexedBenchmark
   private static ByteBuffer serialize(WritableSupplier<IndexedMultivalue<IndexedInts>> writableSupplier)
       throws IOException
   {
-    final ByteBuffer buffer = ByteBuffer.allocateDirect((int) writableSupplier.getSerializedSize());
+    final ByteBuffer buffer = DirectMemoryAllocator.allocate((int) writableSupplier.getSerializedSize(), "benchmark");
 
     WritableByteChannel channel = new WritableByteChannel()
     {

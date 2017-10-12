@@ -83,7 +83,7 @@
                             <goal>testCheck</goal>
                         </goals>
                         <configuration>
-                            <bundledSignatures>
+                            <bundledSignatures combine.self="override">
                                 <!-- Do NOT check jdk-system-out for druid-services,
                                      because it uses System.out on purpose. -->
                                 <bundledSignature>jdk-unsafe</bundledSignature>

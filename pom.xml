@@ -942,6 +942,7 @@
                     </signaturesFiles>
                     <excludes>
                         <exclude>io/druid/java/util/common/DateTimes$UtcFormatter.class</exclude>
+                        <exclude>io/druid/alloc/DirectMemoryAllocator.class</exclude>
                     </excludes>
                 </configuration>
                 <executions>
@@ -952,11 +953,13 @@
                             <goal>check</goal>
                         </goals>
                         <configuration>
-                            <bundledSignatures>
+                            <bundledSignatures combine.children="append">
                                 <!-- Check jdk-system-out only for production code, but not in test code -->
-                                <bundledSignature>jdk-unsafe</bundledSignature>
                                 <bundledSignature>jdk-system-out</bundledSignature>
                             </bundledSignatures>
+                            <signaturesFiles combine.children="append">
+                                <signaturesFile>${session.executionRootDirectory}/codestyle/production-druid-forbidden-apis.txt</signaturesFile>
+                            </signaturesFiles>
                         </configuration>
                     </execution>
                     <execution>
