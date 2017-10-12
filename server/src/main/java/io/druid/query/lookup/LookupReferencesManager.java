@@ -376,6 +376,7 @@ public class LookupReferencesManager
       // Lookup loading is performed via snapshot if older version is present.
       // This check is only for backward compatibility and should be removed in a future release
       if (response.getContent().startsWith("[")) {
+        LOG.info("Failed to retrieve lookup information from coordinator. Attempting to load lookups using snapshot instead");
         return null;
       } else {
         Map<String, LookupExtractorFactoryContainer> lookupMap = jsonMapper.readValue(
@@ -491,7 +492,7 @@ public class LookupReferencesManager
     catch (Exception e) {
       LOG.error(e, "Failed to finish lookup load process.");
       for (Future future : futures) {
-          future.cancel(true);
+        future.cancel(true);
       }
     }
     finally {

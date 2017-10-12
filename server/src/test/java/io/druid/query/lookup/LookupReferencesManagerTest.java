@@ -19,7 +19,6 @@
 
 package io.druid.query.lookup;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.emitter.EmittingLogger;
@@ -39,7 +38,6 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
@@ -99,7 +97,7 @@ public class LookupReferencesManagerTest
   }
 
   @Test
-  public void testStartStop() throws JsonProcessingException, InterruptedException, MalformedURLException
+  public void testStartStop() throws InterruptedException, IOException
   {
     lookupReferencesManager = new LookupReferencesManager(
         new LookupConfig(null),
