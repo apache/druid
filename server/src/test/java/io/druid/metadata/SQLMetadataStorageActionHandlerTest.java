@@ -268,4 +268,62 @@ public class SQLMetadataStorageActionHandlerTest
     );
     Assert.assertEquals(updated.keySet(), locks.keySet());
   }
+
+  @Test
+  public void testReplaceLock() throws EntryExistsException
+  {
+    final String entryId = "ABC123";
+    Map<String, Integer> entry = ImmutableMap.of("a", 1);
+    Map<String, Integer> status = ImmutableMap.of("count", 42);
+
+    handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status);
+
+    Assert.assertEquals(
+        ImmutableMap.<Long, Map<String, Integer>>of(),
+        handler.getLocks("non_exist_entry")
+    );
+
+    Assert.assertEquals(
+        ImmutableMap.<Long, Map<String, Integer>>of(),
+        handler.getLocks(entryId)
+    );
+
+    final ImmutableMap<String, Integer> lock1 = ImmutableMap.of("lock", 1);
+    final ImmutableMap<String, Integer> lock2 = ImmutableMap.of("lock", 2);
+
+    Assert.assertTrue(handler.addLock(entryId, lock1));
+
+    final Long lockId1 = handler.getLockId(entryId, lock1);
+    Assert.assertNotNull(lockId1);
+
+    Assert.assertTrue(handler.replaceLock(entryId, lockId1, lock2));
+  }
+
+  @Test
+  public void testGetLockId() throws EntryExistsException
+  {
+    final String entryId = "ABC123";
+    Map<String, Integer> entry = ImmutableMap.of("a", 1);
+    Map<String, Integer> status = ImmutableMap.of("count", 42);
+
+    handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status);
+
+    Assert.assertEquals(
+        ImmutableMap.<Long, Map<String, Integer>>of(),
+        handler.getLocks("non_exist_entry")
+    );
+
+    Assert.assertEquals(
+        ImmutableMap.<Long, Map<String, Integer>>of(),
+        handler.getLocks(entryId)
+    );
+
+    final ImmutableMap<String, Integer> lock1 = ImmutableMap.of("lock", 1);
+    final ImmutableMap<String, Integer> lock2 = ImmutableMap.of("lock", 2);
+
+    Assert.assertTrue(handler.addLock(entryId, lock1));
+
+    Assert.assertNotNull(handler.getLockId(entryId, lock1));
+    Assert.assertNull(handler.getLockId(entryId, lock2));
+  }
 }
