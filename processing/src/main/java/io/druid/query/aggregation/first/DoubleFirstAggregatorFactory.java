@@ -33,6 +33,7 @@ import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.AggregateCombiner;
+import io.druid.query.aggregation.SimpleDoubleAggregatorFactory;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ObjectColumnSelector;
@@ -59,6 +60,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
 
   private final String fieldName;
   private final String name;
+  private final boolean storeDoubleAsFloat;
 
   @JsonCreator
   public DoubleFirstAggregatorFactory(
@@ -71,6 +73,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
 
     this.name = name;
     this.fieldName = fieldName;
+    this.storeDoubleAsFloat = SimpleDoubleAggregatorFactory.storeDoubleAsFloat();
   }
 
   @Override
@@ -222,6 +225,9 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   @Override
   public String getTypeName()
   {
+    if (storeDoubleAsFloat) {
+      return "float";
+    }
     return "double";
   }
 
