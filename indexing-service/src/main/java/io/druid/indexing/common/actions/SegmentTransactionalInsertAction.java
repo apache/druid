@@ -25,13 +25,16 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableSet;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.indexing.common.task.Task;
+import io.druid.indexing.overlord.CriticalAction;
 import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.indexing.overlord.SegmentPublishResult;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.DruidMetrics;
 import io.druid.timeline.DataSegment;
 
 import java.io.IOException;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Insert segments into metadata storage. The segment versions must all be less than or equal to a lock held by
@@ -43,6 +46,8 @@ import java.util.Set;
  */
 public class SegmentTransactionalInsertAction implements TaskAction<SegmentPublishResult>
 {
+  private static final Logger LOG = new Logger(SegmentTransactionalInsertAction.class);
+
   private final Set<DataSegment> segments;
   private final DataSourceMetadata startMetadata;
   private final DataSourceMetadata endMetadata;
@@ -99,28 +104,45 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   @Override
   public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox) throws IOException
   {
-    toolbox.verifyTaskLocks(task, segments);
+    TaskActionPreconditions.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
 
-    final SegmentPublishResult retVal = toolbox.getIndexerMetadataStorageCoordinator().announceHistoricalSegments(
-        segments,
-        startMetadata,
-        endMetadata
-    );
-
-    // Emit metrics
-    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()
-        .setDimension(DruidMetrics.DATASOURCE, task.getDataSource())
-        .setDimension(DruidMetrics.TASK_TYPE, task.getType());
-
-    if (retVal.isSuccess()) {
-      toolbox.getEmitter().emit(metricBuilder.build("segment/txn/success", 1));
-    } else {
-      toolbox.getEmitter().emit(metricBuilder.build("segment/txn/failure", 1));
+    final SegmentPublishResult retVal;
+    try {
+      retVal = toolbox.getTaskLockbox().doInCriticalSection(
+          task,
+          segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
+          CriticalAction.<SegmentPublishResult>builder()
+              .onValidLocks(
+                  () -> toolbox.getIndexerMetadataStorageCoordinator().announceHistoricalSegments(
+                      segments,
+                      startMetadata,
+                      endMetadata
+                  )
+              )
+              .onInvalidLocks(SegmentPublishResult::fail)
+              .build()
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
     }
 
-    for (DataSegment segment : retVal.getSegments()) {
-      metricBuilder.setDimension(DruidMetrics.INTERVAL, segment.getInterval().toString());
-      toolbox.getEmitter().emit(metricBuilder.build("segment/added/bytes", segment.getSize()));
+    if (retVal.isSuccess()) {
+      // Emit metrics
+      final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()
+          .setDimension(DruidMetrics.DATASOURCE, task.getDataSource())
+          .setDimension(DruidMetrics.TASK_TYPE, task.getType());
+
+      if (retVal.isSuccess()) {
+        toolbox.getEmitter().emit(metricBuilder.build("segment/txn/success", 1));
+      } else {
+        toolbox.getEmitter().emit(metricBuilder.build("segment/txn/failure", 1));
+      }
+
+      for (DataSegment segment : retVal.getSegments()) {
+        metricBuilder.setDimension(DruidMetrics.INTERVAL, segment.getInterval().toString());
+        toolbox.getEmitter().emit(metricBuilder.build("segment/added/bytes", segment.getSize()));
+      }
     }
 
     return retVal;

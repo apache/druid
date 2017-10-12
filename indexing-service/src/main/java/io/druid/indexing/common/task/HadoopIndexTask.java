@@ -36,6 +36,7 @@ import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexer.Jobby;
 import io.druid.indexer.MetadataStorageUpdaterJobHandler;
 import io.druid.indexing.common.TaskLock;
+import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
@@ -120,6 +121,12 @@ public class HadoopIndexTask extends HadoopTask
   }
 
   @Override
+  public int getPriority()
+  {
+    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY);
+  }
+
+  @Override
   public String getType()
   {
     return "index_hadoop";
@@ -135,7 +142,7 @@ public class HadoopIndexTask extends HadoopTask
               intervals.get()
           )
       );
-      return taskActionClient.submit(new LockTryAcquireAction(interval)) != null;
+      return taskActionClient.submit(new LockTryAcquireAction(TaskLockType.EXCLUSIVE, interval)) != null;
     } else {
       return true;
     }
@@ -199,10 +206,15 @@ public class HadoopIndexTask extends HadoopTask
       );
       final long lockTimeoutMs = getContextValue(Tasks.LOCK_TIMEOUT_KEY, Tasks.DEFAULT_LOCK_TIMEOUT);
       // Note: if lockTimeoutMs is larger than ServerConfig.maxIdleTime, the below line can incur http timeout error.
-      TaskLock lock = toolbox.getTaskActionClient().submit(new LockAcquireAction(interval, lockTimeoutMs));
+      final TaskLock lock = Preconditions.checkNotNull(
+          toolbox.getTaskActionClient().submit(
+              new LockAcquireAction(TaskLockType.EXCLUSIVE, interval, lockTimeoutMs)
+          ),
+          "Cannot acquire a lock for interval[%s]", interval
+      );
       version = lock.getVersion();
     } else {
-      Iterable<TaskLock> locks = getTaskLocks(toolbox);
+      Iterable<TaskLock> locks = getTaskLocks(toolbox.getTaskActionClient());
       final TaskLock myLock = Iterables.getOnlyElement(locks);
       version = myLock.getVersion();
     }
