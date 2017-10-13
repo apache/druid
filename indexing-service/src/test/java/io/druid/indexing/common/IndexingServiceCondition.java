@@ -23,5 +23,5 @@ package io.druid.indexing.common;
  */
 public interface IndexingServiceCondition
 {
-  public boolean isValid();
+  boolean isValid();
 }

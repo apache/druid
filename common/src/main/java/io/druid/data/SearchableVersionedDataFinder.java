@@ -42,5 +42,5 @@ public interface SearchableVersionedDataFinder<DataDescriptor>
    *
    * @return A DataDescriptor which matches pattern, is a child of descriptorBase, and is of the most recent "version" at some point during the method execution.
    */
-  DataDescriptor getLatestVersion(DataDescriptor descriptorBase, @Nullable final Pattern pattern);
+  DataDescriptor getLatestVersion(DataDescriptor descriptorBase, @Nullable Pattern pattern);
 }

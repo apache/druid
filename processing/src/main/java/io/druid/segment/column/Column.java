@@ -23,14 +23,14 @@ package io.druid.segment.column;
  */
 public interface Column
 {
-  public static final String TIME_COLUMN_NAME = "__time";
-  public ColumnCapabilities getCapabilities();
+  String TIME_COLUMN_NAME = "__time";
+  ColumnCapabilities getCapabilities();
 
-  public int getLength();
-  public DictionaryEncodedColumn getDictionaryEncoding();
+  int getLength();
+  DictionaryEncodedColumn getDictionaryEncoding();
 
-  public GenericColumn getGenericColumn();
-  public ComplexColumn getComplexColumn();
-  public BitmapIndex getBitmapIndex();
-  public SpatialIndex getSpatialIndex();
+  GenericColumn getGenericColumn();
+  ComplexColumn getComplexColumn();
+  BitmapIndex getBitmapIndex();
+  SpatialIndex getSpatialIndex();
 }

@@ -39,5 +39,5 @@ public interface TaskLogStreamer
    *
    * @return input supplier for this log, if available from this provider
    */
-  public Optional<ByteSource> streamTaskLog(String taskid, long offset) throws IOException;
+  Optional<ByteSource> streamTaskLog(String taskid, long offset) throws IOException;
 }

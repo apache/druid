@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.validation.constraints.NotNull;
+import java.util.Objects;
 
 
 public class AzureBlob
@@ -59,5 +60,27 @@ public class AzureBlob
         + "container=" + container
         + ",path=" + path
         + "}";
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (o == this) {
+      return true;
+    }
+
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    final AzureBlob that = (AzureBlob) o;
+    return Objects.equals(container, that.container) &&
+           Objects.equals(path, that.path);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(container, path);
   }
 }

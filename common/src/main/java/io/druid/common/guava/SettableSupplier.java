@@ -32,6 +32,11 @@ public class SettableSupplier<T> implements Supplier<T>
   {
   }
 
+  public SettableSupplier(T obj)
+  {
+    this.obj = obj;
+  }
+
   public void set(T obj)
   {
     this.obj = obj;

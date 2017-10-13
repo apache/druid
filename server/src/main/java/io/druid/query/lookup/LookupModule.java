@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
@@ -48,6 +49,7 @@ import io.druid.guice.annotations.Self;
 import io.druid.guice.annotations.Smile;
 import io.druid.initialization.DruidModule;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.query.dimension.LookupDimensionSpec;
 import io.druid.query.expression.LookupExprMacro;
 import io.druid.server.DruidNode;
 import io.druid.server.http.HostAndPortWithScheme;
@@ -84,7 +86,11 @@ public class LookupModule implements DruidModule
   public List<? extends Module> getJacksonModules()
   {
     return ImmutableList.<Module>of(
-        new SimpleModule("DruidLookupModule").registerSubtypes(MapLookupExtractorFactory.class)
+        new SimpleModule("DruidLookupModule").registerSubtypes(MapLookupExtractorFactory.class),
+        new SimpleModule().registerSubtypes(
+            new NamedType(LookupDimensionSpec.class, "lookup"),
+            new NamedType(RegisteredLookupExtractionFn.class, "registeredLookup")
+        )
     );
   }
 

@@ -43,7 +43,7 @@ public interface Row extends Comparable<Row>
    *
    * @return the timestamp from the epoch in milliseconds.
    */
-  public long getTimestampFromEpoch();
+  long getTimestampFromEpoch();
 
   /**
    * Returns the timestamp from the epoch as an org.joda.time.DateTime.  If the event happened _right now_, this would return the
@@ -51,7 +51,7 @@ public interface Row extends Comparable<Row>
    *
    * @return the timestamp from the epoch as an org.joda.time.DateTime object.
    */
-  public DateTime getTimestamp();
+  DateTime getTimestamp();
 
   /**
    * Returns the list of dimension values for the given column name.
@@ -61,7 +61,7 @@ public interface Row extends Comparable<Row>
    *
    * @return the list of values for the provided column name
    */
-  public List<String> getDimension(String dimension);
+  List<String> getDimension(String dimension);
 
   /**
    * Returns the raw dimension value for the given column name. This is different from #getDimension which
@@ -71,7 +71,7 @@ public interface Row extends Comparable<Row>
    *
    * @return the value of the provided column name
    */
-  public Object getRaw(String dimension);
+  Object getRaw(String dimension);
 
   /**
    * Returns the float value of the given metric column.
@@ -81,7 +81,7 @@ public interface Row extends Comparable<Row>
    *
    * @return the float value for the provided column name.
    */
-  public float getFloatMetric(String metric);
+  float getFloatMetric(String metric);
 
   /**
    * Returns the long value of the given metric column.
@@ -91,7 +91,7 @@ public interface Row extends Comparable<Row>
    *
    * @return the long value for the provided column name.
    */
-  public long getLongMetric(String metric);
+  long getLongMetric(String metric);
 
   /**
    * Returns the double value of the given metric column.
@@ -101,5 +101,5 @@ public interface Row extends Comparable<Row>
    *
    * @return the double value for the provided column name.
    */
-  public double getDoubleMetric(String metric);
+  double getDoubleMetric(String metric);
 }

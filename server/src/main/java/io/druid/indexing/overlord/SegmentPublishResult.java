@@ -22,6 +22,7 @@ package io.druid.indexing.overlord;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 import io.druid.timeline.DataSegment;
 
 import java.util.Objects;
@@ -41,6 +42,11 @@ public class SegmentPublishResult
 {
   private final Set<DataSegment> segments;
   private final boolean success;
+
+  public static SegmentPublishResult fail()
+  {
+    return new SegmentPublishResult(ImmutableSet.of(), false);
+  }
 
   @JsonCreator
   public SegmentPublishResult(

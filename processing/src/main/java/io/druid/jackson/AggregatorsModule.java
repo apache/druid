@@ -105,7 +105,7 @@ public class AggregatorsModule extends SimpleModule
       @JsonSubTypes.Type(name = "doubleLast", value = DoubleLastAggregatorFactory.class),
       @JsonSubTypes.Type(name = "floatLast", value = FloatLastAggregatorFactory.class)
   })
-  public static interface AggregatorFactoryMixin
+  public interface AggregatorFactoryMixin
   {
   }
 
@@ -123,7 +123,7 @@ public class AggregatorsModule extends SimpleModule
       @JsonSubTypes.Type(name = "longGreatest", value = LongGreatestPostAggregator.class),
       @JsonSubTypes.Type(name = "longLeast", value = LongLeastPostAggregator.class)
   })
-  public static interface PostAggregatorMixin
+  public interface PostAggregatorMixin
   {
   }
 }

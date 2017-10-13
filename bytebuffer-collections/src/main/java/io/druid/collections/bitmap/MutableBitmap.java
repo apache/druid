@@ -27,7 +27,7 @@ public interface MutableBitmap extends ImmutableBitmap
   /**
    * Empties the content of this bitmap.
    */
-  public void clear();
+  void clear();
 
   /**
    * Compute the bitwise-or of this bitmap with another bitmap. The current
@@ -37,7 +37,7 @@ public interface MutableBitmap extends ImmutableBitmap
    *
    * @param mutableBitmap other bitmap
    */
-  public void or(MutableBitmap mutableBitmap);
+  void or(MutableBitmap mutableBitmap);
 
 
   /**
@@ -46,7 +46,7 @@ public interface MutableBitmap extends ImmutableBitmap
    *
    * @return the total set in bytes
    */
-  public int getSizeInBytes();
+  int getSizeInBytes();
 
   /**
    * Add the specified integer to the bitmap. This is equivalent to setting the
@@ -54,7 +54,7 @@ public interface MutableBitmap extends ImmutableBitmap
    *
    * @param entry integer to be added
    */
-  public void add(int entry);
+  void add(int entry);
 
   /**
    * Remove the specified integer to the bitmap. This is equivalent to setting the
@@ -62,6 +62,6 @@ public interface MutableBitmap extends ImmutableBitmap
    *
    * @param entry integer to be remove
    */
-  public void remove(int entry);
+  void remove(int entry);
 
 }

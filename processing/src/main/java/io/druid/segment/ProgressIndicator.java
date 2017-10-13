@@ -23,13 +23,13 @@ package io.druid.segment;
  */
 public interface ProgressIndicator
 {
-  public void progress();
+  void progress();
 
-  public void start();
+  void start();
 
-  public void stop();
+  void stop();
 
-  public void startSection(String section);
+  void startSection(String section);
 
-  public void stopSection(String section);
+  void stopSection(String section);
 }

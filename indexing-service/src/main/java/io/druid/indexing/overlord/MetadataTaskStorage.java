@@ -248,21 +248,39 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
+  public void replaceLock(String taskid, TaskLock oldLock, TaskLock newLock)
+  {
+    Preconditions.checkNotNull(taskid, "taskid");
+    Preconditions.checkNotNull(oldLock, "oldLock");
+    Preconditions.checkNotNull(newLock, "newLock");
+
+    log.info(
+        "Replacing lock on interval[%s] version[%s] for task: %s",
+        oldLock.getInterval(),
+        oldLock.getVersion(),
+        taskid
+    );
+
+    final Long oldLockId = handler.getLockId(taskid, oldLock);
+    if (oldLockId == null) {
+      throw new ISE("Cannot find lock[%s]", oldLock);
+    }
+
+    handler.replaceLock(taskid, oldLockId, newLock);
+  }
+
+  @Override
   public void removeLock(String taskid, TaskLock taskLockToRemove)
   {
     Preconditions.checkNotNull(taskid, "taskid");
     Preconditions.checkNotNull(taskLockToRemove, "taskLockToRemove");
 
-    final Map<Long, TaskLock> taskLocks = getLocksWithIds(taskid);
-
-    for (final Map.Entry<Long, TaskLock> taskLockWithId : taskLocks.entrySet()) {
-      final long id = taskLockWithId.getKey();
-      final TaskLock taskLock = taskLockWithId.getValue();
-
-      if (taskLock.equals(taskLockToRemove)) {
-        log.info("Deleting TaskLock with id[%d]: %s", id, taskLock);
-        handler.removeLock(id);
-      }
+    final Long lockId = handler.getLockId(taskid, taskLockToRemove);
+    if (lockId == null) {
+      log.warn("Cannot find lock[%s]", taskLockToRemove);
+    } else {
+      log.info("Deleting TaskLock with id[%d]: %s", lockId, taskLockToRemove);
+      handler.removeLock(lockId);
     }
   }
 

@@ -27,5 +27,5 @@ import io.druid.guice.annotations.ExtensionPoint;
 @ExtensionPoint
 public interface CliCommandCreator
 {
-  public void addCommands(Cli.CliBuilder builder);
+  void addCommands(Cli.CliBuilder builder);
 }

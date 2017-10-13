@@ -29,8 +29,8 @@ import java.io.Closeable;
 
 public interface IndexedDoubles extends Closeable
 {
-  public int size();
-  public double get(int index);
+  int size();
+  double get(int index);
 
   @Override
   void close();

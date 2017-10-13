@@ -98,7 +98,7 @@ public class IncrementalIndexTest
 {
   interface IndexCreator
   {
-    public IncrementalIndex createIndex(AggregatorFactory[] aggregatorFactories);
+    IncrementalIndex createIndex(AggregatorFactory[] aggregatorFactories);
   }
 
   private final IndexCreator indexCreator;

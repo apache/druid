@@ -126,7 +126,7 @@ public class HadoopDruidIndexerConfig
     DATA_SEGMENT_PUSHER = injector.getInstance(DataSegmentPusher.class);
   }
 
-  public static enum IndexJobCounters
+  public enum IndexJobCounters
   {
     INVALID_ROW_COUNTER
   }

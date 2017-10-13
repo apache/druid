@@ -29,7 +29,7 @@ import java.io.OutputStream;
  */
 public interface IOPeon extends Closeable
 {
-  public OutputStream makeOutputStream(String filename) throws IOException;
-  public InputStream makeInputStream(String filename) throws IOException;
-  public File getFile(String filename);
+  OutputStream makeOutputStream(String filename) throws IOException;
+  InputStream makeInputStream(String filename) throws IOException;
+  File getFile(String filename);
 }
