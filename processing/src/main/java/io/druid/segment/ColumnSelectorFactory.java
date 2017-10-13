@@ -32,6 +32,11 @@ import javax.annotation.Nullable;
 public interface ColumnSelectorFactory
 {
   DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec);
+
+  /**
+   * Returns ColumnValueSelector corresponding to the given column name, or {@link NilColumnValueSelector} if the
+   * column with such name is absent.
+   */
   ColumnValueSelector makeColumnValueSelector(String columnName);
 
   /**
