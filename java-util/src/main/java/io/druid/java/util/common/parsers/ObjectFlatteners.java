@@ -78,7 +78,7 @@ public class ObjectFlatteners
           @Override
           public int size()
           {
-            throw new UnsupportedOperationException();
+            return keySet().size();
           }
 
           @Override

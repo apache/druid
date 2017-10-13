@@ -19,7 +19,6 @@
 
 package io.druid.segment;
 
-import com.google.common.collect.Maps;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.io.Closer;
 import io.druid.query.dimension.DimensionSpec;
@@ -46,14 +45,15 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
   private final Closer closer;
   protected final ReadableOffset offset;
 
-  private final Map<String, BaseColumn> columnCache = Maps.newHashMap();
+  private final Map<String, BaseColumn> columnCache;
 
   QueryableIndexColumnSelectorFactory(
       QueryableIndex index,
       VirtualColumns virtualColumns,
       boolean descending,
       Closer closer,
-      ReadableOffset offset
+      ReadableOffset offset,
+      Map<String, BaseColumn> columnCache
   )
   {
     this.index = index;
@@ -61,6 +61,7 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
     this.descending = descending;
     this.closer = closer;
     this.offset = offset;
+    this.columnCache = columnCache;
   }
 
   @Override

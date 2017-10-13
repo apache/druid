@@ -2159,6 +2159,38 @@ public class CalciteQueryTest
   }
 
   @Test
+  public void testCaseFilteredAggregationWithGroupBy() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + "  cnt,\n"
+        + "  SUM(CASE WHEN dim1 <> '1' THEN 1 ELSE 0 END) + SUM(cnt)\n"
+        + "FROM druid.foo\n"
+        + "GROUP BY cnt",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(DIMS(new DefaultDimensionSpec("cnt", "d0", ValueType.LONG)))
+                        .setAggregatorSpecs(AGGS(
+                            new FilteredAggregatorFactory(
+                                new CountAggregatorFactory("a0"),
+                                NOT(SELECTOR("dim1", "1", null))
+                            ),
+                            new LongSumAggregatorFactory("a1", "cnt")
+                        ))
+                        .setPostAggregatorSpecs(ImmutableList.of(EXPRESSION_POST_AGG("p0", "(\"a0\" + \"a1\")")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L, 11L}
+        )
+    );
+  }
+
+  @Test
   @Ignore // https://issues.apache.org/jira/browse/CALCITE-1910
   public void testFilteredAggregationWithNotIn() throws Exception
   {
@@ -3405,7 +3437,7 @@ public class CalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[] {978393600000L, "def", 1L}
+            new Object[]{978393600000L, "def", 1L}
         )
     );
   }

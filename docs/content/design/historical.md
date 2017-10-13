@@ -50,4 +50,11 @@ Returns the Druid version, loaded extensions, memory used, total memory and othe
 
 * `/druid/historical/v1/loadstatus`
 
-Returns a flag indicating if all segments in the local cache have been loaded. This can be used to know when a historical node is ready to be queried after a restart.
+Returns JSON of the form `{"cacheInitialized":<value>}`, where value is either `true` or `false` indicating if all
+segments in the local cache have been loaded. This can be used to know when a historical node is ready
+to be queried after a restart.
+
+* `/druid/historical/v1/readiness`
+
+Similar to `/druid/historical/v1/loadstatus`, but instead of returning JSON with a flag, responses 200 OK if segments
+in the local cache have been loaded, and 503 SERVICE UNAVAILABLE, if they haven't.

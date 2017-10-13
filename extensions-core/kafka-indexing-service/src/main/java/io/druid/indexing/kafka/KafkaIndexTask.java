@@ -114,6 +114,7 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
@@ -576,13 +577,12 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           sequenceNames.values()
       ).get();
 
+      final Future<SegmentsAndMetadata> handoffFuture = driver.registerHandoff(published);
       final SegmentsAndMetadata handedOff;
       if (tuningConfig.getHandoffConditionTimeout() == 0) {
-        handedOff = driver.registerHandoff(published)
-                          .get();
+        handedOff = handoffFuture.get();
       } else {
-        handedOff = driver.registerHandoff(published)
-                          .get(tuningConfig.getHandoffConditionTimeout(), TimeUnit.MILLISECONDS);
+        handedOff = handoffFuture.get(tuningConfig.getHandoffConditionTimeout(), TimeUnit.MILLISECONDS);
       }
 
       if (handedOff == null) {
