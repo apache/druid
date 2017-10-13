@@ -58,12 +58,12 @@ public interface SqlAggregator
    */
   @Nullable
   Aggregation toDruidAggregation(
-      final PlannerContext plannerContext,
-      final RowSignature rowSignature,
-      final RexBuilder rexBuilder,
-      final String name,
-      final AggregateCall aggregateCall,
-      final Project project,
-      final List<Aggregation> existingAggregations
+      PlannerContext plannerContext,
+      RowSignature rowSignature,
+      RexBuilder rexBuilder,
+      String name,
+      AggregateCall aggregateCall,
+      Project project,
+      List<Aggregation> existingAggregations
   );
 }

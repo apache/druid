@@ -43,7 +43,7 @@ import java.io.IOException;
 })
 public interface TaskAction<RetType>
 {
-  public TypeReference<RetType> getReturnTypeReference(); // T_T
-  public RetType perform(Task task, TaskActionToolbox toolbox) throws IOException;
-  public boolean isAudited();
+  TypeReference<RetType> getReturnTypeReference(); // T_T
+  RetType perform(Task task, TaskActionToolbox toolbox) throws IOException;
+  boolean isAudited();
 }

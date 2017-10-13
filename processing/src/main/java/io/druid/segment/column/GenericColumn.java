@@ -32,12 +32,12 @@ import java.io.Closeable;
  */
 public interface GenericColumn extends HotLoopCallee, Closeable
 {
-  public int length();
-  public ValueType getType();
-  public boolean hasMultipleValues();
+  int length();
+  ValueType getType();
+  boolean hasMultipleValues();
 
   @CalledFromHotLoop
-  public String getStringSingleValueRow(int rowNum);
+  String getStringSingleValueRow(int rowNum);
 
   @CalledFromHotLoop
   float getFloatSingleValueRow(int rowNum);

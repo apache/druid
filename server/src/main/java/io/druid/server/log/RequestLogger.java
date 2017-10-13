@@ -27,5 +27,5 @@ import java.io.IOException;
  */
 public interface RequestLogger
 {
-  public void log(RequestLogLine requestLogLine) throws IOException;
+  void log(RequestLogLine requestLogLine) throws IOException;
 }

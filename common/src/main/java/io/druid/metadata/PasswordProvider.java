@@ -36,5 +36,5 @@ import io.druid.guice.annotations.ExtensionPoint;
 })
 public interface PasswordProvider
 {
-  public String getPassword();
+  String getPassword();
 }

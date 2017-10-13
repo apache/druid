@@ -39,7 +39,7 @@ public interface EC2UserData<T extends EC2UserData>
    * @param version worker version
    * @return instance with the specified version
    */
-  public EC2UserData<T> withVersion(String version);
+  EC2UserData<T> withVersion(String version);
 
-  public String getUserDataBase64();
+  String getUserDataBase64();
 }

@@ -32,10 +32,10 @@ import javax.annotation.Nullable;
 @PublicApi
 public interface StorageAdapter extends CursorFactory
 {
-  public String getSegmentIdentifier();
-  public Interval getInterval();
-  public Indexed<String> getAvailableDimensions();
-  public Iterable<String> getAvailableMetrics();
+  String getSegmentIdentifier();
+  Interval getInterval();
+  Indexed<String> getAvailableDimensions();
+  Iterable<String> getAvailableMetrics();
 
   /**
    * Returns the number of distinct values for the given dimension column
@@ -45,14 +45,14 @@ public interface StorageAdapter extends CursorFactory
    * @param column
    * @return
    */
-  public int getDimensionCardinality(String column);
-  public DateTime getMinTime();
-  public DateTime getMaxTime();
+  int getDimensionCardinality(String column);
+  DateTime getMinTime();
+  DateTime getMaxTime();
   @Nullable
-  public Comparable getMinValue(String column);
+  Comparable getMinValue(String column);
   @Nullable
-  public Comparable getMaxValue(String column);
-  public Capabilities getCapabilities();
+  Comparable getMaxValue(String column);
+  Capabilities getCapabilities();
 
   /**
    * Returns capabilities of a particular column, if known. May be null if the column doesn't exist, or if
@@ -64,15 +64,15 @@ public interface StorageAdapter extends CursorFactory
    * @return capabilities, or null
    */
   @Nullable
-  public ColumnCapabilities getColumnCapabilities(String column);
+  ColumnCapabilities getColumnCapabilities(String column);
 
   /**
    * Like {@link ColumnCapabilities#getType()}, but may return a more descriptive string for complex columns.
    * @param column column name
    * @return type name
    */
-  public String getColumnTypeName(String column);
-  public int getNumRows();
-  public DateTime getMaxIngestedEventTime();
-  public Metadata getMetadata();
+  String getColumnTypeName(String column);
+  int getNumRows();
+  DateTime getMaxIngestedEventTime();
+  Metadata getMetadata();
 }

@@ -341,19 +341,19 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
   }
 
   protected abstract DruidServer addInnerInventory(
-      final DruidServer container,
+      DruidServer container,
       String inventoryKey,
-      final InventoryType inventory
+      InventoryType inventory
   );
 
   protected abstract DruidServer updateInnerInventory(
-      final DruidServer container,
+      DruidServer container,
       String inventoryKey,
-      final InventoryType inventory
+      InventoryType inventory
   );
 
   protected abstract DruidServer removeInnerInventory(
-      final DruidServer container,
+      DruidServer container,
       String inventoryKey
   );
 

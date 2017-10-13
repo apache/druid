@@ -34,7 +34,7 @@ import java.nio.ByteBuffer;
  */
 public class StringFormatExtractionFn extends DimExtractionFn
 {
-  public static enum NullHandling
+  public enum NullHandling
   {
     NULLSTRING,
     EMPTYSTRING,

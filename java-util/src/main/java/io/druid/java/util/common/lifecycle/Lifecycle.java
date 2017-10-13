@@ -366,11 +366,11 @@ public class Lifecycle
     Thread.currentThread().join();
   }
 
-  public static interface Handler
+  public interface Handler
   {
-    public void start() throws Exception;
+    void start() throws Exception;
 
-    public void stop();
+    void stop();
   }
 
   private static class AnnotationBasedHandler implements Handler

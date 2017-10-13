@@ -31,7 +31,7 @@ import javax.annotation.Nullable;
  */
 public interface DimensionSelector extends ColumnValueSelector, HotLoopCallee
 {
-  public static int CARDINALITY_UNKNOWN = -1;
+  int CARDINALITY_UNKNOWN = -1;
 
   /**
    * Gets all values for the row inside of an IntBuffer.  I.e. one possible implementation could be
@@ -41,7 +41,7 @@ public interface DimensionSelector extends ColumnValueSelector, HotLoopCallee
    * @return all values for the row as an IntBuffer
    */
   @CalledFromHotLoop
-  public IndexedInts getRow();
+  IndexedInts getRow();
 
   /**
    * @param value nullable dimension value
@@ -67,7 +67,7 @@ public interface DimensionSelector extends ColumnValueSelector, HotLoopCallee
    *
    * @return the value cardinality, or -1 if unknown.
    */
-  public int getValueCardinality();
+  int getValueCardinality();
 
   /**
    * The Name is the String name of the actual field.  It is assumed that storage layers convert names
@@ -94,7 +94,7 @@ public interface DimensionSelector extends ColumnValueSelector, HotLoopCallee
    * @return the field name for the given id
    */
   @CalledFromHotLoop
-  public String lookupName(int id);
+  String lookupName(int id);
 
   /**
    * Returns true if it is possible to {@link #lookupName(int)} by ids from 0 to {@link #getValueCardinality()}

@@ -238,7 +238,7 @@ public class SketchHolder
     }
   }
 
-  public static enum Func
+  public enum Func
   {
     UNION,
     INTERSECT,

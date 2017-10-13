@@ -33,7 +33,7 @@ import com.google.common.base.Preconditions;
  */
 public class TaskStatus
 {
-  public static enum Status
+  public enum Status
   {
     RUNNING,
     SUCCESS,

@@ -26,5 +26,5 @@ import org.eclipse.jetty.server.Server;
  */
 public interface JettyServerInitializer
 {
-  public void initialize(Server server, Injector injector);
+  void initialize(Server server, Injector injector);
 }

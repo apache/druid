@@ -881,7 +881,7 @@ public class IndexTaskTest
     runTask(indexTask);
   }
 
-  private final List<DataSegment> runTask(final IndexTask indexTask) throws Exception
+  private List<DataSegment> runTask(IndexTask indexTask) throws Exception
   {
     final List<DataSegment> segments = Lists.newArrayList();
 

@@ -23,13 +23,13 @@ package io.druid.query.topn;
  */
 public interface TopNMetricSpecBuilder<T>
 {
-  public void skipTo(String previousStop);
+  void skipTo(String previousStop);
 
-  public void ignoreAfterThreshold();
+  void ignoreAfterThreshold();
 
-  public void ignoreFirstN(int n);
+  void ignoreFirstN(int n);
 
-  public void keepOnlyN(int n);
+  void keepOnlyN(int n);
 
-  public T build();
+  T build();
 }

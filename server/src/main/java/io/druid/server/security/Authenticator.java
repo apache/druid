@@ -69,7 +69,7 @@ public interface Authenticator extends ServletFilterHolder
    * @return Filter that authenticates HTTP requests
    */
   @Override
-  public Filter getFilter();
+  Filter getFilter();
 
   /**
    * Return a WWW-Authenticate challenge scheme string appropriate for this Authenticator's authentication mechanism.
@@ -81,7 +81,7 @@ public interface Authenticator extends ServletFilterHolder
    * @return Authentication scheme
    */
   @Nullable
-  public String getAuthChallengeHeader();
+  String getAuthChallengeHeader();
 
   /**
    * Given a JDBC connection context, authenticate the identity represented by the information in the context.
@@ -97,7 +97,7 @@ public interface Authenticator extends ServletFilterHolder
    *         null if authentication failed
    */
   @Nullable
-  public AuthenticationResult authenticateJDBCContext(Map<String, Object> context);
+  AuthenticationResult authenticateJDBCContext(Map<String, Object> context);
 
   /**
    * Return a client that sends requests with the format/information necessary to authenticate successfully
@@ -110,7 +110,7 @@ public interface Authenticator extends ServletFilterHolder
    *
    * @return metamx HttpClient that sends requests with the credentials of the internal system user
    */
-  public HttpClient createEscalatedClient(HttpClient baseClient);
+  HttpClient createEscalatedClient(HttpClient baseClient);
 
   /**
    * Return a client that sends requests with the format/information necessary to authenticate successfully
@@ -122,10 +122,10 @@ public interface Authenticator extends ServletFilterHolder
    *
    * @return Jetty HttpClient that sends requests with the credentials of the internal system user
    */
-  public org.eclipse.jetty.client.HttpClient createEscalatedJettyClient(org.eclipse.jetty.client.HttpClient baseClient);
+  org.eclipse.jetty.client.HttpClient createEscalatedJettyClient(org.eclipse.jetty.client.HttpClient baseClient);
 
   /**
    * @return an AuthenticationResult representing the identity of the internal system user.
    */
-  public AuthenticationResult createEscalatedAuthenticationResult();
+  AuthenticationResult createEscalatedAuthenticationResult();
 }

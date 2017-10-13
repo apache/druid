@@ -91,7 +91,7 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    *
    * @throws IllegalStateException if the segment is unknown
    */
-  int getRowCount(final SegmentIdentifier identifier);
+  int getRowCount(SegmentIdentifier identifier);
 
   /**
    * Returns the number of total rows in this appenderator.
