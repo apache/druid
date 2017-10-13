@@ -108,7 +108,7 @@ Numeric functions will return 64 bit integers or 64 bit floats, depending on the
 |`FLOOR(expr)`|Floor.|
 |`LN(expr)`|Logarithm (base e).|
 |`LOG10(expr)`|Logarithm (base 10).|
-|`POW(expr, power)`|expr to a power.|
+|`POWER(expr, power)`|expr to a power.|
 |`SQRT(expr)`|Square root.|
 |`TRUNCATE(expr[, digits])`|Truncate expr to a specific number of decimal digits. If digits is negative, then this truncates that many places to the left of the decimal point. Digits defaults to zero if not specified.|
 |`TRUNC(expr[, digits])`|Synonym for `TRUNCATE`.|
