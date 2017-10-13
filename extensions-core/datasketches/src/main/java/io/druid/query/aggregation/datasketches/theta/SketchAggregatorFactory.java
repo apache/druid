@@ -91,11 +91,8 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Object combine(Object lhs, @Nullable Object rhs)
+  public Object combine(Object lhs, Object rhs)
   {
-    if (rhs == null) {
-      return lhs;
-    }
     return SketchHolder.combine(lhs, rhs, size);
   }
 
