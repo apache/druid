@@ -51,6 +51,11 @@
             <artifactId>google-http-client-jackson2</artifactId>
             <version>1.22.0</version>
         </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.module</groupId>
+            <artifactId>jackson-module-guice</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
 
         <!-- Tests -->
         <dependency>
