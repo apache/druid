@@ -27,5 +27,5 @@ public interface ValueGetter
   // converted to strings. We should also add functions
   // for these and modify ColumnComparisonFilter to handle
   // comparing Long and Float columns to eachother.
-  public String[] get();
+  String[] get();
 }

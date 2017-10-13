@@ -38,5 +38,5 @@ public interface BitMapFactory
    *
    * @return the new bitmap
    */
-  public MutableBitmap makeEmptyMutableBitmap();
+  MutableBitmap makeEmptyMutableBitmap();
 }

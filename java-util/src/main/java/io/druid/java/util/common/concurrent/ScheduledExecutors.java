@@ -185,7 +185,7 @@ public class ScheduledExecutors
     );
   }
 
-  public static enum Signal
+  public enum Signal
   {
     REPEAT, STOP
   }

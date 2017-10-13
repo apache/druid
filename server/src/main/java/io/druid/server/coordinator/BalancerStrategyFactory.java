@@ -31,5 +31,5 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 })
 public interface BalancerStrategyFactory
 {
-  public BalancerStrategy createBalancerStrategy(ListeningExecutorService exec);
+  BalancerStrategy createBalancerStrategy(ListeningExecutorService exec);
 }

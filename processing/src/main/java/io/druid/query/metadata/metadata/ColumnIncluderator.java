@@ -32,10 +32,10 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 })
 public interface ColumnIncluderator
 {
-  public static final byte[] NONE_CACHE_PREFIX = new byte[]{0x0};
-  public static final byte[] ALL_CACHE_PREFIX = new byte[]{0x1};
-  public static final byte[] LIST_CACHE_PREFIX = new byte[]{0x2};
+  byte[] NONE_CACHE_PREFIX = new byte[]{0x0};
+  byte[] ALL_CACHE_PREFIX = new byte[]{0x1};
+  byte[] LIST_CACHE_PREFIX = new byte[]{0x2};
 
-  public boolean include(String columnName);
-  public byte[] getCacheKey();
+  boolean include(String columnName);
+  byte[] getCacheKey();
 }

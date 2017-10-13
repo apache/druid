@@ -31,5 +31,5 @@ import org.joda.time.Interval;
 })
 public interface VersioningPolicy
 {
-  public String getVersion(Interval interval);
+  String getVersion(Interval interval);
 }

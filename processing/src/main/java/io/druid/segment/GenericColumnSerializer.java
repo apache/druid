@@ -29,11 +29,11 @@ import java.nio.channels.WritableByteChannel;
 @ExtensionPoint
 public interface GenericColumnSerializer extends Closeable
 {
-  public void open() throws IOException;
+  void open() throws IOException;
 
-  public void serialize(Object obj) throws IOException;
+  void serialize(Object obj) throws IOException;
 
-  public long getSerializedSize();
+  long getSerializedSize();
 
-  public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException;
+  void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException;
 }

@@ -45,7 +45,7 @@ public interface Yielder<T> extends Closeable
    *
    * @return the currently yielded object, null if done
    */
-  public T get();
+  T get();
 
   /**
    * Gets the next Yielder in the chain. The argument is used as the accumulator value to pass along to start the
@@ -57,7 +57,7 @@ public interface Yielder<T> extends Closeable
    *                  iteration completes.
    * @return the next Yielder in the chain, or undefined if done
    */
-  public Yielder<T> next(T initValue);
+  Yielder<T> next(T initValue);
 
   /**
    * Returns true if this is the last Yielder in the chain.  A Yielder that isDone() may return anything
@@ -68,5 +68,5 @@ public interface Yielder<T> extends Closeable
    *
    * @return true if this is the last Yielder in the chain, false otherwise
    */
-  public boolean isDone();
+  boolean isDone();
 }

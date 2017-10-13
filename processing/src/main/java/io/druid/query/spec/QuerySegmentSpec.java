@@ -37,7 +37,7 @@ import java.util.List;
 })
 public interface QuerySegmentSpec
 {
-  public List<Interval> getIntervals();
+  List<Interval> getIntervals();
 
-  public <T> QueryRunner<T> lookup(Query<T> query, QuerySegmentWalker walker);
+  <T> QueryRunner<T> lookup(Query<T> query, QuerySegmentWalker walker);
 }

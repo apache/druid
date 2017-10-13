@@ -56,15 +56,15 @@ public interface GroupByStrategy
   /**
    * Indicates if this query should undergo "mergeResults" or not.
    */
-  boolean doMergeResults(final GroupByQuery query);
+  boolean doMergeResults(GroupByQuery query);
 
   /**
    * Decorate a runner with an interval chunking decorator.
    */
   QueryRunner<Row> createIntervalChunkingRunner(
-      final IntervalChunkingQueryRunnerDecorator decorator,
-      final QueryRunner<Row> runner,
-      final GroupByQueryQueryToolChest toolChest
+      IntervalChunkingQueryRunnerDecorator decorator,
+      QueryRunner<Row> runner,
+      GroupByQueryQueryToolChest toolChest
   );
 
   Sequence<Row> mergeResults(

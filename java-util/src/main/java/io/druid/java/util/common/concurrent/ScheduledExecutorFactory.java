@@ -23,5 +23,5 @@ import java.util.concurrent.ScheduledExecutorService;
 
 public interface ScheduledExecutorFactory
 {
-  public ScheduledExecutorService create(int corePoolSize, String nameFormat);
+  ScheduledExecutorService create(int corePoolSize, String nameFormat);
 }

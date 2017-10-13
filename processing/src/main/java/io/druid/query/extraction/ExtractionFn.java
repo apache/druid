@@ -71,7 +71,7 @@ public interface ExtractionFn extends Cacheable
    * @return a value that should be used instead of the original
    */
   @Nullable
-  public String apply(@Nullable Object value);
+  String apply(@Nullable Object value);
 
   /**
    * The "extraction" function.  This should map a String value into some other String value.
@@ -84,7 +84,7 @@ public interface ExtractionFn extends Cacheable
    * @return a value that should be used instead of the original
    */
   @Nullable
-  public String apply(@Nullable String value);
+  String apply(@Nullable String value);
 
   /**
    * The "extraction" function.  This should map a long value into some String value.
@@ -96,7 +96,7 @@ public interface ExtractionFn extends Cacheable
    *
    * @return a value that should be used instead of the original
    */
-  public String apply(long value);
+  String apply(long value);
 
   /**
    * Offers information on whether the extraction will preserve the original ordering of the values.
@@ -106,7 +106,7 @@ public interface ExtractionFn extends Cacheable
    *
    * @return true if ordering is preserved, false otherwise
    */
-  public boolean preservesOrdering();
+  boolean preservesOrdering();
 
   /**
    * A dim extraction can be of one of two types, renaming or rebucketing. In the `ONE_TO_ONE` case, a unique values is
@@ -115,9 +115,9 @@ public interface ExtractionFn extends Cacheable
    *
    * @return {@link ExtractionFn.ExtractionType} declaring what kind of manipulation this function does
    */
-  public ExtractionType getExtractionType();
+  ExtractionType getExtractionType();
 
-  public static enum ExtractionType
+  enum ExtractionType
   {
     MANY_TO_ONE, ONE_TO_ONE
   }

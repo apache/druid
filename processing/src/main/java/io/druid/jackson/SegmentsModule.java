@@ -40,6 +40,6 @@ public class SegmentsModule extends SimpleModule
   @JsonSubTypes({
       @JsonSubTypes.Type(name = "none", value = NoneShardSpec.class),
   })
-  public static interface ShardSpecMixin
+  public interface ShardSpecMixin
   {}
 }

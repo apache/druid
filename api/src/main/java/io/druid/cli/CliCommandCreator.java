@@ -25,5 +25,5 @@ import io.airlift.airline.Cli;
  */
 public interface CliCommandCreator
 {
-  public void addCommands(Cli.CliBuilder builder);
+  void addCommands(Cli.CliBuilder builder);
 }

@@ -25,7 +25,7 @@ import java.util.List;
 
 public interface BooleanFilter extends Filter
 {
-  public List<Filter> getFilters();
+  List<Filter> getFilters();
 
   /**
    * Get a ValueMatcher that applies this filter to row values.
@@ -43,7 +43,7 @@ public interface BooleanFilter extends Filter
    *
    * @return ValueMatcher that applies this filter
    */
-  public ValueMatcher makeMatcher(
+  ValueMatcher makeMatcher(
       BitmapIndexSelector selector,
       ColumnSelectorFactory columnSelectorFactory,
       RowOffsetMatcherFactory rowOffsetMatcherFactory
