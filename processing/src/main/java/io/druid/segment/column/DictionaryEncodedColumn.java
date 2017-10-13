@@ -30,13 +30,13 @@ import java.io.Closeable;
  */
 public interface DictionaryEncodedColumn<ActualType extends Comparable> extends Closeable
 {
-  public int length();
-  public boolean hasMultipleValues();
-  public int getSingleValueRow(int rowNum);
-  public IndexedInts getMultiValueRow(int rowNum);
-  public ActualType lookupName(int id);
-  public int lookupId(ActualType name);
-  public int getCardinality();
+  int length();
+  boolean hasMultipleValues();
+  int getSingleValueRow(int rowNum);
+  IndexedInts getMultiValueRow(int rowNum);
+  ActualType lookupName(int id);
+  int lookupId(ActualType name);
+  int getCardinality();
 
   DimensionSelector makeDimensionSelector(ReadableOffset offset, ExtractionFn extractionFn);
 }

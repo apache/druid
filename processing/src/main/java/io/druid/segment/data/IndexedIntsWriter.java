@@ -25,7 +25,7 @@ import java.io.IOException;
 
 public interface IndexedIntsWriter extends Serializer
 {
-  public void open() throws IOException;
+  void open() throws IOException;
 
-  public void add(Object obj) throws IOException;
+  void add(Object obj) throws IOException;
 }

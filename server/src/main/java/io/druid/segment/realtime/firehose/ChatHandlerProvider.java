@@ -32,7 +32,7 @@ public interface ChatHandlerProvider
    * @param key     a unique name identifying this service
    * @param handler instance which implements the API to be exposed
    */
-  void register(final String key, ChatHandler handler);
+  void register(String key, ChatHandler handler);
 
   /**
    * Registers a chat handler which provides an API for others to talk to objects in the indexing service. Setting
@@ -43,19 +43,19 @@ public interface ChatHandlerProvider
    * @param handler  instance which implements the API to be exposed
    * @param announce for implementations that have a service discovery mechanism, whether this node should be announced
    */
-  void register(final String key, ChatHandler handler, boolean announce);
+  void register(String key, ChatHandler handler, boolean announce);
 
   /**
    * Unregisters a chat handler.
    *
    * @param key the name of the service
    */
-  void unregister(final String key);
+  void unregister(String key);
 
   /**
    * Retrieves a chat handler.
    *
    * @param key the name of the service
    */
-  Optional<ChatHandler> get(final String key);
+  Optional<ChatHandler> get(String key);
 }

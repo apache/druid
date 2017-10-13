@@ -21,12 +21,11 @@ package io.druid.collections.spatial.search;
 
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.spatial.ImmutableNode;
-//import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
 
 /**
  */
 public interface SearchStrategy
 {
-  public Iterable<ImmutableBitmap> search(ImmutableNode node, Bound bound);
+  Iterable<ImmutableBitmap> search(ImmutableNode node, Bound bound);
 }

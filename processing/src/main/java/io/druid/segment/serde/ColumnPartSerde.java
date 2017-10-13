@@ -38,12 +38,12 @@ import java.nio.ByteBuffer;
 })
 public interface ColumnPartSerde
 {
-  public Serializer getSerializer();
+  Serializer getSerializer();
 
-  public Deserializer getDeserializer();
+  Deserializer getDeserializer();
 
-  public interface Deserializer
+  interface Deserializer
   {
-    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig);
+    void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig);
   }
 }

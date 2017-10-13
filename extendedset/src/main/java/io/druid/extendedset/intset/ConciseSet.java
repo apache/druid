@@ -2584,19 +2584,19 @@ public class ConciseSet extends AbstractIntSet implements Serializable
    */
   private interface WordExpander
   {
-    public boolean hasNext();
+    boolean hasNext();
 
-    public boolean hasPrevious();
+    boolean hasPrevious();
 
-    public int next();
+    int next();
 
-    public int previous();
+    int previous();
 
-    public void skipAllAfter(int i);
+    void skipAllAfter(int i);
 
-    public void skipAllBefore(int i);
+    void skipAllBefore(int i);
 
-    public void reset(int offset, int word, boolean fromBeginning);
+    void reset(int offset, int word, boolean fromBeginning);
   }
 
   /**

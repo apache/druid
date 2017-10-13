@@ -40,6 +40,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -205,15 +206,28 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
       return false;
     }
 
-    StaticS3FirehoseFactory factory = (StaticS3FirehoseFactory) o;
+    StaticS3FirehoseFactory that = (StaticS3FirehoseFactory) o;
 
-    return getUris().equals(factory.getUris());
-
+    return Objects.equals(uris, that.uris) &&
+           Objects.equals(prefixes, that.prefixes) &&
+           getMaxCacheCapacityBytes() == that.getMaxCacheCapacityBytes() &&
+           getMaxFetchCapacityBytes() == that.getMaxFetchCapacityBytes() &&
+           getPrefetchTriggerBytes() == that.getPrefetchTriggerBytes() &&
+           getFetchTimeout() == that.getFetchTimeout() &&
+           getMaxFetchRetry() == that.getMaxFetchRetry();
   }
 
   @Override
   public int hashCode()
   {
-    return getUris().hashCode();
+    return Objects.hash(
+        uris,
+        prefixes,
+        getMaxCacheCapacityBytes(),
+        getMaxFetchCapacityBytes(),
+        getPrefetchTriggerBytes(),
+        getFetchTimeout(),
+        getMaxFetchRetry()
+    );
   }
 }

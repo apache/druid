@@ -51,7 +51,9 @@ public interface Authenticator extends ServletFilterHolder
    * <p>
    * If the authentication succeeds, the Filter should set the "Druid-Authentication-Result" attribute in the request,
    * containing an AuthenticationResult that represents the authenticated identity of the requester, along with
-   * the name of the Authorizer instance that should authorize the request.
+   * the name of the Authorizer instance that should authorize the request. An Authenticator may choose to
+   * add a Map<String, Object> context to the authentication result, containing additional information to be
+   * used by the Authorizer. The contents of this map are left for Authenticator/Authorizer implementors to decide.
    * <p>
    * If the "Druid-Authentication-Result" attribute is already set (i.e., request has been authenticated by an
    * earlier Filter), this Filter should skip any authentication checks and proceed to the next Filter.
@@ -67,7 +69,7 @@ public interface Authenticator extends ServletFilterHolder
    * @return Filter that authenticates HTTP requests
    */
   @Override
-  public Filter getFilter();
+  Filter getFilter();
 
   /**
    * Return a WWW-Authenticate challenge scheme string appropriate for this Authenticator's authentication mechanism.
@@ -79,7 +81,7 @@ public interface Authenticator extends ServletFilterHolder
    * @return Authentication scheme
    */
   @Nullable
-  public String getAuthChallengeHeader();
+  String getAuthChallengeHeader();
 
   /**
    * Given a JDBC connection context, authenticate the identity represented by the information in the context.
@@ -95,7 +97,7 @@ public interface Authenticator extends ServletFilterHolder
    *         null if authentication failed
    */
   @Nullable
-  public AuthenticationResult authenticateJDBCContext(Map<String, Object> context);
+  AuthenticationResult authenticateJDBCContext(Map<String, Object> context);
 
   /**
    * Return a client that sends requests with the format/information necessary to authenticate successfully
@@ -108,7 +110,7 @@ public interface Authenticator extends ServletFilterHolder
    *
    * @return metamx HttpClient that sends requests with the credentials of the internal system user
    */
-  public HttpClient createEscalatedClient(HttpClient baseClient);
+  HttpClient createEscalatedClient(HttpClient baseClient);
 
   /**
    * Return a client that sends requests with the format/information necessary to authenticate successfully
@@ -120,10 +122,10 @@ public interface Authenticator extends ServletFilterHolder
    *
    * @return Jetty HttpClient that sends requests with the credentials of the internal system user
    */
-  public org.eclipse.jetty.client.HttpClient createEscalatedJettyClient(org.eclipse.jetty.client.HttpClient baseClient);
+  org.eclipse.jetty.client.HttpClient createEscalatedJettyClient(org.eclipse.jetty.client.HttpClient baseClient);
 
   /**
    * @return an AuthenticationResult representing the identity of the internal system user.
    */
-  public AuthenticationResult createEscalatedAuthenticationResult();
+  AuthenticationResult createEscalatedAuthenticationResult();
 }

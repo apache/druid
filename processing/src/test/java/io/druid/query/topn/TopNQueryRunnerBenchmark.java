@@ -52,7 +52,7 @@ import java.util.Map;
 public class TopNQueryRunnerBenchmark extends AbstractBenchmark
 {
 
-  public static enum TestCases
+  public enum TestCases
   {
     rtIndex, mMappedTestIndex, mergedRealtimeIndex, rtIndexOffheap
   }

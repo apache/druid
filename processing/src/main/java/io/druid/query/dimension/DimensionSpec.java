@@ -35,8 +35,7 @@ import io.druid.segment.column.ValueType;
     @JsonSubTypes.Type(name = "default", value = DefaultDimensionSpec.class),
     @JsonSubTypes.Type(name = "extraction", value = ExtractionDimensionSpec.class),
     @JsonSubTypes.Type(name = "regexFiltered", value = RegexFilteredDimensionSpec.class),
-    @JsonSubTypes.Type(name = "listFiltered", value = ListFilteredDimensionSpec.class),
-    @JsonSubTypes.Type(name = "lookup", value = LookupDimensionSpec.class)
+    @JsonSubTypes.Type(name = "listFiltered", value = ListFilteredDimensionSpec.class)
 })
 public interface DimensionSpec extends Cacheable
 {

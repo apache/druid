@@ -40,7 +40,7 @@ public class WorkerBehaviorConfigTest
   @Test
   public void testSerde() throws Exception
   {
-    WorkerBehaviorConfig config = new WorkerBehaviorConfig(
+    DefaultWorkerBehaviorConfig config = new DefaultWorkerBehaviorConfig(
         new FillCapacityWithAffinityWorkerSelectStrategy(
             new AffinityConfig(
                 ImmutableMap.of("foo", ImmutableSet.of("localhost")),
@@ -87,6 +87,6 @@ public class WorkerBehaviorConfigTest
           }
         }
     );
-    Assert.assertEquals(config, mapper.readValue(mapper.writeValueAsBytes(config), WorkerBehaviorConfig.class));
+    Assert.assertEquals(config, mapper.readValue(mapper.writeValueAsBytes(config), DefaultWorkerBehaviorConfig.class));
   }
 }

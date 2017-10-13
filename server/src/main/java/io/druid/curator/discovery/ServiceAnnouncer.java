@@ -27,7 +27,7 @@ import io.druid.server.DruidNode;
  */
 public interface ServiceAnnouncer
 {
-  public void announce(DruidNode node);
+  void announce(DruidNode node);
 
-  public void unannounce(DruidNode node);
+  void unannounce(DruidNode node);
 }

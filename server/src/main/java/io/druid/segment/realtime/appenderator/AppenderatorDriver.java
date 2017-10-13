@@ -564,8 +564,7 @@ public class AppenderatorDriver implements Closeable
                                       .equals(Sets.newHashSet(segmentsAndMetadata.getSegments()))) {
                   log.info("Our segments really do exist, awaiting handoff.");
                 } else {
-                  log.warn("Our segments don't exist, giving up.");
-                  return null;
+                  throw new ISE("Failed to publish segments[%s]", segmentIdentifiers);
                 }
               }
             }

@@ -37,7 +37,7 @@ public interface TimelineLookup<VersionType, ObjectType>
    * @return Holders representing the interval that the objects exist for, PartitionHolders
    *         are guaranteed to be complete. Holders returned sorted by the interval.
    */
-  public List<TimelineObjectHolder<VersionType, ObjectType>> lookup(Interval interval);
+  List<TimelineObjectHolder<VersionType, ObjectType>> lookup(Interval interval);
 
   /**
    * Does a lookup for the objects representing the given time interval.  Will also return
@@ -48,8 +48,7 @@ public interface TimelineLookup<VersionType, ObjectType>
    * @return Holders representing the interval that the objects exist for, PartitionHolders
    *         can be incomplete. Holders returned sorted by the interval.
    */
-  public List<TimelineObjectHolder<VersionType, ObjectType>> lookupWithIncompletePartitions(Interval interval);
+  List<TimelineObjectHolder<VersionType, ObjectType>> lookupWithIncompletePartitions(Interval interval);
 
-  public PartitionHolder<ObjectType> findEntry(Interval interval, VersionType version);
-
+  PartitionHolder<ObjectType> findEntry(Interval interval, VersionType version);
 }

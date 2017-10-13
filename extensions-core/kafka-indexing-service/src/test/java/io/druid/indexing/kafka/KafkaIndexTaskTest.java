@@ -1484,7 +1484,7 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task = new KafkaIndexTask(
         taskId,
         null,
-        DATA_SCHEMA,
+        cloneDataSchema(),
         tuningConfig,
         ioConfig,
         null,
@@ -1493,6 +1493,17 @@ public class KafkaIndexTaskTest
     );
     task.setPollRetryMs(POLL_RETRY_MS);
     return task;
+  }
+
+  private static DataSchema cloneDataSchema()
+  {
+    return new DataSchema(
+        DATA_SCHEMA.getDataSource(),
+        DATA_SCHEMA.getParserMap(),
+        DATA_SCHEMA.getAggregators(),
+        DATA_SCHEMA.getGranularitySpec(),
+        objectMapper
+    );
   }
 
   private QueryRunnerFactoryConglomerate makeTimeseriesOnlyConglomerate()

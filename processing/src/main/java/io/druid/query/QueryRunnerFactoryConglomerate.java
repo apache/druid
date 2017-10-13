@@ -23,5 +23,5 @@ package io.druid.query;
  */
 public interface QueryRunnerFactoryConglomerate
 {
-  public <T, QueryType extends Query<T>> QueryRunnerFactory<T, QueryType> findFactory(QueryType query);
+  <T, QueryType extends Query<T>> QueryRunnerFactory<T, QueryType> findFactory(QueryType query);
 }
