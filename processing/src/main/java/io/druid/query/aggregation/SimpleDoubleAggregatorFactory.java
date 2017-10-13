@@ -22,6 +22,7 @@ package io.druid.query.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
 import io.druid.segment.ColumnSelectorFactory;
@@ -34,6 +35,7 @@ import java.util.Objects;
 
 public abstract class SimpleDoubleAggregatorFactory extends AggregatorFactory
 {
+  public final static String DOUBLE_STORAGE_TYPE_PROPERTY = "druid.indexing.doubleStorage";
   protected final String name;
   protected final String fieldName;
   protected final String expression;
@@ -146,6 +148,7 @@ public abstract class SimpleDoubleAggregatorFactory extends AggregatorFactory
 
   public static boolean storeDoubleAsFloat()
   {
-    return Boolean.valueOf(System.getProperty("druid.indexing.store.double.as.float", "true"));
+    String value = System.getProperty(DOUBLE_STORAGE_TYPE_PROPERTY, "float");
+    return !StringUtils.toLowerCase(value).equals("double");
   }
 }
