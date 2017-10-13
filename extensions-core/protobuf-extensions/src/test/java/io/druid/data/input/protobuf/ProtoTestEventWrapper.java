@@ -480,7 +480,7 @@ public final class ProtoTestEventWrapper
 
       private final int value;
 
-      private EventCategory(int value)
+      EventCategory(int value)
       {
         this.value = value;
       }
