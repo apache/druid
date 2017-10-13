@@ -80,6 +80,19 @@ public interface Task
   public String getGroupId();
 
   /**
+   * Returns task priority. The task priority is currently used only for prioritized locking, but, in the future, it can
+   * be used for task scheduling, cluster resource management, etc.
+   *
+   * @return task priority
+   *
+   * @see Tasks for default task priorities
+   */
+  default int getPriority()
+  {
+    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_TASK_PRIORITY);
+  }
+
+  /**
    * Returns a {@link TaskResource} for this task. Task resources define specific worker requirements a task may
    * require.
    *

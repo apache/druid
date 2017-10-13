@@ -29,6 +29,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 
 public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<URI>
 {
@@ -70,5 +71,38 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
   protected InputStream wrapObjectStream(URI object, InputStream stream) throws IOException
   {
     return object.getPath().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    final HttpFirehoseFactory that = (HttpFirehoseFactory) o;
+    return Objects.equals(uris, that.uris) &&
+           getMaxCacheCapacityBytes() == that.getMaxCacheCapacityBytes() &&
+           getMaxFetchCapacityBytes() == that.getMaxFetchCapacityBytes() &&
+           getPrefetchTriggerBytes() == that.getPrefetchTriggerBytes() &&
+           getFetchTimeout() == that.getFetchTimeout() &&
+           getMaxFetchRetry() == that.getMaxFetchRetry();
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        uris,
+        getMaxCacheCapacityBytes(),
+        getMaxFetchCapacityBytes(),
+        getPrefetchTriggerBytes(),
+        getFetchTimeout(),
+        getMaxFetchRetry()
+    );
   }
 }

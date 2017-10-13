@@ -19,6 +19,7 @@
 
 package io.druid.data.input.impl.prefetch;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -119,6 +120,36 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
                                 : prefetchTriggerBytes;
     this.fetchTimeout = fetchTimeout == null ? DEFAULT_FETCH_TIMEOUT_MS : fetchTimeout;
     this.maxFetchRetry = maxFetchRetry == null ? DEFAULT_MAX_FETCH_RETRY : maxFetchRetry;
+  }
+
+  @JsonProperty
+  public long getMaxCacheCapacityBytes()
+  {
+    return cacheManager.getMaxCacheCapacityBytes();
+  }
+
+  @JsonProperty
+  public long getMaxFetchCapacityBytes()
+  {
+    return maxFetchCapacityBytes;
+  }
+
+  @JsonProperty
+  public long getPrefetchTriggerBytes()
+  {
+    return prefetchTriggerBytes;
+  }
+
+  @JsonProperty
+  public long getFetchTimeout()
+  {
+    return fetchTimeout;
+  }
+
+  @JsonProperty
+  public int getMaxFetchRetry()
+  {
+    return maxFetchRetry;
   }
 
   @VisibleForTesting

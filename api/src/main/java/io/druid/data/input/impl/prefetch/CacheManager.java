@@ -89,4 +89,9 @@ class CacheManager<T>
   {
     return totalCachedBytes;
   }
+
+  long getMaxCacheCapacityBytes()
+  {
+    return maxCacheCapacityBytes;
+  }
 }
