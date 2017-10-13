@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.java.util.common.Cacheable;
 import io.druid.query.lookup.LookupExtractionFn;
-import io.druid.query.lookup.RegisteredLookupExtractionFn;
 
 import javax.annotation.Nullable;
 
@@ -41,7 +40,6 @@ import javax.annotation.Nullable;
     @JsonSubTypes.Type(name = "timeFormat", value = TimeFormatExtractionFn.class),
     @JsonSubTypes.Type(name = "identity", value = IdentityExtractionFn.class),
     @JsonSubTypes.Type(name = "lookup", value = LookupExtractionFn.class),
-    @JsonSubTypes.Type(name = "registeredLookup", value = RegisteredLookupExtractionFn.class),
     @JsonSubTypes.Type(name = "substring", value = SubstringDimExtractionFn.class),
     @JsonSubTypes.Type(name = "cascade", value = CascadeExtractionFn.class),
     @JsonSubTypes.Type(name = "stringFormat", value = StringFormatExtractionFn.class),
