@@ -41,7 +41,7 @@ public interface URIDataPuller
    *
    * @throws IOException
    */
-  public InputStream getInputStream(URI uri) throws IOException;
+  InputStream getInputStream(URI uri) throws IOException;
 
   /**
    * Returns an abstract "version" for the URI. The exact meaning of the version is left up to the implementation.
@@ -52,7 +52,7 @@ public interface URIDataPuller
    *
    * @throws IOException on error
    */
-  public String getVersion(URI uri) throws IOException;
+  String getVersion(URI uri) throws IOException;
 
   /**
    * Evaluates a Throwable to see if it is recoverable. This is expected to be used in conjunction with the other methods
@@ -60,5 +60,5 @@ public interface URIDataPuller
    *
    * @return Predicate function indicating if the Throwable is recoverable
    */
-  public Predicate<Throwable> shouldRetryPredicate();
+  Predicate<Throwable> shouldRetryPredicate();
 }

@@ -38,9 +38,9 @@ import javax.script.ScriptException;
 
 public class JavaScriptWorkerSelectStrategy implements WorkerSelectStrategy
 {
-  public static interface SelectorFunction
+  public interface SelectorFunction
   {
-    public String apply(WorkerTaskRunnerConfig config, ImmutableMap<String, ImmutableWorkerInfo> zkWorkers, Task task);
+    String apply(WorkerTaskRunnerConfig config, ImmutableMap<String, ImmutableWorkerInfo> zkWorkers, Task task);
   }
 
   private final String function;

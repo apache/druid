@@ -23,6 +23,6 @@ package io.druid.client.cache;
  */
 public interface CacheSerde<V>
 {
-  public byte[] serialize(V object);
-  public V deserialize(byte[] bytes);
+  byte[] serialize(V object);
+  V deserialize(byte[] bytes);
 }

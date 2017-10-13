@@ -30,9 +30,9 @@ import javax.annotation.Nullable;
  */
 public interface ComplexColumn extends BaseColumn
 {
-  public Class<?> getClazz();
-  public String getTypeName();
-  public Object getRowValue(int rowNum);
+  Class<?> getClazz();
+  String getTypeName();
+  Object getRowValue(int rowNum);
 
   @Override
   void close();

@@ -53,7 +53,7 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
    * a flag mechanism is used in CompressionFactory that involves subtracting the value 126 from the compression id
    * (see {@link CompressionFactory#FLAG_BOUND})
    */
-  public static enum CompressionStrategy
+  public enum CompressionStrategy
   {
     LZF((byte) 0x0) {
       @Override
@@ -162,7 +162,7 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
     }
   }
 
-  public static interface Decompressor
+  public interface Decompressor
   {
     /**
      * Implementations of this method are expected to call out.flip() after writing to the output buffer
@@ -171,12 +171,12 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
      * @param numBytes
      * @param out
      */
-    public void decompress(ByteBuffer in, int numBytes, ByteBuffer out);
+    void decompress(ByteBuffer in, int numBytes, ByteBuffer out);
 
-    public void decompress(ByteBuffer in, int numBytes, ByteBuffer out, int decompressedSize);
+    void decompress(ByteBuffer in, int numBytes, ByteBuffer out, int decompressedSize);
   }
 
-  public static interface Compressor
+  public interface Compressor
   {
     /**
      * Currently assumes buf is an array backed ByteBuffer
@@ -185,7 +185,7 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
      *
      * @return
      */
-    public byte[] compress(byte[] bytes);
+    byte[] compress(byte[] bytes);
   }
 
   public static class UncompressedCompressor implements Compressor
@@ -389,14 +389,14 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
     return converter.compare(o1.get(), o2.get());
   }
 
-  public static interface BufferConverter<T>
+  public interface BufferConverter<T>
   {
-    public T convert(ByteBuffer buf);
+    T convert(ByteBuffer buf);
 
-    public int compare(T lhs, T rhs);
+    int compare(T lhs, T rhs);
 
-    public int sizeOf(int count);
+    int sizeOf(int count);
 
-    public T combine(ByteBuffer into, T from);
+    T combine(ByteBuffer into, T from);
   }
 }

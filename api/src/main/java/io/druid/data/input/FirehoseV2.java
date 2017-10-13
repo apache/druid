@@ -61,12 +61,12 @@ public interface FirehoseV2 extends Closeable
    *
    * @return true if and when there is another row available, false if the stream has dried up
    */
-  public boolean advance();
+  boolean advance();
 
   /**
    * @return The current row
    */
-  public InputRow currRow();
+  InputRow currRow();
 
   /**
    * Returns a Committer that will "commit" everything read up to the point at which makeCommitter() is called.
@@ -86,5 +86,5 @@ public interface FirehoseV2 extends Closeable
    * A simple implementation of this interface might do nothing when run() is called,
    * and save proper commit information in metadata
    */
-  public Committer makeCommitter();
+  Committer makeCommitter();
 }

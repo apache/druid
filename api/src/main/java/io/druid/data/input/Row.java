@@ -43,7 +43,7 @@ public interface Row extends Comparable<Row>
    *
    * @return the timestamp from the epoch in milliseconds.
    */
-  public long getTimestampFromEpoch();
+  long getTimestampFromEpoch();
 
   /**
    * Returns the timestamp from the epoch as an org.joda.time.DateTime.  If the event happened _right now_, this would return the
@@ -51,7 +51,7 @@ public interface Row extends Comparable<Row>
    *
    * @return the timestamp from the epoch as an org.joda.time.DateTime object.
    */
-  public DateTime getTimestamp();
+  DateTime getTimestamp();
 
   /**
    * Returns the list of dimension values for the given column name.
@@ -61,7 +61,7 @@ public interface Row extends Comparable<Row>
    *
    * @return the list of values for the provided column name
    */
-  public List<String> getDimension(String dimension);
+  List<String> getDimension(String dimension);
 
   /**
    * Returns the raw dimension value for the given column name. This is different from {@link #getDimension} which
@@ -71,7 +71,7 @@ public interface Row extends Comparable<Row>
    *
    * @return the value of the provided column name
    */
-  public Object getRaw(String dimension);
+  Object getRaw(String dimension);
 
   /**
    * Returns the metric column value for the given column name. This method is different from {@link #getRaw} in two

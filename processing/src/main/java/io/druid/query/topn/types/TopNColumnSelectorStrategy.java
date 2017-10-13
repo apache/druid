@@ -91,7 +91,7 @@ public interface TopNColumnSelectorStrategy<ValueSelectorType, DimExtractionAggr
    * @return the number of processed rows (after postFilters are applied inside the cursor being processed)
    */
   long dimExtractionScanAndAggregate(
-      final TopNQuery query,
+      TopNQuery query,
       ValueSelectorType selector,
       Cursor cursor,
       Aggregator[][] rowSelector,

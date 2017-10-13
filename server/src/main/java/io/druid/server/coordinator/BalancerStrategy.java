@@ -25,11 +25,11 @@ import java.util.List;
 
 public interface BalancerStrategy
 {
-  public ServerHolder findNewSegmentHomeBalancer(final DataSegment proposalSegment, final List<ServerHolder> serverHolders);
+  ServerHolder findNewSegmentHomeBalancer(DataSegment proposalSegment, List<ServerHolder> serverHolders);
 
-  public ServerHolder findNewSegmentHomeReplicator(final DataSegment proposalSegment, final List<ServerHolder> serverHolders);
+  ServerHolder findNewSegmentHomeReplicator(DataSegment proposalSegment, List<ServerHolder> serverHolders);
 
-  public BalancerSegmentHolder pickSegmentToMove(final List<ServerHolder> serverHolders);
+  BalancerSegmentHolder pickSegmentToMove(List<ServerHolder> serverHolders);
 
-  public void emitStats(String tier, CoordinatorStats stats, List<ServerHolder> serverHolderList);
+  void emitStats(String tier, CoordinatorStats stats, List<ServerHolder> serverHolderList);
 }

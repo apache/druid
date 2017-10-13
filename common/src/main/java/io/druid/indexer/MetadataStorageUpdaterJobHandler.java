@@ -26,5 +26,5 @@ import java.util.List;
 
 public interface MetadataStorageUpdaterJobHandler
 {
-  public void publishSegments(String tableName, List<DataSegment> segments, ObjectMapper mapper);
+  void publishSegments(String tableName, List<DataSegment> segments, ObjectMapper mapper);
 }

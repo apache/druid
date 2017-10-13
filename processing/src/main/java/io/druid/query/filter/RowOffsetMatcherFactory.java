@@ -25,5 +25,5 @@ import io.druid.collections.bitmap.ImmutableBitmap;
  */
 public interface RowOffsetMatcherFactory
 {
-  public ValueMatcher makeRowOffsetMatcher(ImmutableBitmap bitmap);
+  ValueMatcher makeRowOffsetMatcher(ImmutableBitmap bitmap);
 }

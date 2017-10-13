@@ -26,11 +26,11 @@ import io.druid.query.monomorphicprocessing.HotLoopCallee;
  */
 public interface GenericColumn extends BaseColumn, HotLoopCallee
 {
-  public int length();
-  public ValueType getType();
+  int length();
+  ValueType getType();
 
   @CalledFromHotLoop
-  public String getStringSingleValueRow(int rowNum);
+  String getStringSingleValueRow(int rowNum);
 
   @CalledFromHotLoop
   float getFloatSingleValueRow(int rowNum);

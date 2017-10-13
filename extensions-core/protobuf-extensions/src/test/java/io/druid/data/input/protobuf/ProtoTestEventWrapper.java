@@ -221,7 +221,7 @@ public final class ProtoTestEventWrapper
     }
 
     @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
+    public com.google.protobuf.UnknownFieldSet
     getUnknownFields()
     {
       return this.unknownFields;
@@ -354,7 +354,7 @@ public final class ProtoTestEventWrapper
       }
     }
 
-    public static final com.google.protobuf.Descriptors.Descriptor
+    public static com.google.protobuf.Descriptors.Descriptor
     getDescriptor()
     {
       return io.druid.data.input.protobuf.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_descriptor;
@@ -403,7 +403,7 @@ public final class ProtoTestEventWrapper
       public static final int CATEGORY_TWO_VALUE = 2;
 
 
-      public final int getNumber()
+      public int getNumber()
       {
         return value;
       }
@@ -447,19 +447,19 @@ public final class ProtoTestEventWrapper
             }
           };
 
-      public final com.google.protobuf.Descriptors.EnumValueDescriptor
+      public com.google.protobuf.Descriptors.EnumValueDescriptor
       getValueDescriptor()
       {
         return getDescriptor().getValues().get(ordinal());
       }
 
-      public final com.google.protobuf.Descriptors.EnumDescriptor
+      public com.google.protobuf.Descriptors.EnumDescriptor
       getDescriptorForType()
       {
         return getDescriptor();
       }
 
-      public static final com.google.protobuf.Descriptors.EnumDescriptor
+      public static com.google.protobuf.Descriptors.EnumDescriptor
       getDescriptor()
       {
         return io.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.getDescriptor().getEnumTypes().get(0);
@@ -480,7 +480,7 @@ public final class ProtoTestEventWrapper
 
       private final int value;
 
-      private EventCategory(int value)
+      EventCategory(int value)
       {
         this.value = value;
       }
@@ -530,7 +530,7 @@ public final class ProtoTestEventWrapper
       }
 
       @java.lang.Override
-      public final com.google.protobuf.UnknownFieldSet
+      public com.google.protobuf.UnknownFieldSet
       getUnknownFields()
       {
         return this.unknownFields;
@@ -584,7 +584,7 @@ public final class ProtoTestEventWrapper
         }
       }
 
-      public static final com.google.protobuf.Descriptors.Descriptor
+      public static com.google.protobuf.Descriptors.Descriptor
       getDescriptor()
       {
         return io.druid.data.input.protobuf.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_Foo_descriptor;
@@ -651,7 +651,7 @@ public final class ProtoTestEventWrapper
 
       private byte memoizedIsInitialized = -1;
 
-      public final boolean isInitialized()
+      public boolean isInitialized()
       {
         byte isInitialized = memoizedIsInitialized;
         if (isInitialized == 1) {
@@ -857,7 +857,7 @@ public final class ProtoTestEventWrapper
           // @@protoc_insertion_point(builder_implements:prototest.ProtoTestEvent.Foo)
           io.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.FooOrBuilder
       {
-        public static final com.google.protobuf.Descriptors.Descriptor
+        public static com.google.protobuf.Descriptors.Descriptor
         getDescriptor()
         {
           return io.druid.data.input.protobuf.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_Foo_descriptor;
@@ -1005,7 +1005,7 @@ public final class ProtoTestEventWrapper
           return this;
         }
 
-        public final boolean isInitialized()
+        public boolean isInitialized()
         {
           if (!hasBar()) {
             return false;
@@ -1127,14 +1127,14 @@ public final class ProtoTestEventWrapper
           return this;
         }
 
-        public final Builder setUnknownFields(
+        public Builder setUnknownFields(
             final com.google.protobuf.UnknownFieldSet unknownFields
         )
         {
           return super.setUnknownFields(unknownFields);
         }
 
-        public final Builder mergeUnknownFields(
+        public Builder mergeUnknownFields(
             final com.google.protobuf.UnknownFieldSet unknownFields
         )
         {
@@ -1502,7 +1502,7 @@ public final class ProtoTestEventWrapper
 
     private byte memoizedIsInitialized = -1;
 
-    public final boolean isInitialized()
+    public boolean isInitialized()
     {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized == 1) {
@@ -1889,7 +1889,7 @@ public final class ProtoTestEventWrapper
         // @@protoc_insertion_point(builder_implements:prototest.ProtoTestEvent)
         io.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEventOrBuilder
     {
-      public static final com.google.protobuf.Descriptors.Descriptor
+      public static com.google.protobuf.Descriptors.Descriptor
       getDescriptor()
       {
         return io.druid.data.input.protobuf.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_descriptor;
@@ -2171,7 +2171,7 @@ public final class ProtoTestEventWrapper
         return this;
       }
 
-      public final boolean isInitialized()
+      public boolean isInitialized()
       {
         if (!hasEventType()) {
           return false;
@@ -3118,14 +3118,14 @@ public final class ProtoTestEventWrapper
         return barBuilder_;
       }
 
-      public final Builder setUnknownFields(
+      public Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields
       )
       {
         return super.setUnknownFields(unknownFields);
       }
 
-      public final Builder mergeUnknownFields(
+      public Builder mergeUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields
       )
       {

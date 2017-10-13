@@ -38,7 +38,7 @@ import java.util.Set;
 public class WrappedBitSetBitmapBitSetTest
 {
 
-  private static final WrappedBitSetBitmap defaultBitSet()
+  private static WrappedBitSetBitmap defaultBitSet()
   {
     return new WrappedBitSetBitmap(IntSetTestUtility.createSimpleBitSet(IntSetTestUtility.getSetBits()));
   }

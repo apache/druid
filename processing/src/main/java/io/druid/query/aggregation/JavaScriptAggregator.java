@@ -25,15 +25,15 @@ import java.util.List;
 
 public class JavaScriptAggregator implements Aggregator
 {
-  static interface ScriptAggregator
+  interface ScriptAggregator
   {
-    public double aggregate(double current, BaseObjectColumnValueSelector[] selectorList);
+    double aggregate(double current, BaseObjectColumnValueSelector[] selectorList);
 
-    public double combine(double a, double b);
+    double combine(double a, double b);
 
-    public double reset();
+    double reset();
 
-    public void close();
+    void close();
   }
 
   private final BaseObjectColumnValueSelector[] selectorList;

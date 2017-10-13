@@ -25,5 +25,5 @@ import io.druid.collections.spatial.ImmutableRTree;
  */
 public interface SpatialIndex
 {
-  public ImmutableRTree getRTree();
+  ImmutableRTree getRTree();
 }

@@ -28,7 +28,7 @@ import java.util.Map;
  */
 public class LegacyDimensionSpec extends DefaultDimensionSpec
 {
-  private static final String convertValue(Object dimension, String name)
+  private static String convertValue(Object dimension, String name)
   {
     final String retVal;
 
