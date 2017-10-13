@@ -20,6 +20,7 @@
 package io.druid.segment;
 
 import com.google.common.base.Predicate;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import io.druid.query.monomorphicprocessing.HotLoopCallee;
@@ -29,6 +30,7 @@ import javax.annotation.Nullable;
 
 /**
  */
+@PublicApi
 public interface DimensionSelector extends ColumnValueSelector, HotLoopCallee
 {
   public static int CARDINALITY_UNKNOWN = -1;
@@ -143,6 +145,9 @@ public interface DimensionSelector extends ColumnValueSelector, HotLoopCallee
   }
 
   /**
+   * Converts the current result of {@link #getRow()} into null, if the row is empty, a String, if the row has size 1,
+   * or a String[] array, if the row has size > 1, using {@link #lookupName(int)}.
+   *
    * This method is not the default implementation of {@link #getObject()} to minimize the chance that implementations
    * "forget" to override it with more optimized version.
    */

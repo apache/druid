@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import io.druid.guice.annotations.PublicApi;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.column.ColumnCapabilities;
 
@@ -27,6 +28,7 @@ import javax.annotation.Nullable;
 /**
  * Factory class for MetricSelectors
  */
+@PublicApi
 public interface ColumnSelectorFactory
 {
   DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec);

@@ -135,15 +135,10 @@ public class MapBasedRow implements Row
 
   private static String trimLeadingPlusOfLongString(String metricValueString)
   {
-    if (metricValueString.isEmpty()) {
-      return metricValueString;
-    }
-    if (metricValueString.charAt(0) == '+') {
-      if (metricValueString.length() > 1) {
-        char secondChar = metricValueString.charAt(1);
-        if (secondChar >= '0' && secondChar <= '9') {
-          metricValueString = metricValueString.substring(1);
-        }
+    if (metricValueString.length() > 1 && metricValueString.charAt(0) == '+') {
+      char secondChar = metricValueString.charAt(1);
+      if (secondChar >= '0' && secondChar <= '9') {
+        metricValueString = metricValueString.substring(1);
       }
     }
     return metricValueString;

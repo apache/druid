@@ -19,7 +19,6 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ObjectColumnSelector;
 
 /**
@@ -27,10 +26,4 @@ import io.druid.segment.ObjectColumnSelector;
  */
 public abstract class ObjectAggregateCombiner<T> implements AggregateCombiner<T>, ObjectColumnSelector<T>
 {
-
-  @Override
-  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-  {
-    // Usually AggregateCombiner has nothing to inspect
-  }
 }

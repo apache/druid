@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation;
 
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnValueSelector;
 
 /**
@@ -66,4 +67,10 @@ public interface AggregateCombiner<T> extends ColumnValueSelector<T>
    * @see AggregatorFactory#combine
    */
   void fold(ColumnValueSelector selector);
+
+  @Override
+  default void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    // Usually AggregateCombiner has nothing to inspect
+  }
 }

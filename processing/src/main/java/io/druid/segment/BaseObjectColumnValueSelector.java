@@ -19,6 +19,8 @@
 
 package io.druid.segment;
 
+import io.druid.guice.annotations.PublicApi;
+
 import javax.annotation.Nullable;
 
 /**
@@ -28,6 +30,7 @@ import javax.annotation.Nullable;
  *
  * All implementations of this interface MUST also implement {@link ColumnValueSelector}.
  */
+@PublicApi
 public interface BaseObjectColumnValueSelector<T>
 {
   @Nullable

@@ -24,17 +24,17 @@ import com.yahoo.sketches.theta.SetOperation;
 import com.yahoo.sketches.theta.Union;
 import io.druid.java.util.common.ISE;
 import io.druid.query.aggregation.Aggregator;
-import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.BaseObjectColumnValueSelector;
 
 import java.util.List;
 
 public class SketchAggregator implements Aggregator
 {
-  private final ColumnValueSelector selector;
+  private final BaseObjectColumnValueSelector selector;
   private final int size;
   private Union union;
 
-  public SketchAggregator(ColumnValueSelector selector, int size)
+  public SketchAggregator(BaseObjectColumnValueSelector selector, int size)
   {
     this.selector = selector;
     this.size = size;

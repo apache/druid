@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import io.druid.guice.annotations.PublicApi;
 import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import io.druid.query.monomorphicprocessing.HotLoopCallee;
 
@@ -29,6 +30,7 @@ import io.druid.query.monomorphicprocessing.HotLoopCallee;
  *
  * All implementations of this interface MUST also implement {@link ColumnValueSelector}.
  */
+@PublicApi
 public interface BaseLongColumnValueSelector extends HotLoopCallee
 {
   @CalledFromHotLoop
