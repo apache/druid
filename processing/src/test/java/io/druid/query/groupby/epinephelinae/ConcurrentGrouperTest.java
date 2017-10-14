@@ -31,11 +31,8 @@ import io.druid.query.groupby.epinephelinae.Grouper.BufferComparator;
 import io.druid.query.groupby.epinephelinae.Grouper.KeySerde;
 import io.druid.query.groupby.epinephelinae.Grouper.KeySerdeFactory;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.DoubleColumnSelector;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
-import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.ColumnCapabilities;
 import org.junit.AfterClass;
 import org.junit.Test;
@@ -160,31 +157,13 @@ public class ConcurrentGrouperTest
     }
 
     @Override
-    public FloatColumnSelector makeFloatColumnSelector(String columnName)
-    {
-      return null;
-    }
-
-    @Override
-    public LongColumnSelector makeLongColumnSelector(String columnName)
-    {
-      return null;
-    }
-
-    @Override
-    public ObjectColumnSelector makeObjectColumnSelector(String columnName)
+    public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
     {
       return null;
     }
 
     @Override
     public ColumnCapabilities getColumnCapabilities(String columnName)
-    {
-      return null;
-    }
-
-    @Override
-    public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
     {
       return null;
     }

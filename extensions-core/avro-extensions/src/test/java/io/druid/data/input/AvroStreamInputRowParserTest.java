@@ -316,9 +316,9 @@ public class AvroStreamInputRowParserTest
     assertEquals(Collections.singletonList(String.valueOf(SOME_RECORD_VALUE)), inputRow.getDimension("someRecord"));
 
     // test metrics
-    assertEquals(SOME_FLOAT_VALUE, inputRow.getFloatMetric("someFloat"), 0);
-    assertEquals(SOME_LONG_VALUE, inputRow.getLongMetric("someLong"));
-    assertEquals(SOME_INT_VALUE, inputRow.getLongMetric("someInt"));
+    assertEquals(SOME_FLOAT_VALUE, inputRow.getMetric("someFloat").floatValue(), 0);
+    assertEquals(SOME_LONG_VALUE, inputRow.getMetric("someLong"));
+    assertEquals(SOME_INT_VALUE, inputRow.getMetric("someInt"));
   }
 
   public static GenericRecord buildSomeAvroDatum() throws IOException

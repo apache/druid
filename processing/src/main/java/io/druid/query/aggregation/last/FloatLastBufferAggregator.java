@@ -22,17 +22,17 @@ package io.druid.query.aggregation.last;
 import io.druid.collections.SerializablePair;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
+import io.druid.segment.BaseFloatColumnValueSelector;
+import io.druid.segment.BaseLongColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
 public class FloatLastBufferAggregator implements BufferAggregator
 {
-  private final LongColumnSelector timeSelector;
-  private final FloatColumnSelector valueSelector;
+  private final BaseLongColumnValueSelector timeSelector;
+  private final BaseFloatColumnValueSelector valueSelector;
 
-  public FloatLastBufferAggregator(LongColumnSelector timeSelector, FloatColumnSelector valueSelector)
+  public FloatLastBufferAggregator(BaseLongColumnValueSelector timeSelector, BaseFloatColumnValueSelector valueSelector)
   {
     this.timeSelector = timeSelector;
     this.valueSelector = valueSelector;

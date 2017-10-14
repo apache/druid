@@ -21,6 +21,7 @@ package io.druid.query.aggregation;
 
 import io.druid.guice.annotations.ExtensionPoint;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 
 /**
@@ -37,6 +38,7 @@ public interface Aggregator extends Closeable
 {
   void aggregate();
   void reset();
+  @Nullable
   Object get();
   float getFloat();
   long getLong();

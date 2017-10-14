@@ -21,29 +21,11 @@ package io.druid.segment;
 
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
-public final class ZeroLongColumnSelector implements LongColumnSelector
+public abstract class TestObjectColumnSelector<T> implements ObjectColumnSelector<T>
 {
-  private static final ZeroLongColumnSelector INSTANCE = new ZeroLongColumnSelector();
-
-  private ZeroLongColumnSelector()
-  {
-    // No instantiation.
-  }
-
-  public static ZeroLongColumnSelector instance()
-  {
-    return INSTANCE;
-  }
-
-  @Override
-  public long getLong()
-  {
-    return 0;
-  }
-
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
-    // nothing to inspect
+    // Don't care about runtime shape in tests
   }
 }

@@ -20,9 +20,7 @@
 package io.druid.segment.column;
 
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.DoubleColumnSelector;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.data.IndexedDoubles;
 import io.druid.segment.data.ReadableOffset;
 
@@ -49,15 +47,15 @@ public class IndexedDoublesGenericColumn implements GenericColumn
   }
 
   @Override
-  public boolean hasMultipleValues()
-  {
-    return false;
-  }
-
-  @Override
   public String getStringSingleValueRow(int rowNum)
   {
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ColumnValueSelector makeColumnValueSelector(ReadableOffset offset)
+  {
+    return column.makeColumnValueSelector(offset);
   }
 
   @Override
@@ -67,33 +65,15 @@ public class IndexedDoublesGenericColumn implements GenericColumn
   }
 
   @Override
-  public FloatColumnSelector makeFloatSingleValueRowSelector(ReadableOffset offset)
-  {
-    return column.makeFloatColumnSelector(offset);
-  }
-
-  @Override
   public long getLongSingleValueRow(int rowNum)
   {
     return (long) column.get(rowNum);
   }
 
   @Override
-  public LongColumnSelector makeLongSingleValueRowSelector(ReadableOffset offset)
-  {
-    return column.makeLongColumnSelector(offset);
-  }
-
-  @Override
   public double getDoubleSingleValueRow(int rowNum)
   {
     return column.get(rowNum);
-  }
-
-  @Override
-  public DoubleColumnSelector makeDoubleSingleValueRowSelector(ReadableOffset offset)
-  {
-    return column.makeDoubleColumnSelector(offset);
   }
 
   @Override

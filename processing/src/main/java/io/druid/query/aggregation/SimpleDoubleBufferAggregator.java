@@ -21,20 +21,20 @@ package io.druid.query.aggregation;
 
 import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.DoubleColumnSelector;
+import io.druid.segment.BaseDoubleColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
 public abstract class SimpleDoubleBufferAggregator implements BufferAggregator
 {
-  protected final DoubleColumnSelector selector;
+  protected final BaseDoubleColumnValueSelector selector;
 
-  SimpleDoubleBufferAggregator(DoubleColumnSelector selector)
+  SimpleDoubleBufferAggregator(BaseDoubleColumnValueSelector selector)
   {
     this.selector = selector;
   }
 
-  public DoubleColumnSelector getSelector()
+  public BaseDoubleColumnValueSelector getSelector()
   {
     return selector;
   }

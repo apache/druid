@@ -19,8 +19,7 @@
 
 package io.druid.query.aggregation;
 
-import com.google.common.collect.Lists;
-import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.BaseObjectColumnValueSelector;
 
 import java.util.List;
 
@@ -28,7 +27,7 @@ public class JavaScriptAggregator implements Aggregator
 {
   interface ScriptAggregator
   {
-    double aggregate(double current, ObjectColumnSelector[] selectorList);
+    double aggregate(double current, BaseObjectColumnValueSelector[] selectorList);
 
     double combine(double a, double b);
 
@@ -37,14 +36,14 @@ public class JavaScriptAggregator implements Aggregator
     void close();
   }
 
-  private final ObjectColumnSelector[] selectorList;
+  private final BaseObjectColumnValueSelector[] selectorList;
   private final ScriptAggregator script;
 
   private double current;
 
-  public JavaScriptAggregator(List<ObjectColumnSelector> selectorList, ScriptAggregator script)
+  public JavaScriptAggregator(List<BaseObjectColumnValueSelector> selectorList, ScriptAggregator script)
   {
-    this.selectorList = Lists.newArrayList(selectorList).toArray(new ObjectColumnSelector[]{});
+    this.selectorList = selectorList.toArray(new BaseObjectColumnValueSelector[]{});
     this.script = script;
 
     this.current = script.reset();

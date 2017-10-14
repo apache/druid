@@ -53,13 +53,13 @@ public class FloatMinAggregatorFactory extends SimpleFloatAggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new FloatMinAggregator(getFloatColumnSelector(metricFactory, Float.POSITIVE_INFINITY));
+    return new FloatMinAggregator(makeColumnValueSelectorWithFloatDefault(metricFactory, Float.POSITIVE_INFINITY));
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new FloatMinBufferAggregator(getFloatColumnSelector(metricFactory, Float.POSITIVE_INFINITY));
+    return new FloatMinBufferAggregator(makeColumnValueSelectorWithFloatDefault(metricFactory, Float.POSITIVE_INFINITY));
   }
 
   @Override

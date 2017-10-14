@@ -19,38 +19,22 @@
 
 package io.druid.segment;
 
-import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.historical.HistoricalColumnSelector;
+import io.druid.guice.annotations.PublicApi;
 
-public final class ZeroFloatColumnSelector implements FloatColumnSelector, HistoricalColumnSelector<Float>
+import javax.annotation.Nullable;
+
+/**
+ * Object value selecting polymorphic "part" of the {@link ColumnValueSelector} interface. Users of {@link
+ * ColumnValueSelector#getObject()} are encouraged to reduce the parameter/field/etc. type to
+ * BaseObjectColumnValueSelector to make it impossible to accidently call any method other than {@link #getObject()}.
+ *
+ * All implementations of this interface MUST also implement {@link ColumnValueSelector}.
+ */
+@PublicApi
+public interface BaseObjectColumnValueSelector<T>
 {
-  private static final ZeroFloatColumnSelector INSTANCE = new ZeroFloatColumnSelector();
+  @Nullable
+  T getObject();
 
-  private ZeroFloatColumnSelector()
-  {
-    // No instantiation.
-  }
-
-  public static ZeroFloatColumnSelector instance()
-  {
-    return INSTANCE;
-  }
-
-  @Override
-  public float getFloat()
-  {
-    return 0.0f;
-  }
-
-  @Override
-  public double getDouble(int offset)
-  {
-    return 0.0;
-  }
-
-  @Override
-  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-  {
-    // nothing to inspect
-  }
+  Class<T> classOfObject();
 }

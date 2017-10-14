@@ -17,41 +17,22 @@
  * under the License.
  */
 
-package io.druid.query.aggregation;
+package io.druid.segment;
 
-import io.druid.segment.BaseFloatColumnValueSelector;
-
-import java.nio.ByteBuffer;
+import io.druid.guice.annotations.PublicApi;
+import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
+import io.druid.query.monomorphicprocessing.HotLoopCallee;
 
 /**
+ * Long value selecting polymorphic "part" of the {@link ColumnValueSelector} interface. Users of {@link
+ * ColumnValueSelector#getLong()} are encouraged to reduce the parameter/field/etc. type to BaseLongColumnValueSelector
+ * to make it impossible to accidently call any method other than {@link #getLong()}.
+ *
+ * All implementations of this interface MUST also implement {@link ColumnValueSelector}.
  */
-public class FloatMinBufferAggregator extends SimpleFloatBufferAggregator
+@PublicApi
+public interface BaseLongColumnValueSelector extends HotLoopCallee
 {
-
-  FloatMinBufferAggregator(BaseFloatColumnValueSelector selector)
-  {
-    super(selector);
-  }
-
-  @Override
-  public void init(ByteBuffer buf, int position)
-  {
-    buf.putFloat(position, Float.POSITIVE_INFINITY);
-  }
-
-  @Override
-  public void putFirst(ByteBuffer buf, int position, float value)
-  {
-    if (!Float.isNaN(value)) {
-      buf.putFloat(position, value);
-    } else {
-      init(buf, position);
-    }
-  }
-
-  @Override
-  public void aggregate(ByteBuffer buf, int position, float value)
-  {
-    buf.putFloat(position, Math.min(buf.getFloat(position), value));
-  }
+  @CalledFromHotLoop
+  long getLong();
 }

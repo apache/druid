@@ -127,7 +127,7 @@ public class DatasourceRecordReaderTest
 
       Assert.assertEquals(expected.get("time"), actual.getTimestamp());
       Assert.assertEquals(expected.get("host"), actual.getDimension("host"));
-      Assert.assertEquals(expected.get("visited_sum"), actual.getLongMetric("visited_sum"));
+      Assert.assertEquals(expected.get("visited_sum"), actual.getMetric("visited_sum"));
       Assert.assertEquals(
           (Double) expected.get("unique_hosts"),
           (Double) HyperUniquesAggregatorFactory.estimateCardinality(actual.getRaw("unique_hosts"), false),

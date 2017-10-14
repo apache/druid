@@ -31,17 +31,14 @@ import io.druid.query.extraction.BucketExtractionFn;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.BaseFloatColumnValueSelector;
+import io.druid.segment.BaseLongColumnValueSelector;
+import io.druid.segment.BaseObjectColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.DimensionSelectorUtils;
-import io.druid.segment.DoubleColumnSelector;
-import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.IdLookup;
-import io.druid.segment.LongColumnSelector;
-import io.druid.segment.ObjectColumnSelector;
-import io.druid.segment.TestDoubleColumnSelector;
-import io.druid.segment.TestFloatColumnSelector;
 import io.druid.segment.TestHelper;
 import io.druid.segment.TestLongColumnSelector;
 import io.druid.segment.VirtualColumn;
@@ -84,14 +81,14 @@ public class VirtualColumnsTest
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("No such virtual column[bar]");
 
-    virtualColumns.makeObjectColumnSelector("bar", null);
+    virtualColumns.makeColumnValueSelector("bar", null);
   }
 
   @Test
   public void testMakeSelectors()
   {
     final VirtualColumns virtualColumns = makeVirtualColumns();
-    final ObjectColumnSelector objectSelector = virtualColumns.makeObjectColumnSelector("expr", null);
+    final BaseObjectColumnValueSelector objectSelector = virtualColumns.makeColumnValueSelector("expr", null);
     final DimensionSelector dimensionSelector = virtualColumns.makeDimensionSelector(
         new DefaultDimensionSpec("expr", "x"),
         null
@@ -100,8 +97,8 @@ public class VirtualColumnsTest
         new ExtractionDimensionSpec("expr", "x", new BucketExtractionFn(1.0, 0.5)),
         null
     );
-    final FloatColumnSelector floatSelector = virtualColumns.makeFloatColumnSelector("expr", null);
-    final LongColumnSelector longSelector = virtualColumns.makeLongColumnSelector("expr", null);
+    final BaseFloatColumnValueSelector floatSelector = virtualColumns.makeColumnValueSelector("expr", null);
+    final BaseLongColumnValueSelector longSelector = virtualColumns.makeColumnValueSelector("expr", null);
 
     Assert.assertEquals(1L, objectSelector.getObject());
     Assert.assertEquals("1", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
@@ -114,13 +111,13 @@ public class VirtualColumnsTest
   public void testMakeSelectorsWithDotSupport()
   {
     final VirtualColumns virtualColumns = makeVirtualColumns();
-    final ObjectColumnSelector objectSelector = virtualColumns.makeObjectColumnSelector("foo.5", null);
+    final BaseObjectColumnValueSelector objectSelector = virtualColumns.makeColumnValueSelector("foo.5", null);
     final DimensionSelector dimensionSelector = virtualColumns.makeDimensionSelector(
         new DefaultDimensionSpec("foo.5", "x"),
         null
     );
-    final FloatColumnSelector floatSelector = virtualColumns.makeFloatColumnSelector("foo.5", null);
-    final LongColumnSelector longSelector = virtualColumns.makeLongColumnSelector("foo.5", null);
+    final BaseFloatColumnValueSelector floatSelector = virtualColumns.makeColumnValueSelector("foo.5", null);
+    final BaseLongColumnValueSelector longSelector = virtualColumns.makeColumnValueSelector("foo.5", null);
 
     Assert.assertEquals(5L, objectSelector.getObject());
     Assert.assertEquals("5", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
@@ -132,13 +129,13 @@ public class VirtualColumnsTest
   public void testMakeSelectorsWithDotSupportBaseNameOnly()
   {
     final VirtualColumns virtualColumns = makeVirtualColumns();
-    final ObjectColumnSelector objectSelector = virtualColumns.makeObjectColumnSelector("foo", null);
+    final BaseObjectColumnValueSelector objectSelector = virtualColumns.makeColumnValueSelector("foo", null);
     final DimensionSelector dimensionSelector = virtualColumns.makeDimensionSelector(
         new DefaultDimensionSpec("foo", "x"),
         null
     );
-    final FloatColumnSelector floatSelector = virtualColumns.makeFloatColumnSelector("foo", null);
-    final LongColumnSelector longSelector = virtualColumns.makeLongColumnSelector("foo", null);
+    final BaseFloatColumnValueSelector floatSelector = virtualColumns.makeColumnValueSelector("foo", null);
+    final BaseLongColumnValueSelector longSelector = virtualColumns.makeColumnValueSelector("foo", null);
 
     Assert.assertEquals(-1L, objectSelector.getObject());
     Assert.assertEquals("-1", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
@@ -307,29 +304,9 @@ public class VirtualColumnsTest
     }
 
     @Override
-    public ObjectColumnSelector makeObjectColumnSelector(String columnName, ColumnSelectorFactory factory)
-    {
-      final LongColumnSelector selector = makeLongColumnSelector(columnName, factory);
-      return new ObjectColumnSelector()
-      {
-        @Override
-        public Class classOfObject()
-        {
-          return Long.class;
-        }
-
-        @Override
-        public Object getObject()
-        {
-          return selector.getLong();
-        }
-      };
-    }
-
-    @Override
     public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec, ColumnSelectorFactory factory)
     {
-      final LongColumnSelector selector = makeLongColumnSelector(dimensionSpec.getDimension(), factory);
+      final BaseLongColumnValueSelector selector = makeColumnValueSelector(dimensionSpec.getDimension(), factory);
       final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
       final DimensionSelector dimensionSelector = new DimensionSelector()
       {
@@ -389,27 +366,26 @@ public class VirtualColumnsTest
         {
           // Don't care about runtime shape in tests
         }
+
+        @Nullable
+        @Override
+        public Object getObject()
+        {
+          return lookupName(0);
+        }
+
+        @Override
+        public Class classOfObject()
+        {
+          return String.class;
+        }
       };
 
       return dimensionSpec.decorate(dimensionSelector);
     }
 
     @Override
-    public FloatColumnSelector makeFloatColumnSelector(String columnName, ColumnSelectorFactory factory)
-    {
-      final ColumnValueSelector selector = makeLongColumnSelector(columnName, factory);
-      return new TestFloatColumnSelector()
-      {
-        @Override
-        public float getFloat()
-        {
-          return selector.getFloat();
-        }
-      };
-    }
-
-    @Override
-    public LongColumnSelector makeLongColumnSelector(String columnName, ColumnSelectorFactory factory)
+    public ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelectorFactory factory)
     {
       final String subColumn = VirtualColumns.splitColumnName(columnName).rhs;
       final Long boxed = subColumn == null ? null : Longs.tryParse(subColumn);
@@ -420,21 +396,6 @@ public class VirtualColumnsTest
         public long getLong()
         {
           return theLong;
-        }
-      };
-    }
-
-    @Override
-    public DoubleColumnSelector makeDoubleColumnSelector(String columnName, ColumnSelectorFactory factory)
-    {
-      final ColumnValueSelector selector = makeLongColumnSelector(columnName, factory);
-      return new TestDoubleColumnSelector()
-      {
-
-        @Override
-        public double getDouble()
-        {
-          return selector.getDouble();
         }
       };
     }
