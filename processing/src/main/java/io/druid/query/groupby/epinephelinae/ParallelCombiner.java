@@ -214,7 +214,7 @@ public class ParallelCombiner<KeyType>
         if (i < numBuffers) {
           return Groupers.getSlice(combineBuffer, sliceSize, i++);
         } else {
-          throw new ISE("Requested number of buffer slices exceeds the planned one");
+          throw new ISE("Requested number[%d] of buffer slices exceeds the planned one[%d]", i++, numBuffers);
         }
       }
     };
@@ -250,7 +250,13 @@ public class ParallelCombiner<KeyType>
       }
     }
 
-    throw new ISE("Cannot find a proper leaf combine degree. Try increasing druid.processing.buffer.sizeBytes.");
+    throw new ISE(
+        "Cannot find a proper leaf combine degree for the combining tree. "
+        + "Each node of the combining tree requires a buffer of [%d] bytes. "
+        + "Try increasing druid.processing.buffer.sizeBytes for larger buffer or "
+        + "druid.query.groupBy.intermediateCombineDegree for a smaller tree",
+        requiredMinimumBufferCapacity
+    );
   }
 
   /**

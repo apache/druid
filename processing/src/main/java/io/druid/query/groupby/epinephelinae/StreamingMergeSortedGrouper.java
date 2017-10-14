@@ -365,7 +365,7 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
   public void finish()
   {
     increaseWriteIndex();
-    // Once finished is set, curWirteIndex must not be changed. This guarantees that the remaining number of items in
+    // Once finished is set, curWriteIndex must not be changed. This guarantees that the remaining number of items in
     // the array is always decreased as the reading thread proceeds. See hasNext() and remaining() below.
     finished = true;
   }
