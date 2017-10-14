@@ -162,7 +162,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
     Preconditions.checkArgument(concurrencyHint > 0, "concurrencyHint > 0");
     Preconditions.checkArgument(
         concurrencyHint >= numParallelCombineThreads,
-        "numParallelCombineThreads[%d] cannot larger than concurrencyHint[%d]",
+        "numParallelCombineThreads[%s] cannot larger than concurrencyHint[%s]",
         numParallelCombineThreads,
         concurrencyHint
     );

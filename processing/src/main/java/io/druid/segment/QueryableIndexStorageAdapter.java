@@ -35,11 +35,11 @@ import io.druid.query.DefaultBitmapResultFactory;
 import io.druid.query.QueryMetrics;
 import io.druid.query.filter.Filter;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.column.BaseColumn;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ComplexColumn;
-import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.GenericColumn;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.Offset;
@@ -366,9 +366,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       final Offset baseOffset = offset.clone();
 
       // Column caches shared amongst all cursors in this sequence.
-      final Map<String, DictionaryEncodedColumn> dictionaryColumnCache = new HashMap<>();
-      final Map<String, GenericColumn> genericColumnCache = new HashMap<>();
-      final Map<String, Object> objectColumnCache = new HashMap<>();
+      final Map<String, BaseColumn> columnCache = new HashMap<>();
 
       final GenericColumn timestamps = index.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn();
 
@@ -430,9 +428,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       descending,
                       closer,
                       baseCursorOffset.getBaseReadableOffset(),
-                      dictionaryColumnCache,
-                      genericColumnCache,
-                      objectColumnCache
+                      columnCache
                   );
                   final DateTime myBucket = gran.toDateTime(inputInterval.getStartMillis());
 

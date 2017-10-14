@@ -41,7 +41,7 @@ import io.druid.client.ServerInventoryView;
 import io.druid.client.coordinator.Coordinator;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.common.config.JacksonConfigManager;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.curator.discovery.ServiceAnnouncer;
 import io.druid.discovery.DruidLeaderSelector;
 import io.druid.guice.ManageLifecycle;

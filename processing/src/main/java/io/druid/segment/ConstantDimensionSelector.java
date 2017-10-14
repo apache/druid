@@ -113,6 +113,19 @@ public class ConstantDimensionSelector implements SingleValueHistoricalDimension
     return value.equals(name) ? 0 : -1;
   }
 
+  @Nullable
+  @Override
+  public Object getObject()
+  {
+    return value;
+  }
+
+  @Override
+  public Class classOfObject()
+  {
+    return String.class;
+  }
+
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {

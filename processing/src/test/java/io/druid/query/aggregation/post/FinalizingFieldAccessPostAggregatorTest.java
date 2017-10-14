@@ -235,8 +235,8 @@ public class FinalizingFieldAccessPostAggregatorTest
     );
 
     MapBasedRow row = (MapBasedRow) Sequences.toList(seq, Lists.newArrayList()).get(0);
-    Assert.assertEquals(3.0, row.getFloatMetric("hll_market"), 0.1);
-    Assert.assertEquals(9.0, row.getFloatMetric("hll_quality"), 0.1);
-    Assert.assertEquals(12.0, row.getFloatMetric("uniq_add"), 0.1);
+    Assert.assertEquals(3.0, row.getMetric("hll_market").floatValue(), 0.1);
+    Assert.assertEquals(9.0, row.getMetric("hll_quality").floatValue(), 0.1);
+    Assert.assertEquals(12.0, row.getMetric("uniq_add").floatValue(), 0.1);
   }
 }

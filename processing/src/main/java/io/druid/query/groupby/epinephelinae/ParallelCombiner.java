@@ -40,6 +40,7 @@ import io.druid.query.groupby.epinephelinae.Grouper.Entry;
 import io.druid.query.groupby.epinephelinae.Grouper.KeySerdeFactory;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
@@ -458,67 +459,16 @@ public class ParallelCombiner<KeyType>
     }
 
     @Override
-    public FloatColumnSelector makeFloatColumnSelector(String columnName)
-    {
-      return new FloatColumnSelector()
-      {
-        @Override
-        public float getFloat()
-        {
-          return ((Number) values[checkAndGetColumnIndex(columnName)]).floatValue();
-        }
-
-        @Override
-        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-        {
-          // do nothing
-        }
-      };
-    }
-
-    @Override
-    public LongColumnSelector makeLongColumnSelector(String columnName)
-    {
-      return new LongColumnSelector()
-      {
-        @Override
-        public long getLong()
-        {
-          return ((Number) values[checkAndGetColumnIndex(columnName)]).longValue();
-        }
-
-        @Override
-        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-        {
-          // do nothing
-        }
-      };
-    }
-
-    @Override
-    public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
-    {
-      return new DoubleColumnSelector()
-      {
-        @Override
-        public double getDouble()
-        {
-          return ((Number) values[checkAndGetColumnIndex(columnName)]).doubleValue();
-        }
-
-        @Override
-        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-        {
-          // do nothing
-        }
-      };
-    }
-
-    @Override
-    public ObjectColumnSelector makeObjectColumnSelector(String columnName)
+    public ColumnValueSelector makeColumnValueSelector(String columnName)
     {
       return new ObjectColumnSelector()
       {
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          // do nothing
+        }
+
         @Override
         public Class classOfObject()
         {

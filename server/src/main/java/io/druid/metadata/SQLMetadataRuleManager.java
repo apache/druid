@@ -36,7 +36,7 @@ import io.druid.audit.AuditEntry;
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
 import io.druid.client.DruidServer;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.DateTimes;

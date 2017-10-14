@@ -19,7 +19,7 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.BaseFloatColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
@@ -28,7 +28,7 @@ import java.nio.ByteBuffer;
 public class FloatMinBufferAggregator extends SimpleFloatBufferAggregator
 {
 
-  FloatMinBufferAggregator(FloatColumnSelector selector)
+  FloatMinBufferAggregator(BaseFloatColumnValueSelector selector)
   {
     super(selector);
   }

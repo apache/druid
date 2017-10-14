@@ -19,7 +19,7 @@
 
 package io.druid.java.util.common;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.UnsupportedEncodingException;
@@ -115,5 +115,14 @@ public class StringUtilsTest
   {
     Assert.assertEquals("test%d; format", StringUtils.nonStrictFormat("test%d", "format"));
     Assert.assertEquals("test%s%s; format", StringUtils.nonStrictFormat("test%s%s", "format"));
+  }
+
+  @Test
+  public void testRemoveCharacter()
+  {
+    Assert.assertEquals("123", StringUtils.removeChar("123", ','));
+    Assert.assertEquals("123", StringUtils.removeChar("123,", ','));
+    Assert.assertEquals("123", StringUtils.removeChar(",1,,2,3,", ','));
+    Assert.assertEquals("", StringUtils.removeChar(",,", ','));
   }
 }

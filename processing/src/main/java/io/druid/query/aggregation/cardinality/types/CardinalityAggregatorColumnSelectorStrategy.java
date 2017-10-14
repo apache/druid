@@ -22,10 +22,8 @@ package io.druid.query.aggregation.cardinality.types;
 import com.google.common.hash.Hasher;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.query.dimension.ColumnSelectorStrategy;
-import io.druid.segment.ColumnValueSelector;
 
-public interface CardinalityAggregatorColumnSelectorStrategy<ValueSelectorType extends ColumnValueSelector> extends
-    ColumnSelectorStrategy
+public interface CardinalityAggregatorColumnSelectorStrategy<ValueSelectorType> extends ColumnSelectorStrategy
 {
   /***
    * Retrieve the current row from dimSelector and add the row values to the hasher.

@@ -144,7 +144,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
       while (firehose.hasMore()) {
         final InputRow row = firehose.nextRow();
         count++;
-        sum += row.getLongMetric(METRICS[0]);
+        sum += row.getMetric(METRICS[0]).longValue();
       }
     }
 
