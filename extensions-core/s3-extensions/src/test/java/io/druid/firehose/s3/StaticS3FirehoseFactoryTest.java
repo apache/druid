@@ -19,8 +19,6 @@
 
 package io.druid.firehose.s3;
 
-
-
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;

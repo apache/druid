@@ -32,7 +32,7 @@ import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.concurrent.TaskThreadPriority;
 import io.druid.guice.annotations.Self;
 import io.druid.indexing.common.TaskLocation;
