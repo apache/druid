@@ -688,7 +688,7 @@ public class ScanQueryRunnerTest
     return expected;
   }
 
-  private static void verify(
+  public static void verify(
       Iterable<ScanResultValue> expectedResults,
       Iterable<ScanResultValue> actualResults
   )
