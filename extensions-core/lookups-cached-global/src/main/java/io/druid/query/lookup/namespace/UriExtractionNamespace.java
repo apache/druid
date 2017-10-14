@@ -250,7 +250,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
       @JsonSubTypes.Type(name = "customJson", value = JSONFlatDataParser.class),
       @JsonSubTypes.Type(name = "simpleJson", value = ObjectMapperFlatDataParser.class)
   })
-  public static interface FlatDataParser
+  public interface FlatDataParser
   {
     Parser<String, String> getParser();
   }

@@ -117,7 +117,7 @@ public interface Grouper<KeyType> extends Closeable
    *
    * @return entry iterator
    */
-  CloseableIterator<Entry<KeyType>> iterator(final boolean sorted);
+  CloseableIterator<Entry<KeyType>> iterator(boolean sorted);
 
   class Entry<T>
   {

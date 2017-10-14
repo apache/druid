@@ -40,7 +40,7 @@ public interface LookupExtractorFactory extends Supplier<LookupExtractor>
    *
    * @return Returns false if is not successfully started the {@link LookupExtractor} otherwise returns true.
    */
-  public boolean start();
+  boolean start();
 
   /**
    * <p>
@@ -49,7 +49,7 @@ public interface LookupExtractorFactory extends Supplier<LookupExtractor>
    * </p>
    * @return Returns false if not successfully closed the {@link LookupExtractor} otherwise returns true
    */
-  public boolean close();
+  boolean close();
 
   /**
    * This method is deprecated and is not removed only to allow 0.10.0 to 0.10.1 transition. It is not used
@@ -63,5 +63,5 @@ public interface LookupExtractorFactory extends Supplier<LookupExtractor>
    * This will be called once per HTTP request to introspect the actual lookup.
    */
   @Nullable
-  public LookupIntrospectHandler getIntrospectHandler();
+  LookupIntrospectHandler getIntrospectHandler();
 }

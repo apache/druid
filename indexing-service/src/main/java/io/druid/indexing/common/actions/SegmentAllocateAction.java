@@ -24,10 +24,12 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
-import io.druid.indexing.common.TaskLock;
+import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import io.druid.indexing.overlord.LockResult;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.logger.Logger;
@@ -254,14 +256,19 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
         rowInterval,
         tryInterval
     );
-    final TaskLock tryLock = toolbox.getTaskLockbox().tryLock(task, tryInterval).orNull();
-    if (tryLock != null) {
+    final LockResult lockResult = toolbox.getTaskLockbox().tryLock(TaskLockType.EXCLUSIVE, task, tryInterval);
+    if (lockResult.isRevoked()) {
+      // We had acquired a lock but it was preempted by other locks
+      throw new ISE("The lock for interval[%s] is preempted and no longer valid", tryInterval);
+    }
+
+    if (lockResult.isOk()) {
       final SegmentIdentifier identifier = toolbox.getIndexerMetadataStorageCoordinator().allocatePendingSegment(
           dataSource,
           sequenceName,
           previousSegmentId,
           tryInterval,
-          tryLock.getVersion()
+          lockResult.getTaskLock().getVersion()
       );
       if (identifier != null) {
         return identifier;

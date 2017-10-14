@@ -23,5 +23,5 @@ package io.druid.java.util.common.guava;
  */
 public interface Accumulator<AccumulatedType, InType>
 {
-  public AccumulatedType accumulate(AccumulatedType accumulated, InType in);
+  AccumulatedType accumulate(AccumulatedType accumulated, InType in);
 }

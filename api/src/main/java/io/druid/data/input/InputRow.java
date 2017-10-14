@@ -38,5 +38,5 @@ public interface InputRow extends Row
    *
    * @return the dimensions that exist in this row.
    */
-  public List<String> getDimensions();
+  List<String> getDimensions();
 }

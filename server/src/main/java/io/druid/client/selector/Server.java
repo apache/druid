@@ -23,8 +23,8 @@ package io.druid.client.selector;
  */
 public interface Server
 {
-  public String getScheme();
-  public String getHost();
-  public String getAddress();
-  public int getPort();
+  String getScheme();
+  String getHost();
+  String getAddress();
+  int getPort();
 }

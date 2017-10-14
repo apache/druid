@@ -269,7 +269,9 @@ public class LookupCoordinatorResource
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
   @Path("/{tier}")
   public Response getSpecificTier(
-      @PathParam("tier") String tier
+      @PathParam("tier") String tier,
+      @DefaultValue("false") @QueryParam("detailed") boolean detailed
+
   )
   {
     try {
@@ -290,7 +292,11 @@ public class LookupCoordinatorResource
                        .entity(ServletResourceUtils.sanitizeException(new RE("Tier [%s] not found", tier)))
                        .build();
       }
-      return Response.ok().entity(tierLookups.keySet()).build();
+      if (detailed) {
+        return Response.ok().entity(tierLookups).build();
+      } else {
+        return Response.ok().entity(tierLookups.keySet()).build();
+      }
     }
     catch (Exception e) {
       LOG.error(e, "Error getting tier [%s]", tier);

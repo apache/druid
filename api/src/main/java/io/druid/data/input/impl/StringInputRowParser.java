@@ -22,6 +22,7 @@ package io.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
+import com.google.common.base.Preconditions;
 import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.parsers.ParseException;
@@ -43,10 +44,10 @@ public class StringInputRowParser implements ByteBufferInputRowParser
 
   private final ParseSpec parseSpec;
   private final MapInputRowParser mapParser;
-  private final Parser<String, Object> parser;
   private final Charset charset;
 
-  private CharBuffer chars = null;
+  private Parser<String, Object> parser;
+  private CharBuffer chars;
 
   @JsonCreator
   public StringInputRowParser(
@@ -54,9 +55,8 @@ public class StringInputRowParser implements ByteBufferInputRowParser
       @JsonProperty("encoding") String encoding
   )
   {
-    this.parseSpec = parseSpec;
+    this.parseSpec = Preconditions.checkNotNull(parseSpec, "parseSpec");
     this.mapParser = new MapInputRowParser(parseSpec);
-    this.parser = parseSpec.makeParser();
 
     if (encoding != null) {
       this.charset = Charset.forName(encoding);
@@ -124,8 +124,18 @@ public class StringInputRowParser implements ByteBufferInputRowParser
     return theMap;
   }
 
+  public void initializeParser()
+  {
+    if (parser == null) {
+      // parser should be created when it is really used to avoid unnecessary initialization of the underlying
+      // parseSpec.
+      parser = parseSpec.makeParser();
+    }
+  }
+
   public void startFileFromBeginning()
   {
+    initializeParser();
     parser.startFileFromBeginning();
   }
 
@@ -138,6 +148,7 @@ public class StringInputRowParser implements ByteBufferInputRowParser
   @Nullable
   private Map<String, Object> parseString(@Nullable String inputString)
   {
+    initializeParser();
     return parser.parse(inputString);
   }
 

@@ -31,7 +31,7 @@ import javax.annotation.Nullable;
  */
 public interface CursorFactory
 {
-  public Sequence<Cursor> makeCursors(
+  Sequence<Cursor> makeCursors(
       Filter filter,
       Interval interval,
       VirtualColumns virtualColumns,

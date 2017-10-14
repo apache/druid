@@ -140,14 +140,14 @@ public class PolyBindTest
     }
   }
 
-  public static interface Gogo
+  public interface Gogo
   {
-    public String go();
+    String go();
   }
 
-  public static interface GogoSally
+  public interface GogoSally
   {
-    public String go();
+    String go();
   }
 
   public static class GoA implements Gogo, GogoSally

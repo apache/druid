@@ -66,8 +66,13 @@ public class TimestampParseExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public ExprEval eval(final ObjectBinding bindings)
       {
+        final String value = arg.eval(bindings).asString();
+        if (value == null) {
+          return ExprEval.of(null);
+        }
+
         try {
-          return ExprEval.of(formatter.parse(arg.eval(bindings).asString()).getMillis());
+          return ExprEval.of(formatter.parse(value).getMillis());
         }
         catch (IllegalArgumentException e) {
           // Catch exceptions potentially thrown by formatter.parseDateTime. Our docs say that unparseable timestamps

@@ -100,6 +100,37 @@ public class DruidTypeSystem implements RelDataTypeSystem
   }
 
   @Override
+  public RelDataType deriveAvgAggType(
+      final RelDataTypeFactory typeFactory,
+      final RelDataType argumentType
+  )
+  {
+    return RelDataTypeSystem.DEFAULT.deriveAvgAggType(typeFactory, argumentType);
+  }
+
+  @Override
+  public RelDataType deriveCovarType(
+      final RelDataTypeFactory typeFactory,
+      final RelDataType arg0Type,
+      final RelDataType arg1Type
+  )
+  {
+    return RelDataTypeSystem.DEFAULT.deriveCovarType(typeFactory, arg0Type, arg1Type);
+  }
+
+  @Override
+  public RelDataType deriveFractionalRankType(final RelDataTypeFactory typeFactory)
+  {
+    return RelDataTypeSystem.DEFAULT.deriveFractionalRankType(typeFactory);
+  }
+
+  @Override
+  public RelDataType deriveRankType(final RelDataTypeFactory typeFactory)
+  {
+    return RelDataTypeSystem.DEFAULT.deriveRankType(typeFactory);
+  }
+
+  @Override
   public boolean isSchemaCaseSensitive()
   {
     return RelDataTypeSystem.DEFAULT.isSchemaCaseSensitive();

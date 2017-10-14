@@ -26,5 +26,5 @@ import io.druid.guice.annotations.PublicApi;
 @PublicApi
 public interface MetricManipulationFn
 {
-  public Object manipulate(AggregatorFactory factory, Object object);
+  Object manipulate(AggregatorFactory factory, Object object);
 }
