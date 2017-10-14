@@ -34,7 +34,7 @@ import com.metamx.metrics.JvmMonitor;
 import com.metamx.metrics.Monitor;
 import com.metamx.metrics.MonitorScheduler;
 import com.metamx.metrics.SysMonitor;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.guice.DruidBinders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;

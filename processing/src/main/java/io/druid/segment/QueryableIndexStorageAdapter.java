@@ -35,6 +35,7 @@ import io.druid.query.DefaultBitmapResultFactory;
 import io.druid.query.QueryMetrics;
 import io.druid.query.filter.Filter;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.column.BaseColumn;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
@@ -51,7 +52,9 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -362,6 +365,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     {
       final Offset baseOffset = offset.clone();
 
+      // Column caches shared amongst all cursors in this sequence.
+      final Map<String, BaseColumn> columnCache = new HashMap<>();
+
       final GenericColumn timestamps = index.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn();
 
       final Closer closer = Closer.create();
@@ -421,7 +427,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       virtualColumns,
                       descending,
                       closer,
-                      baseCursorOffset.getBaseReadableOffset()
+                      baseCursorOffset.getBaseReadableOffset(),
+                      columnCache
                   );
                   final DateTime myBucket = gran.toDateTime(inputInterval.getStartMillis());
 

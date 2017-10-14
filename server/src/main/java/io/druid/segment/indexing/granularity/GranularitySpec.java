@@ -47,14 +47,14 @@ public interface GranularitySpec
    *
    * @return set of all time groups
    */
-  public Optional<SortedSet<Interval>> bucketIntervals();
+  Optional<SortedSet<Interval>> bucketIntervals();
 
   /**
    * Returns user provided intervals as-is state. used for configuring granular path spec
    *
    * @return
    */
-  public List<Interval> inputIntervals();
+  List<Interval> inputIntervals();
 
   /**
    * Time-grouping interval corresponding to some instant, if any.
@@ -63,13 +63,13 @@ public interface GranularitySpec
    *
    * @return optional time interval
    */
-  public Optional<Interval> bucketInterval(DateTime dt);
+  Optional<Interval> bucketInterval(DateTime dt);
 
   Granularity getSegmentGranularity();
 
   boolean isRollup();
 
-  public Granularity getQueryGranularity();
+  Granularity getQueryGranularity();
 
   GranularitySpec withIntervals(List<Interval> inputIntervals);
 }

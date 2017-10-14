@@ -22,7 +22,7 @@ package io.druid.firehose.cloudfiles;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.data.input.impl.PrefetchableTextFilesFirehoseFactory;
+import io.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.storage.cloudfiles.CloudFilesByteSource;
@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 
 public class StaticCloudFilesFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<CloudFilesBlob>
 {
@@ -90,5 +91,38 @@ public class StaticCloudFilesFirehoseFactory extends PrefetchableTextFilesFireho
   protected InputStream wrapObjectStream(CloudFilesBlob object, InputStream stream) throws IOException
   {
     return object.getPath().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (o == this) {
+      return true;
+    }
+
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    final StaticCloudFilesFirehoseFactory that = (StaticCloudFilesFirehoseFactory) o;
+    return Objects.equals(blobs, that.blobs) &&
+           getMaxCacheCapacityBytes() == that.getMaxCacheCapacityBytes() &&
+           getMaxFetchCapacityBytes() == that.getMaxFetchCapacityBytes() &&
+           getPrefetchTriggerBytes() == that.getPrefetchTriggerBytes() &&
+           getFetchTimeout() == that.getFetchTimeout() &&
+           getMaxFetchRetry() == that.getMaxFetchRetry();
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        blobs,
+        getMaxCacheCapacityBytes(),
+        getMaxFetchCapacityBytes(),
+        getPrefetchTriggerBytes(),
+        getFetchTimeout(),
+        getMaxFetchRetry()
+    );
   }
 }

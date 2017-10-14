@@ -49,9 +49,9 @@ public class JavaScriptPostAggregator implements PostAggregator
     }
   };
 
-  private static interface Function
+  private interface Function
   {
-    public double apply(final Object[] args);
+    double apply(Object[] args);
   }
 
   private static Function compile(String function)

@@ -29,10 +29,10 @@ import java.io.Closeable;
 @PublicApi
 public interface Segment extends Closeable
 {
-  public String getIdentifier();
-  public Interval getDataInterval();
-  public QueryableIndex asQueryableIndex();
-  public StorageAdapter asStorageAdapter();
+  String getIdentifier();
+  Interval getDataInterval();
+  QueryableIndex asQueryableIndex();
+  StorageAdapter asStorageAdapter();
   
   /**
    * Request an implementation of a particular interface.
@@ -51,5 +51,5 @@ public interface Segment extends Closeable
    * @param <T> desired interface
    * @return instance of clazz, or null if the interface is not supported by this segment
    */
-  public <T> T as(Class<T> clazz);
+  <T> T as(Class<T> clazz);
 }

@@ -76,7 +76,7 @@ public class IncrementalIndexStorageAdapterTest
 {
   interface IndexCreator
   {
-    public IncrementalIndex createIndex();
+    IncrementalIndex createIndex();
   }
 
   private final IndexCreator indexCreator;

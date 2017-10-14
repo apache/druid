@@ -24,5 +24,5 @@ import java.util.Map;
 
 public interface EventReceiver
 {
-  public void addAll(Collection<Map<String, Object>> events);
+  void addAll(Collection<Map<String, Object>> events);
 }

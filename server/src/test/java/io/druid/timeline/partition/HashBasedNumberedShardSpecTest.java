@@ -237,21 +237,9 @@ public class HashBasedNumberedShardSpecTest
     }
 
     @Override
-    public float getFloatMetric(String s)
+    public Number getMetric(String metric)
     {
       return 0;
-    }
-
-    @Override
-    public long getLongMetric(String s)
-    {
-      return 0L;
-    }
-
-    @Override
-    public double getDoubleMetric(String metric)
-    {
-      return 0.0d;
     }
 
     @Override

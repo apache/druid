@@ -40,11 +40,11 @@ import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherColumnSelectorStrategy;
 import io.druid.query.filter.ValueMatcherColumnSelectorStrategyFactory;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.IntIteratorUtils;
-import io.druid.segment.LongColumnSelector;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
@@ -162,7 +162,7 @@ public class Filters
     // This should be folded into the ValueMatcherColumnSelectorStrategy once that can handle LONG typed columns.
     if (capabilities != null && capabilities.getType() == ValueType.LONG) {
       return getLongPredicateMatcher(
-          columnSelectorFactory.makeLongColumnSelector(columnName),
+          columnSelectorFactory.makeColumnValueSelector(columnName),
           predicateFactory.makeLongPredicate()
       );
     }
@@ -446,7 +446,7 @@ public class Filters
   }
 
   public static ValueMatcher getLongPredicateMatcher(
-      final LongColumnSelector longSelector,
+      final BaseLongColumnValueSelector longSelector,
       final DruidLongPredicate predicate
   )
   {

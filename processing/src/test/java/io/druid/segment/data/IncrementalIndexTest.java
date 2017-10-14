@@ -98,7 +98,7 @@ public class IncrementalIndexTest
 {
   interface IndexCreator
   {
-    public IncrementalIndex createIndex(AggregatorFactory[] aggregatorFactories);
+    IncrementalIndex createIndex(AggregatorFactory[] aggregatorFactories);
   }
 
   private final IndexCreator indexCreator;
@@ -388,22 +388,22 @@ public class IncrementalIndexTest
     Assert.assertEquals(Arrays.asList("1"), row.getDimension("dim1"));
     Assert.assertEquals(Arrays.asList("2"), row.getDimension("dim2"));
     Assert.assertEquals(Arrays.asList("a", "b"), row.getDimension("dim3"));
-    Assert.assertEquals(1L, row.getLongMetric("count"));
-    Assert.assertEquals(1L, row.getLongMetric("count_selector_filtered"));
-    Assert.assertEquals(1L, row.getLongMetric("count_bound_filtered"));
-    Assert.assertEquals(1L, row.getLongMetric("count_multivaldim_filtered"));
-    Assert.assertEquals(0L, row.getLongMetric("count_numeric_filtered"));
+    Assert.assertEquals(1L, row.getMetric("count"));
+    Assert.assertEquals(1L, row.getMetric("count_selector_filtered"));
+    Assert.assertEquals(1L, row.getMetric("count_bound_filtered"));
+    Assert.assertEquals(1L, row.getMetric("count_multivaldim_filtered"));
+    Assert.assertEquals(0L, row.getMetric("count_numeric_filtered"));
 
     row = rows.next();
     Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
     Assert.assertEquals(Arrays.asList("3"), row.getDimension("dim1"));
     Assert.assertEquals(Arrays.asList("4"), row.getDimension("dim2"));
     Assert.assertEquals(Arrays.asList("c", "d"), row.getDimension("dim3"));
-    Assert.assertEquals(1L, row.getLongMetric("count"));
-    Assert.assertEquals(0L, row.getLongMetric("count_selector_filtered"));
-    Assert.assertEquals(0L, row.getLongMetric("count_bound_filtered"));
-    Assert.assertEquals(0L, row.getLongMetric("count_multivaldim_filtered"));
-    Assert.assertEquals(1L, row.getLongMetric("count_numeric_filtered"));
+    Assert.assertEquals(1L, row.getMetric("count"));
+    Assert.assertEquals(0L, row.getMetric("count_selector_filtered"));
+    Assert.assertEquals(0L, row.getMetric("count_bound_filtered"));
+    Assert.assertEquals(0L, row.getMetric("count_multivaldim_filtered"));
+    Assert.assertEquals(1L, row.getMetric("count_numeric_filtered"));
   }
 
   @Test
@@ -767,7 +767,7 @@ public class IncrementalIndexTest
     while (iterator.hasNext()) {
       Row row = iterator.next();
       Assert.assertEquals(timestamp + (isRollup ? curr : curr / threadCount), row.getTimestampFromEpoch());
-      Assert.assertEquals(Float.valueOf(isRollup ? threadCount : 1), (Float) row.getFloatMetric("count"));
+      Assert.assertEquals(isRollup ? threadCount : 1, row.getMetric("count").intValue());
       curr++;
     }
     Assert.assertEquals(elementsPerThread * (isRollup ? 1 : threadCount), curr);

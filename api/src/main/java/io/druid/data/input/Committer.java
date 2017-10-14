@@ -32,5 +32,5 @@ public interface Committer extends Runnable
    * which needs to be serialized and deserialized by Jackson.
    * Commit metadata can be a complex type, but we recommend keeping it to List/Map/"Primitive JSON" types
    */
-  public Object getMetadata();
+  Object getMetadata();
 }

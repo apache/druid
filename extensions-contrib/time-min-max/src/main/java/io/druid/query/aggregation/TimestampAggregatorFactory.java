@@ -67,13 +67,13 @@ public class TimestampAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new TimestampAggregator(name, metricFactory.makeObjectColumnSelector(fieldName), timestampSpec, comparator, initValue);
+    return new TimestampAggregator(name, metricFactory.makeColumnValueSelector(fieldName), timestampSpec, comparator, initValue);
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new TimestampBufferAggregator(metricFactory.makeObjectColumnSelector(fieldName), timestampSpec, comparator, initValue);
+    return new TimestampBufferAggregator(metricFactory.makeColumnValueSelector(fieldName), timestampSpec, comparator, initValue);
   }
 
   @Override
@@ -106,7 +106,7 @@ public class TimestampAggregatorFactory extends AggregatorFactory
       private long getTimestamp(ColumnValueSelector selector)
       {
         if (selector instanceof ObjectColumnSelector) {
-          Object input = ((ObjectColumnSelector) selector).getObject();
+          Object input = selector.getObject();
           return convertLong(timestampSpec, input);
         } else {
           return selector.getLong();

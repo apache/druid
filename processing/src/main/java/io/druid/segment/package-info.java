@@ -17,30 +17,7 @@
  * under the License.
  */
 
+@EverythingIsNonnullByDefault
 package io.druid.segment;
 
-public final class NullStringObjectColumnSelector implements ObjectColumnSelector<String>
-{
-  private static final NullStringObjectColumnSelector INSTANCE = new NullStringObjectColumnSelector();
-
-  public static NullStringObjectColumnSelector instance()
-  {
-    return INSTANCE;
-  }
-
-  private NullStringObjectColumnSelector()
-  {
-  }
-
-  @Override
-  public Class<String> classOfObject()
-  {
-    return String.class;
-  }
-
-  @Override
-  public String getObject()
-  {
-    return null;
-  }
-}
+import io.druid.annotations.EverythingIsNonnullByDefault;

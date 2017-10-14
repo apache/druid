@@ -54,7 +54,7 @@ public class ExecutorServiceMonitor extends AbstractMonitor
     return true;
   }
 
-  public static interface MetricEmitter
+  public interface MetricEmitter
   {
     void emitMetrics(ServiceEmitter emitter, ServiceMetricEvent.Builder metricBuilder);
   }

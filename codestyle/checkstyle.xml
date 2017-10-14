@@ -41,6 +41,10 @@
   <module name="TreeWalker">
     <module name="FileContentsHolder"/>
 
+    <module name="RedundantModifier">
+      <property name="tokens" value="INTERFACE_DEF,ENUM_DEF,METHOD_DEF"/>
+    </module>
+
     <!-- See http://checkstyle.sourceforge.net/checks.html for examples -->
 
     <!--<module name="LineLength">-->

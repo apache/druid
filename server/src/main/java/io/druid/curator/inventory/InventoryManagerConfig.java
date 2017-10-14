@@ -35,7 +35,7 @@ public interface InventoryManagerConfig
    *
    * @return the containerPath
    */
-  public String getContainerPath();
+  String getContainerPath();
 
   /**
    * The InventoryPath is the path where the InventoryManager should look for new inventory.
@@ -49,5 +49,5 @@ public interface InventoryManagerConfig
    *
    * @return the inventoryPath
    */
-  public String getInventoryPath();
+  String getInventoryPath();
 }

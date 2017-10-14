@@ -46,7 +46,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.MapCache;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.java.util.common.parsers.JSONPathFieldSpec;

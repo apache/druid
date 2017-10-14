@@ -45,7 +45,7 @@ import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.Intervals;

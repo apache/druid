@@ -20,7 +20,7 @@
 package io.druid.curator.announcement;
 
 import com.google.common.collect.Sets;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.curator.CuratorTestBase;
 import io.druid.java.util.common.StringUtils;
 import org.apache.curator.framework.CuratorFramework;

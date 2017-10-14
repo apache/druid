@@ -36,23 +36,23 @@ import java.util.List;
 public interface PartitionsSpec
 {
   @JsonIgnore
-  public Jobby getPartitionJob(HadoopDruidIndexerConfig config);
+  Jobby getPartitionJob(HadoopDruidIndexerConfig config);
 
   @JsonProperty
-  public long getTargetPartitionSize();
+  long getTargetPartitionSize();
 
   @JsonProperty
-  public long getMaxPartitionSize();
+  long getMaxPartitionSize();
 
   @JsonProperty
-  public boolean isAssumeGrouped();
+  boolean isAssumeGrouped();
 
   @JsonIgnore
-  public boolean isDeterminingPartitions();
+  boolean isDeterminingPartitions();
 
   @JsonProperty
-  public int getNumShards();
+  int getNumShards();
 
   @JsonProperty
-  public List<String> getPartitionDimensions();
+  List<String> getPartitionDimensions();
 }

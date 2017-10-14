@@ -20,9 +20,7 @@
 package io.druid.metadata;
 
 import com.google.common.base.Optional;
-
 import io.druid.java.util.common.Pair;
-
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -43,7 +41,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * @param status status object associated wit this object, can be null
    * @throws EntryExistsException
    */
-  public void insert(
+  void insert(
       @NotNull String id,
       @NotNull DateTime timestamp,
       @NotNull String dataSource,
@@ -62,7 +60,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * @param status status
    * @return true if the status was updated, false if the entry did not exist of if the entry was inactive
    */
-  public boolean setStatus(String entryId, boolean active, StatusType status);
+  boolean setStatus(String entryId, boolean active, StatusType status);
 
   /**
    * Retrieves the entry with the given id.
@@ -70,7 +68,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * @param entryId entry id
    * @return optional entry, absent if the given id does not exist
    */
-  public Optional<EntryType> getEntry(String entryId);
+  Optional<EntryType> getEntry(String entryId);
 
   /**
    * Retrieve the status for the entry with the given id.
@@ -78,14 +76,14 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * @param entryId entry id
    * @return optional status, absent if entry does not exist or status is not set
    */
-  public Optional<StatusType> getStatus(String entryId);
+  Optional<StatusType> getStatus(String entryId);
 
   /**
    * Return all active entries with their respective status
    *
    * @return list of (entry, status) pairs
    */
-  public List<Pair<EntryType, StatusType>> getActiveEntriesWithStatus();
+  List<Pair<EntryType, StatusType>> getActiveEntriesWithStatus();
 
   /**
    * Return all statuses for inactive entries created on or later than the given timestamp
@@ -93,7 +91,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * @param timestamp timestamp
    * @return list of statuses
    */
-  public List<StatusType> getInactiveStatusesSince(DateTime timestamp);
+  List<StatusType> getInactiveStatusesSince(DateTime timestamp);
 
   /**
    * Add a lock to the given entry
@@ -102,14 +100,25 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * @param lock lock to add
    * @return true if the lock was added
    */
-  public boolean addLock(String entryId, LockType lock);
+  boolean addLock(String entryId, LockType lock);
+
+  /**
+   * Replace an existing lock with a new lock.
+   *
+   * @param entryId   entry id
+   * @param oldLockId lock to be replaced
+   * @param newLock   lock to be added
+   *
+   * @return true if the lock is replaced
+   */
+  boolean replaceLock(String entryId, long oldLockId, LockType newLock);
 
   /**
    * Remove the lock with the given lock id.
    *
    * @param lockId lock id
    */
-  public void removeLock(long lockId);
+  void removeLock(long lockId);
 
   /**
    * Add a log to the entry with the given id.
@@ -118,7 +127,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * @param log log to add
    * @return true if the log was added
    */
-  public boolean addLog(String entryId, LogType log);
+  boolean addLog(String entryId, LogType log);
 
   /**
    * Returns the logs for the entry with the given id.
@@ -126,7 +135,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * @param entryId entry id
    * @return list of logs
    */
-  public List<LogType> getLogs(String entryId);
+  List<LogType> getLogs(String entryId);
 
   /**
    * Returns the locks for the given entry
@@ -134,5 +143,13 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * @param entryId entry id
    * @return map of lockId to lock
    */
-  public Map<Long, LockType> getLocks(String entryId);
+  Map<Long, LockType> getLocks(String entryId);
+
+  /**
+   * Returns the lock id for the given entry and the lock.
+   *
+   * @return lock id if found. Otherwise null.
+   */
+  @Nullable
+  Long getLockId(String entryId, LockType lock);
 }

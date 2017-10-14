@@ -145,11 +145,11 @@ public class InputRowParserSerdeTest
         ImmutableList.of("1412705931123", "123.456", "1.23E47", "hello"),
         parsed.getDimension("values")
     );
-    Assert.assertEquals(Float.POSITIVE_INFINITY, parsed.getFloatMetric("toobig"), 0.0);
+    Assert.assertEquals(Float.POSITIVE_INFINITY, parsed.getMetric("toobig").floatValue(), 0.0);
     Assert.assertEquals(123E64, parsed.getRaw("toobig"));
-    Assert.assertEquals(123.456f, parsed.getFloatMetric("value"), 0.0f);
+    Assert.assertEquals(123.456f, parsed.getMetric("value").floatValue(), 0.0f);
     Assert.assertEquals(123456789000L, parsed.getRaw("long"));
-    Assert.assertEquals(1.23456791E11f, parsed.getFloatMetric("long"), 0.0f);
+    Assert.assertEquals(1.23456791E11f, parsed.getMetric("long").floatValue(), 0.0f);
     Assert.assertEquals(1412705931123L, parsed.getTimestampFromEpoch());
   }
 

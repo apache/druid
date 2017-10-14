@@ -26,6 +26,6 @@ import java.util.Properties;
  */
 public interface PropertyConverter
 {
-  public boolean canHandle(String property);
-  public Map<String, String> convert(Properties properties);
+  boolean canHandle(String property);
+  Map<String, String> convert(Properties properties);
 }
