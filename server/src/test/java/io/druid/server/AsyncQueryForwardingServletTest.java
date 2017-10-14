@@ -50,6 +50,7 @@ import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.router.QueryHostFinder;
+import io.druid.server.router.RendezvousHashAvaticaConnectionBalancer;
 import io.druid.server.security.AllowAllAuthorizer;
 import io.druid.server.security.AuthTestUtils;
 import io.druid.server.security.Authorizer;
@@ -252,7 +253,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                 }
               },
               new DefaultGenericQueryMetricsFactory(jsonMapper),
-              AuthTestUtils.TEST_AUTHENTICATOR_MAPPER
+              AuthTestUtils.TEST_AUTHENTICATOR_MAPPER,
+              new RendezvousHashAvaticaConnectionBalancer()
           )
           {
             @Override

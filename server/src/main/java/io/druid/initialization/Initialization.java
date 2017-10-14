@@ -69,6 +69,7 @@ import io.druid.server.initialization.AuthorizerMapperModule;
 import io.druid.server.emitter.EmitterModule;
 import io.druid.server.initialization.jetty.JettyServerModule;
 import io.druid.server.metrics.MetricsModule;
+import io.druid.server.router.AvaticaConnectionBalancerModule;
 import org.apache.commons.io.FileUtils;
 import org.eclipse.aether.artifact.DefaultArtifact;
 
@@ -381,7 +382,8 @@ public class Initialization
         new AuthenticatorHttpClientWrapperModule(),
         new AuthorizerModule(),
         new AuthorizerMapperModule(),
-        new StartupLoggingModule()
+        new StartupLoggingModule(),
+        AvaticaConnectionBalancerModule.class
     );
 
     ModuleList actualModules = new ModuleList(baseInjector);

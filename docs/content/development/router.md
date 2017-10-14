@@ -75,6 +75,7 @@ The router module uses several of the default modules in [Configuration](../conf
 |`druid.router.coordinatorServiceName`|Any string.|The service discovery name of the coordinator.|druid/coordinator|
 |`druid.router.pollPeriod`|Any ISO8601 duration.|How often to poll for new rules.|PT1M|
 |`druid.router.strategies`|An ordered JSON array of objects.|All custom strategies to use for routing.|[{"type":"timeBoundary"},{"type":"priority"}]|
+|`druid.router.avatica.balancer`|String representing an AvaticaConnectionBalancer name|Class to use for balancing Avatica queries across brokers|rendezvousHash|
 
 Router Strategies
 -----------------
@@ -118,6 +119,37 @@ Allows defining arbitrary routing rules using a JavaScript function. The functio
 <div class="note info">
 JavaScript-based functionality is disabled by default. Please refer to the Druid <a href="../development/javascript.html">JavaScript programming guide</a> for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
 </div>
+
+
+Avatica Query Balancing
+--------------
+
+All Avatica JDBC requests with a given connection ID must be routed to the same broker, since Druid brokers do not share connection state with each other.
+
+To accomplish this, Druid provides two built-in balancers that use rendezvous hashing and consistent hashing of a request's connection ID respectively to assign requests to brokers.
+
+### Rendezvous Hash Balancer
+
+This balancer uses [Rendezvous Hashing](https://en.wikipedia.org/wiki/Rendezvous_hashing) on an Avatica request's connection ID to assign the request to a broker.
+
+To use this balancer, specify the following property:
+
+```
+druid.router.avatica.balancer=rendezvousHash
+```
+
+If no `druid.router.avatica.balancer` property is set, the Router will also default to using the Rendezvous Hash Balancer.
+
+### Consistent Hash Balancer
+
+This balancer uses [Consistent Hashing](https://en.wikipedia.org/wiki/Consistent_hashing) on an Avatica request's connection ID to assign the request to a broker.
+
+To use this balancer, specify the following property:
+
+```
+druid.router.avatica.balancer=consistentHash
+```
+
 
 HTTP Endpoints
 --------------
