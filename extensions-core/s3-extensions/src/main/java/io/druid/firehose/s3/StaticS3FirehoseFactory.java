@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import io.druid.data.input.impl.PrefetchableTextFilesFirehoseFactory;
+import io.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.logger.Logger;
@@ -40,6 +40,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -178,8 +179,6 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   @Override
   protected InputStream openObjectStream(S3Object object) throws IOException
   {
-    log.info("Reading from bucket[%s] object[%s] (%s)", object.getBucketName(), object.getKey(), object);
-
     try {
       // Get data of the given object and open an input stream
       return s3Client.getObject(object.getBucketName(), object.getKey()).getDataInputStream();
@@ -205,15 +204,28 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
       return false;
     }
 
-    StaticS3FirehoseFactory factory = (StaticS3FirehoseFactory) o;
+    StaticS3FirehoseFactory that = (StaticS3FirehoseFactory) o;
 
-    return getUris().equals(factory.getUris());
-
+    return Objects.equals(uris, that.uris) &&
+           Objects.equals(prefixes, that.prefixes) &&
+           getMaxCacheCapacityBytes() == that.getMaxCacheCapacityBytes() &&
+           getMaxFetchCapacityBytes() == that.getMaxFetchCapacityBytes() &&
+           getPrefetchTriggerBytes() == that.getPrefetchTriggerBytes() &&
+           getFetchTimeout() == that.getFetchTimeout() &&
+           getMaxFetchRetry() == that.getMaxFetchRetry();
   }
 
   @Override
   public int hashCode()
   {
-    return getUris().hashCode();
+    return Objects.hash(
+        uris,
+        prefixes,
+        getMaxCacheCapacityBytes(),
+        getMaxFetchCapacityBytes(),
+        getPrefetchTriggerBytes(),
+        getFetchTimeout(),
+        getMaxFetchRetry()
+    );
   }
 }

@@ -106,7 +106,7 @@ import java.util.Set;
 @Command(
     name = "peon",
     description = "Runs a Peon, this is an individual forked \"task\" used as part of the indexing service. "
-                  + "This should rarely, if ever, be used directly."
+                  + "This should rarely, if ever, be used directly. See http://druid.io/docs/latest/design/peons.html for a description"
 )
 public class CliPeon extends GuiceRunnable
 {
@@ -305,7 +305,12 @@ public class CliPeon extends GuiceRunnable
 
         // Explicitly call lifecycle stop, dont rely on shutdown hook.
         lifecycle.stop();
-        Runtime.getRuntime().removeShutdownHook(hook);
+        try {
+          Runtime.getRuntime().removeShutdownHook(hook);
+        }
+        catch (IllegalStateException e) {
+          log.warn("Cannot remove shutdown hook, already shutting down");
+        }
       }
       catch (Throwable t) {
         log.error(t, "Error when starting up.  Failing.");

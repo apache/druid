@@ -25,5 +25,5 @@ import io.druid.indexing.common.task.Task;
  */
 public interface TaskActionClientFactory
 {
-  public TaskActionClient create(Task task);
+  TaskActionClient create(Task task);
 }

@@ -22,8 +22,10 @@ package io.druid.indexing.common.actions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
+import io.druid.indexing.overlord.CriticalAction;
 import io.druid.java.util.common.Intervals;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
@@ -34,6 +36,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.util.Collections;
 import java.util.Set;
 
 public class SegmentInsertActionTest
@@ -91,8 +94,20 @@ public class SegmentInsertActionTest
     final Task task = new NoopTask(null, 0, 0, null, null, null);
     final SegmentInsertAction action = new SegmentInsertAction(ImmutableSet.of(SEGMENT1, SEGMENT2));
     actionTestKit.getTaskLockbox().add(task);
-    actionTestKit.getTaskLockbox().lock(task, INTERVAL, 5000);
-    action.perform(task, actionTestKit.getTaskActionToolbox());
+    actionTestKit.getTaskLockbox().lock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
+    actionTestKit.getTaskLockbox().doInCriticalSection(
+        task,
+        Collections.singletonList(INTERVAL),
+        CriticalAction.builder()
+                      .onValidLocks(() -> action.perform(task, actionTestKit.getTaskActionToolbox()))
+                      .onInvalidLocks(
+                          () -> {
+                            Assert.fail();
+                            return null;
+                          }
+                      )
+                      .build()
+    );
 
     Assert.assertEquals(
         ImmutableSet.of(SEGMENT1, SEGMENT2),
@@ -109,11 +124,24 @@ public class SegmentInsertActionTest
     final Task task = new NoopTask(null, 0, 0, null, null, null);
     final SegmentInsertAction action = new SegmentInsertAction(ImmutableSet.of(SEGMENT3));
     actionTestKit.getTaskLockbox().add(task);
-    actionTestKit.getTaskLockbox().lock(task, INTERVAL, 5000);
+    actionTestKit.getTaskLockbox().lock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
 
     thrown.expect(IllegalStateException.class);
     thrown.expectMessage(CoreMatchers.startsWith("Segments not covered by locks for task"));
-    final Set<DataSegment> segments = action.perform(task, actionTestKit.getTaskActionToolbox());
+    final Set<DataSegment> segments = actionTestKit.getTaskLockbox().doInCriticalSection(
+        task,
+        Collections.singletonList(INTERVAL),
+        CriticalAction.<Set<DataSegment>>builder()
+            .onValidLocks(() -> action.perform(task, actionTestKit.getTaskActionToolbox()))
+            .onInvalidLocks(
+                () -> {
+                  Assert.fail();
+                  return null;
+                }
+            )
+            .build()
+    );
+
     Assert.assertEquals(ImmutableSet.of(SEGMENT3), segments);
   }
 }

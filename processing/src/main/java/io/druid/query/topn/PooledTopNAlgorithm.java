@@ -108,9 +108,9 @@ public class PooledTopNAlgorithm
      * of processed rows. Otherwise return -1 (scanning and aggregation is not done).
      */
     long scanAndAggregate(
-        final PooledTopNParams params,
-        final int[] positions,
-        final BufferAggregator[] theAggregators
+        PooledTopNParams params,
+        int[] positions,
+        BufferAggregator[] theAggregators
     );
   }
 

@@ -52,7 +52,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   private static final Logger log = new Logger(SQLMetadataConnector.class);
   private static final String PAYLOAD_TYPE = "BLOB";
 
-  public static final int DEFAULT_MAX_TRIES = 10;
+  static final int DEFAULT_MAX_TRIES = 10;
 
   private final Supplier<MetadataStorageConnectorConfig> config;
   private final Supplier<MetadataStorageTablesConfig> tablesConfigSupplier;
@@ -118,7 +118,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     return "SELECT 1";
   }
 
-  public abstract boolean tableExists(Handle handle, final String tableName);
+  public abstract boolean tableExists(Handle handle, String tableName);
 
   public <T> T retryWithHandle(
       final HandleCallback<T> callback,

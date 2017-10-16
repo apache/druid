@@ -25,7 +25,7 @@ import io.druid.collections.spatial.Node;
  */
 public interface SplitStrategy
 {
-  public boolean needToSplit(Node node);
+  boolean needToSplit(Node node);
 
-  public Node[] split(Node node);
+  Node[] split(Node node);
 }

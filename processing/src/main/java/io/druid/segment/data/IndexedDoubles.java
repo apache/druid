@@ -20,23 +20,22 @@
 package io.druid.segment.data;
 
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DoubleColumnSelector;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
 import io.druid.segment.historical.HistoricalColumnSelector;
 
 import java.io.Closeable;
 
 public interface IndexedDoubles extends Closeable
 {
-  public int size();
-  public double get(int index);
-  public void fill(int index, double[] toFill);
+  int size();
+  double get(int index);
+  void fill(int index, double[] toFill);
 
   @Override
   void close();
 
-  default DoubleColumnSelector makeDoubleColumnSelector(ReadableOffset offset)
+  default ColumnValueSelector<Double> makeColumnValueSelector(ReadableOffset offset)
   {
     class HistoricalDoubleColumnSelector implements DoubleColumnSelector, HistoricalColumnSelector<Double>
     {
@@ -60,58 +59,6 @@ public interface IndexedDoubles extends Closeable
       }
     }
     return new HistoricalDoubleColumnSelector();
-  }
-
-  default FloatColumnSelector makeFloatColumnSelector(ReadableOffset offset)
-  {
-    class HistoricalFloatColumnSelector implements FloatColumnSelector, HistoricalColumnSelector<Float>
-    {
-      @Override
-      public float getFloat()
-      {
-        return (float) IndexedDoubles.this.get(offset.getOffset());
-      }
-
-      @Override
-      public double getDouble(int offset)
-      {
-        return IndexedDoubles.this.get(offset);
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        inspector.visit("indexed", IndexedDoubles.this);
-        inspector.visit("offset", offset);
-      }
-    }
-    return new HistoricalFloatColumnSelector();
-  }
-
-  default LongColumnSelector makeLongColumnSelector(ReadableOffset offset)
-  {
-    class HistoricalLongColumnSelector implements LongColumnSelector, HistoricalColumnSelector<Long>
-    {
-      @Override
-      public long getLong()
-      {
-        return (long) IndexedDoubles.this.get(offset.getOffset());
-      }
-
-      @Override
-      public double getDouble(int offset)
-      {
-        return IndexedDoubles.this.get(offset);
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        inspector.visit("indexed", IndexedDoubles.this);
-        inspector.visit("offset", offset);
-      }
-    }
-    return new HistoricalLongColumnSelector();
   }
 }
 

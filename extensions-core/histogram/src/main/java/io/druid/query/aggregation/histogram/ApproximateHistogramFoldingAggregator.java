@@ -21,11 +21,11 @@ package io.druid.query.aggregation.histogram;
 
 
 import io.druid.query.aggregation.Aggregator;
-import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.BaseObjectColumnValueSelector;
 
 public class ApproximateHistogramFoldingAggregator implements Aggregator
 {
-  private final ObjectColumnSelector<ApproximateHistogram> selector;
+  private final BaseObjectColumnValueSelector<ApproximateHistogram> selector;
   private final int resolution;
   private final float lowerLimit;
   private final float upperLimit;
@@ -35,7 +35,7 @@ public class ApproximateHistogramFoldingAggregator implements Aggregator
   private long[] tmpBufferB;
 
   public ApproximateHistogramFoldingAggregator(
-      ObjectColumnSelector<ApproximateHistogram> selector,
+      BaseObjectColumnValueSelector<ApproximateHistogram> selector,
       int resolution,
       float lowerLimit,
       float upperLimit

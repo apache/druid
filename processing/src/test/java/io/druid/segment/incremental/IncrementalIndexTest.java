@@ -227,7 +227,7 @@ public class IncrementalIndexTest
     Assert.assertEquals(Arrays.asList(new String[]{"", "", "A"}), row.getRaw("string"));
     Assert.assertEquals(Arrays.asList(new String[]{"", "", String.valueOf(Float.POSITIVE_INFINITY)}), row.getRaw("float"));
     Assert.assertEquals(Arrays.asList(new String[]{"", "", String.valueOf(Long.MIN_VALUE)}), row.getRaw("long"));
-    Assert.assertEquals(0.0, row.getRaw("double"));
+    Assert.assertEquals(0.0, row.getMetric("double").doubleValue(), 0.0);
   }
 
   @Test

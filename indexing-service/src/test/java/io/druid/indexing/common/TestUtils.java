@@ -29,7 +29,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.math.expr.ExprMacroTable;
-import io.druid.query.expression.TestExprMacroTable;
+import io.druid.query.expression.TestExpressionMacroTable;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.column.ColumnConfig;
@@ -74,7 +74,7 @@ public class TestUtils
 
     jsonMapper.setInjectableValues(
         new InjectableValues.Std()
-            .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
+            .addValue(ExprMacroTable.class.getName(), TestExpressionMacroTable.INSTANCE)
             .addValue(IndexIO.class, indexIO)
             .addValue(ObjectMapper.class, jsonMapper)
             .addValue(ChatHandlerProvider.class, new NoopChatHandlerProvider())

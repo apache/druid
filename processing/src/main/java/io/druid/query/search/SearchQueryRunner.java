@@ -35,11 +35,11 @@ import io.druid.query.QueryRunner;
 import io.druid.query.Result;
 import io.druid.query.dimension.ColumnSelectorStrategy;
 import io.druid.query.dimension.ColumnSelectorStrategyFactory;
+import io.druid.segment.BaseDoubleColumnValueSelector;
+import io.druid.segment.BaseFloatColumnValueSelector;
+import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.DoubleColumnSelector;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
 import io.druid.segment.Segment;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
@@ -90,8 +90,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     }
   }
 
-  public interface SearchColumnSelectorStrategy<ValueSelectorType extends ColumnValueSelector>
-      extends ColumnSelectorStrategy
+  public interface SearchColumnSelectorStrategy<ValueSelectorType> extends ColumnSelectorStrategy
   {
     /**
      * Read the current row from dimSelector and update the search result set.
@@ -149,12 +148,13 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
            && selector.lookupName(0) == null;
   }
 
-  public static class LongSearchColumnSelectorStrategy implements SearchColumnSelectorStrategy<LongColumnSelector>
+  public static class LongSearchColumnSelectorStrategy
+      implements SearchColumnSelectorStrategy<BaseLongColumnValueSelector>
   {
     @Override
     public void updateSearchResultSet(
         String outputName,
-        LongColumnSelector selector,
+        BaseLongColumnValueSelector selector,
         SearchQuerySpec searchQuerySpec,
         int limit,
         Object2IntRBTreeMap<SearchHit> set
@@ -169,12 +169,13 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     }
   }
 
-  public static class FloatSearchColumnSelectorStrategy implements SearchColumnSelectorStrategy<FloatColumnSelector>
+  public static class FloatSearchColumnSelectorStrategy
+      implements SearchColumnSelectorStrategy<BaseFloatColumnValueSelector>
   {
     @Override
     public void updateSearchResultSet(
         String outputName,
-        FloatColumnSelector selector,
+        BaseFloatColumnValueSelector selector,
         SearchQuerySpec searchQuerySpec,
         int limit,
         Object2IntRBTreeMap<SearchHit> set
@@ -189,12 +190,13 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     }
   }
 
-  public static class DoubleSearchColumnSelectorStrategy implements SearchColumnSelectorStrategy<DoubleColumnSelector>
+  public static class DoubleSearchColumnSelectorStrategy
+      implements SearchColumnSelectorStrategy<BaseDoubleColumnValueSelector>
   {
     @Override
     public void updateSearchResultSet(
         String outputName,
-        DoubleColumnSelector selector,
+        BaseDoubleColumnValueSelector selector,
         SearchQuerySpec searchQuerySpec,
         int limit,
         Object2IntRBTreeMap<SearchHit> set

@@ -22,6 +22,8 @@ package io.druid.firehose.google;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Objects;
+
 public class GoogleBlob
 {
   private final String bucket;
@@ -53,6 +55,22 @@ public class GoogleBlob
         + "bucket=" + bucket
         + ",path=" + path
         + "}";
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    final GoogleBlob that = (GoogleBlob) o;
+    return Objects.equals(bucket, that.bucket) &&
+           Objects.equals(path, that.path);
   }
 }
 

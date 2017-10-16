@@ -54,8 +54,8 @@ public interface WorkerSelectStrategy
    */
   @Nullable
   ImmutableWorkerInfo findWorkerForTask(
-      final WorkerTaskRunnerConfig config,
-      final ImmutableMap<String, ImmutableWorkerInfo> zkWorkers,
-      final Task task
+      WorkerTaskRunnerConfig config,
+      ImmutableMap<String, ImmutableWorkerInfo> zkWorkers,
+      Task task
   );
 }

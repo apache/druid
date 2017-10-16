@@ -596,19 +596,7 @@ public class RealtimePlumberSchoolTest
       }
 
       @Override
-      public float getFloatMetric(String metric)
-      {
-        return 0;
-      }
-
-      @Override
-      public long getLongMetric(String metric)
-      {
-        return 0L;
-      }
-
-      @Override
-      public double getDoubleMetric(String metric)
+      public Number getMetric(String metric)
       {
         return 0;
       }
@@ -656,27 +644,15 @@ public class RealtimePlumberSchoolTest
       }
 
       @Override
-      public float getFloatMetric(String metric)
+      public Number getMetric(String metric)
       {
         return 0;
-      }
-
-      @Override
-      public long getLongMetric(String metric)
-      {
-        return 0L;
       }
 
       @Override
       public Object getRaw(String dimension)
       {
         return dimVals;
-      }
-
-      @Override
-      public double getDoubleMetric(String metric)
-      {
-        return 0;
       }
 
       @Override

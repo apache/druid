@@ -29,7 +29,7 @@ public interface MutableBitmap extends ImmutableBitmap
   /**
    * Empties the content of this bitmap.
    */
-  public void clear();
+  void clear();
 
   /**
    * Compute the bitwise-or of this bitmap with another bitmap. The current
@@ -39,7 +39,7 @@ public interface MutableBitmap extends ImmutableBitmap
    *
    * @param mutableBitmap other bitmap
    */
-  public void or(MutableBitmap mutableBitmap);
+  void or(MutableBitmap mutableBitmap);
 
   /**
    * Compute the bitwise-and of this bitmap with another bitmap. The current
@@ -49,7 +49,7 @@ public interface MutableBitmap extends ImmutableBitmap
    *
    * @param mutableBitmap other bitmap
    */
-  public void and(MutableBitmap mutableBitmap);
+  void and(MutableBitmap mutableBitmap);
 
 
   /**
@@ -60,7 +60,7 @@ public interface MutableBitmap extends ImmutableBitmap
    *
    * @param mutableBitmap other bitmap
    */
-  public void xor(MutableBitmap mutableBitmap);
+  void xor(MutableBitmap mutableBitmap);
 
   /**
    * Compute the bitwise-andNot of this bitmap with another bitmap. The current
@@ -70,7 +70,7 @@ public interface MutableBitmap extends ImmutableBitmap
    *
    * @param mutableBitmap other bitmap
    */
-  public void andNot(MutableBitmap mutableBitmap);
+  void andNot(MutableBitmap mutableBitmap);
 
   /**
    * Return the size in bytes for the purpose of serialization to a ByteBuffer.
@@ -78,7 +78,7 @@ public interface MutableBitmap extends ImmutableBitmap
    *
    * @return the total set in bytes
    */
-  public int getSizeInBytes();
+  int getSizeInBytes();
 
   /**
    * Add the specified integer to the bitmap. This is equivalent to setting the
@@ -86,7 +86,7 @@ public interface MutableBitmap extends ImmutableBitmap
    *
    * @param entry integer to be added
    */
-  public void add(int entry);
+  void add(int entry);
 
   /**
    * Remove the specified integer to the bitmap. This is equivalent to setting the
@@ -94,7 +94,7 @@ public interface MutableBitmap extends ImmutableBitmap
    *
    * @param entry integer to be remove
    */
-  public void remove(int entry);
+  void remove(int entry);
 
   /**
    * Write out a serialized (Immutable) version of the bitmap to the ByteBuffer. We preprend
@@ -107,5 +107,5 @@ public interface MutableBitmap extends ImmutableBitmap
    *
    * @param buffer where we write
    */
-  public void serialize(ByteBuffer buffer);
+  void serialize(ByteBuffer buffer);
 }

@@ -23,6 +23,6 @@ import org.joda.time.DateTime;
 
 public interface RejectionPolicy
 {
-  public DateTime getCurrMaxTime();
-  public boolean accept(long timestamp);
+  DateTime getCurrMaxTime();
+  boolean accept(long timestamp);
 }

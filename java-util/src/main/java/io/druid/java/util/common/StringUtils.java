@@ -139,4 +139,27 @@ public class StringUtils
   {
     return s.toUpperCase(Locale.ENGLISH);
   }
+
+  public static String removeChar(String s, char c)
+  {
+    for (int i = 0; i < s.length(); i++) {
+      if (s.charAt(i) == c) {
+        return removeChar(s, c, i);
+      }
+    }
+    return s;
+  }
+
+  private static String removeChar(String s, char c, int firstOccurranceIndex)
+  {
+    StringBuilder sb = new StringBuilder(s.length() - 1);
+    sb.append(s, 0, firstOccurranceIndex);
+    for (int i = firstOccurranceIndex + 1; i < s.length(); i++) {
+      char charOfString = s.charAt(i);
+      if (charOfString != c) {
+        sb.append(charOfString);
+      }
+    }
+    return sb.toString();
+  }
 }

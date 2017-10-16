@@ -23,16 +23,16 @@ import com.google.common.primitives.Longs;
 import io.druid.collections.SerializablePair;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.LongColumnSelector;
+import io.druid.segment.BaseLongColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
 public class LongFirstBufferAggregator implements BufferAggregator
 {
-  private final LongColumnSelector timeSelector;
-  private final LongColumnSelector valueSelector;
+  private final BaseLongColumnValueSelector timeSelector;
+  private final BaseLongColumnValueSelector valueSelector;
 
-  public LongFirstBufferAggregator(LongColumnSelector timeSelector, LongColumnSelector valueSelector)
+  public LongFirstBufferAggregator(BaseLongColumnValueSelector timeSelector, BaseLongColumnValueSelector valueSelector)
   {
     this.timeSelector = timeSelector;
     this.valueSelector = valueSelector;

@@ -72,6 +72,6 @@ public class ExprMacroTable
   {
     String name();
 
-    Expr apply(final List<Expr> args);
+    Expr apply(List<Expr> args);
   }
 }

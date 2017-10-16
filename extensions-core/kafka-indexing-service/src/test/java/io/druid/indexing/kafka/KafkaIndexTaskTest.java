@@ -46,7 +46,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.MapCache;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.java.util.common.parsers.JSONPathFieldSpec;
@@ -1483,7 +1483,7 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task = new KafkaIndexTask(
         taskId,
         null,
-        DATA_SCHEMA,
+        cloneDataSchema(),
         tuningConfig,
         ioConfig,
         null,
@@ -1492,6 +1492,17 @@ public class KafkaIndexTaskTest
     );
     task.setPollRetryMs(POLL_RETRY_MS);
     return task;
+  }
+
+  private static DataSchema cloneDataSchema()
+  {
+    return new DataSchema(
+        DATA_SCHEMA.getDataSource(),
+        DATA_SCHEMA.getParserMap(),
+        DATA_SCHEMA.getAggregators(),
+        DATA_SCHEMA.getGranularitySpec(),
+        objectMapper
+    );
   }
 
   private QueryRunnerFactoryConglomerate makeTimeseriesOnlyConglomerate()

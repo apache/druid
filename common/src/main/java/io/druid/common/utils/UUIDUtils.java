@@ -21,6 +21,7 @@ package io.druid.common.utils;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
+import io.druid.java.util.common.StringUtils;
 
 import java.util.ArrayList;
 import java.util.UUID;
@@ -53,7 +54,8 @@ public class UUIDUtils
         extra = Joiner.on(UUID_DELIM).join(extraStrings);
       }
     }
-    final String uuid = UUID.randomUUID().toString().replace("-", ""); // We don't use "-" in general, so remove them here.
+    // We don't use "-" in general, so remove them here.
+    final String uuid = StringUtils.removeChar(UUID.randomUUID().toString(), '-');
     return extra == null ? uuid : (extra + UUID_DELIM + uuid);
   }
 }

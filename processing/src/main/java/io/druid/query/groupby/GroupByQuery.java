@@ -103,7 +103,6 @@ public class GroupByQuery extends BaseQuery<Row>
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
 
-  private final Function<Sequence<Row>, Sequence<Row>> limitFn;
   private final boolean applyLimitPushDown;
   private final Function<Sequence<Row>, Sequence<Row>> postProcessingFn;
 
@@ -203,43 +202,6 @@ public class GroupByQuery extends BaseQuery<Row>
 
     // Check if limit push down configuration is valid and check if limit push down will be applied
     this.applyLimitPushDown = determineApplyLimitPushDown();
-
-    // On an inner query, we may sometimes get a LimitSpec so that row orderings can be determined for limit push down
-    // However, it's not necessary to build the real limitFn from it at this stage.
-    Function<Sequence<Row>, Sequence<Row>> postProcFn;
-    if (getContextBoolean(GroupByStrategyV2.CTX_KEY_OUTERMOST, true)) {
-      postProcFn = this.limitSpec.build(this.dimensions, this.aggregatorSpecs, this.postAggregatorSpecs);
-    } else {
-      postProcFn = NoopLimitSpec.INSTANCE.build(this.dimensions, this.aggregatorSpecs, this.postAggregatorSpecs);
-    }
-
-    if (havingSpec != null) {
-      postProcFn = Functions.compose(
-          postProcFn,
-          new Function<Sequence<Row>, Sequence<Row>>()
-          {
-            @Override
-            public Sequence<Row> apply(Sequence<Row> input)
-            {
-              GroupByQuery.this.havingSpec.setRowSignature(GroupByQueryHelper.rowSignatureFor(GroupByQuery.this));
-              GroupByQuery.this.havingSpec.setAggregators(getAggregatorsMap(GroupByQuery.this.aggregatorSpecs));
-              return Sequences.filter(
-                  input,
-                  new Predicate<Row>()
-                  {
-                    @Override
-                    public boolean apply(Row input)
-                    {
-                      return GroupByQuery.this.havingSpec.eval(input);
-                    }
-                  }
-              );
-            }
-          }
-      );
-    }
-
-    limitFn = postProcFn;
   }
 
   @JsonProperty

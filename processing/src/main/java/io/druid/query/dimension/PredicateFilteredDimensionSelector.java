@@ -149,6 +149,19 @@ final class PredicateFilteredDimensionSelector implements DimensionSelector
     return selector.idLookup();
   }
 
+  @Nullable
+  @Override
+  public Object getObject()
+  {
+    return defaultGetObject();
+  }
+
+  @Override
+  public Class classOfObject()
+  {
+    return Object.class;
+  }
+
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {

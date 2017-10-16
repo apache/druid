@@ -23,8 +23,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 
 public interface MetadataStorageActionHandlerTypes<EntryType, StatusType, LogType, LockType>
 {
-  public TypeReference<EntryType> getEntryType();
-  public TypeReference<StatusType> getStatusType();
-  public TypeReference<LogType> getLogType();
-  public TypeReference<LockType> getLockType();
+  TypeReference<EntryType> getEntryType();
+  TypeReference<StatusType> getStatusType();
+  TypeReference<LogType> getLogType();
+  TypeReference<LockType> getLockType();
 }

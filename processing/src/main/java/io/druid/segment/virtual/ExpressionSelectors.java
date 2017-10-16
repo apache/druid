@@ -25,10 +25,10 @@ import io.druid.math.expr.ExprEval;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.DoubleColumnSelector;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
+
+import javax.annotation.Nullable;
 
 public class ExpressionSelectors
 {
@@ -37,78 +37,47 @@ public class ExpressionSelectors
     // No instantiation.
   }
 
-  public static ExpressionObjectSelector makeObjectColumnSelector(
-      final ColumnSelectorFactory columnSelectorFactory,
-      final Expr expression
-  )
-  {
-    return ExpressionObjectSelector.from(columnSelectorFactory, expression);
-  }
-
-  public static LongColumnSelector makeLongColumnSelector(
-      final ColumnSelectorFactory columnSelectorFactory,
-      final Expr expression,
-      final long nullValue
-  )
-  {
-    final ExpressionObjectSelector baseSelector = ExpressionObjectSelector.from(columnSelectorFactory, expression);
-    class ExpressionLongColumnSelector implements LongColumnSelector
-    {
-      @Override
-      public long getLong()
-      {
-        final ExprEval exprEval = baseSelector.getObject();
-        return exprEval.isNull() ? nullValue : exprEval.asLong();
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        inspector.visit("baseSelector", baseSelector);
-      }
-    }
-    return new ExpressionLongColumnSelector();
-  }
-
-  public static FloatColumnSelector makeFloatColumnSelector(
-      final ColumnSelectorFactory columnSelectorFactory,
-      final Expr expression,
-      final float nullValue
-  )
-  {
-    final ExpressionObjectSelector baseSelector = ExpressionObjectSelector.from(columnSelectorFactory, expression);
-    class ExpressionFloatColumnSelector implements FloatColumnSelector
-    {
-      @Override
-      public float getFloat()
-      {
-        final ExprEval exprEval = baseSelector.getObject();
-        return exprEval.isNull() ? nullValue : (float) exprEval.asDouble();
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        inspector.visit("baseSelector", baseSelector);
-      }
-    }
-    return new ExpressionFloatColumnSelector();
-  }
-
-  public static DoubleColumnSelector makeDoubleColumnSelector(
+  public static ColumnValueSelector makeColumnValueSelector(
       ColumnSelectorFactory columnSelectorFactory,
-      Expr expression,
-      double nullValue
+      Expr expression
   )
   {
     final ExpressionObjectSelector baseSelector = ExpressionObjectSelector.from(columnSelectorFactory, expression);
-    class ExpressionDoubleColumnSelector implements DoubleColumnSelector
+    return new ColumnValueSelector()
     {
       @Override
       public double getDouble()
       {
         final ExprEval exprEval = baseSelector.getObject();
-        return exprEval.isNull() ? nullValue : exprEval.asDouble();
+        return exprEval.isNull() ? 0.0 : exprEval.asDouble();
+      }
+
+      @Override
+      public float getFloat()
+      {
+        final ExprEval exprEval = baseSelector.getObject();
+        return exprEval.isNull() ? 0.0f : (float) exprEval.asDouble();
+      }
+
+      @Override
+      public long getLong()
+      {
+        final ExprEval exprEval = baseSelector.getObject();
+        return exprEval.isNull() ? 0L : exprEval.asLong();
+      }
+
+      @Nullable
+      @Override
+      public Object getObject()
+      {
+        final ExprEval exprEval = baseSelector.getObject();
+        return exprEval.value();
+      }
+
+      @Override
+      public Class classOfObject()
+      {
+        return Object.class;
       }
 
       @Override
@@ -116,8 +85,7 @@ public class ExpressionSelectors
       {
         inspector.visit("baseSelector", baseSelector);
       }
-    }
-    return new ExpressionDoubleColumnSelector();
+    };
   }
 
   public static DimensionSelector makeDimensionSelector(

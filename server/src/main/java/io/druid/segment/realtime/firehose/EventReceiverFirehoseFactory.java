@@ -27,14 +27,13 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.CountingInputStream;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
@@ -69,8 +68,11 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -81,8 +83,10 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRowParser>
 {
+  public static final int MAX_FIREHOSE_PRODUCERS = 10_000;
+
   private static final EmittingLogger log = new EmittingLogger(EventReceiverFirehoseFactory.class);
-  private static final int DEFAULT_BUFFER_SIZE = 100000;
+  private static final int DEFAULT_BUFFER_SIZE = 100_000;
 
   private final String serviceName;
   private final int bufferSize;
@@ -107,7 +111,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
 
     this.serviceName = serviceName;
     this.bufferSize = bufferSize == null || bufferSize <= 0 ? DEFAULT_BUFFER_SIZE : bufferSize;
-    this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
+    this.chatHandlerProvider = Optional.ofNullable(chatHandlerProvider);
     this.jsonMapper = jsonMapper;
     this.smileMapper = smileMapper;
     this.eventReceiverFirehoseRegister = eventReceiverFirehoseRegister;
@@ -159,6 +163,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
     private volatile boolean closed = false;
     private final AtomicLong bytesReceived = new AtomicLong(0);
     private final AtomicLong lastBufferAddFailMsgTime = new AtomicLong(0);
+    private final ConcurrentMap<String, Long> producerSequences = new ConcurrentHashMap<>();
 
     public EventReceiverFirehose(MapInputRowParser parser)
     {
@@ -173,7 +178,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
     @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
     public Response addAll(
         InputStream in,
-        @Context final HttpServletRequest req // used only to get request content-type
+        @Context final HttpServletRequest req
     )
     {
       Access accessResult = AuthorizationUtils.authorizeResourceAction(
@@ -193,6 +198,12 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
       final String contentType = isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON;
 
       ObjectMapper objectMapper = isSmile ? smileMapper : jsonMapper;
+
+      Optional<Response> producerSequenceResponse = checkProducerSequence(req, reqContentType, objectMapper);
+      if (producerSequenceResponse.isPresent()) {
+        return producerSequenceResponse.get();
+      }
+
       CountingInputStream countingInputStream = new CountingInputStream(in);
       Collection<Map<String, Object>> events = null;
       try {
@@ -392,6 +403,82 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
     public boolean isClosed()
     {
       return closed;
+    }
+
+    /**
+     * Checks the request for a producer ID and sequence value.  If the producer ID is specified, a corresponding
+     * sequence value must be specified as well.  If the incoming sequence is less than or equal to the last seen
+     * sequence for that producer ID, the request is ignored
+     *
+     * @param req Http request
+     * @param responseContentType Response content type
+     * @param responseMapper Response object mapper
+     * @return Optional of a response to return of an empty optional if the request can proceed
+     */
+    private Optional<Response> checkProducerSequence(
+        final HttpServletRequest req,
+        final String responseContentType,
+        final ObjectMapper responseMapper
+    )
+    {
+      final String producerId = req.getHeader("X-Firehose-Producer-Id");
+
+      if (producerId == null) {
+        return Optional.empty();
+      }
+
+      final String sequenceValue = req.getHeader("X-Firehose-Producer-Seq");
+
+      if (sequenceValue == null) {
+        return Optional.of(
+            Response.status(Response.Status.BAD_REQUEST)
+                       .entity(ImmutableMap.<String, Object>of("error", "Producer sequence value is missing"))
+                       .build()
+        );
+      }
+
+      Long producerSequence = producerSequences.computeIfAbsent(producerId, key -> Long.MIN_VALUE);
+
+      if (producerSequences.size() >= MAX_FIREHOSE_PRODUCERS) {
+        return Optional.of(
+            Response.status(Response.Status.FORBIDDEN)
+                    .entity(
+                        ImmutableMap.<String, Object>of(
+                            "error",
+                            "Too many individual producer IDs for this firehose.  Max is " + MAX_FIREHOSE_PRODUCERS
+                        )
+                    )
+                    .build()
+        );
+      }
+
+      try {
+        Long newSequence = Long.parseLong(sequenceValue);
+        if (newSequence <= producerSequence) {
+          return Optional.of(
+              Response.ok(
+                responseMapper.writeValueAsString(
+                    ImmutableMap.of("eventCount", 0, "skipped", true)
+                ),
+                responseContentType
+            ).build()
+          );
+        }
+
+        producerSequences.put(producerId, newSequence);
+      }
+      catch (JsonProcessingException ex) {
+        throw Throwables.propagate(ex);
+      }
+      catch (NumberFormatException ex) {
+        return Optional.of(
+            Response.status(Response.Status.BAD_REQUEST)
+                    .entity(ImmutableMap.<String, Object>of("error", "Producer sequence must be a number"))
+                    .build()
+        );
+      }
+
+      return Optional.empty();
     }
   }
 }

@@ -928,6 +928,28 @@ interface Function
     }
   }
 
+  class StrposFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "strpos";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 2) {
+        throw new IAE("Function[%s] needs 2 arguments", name());
+      }
+
+      final String haystack = Strings.nullToEmpty(args.get(0).eval(bindings).asString());
+      final String needle = Strings.nullToEmpty(args.get(1).eval(bindings).asString());
+
+      return ExprEval.of(haystack.indexOf(needle));
+    }
+  }
+
   class SubstringFunc implements Function
   {
     @Override

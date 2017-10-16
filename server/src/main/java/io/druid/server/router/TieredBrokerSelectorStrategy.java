@@ -35,5 +35,5 @@ import io.druid.query.Query;
 
 public interface TieredBrokerSelectorStrategy
 {
-  public Optional<String> getBrokerServiceName(TieredBrokerConfig config, Query query);
+  Optional<String> getBrokerServiceName(TieredBrokerConfig config, Query query);
 }

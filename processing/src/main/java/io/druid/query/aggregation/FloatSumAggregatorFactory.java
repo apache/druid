@@ -53,13 +53,13 @@ public class FloatSumAggregatorFactory extends SimpleFloatAggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new FloatSumAggregator(getFloatColumnSelector(metricFactory, 0.0f));
+    return new FloatSumAggregator(makeColumnValueSelectorWithFloatDefault(metricFactory, 0.0f));
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new FloatSumBufferAggregator(getFloatColumnSelector(metricFactory, 0.0f));
+    return new FloatSumBufferAggregator(makeColumnValueSelectorWithFloatDefault(metricFactory, 0.0f));
   }
 
   @Override

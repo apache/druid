@@ -38,5 +38,5 @@ import java.io.IOException;
 })
 public interface PathSpec
 {
-  public Job addInputPaths(HadoopDruidIndexerConfig config, Job job) throws IOException;
+  Job addInputPaths(HadoopDruidIndexerConfig config, Job job) throws IOException;
 }

@@ -36,12 +36,12 @@ import java.util.Map;
  */
 public interface QueryableIndex extends ColumnSelector, Closeable
 {
-  public Interval getDataInterval();
-  public int getNumRows();
-  public Indexed<String> getAvailableDimensions();
-  public BitmapFactory getBitmapFactoryForDimensions();
-  public Metadata getMetadata();
-  public Map<String, DimensionHandler> getDimensionHandlers();
+  Interval getDataInterval();
+  int getNumRows();
+  Indexed<String> getAvailableDimensions();
+  BitmapFactory getBitmapFactoryForDimensions();
+  Metadata getMetadata();
+  Map<String, DimensionHandler> getDimensionHandlers();
 
   /**
    * The close method shouldn't actually be here as this is nasty. We will adjust it in the future.
@@ -49,5 +49,5 @@ public interface QueryableIndex extends ColumnSelector, Closeable
    */
   //@Deprecated // This is still required for SimpleQueryableIndex. It should not go away unitl SimpleQueryableIndex is fixed
   @Override
-  public void close() throws IOException;
+  void close() throws IOException;
 }

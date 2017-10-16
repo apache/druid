@@ -69,13 +69,13 @@ public class BenchmarkIndexibleWrites extends AbstractBenchmark
     this.concurrentIndexible = concurrentIndexible;
   }
 
-  private static interface ConcurrentIndexible<V>
+  private interface ConcurrentIndexible<V>
   {
-    public void set(Integer index, V object);
+    void set(Integer index, V object);
 
-    public V get(Integer index);
+    V get(Integer index);
 
-    public void clear();
+    void clear();
   }
 
   private static class ConcurrentStandardMap<V> implements ConcurrentIndexible<V>
