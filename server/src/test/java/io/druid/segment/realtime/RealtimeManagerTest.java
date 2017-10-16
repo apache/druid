@@ -334,8 +334,8 @@ public class RealtimeManagerTest
     }
 
     Assert.assertEquals(1, realtimeManager.getMetrics("test").processed());
-    Assert.assertEquals(1, realtimeManager.getMetrics("test").thrownAway());
-    Assert.assertEquals(2, realtimeManager.getMetrics("test").unparseable());
+    Assert.assertEquals(2, realtimeManager.getMetrics("test").thrownAway());
+    Assert.assertEquals(1, realtimeManager.getMetrics("test").unparseable());
     Assert.assertTrue(plumber.isStartedJob());
     Assert.assertTrue(plumber.isFinishedJob());
     Assert.assertEquals(0, plumber.getPersistCount());
