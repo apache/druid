@@ -73,6 +73,12 @@ public class LongGenericColumnPartSerdeV2 implements ColumnPartSerde
     return byteOrder;
   }
 
+  @JsonProperty
+  public BitmapSerdeFactory getBitmapSerdeFactory()
+  {
+    return bitmapSerdeFactory;
+  }
+
   public static SerializerBuilder serializerBuilder()
   {
     return new SerializerBuilder();

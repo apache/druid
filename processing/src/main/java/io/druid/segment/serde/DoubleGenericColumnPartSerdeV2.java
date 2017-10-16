@@ -62,6 +62,11 @@ public class DoubleGenericColumnPartSerdeV2 implements ColumnPartSerde
     return byteOrder;
   }
 
+  @JsonProperty
+  public BitmapSerdeFactory getBitmapSerdeFactory()
+  {
+    return bitmapSerdeFactory;
+  }
 
   public DoubleGenericColumnPartSerdeV2(
       ByteOrder byteOrder,
