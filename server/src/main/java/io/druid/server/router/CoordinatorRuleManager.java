@@ -25,7 +25,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.metamx.http.client.response.FullResponseHolder;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.discovery.DruidLeaderClient;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Json;

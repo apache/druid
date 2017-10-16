@@ -22,7 +22,7 @@ package io.druid.firehose.google;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.data.input.impl.PrefetchableTextFilesFirehoseFactory;
+import io.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.storage.google.GoogleByteSource;
 import io.druid.storage.google.GoogleStorage;

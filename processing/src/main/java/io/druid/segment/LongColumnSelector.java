@@ -19,24 +19,21 @@
 
 package io.druid.segment;
 
-import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
-import io.druid.query.monomorphicprocessing.HotLoopCallee;
-
 /**
+ * This interface is convenient for implementation of "long-sourcing" {@link ColumnValueSelector}s, it provides default
+ * implementations for all {@link ColumnValueSelector}'s methods except {@link #getLong()}.
+ *
+ * This interface should appear ONLY in "implements" clause or anonymous class creation, but NOT in "user" code, where
+ * {@link BaseLongColumnValueSelector} must be used instead.
  */
-public interface LongColumnSelector extends ColumnValueSelector<Long>, HotLoopCallee
+public interface LongColumnSelector extends ColumnValueSelector<Long>
 {
-  @CalledFromHotLoop
-  @Override
-  long getLong();
-
   /**
    * @deprecated This method is marked as deprecated in LongColumnSelector to minimize the probability of accidential
    * calling. "Polymorphism" of LongColumnSelector should be used only when operating on {@link ColumnValueSelector}
    * objects.
    */
   @Deprecated
-  @CalledFromHotLoop
   @Override
   default float getFloat()
   {
@@ -49,7 +46,6 @@ public interface LongColumnSelector extends ColumnValueSelector<Long>, HotLoopCa
    * objects.
    */
   @Deprecated
-  @CalledFromHotLoop
   @Override
   default double getDouble()
   {

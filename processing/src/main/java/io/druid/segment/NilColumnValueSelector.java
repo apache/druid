@@ -19,26 +19,70 @@
 
 package io.druid.segment;
 
+import io.druid.guice.annotations.PublicApi;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
-public final class ZeroDoubleColumnSelector implements DoubleColumnSelector
+import javax.annotation.Nullable;
+
+/**
+ * Represents "absent" column.
+ */
+@PublicApi
+public final class NilColumnValueSelector implements ColumnValueSelector
 {
-  private static final ZeroDoubleColumnSelector INSTANCE = new ZeroDoubleColumnSelector();
+  private static final NilColumnValueSelector INSTANCE = new NilColumnValueSelector();
 
-  private ZeroDoubleColumnSelector()
-  {
-    // No instantiation.
-  }
-
-  public static ZeroDoubleColumnSelector instance()
+  public static NilColumnValueSelector instance()
   {
     return INSTANCE;
   }
 
+  private NilColumnValueSelector() {}
+
+  /**
+   * Always returns 0.0.
+   */
   @Override
   public double getDouble()
   {
-    return 0.0d;
+    return 0.0;
+  }
+
+  /**
+   * Always returns 0.0f.
+   */
+  @Override
+  public float getFloat()
+  {
+    return 0.0f;
+  }
+
+  /**
+   * Always returns 0L.
+   */
+  @Override
+  public long getLong()
+  {
+    return 0L;
+  }
+
+  /**
+   * Always returns null.
+   */
+  @Nullable
+  @Override
+  public Object getObject()
+  {
+    return null;
+  }
+
+  /**
+   * Returns Object.class.
+   */
+  @Override
+  public Class classOfObject()
+  {
+    return Object.class;
   }
 
   @Override

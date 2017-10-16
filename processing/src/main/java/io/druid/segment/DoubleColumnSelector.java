@@ -19,23 +19,21 @@
 
 package io.druid.segment;
 
-import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
-import io.druid.query.monomorphicprocessing.HotLoopCallee;
-
-
-public interface DoubleColumnSelector extends ColumnValueSelector<Double>, HotLoopCallee
+/**
+ * This interface is convenient for implementation of "double-sourcing" {@link ColumnValueSelector}s, it provides
+ * default implementations for all {@link ColumnValueSelector}'s methods except {@link #getDouble()}.
+ *
+ * This interface should appear ONLY in "implements" clause or anonymous class creation, but NOT in "user" code, where
+ * {@link BaseDoubleColumnValueSelector} must be used instead.
+ */
+public interface DoubleColumnSelector extends ColumnValueSelector<Double>
 {
-  @CalledFromHotLoop
-  @Override
-  double getDouble();
-
   /**
    * @deprecated This method is marked as deprecated in DoubleColumnSelector to minimize the probability of accidential
    * calling. "Polymorphism" of DoubleColumnSelector should be used only when operating on {@link ColumnValueSelector}
    * objects.
    */
   @Deprecated
-  @CalledFromHotLoop
   @Override
   default float getFloat()
   {
@@ -48,7 +46,6 @@ public interface DoubleColumnSelector extends ColumnValueSelector<Double>, HotLo
    * objects.
    */
   @Deprecated
-  @CalledFromHotLoop
   @Override
   default long getLong()
   {

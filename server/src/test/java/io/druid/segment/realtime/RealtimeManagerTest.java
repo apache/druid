@@ -826,21 +826,9 @@ public class RealtimeManagerTest
         }
 
         @Override
-        public float getFloatMetric(String metric)
+        public Number getMetric(String metric)
         {
           return 0;
-        }
-
-        @Override
-        public long getLongMetric(String metric)
-        {
-          return 0L;
-        }
-
-        @Override
-        public double getDoubleMetric(String metric)
-        {
-          return 0.0d;
         }
 
         @Override

@@ -35,7 +35,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.client.DruidDataSource;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.guice.ManageLifecycle;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;

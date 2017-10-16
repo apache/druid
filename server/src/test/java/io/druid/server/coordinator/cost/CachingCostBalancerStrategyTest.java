@@ -22,7 +22,7 @@ package io.druid.server.coordinator.cost;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.client.DruidServer;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.DateTimes;
 import io.druid.server.coordination.ServerType;
 import io.druid.server.coordinator.CachingCostBalancerStrategy;

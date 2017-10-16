@@ -21,7 +21,7 @@ package io.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.data.input.impl.PrefetchableTextFilesFirehoseFactory;
+import io.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
 
 import java.io.IOException;

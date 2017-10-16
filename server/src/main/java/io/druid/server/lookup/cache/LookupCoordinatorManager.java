@@ -44,7 +44,7 @@ import com.metamx.http.client.response.HttpResponseHandler;
 import com.metamx.http.client.response.SequenceInputStreamResponseHandler;
 import io.druid.audit.AuditInfo;
 import io.druid.common.config.JacksonConfigManager;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.annotations.EscalatedGlobal;
