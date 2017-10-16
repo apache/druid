@@ -40,7 +40,11 @@ public class CloudFilesBlob
   private String region = null;
 
   @JsonCreator
-  public CloudFilesBlob(String container, String path, String region)
+  public CloudFilesBlob(
+      @JsonProperty("container") String container,
+      @JsonProperty("path") String path,
+      @JsonProperty("region") String region
+  )
   {
     this.container = container;
     this.path = path;
