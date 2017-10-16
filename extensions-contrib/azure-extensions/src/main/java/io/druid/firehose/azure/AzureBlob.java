@@ -37,7 +37,7 @@ public class AzureBlob
   private String path = null;
 
   @JsonCreator
-  public AzureBlob(String container, String path)
+  public AzureBlob(@JsonProperty("container") String container, @JsonProperty("path") String path)
   {
     this.container = container;
     this.path = path;
