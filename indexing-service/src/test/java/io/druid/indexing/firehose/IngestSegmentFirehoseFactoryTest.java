@@ -555,7 +555,7 @@ public class IngestSegmentFirehoseFactoryTest
       while (firehose.hasMore()) {
         InputRow row = firehose.nextRow();
         if (row == null) {
-          skipped ++;
+          skipped++;
           continue;
         }
         Assert.assertArrayEquals(new String[]{DIM_NAME}, row.getDimensions().toArray());
