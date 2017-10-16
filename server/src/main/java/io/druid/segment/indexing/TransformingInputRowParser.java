@@ -53,4 +53,9 @@ public class TransformingInputRowParser<T> implements InputRowParser<T>
   {
     return new TransformingInputRowParser<>(parser.withParseSpec(parseSpec), transformSpec);
   }
+
+  public TransformSpec getTransformSpec()
+  {
+    return transformSpec;
+  }
 }

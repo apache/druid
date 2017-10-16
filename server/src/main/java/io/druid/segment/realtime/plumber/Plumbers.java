@@ -20,7 +20,6 @@
 package io.druid.segment.realtime.plumber;
 
 import com.google.common.base.Supplier;
-
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
@@ -62,13 +61,9 @@ public class Plumbers
     }
 
     if (inputRow == null) {
-      if (reportParseExceptions) {
-        throw new ParseException("null input row");
-      } else {
-        log.debug("Discarded null input row, considering unparseable.");
-        metrics.incrementUnparseable();
-        return;
-      }
+      log.debug("Discarded null row, considering thrownAway.");
+      metrics.incrementThrownAway();
+      return;
     }
 
     final int numRows;

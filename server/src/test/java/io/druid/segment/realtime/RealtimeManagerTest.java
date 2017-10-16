@@ -874,6 +874,7 @@ public class RealtimeManagerTest
       return rows.hasNext();
     }
 
+    @Nullable
     @Override
     public InputRow nextRow()
     {

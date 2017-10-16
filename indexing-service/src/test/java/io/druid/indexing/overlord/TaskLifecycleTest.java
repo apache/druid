@@ -129,6 +129,7 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -257,6 +258,7 @@ public class TaskLifecycleTest
           return true;
         }
 
+        @Nullable
         @Override
         public InputRow nextRow()
         {
@@ -311,6 +313,7 @@ public class TaskLifecycleTest
           return inputRowIterator.hasNext();
         }
 
+        @Nullable
         @Override
         public InputRow nextRow()
         {

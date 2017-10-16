@@ -187,6 +187,11 @@ public class DataSchema
     return new DataSchema(dataSource, parser, aggregators, granularitySpec, transformSpec, jsonMapper);
   }
 
+  public DataSchema withTransformSpec(TransformSpec transformSpec)
+  {
+    return new DataSchema(dataSource, parser, aggregators, granularitySpec, transformSpec, jsonMapper);
+  }
+
   @Override
   public String toString()
   {

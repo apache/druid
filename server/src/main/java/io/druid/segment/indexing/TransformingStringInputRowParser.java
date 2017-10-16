@@ -60,4 +60,9 @@ public class TransformingStringInputRowParser extends StringInputRowParser
   {
     return new TransformingStringInputRowParser(getParseSpec(), getEncoding(), transformSpec);
   }
+
+  public TransformSpec getTransformSpec()
+  {
+    return transformSpec;
+  }
 }
