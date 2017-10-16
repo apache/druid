@@ -19,9 +19,13 @@
 
 package io.druid.data.input;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Maps;
+import com.google.common.primitives.Longs;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.parsers.ParseException;
 
 import java.util.List;
 import java.util.Map;
@@ -33,7 +37,8 @@ public class Rows
 {
   /**
    * @param timeStamp rollup up timestamp to be used to create group key
-   * @param inputRow input row
+   * @param inputRow  input row
+   *
    * @return groupKey for the given input row
    */
   public static List<Object> toGroupKey(long timeStamp, InputRow inputRow)
@@ -49,5 +54,48 @@ public class Rows
         timeStamp,
         dims
     );
+  }
+
+  /**
+   * Convert a string to a number. Throws ParseException
+   *
+   * @param name name of the string being parsed (may be used for exception messages)
+   * @param s    the actual string being parsed
+   *
+   * @return a number
+   *
+   * @throws NullPointerException if the string is null
+   * @throws ParseException       if the string cannot be parsed as a number
+   */
+  public static Number stringToNumber(final String name, final String s)
+  {
+    Preconditions.checkNotNull(s, "s");
+
+    try {
+      String metricValueString = StringUtils.removeChar(s.trim(), ',');
+      // Longs.tryParse() doesn't support leading '+', so we need to trim it ourselves
+      metricValueString = trimLeadingPlusOfLongString(metricValueString);
+      Long v = Longs.tryParse(metricValueString);
+      // Do NOT use ternary operator here, because it makes Java to convert Long to Double
+      if (v != null) {
+        return v;
+      } else {
+        return Double.valueOf(metricValueString);
+      }
+    }
+    catch (Exception e) {
+      throw new ParseException(e, "Unable to parse metrics[%s], value[%s]", name, s);
+    }
+  }
+
+  private static String trimLeadingPlusOfLongString(String metricValueString)
+  {
+    if (metricValueString.length() > 1 && metricValueString.charAt(0) == '+') {
+      char secondChar = metricValueString.charAt(1);
+      if (secondChar >= '0' && secondChar <= '9') {
+        metricValueString = metricValueString.substring(1);
+      }
+    }
+    return metricValueString;
   }
 }

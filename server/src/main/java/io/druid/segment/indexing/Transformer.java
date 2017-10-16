@@ -22,8 +22,11 @@ package io.druid.segment.indexing;
 import com.google.common.base.Strings;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
+import io.druid.data.input.Rows;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.ISE;
 import io.druid.math.expr.Expr;
+import io.druid.math.expr.ExprEval;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.groupby.RowBasedColumnSelectorFactory;
 import io.druid.segment.column.Column;
@@ -162,35 +165,23 @@ public class Transformer
     }
 
     @Override
-    public float getFloatMetric(final String metric)
+    public Number getMetric(final String metric)
     {
       final Expr transform = transforms.get(metric);
       if (transform != null) {
-        return (float) transform.eval(this::getValueFromRow).asDouble();
+        final ExprEval eval = transform.eval(this::getValueFromRow);
+        switch (eval.type()) {
+          case DOUBLE:
+            return eval.asDouble();
+          case LONG:
+            return eval.asLong();
+          case STRING:
+            return Rows.stringToNumber(metric, eval.asString());
+          default:
+            throw new ISE("WTF, unexpected eval type[%s]", eval.type());
+        }
       } else {
-        return row.getFloatMetric(metric);
-      }
-    }
-
-    @Override
-    public long getLongMetric(final String metric)
-    {
-      final Expr transform = transforms.get(metric);
-      if (transform != null) {
-        return transform.eval(this::getValueFromRow).asLong();
-      } else {
-        return row.getLongMetric(metric);
-      }
-    }
-
-    @Override
-    public double getDoubleMetric(final String metric)
-    {
-      final Expr transform = transforms.get(metric);
-      if (transform != null) {
-        return transform.eval(this::getValueFromRow).asDouble();
-      } else {
-        return row.getDoubleMetric(metric);
+        return row.getMetric(metric);
       }
     }
 

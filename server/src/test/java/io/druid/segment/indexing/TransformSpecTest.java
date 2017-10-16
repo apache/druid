@@ -83,13 +83,12 @@ public class TransformSpecTest
     Assert.assertEquals(DateTimes.of("2000-01-01"), row.getTimestamp());
     Assert.assertEquals(ImmutableList.of("f", "x", "y"), row.getDimensions());
     Assert.assertEquals(ImmutableList.of("foo"), row.getDimension("x"));
-    Assert.assertEquals(3.0, row.getDoubleMetric("b"), 0);
+    Assert.assertEquals(3.0, row.getMetric("b").doubleValue(), 0);
     Assert.assertEquals("foobar", row.getRaw("f"));
     Assert.assertEquals(ImmutableList.of("foobar"), row.getDimension("f"));
     Assert.assertEquals(ImmutableList.of("5.0"), row.getDimension("g"));
     Assert.assertEquals(ImmutableList.of(), row.getDimension("h"));
-    Assert.assertEquals(0L, row.getLongMetric("f"));
-    Assert.assertEquals(5L, row.getLongMetric("g"));
+    Assert.assertEquals(5L, row.getMetric("g").longValue());
   }
 
   @Test

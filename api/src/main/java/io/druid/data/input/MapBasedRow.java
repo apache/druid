@@ -22,10 +22,8 @@ package io.druid.data.input;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
-import com.google.common.primitives.Longs;
 import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.DateTimes;
-import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.parsers.ParseException;
 import org.joda.time.DateTime;
 
@@ -113,35 +111,10 @@ public class MapBasedRow implements Row
     if (metricValue instanceof Number) {
       return (Number) metricValue;
     } else if (metricValue instanceof String) {
-      try {
-        String metricValueString = StringUtils.removeChar(((String) metricValue).trim(), ',');
-        // Longs.tryParse() doesn't support leading '+', so we need to trim it ourselves
-        metricValueString = trimLeadingPlusOfLongString(metricValueString);
-        Long v = Longs.tryParse(metricValueString);
-        // Do NOT use ternary operator here, because it makes Java to convert Long to Double
-        if (v != null) {
-          return v;
-        } else {
-          return Double.valueOf(metricValueString);
-        }
-      }
-      catch (Exception e) {
-        throw new ParseException(e, "Unable to parse metrics[%s], value[%s]", metric, metricValue);
-      }
+      return Rows.stringToNumber(metric, (String) metricValue);
     } else {
       throw new ParseException("Unknown type[%s]", metricValue.getClass());
     }
-  }
-
-  private static String trimLeadingPlusOfLongString(String metricValueString)
-  {
-    if (metricValueString.length() > 1 && metricValueString.charAt(0) == '+') {
-      char secondChar = metricValueString.charAt(1);
-      if (secondChar >= '0' && secondChar <= '9') {
-        metricValueString = metricValueString.substring(1);
-      }
-    }
-    return metricValueString;
   }
 
   @Override
