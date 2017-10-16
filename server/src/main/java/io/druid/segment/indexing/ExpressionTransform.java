@@ -50,6 +50,7 @@ public class ExpressionTransform implements Transform
   }
 
   @JsonProperty
+  @Override
   public String getName()
   {
     return name;
