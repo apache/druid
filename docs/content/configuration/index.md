@@ -398,9 +398,11 @@ JavaScript-based functionality is disabled by default. Please refer to the Druid
 
 ### Double Column storage
 
-Originaly druid storage layer uses a 32 bits float representation to store double columns at indexing time. 
-To use proper 64 bits to store double columns please use the system wide property `druid.indexing.doubleStorage=double`.
+Druid's storage layer uses a 32-bit float representation to store columns created by the 
+doubleSum, doubleMin, and doubleMax aggregators at indexing time. To instead use 64-bit floats
+for these columns, please set the system-wide property `druid.indexing.doubleStorage=double`.
+This will become the default behavior in a future version of Druid.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.indexing.doubleStorage`|Set to "double" to use 64 bits double representation for double columns.|float|
+|`druid.indexing.doubleStorage`|Set to "double" to use 64-bit double representation for double columns.|float|
