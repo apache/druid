@@ -395,3 +395,12 @@ the following properties.
 <div class="note info">
 JavaScript-based functionality is disabled by default. Please refer to the Druid <a href="../development/javascript.html">JavaScript programming guide</a> for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
 </div>
+
+### Double Column storage
+
+Originaly druid storage layer uses a 32 bits float representation to store double columns at indexing time. 
+To use proper 64 bits to store double columns please use the system wide property `druid.indexing.doubleStorage=double`.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.indexing.doubleStorage`|Set to "double" to use 64 bits double representation for double columns.|float|
