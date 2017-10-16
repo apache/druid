@@ -22,11 +22,11 @@ package io.druid.query.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
 import io.druid.segment.BaseDoubleColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.column.Column;
 
 import java.util.Collections;
 import java.util.Comparator;
@@ -35,7 +35,6 @@ import java.util.Objects;
 
 public abstract class SimpleDoubleAggregatorFactory extends AggregatorFactory
 {
-  public final static String DOUBLE_STORAGE_TYPE_PROPERTY = "druid.indexing.doubleStorage";
   protected final String name;
   protected final String fieldName;
   protected final String expression;
@@ -53,7 +52,7 @@ public abstract class SimpleDoubleAggregatorFactory extends AggregatorFactory
     this.fieldName = fieldName;
     this.name = name;
     this.expression = expression;
-    this.storeDoubleAsFloat = storeDoubleAsFloat();
+    this.storeDoubleAsFloat = Column.storeDoubleAsFloat();
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     Preconditions.checkArgument(
         fieldName == null ^ expression == null,
@@ -152,9 +151,4 @@ public abstract class SimpleDoubleAggregatorFactory extends AggregatorFactory
     return expression;
   }
 
-  public static boolean storeDoubleAsFloat()
-  {
-    String value = System.getProperty(DOUBLE_STORAGE_TYPE_PROPERTY, "float");
-    return !StringUtils.toLowerCase(value).equals("double");
-  }
 }

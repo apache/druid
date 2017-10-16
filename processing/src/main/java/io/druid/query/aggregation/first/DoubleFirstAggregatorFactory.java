@@ -33,7 +33,6 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
-import io.druid.query.aggregation.SimpleDoubleAggregatorFactory;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.BaseObjectColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
@@ -73,7 +72,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
 
     this.name = name;
     this.fieldName = fieldName;
-    this.storeDoubleAsFloat = SimpleDoubleAggregatorFactory.storeDoubleAsFloat();
+    this.storeDoubleAsFloat = Column.storeDoubleAsFloat();
   }
 
   @Override

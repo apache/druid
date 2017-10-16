@@ -77,7 +77,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import static io.druid.query.aggregation.SimpleDoubleAggregatorFactory.DOUBLE_STORAGE_TYPE_PROPERTY;
+import static io.druid.segment.column.Column.DOUBLE_STORAGE_TYPE_PROPERTY;
 import static io.druid.query.scan.ScanQueryRunnerTest.verify;
 
 @RunWith(Parameterized.class)
