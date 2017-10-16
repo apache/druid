@@ -17,40 +17,12 @@
  * under the License.
  */
 
-package io.druid.segment;
+package io.druid.data.input.impl.prefetch;
 
-import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.historical.HistoricalColumnSelector;
+import java.io.IOException;
+import java.io.InputStream;
 
-public final class ZeroFloatColumnSelector implements FloatColumnSelector, HistoricalColumnSelector<Float>
+interface ObjectOpenFunction<T>
 {
-  private static final ZeroFloatColumnSelector INSTANCE = new ZeroFloatColumnSelector();
-
-  private ZeroFloatColumnSelector()
-  {
-    // No instantiation.
-  }
-
-  public static ZeroFloatColumnSelector instance()
-  {
-    return INSTANCE;
-  }
-
-  @Override
-  public float getFloat()
-  {
-    return 0.0f;
-  }
-
-  @Override
-  public double getDouble(int offset)
-  {
-    return 0.0;
-  }
-
-  @Override
-  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-  {
-    // nothing to inspect
-  }
+  InputStream open(T object) throws IOException;
 }

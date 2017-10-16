@@ -43,8 +43,7 @@ import java.util.BitSet;
 
 /**
 */
-public class SimpleDictionaryEncodedColumn
-    implements DictionaryEncodedColumn<String>
+public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn<String>
 {
   private final IndexedInts column;
   private final IndexedMultivalue<IndexedInts> multiValueColumn;
@@ -105,7 +104,10 @@ public class SimpleDictionaryEncodedColumn
   }
 
   @Override
-  public HistoricalDimensionSelector makeDimensionSelector(final ReadableOffset offset, final ExtractionFn extractionFn)
+  public HistoricalDimensionSelector makeDimensionSelector(
+      final ReadableOffset offset,
+      @Nullable final ExtractionFn extractionFn
+  )
   {
     abstract class QueryableDimensionSelector implements HistoricalDimensionSelector, IdLookup
     {
@@ -141,9 +143,7 @@ public class SimpleDictionaryEncodedColumn
       public int lookupId(String name)
       {
         if (extractionFn != null) {
-          throw new UnsupportedOperationException(
-              "cannot perform lookup when applying an extraction function"
-          );
+          throw new UnsupportedOperationException("cannot perform lookup when applying an extraction function");
         }
         return SimpleDictionaryEncodedColumn.this.lookupId(name);
       }
@@ -174,6 +174,19 @@ public class SimpleDictionaryEncodedColumn
         public ValueMatcher makeValueMatcher(Predicate<String> predicate)
         {
           return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicate);
+        }
+
+        @Nullable
+        @Override
+        public Object getObject()
+        {
+          return defaultGetObject();
+        }
+
+        @Override
+        public Class classOfObject()
+        {
+          return Object.class;
         }
 
         @Override
@@ -262,6 +275,18 @@ public class SimpleDictionaryEncodedColumn
               inspector.visit("column", SimpleDictionaryEncodedColumn.this);
             }
           };
+        }
+
+        @Override
+        public Object getObject()
+        {
+          return lookupName(getRowValue());
+        }
+
+        @Override
+        public Class classOfObject()
+        {
+          return String.class;
         }
 
         @Override

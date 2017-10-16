@@ -21,16 +21,13 @@ package io.druid.query.groupby.epinephelinae;
 
 import io.druid.data.input.Row;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.DoubleColumnSelector;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
-import io.druid.segment.ObjectColumnSelector;
-import io.druid.segment.TestDoubleColumnSelector;
-import io.druid.segment.TestFloatColumnSelector;
-import io.druid.segment.TestLongColumnSelector;
 import io.druid.segment.column.ColumnCapabilities;
+
+import javax.annotation.Nullable;
 
 public class TestColumnSelectorFactory implements ColumnSelectorFactory
 {
@@ -48,46 +45,45 @@ public class TestColumnSelectorFactory implements ColumnSelectorFactory
   }
 
   @Override
-  public FloatColumnSelector makeFloatColumnSelector(final String columnName)
+  public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
   {
-    return new TestFloatColumnSelector()
+    return new ColumnValueSelector<Object>()
     {
+      @Override
+      public double getDouble()
+      {
+        return row.get().getMetric(columnName).doubleValue();
+      }
+
       @Override
       public float getFloat()
       {
-        return row.get().getFloatMetric(columnName);
+        return row.get().getMetric(columnName).floatValue();
       }
-    };
-  }
 
-  @Override
-  public LongColumnSelector makeLongColumnSelector(final String columnName)
-  {
-    return new TestLongColumnSelector()
-    {
       @Override
       public long getLong()
       {
-        return row.get().getLongMetric(columnName);
+        return row.get().getMetric(columnName).longValue();
       }
-    };
-  }
 
-  @Override
-  public ObjectColumnSelector makeObjectColumnSelector(final String columnName)
-  {
-    return new ObjectColumnSelector()
-    {
+      @Nullable
       @Override
-      public Class classOfObject()
+      public Object getObject()
+      {
+        return row.get().getRaw(columnName);
+      }
+
+      @Override
+      public Class<Object> classOfObject()
       {
         return Object.class;
       }
 
       @Override
-      public Object getObject()
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
       {
-        return row.get().getRaw(columnName);
+        // don't inspect in tests
       }
     };
   }
@@ -96,18 +92,5 @@ public class TestColumnSelectorFactory implements ColumnSelectorFactory
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
     return null;
-  }
-
-  @Override
-  public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
-  {
-    return new TestDoubleColumnSelector()
-    {
-      @Override
-      public double getDouble()
-      {
-        return row.get().getFloatMetric(columnName);
-      }
-    };
   }
 }

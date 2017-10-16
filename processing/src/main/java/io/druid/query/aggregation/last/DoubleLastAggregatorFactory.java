@@ -35,8 +35,8 @@ import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
 import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.BaseObjectColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.Column;
 
 import java.nio.ByteBuffer;
@@ -68,8 +68,8 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     return new DoubleLastAggregator(
-        metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME),
-        metricFactory.makeDoubleColumnSelector(fieldName)
+        metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
+        metricFactory.makeColumnValueSelector(fieldName)
     );
   }
 
@@ -77,8 +77,8 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     return new DoubleLastBufferAggregator(
-        metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME),
-        metricFactory.makeDoubleColumnSelector(fieldName)
+        metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
+        metricFactory.makeColumnValueSelector(fieldName)
     );
   }
 
@@ -108,7 +108,7 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
       @Override
       public Aggregator factorize(ColumnSelectorFactory metricFactory)
       {
-        final ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(name);
+        final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
         return new DoubleLastAggregator(null, null)
         {
           @Override
@@ -126,7 +126,7 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
       @Override
       public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
       {
-        final ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(name);
+        final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
         return new DoubleLastBufferAggregator(null, null)
         {
           @Override

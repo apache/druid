@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import io.druid.data.input.impl.PrefetchableTextFilesFirehoseFactory;
+import io.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.logger.Logger;
@@ -179,8 +179,6 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   @Override
   protected InputStream openObjectStream(S3Object object) throws IOException
   {
-    log.info("Reading from bucket[%s] object[%s] (%s)", object.getBucketName(), object.getKey(), object);
-
     try {
       // Get data of the given object and open an input stream
       return s3Client.getObject(object.getBucketName(), object.getKey()).getDataInputStream();

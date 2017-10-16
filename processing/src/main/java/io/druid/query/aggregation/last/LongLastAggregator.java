@@ -21,17 +21,17 @@ package io.druid.query.aggregation.last;
 
 import io.druid.collections.SerializablePair;
 import io.druid.query.aggregation.Aggregator;
-import io.druid.segment.LongColumnSelector;
+import io.druid.segment.BaseLongColumnValueSelector;
 
 public class LongLastAggregator implements Aggregator
 {
-  private final LongColumnSelector valueSelector;
-  private final LongColumnSelector timeSelector;
+  private final BaseLongColumnValueSelector valueSelector;
+  private final BaseLongColumnValueSelector timeSelector;
 
   protected long lastTime;
   protected long lastValue;
 
-  public LongLastAggregator(LongColumnSelector timeSelector, LongColumnSelector valueSelector)
+  public LongLastAggregator(BaseLongColumnValueSelector timeSelector, BaseLongColumnValueSelector valueSelector)
   {
     this.valueSelector = valueSelector;
     this.timeSelector = timeSelector;

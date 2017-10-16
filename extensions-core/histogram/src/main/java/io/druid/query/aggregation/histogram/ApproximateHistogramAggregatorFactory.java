@@ -36,7 +36,6 @@ import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.ObjectAggregateCombiner;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
-import io.druid.segment.ObjectColumnSelector;
 import org.apache.commons.codec.binary.Base64;
 
 import javax.annotation.Nullable;
@@ -85,7 +84,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     return new ApproximateHistogramAggregator(
-        metricFactory.makeFloatColumnSelector(fieldName),
+        metricFactory.makeColumnValueSelector(fieldName),
         resolution,
         lowerLimit,
         upperLimit
@@ -96,7 +95,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     return new ApproximateHistogramBufferAggregator(
-        metricFactory.makeFloatColumnSelector(fieldName),
+        metricFactory.makeColumnValueSelector(fieldName),
         resolution
     );
   }
@@ -125,16 +124,14 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
       @Override
       public void reset(ColumnValueSelector selector)
       {
-        @SuppressWarnings("unchecked")
-        ApproximateHistogram first = ((ObjectColumnSelector<ApproximateHistogram>) selector).getObject();
+        ApproximateHistogram first = (ApproximateHistogram) selector.getObject();
         combined.copy(first);
       }
 
       @Override
       public void fold(ColumnValueSelector selector)
       {
-        @SuppressWarnings("unchecked")
-        ApproximateHistogram other = ((ObjectColumnSelector<ApproximateHistogram>) selector).getObject();
+        ApproximateHistogram other = (ApproximateHistogram) selector.getObject();
         combined.foldFast(other);
       }
 

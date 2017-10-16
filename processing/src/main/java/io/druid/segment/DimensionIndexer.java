@@ -202,35 +202,14 @@ public interface DimensionIndexer
       IncrementalIndex.DimensionDesc desc
   );
 
-
   /**
-   * Return an object used to read values from this indexer's column as Longs.
+   * Return an object used to read values from this indexer's column.
    *
    * @param currEntry Provides access to the current TimeAndDims object in the Cursor
    * @param desc Descriptor object for this dimension within an IncrementalIndex
    * @return A new object that reads rows from currEntry
    */
-  LongColumnSelector makeLongColumnSelector(TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc);
-
-
-  /**
-   * Return an object used to read values from this indexer's column as Floats.
-   *
-   * @param currEntry Provides access to the current TimeAndDims object in the Cursor
-   * @param desc Descriptor object for this dimension within an IncrementalIndex
-   * @return A new object that reads rows from currEntry
-   */
-  FloatColumnSelector makeFloatColumnSelector(TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc);
-
-
-  /**
-   * Return an object used to read values from this indexer's column as Doubles.
-   *
-   * @param currEntry Provides access to the current TimeAndDims object in the Cursor
-   * @param desc Descriptor object for this dimension within an IncrementalIndex
-   * @return A new object that reads rows from currEntry
-   */
-  DoubleColumnSelector makeDoubleColumnSelector(TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc);
+  ColumnValueSelector<?> makeColumnValueSelector(TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc);
 
   /**
    * Compares the row values for this DimensionIndexer's dimension from a TimeAndDims key.

@@ -21,20 +21,20 @@ package io.druid.query.aggregation;
 
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.BaseObjectColumnValueSelector;
 
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 
 public class TimestampBufferAggregator implements BufferAggregator
 {
-  private final ObjectColumnSelector selector;
+  private final BaseObjectColumnValueSelector selector;
   private final TimestampSpec timestampSpec;
   private final Comparator<Long> comparator;
   private final Long initValue;
 
   public TimestampBufferAggregator(
-      ObjectColumnSelector selector,
+      BaseObjectColumnValueSelector selector,
       TimestampSpec timestampSpec,
       Comparator<Long> comparator,
       Long initValue)

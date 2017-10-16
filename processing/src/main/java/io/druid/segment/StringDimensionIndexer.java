@@ -29,6 +29,7 @@ import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Comparators;
+import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.ValueMatcher;
@@ -523,31 +524,50 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
         return getEncodedValue(name, false);
       }
 
+      @SuppressWarnings("deprecation")
+      @Nullable
+      @Override
+      public Object getObject()
+      {
+        IncrementalIndex.TimeAndDims key = currEntry.get();
+        if (key == null) {
+          return null;
+        }
+
+        Object[] dims = key.getDims();
+        if (dimIndex >= dims.length) {
+          return null;
+        }
+
+        return convertUnsortedEncodedKeyComponentToActualArrayOrList(
+            (int[]) dims[dimIndex],
+            DimensionIndexer.ARRAY
+        );
+      }
+
+      @SuppressWarnings("deprecation")
+      @Override
+      public Class classOfObject()
+      {
+        return Object.class;
+      }
+
       @Override
       public void inspectRuntimeShape(RuntimeShapeInspector inspector)
       {
-        inspector.visit("currEntry", currEntry);
+        // nothing to inspect
       }
     }
     return new IndexerDimensionSelector();
   }
 
   @Override
-  public LongColumnSelector makeLongColumnSelector(TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc)
+  public ColumnValueSelector<?> makeColumnValueSelector(
+      TimeAndDimsHolder currEntry,
+      IncrementalIndex.DimensionDesc desc
+  )
   {
-    return ZeroLongColumnSelector.instance();
-  }
-
-  @Override
-  public FloatColumnSelector makeFloatColumnSelector(TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc)
-  {
-    return ZeroFloatColumnSelector.instance();
-  }
-
-  @Override
-  public DoubleColumnSelector makeDoubleColumnSelector(TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc)
-  {
-    return ZeroDoubleColumnSelector.instance();
+    return makeDimensionSelector(DefaultDimensionSpec.of(desc.getName()), currEntry, desc);
   }
 
   @Override

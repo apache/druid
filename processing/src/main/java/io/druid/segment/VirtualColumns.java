@@ -150,31 +150,6 @@ public class VirtualColumns implements Cacheable
   }
 
   /**
-   * Create an object selector.
-   *
-   * @param columnName column mame
-   * @param factory    base column selector factory
-   *
-   * @return selector
-   *
-   * @throws IllegalArgumentException if the virtual column does not exist (see {@link #exists(String)}
-   */
-  public ObjectColumnSelector makeObjectColumnSelector(String columnName, ColumnSelectorFactory factory)
-  {
-    final VirtualColumn virtualColumn = getVirtualColumn(columnName);
-    if (virtualColumn == null) {
-      throw new IAE("No such virtual column[%s]", columnName);
-    } else {
-      return Preconditions.checkNotNull(
-          virtualColumn.makeObjectColumnSelector(columnName, factory),
-          "VirtualColumn[%s] returned a null ObjectColumnSelector for columnName[%s]",
-          virtualColumn.getOutputName(),
-          columnName
-      );
-    }
-  }
-
-  /**
    * Create a dimension (string) selector.
    *
    * @param dimensionSpec the dimensionSpec for this selector
@@ -197,7 +172,7 @@ public class VirtualColumns implements Cacheable
   }
 
   /**
-   * Create a float selector.
+   * Create a column value selector.
    *
    * @param columnName column mame
    * @param factory    base column selector factory
@@ -206,60 +181,13 @@ public class VirtualColumns implements Cacheable
    *
    * @throws IllegalArgumentException if the virtual column does not exist (see {@link #exists(String)}
    */
-  public FloatColumnSelector makeFloatColumnSelector(String columnName, ColumnSelectorFactory factory)
+  public ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelectorFactory factory)
   {
     final VirtualColumn virtualColumn = getVirtualColumn(columnName);
     if (virtualColumn == null) {
       throw new IAE("No such virtual column[%s]", columnName);
     } else {
-      final FloatColumnSelector selector = virtualColumn.makeFloatColumnSelector(columnName, factory);
-      Preconditions.checkNotNull(selector, "selector");
-      return selector;
-    }
-  }
-
-  /**
-   * Create a long selector.
-   *
-   * @param columnName column mame
-   * @param factory    base column selector factory
-   *
-   * @return selector
-   *
-   * @throws IllegalArgumentException if the virtual column does not exist (see {@link #exists(String)}
-   */
-  public LongColumnSelector makeLongColumnSelector(String columnName, ColumnSelectorFactory factory)
-  {
-    final VirtualColumn virtualColumn = getVirtualColumn(columnName);
-    if (virtualColumn == null) {
-      throw new IAE("No such virtual column[%s]", columnName);
-    } else {
-      final LongColumnSelector selector = virtualColumn.makeLongColumnSelector(columnName, factory);
-      Preconditions.checkNotNull(selector, "selector");
-      return selector;
-    }
-  }
-
-  /**
-   * Create a double selector.
-   *
-   * @param columnName column mame
-   * @param factory    base column selector factory
-   *
-   * @return selector
-   *
-   * @throws IllegalArgumentException if the virtual column does not exist (see {@link #exists(String)}
-   */
-  public DoubleColumnSelector makeDoubleColumnSelector(
-      String columnName,
-      ColumnSelectorFactory factory
-  )
-  {
-    final VirtualColumn virtualColumn = getVirtualColumn(columnName);
-    if (virtualColumn == null) {
-      throw new IAE("No such virtual column[%s]", columnName);
-    } else {
-      final DoubleColumnSelector selector = virtualColumn.makeDoubleColumnSelector(columnName, factory);
+      final ColumnValueSelector<?> selector = virtualColumn.makeColumnValueSelector(columnName, factory);
       Preconditions.checkNotNull(selector, "selector");
       return selector;
     }

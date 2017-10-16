@@ -27,9 +27,9 @@ public class DoubleWrappingDimensionSelector extends BaseSingleValueDimensionSel
 {
 
   private final ExtractionFn extractionFn;
-  private final DoubleColumnSelector selector;
+  private final BaseDoubleColumnValueSelector selector;
 
-  public DoubleWrappingDimensionSelector(DoubleColumnSelector doubleColumnSelector, ExtractionFn extractionFn)
+  public DoubleWrappingDimensionSelector(BaseDoubleColumnValueSelector doubleColumnSelector, ExtractionFn extractionFn)
   {
     this.extractionFn = extractionFn;
     selector = doubleColumnSelector;

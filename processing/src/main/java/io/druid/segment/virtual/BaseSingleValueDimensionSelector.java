@@ -105,4 +105,17 @@ public abstract class BaseSingleValueDimensionSelector implements DimensionSelec
   {
     return null;
   }
+
+  @Nullable
+  @Override
+  public Object getObject()
+  {
+    return getValue();
+  }
+
+  @Override
+  public Class classOfObject()
+  {
+    return String.class;
+  }
 }

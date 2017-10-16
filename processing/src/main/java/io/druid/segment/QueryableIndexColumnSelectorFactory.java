@@ -19,20 +19,18 @@
 
 package io.druid.segment;
 
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.io.Closer;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.segment.column.BaseColumn;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
-import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.column.DictionaryEncodedColumn;
-import io.druid.segment.column.GenericColumn;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.ReadableOffset;
 
 import javax.annotation.Nullable;
-import java.io.Closeable;
 import java.util.Map;
 
 /**
@@ -47,9 +45,7 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
   private final Closer closer;
   protected final ReadableOffset offset;
 
-  private final Map<String, DictionaryEncodedColumn> dictionaryColumnCache;
-  private final Map<String, GenericColumn> genericColumnCache;
-  private final Map<String, Object> objectColumnCache;
+  private final Map<String, BaseColumn> columnCache;
 
   QueryableIndexColumnSelectorFactory(
       QueryableIndex index,
@@ -57,9 +53,7 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
       boolean descending,
       Closer closer,
       ReadableOffset offset,
-      Map<String, DictionaryEncodedColumn> dictionaryColumnCache,
-      Map<String, GenericColumn> genericColumnCache,
-      Map<String, Object> objectColumnCache
+      Map<String, BaseColumn> columnCache
   )
   {
     this.index = index;
@@ -67,9 +61,7 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
     this.descending = descending;
     this.closer = closer;
     this.offset = offset;
-    this.dictionaryColumnCache = dictionaryColumnCache;
-    this.genericColumnCache = genericColumnCache;
-    this.objectColumnCache = objectColumnCache;
+    this.columnCache = columnCache;
   }
 
   @Override
@@ -93,33 +85,18 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
     }
 
     if (dimension.equals(Column.TIME_COLUMN_NAME)) {
-      return new SingleScanTimeDimSelector(
-          makeLongColumnSelector(dimension),
-          extractionFn,
-          descending
-      );
+      return new SingleScanTimeDimSelector(makeColumnValueSelector(dimension), extractionFn, descending);
     }
 
-    if (columnDesc.getCapabilities().getType() == ValueType.LONG) {
-      return new LongWrappingDimensionSelector(makeLongColumnSelector(dimension), extractionFn);
+    ValueType type = columnDesc.getCapabilities().getType();
+    if (type.isNumeric()) {
+      return type.makeNumericWrappingDimensionSelector(makeColumnValueSelector(dimension), extractionFn);
     }
 
-    if (columnDesc.getCapabilities().getType() == ValueType.FLOAT) {
-      return new FloatWrappingDimensionSelector(makeFloatColumnSelector(dimension), extractionFn);
-    }
+    @SuppressWarnings("unchecked")
+    DictionaryEncodedColumn<String> column = (DictionaryEncodedColumn<String>)
+        columnCache.computeIfAbsent(dimension, d -> closer.register(columnDesc.getDictionaryEncoding()));
 
-    if (columnDesc.getCapabilities().getType() == ValueType.DOUBLE) {
-      return new DoubleWrappingDimensionSelector(makeDoubleColumnSelector(dimension), extractionFn);
-    }
-
-    DictionaryEncodedColumn<String> cachedColumn = dictionaryColumnCache.get(dimension);
-    if (cachedColumn == null) {
-      cachedColumn = columnDesc.getDictionaryEncoding();
-      closer.register(cachedColumn);
-      dictionaryColumnCache.put(dimension, cachedColumn);
-    }
-
-    final DictionaryEncodedColumn<String> column = cachedColumn;
     if (column == null) {
       return DimensionSelectorUtils.constantSelector(null, extractionFn);
     } else {
@@ -128,240 +105,37 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
   }
 
   @Override
-  public FloatColumnSelector makeFloatColumnSelector(String columnName)
+  public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
   {
     if (virtualColumns.exists(columnName)) {
-      return virtualColumns.makeFloatColumnSelector(columnName, this);
+      return virtualColumns.makeColumnValueSelector(columnName, this);
     }
 
-    GenericColumn cachedMetricVals = genericColumnCache.get(columnName);
+    BaseColumn column = columnCache.get(columnName);
 
-    if (cachedMetricVals == null) {
+    if (column == null) {
       Column holder = index.getColumn(columnName);
-      if (holder != null && ValueType.isNumeric(holder.getCapabilities().getType())) {
-        cachedMetricVals = holder.getGenericColumn();
-        closer.register(cachedMetricVals);
-        genericColumnCache.put(columnName, cachedMetricVals);
-      }
-    }
-
-    if (cachedMetricVals == null) {
-      return ZeroFloatColumnSelector.instance();
-    }
-
-    return cachedMetricVals.makeFloatSingleValueRowSelector(offset);
-  }
-
-  @Override
-  public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
-  {
-    if (virtualColumns.exists(columnName)) {
-      return virtualColumns.makeDoubleColumnSelector(columnName, this);
-    }
-
-    GenericColumn cachedMetricVals = genericColumnCache.get(columnName);
-
-    if (cachedMetricVals == null) {
-      Column holder = index.getColumn(columnName);
-      if (holder != null && ValueType.isNumeric(holder.getCapabilities().getType())) {
-        cachedMetricVals = holder.getGenericColumn();
-        closer.register(cachedMetricVals);
-        genericColumnCache.put(columnName, cachedMetricVals);
-      }
-    }
-
-    if (cachedMetricVals == null) {
-      return ZeroDoubleColumnSelector.instance();
-    }
-
-    return cachedMetricVals.makeDoubleSingleValueRowSelector(offset);
-  }
-
-  @Override
-  public LongColumnSelector makeLongColumnSelector(String columnName)
-  {
-    if (virtualColumns.exists(columnName)) {
-      return virtualColumns.makeLongColumnSelector(columnName, this);
-    }
-
-    GenericColumn cachedMetricVals = genericColumnCache.get(columnName);
-
-    if (cachedMetricVals == null) {
-      Column holder = index.getColumn(columnName);
-      if (holder != null && ValueType.isNumeric(holder.getCapabilities().getType())) {
-        cachedMetricVals = holder.getGenericColumn();
-        closer.register(cachedMetricVals);
-        genericColumnCache.put(columnName, cachedMetricVals);
-      }
-    }
-
-    if (cachedMetricVals == null) {
-      return ZeroLongColumnSelector.instance();
-    }
-
-    return cachedMetricVals.makeLongSingleValueRowSelector(offset);
-  }
-
-  @Nullable
-  @Override
-  public ObjectColumnSelector makeObjectColumnSelector(String column)
-  {
-    if (virtualColumns.exists(column)) {
-      return virtualColumns.makeObjectColumnSelector(column, this);
-    }
-
-    Object cachedColumnVals = objectColumnCache.get(column);
-
-    if (cachedColumnVals == null) {
-      Column holder = index.getColumn(column);
 
       if (holder != null) {
         final ColumnCapabilities capabilities = holder.getCapabilities();
 
         if (capabilities.isDictionaryEncoded()) {
-          cachedColumnVals = holder.getDictionaryEncoding();
+          column = holder.getDictionaryEncoding();
         } else if (capabilities.getType() == ValueType.COMPLEX) {
-          cachedColumnVals = holder.getComplexColumn();
+          column = holder.getComplexColumn();
+        } else if (capabilities.getType().isNumeric()) {
+          column = holder.getGenericColumn();
         } else {
-          cachedColumnVals = holder.getGenericColumn();
+          throw new ISE("Unknown column type: %s", capabilities.getType());
         }
-      }
-
-      if (cachedColumnVals != null) {
-        closer.register((Closeable) cachedColumnVals);
-        objectColumnCache.put(column, cachedColumnVals);
-      }
-    }
-
-    if (cachedColumnVals == null) {
-      return null;
-    }
-
-    if (cachedColumnVals instanceof GenericColumn) {
-      final GenericColumn columnVals = (GenericColumn) cachedColumnVals;
-      final ValueType type = columnVals.getType();
-
-      if (columnVals.hasMultipleValues()) {
-        throw new UnsupportedOperationException(
-            "makeObjectColumnSelector does not support multi-value GenericColumns"
-        );
-      }
-
-      if (type == ValueType.FLOAT) {
-        return new ObjectColumnSelector<Float>()
-        {
-          @Override
-          public Class<Float> classOfObject()
-          {
-            return Float.class;
-          }
-
-          @Override
-          public Float getObject()
-          {
-            return columnVals.getFloatSingleValueRow(offset.getOffset());
-          }
-        };
-      }
-      if (type == ValueType.DOUBLE) {
-        return new ObjectColumnSelector<Double>()
-        {
-          @Override
-          public Class<Double> classOfObject()
-          {
-            return Double.class;
-          }
-
-          @Override
-          public Double getObject()
-          {
-            return columnVals.getDoubleSingleValueRow(offset.getOffset());
-          }
-        };
-      }
-      if (type == ValueType.LONG) {
-        return new ObjectColumnSelector<Long>()
-        {
-          @Override
-          public Class<Long> classOfObject()
-          {
-            return Long.class;
-          }
-
-          @Override
-          public Long getObject()
-          {
-            return columnVals.getLongSingleValueRow(offset.getOffset());
-          }
-        };
-      }
-      if (type == ValueType.STRING) {
-        throw new IllegalStateException("Generic column's type couldn't be string");
-      }
-    }
-
-    if (cachedColumnVals instanceof DictionaryEncodedColumn) {
-      final DictionaryEncodedColumn<String> columnVals = (DictionaryEncodedColumn) cachedColumnVals;
-      if (columnVals.hasMultipleValues()) {
-        return new ObjectColumnSelector<Object>()
-        {
-          @Override
-          public Class<Object> classOfObject()
-          {
-            return Object.class;
-          }
-
-          @Override
-          @Nullable
-          public Object getObject()
-          {
-            final IndexedInts multiValueRow = columnVals.getMultiValueRow(offset.getOffset());
-            if (multiValueRow.size() == 0) {
-              return null;
-            } else if (multiValueRow.size() == 1) {
-              return columnVals.lookupName(multiValueRow.get(0));
-            } else {
-              final String[] strings = new String[multiValueRow.size()];
-              for (int i = 0; i < multiValueRow.size(); i++) {
-                strings[i] = columnVals.lookupName(multiValueRow.get(i));
-              }
-              return strings;
-            }
-          }
-        };
+        closer.register(column);
+        columnCache.put(columnName, column);
       } else {
-        return new ObjectColumnSelector<String>()
-        {
-          @Override
-          public Class<String> classOfObject()
-          {
-            return String.class;
-          }
-
-          @Override
-          public String getObject()
-          {
-            return columnVals.lookupName(columnVals.getSingleValueRow(offset.getOffset()));
-          }
-        };
+        return NilColumnValueSelector.instance();
       }
     }
 
-    final ComplexColumn columnVals = (ComplexColumn) cachedColumnVals;
-    return new ObjectColumnSelector()
-    {
-      @Override
-      public Class classOfObject()
-      {
-        return columnVals.getClazz();
-      }
-
-      @Override
-      public Object getObject()
-      {
-        return columnVals.getRowValue(offset.getOffset());
-      }
-    };
+    return column.makeColumnValueSelector(offset);
   }
 
   @Override

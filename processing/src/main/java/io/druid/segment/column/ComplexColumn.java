@@ -19,11 +19,16 @@
 
 package io.druid.segment.column;
 
-import java.io.Closeable;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.data.ReadableOffset;
+
+import javax.annotation.Nullable;
 
 /**
  */
-public interface ComplexColumn extends Closeable
+public interface ComplexColumn extends BaseColumn
 {
   Class<?> getClazz();
   String getTypeName();
@@ -31,4 +36,30 @@ public interface ComplexColumn extends Closeable
 
   @Override
   void close();
+
+  @Override
+  default ColumnValueSelector makeColumnValueSelector(ReadableOffset offset)
+  {
+    return new ObjectColumnSelector()
+    {
+      @Nullable
+      @Override
+      public Object getObject()
+      {
+        return getRowValue(offset.getOffset());
+      }
+
+      @Override
+      public Class classOfObject()
+      {
+        return getClazz();
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("column", ComplexColumn.this);
+      }
+    };
+  }
 }

@@ -283,23 +283,10 @@ class WikipediaIrcDecoder implements IrcDecoder
         return dimensions.get(dimension);
       }
 
-
       @Override
-      public double getDoubleMetric(String metric)
-      {
-        return new Double(metrics.get(metric)).doubleValue();
-      }
-
-      @Override
-      public float getFloatMetric(String metric)
+      public Number getMetric(String metric)
       {
         return metrics.get(metric);
-      }
-
-      @Override
-      public long getLongMetric(String metric)
-      {
-        return new Float(metrics.get(metric)).longValue();
       }
 
       @Override

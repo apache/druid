@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.concurrent;
+package io.druid.java.util.common.concurrent;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;

@@ -20,7 +20,7 @@
 package io.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.StringUtils;
 
 import java.util.concurrent.Executor;

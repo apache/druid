@@ -20,7 +20,6 @@
 package io.druid.query.topn;
 
 import io.druid.query.aggregation.BufferAggregator;
-import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.historical.HistoricalCursor;
 import io.druid.segment.historical.HistoricalDimensionSelector;
 
@@ -28,7 +27,7 @@ import java.nio.ByteBuffer;
 
 public interface Historical1AggPooledTopNScanner<
     DimensionSelectorType extends HistoricalDimensionSelector,
-    MetricSelectorType extends ColumnValueSelector,
+    MetricSelectorType,
     BufferAggregatorType extends BufferAggregator>
 {
   /**

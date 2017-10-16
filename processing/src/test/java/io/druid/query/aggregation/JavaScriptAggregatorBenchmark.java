@@ -21,10 +21,9 @@ package io.druid.query.aggregation;
 
 import com.google.caliper.Runner;
 import com.google.caliper.SimpleBenchmark;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import io.druid.segment.ObjectColumnSelector;
 
+import java.util.Collections;
 import java.util.Map;
 
 
@@ -57,7 +56,7 @@ public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
     Map<String, String> script = scriptDoubleSum;
 
     jsAggregator = new JavaScriptAggregator(
-        Lists.asList(MetricSelectorUtils.wrap(selector), new ObjectColumnSelector[]{}),
+        Collections.singletonList(selector),
         JavaScriptAggregatorFactory.compileScript(
             script.get("fnAggregate"),
             script.get("fnReset"),

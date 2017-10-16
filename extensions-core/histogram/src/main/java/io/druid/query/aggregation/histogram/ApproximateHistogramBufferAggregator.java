@@ -21,16 +21,16 @@ package io.druid.query.aggregation.histogram;
 
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.BaseFloatColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
 public class ApproximateHistogramBufferAggregator implements BufferAggregator
 {
-  private final FloatColumnSelector selector;
+  private final BaseFloatColumnValueSelector selector;
   private final int resolution;
 
-  public ApproximateHistogramBufferAggregator(FloatColumnSelector selector, int resolution)
+  public ApproximateHistogramBufferAggregator(BaseFloatColumnValueSelector selector, int resolution)
   {
     this.selector = selector;
     this.resolution = resolution;

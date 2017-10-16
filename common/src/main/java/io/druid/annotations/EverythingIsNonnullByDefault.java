@@ -17,52 +17,24 @@
  * under the License.
  */
 
-package io.druid.query.aggregation.datasketches.theta;
+package io.druid.annotations;
 
-import io.druid.query.aggregation.Aggregator;
+import javax.annotation.Nonnull;
+import javax.annotation.meta.TypeQualifierDefault;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
-public class EmptySketchAggregator implements Aggregator
+/**
+ * This annotation can be applied to a package, class or method to indicate that all
+ * class fields and method parameters and return values in that element are nonnull
+ * by default unless overridden.
+ */
+@Documented
+@Nonnull
+@TypeQualifierDefault({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
+@Retention(RetentionPolicy.RUNTIME)
+public @interface EverythingIsNonnullByDefault
 {
-  public EmptySketchAggregator()
-  {
-  }
-
-  @Override
-  public void aggregate()
-  {
-  }
-
-  @Override
-  public void reset()
-  {
-  }
-
-  @Override
-  public Object get()
-  {
-    return SketchHolder.EMPTY;
-  }
-
-  @Override
-  public float getFloat()
-  {
-    throw new UnsupportedOperationException("Not implemented");
-  }
-
-  @Override
-  public long getLong()
-  {
-    throw new UnsupportedOperationException("Not implemented");
-  }
-
-  @Override
-  public double getDouble()
-  {
-    throw new UnsupportedOperationException("Not implemented");
-  }
-
-  @Override
-  public void close()
-  {
-  }
 }

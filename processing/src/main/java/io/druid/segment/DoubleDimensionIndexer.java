@@ -79,69 +79,14 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
       IncrementalIndex.DimensionDesc desc
   )
   {
-    return new DoubleWrappingDimensionSelector(makeDoubleColumnSelector(currEntry, desc), spec.getExtractionFn());
+    return new DoubleWrappingDimensionSelector(makeColumnValueSelector(currEntry, desc), spec.getExtractionFn());
   }
 
   @Override
-  public LongColumnSelector makeLongColumnSelector(TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc)
-  {
-    final int dimIndex = desc.getIndex();
-    class IndexerLongColumnSelector implements LongColumnSelector
-    {
-      @Override
-      public long getLong()
-      {
-        final Object[] dims = currEntry.get().getDims();
-
-        if (dimIndex >= dims.length) {
-          return 0L;
-        }
-
-        double doubleValue = (Double) dims[dimIndex];
-        return (long) doubleValue;
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        // nothing to inspect
-      }
-    }
-
-    return new IndexerLongColumnSelector();
-  }
-
-  @Override
-  public FloatColumnSelector makeFloatColumnSelector(TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc)
-  {
-    final int dimIndex = desc.getIndex();
-    class IndexerFloatColumnSelector implements FloatColumnSelector
-    {
-      @Override
-      public float getFloat()
-      {
-        final Object[] dims = currEntry.get().getDims();
-
-        if (dimIndex >= dims.length) {
-          return 0.0f;
-        }
-
-        double doubleValue = (Double) dims[dimIndex];
-        return (float) doubleValue;
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        // nothing to inspect
-      }
-    }
-
-    return new IndexerFloatColumnSelector();
-  }
-
-  @Override
-  public DoubleColumnSelector makeDoubleColumnSelector(TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc)
+  public ColumnValueSelector<?> makeColumnValueSelector(
+      TimeAndDimsHolder currEntry,
+      IncrementalIndex.DimensionDesc desc
+  )
   {
     final int dimIndex = desc.getIndex();
     class IndexerDoubleColumnSelector implements DoubleColumnSelector
@@ -153,6 +98,19 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
 
         if (dimIndex >= dims.length) {
           return 0.0;
+        }
+        return (Double) dims[dimIndex];
+      }
+
+      @SuppressWarnings("deprecation")
+      @Nullable
+      @Override
+      public Double getObject()
+      {
+        final Object[] dims = currEntry.get().getDims();
+
+        if (dimIndex >= dims.length) {
+          return null;
         }
         return (Double) dims[dimIndex];
       }
