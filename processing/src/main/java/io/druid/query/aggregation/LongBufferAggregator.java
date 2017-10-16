@@ -20,15 +20,15 @@
 package io.druid.query.aggregation;
 
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.LongColumnSelector;
+import io.druid.segment.BaseLongColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
 public abstract class LongBufferAggregator implements BufferAggregator
 {
-  protected final LongColumnSelector selector;
+  protected final BaseLongColumnValueSelector selector;
 
-  LongBufferAggregator(LongColumnSelector selector)
+  LongBufferAggregator(BaseLongColumnValueSelector selector)
   {
     this.selector = selector;
   }

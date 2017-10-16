@@ -46,7 +46,6 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.MapCache;
-import io.druid.concurrent.Execs;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.StringInputRowParser;
@@ -80,6 +79,7 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.parsers.JSONPathFieldSpec;
@@ -1536,7 +1536,7 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task = new KafkaIndexTask(
         taskId,
         null,
-        dataSchema,
+        cloneDataSchema(dataSchema),
         tuningConfig,
         ioConfig,
         null,
@@ -1545,6 +1545,18 @@ public class KafkaIndexTaskTest
     );
     task.setPollRetryMs(POLL_RETRY_MS);
     return task;
+  }
+
+  private static DataSchema cloneDataSchema(final DataSchema dataSchema)
+  {
+    return new DataSchema(
+        dataSchema.getDataSource(),
+        dataSchema.getParserMap(),
+        dataSchema.getAggregators(),
+        dataSchema.getGranularitySpec(),
+        dataSchema.getTransformSpec(),
+        objectMapper
+    );
   }
 
   private QueryRunnerFactoryConglomerate makeTimeseriesOnlyConglomerate()

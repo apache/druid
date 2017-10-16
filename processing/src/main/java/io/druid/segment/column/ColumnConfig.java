@@ -21,5 +21,5 @@ package io.druid.segment.column;
 
 public interface ColumnConfig
 {
-  public int columnCacheSizeBytes();
+  int columnCacheSizeBytes();
 }

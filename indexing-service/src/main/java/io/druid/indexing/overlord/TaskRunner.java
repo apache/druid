@@ -22,6 +22,7 @@ package io.druid.indexing.overlord;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.ListenableFuture;
 
+import io.druid.guice.annotations.PublicApi;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.autoscaling.ScalingStats;
@@ -35,6 +36,7 @@ import java.util.concurrent.Executor;
  * Interface for handing off tasks. Managed by a {@link TaskQueue}.
  * Holds state
  */
+@PublicApi
 public interface TaskRunner
 {
   /**

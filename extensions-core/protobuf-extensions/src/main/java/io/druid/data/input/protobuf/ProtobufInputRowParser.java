@@ -47,10 +47,10 @@ import java.util.Set;
 public class ProtobufInputRowParser implements ByteBufferInputRowParser
 {
   private final ParseSpec parseSpec;
-  private Parser<String, Object> parser;
   private final String descriptorFilePath;
   private final String protoMessageType;
-  private Descriptor descriptor;
+  private final Descriptor descriptor;
+  private Parser<String, Object> parser;
 
 
   @JsonCreator
@@ -63,7 +63,6 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
     this.parseSpec = parseSpec;
     this.descriptorFilePath = descriptorFilePath;
     this.protoMessageType = protoMessageType;
-    this.parser = parseSpec.makeParser();
     this.descriptor = getDescriptor(descriptorFilePath);
   }
 
@@ -82,6 +81,11 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
   @Override
   public InputRow parse(ByteBuffer input)
   {
+    if (parser == null) {
+      // parser should be created when it is really used to avoid unnecessary initialization of the underlying
+      // parseSpec.
+      parser = parseSpec.makeParser();
+    }
     String json;
     try {
       DynamicMessage message = DynamicMessage.parseFrom(descriptor, ByteString.copyFrom(input));

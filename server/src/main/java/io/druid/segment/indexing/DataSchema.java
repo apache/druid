@@ -54,6 +54,8 @@ public class DataSchema
 
   private final ObjectMapper jsonMapper;
 
+  private InputRowParser cachedParser;
+
   @JsonCreator
   public DataSchema(
       @JsonProperty("dataSource") String dataSource,
@@ -111,6 +113,10 @@ public class DataSchema
       return null;
     }
 
+    if (cachedParser != null) {
+      return cachedParser;
+    }
+
     final InputRowParser inputRowParser = transformSpec.decorate(
         jsonMapper.convertValue(this.parser, InputRowParser.class)
     );
@@ -146,7 +152,7 @@ public class DataSchema
           );
         }
 
-        return inputRowParser.withParseSpec(
+        cachedParser = inputRowParser.withParseSpec(
             inputRowParser.getParseSpec()
                           .withDimensionsSpec(
                               dimensionsSpec
@@ -156,12 +162,14 @@ public class DataSchema
                           )
         );
       } else {
-        return inputRowParser;
+        cachedParser = inputRowParser;
       }
     } else {
       log.warn("No parseSpec in parser has been specified.");
-      return inputRowParser;
+      cachedParser = inputRowParser;
     }
+
+    return cachedParser;
   }
 
   @JsonProperty("metricsSpec")

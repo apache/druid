@@ -62,9 +62,9 @@ public class DoubleLastAggregationTest
     valueSelector = new TestDoubleColumnSelectorImpl(doubles);
     objectSelector = new TestObjectColumnSelector<>(pairs);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
-    EasyMock.expect(colSelectorFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME)).andReturn(timeSelector);
-    EasyMock.expect(colSelectorFactory.makeDoubleColumnSelector("nilly")).andReturn(valueSelector);
-    EasyMock.expect(colSelectorFactory.makeObjectColumnSelector("billy")).andReturn(objectSelector);
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME)).andReturn(timeSelector);
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(valueSelector);
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector("billy")).andReturn(objectSelector);
     EasyMock.replay(colSelectorFactory);
   }
 

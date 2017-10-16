@@ -19,7 +19,6 @@
 
 package io.druid.sql.calcite.planner;
 
-import com.google.common.collect.ImmutableMap;
 import io.druid.java.util.common.DateTimes;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprEval;
@@ -28,6 +27,7 @@ import io.druid.math.expr.Parser;
 import io.druid.sql.calcite.expression.DruidExpression;
 import io.druid.sql.calcite.expression.Expressions;
 import io.druid.sql.calcite.table.RowSignature;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexExecutor;
 import org.apache.calcite.rex.RexNode;
@@ -70,25 +70,48 @@ public class DruidRexExecutor implements RexExecutor
       } else {
         final SqlTypeName sqlTypeName = constExp.getType().getSqlTypeName();
         final Expr expr = Parser.parse(druidExpression.getExpression(), plannerContext.getExprMacroTable());
-        final ExprEval exprResult = expr.eval(Parser.withMap(ImmutableMap.of()));
-        final Object literalValue;
+
+        final ExprEval exprResult = expr.eval(
+            name -> {
+              // Sanity check. Bindings should not be used for a constant expression.
+              throw new UnsupportedOperationException();
+            }
+        );
+
+        final RexNode literal;
 
         if (sqlTypeName == SqlTypeName.BOOLEAN) {
-          literalValue = exprResult.asBoolean();
-        } else if (sqlTypeName == SqlTypeName.DATE || sqlTypeName == SqlTypeName.TIMESTAMP) {
-          literalValue = Calcites.jodaToCalciteCalendarLiteral(
-              DateTimes.utc(exprResult.asLong()),
-              plannerContext.getTimeZone()
+          literal = rexBuilder.makeLiteral(exprResult.asBoolean(), constExp.getType(), true);
+        } else if (sqlTypeName == SqlTypeName.DATE) {
+          literal = rexBuilder.makeDateLiteral(
+              Calcites.jodaToCalciteDateString(
+                  DateTimes.utc(exprResult.asLong()),
+                  plannerContext.getTimeZone()
+              )
+          );
+        } else if (sqlTypeName == SqlTypeName.TIMESTAMP) {
+          literal = rexBuilder.makeTimestampLiteral(
+              Calcites.jodaToCalciteTimestampString(
+                  DateTimes.utc(exprResult.asLong()),
+                  plannerContext.getTimeZone()
+              ),
+              RelDataType.PRECISION_NOT_SPECIFIED
           );
         } else if (SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName)) {
-          literalValue = exprResult.type() == ExprType.LONG
-                         ? new BigDecimal(exprResult.asLong())
-                         : new BigDecimal(exprResult.asDouble());
+          final BigDecimal bigDecimal;
+
+          if (exprResult.type() == ExprType.LONG) {
+            bigDecimal = BigDecimal.valueOf(exprResult.asLong());
+          } else {
+            bigDecimal = BigDecimal.valueOf(exprResult.asDouble());
+          }
+
+          literal = rexBuilder.makeLiteral(bigDecimal, constExp.getType(), true);
         } else {
-          literalValue = exprResult.value();
+          literal = rexBuilder.makeLiteral(exprResult.value(), constExp.getType(), true);
         }
 
-        reducedValues.add(rexBuilder.makeLiteral(literalValue, constExp.getType(), true));
+        reducedValues.add(literal);
       }
     }
   }

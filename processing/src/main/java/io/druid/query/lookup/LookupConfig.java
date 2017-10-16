@@ -26,11 +26,19 @@ import com.google.common.base.Strings;
 public class LookupConfig
 {
 
-  @JsonProperty
-  private final String snapshotWorkingDir;
+  @JsonProperty("snapshotWorkingDir")
+  private String snapshotWorkingDir;
+
+  @JsonProperty("enableLookupSyncOnStartup")
+  private boolean enableLookupSyncOnStartup = true;
+
+  @JsonProperty("numLookupLoadingThreads")
+  private int numLookupLoadingThreads = Runtime.getRuntime().availableProcessors() / 2;
 
   /**
-   * @param snapshotWorkingDir working directory to store lookups snapshot file, passing null or empty string will disable the snapshot utility
+   * @param snapshotWorkingDir        working directory to store lookups snapshot file, passing null or empty string will disable the snapshot utility
+   * @param numLookupLoadingThreads   number of threads for loading the lookups as part of the synchronization process
+   * @param enableLookupSyncOnStartup decides whether the lookup synchronization process should be enabled at startup
    */
   @JsonCreator
   public LookupConfig(
@@ -45,6 +53,15 @@ public class LookupConfig
     return snapshotWorkingDir;
   }
 
+  public int getNumLookupLoadingThreads()
+  {
+    return numLookupLoadingThreads;
+  }
+
+  public boolean getEnableLookupSyncOnStartup()
+  {
+    return enableLookupSyncOnStartup;
+  }
 
   @Override
   public boolean equals(Object o)
@@ -58,7 +75,9 @@ public class LookupConfig
 
     LookupConfig that = (LookupConfig) o;
 
-    return getSnapshotWorkingDir().equals(that.getSnapshotWorkingDir());
+    return snapshotWorkingDir.equals(that.snapshotWorkingDir) &&
+           enableLookupSyncOnStartup == that.enableLookupSyncOnStartup &&
+           numLookupLoadingThreads == that.numLookupLoadingThreads;
 
   }
 
@@ -67,6 +86,8 @@ public class LookupConfig
   {
     return "LookupConfig{" +
            "snapshotWorkingDir='" + getSnapshotWorkingDir() + '\'' +
+           " numLookupLoadingThreads='" + getNumLookupLoadingThreads() + '\'' +
+           " enableLookupSyncOnStartup='" + getEnableLookupSyncOnStartup() + '\'' +
            '}';
   }
 }

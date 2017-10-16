@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Ordering;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 
@@ -33,6 +34,7 @@ import java.util.List;
 
 /**
  */
+@PublicApi
 public class ScalingStats
 {
   public enum EVENT
@@ -63,6 +65,15 @@ public class ScalingStats
           .orderedBy(COMPARATOR)
           .maximumSize(capacity)
           .create();
+    }
+  }
+
+  public void addAll(ScalingStats stats)
+  {
+    synchronized (lock) {
+      synchronized (stats.lock) {
+        recentEvents.addAll(stats.recentEvents);
+      }
     }
   }
 

@@ -49,7 +49,7 @@ import com.metamx.http.client.Request;
 import com.metamx.http.client.response.InputStreamResponseHandler;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.curator.CuratorUtils;
 import io.druid.curator.cache.PathChildrenCacheFactory;
@@ -747,7 +747,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       WorkerSelectStrategy strategy;
       if (workerConfig == null || workerConfig.getSelectStrategy() == null) {
         strategy = WorkerBehaviorConfig.DEFAULT_STRATEGY;
-        log.info("No worker selection strategy set. Using default of [%s]", strategy.getClass().getSimpleName());
+        log.debug("No worker selection strategy set. Using default of [%s]", strategy.getClass().getSimpleName());
       } else {
         strategy = workerConfig.getSelectStrategy();
       }

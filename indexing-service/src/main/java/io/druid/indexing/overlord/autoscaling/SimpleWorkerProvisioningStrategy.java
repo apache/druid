@@ -35,6 +35,7 @@ import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.overlord.WorkerTaskRunner;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import io.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import io.druid.indexing.worker.Worker;
 import io.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
@@ -118,9 +119,9 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
       Collection<? extends TaskRunnerWorkItem> pendingTasks = runner.getPendingTasks();
       Collection<ImmutableWorkerInfo> workers = runner.getWorkers();
       boolean didProvision = false;
-      final WorkerBehaviorConfig workerConfig = workerConfigRef.get();
-      if (workerConfig == null || workerConfig.getAutoScaler() == null) {
-        log.error("No workerConfig available, cannot provision new workers.");
+      final DefaultWorkerBehaviorConfig workerConfig =
+          PendingTaskBasedWorkerProvisioningStrategy.getDefaultWorkerBehaviorConfig(workerConfigRef, "provision", log);
+      if (workerConfig == null) {
         return false;
       }
 
@@ -183,9 +184,9 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
     public synchronized boolean doTerminate()
     {
       Collection<? extends TaskRunnerWorkItem> pendingTasks = runner.getPendingTasks();
-      final WorkerBehaviorConfig workerConfig = workerConfigRef.get();
+      final DefaultWorkerBehaviorConfig workerConfig =
+          PendingTaskBasedWorkerProvisioningStrategy.getDefaultWorkerBehaviorConfig(workerConfigRef, "terminate", log);
       if (workerConfig == null) {
-        log.warn("No workerConfig available, cannot terminate workers.");
         return false;
       }
 
@@ -208,14 +209,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
           )
       );
 
-      final Set<String> stillExisting = Sets.newHashSet();
-      for (String s : currentlyTerminating) {
-        if (workerNodeIds.contains(s)) {
-          stillExisting.add(s);
-        }
-      }
-      currentlyTerminating.clear();
-      currentlyTerminating.addAll(stillExisting);
+      currentlyTerminating.retainAll(workerNodeIds);
 
       Collection<ImmutableWorkerInfo> workers = runner.getWorkers();
       updateTargetWorkerCount(workerConfig, pendingTasks, workers);
@@ -277,7 +271,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
 
 
     private void updateTargetWorkerCount(
-        final WorkerBehaviorConfig workerConfig,
+        final DefaultWorkerBehaviorConfig workerConfig,
         final Collection<? extends TaskRunnerWorkItem> pendingTasks,
         final Collection<ImmutableWorkerInfo> zkWorkers
     )

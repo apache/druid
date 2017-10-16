@@ -24,6 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Longs;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 
@@ -74,9 +75,9 @@ public class VarianceAggregatorCollector
     }
   };
 
-  void fold(VarianceAggregatorCollector other)
+  void fold(@Nullable VarianceAggregatorCollector other)
   {
-    if (other.count == 0) {
+    if (other == null || other.count == 0) {
       return;
     }
     if (this.count == 0) {
@@ -93,7 +94,7 @@ public class VarianceAggregatorCollector
     this.sum += other.sum;
   }
 
-  static Object combineValues(Object lhs, Object rhs)
+  static Object combineValues(Object lhs, @Nullable Object rhs)
   {
     ((VarianceAggregatorCollector) lhs).fold((VarianceAggregatorCollector) rhs);
     return lhs;

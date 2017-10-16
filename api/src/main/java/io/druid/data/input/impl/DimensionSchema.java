@@ -73,7 +73,7 @@ public abstract class DimensionSchema
     }
   }
 
-  public static enum MultiValueHandling
+  public enum MultiValueHandling
   {
     SORTED_ARRAY,
     SORTED_SET,

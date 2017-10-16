@@ -21,7 +21,7 @@ package io.druid.segment.realtime.firehose;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.MapInputRowParser;
@@ -41,8 +41,10 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -99,19 +101,9 @@ public class EventReceiverFirehoseTest
   @Test
   public void testSingleThread() throws IOException
   {
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
-            .andReturn(null)
-            .anyTimes();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
-            .anyTimes();
-    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
-    EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(req.getContentType()).andReturn("application/json").times(NUM_EVENTS);
-    EasyMock.replay(req);
-
     for (int i = 0; i < NUM_EVENTS; ++i) {
-      final InputStream inputStream = IOUtils.toInputStream(inputRow);
+      setUpRequestExpectations(null, null);
+      final InputStream inputStream = IOUtils.toInputStream(inputRow, StandardCharsets.UTF_8);
       firehose.addAll(inputStream, req);
       Assert.assertEquals(i + 1, firehose.getCurrentBufferSize());
       inputStream.close();
@@ -159,6 +151,7 @@ public class EventReceiverFirehoseTest
     EasyMock.expectLastCall().anyTimes();
 
     EasyMock.expect(req.getContentType()).andReturn("application/json").times(2 * NUM_EVENTS);
+    EasyMock.expect(req.getHeader("X-Firehose-Producer-Id")).andReturn(null).times(2 * NUM_EVENTS);
     EasyMock.replay(req);
 
     final ExecutorService executorService = Execs.singleThreaded("single_thread");
@@ -169,7 +162,7 @@ public class EventReceiverFirehoseTest
           public Boolean call() throws Exception
           {
             for (int i = 0; i < NUM_EVENTS; ++i) {
-              final InputStream inputStream = IOUtils.toInputStream(inputRow);
+              final InputStream inputStream = IOUtils.toInputStream(inputRow, StandardCharsets.UTF_8);
               firehose.addAll(inputStream, req);
               inputStream.close();
             }
@@ -179,7 +172,7 @@ public class EventReceiverFirehoseTest
     );
 
     for (int i = 0; i < NUM_EVENTS; ++i) {
-      final InputStream inputStream = IOUtils.toInputStream(inputRow);
+      final InputStream inputStream = IOUtils.toInputStream(inputRow, StandardCharsets.UTF_8);
       firehose.addAll(inputStream, req);
       inputStream.close();
     }
@@ -283,5 +276,146 @@ public class EventReceiverFirehoseTest
     while (!firehose.isClosed()) {
       Thread.sleep(50);
     }
+  }
+
+  @Test
+  public void testProducerSequence() throws IOException
+  {
+    for (int i = 0; i < NUM_EVENTS; ++i) {
+      setUpRequestExpectations("producer", String.valueOf(i));
+
+      final InputStream inputStream = IOUtils.toInputStream(inputRow, StandardCharsets.UTF_8);
+      firehose.addAll(inputStream, req);
+      Assert.assertEquals(i + 1, firehose.getCurrentBufferSize());
+      inputStream.close();
+    }
+
+    EasyMock.verify(req);
+
+    final Iterable<Map.Entry<String, EventReceiverFirehoseMetric>> metrics = register.getMetrics();
+    Assert.assertEquals(1, Iterables.size(metrics));
+
+    final Map.Entry<String, EventReceiverFirehoseMetric> entry = Iterables.getLast(metrics);
+    Assert.assertEquals(SERVICE_NAME, entry.getKey());
+    Assert.assertEquals(CAPACITY, entry.getValue().getCapacity());
+    Assert.assertEquals(CAPACITY, firehose.getCapacity());
+    Assert.assertEquals(NUM_EVENTS, entry.getValue().getCurrentBufferSize());
+    Assert.assertEquals(NUM_EVENTS, firehose.getCurrentBufferSize());
+
+    for (int i = NUM_EVENTS - 1; i >= 0; --i) {
+      Assert.assertTrue(firehose.hasMore());
+      Assert.assertNotNull(firehose.nextRow());
+      Assert.assertEquals(i, firehose.getCurrentBufferSize());
+    }
+
+    Assert.assertEquals(CAPACITY, entry.getValue().getCapacity());
+    Assert.assertEquals(CAPACITY, firehose.getCapacity());
+    Assert.assertEquals(0, entry.getValue().getCurrentBufferSize());
+    Assert.assertEquals(0, firehose.getCurrentBufferSize());
+
+    firehose.close();
+    Assert.assertFalse(firehose.hasMore());
+    Assert.assertEquals(0, Iterables.size(register.getMetrics()));
+
+  }
+
+  @Test
+  public void testLowProducerSequence() throws IOException
+  {
+    for (int i = 0; i < NUM_EVENTS; ++i) {
+      setUpRequestExpectations("producer", "1");
+
+      final InputStream inputStream = IOUtils.toInputStream(inputRow, StandardCharsets.UTF_8);
+      final Response response = firehose.addAll(inputStream, req);
+      Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+      Assert.assertEquals(1, firehose.getCurrentBufferSize());
+      inputStream.close();
+    }
+
+    EasyMock.verify(req);
+
+    firehose.close();
+  }
+
+  @Test
+  public void testMissingProducerSequence() throws IOException
+  {
+    setUpRequestExpectations("producer", null);
+
+    final InputStream inputStream = IOUtils.toInputStream(inputRow, StandardCharsets.UTF_8);
+    final Response response = firehose.addAll(inputStream, req);
+
+    Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+
+    inputStream.close();
+
+    EasyMock.verify(req);
+
+    firehose.close();
+  }
+
+  @Test
+  public void testTooManyProducerIds() throws IOException
+  {
+    for (int i = 0; i < EventReceiverFirehoseFactory.MAX_FIREHOSE_PRODUCERS - 1; i++) {
+      setUpRequestExpectations("producer-" + i, "0");
+
+      final InputStream inputStream = IOUtils.toInputStream(inputRow, StandardCharsets.UTF_8);
+      final Response response = firehose.addAll(inputStream, req);
+      Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+      inputStream.close();
+      Assert.assertTrue(firehose.hasMore());
+      Assert.assertNotNull(firehose.nextRow());
+    }
+
+    setUpRequestExpectations("toomany", "0");
+
+    final InputStream inputStream = IOUtils.toInputStream(inputRow, StandardCharsets.UTF_8);
+    final Response response = firehose.addAll(inputStream, req);
+    Assert.assertEquals(Response.Status.FORBIDDEN.getStatusCode(), response.getStatus());
+    inputStream.close();
+
+    EasyMock.verify(req);
+
+    firehose.close();
+  }
+
+  @Test
+  public void testNaNProducerSequence() throws IOException
+  {
+    setUpRequestExpectations("producer", "foo");
+
+    final InputStream inputStream = IOUtils.toInputStream(inputRow, StandardCharsets.UTF_8);
+    final Response response = firehose.addAll(inputStream, req);
+
+    Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+
+    inputStream.close();
+
+    EasyMock.verify(req);
+
+    firehose.close();
+  }
+
+  private void setUpRequestExpectations(String producerId, String producerSequenceValue)
+  {
+    EasyMock.reset(req);
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
+            .andReturn(null)
+            .anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
+            .anyTimes();
+    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    EasyMock.expectLastCall().anyTimes();
+
+    EasyMock.expect(req.getContentType()).andReturn("application/json");
+    EasyMock.expect(req.getHeader("X-Firehose-Producer-Id")).andReturn(producerId);
+
+    if (producerId != null) {
+      EasyMock.expect(req.getHeader("X-Firehose-Producer-Seq")).andReturn(producerSequenceValue);
+    }
+
+    EasyMock.replay(req);
   }
 }

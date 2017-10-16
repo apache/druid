@@ -65,7 +65,7 @@ public interface TimelineServerView extends ServerView
      *
      * @return continue or unregister
      */
-    CallbackAction segmentAdded(final DruidServerMetadata server, final DataSegment segment);
+    CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment);
 
     /**
      * Called when a segment has been removed from all servers and is no longer present in the timeline.
@@ -74,6 +74,6 @@ public interface TimelineServerView extends ServerView
      *
      * @return continue or unregister
      */
-    CallbackAction segmentRemoved(final DataSegment segment);
+    CallbackAction segmentRemoved(DataSegment segment);
   }
 }

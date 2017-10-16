@@ -27,5 +27,5 @@ import java.nio.ByteBuffer;
 public interface ByteBufferInputRowParser extends InputRowParser<ByteBuffer>
 {
   @Override
-  public ByteBufferInputRowParser withParseSpec(ParseSpec parseSpec);
+  ByteBufferInputRowParser withParseSpec(ParseSpec parseSpec);
 }

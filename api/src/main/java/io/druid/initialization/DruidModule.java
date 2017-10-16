@@ -29,5 +29,5 @@ import java.util.List;
 @ExtensionPoint
 public interface DruidModule extends com.google.inject.Module
 {
-  public List<? extends Module> getJacksonModules();
+  List<? extends Module> getJacksonModules();
 }

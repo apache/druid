@@ -21,13 +21,13 @@ package io.druid.query.aggregation.first;
 
 import io.druid.collections.SerializablePair;
 import io.druid.query.aggregation.Aggregator;
-import io.druid.segment.LongColumnSelector;
+import io.druid.segment.BaseLongColumnValueSelector;
 
 public class LongFirstAggregator implements Aggregator
 {
 
-  private final LongColumnSelector valueSelector;
-  private final LongColumnSelector timeSelector;
+  private final BaseLongColumnValueSelector valueSelector;
+  private final BaseLongColumnValueSelector timeSelector;
   private final String name;
 
   protected long firstTime;
@@ -35,8 +35,8 @@ public class LongFirstAggregator implements Aggregator
 
   public LongFirstAggregator(
       String name,
-      LongColumnSelector timeSelector,
-      LongColumnSelector valueSelector
+      BaseLongColumnValueSelector timeSelector,
+      BaseLongColumnValueSelector valueSelector
   )
   {
     this.name = name;

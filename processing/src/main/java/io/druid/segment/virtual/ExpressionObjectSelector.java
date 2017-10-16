@@ -27,6 +27,8 @@ import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprEval;
 import io.druid.math.expr.Parser;
 import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.BaseObjectColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.ObjectColumnSelector;
@@ -49,7 +51,7 @@ public class ExpressionObjectSelector implements ObjectColumnSelector<ExprEval>
     this.expression = Preconditions.checkNotNull(expression, "expression");
   }
 
-  static ExpressionObjectSelector from(ColumnSelectorFactory columnSelectorFactory, Expr expression)
+  public static ExpressionObjectSelector from(ColumnSelectorFactory columnSelectorFactory, Expr expression)
   {
     return new ExpressionObjectSelector(createBindings(columnSelectorFactory, expression), expression);
   }
@@ -63,18 +65,18 @@ public class ExpressionObjectSelector implements ObjectColumnSelector<ExprEval>
       final Supplier<Object> supplier;
 
       if (nativeType == ValueType.FLOAT) {
-        supplier = columnSelectorFactory.makeFloatColumnSelector(columnName)::getFloat;
+        supplier = columnSelectorFactory.makeColumnValueSelector(columnName)::getFloat;
       } else if (nativeType == ValueType.LONG) {
-        supplier = columnSelectorFactory.makeLongColumnSelector(columnName)::getLong;
+        supplier = columnSelectorFactory.makeColumnValueSelector(columnName)::getLong;
       } else if (nativeType == ValueType.DOUBLE) {
-        supplier = columnSelectorFactory.makeDoubleColumnSelector(columnName)::getDouble;
+        supplier = columnSelectorFactory.makeColumnValueSelector(columnName)::getDouble;
       } else if (nativeType == ValueType.STRING) {
         supplier = supplierFromDimensionSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName))
         );
       } else if (nativeType == null) {
         // Unknown ValueType. Try making an Object selector and see if that gives us anything useful.
-        supplier = supplierFromObjectSelector(columnSelectorFactory.makeObjectColumnSelector(columnName));
+        supplier = supplierFromObjectSelector(columnSelectorFactory.makeColumnValueSelector(columnName));
       } else {
         // Unhandleable ValueType (COMPLEX).
         supplier = null;
@@ -110,7 +112,7 @@ public class ExpressionObjectSelector implements ObjectColumnSelector<ExprEval>
 
   @VisibleForTesting
   @Nullable
-  static Supplier<Object> supplierFromObjectSelector(final ObjectColumnSelector selector)
+  static Supplier<Object> supplierFromObjectSelector(final BaseObjectColumnValueSelector<?> selector)
   {
     if (selector == null) {
       return null;
@@ -146,5 +148,12 @@ public class ExpressionObjectSelector implements ObjectColumnSelector<ExprEval>
   public ExprEval getObject()
   {
     return expression.eval(bindings);
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("expression", expression);
+    inspector.visit("bindings", bindings);
   }
 }

@@ -27,7 +27,7 @@ import io.druid.collections.BlockingPool;
 import io.druid.collections.DummyBlockingPool;
 import io.druid.collections.DummyNonBlockingPool;
 import io.druid.collections.NonBlockingPool;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Merging;

@@ -193,7 +193,7 @@ public class ArithmeticPostAggregator implements PostAggregator
     }
   }
 
-  private static enum Ops
+  private enum Ops
   {
     PLUS("+") {
       @Override
@@ -264,7 +264,7 @@ public class ArithmeticPostAggregator implements PostAggregator
     }
   }
 
-  public static enum Ordering implements Comparator<Double>
+  public enum Ordering implements Comparator<Double>
   {
     // ensures the following order: numeric > NaN > Infinite
     // The name may be referenced via Ordering.valueOf(ordering) in the constructor.

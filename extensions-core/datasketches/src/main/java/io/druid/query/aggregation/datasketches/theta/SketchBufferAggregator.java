@@ -25,7 +25,7 @@ import com.yahoo.sketches.theta.SetOperation;
 import com.yahoo.sketches.theta.Union;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.BaseObjectColumnValueSelector;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
@@ -34,13 +34,13 @@ import java.util.IdentityHashMap;
 
 public class SketchBufferAggregator implements BufferAggregator
 {
-  private final ObjectColumnSelector selector;
+  private final BaseObjectColumnValueSelector selector;
   private final int size;
   private final int maxIntermediateSize;
   private final IdentityHashMap<ByteBuffer, Int2ObjectMap<Union>> unions = new IdentityHashMap<>();
   private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
 
-  public SketchBufferAggregator(ObjectColumnSelector selector, int size, int maxIntermediateSize)
+  public SketchBufferAggregator(BaseObjectColumnValueSelector selector, int size, int maxIntermediateSize)
   {
     this.selector = selector;
     this.size = size;
@@ -61,23 +61,27 @@ public class SketchBufferAggregator implements BufferAggregator
       return;
     }
 
-    Union union = getUnion(buf, position);
+    Union union = getOrCreateUnion(buf, position);
     SketchAggregator.updateUnion(union, update);
   }
 
   @Override
   public Object get(ByteBuffer buf, int position)
   {
+    Int2ObjectMap<Union> unionMap = unions.get(buf);
+    Union union = unionMap != null ? unionMap.get(position) : null;
+    if (union == null) {
+      return SketchHolder.EMPTY;
+    }
     //in the code below, I am returning SetOp.getResult(true, null)
     //"true" returns an ordered sketch but slower to compute than unordered sketch.
     //however, advantage of ordered sketch is that they are faster to "union" later
     //given that results from the aggregator will be combined further, it is better
     //to return the ordered sketch here
-    return SketchHolder.of(getUnion(buf, position).getResult(true, null));
+    return SketchHolder.of(union.getResult(true, null));
   }
 
-  //Note that this is not threadsafe and I don't think it needs to be
-  private Union getUnion(ByteBuffer buf, int position)
+  private Union getOrCreateUnion(ByteBuffer buf, int position)
   {
     Int2ObjectMap<Union> unionMap = unions.get(buf);
     Union union = unionMap != null ? unionMap.get(position) : null;

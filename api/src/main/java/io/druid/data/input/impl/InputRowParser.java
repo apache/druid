@@ -40,9 +40,9 @@ public interface InputRowParser<T>
    * {@code ParseException} if the input is unparseable.
    */
   @Nullable
-  public InputRow parse(T input);
+  InputRow parse(T input);
 
-  public ParseSpec getParseSpec();
+  ParseSpec getParseSpec();
 
-  public InputRowParser withParseSpec(ParseSpec parseSpec);
+  InputRowParser withParseSpec(ParseSpec parseSpec);
 }

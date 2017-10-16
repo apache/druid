@@ -29,17 +29,17 @@ import java.util.Map;
  */
 public interface MetadataRuleManager
 {
-  public void start();
+  void start();
 
-  public void stop();
+  void stop();
 
-  public void poll();
+  void poll();
 
-  public Map<String, List<Rule>> getAllRules();
+  Map<String, List<Rule>> getAllRules();
 
-  public List<Rule> getRules(final String dataSource);
+  List<Rule> getRules(String dataSource);
 
-  public List<Rule> getRulesWithDefault(final String dataSource);
+  List<Rule> getRulesWithDefault(String dataSource);
 
-  public boolean overrideRule(final String dataSource, final List<Rule> rulesConfig, final AuditInfo auditInfo);
+  boolean overrideRule(String dataSource, List<Rule> rulesConfig, AuditInfo auditInfo);
 }

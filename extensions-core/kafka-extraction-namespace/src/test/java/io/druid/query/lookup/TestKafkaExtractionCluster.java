@@ -295,7 +295,7 @@ public class TestKafkaExtractionCluster
     closer.close();
   }
 
-  private final Properties makeProducerProperties()
+  private Properties makeProducerProperties()
   {
     final Properties kafkaProducerProperties = new Properties();
     kafkaProducerProperties.putAll(kafkaProperties);

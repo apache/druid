@@ -49,8 +49,6 @@ import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
-import io.druid.indexing.common.actions.LockAcquireAction;
-import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.firehose.IngestSegmentFirehoseFactory;
@@ -98,9 +96,11 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -163,6 +163,12 @@ public class IndexTask extends AbstractTask
   }
 
   @Override
+  public int getPriority()
+  {
+    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY);
+  }
+
+  @Override
   public String getType()
   {
     return TYPE;
@@ -171,11 +177,21 @@ public class IndexTask extends AbstractTask
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
-    Optional<SortedSet<Interval>> intervals = ingestionSchema.getDataSchema().getGranularitySpec().bucketIntervals();
+    final Optional<SortedSet<Interval>> intervals = ingestionSchema.getDataSchema()
+                                                                   .getGranularitySpec()
+                                                                   .bucketIntervals();
 
     if (intervals.isPresent()) {
-      Interval interval = JodaUtils.umbrellaInterval(intervals.get());
-      return taskActionClient.submit(new LockTryAcquireAction(interval)) != null;
+      final List<TaskLock> locks = getTaskLocks(taskActionClient);
+      if (locks.size() == 0) {
+        try {
+          Tasks.tryAcquireExclusiveLocks(taskActionClient, intervals.get());
+        }
+        catch (Exception e) {
+          return false;
+        }
+      }
+      return true;
     } else {
       return true;
     }
@@ -208,14 +224,15 @@ public class IndexTask extends AbstractTask
 
     final ShardSpecs shardSpecs = determineShardSpecs(toolbox, firehoseFactory, firehoseTempDir);
 
-    final String version;
     final DataSchema dataSchema;
+    final Map<Interval, String> versions;
     if (determineIntervals) {
-      Interval interval = JodaUtils.umbrellaInterval(shardSpecs.getIntervals());
-      final long lockTimeoutMs = getContextValue(Tasks.LOCK_TIMEOUT_KEY, Tasks.DEFAULT_LOCK_TIMEOUT);
-      // Note: if lockTimeoutMs is larger than ServerConfig.maxIdleTime, the below line can incur http timeout error.
-      TaskLock lock = toolbox.getTaskActionClient().submit(new LockAcquireAction(interval, lockTimeoutMs));
-      version = lock.getVersion();
+      final SortedSet<Interval> intervals = new TreeSet<>(Comparators.intervalsByStartThenEnd());
+      intervals.addAll(shardSpecs.getIntervals());
+      final Map<Interval, TaskLock> locks = Tasks.tryAcquireExclusiveLocks(toolbox.getTaskActionClient(), intervals);
+      versions = locks.entrySet().stream()
+                      .collect(Collectors.toMap(Entry::getKey, entry -> entry.getValue().getVersion()));
+
       dataSchema = ingestionSchema.getDataSchema().withGranularitySpec(
           ingestionSchema.getDataSchema()
                          .getGranularitySpec()
@@ -226,15 +243,26 @@ public class IndexTask extends AbstractTask
                          )
       );
     } else {
-      version = Iterables.getOnlyElement(getTaskLocks(toolbox)).getVersion();
+      versions = getTaskLocks(toolbox.getTaskActionClient())
+          .stream()
+          .collect(Collectors.toMap(TaskLock::getInterval, TaskLock::getVersion));
       dataSchema = ingestionSchema.getDataSchema();
     }
 
-    if (generateAndPublishSegments(toolbox, dataSchema, shardSpecs, version, firehoseFactory, firehoseTempDir)) {
+    if (generateAndPublishSegments(toolbox, dataSchema, shardSpecs, versions, firehoseFactory, firehoseTempDir)) {
       return TaskStatus.success(getId());
     } else {
       return TaskStatus.failure(getId());
     }
+  }
+
+  private static String findVersion(Map<Interval, String> versions, Interval interval)
+  {
+    return versions.entrySet().stream()
+                   .filter(entry -> entry.getKey().contains(interval))
+                   .map(Entry::getValue)
+                   .findFirst()
+                   .orElse(null);
   }
 
   private static boolean isGuaranteedRollup(IndexIOConfig ioConfig, IndexTuningConfig tuningConfig)
@@ -523,7 +551,7 @@ public class IndexTask extends AbstractTask
       final TaskToolbox toolbox,
       final DataSchema dataSchema,
       final ShardSpecs shardSpecs,
-      final String version,
+      Map<Interval, String> versions,
       final FirehoseFactory firehoseFactory,
       final File firehoseTempDir
   ) throws IOException, InterruptedException
@@ -571,6 +599,7 @@ public class IndexTask extends AbstractTask
             shardSpecForPublishing = shardSpec;
           }
 
+          final String version = findVersion(versions, entry.getKey());
           lookup.put(
               Appenderators.getSequenceName(entry.getKey(), version, shardSpec),
               new SegmentIdentifier(getDataSource(), entry.getKey(), version, shardSpecForPublishing)
@@ -599,12 +628,12 @@ public class IndexTask extends AbstractTask
         }
 
         final int partitionNum = counters.computeIfAbsent(interval, x -> new AtomicInteger()).getAndIncrement();
-        return new SegmentIdentifier(getDataSource(), interval, version, new NumberedShardSpec(partitionNum, 0));
+        return new SegmentIdentifier(getDataSource(), interval, findVersion(versions, interval), new NumberedShardSpec(partitionNum, 0));
       };
     }
 
     final TransactionalSegmentPublisher publisher = (segments, commitMetadata) -> {
-      final SegmentTransactionalInsertAction action = new SegmentTransactionalInsertAction(segments, null, null);
+      final SegmentTransactionalInsertAction action = new SegmentTransactionalInsertAction(segments);
       return toolbox.getTaskActionClient().submit(action).isSuccess();
     };
 
@@ -646,13 +675,12 @@ public class IndexTask extends AbstractTask
               // Sequence name is based solely on the shardSpec, and there will only be one segment per sequence.
               final Interval interval = optInterval.get();
               final ShardSpec shardSpec = shardSpecs.getShardSpec(interval, inputRow);
-              sequenceName = Appenderators.getSequenceName(interval, version, shardSpec);
+              sequenceName = Appenderators.getSequenceName(interval, findVersion(versions, interval), shardSpec);
             } else {
               // Segments are created as needed, using a single sequence name. They may be allocated from the overlord
               // (in append mode) or may be created on our own authority (in overwrite mode).
               sequenceName = getId();
             }
-
             final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName, committerSupplier);
 
             if (addResult.isOk()) {

@@ -31,7 +31,7 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.LocalCacheProvider;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.curator.CuratorTestBase;
 import io.druid.curator.announcement.Announcer;
 import io.druid.jackson.DefaultObjectMapper;

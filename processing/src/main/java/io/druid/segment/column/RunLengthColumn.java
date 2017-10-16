@@ -23,5 +23,5 @@ package io.druid.segment.column;
  */
 public interface RunLengthColumn
 {
-  public void thisIsAFictionalInterfaceThatWillHopefullyMeanSomethingSometime();
+  void thisIsAFictionalInterfaceThatWillHopefullyMeanSomethingSometime();
 }

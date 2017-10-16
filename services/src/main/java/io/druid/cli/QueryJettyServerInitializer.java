@@ -20,6 +20,7 @@
 package io.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
@@ -27,9 +28,10 @@ import com.google.inject.Key;
 import com.google.inject.servlet.GuiceFilter;
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
-import io.druid.server.security.AuthConfig;
+import io.druid.server.initialization.jetty.LimitRequestsFilter;
 import io.druid.server.security.AuthenticationUtils;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
@@ -37,6 +39,7 @@ import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.servlet.DefaultServlet;
+import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
@@ -47,14 +50,17 @@ import java.util.Set;
  */
 public class QueryJettyServerInitializer implements JettyServerInitializer
 {
-  private static Logger log = new Logger(QueryJettyServerInitializer.class);
+  private static final Logger log = new Logger(QueryJettyServerInitializer.class);
 
   private final List<Handler> extensionHandlers;
 
+  private final ServerConfig serverConfig;
+
   @Inject
-  public QueryJettyServerInitializer(Set<Handler> extensionHandlers)
+  public QueryJettyServerInitializer(Set<Handler> extensionHandlers, ServerConfig serverConfig)
   {
     this.extensionHandlers = ImmutableList.copyOf(extensionHandlers);
+    this.serverConfig = serverConfig;
   }
 
   @Override
@@ -63,7 +69,20 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
     final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
 
-    final AuthConfig authConfig = injector.getInstance(AuthConfig.class);
+    // Add LimitRequestsFilter as first in the chain if enabled.
+    if (serverConfig.isEnableRequestLimit()) {
+      //To reject xth request, limit should be set to x-1 because (x+1)st request wouldn't reach filter
+      // but rather wait on jetty queue.
+      Preconditions.checkArgument(
+          serverConfig.getNumThreads() > 1,
+          "numThreads must be > 1 to enable Request Limit Filter."
+      );
+      log.info("Enabling Request Limit Filter with limit [%d].", serverConfig.getNumThreads() - 1);
+      root.addFilter(new FilterHolder(new LimitRequestsFilter(serverConfig.getNumThreads() - 1)),
+                     "/*", null
+      );
+    }
+
     final ObjectMapper jsonMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
     final AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
 

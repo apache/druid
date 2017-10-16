@@ -87,19 +87,18 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 
   @Override
   public DimensionSelector makeDimensionSelector(
-      DimensionSpec spec, TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc
+      DimensionSpec spec,
+      TimeAndDimsHolder currEntry,
+      IncrementalIndex.DimensionDesc desc
   )
   {
-    return new LongWrappingDimensionSelector(
-        makeLongColumnSelector(currEntry, desc),
-        spec.getExtractionFn()
-    );
+    return new LongWrappingDimensionSelector(makeColumnValueSelector(currEntry, desc), spec.getExtractionFn());
   }
 
   @Override
-  public LongColumnSelector makeLongColumnSelector(
-      final TimeAndDimsHolder currEntry,
-      final IncrementalIndex.DimensionDesc desc
+  public ColumnValueSelector<?> makeColumnValueSelector(
+      TimeAndDimsHolder currEntry,
+      IncrementalIndex.DimensionDesc desc
   )
   {
     final int dimIndex = desc.getIndex();
@@ -117,6 +116,20 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
         return (Long) dims[dimIndex];
       }
 
+      @SuppressWarnings("deprecation")
+      @Nullable
+      @Override
+      public Long getObject()
+      {
+        final Object[] dims = currEntry.getKey().getDims();
+
+        if (dimIndex >= dims.length) {
+          return null;
+        }
+
+        return (Long) dims[dimIndex];
+      }
+
       @Override
       public void inspectRuntimeShape(RuntimeShapeInspector inspector)
       {
@@ -126,70 +139,6 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 
     return new IndexerLongColumnSelector();
   }
-
-  @Override
-  public FloatColumnSelector makeFloatColumnSelector(
-      final TimeAndDimsHolder currEntry,
-      final IncrementalIndex.DimensionDesc desc
-  )
-  {
-    final int dimIndex = desc.getIndex();
-    class IndexerFloatColumnSelector implements FloatColumnSelector
-    {
-      @Override
-      public float getFloat()
-      {
-        final Object[] dims = currEntry.getKey().getDims();
-
-        if (dimIndex >= dims.length) {
-          return 0.0f;
-        }
-
-        long longVal = (Long) dims[dimIndex];
-        return (float) longVal;
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        // nothing to inspect
-      }
-    }
-
-    return new IndexerFloatColumnSelector();
-  }
-
-  @Override
-  public DoubleColumnSelector makeDoubleColumnSelector(
-      final TimeAndDimsHolder currEntry,
-      final IncrementalIndex.DimensionDesc desc
-  )
-  {
-    final int dimIndex = desc.getIndex();
-    class IndexerDoubleColumnSelector implements DoubleColumnSelector
-    {
-      @Override
-      public double getDouble()
-      {
-        final Object[] dims = currEntry.getKey().getDims();
-
-        if (dimIndex >= dims.length) {
-          return 0.0;
-        }
-
-        long longVal = (Long) dims[dimIndex];
-        return (double) longVal;
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        // nothing to inspect
-      }
-    }
-    return new IndexerDoubleColumnSelector();
-  }
-
 
   @Override
   public int compareUnsortedEncodedKeyComponents(@Nullable Long lhs, @Nullable Long rhs)

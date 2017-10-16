@@ -22,19 +22,19 @@ package io.druid.query.aggregation.cardinality.types;
 import com.google.common.hash.Hasher;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.query.aggregation.cardinality.CardinalityAggregator;
-import io.druid.segment.LongColumnSelector;
+import io.druid.segment.BaseLongColumnValueSelector;
 
 public class LongCardinalityAggregatorColumnSelectorStrategy
-    implements CardinalityAggregatorColumnSelectorStrategy<LongColumnSelector>
+    implements CardinalityAggregatorColumnSelectorStrategy<BaseLongColumnValueSelector>
 {
   @Override
-  public void hashRow(LongColumnSelector dimSelector, Hasher hasher)
+  public void hashRow(BaseLongColumnValueSelector dimSelector, Hasher hasher)
   {
     hasher.putLong(dimSelector.getLong());
   }
 
   @Override
-  public void hashValues(LongColumnSelector dimSelector, HyperLogLogCollector collector)
+  public void hashValues(BaseLongColumnValueSelector dimSelector, HyperLogLogCollector collector)
   {
     collector.add(CardinalityAggregator.hashFn.hashLong(dimSelector.getLong()).asBytes());
   }

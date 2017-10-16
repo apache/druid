@@ -50,6 +50,11 @@ public interface TopNQueryMetrics extends QueryMetrics<TopNQuery>
    */
   void numComplexMetrics(TopNQuery query);
 
+  /**
+   * Sets the granularity of {@link TopNQuery#getGranularity()} of the given query as dimension.
+   */
+  void granularity(TopNQuery query);
+
   void dimensionCardinality(int cardinality);
 
   void algorithm(TopNAlgorithm algorithm);

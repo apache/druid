@@ -50,7 +50,7 @@ public class DoubleMaxAggregationTest
   {
     selector = new TestDoubleColumnSelectorImpl(values);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
-    EasyMock.expect(colSelectorFactory.makeDoubleColumnSelector("nilly")).andReturn(selector);
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(selector);
     EasyMock.replay(colSelectorFactory);
   }
 

@@ -54,13 +54,13 @@ import io.druid.query.groupby.orderby.OrderByColumnSpec;
 import io.druid.query.groupby.strategy.GroupByStrategyV2;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
+import io.druid.segment.BaseDoubleColumnValueSelector;
+import io.druid.segment.BaseFloatColumnValueSelector;
+import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.DoubleColumnSelector;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
@@ -537,12 +537,13 @@ public class RowBasedGrouperHelper
         case STRING:
           return new StringInputRawSupplierColumnSelectorStrategy();
         case LONG:
-          return (InputRawSupplierColumnSelectorStrategy<LongColumnSelector>) columnSelector -> columnSelector::getLong;
+          return (InputRawSupplierColumnSelectorStrategy<BaseLongColumnValueSelector>)
+              columnSelector -> columnSelector::getLong;
         case FLOAT:
-          return (InputRawSupplierColumnSelectorStrategy<FloatColumnSelector>)
+          return (InputRawSupplierColumnSelectorStrategy<BaseFloatColumnValueSelector>)
               columnSelector -> columnSelector::getFloat;
         case DOUBLE:
-          return (InputRawSupplierColumnSelectorStrategy<DoubleColumnSelector>)
+          return (InputRawSupplierColumnSelectorStrategy<BaseDoubleColumnValueSelector>)
               columnSelector -> columnSelector::getDouble;
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", type);
@@ -877,7 +878,7 @@ public class RowBasedGrouperHelper
 
         final StringComparator comparator = comparators.get(i);
 
-        if (isNumericField.get(i) && comparator == StringComparators.NUMERIC) {
+        if (isNumericField.get(i) && comparator.equals(StringComparators.NUMERIC)) {
           // use natural comparison
           cmp = lhs.compareTo(rhs);
         } else {
@@ -1112,7 +1113,7 @@ public class RowBasedGrouperHelper
           if (aggIndex >= 0) {
             final RowBasedKeySerdeHelper serdeHelper;
             final StringComparator cmp = orderSpec.getDimensionComparator();
-            final boolean cmpIsNumeric = cmp == StringComparators.NUMERIC;
+            final boolean cmpIsNumeric = cmp.equals(StringComparators.NUMERIC);
             final String typeName = aggregatorFactories[aggIndex].getTypeName();
             final int aggOffset = aggregatorOffsets[aggIndex] - Ints.BYTES;
 
@@ -1386,7 +1387,7 @@ public class RowBasedGrouperHelper
         final ValueType valType = valueTypes.get(i);
         final String dimName = dimensions.get(i).getOutputName();
         StringComparator cmp = DefaultLimitSpec.getComparatorForDimName(limitSpec, dimName);
-        final boolean cmpIsNumeric = cmp == StringComparators.NUMERIC;
+        final boolean cmpIsNumeric = cmp != null && cmp.equals(StringComparators.NUMERIC);
 
         RowBasedKeySerdeHelper helper;
         switch (valType) {

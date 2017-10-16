@@ -21,10 +21,12 @@ package io.druid.indexing.worker;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.guice.annotations.PublicApi;
 
 /**
  * A container for worker metadata.
  */
+@PublicApi
 public class Worker
 {
   private final String scheme;
@@ -42,7 +44,7 @@ public class Worker
       @JsonProperty("version") String version
   )
   {
-    this.scheme = scheme;
+    this.scheme = scheme == null ? "http" : scheme; // needed for backwards compatibility with older workers (pre-#4270)
     this.host = host;
     this.ip = ip;
     this.capacity = capacity;

@@ -30,7 +30,7 @@ import com.metamx.http.client.HttpClient;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
 import io.druid.client.selector.TierSelectorStrategy;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.guice.annotations.EscalatedClient;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.Pair;

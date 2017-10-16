@@ -44,6 +44,7 @@ import org.apache.calcite.schema.Statistics;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.TableMacro;
 import org.apache.calcite.schema.impl.AbstractSchema;
+import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.sql.type.SqlTypeName;
 
 import javax.annotation.Nullable;
@@ -117,7 +118,7 @@ public class InformationSchema extends AbstractSchema
     return tableMap;
   }
 
-  class SchemataTable implements ScannableTable
+  class SchemataTable extends AbstractTable implements ScannableTable
   {
     @Override
     public Enumerable<Object[]> scan(final DataContext root)
@@ -166,7 +167,7 @@ public class InformationSchema extends AbstractSchema
     }
   }
 
-  class TablesTable implements ScannableTable
+  class TablesTable extends AbstractTable implements ScannableTable
   {
     @Override
     public Enumerable<Object[]> scan(final DataContext root)
@@ -245,7 +246,7 @@ public class InformationSchema extends AbstractSchema
     }
   }
 
-  class ColumnsTable implements ScannableTable
+  class ColumnsTable extends AbstractTable implements ScannableTable
   {
     @Override
     public Enumerable<Object[]> scan(final DataContext root)
