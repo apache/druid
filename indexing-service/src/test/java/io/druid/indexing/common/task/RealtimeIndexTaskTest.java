@@ -30,7 +30,6 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.common.logger.Logger;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.NoopEmitter;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -76,6 +75,7 @@ import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.jackson.JacksonUtils;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.metadata.EntryExistsException;
@@ -149,7 +149,6 @@ import java.util.concurrent.Executor;
 public class RealtimeIndexTaskTest
 {
   private static final Logger log = new Logger(RealtimeIndexTaskTest.class);
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
   private static final ServiceEmitter emitter = new ServiceEmitter(
       "service",
       "host",
