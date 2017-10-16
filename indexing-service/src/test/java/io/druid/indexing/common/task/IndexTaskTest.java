@@ -57,7 +57,7 @@ import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.indexing.Transform;
+import io.druid.segment.indexing.ExpressionTransform;
 import io.druid.segment.indexing.TransformSpec;
 import io.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import io.druid.segment.indexing.granularity.GranularitySpec;
@@ -236,7 +236,7 @@ public class IndexTaskTest
             new TransformSpec(
                 new SelectorDimFilter("dim", "b", null),
                 ImmutableList.of(
-                    new Transform("dimt", "concat(dim,dim)", ExprMacroTable.nil())
+                    new ExpressionTransform("dimt", "concat(dim,dim)", ExprMacroTable.nil())
                 )
             ),
             null,

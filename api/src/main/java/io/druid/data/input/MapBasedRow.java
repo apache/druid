@@ -21,13 +21,10 @@ package io.druid.data.input;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Lists;
 import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.DateTimes;
-import io.druid.java.util.common.parsers.ParseException;
 import org.joda.time.DateTime;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -36,8 +33,6 @@ import java.util.Map;
 @PublicApi
 public class MapBasedRow implements Row
 {
-  private static final Long LONG_ZERO = 0L;
-
   private final DateTime timestamp;
   private final Map<String, Object> event;
 
@@ -81,16 +76,7 @@ public class MapBasedRow implements Row
   @Override
   public List<String> getDimension(String dimension)
   {
-    final Object dimValue = event.get(dimension);
-
-    if (dimValue == null) {
-      return Collections.emptyList();
-    } else if (dimValue instanceof List) {
-      // guava's toString function fails on null objects, so please do not use it
-      return Lists.transform((List) dimValue, String::valueOf);
-    } else {
-      return Collections.singletonList(String.valueOf(dimValue));
-    }
+    return Rows.objectToStrings(event.get(dimension));
   }
 
   @Override
@@ -102,19 +88,7 @@ public class MapBasedRow implements Row
   @Override
   public Number getMetric(String metric)
   {
-    Object metricValue = event.get(metric);
-
-    if (metricValue == null) {
-      return LONG_ZERO;
-    }
-
-    if (metricValue instanceof Number) {
-      return (Number) metricValue;
-    } else if (metricValue instanceof String) {
-      return Rows.stringToNumber(metric, (String) metricValue);
-    } else {
-      throw new ParseException("Unknown type[%s]", metricValue.getClass());
-    }
+    return Rows.objectToNumber(metric, event.get(metric));
   }
 
   @Override

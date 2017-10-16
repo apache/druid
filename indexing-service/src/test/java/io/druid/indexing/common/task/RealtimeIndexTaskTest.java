@@ -30,16 +30,13 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-//CHECKSTYLE.OFF: Regexp
 import com.metamx.common.logger.Logger;
-//CHECKSTYLE.ON: Regexp
 import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.core.LoggingEmitter;
+import com.metamx.emitter.core.NoopEmitter;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.MapCache;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
@@ -75,6 +72,7 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.jackson.JacksonUtils;
@@ -105,9 +103,9 @@ import io.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.TestHelper;
 import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.ExpressionTransform;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.RealtimeTuningConfig;
-import io.druid.segment.indexing.Transform;
 import io.druid.segment.indexing.TransformSpec;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.loading.SegmentLoaderConfig;
@@ -155,11 +153,7 @@ public class RealtimeIndexTaskTest
   private static final ServiceEmitter emitter = new ServiceEmitter(
       "service",
       "host",
-      new LoggingEmitter(
-          log,
-          LoggingEmitter.Level.ERROR,
-          jsonMapper
-      )
+      new NoopEmitter()
   );
 
   private static final String FAIL_DIM = "__fail__";
@@ -391,7 +385,7 @@ public class RealtimeIndexTaskTest
     final TransformSpec transformSpec = new TransformSpec(
         new SelectorDimFilter("dim1", "foo", null),
         ImmutableList.of(
-            new Transform("dim1t", "concat(dim1,dim1)", ExprMacroTable.nil())
+            new ExpressionTransform("dim1t", "concat(dim1,dim1)", ExprMacroTable.nil())
         )
     );
     final RealtimeIndexTask task = makeRealtimeTask(null, transformSpec, true, 0);

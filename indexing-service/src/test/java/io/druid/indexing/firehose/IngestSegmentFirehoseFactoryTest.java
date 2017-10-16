@@ -71,7 +71,7 @@ import io.druid.segment.TestHelper;
 import io.druid.segment.column.Column;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.indexing.Transform;
+import io.druid.segment.indexing.ExpressionTransform;
 import io.druid.segment.indexing.TransformSpec;
 import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
@@ -545,7 +545,7 @@ public class IngestSegmentFirehoseFactoryTest
     final TransformSpec transformSpec = new TransformSpec(
         new SelectorDimFilter(Column.TIME_COLUMN_NAME, "1", null),
         ImmutableList.of(
-            new Transform(METRIC_FLOAT_NAME, METRIC_FLOAT_NAME + " * 10", ExprMacroTable.nil())
+            new ExpressionTransform(METRIC_FLOAT_NAME, METRIC_FLOAT_NAME + " * 10", ExprMacroTable.nil())
         )
     );
     int skipped = 0;

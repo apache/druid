@@ -37,11 +37,9 @@ import com.google.common.io.Files;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-//CHECKSTYLE.OFF: Regexp
 import com.metamx.common.logger.Logger;
-//CHECKSTYLE.ON: Regexp
 import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.core.LoggingEmitter;
+import com.metamx.emitter.core.NoopEmitter;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.cache.CacheConfig;
@@ -73,7 +71,6 @@ import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.supervisor.SupervisorManager;
 import io.druid.indexing.test.TestDataSegmentAnnouncer;
 import io.druid.indexing.test.TestDataSegmentKiller;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
@@ -115,7 +112,7 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.TestHelper;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.indexing.Transform;
+import io.druid.segment.indexing.ExpressionTransform;
 import io.druid.segment.indexing.TransformSpec;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.loading.DataSegmentPusher;
@@ -240,11 +237,7 @@ public class KafkaIndexTaskTest
     emitter = new ServiceEmitter(
         "service",
         "host",
-        new LoggingEmitter(
-            log,
-            LoggingEmitter.Level.ERROR,
-            new DefaultObjectMapper()
-        )
+        new NoopEmitter()
     );
     emitter.start();
     EmittingLogger.registerEmitter(emitter);
@@ -533,7 +526,7 @@ public class KafkaIndexTaskTest
             new TransformSpec(
                 new SelectorDimFilter("dim1", "b", null),
                 ImmutableList.of(
-                    new Transform("dim1t", "concat(dim1,dim1)", ExprMacroTable.nil())
+                    new ExpressionTransform("dim1t", "concat(dim1,dim1)", ExprMacroTable.nil())
                 )
             )
         ),

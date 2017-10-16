@@ -19,6 +19,7 @@
 
 package io.druid.segment.indexing;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.data.input.InputRow;
@@ -31,6 +32,7 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
+import io.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -69,9 +71,9 @@ public class TransformSpecTest
     final TransformSpec transformSpec = new TransformSpec(
         null,
         ImmutableList.of(
-            new Transform("f", "concat(x,y)", TestExprMacroTable.INSTANCE),
-            new Transform("g", "a + b", TestExprMacroTable.INSTANCE),
-            new Transform("h", "concat(f,g)", TestExprMacroTable.INSTANCE)
+            new ExpressionTransform("f", "concat(x,y)", TestExprMacroTable.INSTANCE),
+            new ExpressionTransform("g", "a + b", TestExprMacroTable.INSTANCE),
+            new ExpressionTransform("h", "concat(f,g)", TestExprMacroTable.INSTANCE)
         )
     );
 
@@ -103,8 +105,8 @@ public class TransformSpecTest
             )
         ),
         ImmutableList.of(
-            new Transform("f", "concat(x,y)", TestExprMacroTable.INSTANCE),
-            new Transform("g", "a + b", TestExprMacroTable.INSTANCE)
+            new ExpressionTransform("f", "concat(x,y)", TestExprMacroTable.INSTANCE),
+            new ExpressionTransform("g", "a + b", TestExprMacroTable.INSTANCE)
         )
     );
 
@@ -119,7 +121,7 @@ public class TransformSpecTest
     final TransformSpec transformSpec = new TransformSpec(
         null,
         ImmutableList.of(
-            new Transform("__time", "(a + b) * 3600000", TestExprMacroTable.INSTANCE)
+            new ExpressionTransform("__time", "(a + b) * 3600000", TestExprMacroTable.INSTANCE)
         )
     );
 
@@ -137,7 +139,7 @@ public class TransformSpecTest
     final TransformSpec transformSpec = new TransformSpec(
         null,
         ImmutableList.of(
-            new Transform("__time", "__time + 3600000", TestExprMacroTable.INSTANCE)
+            new ExpressionTransform("__time", "__time + 3600000", TestExprMacroTable.INSTANCE)
         )
     );
 
@@ -147,5 +149,29 @@ public class TransformSpecTest
     Assert.assertNotNull(row);
     Assert.assertEquals(DateTimes.of("2000-01-01T01:00:00Z"), row.getTimestamp());
     Assert.assertEquals(DateTimes.of("2000-01-01T01:00:00Z").getMillis(), row.getTimestampFromEpoch());
+  }
+
+  @Test
+  public void testSerde() throws Exception
+  {
+    final TransformSpec transformSpec = new TransformSpec(
+        new AndDimFilter(
+            ImmutableList.of(
+                new SelectorDimFilter("x", "foo", null),
+                new SelectorDimFilter("f", "foobar", null),
+                new SelectorDimFilter("g", "5.0", null)
+            )
+        ),
+        ImmutableList.of(
+            new ExpressionTransform("f", "concat(x,y)", TestExprMacroTable.INSTANCE),
+            new ExpressionTransform("g", "a + b", TestExprMacroTable.INSTANCE)
+        )
+    );
+
+    final ObjectMapper jsonMapper = TestHelper.getJsonMapper();
+    Assert.assertEquals(
+        transformSpec,
+        jsonMapper.readValue(jsonMapper.writeValueAsString(transformSpec), TransformSpec.class)
+    );
   }
 }

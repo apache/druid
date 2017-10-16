@@ -19,16 +19,12 @@
 
 package io.druid.segment.indexing;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.data.input.Row;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "expression", value = ExpressionTransform.class)
-})
-public interface Transform
+/**
+ * Interface for evaluating functions on rows. Used by {@link Transformer}.
+ */
+public interface RowFunction
 {
-  String getName();
-
-  RowFunction getRowFunction();
+  Object eval(Row row);
 }

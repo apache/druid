@@ -36,7 +36,7 @@ import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.TestHelper;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.indexing.Transform;
+import io.druid.segment.indexing.ExpressionTransform;
 import io.druid.segment.indexing.TransformSpec;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.hadoop.conf.Configuration;
@@ -128,7 +128,7 @@ public class HadoopDruidIndexerMapperTest
                 new TransformSpec(
                     new SelectorDimFilter("dim1", "foo", null),
                     ImmutableList.of(
-                        new Transform("dim1t", "concat(dim1,dim1)", ExprMacroTable.nil())
+                        new ExpressionTransform("dim1t", "concat(dim1,dim1)", ExprMacroTable.nil())
                     )
                 )
             ),
