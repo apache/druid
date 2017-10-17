@@ -76,7 +76,7 @@ public class QueryResourceTest
 {
   private static final QueryToolChestWarehouse warehouse = new MapQueryToolChestWarehouse(ImmutableMap.<Class<? extends Query>, QueryToolChest>of());
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
-  private static final AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid");
+  private static final AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null);
 
 
   public static final ServerConfig serverConfig = new ServerConfig()
