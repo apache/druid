@@ -59,7 +59,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   }
 
   // Might make sense for this to be a builder
-  public static RealtimeTuningConfig makeDefaultTuningConfig(final File basePersistDirectory)
+  public static RealtimeTuningConfig makeDefaultTuningConfig(final @Nullable File basePersistDirectory)
   {
     return new RealtimeTuningConfig(
         defaultMaxRowsInMemory,

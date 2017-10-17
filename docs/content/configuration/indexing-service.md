@@ -355,7 +355,9 @@ This type of medium may do unnecessary disk I/O and requires some disk space to 
 
 *Off-heap memory medium* (`offHeapMemory`) creates buffers in off-heap memory of a JVM process that is running a task.
 This type of medium is preferred, but it may require to allow the JVM to have more off-heap memory, by changing
-`-XX:MaxDirectMemorySize` configuration.
+`-XX:MaxDirectMemorySize` configuration. It is not yet understood how does the required off-heap memory size relates
+to the size of the segments being created. But definitely it doesn't make sense to add more extra off-heap memory,
+than the configured maximum *heap* size (`-Xmx`) for the same JVM.
 
 For most types of tasks OutputMediumFactory could be configured per-task (see [Tasks](../ingestion/tasks.html) page,
 "TuningConfig" section), but if it's not specified for a task, or it's not supported for a particular task type, then
@@ -363,4 +365,4 @@ the value from the configuration below is used:
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.defaultOutputMediumFactory`|`tmpFile` or `offHeapMemory`, see explanation above|`tmpFile`|
+|`druid.peon.defaultOutputMediumFactory`|`tmpFile` or `offHeapMemory`, see explanation above|`tmpFile`|

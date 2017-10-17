@@ -28,6 +28,6 @@ public class OutputMediumModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    JsonConfigProvider.bind(binder, "druid.defaultOutputMediumFactory", OutputMediumFactory.class);
+    JsonConfigProvider.bind(binder, "druid.peon.defaultOutputMediumFactory", OutputMediumFactory.class);
   }
 }

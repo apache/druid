@@ -146,7 +146,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |forceGuaranteedRollup|Forces guaranteeing the [perfect rollup](../design/index.html). The perfect rollup optimizes the total size of generated segments and querying time while indexing time will be increased. This flag cannot be used with either `appendToExisting` of IOConfig or `forceExtendableShardSpecs`. For more details, see the below __Segment publishing modes__ section.|false|no|
 |reportParseExceptions|If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped.|false|no|
 |publishTimeout|Milliseconds to wait for publishing segments. It must be >= 0, where 0 means to wait forever.|0|no|
-|outputMediumFactory|Output Medium to use when creating segments. See [Indexing Service Configuration](../configuration/indexing-service.html) page, "OutputMediumFactory" for explanation and available options.|Not specified, the value from `druid.defaultOutputMediumFactory` is used|no|
+|outputMediumFactory|Output Medium to use when creating segments. See [Indexing Service Configuration](../configuration/indexing-service.html) page, "OutputMediumFactory" for explanation and available options.|Not specified, the value from `druid.peon.defaultOutputMediumFactory` is used|no|
 
 #### IndexSpec
 
