@@ -19,9 +19,10 @@
 
 package io.druid.server.coordinator;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.client.ServerInventoryView;
 import io.druid.client.ServerView;
@@ -55,8 +56,8 @@ public class CachingCostBalancerStrategyFactory implements BalancerStrategyFacto
   private final ClusterCostCache.Builder clusterCostCacheBuilder = ClusterCostCache.builder();
   private volatile boolean initialized = false;
 
-  @Inject
-  public CachingCostBalancerStrategyFactory(ServerInventoryView serverInventoryView)
+  @JsonCreator
+  public CachingCostBalancerStrategyFactory(@JacksonInject ServerInventoryView serverInventoryView)
   {
     this.serverInventoryView = Preconditions.checkNotNull(serverInventoryView);
   }
