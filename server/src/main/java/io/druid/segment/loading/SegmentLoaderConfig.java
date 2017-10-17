@@ -45,7 +45,7 @@ public class SegmentLoaderConfig
   private int announceIntervalMillis = 0; // do not background announce
 
   @JsonProperty("numLoadingThreads")
-  private int numLoadingThreads = 1;
+  private int numLoadingThreads = 10;
 
   @JsonProperty("numBootstrapThreads")
   private Integer numBootstrapThreads = null;

@@ -176,6 +176,13 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
     }
 
     if (newRequests.size() == 0) {
+      log.debug(
+          "[%s]Found no load/drop requests. SegmentsToLoad[%d], SegmentsToDrop[%d], batchSize[%d].",
+          serverId,
+          segmentsToLoad.size(),
+          segmentsToDrop.size(),
+          config.getHttpLoadQueuePeonBatchSize()
+      );
       mainLoopInProgress.set(false);
       return;
     }
@@ -208,9 +215,11 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
                     List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus> statuses = jsonMapper.readValue(
                         result, RESPONSE_ENTITY_TYPE_REF
                     );
-
+                    log.debug("Server[%s] returned status response [%s].", serverId, statuses);
                     synchronized (lock) {
                       if (stopped) {
+                        log.debug("Ignoring response from Server[%s]. We are already stopped.", serverId);
+                        scheduleNextRunImmediately = false;
                         return;
                       }
 
@@ -221,7 +230,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
                             handleResponseStatus(e.getRequest(), e.getStatus());
                             break;
                           case PENDING:
-                            log.debug("[%s]Segment request [%s] is pending.", serverId, e.getRequest());
+                            log.info("Request[%s] is still pending on server[%s].", e.getRequest(), serverId);
                             break;
                           default:
                             scheduleNextRunImmediately = false;
@@ -505,6 +514,13 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
 
     public void requestSucceeded()
     {
+      log.info(
+          "Server[%s] Successfully processed segment[%s] request[%s].",
+          serverId,
+          segment.getIdentifier(),
+          changeRequest.getClass().getSimpleName()
+      );
+
       callBackExecutor.execute(() -> {
         for (LoadPeonCallback callback : callbacks) {
           if (callback != null) {
@@ -526,7 +542,13 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
 
       failedAssignCount.getAndIncrement();
 
-      requestSucceeded();
+      callBackExecutor.execute(() -> {
+        for (LoadPeonCallback callback : callbacks) {
+          if (callback != null) {
+            callback.execute();
+          }
+        }
+      });
     }
 
     @Override
