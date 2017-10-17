@@ -29,6 +29,8 @@ import com.metamx.emitter.core.Emitter;
 import com.metamx.emitter.core.ParametrizedUriEmitter;
 import com.metamx.http.client.HttpClientConfig;
 import com.metamx.http.client.HttpClientInit;
+import com.metamx.metrics.FeedDefiningMonitor;
+import com.metamx.metrics.ParametrizedUriEmitterMonitor;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.http.LifecycleUtils;
@@ -53,7 +55,8 @@ public class ParametrizedUriEmitterModule implements Module
       Supplier<ParametrizedUriEmitterConfig> config,
       @Nullable SSLContext sslContext,
       Lifecycle lifecycle,
-      ObjectMapper jsonMapper
+      ObjectMapper jsonMapper,
+      EmitterMonitorProvider emitterMonitorProvider
   )
   {
     final HttpClientConfig.Builder builder = HttpClientConfig
@@ -63,10 +66,16 @@ public class ParametrizedUriEmitterModule implements Module
     if (sslContext != null) {
       builder.withSslContext(sslContext);
     }
-    return new ParametrizedUriEmitter(
+    ParametrizedUriEmitter emitter = new ParametrizedUriEmitter(
         config.get(),
         HttpClientInit.createClient(builder.build(), LifecycleUtils.asMmxLifecycle(lifecycle)),
         jsonMapper
     );
+    ParametrizedUriEmitterMonitor emitterMonitor = new ParametrizedUriEmitterMonitor(
+        FeedDefiningMonitor.DEFAULT_METRICS_FEED,
+        emitter
+    );
+    emitterMonitorProvider.setEmitterMontor(emitterMonitor);
+    return emitter;
   }
 }

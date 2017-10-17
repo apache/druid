@@ -41,6 +41,7 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.ExecutorServiceMonitor;
+import io.druid.server.emitter.EmitterMonitorProvider;
 
 import java.util.List;
 import java.util.Set;
@@ -84,6 +85,7 @@ public class MetricsModule implements Module
       MonitorsConfig monitorsConfig,
       Set<Class<? extends Monitor>> monitorSet,
       ServiceEmitter emitter,
+      EmitterMonitorProvider emitterMonitorProvider,
       Injector injector
   )
   {
@@ -95,6 +97,10 @@ public class MetricsModule implements Module
       log.info("Adding monitor[%s]", monitor);
 
       monitors.add(monitor);
+    }
+    Monitor emitterMontor = emitterMonitorProvider.getEmitterMontor();
+    if (emitterMontor != null) {
+      monitors.add(emitterMontor);
     }
 
     return new MonitorScheduler(

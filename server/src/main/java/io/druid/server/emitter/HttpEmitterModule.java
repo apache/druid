@@ -21,6 +21,7 @@ package io.druid.server.emitter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
@@ -30,6 +31,8 @@ import com.metamx.emitter.core.Emitter;
 import com.metamx.emitter.core.HttpPostEmitter;
 import com.metamx.http.client.HttpClientConfig;
 import com.metamx.http.client.HttpClientInit;
+import com.metamx.metrics.FeedDefiningMonitor;
+import com.metamx.metrics.HttpPostEmitterMonitor;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;
@@ -72,7 +75,8 @@ public class HttpEmitterModule implements Module
       Supplier<HttpEmitterConfig> config,
       @Nullable SSLContext sslContext,
       Lifecycle lifecycle,
-      ObjectMapper jsonMapper
+      ObjectMapper jsonMapper,
+      EmitterMonitorProvider emitterMonitorProvider
   )
   {
     final HttpClientConfig.Builder builder = HttpClientConfig
@@ -83,6 +87,17 @@ public class HttpEmitterModule implements Module
     if (sslContext != null) {
       builder.withSslContext(sslContext);
     }
-    return new HttpPostEmitter(config.get(), HttpClientInit.createClient(builder.build(), LifecycleUtils.asMmxLifecycle(lifecycle)), jsonMapper);
+    HttpPostEmitter emitter = new HttpPostEmitter(
+        config.get(),
+        HttpClientInit.createClient(builder.build(), LifecycleUtils.asMmxLifecycle(lifecycle)),
+        jsonMapper
+    );
+    HttpPostEmitterMonitor emitterMonitor = new HttpPostEmitterMonitor(
+        FeedDefiningMonitor.DEFAULT_METRICS_FEED,
+        emitter,
+        ImmutableMap.of()
+    );
+    emitterMonitorProvider.setEmitterMontor(emitterMonitor);
+    return emitter;
   }
 }

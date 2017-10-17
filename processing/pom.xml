@@ -51,11 +51,7 @@
         </dependency>
         <dependency>
             <groupId>com.metamx</groupId>
-            <artifactId>emitter</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.metamx</groupId>
-            <artifactId>server-metrics</artifactId>
+            <artifactId>java-util</artifactId>
         </dependency>
         <dependency>
             <groupId>com.ning</groupId>
