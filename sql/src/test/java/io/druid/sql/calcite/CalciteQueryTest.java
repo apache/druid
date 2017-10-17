@@ -5718,6 +5718,58 @@ public class CalciteQueryTest
   }
 
   @Test
+  public void testUsingSubqueryAsFilterWithInnerSort() throws Exception
+  {
+    // Regression test for https://github.com/druid-io/druid/issues/4208
+
+    testQuery(
+        "SELECT dim1, dim2 FROM druid.foo\n"
+        + " WHERE dim2 IN (\n"
+        + "   SELECT dim2\n"
+        + "   FROM druid.foo\n"
+        + "   GROUP BY dim2\n"
+        + "   ORDER BY dim2 DESC\n"
+        + " )",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(DIMS(new DefaultDimensionSpec("dim2", "d0")))
+                        .setLimitSpec(
+                            new DefaultLimitSpec(
+                                ImmutableList.of(
+                                    new OrderByColumnSpec(
+                                        "d0",
+                                        OrderByColumnSpec.Direction.DESCENDING,
+                                        StringComparators.LEXICOGRAPHIC
+                                    )
+                                ),
+                                Integer.MAX_VALUE
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build(),
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(QSS(Filtration.eternity()))
+                .filters(IN("dim2", ImmutableList.of("", "a", "abc"), null))
+                .columns("dim1", "dim2")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", "a"},
+            new Object[]{"10.1", ""},
+            new Object[]{"2", ""},
+            new Object[]{"1", "a"},
+            new Object[]{"def", "abc"},
+            new Object[]{"abc", ""}
+        )
+    );
+  }
+
+  @Test
   public void testUsingSubqueryWithExtractionFns() throws Exception
   {
     testQuery(
@@ -6035,6 +6087,7 @@ public class CalciteQueryTest
 
   private static ScanQuery.ScanQueryBuilder newScanQueryBuilder()
   {
-    return new ScanQuery.ScanQueryBuilder().legacy(false);
+    return new ScanQuery.ScanQueryBuilder().resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+                                           .legacy(false);
   }
 }
