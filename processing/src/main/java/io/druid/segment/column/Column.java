@@ -19,12 +19,21 @@
 
 package io.druid.segment.column;
 
+import io.druid.java.util.common.StringUtils;
+
 /**
  */
 public interface Column
 {
   public static final String TIME_COLUMN_NAME = "__time";
   public ColumnCapabilities getCapabilities();
+
+  String DOUBLE_STORAGE_TYPE_PROPERTY = "druid.indexing.doubleStorage";
+  static boolean storeDoubleAsFloat()
+  {
+    String value = System.getProperty(DOUBLE_STORAGE_TYPE_PROPERTY, "float");
+    return !StringUtils.toLowerCase(value).equals("double");
+  }
 
   public int getLength();
   public DictionaryEncodedColumn getDictionaryEncoding();
