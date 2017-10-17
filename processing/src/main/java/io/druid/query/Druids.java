@@ -654,6 +654,12 @@ public class Druids
       return this;
     }
 
+    public SegmentMetadataQueryBuilder intervals(List<Interval> l)
+    {
+      querySegmentSpec = new LegacySegmentSpec(l);
+      return this;
+    }
+
     public SegmentMetadataQueryBuilder toInclude(ColumnIncluderator toInclude)
     {
       this.toInclude = toInclude;

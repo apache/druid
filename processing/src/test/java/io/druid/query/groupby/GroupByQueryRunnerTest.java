@@ -3314,10 +3314,6 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    // havingSpec equalTo/greaterThan/lessThan do not work on complex aggregators, even if they could be finalized.
-    // See also: https://github.com/druid-io/druid/issues/2507
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage("Unknown type of metric value");
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "order-limit");
   }
