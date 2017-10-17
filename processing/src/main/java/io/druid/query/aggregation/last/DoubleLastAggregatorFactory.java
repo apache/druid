@@ -51,6 +51,7 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
 
   private final String fieldName;
   private final String name;
+  private final boolean storeDoubleAsFloat;
 
   @JsonCreator
   public DoubleLastAggregatorFactory(
@@ -62,6 +63,7 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
     Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
     this.name = name;
     this.fieldName = fieldName;
+    this.storeDoubleAsFloat = Column.storeDoubleAsFloat();
   }
 
   @Override
@@ -213,6 +215,10 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
   @Override
   public String getTypeName()
   {
+
+    if (storeDoubleAsFloat) {
+      return "float";
+    }
     return "double";
   }
 

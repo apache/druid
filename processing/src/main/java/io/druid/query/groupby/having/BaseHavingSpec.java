@@ -19,6 +19,7 @@
 
 package io.druid.query.groupby.having;
 
+import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.column.ValueType;
 
 import java.util.Map;
@@ -29,5 +30,11 @@ public abstract class BaseHavingSpec implements HavingSpec
   public void setRowSignature(Map<String, ValueType> rowSignature)
   {
     // Do nothing.
+  }
+
+  @Override
+  public void setAggregators(Map<String, AggregatorFactory> aggregators)
+  {
+
   }
 }

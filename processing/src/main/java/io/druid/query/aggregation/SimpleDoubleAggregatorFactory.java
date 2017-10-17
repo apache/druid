@@ -26,6 +26,7 @@ import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
 import io.druid.segment.BaseDoubleColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.column.Column;
 
 import java.util.Collections;
 import java.util.Comparator;
@@ -38,6 +39,7 @@ public abstract class SimpleDoubleAggregatorFactory extends AggregatorFactory
   protected final String fieldName;
   protected final String expression;
   protected final ExprMacroTable macroTable;
+  protected final boolean storeDoubleAsFloat;
 
   public SimpleDoubleAggregatorFactory(
       ExprMacroTable macroTable,
@@ -50,6 +52,7 @@ public abstract class SimpleDoubleAggregatorFactory extends AggregatorFactory
     this.fieldName = fieldName;
     this.name = name;
     this.expression = expression;
+    this.storeDoubleAsFloat = Column.storeDoubleAsFloat();
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     Preconditions.checkArgument(
         fieldName == null ^ expression == null,
@@ -81,6 +84,9 @@ public abstract class SimpleDoubleAggregatorFactory extends AggregatorFactory
   @Override
   public String getTypeName()
   {
+    if (storeDoubleAsFloat) {
+      return "float";
+    }
     return "double";
   }
 
@@ -144,4 +150,5 @@ public abstract class SimpleDoubleAggregatorFactory extends AggregatorFactory
   {
     return expression;
   }
+
 }
