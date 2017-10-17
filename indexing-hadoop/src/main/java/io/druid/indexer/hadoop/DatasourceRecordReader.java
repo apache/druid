@@ -105,11 +105,9 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
         }
     );
 
-    final HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
-
     firehose = new IngestSegmentFirehose(
         adapters,
-        config.getSchema().getDataSchema().getTransformSpec(),
+        spec.getTransformSpec(),
         spec.getDimensions(),
         spec.getMetrics(),
         spec.getFilter()

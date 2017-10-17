@@ -79,7 +79,8 @@ public class DatasourcePathSpecTest
         null,
         null,
         null,
-        false
+        false,
+        null
     );
 
     segments = ImmutableList.of(
