@@ -323,7 +323,7 @@ public class TestHelper
             StringUtils.format("%s: key[%s]", msg, key),
             ((Number) expectedValue).doubleValue(),
             ((Number) actualValue).doubleValue(),
-            ((Number) expectedValue).doubleValue() * 1e-6
+            Math.abs(((Number) expectedValue).doubleValue() * 1e-6)
         );
       } else {
         Assert.assertEquals(
