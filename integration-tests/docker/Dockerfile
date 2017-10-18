@@ -1,12 +1,11 @@
-FROM ubuntu:14.04
+FROM openjdk:8u141-jdk
 
 # Java 8
 RUN apt-get update \
       && apt-get install -y software-properties-common \
       && add-apt-repository -y ppa:openjdk-r/ppa \
       && apt-get purge --auto-remove -y software-properties-common \
-      && apt-get update \
-      && apt-get install -y openjdk-8-jdk
+      && apt-get update
 
 # wget
 RUN apt-get install -y wget
