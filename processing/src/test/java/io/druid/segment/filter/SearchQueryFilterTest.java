@@ -64,12 +64,12 @@ public class SearchQueryFilterTest extends BaseFilterTest
   );
 
   private static final List<InputRow> ROWS = ImmutableList.of(
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "0", "dim1", "", "dim2", ImmutableList.of("a", "b"))),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "1", "dim1", "10", "dim2", ImmutableList.of())),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "2", "dim1", "2", "dim2", ImmutableList.of(""))),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "3", "dim1", "1", "dim2", ImmutableList.of("a"))),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "4", "dim1", "abdef", "dim2", ImmutableList.of("c"))),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "5", "dim1", "abc"))
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "0", "dim1", "", "dim2", ImmutableList.of("a", "b"))).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "1", "dim1", "10", "dim2", ImmutableList.of())).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "2", "dim1", "2", "dim2", ImmutableList.of(""))).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "3", "dim1", "1", "dim2", ImmutableList.of("a"))).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "4", "dim1", "abdef", "dim2", ImmutableList.of("c"))).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "5", "dim1", "abc")).get(0)
   );
 
   public SearchQueryFilterTest(

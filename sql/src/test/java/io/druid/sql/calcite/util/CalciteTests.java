@@ -526,18 +526,18 @@ public class CalciteTests
 
   public static InputRow createRow(final ImmutableMap<String, ?> map)
   {
-    return PARSER.parse((Map<String, Object>) map);
+    return PARSER.parseBatch((Map<String, Object>) map).get(0);
   }
 
   public static InputRow createRow(final Object t, final String dim1, final String dim2, final double m1)
   {
-    return PARSER.parse(
+    return PARSER.parseBatch(
         ImmutableMap.<String, Object>of(
             "t", new DateTime(t, ISOChronology.getInstanceUTC()).getMillis(),
             "dim1", dim1,
             "dim2", dim2,
             "m1", m1
         )
-    );
+    ).get(0);
   }
 }

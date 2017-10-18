@@ -81,7 +81,7 @@ public class JavaScriptParseSpecTest
     );
 
     final Parser<String, Object> parser = spec.makeParser();
-    final Map<String, Object> obj = parser.parse("x-y");
+    final Map<String, Object> obj = parser.parseToMap("x-y");
     Assert.assertEquals(ImmutableMap.of("one", "x", "two", "y"), obj);
   }
 

@@ -172,7 +172,7 @@ public class OrcHadoopInputRowParserTest
     );
     oi.setStructFieldData(struct, oi.getStructFieldRef("col6"), null);
 
-    final InputRow row = parser.parse(struct);
+    final InputRow row = parser.parseBatch(struct).get(0);
     Assert.assertEquals("timestamp", DateTimes.of("2000-01-01"), row.getTimestamp());
     Assert.assertEquals("col1", "foo", row.getRaw("col1"));
     Assert.assertEquals("col2", ImmutableList.of("foo", "bar"), row.getRaw("col2"));

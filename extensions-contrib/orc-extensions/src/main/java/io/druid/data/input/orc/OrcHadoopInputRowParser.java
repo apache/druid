@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.data.input.InputRow;
@@ -74,7 +75,7 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
 
   @SuppressWarnings("ArgumentParameterSwap")
   @Override
-  public InputRow parse(OrcStruct input)
+  public List<InputRow> parseBatch(OrcStruct input)
   {
     Map<String, Object> map = Maps.newHashMap();
     List<? extends StructField> fields = oip.getAllStructFieldRefs();
@@ -106,7 +107,7 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
     TimestampSpec timestampSpec = parseSpec.getTimestampSpec();
     DateTime dateTime = timestampSpec.extractTimestamp(map);
 
-    return new MapBasedInputRow(dateTime, dimensions, map);
+    return ImmutableList.of(new MapBasedInputRow(dateTime, dimensions, map));
   }
 
   private List getListObject(ListObjectInspector listObjectInspector, Object listObject)

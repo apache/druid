@@ -83,13 +83,22 @@ public class AppenderatorTest
 
       // add
       commitMetadata.put("x", "1");
-      Assert.assertEquals(1, appenderator.add(IDENTIFIERS.get(0), IR("2000", "foo", 1), committerSupplier));
+      Assert.assertEquals(1,
+                          appenderator.add(IDENTIFIERS.get(0), IR("2000", "foo", 1), committerSupplier)
+                                      .getNumRowsInSegment()
+      );
 
       commitMetadata.put("x", "2");
-      Assert.assertEquals(2, appenderator.add(IDENTIFIERS.get(0), IR("2000", "bar", 2), committerSupplier));
+      Assert.assertEquals(2,
+                          appenderator.add(IDENTIFIERS.get(0), IR("2000", "bar", 2), committerSupplier)
+                                      .getNumRowsInSegment()
+      );
 
       commitMetadata.put("x", "3");
-      Assert.assertEquals(1, appenderator.add(IDENTIFIERS.get(1), IR("2000", "qux", 4), committerSupplier));
+      Assert.assertEquals(1,
+                          appenderator.add(IDENTIFIERS.get(1), IR("2000", "qux", 4), committerSupplier)
+                                      .getNumRowsInSegment()
+      );
 
       // getSegments
       Assert.assertEquals(IDENTIFIERS.subList(0, 2), sorted(appenderator.getSegments()));

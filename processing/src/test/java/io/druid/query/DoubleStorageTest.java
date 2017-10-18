@@ -331,7 +331,7 @@ public class DoubleStorageTest
 
     getStreamOfEvents().forEach(o -> {
       try {
-        index.add(ROW_PARSER.parse((Map) o));
+        index.add(ROW_PARSER.parseBatch((Map<String, Object>) o).get(0));
       }
       catch (IndexSizeExceededException e) {
         Throwables.propagate(e);
