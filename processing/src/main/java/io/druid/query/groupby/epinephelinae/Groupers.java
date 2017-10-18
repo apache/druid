@@ -19,10 +19,7 @@
 
 package io.druid.query.groupby.epinephelinae;
 
-import com.google.common.collect.Iterators;
-
-import java.util.Comparator;
-import java.util.Iterator;
+import java.nio.ByteBuffer;
 
 public class Groupers
 {
@@ -72,25 +69,11 @@ public class Groupers
     return keyHash | 0x80000000;
   }
 
-  public static <KeyType> Iterator<Grouper.Entry<KeyType>> mergeIterators(
-      final Iterable<Iterator<Grouper.Entry<KeyType>>> iterators,
-      final Comparator<Grouper.Entry<KeyType>> keyTypeComparator
-  )
+  public static ByteBuffer getSlice(ByteBuffer buffer, int sliceSize, int i)
   {
-    if (keyTypeComparator != null) {
-      return Iterators.mergeSorted(
-          iterators,
-          new Comparator<Grouper.Entry<KeyType>>()
-          {
-            @Override
-            public int compare(Grouper.Entry<KeyType> lhs, Grouper.Entry<KeyType> rhs)
-            {
-              return keyTypeComparator.compare(lhs, rhs);
-            }
-          }
-      );
-    } else {
-      return Iterators.concat(iterators.iterator());
-    }
+    final ByteBuffer slice = buffer.duplicate();
+    slice.position(sliceSize * i);
+    slice.limit(slice.position() + sliceSize);
+    return slice.slice();
   }
 }
