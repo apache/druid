@@ -19,8 +19,9 @@
 
 package io.druid.query.expression;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.lookup.LookupExtractor;
@@ -31,27 +32,26 @@ import io.druid.query.lookup.LookupReferencesManager;
 import org.easymock.EasyMock;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 
-public class TestExpressionMacroTable extends ExprMacroTable
+/**
+ * Separate from {@link TestExprMacroTable} since that one is in druid-processing, which doesn't have
+ * {@link LookupReferencesManager}.
+ */
+public class LookupEnabledTestExprMacroTable extends ExprMacroTable
 {
-  public static final ExprMacroTable INSTANCE = new TestExpressionMacroTable();
+  public static final ExprMacroTable INSTANCE = new LookupEnabledTestExprMacroTable();
 
-  private TestExpressionMacroTable()
+  private LookupEnabledTestExprMacroTable()
   {
     super(
-        ImmutableList.of(
-            new LikeExprMacro(),
-            new LookupExprMacro(createTestLookupReferencesManager(ImmutableMap.of("foo", "xfoo"))),
-            new RegexpExtractExprMacro(),
-            new TimestampCeilExprMacro(),
-            new TimestampExtractExprMacro(),
-            new TimestampFloorExprMacro(),
-            new TimestampFormatExprMacro(),
-            new TimestampParseExprMacro(),
-            new TimestampShiftExprMacro(),
-            new TrimExprMacro.BothTrimExprMacro(),
-            new TrimExprMacro.LeftTrimExprMacro(),
-            new TrimExprMacro.RightTrimExprMacro()
+        Lists.newArrayList(
+            Iterables.concat(
+                TestExprMacroTable.INSTANCE.getMacros(),
+                Collections.singletonList(
+                    new LookupExprMacro(createTestLookupReferencesManager(ImmutableMap.of("foo", "xfoo")))
+                )
+            )
         )
     );
   }
