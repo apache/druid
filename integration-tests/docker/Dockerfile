@@ -1,3 +1,7 @@
+# This is intended to be a temporary unblocker for Travis CI
+# We should revert this when ppa:webupd8team/java repo maintainers fix the issue shown here: https://github.com/druid-io/druid/pull/4970
+# Or if we stick to using a non-base Ubuntu image, the custom image should reside in an org repo and not an individual repo
+# https://hub.docker.com/r/jonweiimply/ubuntu-j8/
 FROM jonweiimply/ubuntu-j8
 
 # MySQL (Metadata store)
