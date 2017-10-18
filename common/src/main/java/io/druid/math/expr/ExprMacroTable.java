@@ -19,6 +19,7 @@
 
 package io.druid.math.expr;
 
+import com.google.common.collect.ImmutableList;
 import io.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
@@ -46,6 +47,11 @@ public class ExprMacroTable
   public static ExprMacroTable nil()
   {
     return NIL;
+  }
+
+  public List<ExprMacro> getMacros()
+  {
+    return ImmutableList.copyOf(macroMap.values());
   }
 
   /**
