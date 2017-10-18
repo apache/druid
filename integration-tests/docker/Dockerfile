@@ -8,9 +8,6 @@ RUN apt-get update \
       && apt-get update \
       && apt-get install -y openjdk-8-jdk
 
-# wget
-RUN apt-get install -y wget
-
 # MySQL (Metadata store)
 RUN apt-get install -y mysql-server
 
