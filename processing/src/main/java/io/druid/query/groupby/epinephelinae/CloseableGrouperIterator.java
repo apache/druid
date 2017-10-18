@@ -19,29 +19,33 @@
 
 package io.druid.query.groupby.epinephelinae;
 
-import com.google.common.base.Function;
-import com.google.common.base.Throwables;
+import io.druid.java.util.common.io.Closer;
+import io.druid.java.util.common.parsers.CloseableIterator;
+import io.druid.query.groupby.epinephelinae.Grouper.Entry;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.Iterator;
+import java.util.function.Function;
 
-public class CloseableGrouperIterator<KeyType, T> implements Iterator<T>, Closeable
+public class CloseableGrouperIterator<KeyType, T> implements CloseableIterator<T>
 {
-  private final Function<Grouper.Entry<KeyType>, T> transformer;
-  private final Closeable closer;
-  private final Iterator<Grouper.Entry<KeyType>> iterator;
+  private final Function<Entry<KeyType>, T> transformer;
+  private final CloseableIterator<Entry<KeyType>> iterator;
+  private final Closer closer;
 
   public CloseableGrouperIterator(
       final Grouper<KeyType> grouper,
       final boolean sorted,
       final Function<Grouper.Entry<KeyType>, T> transformer,
-      final Closeable closer
+      final Closeable closeable
   )
   {
     this.transformer = transformer;
-    this.closer = closer;
     this.iterator = grouper.iterator(sorted);
+    this.closer = Closer.create();
+
+    closer.register(iterator);
+    closer.register(closeable);
   }
 
   @Override
@@ -65,13 +69,11 @@ public class CloseableGrouperIterator<KeyType, T> implements Iterator<T>, Closea
   @Override
   public void close()
   {
-    if (closer != null) {
-      try {
-        closer.close();
-      }
-      catch (IOException e) {
-        throw Throwables.propagate(e);
-      }
+    try {
+      closer.close();
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
     }
   }
 }
