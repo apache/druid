@@ -26,7 +26,7 @@ import com.metamx.metrics.AbstractMonitor;
 import io.druid.client.DruidServerConfig;
 import io.druid.query.DruidMetrics;
 import io.druid.server.SegmentManager;
-import io.druid.server.coordination.ZkCoordinator;
+import io.druid.server.coordination.SegmentLoadDropHandler;
 import io.druid.timeline.DataSegment;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
@@ -37,18 +37,18 @@ public class HistoricalMetricsMonitor extends AbstractMonitor
 {
   private final DruidServerConfig serverConfig;
   private final SegmentManager segmentManager;
-  private final ZkCoordinator zkCoordinator;
+  private final SegmentLoadDropHandler segmentLoadDropMgr;
 
   @Inject
   public HistoricalMetricsMonitor(
       DruidServerConfig serverConfig,
       SegmentManager segmentManager,
-      ZkCoordinator zkCoordinator
+      SegmentLoadDropHandler segmentLoadDropMgr
   )
   {
     this.serverConfig = serverConfig;
     this.segmentManager = segmentManager;
-    this.zkCoordinator = zkCoordinator;
+    this.segmentLoadDropMgr = segmentLoadDropMgr;
   }
 
   @Override
@@ -58,7 +58,7 @@ public class HistoricalMetricsMonitor extends AbstractMonitor
 
     final Object2LongOpenHashMap<String> pendingDeleteSizes = new Object2LongOpenHashMap<>();
 
-    for (DataSegment segment : zkCoordinator.getPendingDeleteSnapshot()) {
+    for (DataSegment segment : segmentLoadDropMgr.getPendingDeleteSnapshot()) {
       pendingDeleteSizes.addTo(segment.getDataSource(), segment.getSize());
     }
 
