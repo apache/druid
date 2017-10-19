@@ -30,10 +30,10 @@ import java.lang.annotation.Target;
 /**
  * Annotation to inject extra dimensions, added to all events, emitted via {@link EmitterModule#getServiceEmitter}.
  *
- * Example:
+ * For example, write this in a body of {@link com.google.inject.Module#configure} of your extension module):
  *
  * MapBinder<String, String> extraDims =
- *     MapBinder.newMapBinder(String.class, String.class, ExtraServiceDimensions.class);
+ *     MapBinder.newMapBinder(binder, String.class, String.class, ExtraServiceDimensions.class);
  * extraDims.addBinding("foo").toInstance("bar");
  */
 @Target(ElementType.PARAMETER)
