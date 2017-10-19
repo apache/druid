@@ -59,7 +59,7 @@ import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.FloatSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.expression.LookupExprMacro;
-import io.druid.query.expression.TestExpressionMacroTable;
+import io.druid.query.expression.LookupEnabledTestExprMacroTable;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
@@ -141,7 +141,7 @@ public class CalciteTests
 
           binder.bind(LookupReferencesManager.class)
                 .toInstance(
-                    TestExpressionMacroTable.createTestLookupReferencesManager(
+                    LookupEnabledTestExprMacroTable.createTestLookupReferencesManager(
                         ImmutableMap.of(
                             "a", "xa",
                             "abc", "xabc"

@@ -29,13 +29,13 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.math.expr.ExprMacroTable;
-import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import io.druid.query.expression.TestExpressionMacroTable;
+import io.druid.query.expression.LookupEnabledTestExprMacroTable;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.segment.realtime.firehose.NoopChatHandlerProvider;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthorizerMapper;
 
@@ -76,7 +76,7 @@ public class TestUtils
 
     jsonMapper.setInjectableValues(
         new InjectableValues.Std()
-            .addValue(ExprMacroTable.class.getName(), TestExpressionMacroTable.INSTANCE)
+            .addValue(ExprMacroTable.class.getName(), LookupEnabledTestExprMacroTable.INSTANCE)
             .addValue(IndexIO.class, indexIO)
             .addValue(ObjectMapper.class, jsonMapper)
             .addValue(ChatHandlerProvider.class, new NoopChatHandlerProvider())

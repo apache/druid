@@ -174,7 +174,7 @@ public class ExprMacroTest
 
   private void assertExpr(final String expression, final Object expectedResult)
   {
-    final Expr expr = Parser.parse(expression, TestExpressionMacroTable.INSTANCE);
+    final Expr expr = Parser.parse(expression, LookupEnabledTestExprMacroTable.INSTANCE);
     Assert.assertEquals(expression, expectedResult, expr.eval(BINDINGS).value());
   }
 }

@@ -116,7 +116,7 @@ Numeric functions will return 64 bit integers or 64 bit floats, depending on the
 |`x - y`|Subtraction.|
 |`x * y`|Multiplication.|
 |`x / y`|Division.|
-|`x % y`|Mod.|
+|`MOD(x, y)`|Modulo (remainder of x divided by y).|
 
 ### String functions
 
