@@ -17,36 +17,15 @@
  * under the License.
  */
 
-package io.druid.output;
-
-import io.druid.java.util.common.ByteBufferUtils;
+package io.druid.segment.writeout;
 
 import java.nio.ByteBuffer;
 
-final class DirectByteBufferOutputBytes extends ByteBufferOutputBytes
+public final class HeapByteBufferWriteOutBytes extends ByteBufferWriteOutBytes
 {
-  private boolean open = true;
-
   @Override
   protected ByteBuffer allocateBuffer()
   {
-    return ByteBuffer.allocateDirect(BUFFER_SIZE);
-  }
-
-  @Override
-  public boolean isOpen()
-  {
-    return open;
-  }
-
-  void free()
-  {
-    open = false;
-    buffers.forEach(ByteBufferUtils::free);
-    buffers.clear();
-    headBufferIndex = -1;
-    headBuffer = null;
-    size = 0;
-    capacity = 0;
+    return ByteBuffer.allocate(BUFFER_SIZE);
   }
 }

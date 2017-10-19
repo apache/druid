@@ -22,8 +22,8 @@ package io.druid.segment.data;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.output.OutputBytes;
-import io.druid.output.OutputMedium;
+import io.druid.segment.writeout.WriteOutBytes;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.serde.Serializer;
 
 import java.io.IOException;
@@ -33,22 +33,22 @@ import java.nio.channels.WritableByteChannel;
  */
 public class ByteBufferWriter<T> implements Serializer
 {
-  private final OutputMedium outputMedium;
+  private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final ObjectStrategy<T> strategy;
 
-  private OutputBytes headerOut = null;
-  private OutputBytes valueOut = null;
+  private WriteOutBytes headerOut = null;
+  private WriteOutBytes valueOut = null;
 
-  public ByteBufferWriter(OutputMedium outputMedium, ObjectStrategy<T> strategy)
+  public ByteBufferWriter(SegmentWriteOutMedium segmentWriteOutMedium, ObjectStrategy<T> strategy)
   {
-    this.outputMedium = outputMedium;
+    this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.strategy = strategy;
   }
 
   public void open() throws IOException
   {
-    headerOut = outputMedium.makeOutputBytes();
-    valueOut = outputMedium.makeOutputBytes();
+    headerOut = segmentWriteOutMedium.makeWriteOutBytes();
+    valueOut = segmentWriteOutMedium.makeWriteOutBytes();
   }
 
   public void write(T objectToWrite) throws IOException

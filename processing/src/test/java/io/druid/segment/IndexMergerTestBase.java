@@ -41,7 +41,7 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import io.druid.output.OutputMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -88,7 +88,7 @@ public class IndexMergerTestBase
 
   protected IndexMerger indexMerger;
 
-  @Parameterized.Parameters(name = "{index}: metric compression={0}, dimension compression={1}, long encoding={2}, output medium={3}")
+  @Parameterized.Parameters(name = "{index}: metric compression={0}, dimension compression={1}, long encoding={2}, segment write-out medium={3}")
   public static Collection<Object[]> data()
   {
     return Collections2.transform(
@@ -97,7 +97,7 @@ public class IndexMergerTestBase
                 EnumSet.allOf(CompressionStrategy.class),
                 ImmutableSet.copyOf(CompressionStrategy.noNoneValues()),
                 EnumSet.allOf(CompressionFactory.LongEncodingStrategy.class),
-                OutputMediumFactory.builtInFactories()
+                SegmentWriteOutMediumFactory.builtInFactories()
             )
         ), new Function<List<?>, Object[]>()
         {
@@ -141,7 +141,7 @@ public class IndexMergerTestBase
       CompressionStrategy compressionStrategy,
       CompressionStrategy dimCompressionStrategy,
       CompressionFactory.LongEncodingStrategy longEncodingStrategy,
-      OutputMediumFactory outputMediumFactory
+      SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   )
   {
     this.indexSpec = makeIndexSpec(
@@ -150,7 +150,7 @@ public class IndexMergerTestBase
         dimCompressionStrategy,
         longEncodingStrategy
     );
-    this.indexIO = TestHelper.getTestIndexIO(outputMediumFactory);
+    this.indexIO = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory);
   }
 
   @Test

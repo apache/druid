@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 import io.druid.benchmark.datagen.BenchmarkColumnSchema;
 import io.druid.benchmark.datagen.BenchmarkColumnValueGenerator;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.output.OffHeapMemoryOutputMedium;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.CompressionStrategy;
@@ -140,7 +140,7 @@ public class LongCompressionBenchmarkFileGenerator
           File dataFile = new File(dir, entry.getKey());
 
           LongSupplierSerializer writer = CompressionFactory.getLongSerializer(
-              new OffHeapMemoryOutputMedium(),
+              new OffHeapMemorySegmentWriteOutMedium(),
               "long",
               ByteOrder.nativeOrder(),
               encoding,

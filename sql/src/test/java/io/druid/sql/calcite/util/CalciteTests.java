@@ -43,7 +43,7 @@ import io.druid.data.input.impl.TimestampSpec;
 import io.druid.guice.ExpressionModule;
 import io.druid.guice.annotations.Json;
 import io.druid.math.expr.ExprMacroTable;
-import io.druid.output.OffHeapMemoryOutputMediumFactory;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.query.DefaultGenericQueryMetricsFactory;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.DruidProcessingConfig;
@@ -344,14 +344,14 @@ public class CalciteTests
   {
     final QueryableIndex index1 = IndexBuilder.create()
                                               .tmpDir(new File(tmpDir, "1"))
-                                              .outputMediumFactory(OffHeapMemoryOutputMediumFactory.instance())
+                                              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                                               .schema(INDEX_SCHEMA)
                                               .rows(ROWS1)
                                               .buildMMappedIndex();
 
     final QueryableIndex index2 = IndexBuilder.create()
                                               .tmpDir(new File(tmpDir, "2"))
-                                              .outputMediumFactory(OffHeapMemoryOutputMediumFactory.instance())
+                                              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                                               .schema(INDEX_SCHEMA)
                                               .rows(ROWS2)
                                               .buildMMappedIndex();

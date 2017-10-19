@@ -19,7 +19,7 @@
 
 package io.druid.segment;
 
-import io.druid.output.OutputMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
@@ -33,7 +33,7 @@ public class ConciseBitmapIndexMergerV9Test extends IndexMergerTestBase
       CompressionStrategy compressionStrategy,
       CompressionStrategy dimCompressionStrategy,
       LongEncodingStrategy longEncodingStrategy,
-      OutputMediumFactory outputMediumFactory
+      SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   )
   {
     super(
@@ -41,8 +41,8 @@ public class ConciseBitmapIndexMergerV9Test extends IndexMergerTestBase
         compressionStrategy,
         dimCompressionStrategy,
         longEncodingStrategy,
-        outputMediumFactory
+        segmentWriteOutMediumFactory
     );
-    indexMerger = TestHelper.getTestIndexMergerV9(outputMediumFactory);
+    indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
   }
 }

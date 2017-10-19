@@ -22,7 +22,7 @@ package io.druid.segment.data;
 
 import io.druid.io.Channels;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.output.OutputMedium;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.CompressedVSizeIndexedV3Supplier;
 import io.druid.segment.IndexIO;
 import it.unimi.dsi.fastutil.ints.IntList;
@@ -40,7 +40,7 @@ public class CompressedVSizeIndexedV3Writer extends MultiValueIndexedIntsWriter
   private static final byte VERSION = CompressedVSizeIndexedV3Supplier.VERSION;
 
   public static CompressedVSizeIndexedV3Writer create(
-      final OutputMedium outputMedium,
+      final SegmentWriteOutMedium segmentWriteOutMedium,
       final String filenameBase,
       final int maxValue,
       final CompressionStrategy compression
@@ -48,14 +48,14 @@ public class CompressedVSizeIndexedV3Writer extends MultiValueIndexedIntsWriter
   {
     return new CompressedVSizeIndexedV3Writer(
         new CompressedIntsIndexedWriter(
-            outputMedium,
+            segmentWriteOutMedium,
             filenameBase,
             CompressedIntsIndexedSupplier.MAX_INTS_IN_BUFFER,
             IndexIO.BYTE_ORDER,
             compression
         ),
         new CompressedVSizeIntsIndexedWriter(
-            outputMedium,
+            segmentWriteOutMedium,
             filenameBase,
             maxValue,
             CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(maxValue),

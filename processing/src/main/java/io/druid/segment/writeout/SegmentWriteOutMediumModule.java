@@ -17,15 +17,21 @@
  * under the License.
  */
 
-package io.druid.output;
+package io.druid.segment.writeout;
 
-import java.nio.ByteBuffer;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import io.druid.guice.JsonConfigProvider;
 
-public final class HeapByteBufferOutputBytes extends ByteBufferOutputBytes
+public class SegmentWriteOutMediumModule implements Module
 {
   @Override
-  protected ByteBuffer allocateBuffer()
+  public void configure(Binder binder)
   {
-    return ByteBuffer.allocate(BUFFER_SIZE);
+    JsonConfigProvider.bind(
+        binder,
+        "druid.peon.defaultSegmentWriteOutMediumFactory",
+        SegmentWriteOutMediumFactory.class
+    );
   }
 }

@@ -29,7 +29,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.math.expr.ExprMacroTable;
-import io.druid.output.OffHeapMemoryOutputMediumFactory;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.query.expression.TestExpressionMacroTable;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMergerV9;
@@ -57,7 +57,7 @@ public class TestUtils
     jsonMapper = new DefaultObjectMapper();
     indexIO = new IndexIO(
         jsonMapper,
-        OffHeapMemoryOutputMediumFactory.instance(),
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -67,7 +67,7 @@ public class TestUtils
           }
         }
     );
-    indexMergerV9 = new IndexMergerV9(jsonMapper, indexIO, OffHeapMemoryOutputMediumFactory.instance());
+    indexMergerV9 = new IndexMergerV9(jsonMapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
 
     final List<? extends Module> list = new ServerModule().getJacksonModules();
     for (Module module : list) {

@@ -30,9 +30,9 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.output.OffHeapMemoryOutputMediumFactory;
-import io.druid.output.OutputMediumFactory;
-import io.druid.output.TmpFileOutputMediumFactory;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import io.druid.query.Druids;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
@@ -82,8 +82,8 @@ public class SchemalessTestFullTest
   public static Collection<?> constructorFeeder() throws IOException
   {
     return ImmutableList.of(
-        new Object[] {TmpFileOutputMediumFactory.instance()},
-        new Object[] {OffHeapMemoryOutputMediumFactory.instance()}
+        new Object[] {TmpFileSegmentWriteOutMediumFactory.instance()},
+        new Object[] {OffHeapMemorySegmentWriteOutMediumFactory.instance()}
     );
   }
 
@@ -116,9 +116,9 @@ public class SchemalessTestFullTest
       Arrays.asList(Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z"))
   );
 
-  public SchemalessTestFullTest(OutputMediumFactory outputMediumFactory)
+  public SchemalessTestFullTest(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
-    schemalessIndexTest = new SchemalessIndexTest(outputMediumFactory);
+    schemalessIndexTest = new SchemalessIndexTest(segmentWriteOutMediumFactory);
   }
 
   @Test

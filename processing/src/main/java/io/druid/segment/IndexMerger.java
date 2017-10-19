@@ -37,7 +37,7 @@ import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.CloseableIterator;
-import io.druid.output.OutputMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.data.Indexed;
@@ -163,7 +163,7 @@ public interface IndexMerger
       IncrementalIndex index,
       File outDir,
       IndexSpec indexSpec,
-      @Nullable OutputMediumFactory outputMediumFactory
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException;
 
   /**
@@ -183,7 +183,7 @@ public interface IndexMerger
       Interval dataInterval,
       File outDir,
       IndexSpec indexSpec,
-      @Nullable OutputMediumFactory outputMediumFactory
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException;
 
   File persist(
@@ -192,7 +192,7 @@ public interface IndexMerger
       File outDir,
       IndexSpec indexSpec,
       ProgressIndicator progress,
-      @Nullable OutputMediumFactory outputMediumFactory
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException;
 
   File mergeQueryableIndex(
@@ -201,7 +201,7 @@ public interface IndexMerger
       AggregatorFactory[] metricAggs,
       File outDir,
       IndexSpec indexSpec,
-      @Nullable OutputMediumFactory outputMediumFactory
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException;
 
   File mergeQueryableIndex(
@@ -211,7 +211,7 @@ public interface IndexMerger
       File outDir,
       IndexSpec indexSpec,
       ProgressIndicator progress,
-      @Nullable OutputMediumFactory outputMediumFactory
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException;
 
   @VisibleForTesting
@@ -230,7 +230,7 @@ public interface IndexMerger
       File outDir,
       IndexSpec indexSpec,
       ProgressIndicator progress,
-      @Nullable OutputMediumFactory outputMediumFactory
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException;
 
   File append(
@@ -238,7 +238,7 @@ public interface IndexMerger
       AggregatorFactory[] aggregators,
       File outDir,
       IndexSpec indexSpec,
-      @Nullable OutputMediumFactory outputMediumFactory
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException;
 
   interface IndexSeeker

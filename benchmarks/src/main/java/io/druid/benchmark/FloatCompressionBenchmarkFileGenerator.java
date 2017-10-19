@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 import io.druid.benchmark.datagen.BenchmarkColumnSchema;
 import io.druid.benchmark.datagen.BenchmarkColumnValueGenerator;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.output.OffHeapMemoryOutputMedium;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.CompressionStrategy;
@@ -147,7 +147,7 @@ public class FloatCompressionBenchmarkFileGenerator
         File dataFile = new File(dir, entry.getKey());
 
         FloatSupplierSerializer writer = CompressionFactory.getFloatSerializer(
-            new OffHeapMemoryOutputMedium(),
+            new OffHeapMemorySegmentWriteOutMedium(),
             "float",
             ByteOrder.nativeOrder(),
             compression

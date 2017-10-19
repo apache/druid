@@ -47,7 +47,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.Yielder;
 import io.druid.java.util.common.guava.YieldingAccumulator;
-import io.druid.output.OffHeapMemoryOutputMediumFactory;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryPlus;
@@ -144,7 +144,7 @@ public class AggregationTestHelper
 
     IndexIO indexIO = new IndexIO(
         mapper,
-        OffHeapMemoryOutputMediumFactory.instance(),
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -157,7 +157,7 @@ public class AggregationTestHelper
 
     return new AggregationTestHelper(
         mapper,
-        new IndexMergerV9(mapper, indexIO, OffHeapMemoryOutputMediumFactory.instance()),
+        new IndexMergerV9(mapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance()),
         indexIO,
         factory.getToolchest(),
         factory,
@@ -201,7 +201,7 @@ public class AggregationTestHelper
 
     IndexIO indexIO = new IndexIO(
         mapper,
-        OffHeapMemoryOutputMediumFactory.instance(),
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -214,7 +214,7 @@ public class AggregationTestHelper
 
     return new AggregationTestHelper(
         mapper,
-        new IndexMergerV9(mapper, indexIO, OffHeapMemoryOutputMediumFactory.instance()),
+        new IndexMergerV9(mapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance()),
         indexIO,
         toolchest,
         factory,
@@ -242,7 +242,7 @@ public class AggregationTestHelper
 
     IndexIO indexIO = new IndexIO(
         mapper,
-        OffHeapMemoryOutputMediumFactory.instance(),
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -255,7 +255,7 @@ public class AggregationTestHelper
 
     return new AggregationTestHelper(
         mapper,
-        new IndexMergerV9(mapper, indexIO, OffHeapMemoryOutputMediumFactory.instance()),
+        new IndexMergerV9(mapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance()),
         indexIO,
         toolchest,
         factory,
@@ -294,7 +294,7 @@ public class AggregationTestHelper
 
     IndexIO indexIO = new IndexIO(
         mapper,
-        OffHeapMemoryOutputMediumFactory.instance(),
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -307,7 +307,7 @@ public class AggregationTestHelper
 
     return new AggregationTestHelper(
         mapper,
-        new IndexMergerV9(mapper, indexIO, OffHeapMemoryOutputMediumFactory.instance()),
+        new IndexMergerV9(mapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance()),
         indexIO,
         toolchest,
         factory,

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.output;
+package io.druid.segment.writeout;
 
 import com.google.common.io.ByteStreams;
 import io.druid.io.Channels;
@@ -32,7 +32,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
 
-final class FileOutputBytes extends OutputBytes
+final class FileWriteOutBytes extends WriteOutBytes
 {
   private final File file;
   private final FileChannel ch;
@@ -40,7 +40,7 @@ final class FileOutputBytes extends OutputBytes
   /** Purposely big-endian, for {@link #writeInt(int)} implementation */
   private final ByteBuffer buffer = ByteBuffer.allocate(4096); // 4K page sized buffer
 
-  FileOutputBytes(File file, FileChannel ch)
+  FileWriteOutBytes(File file, FileChannel ch)
   {
     this.file = file;
     this.ch = ch;

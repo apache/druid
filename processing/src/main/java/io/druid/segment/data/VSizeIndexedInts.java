@@ -24,7 +24,7 @@ import io.druid.common.utils.ByteUtils;
 import io.druid.io.Channels;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.output.HeapByteBufferOutputBytes;
+import io.druid.segment.writeout.HeapByteBufferWriteOutBytes;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.serde.MetaSerdeHelper;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -139,7 +139,7 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
     return buffer.remaining() - (Ints.BYTES - numBytes);
   }
 
-  public void writeBytesNoPaddingTo(HeapByteBufferOutputBytes out)
+  public void writeBytesNoPaddingTo(HeapByteBufferWriteOutBytes out)
   {
     ByteBuffer toWrite = buffer.slice();
     toWrite.limit(toWrite.limit() - (Ints.BYTES - numBytes));

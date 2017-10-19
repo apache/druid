@@ -19,7 +19,7 @@
 
 package io.druid.segment.data;
 
-import io.druid.output.OnHeapMemoryOutputMedium;
+import io.druid.segment.writeout.OnHeapMemorySegmentWriteOutMedium;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -34,9 +34,9 @@ public class GenericIndexedStringWriterTest
   @Test
   public void testRandomAccess() throws IOException
   {
-    OnHeapMemoryOutputMedium outputMedium = new OnHeapMemoryOutputMedium();
+    OnHeapMemorySegmentWriteOutMedium segmentWriteOutMedium = new OnHeapMemorySegmentWriteOutMedium();
     GenericIndexedWriter<String> writer = new GenericIndexedWriter<>(
-        outputMedium,
+        segmentWriteOutMedium,
         "test",
         GenericIndexed.STRING_STRATEGY
     );

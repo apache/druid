@@ -20,8 +20,8 @@
 package io.druid.segment.data;
 
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.output.OutputBytes;
-import io.druid.output.OutputMedium;
+import io.druid.segment.writeout.WriteOutBytes;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.serde.MetaSerdeHelper;
 
 import java.io.IOException;
@@ -36,21 +36,21 @@ public class EntireLayoutLongSupplierSerializer implements LongSupplierSerialize
       .writeSomething(CompressionFactory.longEncodingWriter(x -> x.writer, x -> CompressionStrategy.NONE));
 
   private final CompressionFactory.LongEncodingWriter writer;
-  private final OutputMedium outputMedium;
-  private OutputBytes valuesOut;
+  private final SegmentWriteOutMedium segmentWriteOutMedium;
+  private WriteOutBytes valuesOut;
 
   private int numInserted = 0;
 
-  EntireLayoutLongSupplierSerializer(OutputMedium outputMedium, CompressionFactory.LongEncodingWriter writer)
+  EntireLayoutLongSupplierSerializer(SegmentWriteOutMedium segmentWriteOutMedium, CompressionFactory.LongEncodingWriter writer)
   {
-    this.outputMedium = outputMedium;
+    this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.writer = writer;
   }
 
   @Override
   public void open() throws IOException
   {
-    valuesOut = outputMedium.makeOutputBytes();
+    valuesOut = segmentWriteOutMedium.makeWriteOutBytes();
     writer.setOutputStream(valuesOut);
   }
 

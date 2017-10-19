@@ -38,7 +38,7 @@ import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.output.OffHeapMemoryOutputMediumFactory;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.query.Druids;
 import io.druid.query.Druids.SearchQueryBuilder;
 import io.druid.query.FinalizeResultsQueryRunner;
@@ -141,7 +141,7 @@ public class SearchBenchmark
     JSON_MAPPER = new DefaultObjectMapper();
     INDEX_IO = new IndexIO(
         JSON_MAPPER,
-        OffHeapMemoryOutputMediumFactory.instance(),
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -151,7 +151,7 @@ public class SearchBenchmark
           }
         }
     );
-    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemoryOutputMediumFactory.instance());
+    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
   }
 
   private static final Map<String, Map<String, Druids.SearchQueryBuilder>> SCHEMA_QUERY_MAP = new LinkedHashMap<>();

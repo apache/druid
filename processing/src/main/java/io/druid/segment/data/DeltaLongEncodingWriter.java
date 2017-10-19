@@ -21,7 +21,7 @@ package io.druid.segment.data;
 
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-import io.druid.output.OutputBytes;
+import io.druid.segment.writeout.WriteOutBytes;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -46,7 +46,7 @@ public class DeltaLongEncodingWriter implements CompressionFactory.LongEncodingW
   }
 
   @Override
-  public void setOutputStream(OutputBytes output)
+  public void setOutputStream(WriteOutBytes output)
   {
     serializer = VSizeLongSerde.getSerializer(bitsPerValue, output);
   }

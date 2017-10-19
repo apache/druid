@@ -26,7 +26,7 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
-import io.druid.output.OutputMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.query.Druids;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
@@ -76,8 +76,8 @@ public class SchemalessTestSimpleTest
   public static Collection<?> constructorFeeder() throws IOException
   {
     List<Object[]> argumentArrays = new ArrayList<>();
-    for (OutputMediumFactory outputMediumFactory : OutputMediumFactory.builtInFactories()) {
-      SchemalessIndexTest schemalessIndexTest = new SchemalessIndexTest(outputMediumFactory);
+    for (SegmentWriteOutMediumFactory segmentWriteOutMediumFactory : SegmentWriteOutMediumFactory.builtInFactories()) {
+      SchemalessIndexTest schemalessIndexTest = new SchemalessIndexTest(segmentWriteOutMediumFactory);
       final IncrementalIndex incrementalIndex = SchemalessIndexTest.getIncrementalIndex();
       final QueryableIndex persistedIncrementalIndex = TestIndex.persistRealtimeAndLoadMMapped(incrementalIndex);
       final QueryableIndex mergedIncrementalIndex = schemalessIndexTest.getMergedIncrementalIndex();

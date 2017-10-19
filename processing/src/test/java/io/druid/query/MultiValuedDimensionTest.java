@@ -35,9 +35,9 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.output.OffHeapMemoryOutputMediumFactory;
-import io.druid.output.OutputMediumFactory;
-import io.druid.output.TmpFileOutputMediumFactory;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.AggregationTestHelper;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
@@ -89,21 +89,21 @@ public class MultiValuedDimensionTest
   {
     final List<Object[]> constructors = Lists.newArrayList();
     for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
-      constructors.add(new Object[]{config, TmpFileOutputMediumFactory.instance()});
-      constructors.add(new Object[]{config, OffHeapMemoryOutputMediumFactory.instance()});
+      constructors.add(new Object[]{config, TmpFileSegmentWriteOutMediumFactory.instance()});
+      constructors.add(new Object[]{config, OffHeapMemorySegmentWriteOutMediumFactory.instance()});
     }
     return constructors;
   }
 
   private final AggregationTestHelper helper;
-  private final OutputMediumFactory outputMediumFactory;
+  private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
 
   private IncrementalIndex incrementalIndex;
   private QueryableIndex queryableIndex;
 
   private File persistedSegmentDir;
 
-  public MultiValuedDimensionTest(final GroupByQueryConfig config, OutputMediumFactory outputMediumFactory)
+  public MultiValuedDimensionTest(final GroupByQueryConfig config, SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
       throws Exception
   {
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
@@ -111,7 +111,7 @@ public class MultiValuedDimensionTest
         config,
         null
     );
-    this.outputMediumFactory = outputMediumFactory;
+    this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
   }
 
   @Before
@@ -146,10 +146,10 @@ public class MultiValuedDimensionTest
     }
 
     persistedSegmentDir = Files.createTempDir();
-    TestHelper.getTestIndexMergerV9(outputMediumFactory)
+    TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory)
               .persist(incrementalIndex, persistedSegmentDir, new IndexSpec(), null);
 
-    queryableIndex = TestHelper.getTestIndexIO(outputMediumFactory).loadIndex(persistedSegmentDir);
+    queryableIndex = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory).loadIndex(persistedSegmentDir);
   }
 
   @Test

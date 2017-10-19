@@ -29,9 +29,9 @@ import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.Smoosh;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.java.util.common.io.smoosh.SmooshedWriter;
-import io.druid.output.OffHeapMemoryOutputMedium;
-import io.druid.output.OutputBytes;
-import io.druid.output.OutputMedium;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
+import io.druid.segment.writeout.WriteOutBytes;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -55,7 +55,7 @@ import static org.junit.Assert.assertEquals;
 public class CompressedVSizeIntsIndexedWriterTest
 {
   private static final int[] MAX_VALUES = new int[]{0xFF, 0xFFFF, 0xFFFFFF, 0x0FFFFFFF};
-  private final OutputMedium outputMedium = new OffHeapMemoryOutputMedium();
+  private final SegmentWriteOutMedium segmentWriteOutMedium = new OffHeapMemorySegmentWriteOutMedium();
   private final CompressionStrategy compressionStrategy;
   private final ByteOrder byteOrder;
   private final Random rand = new Random(0);
@@ -98,7 +98,7 @@ public class CompressedVSizeIntsIndexedWriterTest
   @After
   public void tearDown() throws Exception
   {
-    outputMedium.close();
+    segmentWriteOutMedium.close();
   }
 
   private void generateVals(final int totalSize, final int maxValue) throws IOException
@@ -114,7 +114,7 @@ public class CompressedVSizeIntsIndexedWriterTest
     FileSmoosher smoosher = new FileSmoosher(FileUtils.getTempDirectory());
 
     CompressedVSizeIntsIndexedWriter writer = new CompressedVSizeIntsIndexedWriter(
-        outputMedium,
+        segmentWriteOutMedium,
         "test",
         vals.length > 0 ? Ints.max(vals) : 0,
         chunkSize,
@@ -127,22 +127,22 @@ public class CompressedVSizeIntsIndexedWriterTest
         chunkSize,
         byteOrder,
         compressionStrategy,
-        outputMedium.getCloser()
+        segmentWriteOutMedium.getCloser()
     );
     writer.open();
     for (int val : vals) {
       writer.add(val);
     }
     long writtenLength = writer.getSerializedSize();
-    final OutputBytes outputBytes = outputMedium.makeOutputBytes();
-    writer.writeTo(outputBytes, smoosher);
+    final WriteOutBytes writeOutBytes = segmentWriteOutMedium.makeWriteOutBytes();
+    writer.writeTo(writeOutBytes, smoosher);
     smoosher.close();
 
     assertEquals(writtenLength, supplierFromList.getSerializedSize());
 
     // read from ByteBuffer and check values
     CompressedVSizeIntsIndexedSupplier supplierFromByteBuffer = CompressedVSizeIntsIndexedSupplier.fromByteBuffer(
-        ByteBuffer.wrap(IOUtils.toByteArray(outputBytes.asInputStream())),
+        ByteBuffer.wrap(IOUtils.toByteArray(writeOutBytes.asInputStream())),
         byteOrder
     );
     IndexedInts indexedInts = supplierFromByteBuffer.get();
@@ -187,13 +187,13 @@ public class CompressedVSizeIntsIndexedWriterTest
     FileSmoosher smoosher = new FileSmoosher(tmpDirectory);
 
     GenericIndexedWriter genericIndexed = GenericIndexedWriter.ofCompressedByteBuffers(
-        outputMedium,
+        segmentWriteOutMedium,
         "test",
         compressionStrategy,
         Longs.BYTES * 10000
     );
     CompressedVSizeIntsIndexedWriter writer = new CompressedVSizeIntsIndexedWriter(
-        outputMedium,
+        segmentWriteOutMedium,
         vals.length > 0 ? Ints.max(vals) : 0,
         chunkSize,
         byteOrder,

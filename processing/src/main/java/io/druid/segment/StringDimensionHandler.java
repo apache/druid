@@ -21,7 +21,7 @@ package io.druid.segment;
 
 import com.google.common.primitives.Ints;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
-import io.druid.output.OutputMedium;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.DictionaryEncodedColumn;
@@ -192,12 +192,12 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   @Override
   public DimensionMergerV9 makeMerger(
       IndexSpec indexSpec,
-      OutputMedium outputMedium,
+      SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress
   )
   {
-    return new StringDimensionMergerV9(dimensionName, indexSpec, outputMedium, capabilities, progress);
+    return new StringDimensionMergerV9(dimensionName, indexSpec, segmentWriteOutMedium, capabilities, progress);
   }
 
 }

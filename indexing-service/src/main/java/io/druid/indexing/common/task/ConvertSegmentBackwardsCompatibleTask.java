@@ -21,7 +21,7 @@ package io.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.output.OutputMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.segment.IndexSpec;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -40,7 +40,7 @@ public class ConvertSegmentBackwardsCompatibleTask extends ConvertSegmentTask
       @JsonProperty("indexSpec") IndexSpec indexSpec,
       @JsonProperty("force") Boolean force,
       @JsonProperty("validate") Boolean validate,
-      @JsonProperty("outputMediumFactory") @Nullable OutputMediumFactory outputMediumFactory
+      @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   )
   {
     super(
@@ -51,7 +51,7 @@ public class ConvertSegmentBackwardsCompatibleTask extends ConvertSegmentTask
         indexSpec,
         force == null ? false : force,
         validate == null ? false : validate,
-        outputMediumFactory,
+        segmentWriteOutMediumFactory,
         null
     );
   }
@@ -66,10 +66,10 @@ public class ConvertSegmentBackwardsCompatibleTask extends ConvertSegmentTask
         @JsonProperty("indexSpec") IndexSpec indexSpec,
         @JsonProperty("force") Boolean force,
         @JsonProperty("validate") Boolean validate,
-        @JsonProperty("outputMediumFactory") @Nullable OutputMediumFactory outputMediumFactory
+        @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
     )
     {
-      super(groupId, segment, indexSpec, force, validate, outputMediumFactory, null);
+      super(groupId, segment, indexSpec, force, validate, segmentWriteOutMediumFactory, null);
     }
   }
 }

@@ -27,9 +27,9 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.JodaUtils;
-import io.druid.output.OffHeapMemoryOutputMediumFactory;
-import io.druid.output.OutputMediumFactory;
-import io.druid.output.TmpFileOutputMediumFactory;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.data.CompressionFactory;
@@ -64,8 +64,8 @@ public class IndexMergerV9CompatibilityTest
   public static Collection<?> constructorFeeder() throws IOException
   {
     return ImmutableList.of(
-        new Object[] {TmpFileOutputMediumFactory.instance()},
-        new Object[] {OffHeapMemoryOutputMediumFactory.instance()}
+        new Object[] {TmpFileSegmentWriteOutMediumFactory.instance()},
+        new Object[] {OffHeapMemorySegmentWriteOutMediumFactory.instance()}
     );
   }
 
@@ -90,10 +90,10 @@ public class IndexMergerV9CompatibilityTest
   private final IndexMerger indexMerger;
   private final IndexIO indexIO;
 
-  public IndexMergerV9CompatibilityTest(OutputMediumFactory outputMediumFactory)
+  public IndexMergerV9CompatibilityTest(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
-    indexMerger = TestHelper.getTestIndexMergerV9(outputMediumFactory);
-    indexIO = TestHelper.getTestIndexIO(outputMediumFactory);
+    indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
+    indexIO = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory);
     events = new ArrayList<>();
 
     final Map<String, Object> map1 = ImmutableMap.<String, Object>of(

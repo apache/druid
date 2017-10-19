@@ -21,7 +21,7 @@ package io.druid.indexing.kafka;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.output.OutputMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.indexing.TuningConfig;
@@ -48,7 +48,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
   private final long handoffConditionTimeout;
   private final boolean resetOffsetAutomatically;
   @Nullable
-  private final OutputMediumFactory outputMediumFactory;
+  private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
 
   @JsonCreator
   public KafkaTuningConfig(
@@ -63,7 +63,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
       @JsonProperty("reportParseExceptions") @Nullable Boolean reportParseExceptions,
       @JsonProperty("handoffConditionTimeout") @Nullable Long handoffConditionTimeout,
       @JsonProperty("resetOffsetAutomatically") @Nullable Boolean resetOffsetAutomatically,
-      @JsonProperty("outputMediumFactory") @Nullable OutputMediumFactory outputMediumFactory
+      @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   )
   {
     // Cannot be a static because default basePersistDirectory is unique per-instance
@@ -86,7 +86,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     this.resetOffsetAutomatically = resetOffsetAutomatically == null
                                     ? DEFAULT_RESET_OFFSET_AUTOMATICALLY
                                     : resetOffsetAutomatically;
-    this.outputMediumFactory = outputMediumFactory;
+    this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
   }
 
   public static KafkaTuningConfig copyOf(KafkaTuningConfig config)
@@ -102,7 +102,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         config.reportParseExceptions,
         config.handoffConditionTimeout,
         config.resetOffsetAutomatically,
-        config.outputMediumFactory
+        config.segmentWriteOutMediumFactory
     );
   }
 
@@ -180,9 +180,9 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
   @Override
   @JsonProperty
   @Nullable
-  public OutputMediumFactory getOutputMediumFactory()
+  public SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory()
   {
-    return outputMediumFactory;
+    return segmentWriteOutMediumFactory;
   }
 
   public KafkaTuningConfig withBasePersistDirectory(File dir)
@@ -198,7 +198,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically,
-        outputMediumFactory
+        segmentWriteOutMediumFactory
     );
   }
 
@@ -215,7 +215,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically,
-        outputMediumFactory
+        segmentWriteOutMediumFactory
     );
   }
 
@@ -238,7 +238,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
            Objects.equals(intermediatePersistPeriod, that.intermediatePersistPeriod) &&
            Objects.equals(basePersistDirectory, that.basePersistDirectory) &&
            Objects.equals(indexSpec, that.indexSpec) &&
-           Objects.equals(outputMediumFactory, that.outputMediumFactory);
+           Objects.equals(segmentWriteOutMediumFactory, that.segmentWriteOutMediumFactory);
   }
 
   @Override
@@ -254,7 +254,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically,
-        outputMediumFactory
+        segmentWriteOutMediumFactory
     );
   }
 
@@ -271,7 +271,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
            ", reportParseExceptions=" + reportParseExceptions +
            ", handoffConditionTimeout=" + handoffConditionTimeout +
            ", resetOffsetAutomatically=" + resetOffsetAutomatically +
-           ", outputMediumFactory=" + outputMediumFactory +
+           ", segmentWriteOutMediumFactory=" + segmentWriteOutMediumFactory +
            '}';
   }
 }

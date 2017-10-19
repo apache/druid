@@ -34,7 +34,7 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.java.util.common.UOE;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.output.OutputMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.segment.IndexSpec;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -73,7 +73,7 @@ public class HadoopConverterTask extends ConvertSegmentTask
       @JsonProperty("jobPriority") String jobPriority,
       @JsonProperty("segmentOutputPath") String segmentOutputPath,
       @JsonProperty("classpathPrefix") String classpathPrefix,
-      @JsonProperty("outputMediumFactory") @Nullable OutputMediumFactory outputMediumFactory,
+      @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       @JsonProperty("context") Map<String, Object> context
   )
   {
@@ -90,7 +90,7 @@ public class HadoopConverterTask extends ConvertSegmentTask
         indexSpec,
         force,
         validate == null ? true : validate,
-        outputMediumFactory,
+        segmentWriteOutMediumFactory,
         context
     );
     this.hadoopDependencyCoordinates = hadoopDependencyCoordinates;

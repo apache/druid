@@ -27,8 +27,8 @@ import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.Smoosh;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.java.util.common.io.smoosh.SmooshedWriter;
-import io.druid.output.OffHeapMemoryOutputMedium;
-import io.druid.output.OutputMedium;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ComplexColumn;
@@ -60,11 +60,11 @@ public class LargeColumnSupportedComplexColumnSerializerTest
       for (int aCase : cases) {
         File tmpFile = FileUtils.getTempDirectory();
         HyperLogLogCollector baseCollector = HyperLogLogCollector.makeLatestCollector();
-        try (OutputMedium outputMedium = new OffHeapMemoryOutputMedium();
+        try (SegmentWriteOutMedium segmentWriteOutMedium = new OffHeapMemorySegmentWriteOutMedium();
              FileSmoosher v9Smoosher = new FileSmoosher(tmpFile)) {
 
           LargeColumnSupportedComplexColumnSerializer serializer = LargeColumnSupportedComplexColumnSerializer
-              .createWithColumnSize(outputMedium, "test", serde.getObjectStrategy(), columnSize);
+              .createWithColumnSize(segmentWriteOutMedium, "test", serde.getObjectStrategy(), columnSize);
 
           serializer.open();
           for (int i = 0; i < aCase; i++) {

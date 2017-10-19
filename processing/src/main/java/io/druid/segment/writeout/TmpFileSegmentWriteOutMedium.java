@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.output;
+package io.druid.segment.writeout;
 
 import io.druid.java.util.common.io.Closer;
 import org.apache.commons.io.FileUtils;
@@ -27,12 +27,12 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.file.StandardOpenOption;
 
-public final class TmpFileOutputMedium implements OutputMedium
+public final class TmpFileSegmentWriteOutMedium implements SegmentWriteOutMedium
 {
   private final File dir;
   private final Closer closer = Closer.create();
 
-  TmpFileOutputMedium(File outDir) throws IOException
+  TmpFileSegmentWriteOutMedium(File outDir) throws IOException
   {
     File tmpOutputFilesDir = new File(outDir, "tmpOutputFiles");
     FileUtils.forceMkdir(tmpOutputFilesDir);
@@ -41,7 +41,7 @@ public final class TmpFileOutputMedium implements OutputMedium
   }
 
   @Override
-  public OutputBytes makeOutputBytes() throws IOException
+  public WriteOutBytes makeWriteOutBytes() throws IOException
   {
     File file = File.createTempFile("filePeon", null, dir);
     FileChannel ch = FileChannel.open(
@@ -51,7 +51,7 @@ public final class TmpFileOutputMedium implements OutputMedium
     );
     closer.register(file::delete);
     closer.register(ch);
-    return new FileOutputBytes(file, ch);
+    return new FileWriteOutBytes(file, ch);
   }
 
   @Override

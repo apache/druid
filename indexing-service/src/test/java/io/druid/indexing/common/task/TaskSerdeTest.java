@@ -35,7 +35,7 @@ import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
-import io.druid.output.TmpFileOutputMediumFactory;
+import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -415,7 +415,7 @@ public class TaskSerdeTest
         null,
         false,
         true,
-        TmpFileOutputMediumFactory.instance(),
+        TmpFileSegmentWriteOutMediumFactory.instance(),
         null
     );
 
@@ -432,7 +432,7 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
     Assert.assertEquals(task.getInterval(), task2.getInterval());
     Assert.assertEquals(task.getSegment(), task2.getSegment());
-    Assert.assertEquals(task.getOutputMediumFactory(), task2.getOutputMediumFactory());
+    Assert.assertEquals(task.getSegmentWriteOutMediumFactory(), task2.getSegmentWriteOutMediumFactory());
   }
 
   @Test
@@ -670,7 +670,7 @@ public class TaskSerdeTest
         indexSpec,
         false,
         true,
-        TmpFileOutputMediumFactory.instance(),
+        TmpFileSegmentWriteOutMediumFactory.instance(),
         null
     );
     final String json = jsonMapper.writeValueAsString(task);
@@ -702,7 +702,7 @@ public class TaskSerdeTest
         ),
         false,
         true,
-        TmpFileOutputMediumFactory.instance(),
+        TmpFileSegmentWriteOutMediumFactory.instance(),
         null
     );
     final String json = jsonMapper.writeValueAsString(originalTask);
@@ -728,7 +728,7 @@ public class TaskSerdeTest
     );
     Assert.assertEquals(false, convertSegmentTask.isForce());
     Assert.assertEquals(segment, convertSegmentTask.getSegment());
-    Assert.assertEquals(originalTask.getOutputMediumFactory(), convertSegmentTask.getOutputMediumFactory());
+    Assert.assertEquals(originalTask.getSegmentWriteOutMediumFactory(), convertSegmentTask.getSegmentWriteOutMediumFactory());
   }
 
   @Test

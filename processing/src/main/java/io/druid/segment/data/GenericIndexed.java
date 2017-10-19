@@ -31,7 +31,7 @@ import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import io.druid.output.HeapByteBufferOutputBytes;
+import io.druid.segment.writeout.HeapByteBufferWriteOutBytes;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.serde.MetaSerdeHelper;
 import io.druid.segment.serde.Serializer;
@@ -485,8 +485,8 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
 
     int count = 0;
 
-    HeapByteBufferOutputBytes headerOut = new HeapByteBufferOutputBytes();
-    HeapByteBufferOutputBytes valuesOut = new HeapByteBufferOutputBytes();
+    HeapByteBufferWriteOutBytes headerOut = new HeapByteBufferWriteOutBytes();
+    HeapByteBufferWriteOutBytes valuesOut = new HeapByteBufferWriteOutBytes();
     try {
       T prevVal = null;
       do {

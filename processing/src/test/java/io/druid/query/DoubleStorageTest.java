@@ -32,7 +32,7 @@ import io.druid.data.input.impl.TimestampSpec;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.output.OffHeapMemoryOutputMediumFactory;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.metadata.SegmentMetadataQueryConfig;
 import io.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
@@ -112,8 +112,8 @@ public class DoubleStorageTest
 
 
   private static final IndexMergerV9 INDEX_MERGER_V9 =
-      TestHelper.getTestIndexMergerV9(OffHeapMemoryOutputMediumFactory.instance());
-  private static final IndexIO INDEX_IO = TestHelper.getTestIndexIO(OffHeapMemoryOutputMediumFactory.instance());
+      TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance());
+  private static final IndexIO INDEX_IO = TestHelper.getTestIndexIO(OffHeapMemorySegmentWriteOutMediumFactory.instance());
   private static final Integer MAX_ROWS = 10;
   private static final String TIME_COLUMN = "__time";
   private static final String DIM_NAME = "testDimName";

@@ -17,28 +17,28 @@
  * under the License.
  */
 
-package io.druid.output;
+package io.druid.segment.writeout;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 
 import java.io.File;
 import java.io.IOException;
 
-public class OffHeapMemoryOutputMediumFactory implements OutputMediumFactory
+public final class TmpFileSegmentWriteOutMediumFactory implements SegmentWriteOutMediumFactory
 {
-  private static final OffHeapMemoryOutputMediumFactory INSTANCE = new OffHeapMemoryOutputMediumFactory();
+  private static final TmpFileSegmentWriteOutMediumFactory INSTANCE = new TmpFileSegmentWriteOutMediumFactory();
 
   @JsonCreator
-  public static OffHeapMemoryOutputMediumFactory instance()
+  public static TmpFileSegmentWriteOutMediumFactory instance()
   {
     return INSTANCE;
   }
 
-  private OffHeapMemoryOutputMediumFactory() {}
+  private TmpFileSegmentWriteOutMediumFactory() {}
 
   @Override
-  public OutputMedium makeOutputMedium(File outDir) throws IOException
+  public SegmentWriteOutMedium makeSegmentWriteOutMedium(File outDir) throws IOException
   {
-    return new OffHeapMemoryOutputMedium();
+    return new TmpFileSegmentWriteOutMedium(outDir);
   }
 }

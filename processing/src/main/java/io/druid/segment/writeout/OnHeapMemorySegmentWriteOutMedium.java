@@ -17,17 +17,33 @@
  * under the License.
  */
 
-package io.druid.output;
+package io.druid.segment.writeout;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import io.druid.guice.JsonConfigProvider;
+import com.google.common.annotations.VisibleForTesting;
+import io.druid.java.util.common.io.Closer;
 
-public class OutputMediumModule implements Module
+import java.io.IOException;
+
+@VisibleForTesting
+public final class OnHeapMemorySegmentWriteOutMedium implements SegmentWriteOutMedium
 {
+  private final Closer closer = Closer.create();
+
   @Override
-  public void configure(Binder binder)
+  public WriteOutBytes makeWriteOutBytes() throws IOException
   {
-    JsonConfigProvider.bind(binder, "druid.peon.defaultOutputMediumFactory", OutputMediumFactory.class);
+    return new HeapByteBufferWriteOutBytes();
+  }
+
+  @Override
+  public Closer getCloser()
+  {
+    return closer;
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    closer.close();
   }
 }

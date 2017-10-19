@@ -29,7 +29,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.math.expr.ExprMacroTable;
-import io.druid.output.OutputMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.query.Result;
 import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.timeseries.TimeseriesResultValue;
@@ -49,16 +49,16 @@ public class TestHelper
 {
   private static final ObjectMapper JSON_MAPPER = getJsonMapper();
 
-  public static IndexMergerV9 getTestIndexMergerV9(OutputMediumFactory outputMediumFactory)
+  public static IndexMergerV9 getTestIndexMergerV9(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
-    return new IndexMergerV9(JSON_MAPPER, getTestIndexIO(outputMediumFactory), outputMediumFactory);
+    return new IndexMergerV9(JSON_MAPPER, getTestIndexIO(segmentWriteOutMediumFactory), segmentWriteOutMediumFactory);
   }
 
-  public static IndexIO getTestIndexIO(OutputMediumFactory outputMediumFactory)
+  public static IndexIO getTestIndexIO(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
     return new IndexIO(
         JSON_MAPPER,
-        outputMediumFactory,
+        segmentWriteOutMediumFactory,
         new ColumnConfig()
         {
           @Override

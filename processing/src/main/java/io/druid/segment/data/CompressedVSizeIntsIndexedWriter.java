@@ -22,7 +22,7 @@ package io.druid.segment.data;
 import com.google.common.primitives.Ints;
 import io.druid.common.utils.ByteUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.output.OutputMedium;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.IndexIO;
 import io.druid.segment.serde.MetaSerdeHelper;
 
@@ -46,14 +46,14 @@ public class CompressedVSizeIntsIndexedWriter extends SingleValueIndexedIntsWrit
       .writeByte(x -> x.compression.getId());
 
   public static CompressedVSizeIntsIndexedWriter create(
-      final OutputMedium outputMedium,
+      final SegmentWriteOutMedium segmentWriteOutMedium,
       final String filenameBase,
       final int maxValue,
       final CompressionStrategy compression
   )
   {
     return new CompressedVSizeIntsIndexedWriter(
-        outputMedium,
+        segmentWriteOutMedium,
         filenameBase,
         maxValue,
         CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(maxValue),
@@ -73,7 +73,7 @@ public class CompressedVSizeIntsIndexedWriter extends SingleValueIndexedIntsWrit
   private int numInserted;
 
   CompressedVSizeIntsIndexedWriter(
-      final OutputMedium outputMedium,
+      final SegmentWriteOutMedium segmentWriteOutMedium,
       final String filenameBase,
       final int maxValue,
       final int chunkFactor,
@@ -82,13 +82,13 @@ public class CompressedVSizeIntsIndexedWriter extends SingleValueIndexedIntsWrit
   )
   {
     this(
-        outputMedium,
+        segmentWriteOutMedium,
         maxValue,
         chunkFactor,
         byteOrder,
         compression,
         GenericIndexedWriter.ofCompressedByteBuffers(
-            outputMedium,
+            segmentWriteOutMedium,
             filenameBase,
             compression,
             sizePer(maxValue, chunkFactor)
@@ -97,7 +97,7 @@ public class CompressedVSizeIntsIndexedWriter extends SingleValueIndexedIntsWrit
   }
 
   CompressedVSizeIntsIndexedWriter(
-      final OutputMedium outputMedium,
+      final SegmentWriteOutMedium segmentWriteOutMedium,
       final int maxValue,
       final int chunkFactor,
       final ByteOrder byteOrder,
@@ -113,7 +113,7 @@ public class CompressedVSizeIntsIndexedWriter extends SingleValueIndexedIntsWrit
     this.flattener = flattener;
     this.intBuffer = ByteBuffer.allocate(Ints.BYTES).order(byteOrder);
     CompressionStrategy.Compressor compressor = compression.getCompressor();
-    this.endBuffer = compressor.allocateInBuffer(chunkBytes, outputMedium.getCloser()).order(byteOrder);
+    this.endBuffer = compressor.allocateInBuffer(chunkBytes, segmentWriteOutMedium.getCloser()).order(byteOrder);
     this.numInserted = 0;
   }
 

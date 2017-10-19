@@ -34,9 +34,9 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.output.OffHeapMemoryOutputMediumFactory;
-import io.druid.output.OutputMediumFactory;
-import io.druid.output.TmpFileOutputMediumFactory;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import io.druid.query.BitmapResultFactory;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -184,9 +184,9 @@ public abstract class BaseFilterTest
         "roaring", new RoaringBitmapSerdeFactory(true)
     );
 
-    final Map<String, OutputMediumFactory> outputMediumFactories = ImmutableMap.of(
-        "tmpFile output medium", TmpFileOutputMediumFactory.instance(),
-        "off-heap memory output medium", OffHeapMemoryOutputMediumFactory.instance()
+    final Map<String, SegmentWriteOutMediumFactory> segmentWriteOutMediumFactories = ImmutableMap.of(
+        "tmpFile segment write-out medium", TmpFileSegmentWriteOutMediumFactory.instance(),
+        "off-heap memory segment write-out medium", OffHeapMemorySegmentWriteOutMediumFactory.instance()
     );
 
     final Map<String, Function<IndexBuilder, Pair<StorageAdapter, Closeable>>> finishers = ImmutableMap.of(
@@ -250,7 +250,8 @@ public abstract class BaseFilterTest
     );
 
     for (Map.Entry<String, BitmapSerdeFactory> bitmapSerdeFactoryEntry : bitmapSerdeFactories.entrySet()) {
-      for (Map.Entry<String, OutputMediumFactory> outputMediumFactoryEntry : outputMediumFactories.entrySet()) {
+      for (Map.Entry<String, SegmentWriteOutMediumFactory> segmentWriteOutMediumFactoryEntry :
+          segmentWriteOutMediumFactories.entrySet()) {
         for (Map.Entry<String, Function<IndexBuilder, Pair<StorageAdapter, Closeable>>> finisherEntry :
             finishers.entrySet()) {
           for (boolean cnf : ImmutableList.of(false, true)) {
@@ -258,18 +259,14 @@ public abstract class BaseFilterTest
               final String testName = StringUtils.format(
                   "bitmaps[%s], indexMerger[%s], finisher[%s], optimize[%s]",
                   bitmapSerdeFactoryEntry.getKey(),
-                  outputMediumFactoryEntry.getKey(),
+                  segmentWriteOutMediumFactoryEntry.getKey(),
                   finisherEntry.getKey(),
                   optimize
               );
-              final IndexBuilder indexBuilder = IndexBuilder.create()
-                                                            .indexSpec(new IndexSpec(
-                                                                bitmapSerdeFactoryEntry.getValue(),
-                                                                null,
-                                                                null,
-                                                                null
-                                                            ))
-                                                            .outputMediumFactory(outputMediumFactoryEntry.getValue());
+              final IndexBuilder indexBuilder = IndexBuilder
+                  .create()
+                  .indexSpec(new IndexSpec(bitmapSerdeFactoryEntry.getValue(), null, null, null))
+                  .segmentWriteOutMediumFactory(segmentWriteOutMediumFactoryEntry.getValue());
 
               constructors.add(new Object[]{testName, indexBuilder, finisherEntry.getValue(), cnf, optimize});
             }

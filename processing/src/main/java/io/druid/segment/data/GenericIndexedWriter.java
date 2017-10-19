@@ -27,8 +27,8 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedWriter;
-import io.druid.output.OutputBytes;
-import io.druid.output.OutputMedium;
+import io.druid.segment.writeout.WriteOutBytes;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.serde.MetaSerdeHelper;
 import io.druid.segment.serde.Serializer;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
@@ -71,16 +71,16 @@ public class GenericIndexedWriter<T> implements Serializer
 
 
   static GenericIndexedWriter<ByteBuffer> ofCompressedByteBuffers(
-      final OutputMedium outputMedium,
+      final SegmentWriteOutMedium segmentWriteOutMedium,
       final String filenameBase,
       final CompressionStrategy compressionStrategy,
       final int bufferSize
   )
   {
     GenericIndexedWriter<ByteBuffer> writer = new GenericIndexedWriter<>(
-        outputMedium,
+        segmentWriteOutMedium,
         filenameBase,
-        compressedByteBuffersWriteObjectStrategy(compressionStrategy, bufferSize, outputMedium.getCloser())
+        compressedByteBuffersWriteObjectStrategy(compressionStrategy, bufferSize, segmentWriteOutMedium.getCloser())
     );
     writer.objectsSorted = false;
     return writer;
@@ -116,7 +116,7 @@ public class GenericIndexedWriter<T> implements Serializer
       }
 
       @Override
-      public void writeTo(ByteBuffer val, OutputBytes out) throws IOException
+      public void writeTo(ByteBuffer val, WriteOutBytes out) throws IOException
       {
         compressedDataBuffer.clear();
         int valPos = val.position();
@@ -132,34 +132,34 @@ public class GenericIndexedWriter<T> implements Serializer
     };
   }
 
-  private final OutputMedium outputMedium;
+  private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final String filenameBase;
   private final ObjectStrategy<T> strategy;
   private final int fileSizeLimit;
   private final byte[] fileNameByteArray;
   private boolean objectsSorted = true;
   private T prevObject = null;
-  private OutputBytes headerOut = null;
-  private OutputBytes valuesOut = null;
+  private WriteOutBytes headerOut = null;
+  private WriteOutBytes valuesOut = null;
   private int numWritten = 0;
   private boolean requireMultipleFiles = false;
   private LongList headerOutLong;
 
   private final ByteBuffer getOffsetBuffer = ByteBuffer.allocate(Integer.BYTES);
 
-  public GenericIndexedWriter(OutputMedium outputMedium, String filenameBase, ObjectStrategy<T> strategy)
+  public GenericIndexedWriter(SegmentWriteOutMedium segmentWriteOutMedium, String filenameBase, ObjectStrategy<T> strategy)
   {
-    this(outputMedium, filenameBase, strategy, Integer.MAX_VALUE & ~PAGE_SIZE);
+    this(segmentWriteOutMedium, filenameBase, strategy, Integer.MAX_VALUE & ~PAGE_SIZE);
   }
 
   public GenericIndexedWriter(
-      OutputMedium outputMedium,
+      SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ObjectStrategy<T> strategy,
       int fileSizeLimit
   )
   {
-    this.outputMedium = outputMedium;
+    this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.filenameBase = filenameBase;
     this.strategy = strategy;
     this.fileSizeLimit = fileSizeLimit;
@@ -198,8 +198,8 @@ public class GenericIndexedWriter<T> implements Serializer
 
   public void open() throws IOException
   {
-    headerOut = outputMedium.makeOutputBytes();
-    valuesOut = outputMedium.makeOutputBytes();
+    headerOut = segmentWriteOutMedium.makeWriteOutBytes();
+    valuesOut = segmentWriteOutMedium.makeWriteOutBytes();
   }
 
   public void write(T objectToWrite) throws IOException

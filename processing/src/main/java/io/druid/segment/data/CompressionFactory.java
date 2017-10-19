@@ -25,8 +25,8 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
-import io.druid.output.OutputBytes;
-import io.druid.output.OutputMedium;
+import io.druid.segment.writeout.WriteOutBytes;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.serde.MetaSerdeHelper;
 
 import java.io.IOException;
@@ -217,7 +217,7 @@ public class CompressionFactory
 
   /**
    * This writer output encoded values to the given ByteBuffer or OutputStream. {@link #setBuffer(ByteBuffer)} or
-   * {@link #setOutputStream(OutputBytes)} must be called before any value is written, and {@link #flush()} must
+   * {@link #setOutputStream(WriteOutBytes)} must be called before any value is written, and {@link #flush()} must
    * be called before calling setBuffer or setOutputStream again to set another output.
    */
   public interface LongEncodingWriter
@@ -228,7 +228,7 @@ public class CompressionFactory
      */
     void setBuffer(ByteBuffer buffer);
 
-    void setOutputStream(OutputBytes output);
+    void setOutputStream(WriteOutBytes output);
 
     void write(long value) throws IOException;
 
@@ -312,7 +312,7 @@ public class CompressionFactory
   }
 
   public static LongSupplierSerializer getLongSerializer(
-      OutputMedium outputMedium,
+      SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ByteOrder order,
       LongEncodingStrategy encodingStrategy,
@@ -320,13 +320,13 @@ public class CompressionFactory
   )
   {
     if (encodingStrategy == LongEncodingStrategy.AUTO) {
-      return new IntermediateLongSupplierSerializer(outputMedium, filenameBase, order, compressionStrategy);
+      return new IntermediateLongSupplierSerializer(segmentWriteOutMedium, filenameBase, order, compressionStrategy);
     } else if (encodingStrategy == LongEncodingStrategy.LONGS) {
       if (compressionStrategy == CompressionStrategy.NONE) {
-        return new EntireLayoutLongSupplierSerializer(outputMedium, new LongsLongEncodingWriter(order));
+        return new EntireLayoutLongSupplierSerializer(segmentWriteOutMedium, new LongsLongEncodingWriter(order));
       } else {
         return new BlockLayoutLongSupplierSerializer(
-            outputMedium,
+            segmentWriteOutMedium,
             filenameBase,
             order,
             new LongsLongEncodingWriter(order),
@@ -356,16 +356,16 @@ public class CompressionFactory
   }
 
   public static FloatSupplierSerializer getFloatSerializer(
-      OutputMedium outputMedium,
+      SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ByteOrder order,
       CompressionStrategy compressionStrategy
   )
   {
     if (compressionStrategy == CompressionStrategy.NONE) {
-      return new EntireLayoutFloatSupplierSerializer(outputMedium, order);
+      return new EntireLayoutFloatSupplierSerializer(segmentWriteOutMedium, order);
     } else {
-      return new BlockLayoutFloatSupplierSerializer(outputMedium, filenameBase, order, compressionStrategy);
+      return new BlockLayoutFloatSupplierSerializer(segmentWriteOutMedium, filenameBase, order, compressionStrategy);
     }
   }
 
@@ -387,16 +387,16 @@ public class CompressionFactory
   }
 
   public static DoubleSupplierSerializer getDoubleSerializer(
-      OutputMedium outputMedium,
+      SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ByteOrder byteOrder,
       CompressionStrategy compression
   )
   {
     if (compression == CompressionStrategy.NONE) {
-      return new EntireLayoutDoubleSupplierSerializer(outputMedium, byteOrder);
+      return new EntireLayoutDoubleSupplierSerializer(segmentWriteOutMedium, byteOrder);
     } else {
-      return new BlockLayoutDoubleSupplierSerializer(outputMedium, filenameBase, byteOrder, compression);
+      return new BlockLayoutDoubleSupplierSerializer(segmentWriteOutMedium, filenameBase, byteOrder, compression);
     }
   }
 }

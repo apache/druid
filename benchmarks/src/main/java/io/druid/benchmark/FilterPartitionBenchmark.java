@@ -36,7 +36,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.js.JavaScriptConfig;
-import io.druid.output.OffHeapMemoryOutputMediumFactory;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
@@ -133,7 +133,7 @@ public class FilterPartitionBenchmark
     JSON_MAPPER = new DefaultObjectMapper();
     INDEX_IO = new IndexIO(
         JSON_MAPPER,
-        OffHeapMemoryOutputMediumFactory.instance(),
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -143,7 +143,7 @@ public class FilterPartitionBenchmark
           }
         }
     );
-    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemoryOutputMediumFactory.instance());
+    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
   }
 
   @Setup

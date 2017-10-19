@@ -35,7 +35,7 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.output.OutputMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -102,10 +102,10 @@ public class SchemalessIndexTest
   private final IndexMerger indexMerger;
   private final IndexIO indexIO;
 
-  public SchemalessIndexTest(OutputMediumFactory outputMediumFactory)
+  public SchemalessIndexTest(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
-    indexMerger = TestHelper.getTestIndexMergerV9(outputMediumFactory);
-    indexIO = TestHelper.getTestIndexIO(outputMediumFactory);
+    indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
+    indexIO = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory);
   }
 
   public static IncrementalIndex getIncrementalIndex()

@@ -58,7 +58,7 @@ import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
-import io.druid.output.OutputMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.query.DruidMetrics;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.DataSchema;
@@ -951,7 +951,7 @@ public class IndexTask extends AbstractTask
     private final boolean reportParseExceptions;
     private final long publishTimeout;
     @Nullable
-    private final OutputMediumFactory outputMediumFactory;
+    private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
 
     @JsonCreator
     public IndexTuningConfig(
@@ -968,7 +968,7 @@ public class IndexTask extends AbstractTask
         @JsonProperty("forceGuaranteedRollup") @Nullable Boolean forceGuaranteedRollup,
         @JsonProperty("reportParseExceptions") @Nullable Boolean reportParseExceptions,
         @JsonProperty("publishTimeout") @Nullable Long publishTimeout,
-        @JsonProperty("outputMediumFactory") @Nullable OutputMediumFactory outputMediumFactory
+        @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
     )
     {
       this(
@@ -983,7 +983,7 @@ public class IndexTask extends AbstractTask
           reportParseExceptions,
           publishTimeout,
           null,
-          outputMediumFactory
+          segmentWriteOutMediumFactory
       );
     }
 
@@ -1004,7 +1004,7 @@ public class IndexTask extends AbstractTask
         @Nullable Boolean reportParseExceptions,
         @Nullable Long publishTimeout,
         @Nullable File basePersistDirectory,
-        @Nullable OutputMediumFactory outputMediumFactory
+        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
     )
     {
       Preconditions.checkArgument(
@@ -1039,7 +1039,7 @@ public class IndexTask extends AbstractTask
           "Perfect rollup cannot be guaranteed with extendable shardSpecs"
       );
 
-      this.outputMediumFactory = outputMediumFactory;
+      this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
     }
 
     public IndexTuningConfig withBasePersistDirectory(File dir)
@@ -1056,7 +1056,7 @@ public class IndexTask extends AbstractTask
           reportParseExceptions,
           publishTimeout,
           dir,
-          outputMediumFactory
+          segmentWriteOutMediumFactory
       );
     }
 
@@ -1149,9 +1149,9 @@ public class IndexTask extends AbstractTask
     @Nullable
     @Override
     @JsonProperty
-    public OutputMediumFactory getOutputMediumFactory()
+    public SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory()
     {
-      return outputMediumFactory;
+      return segmentWriteOutMediumFactory;
     }
   }
 }

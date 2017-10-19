@@ -19,7 +19,7 @@
 
 package io.druid.segment;
 
-import io.druid.output.OutputMedium;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.DoubleColumn;
@@ -53,7 +53,7 @@ public class DoubleDimensionHandler implements DimensionHandler<Double, Double, 
   @Override
   public DimensionMergerV9<Double> makeMerger(
       IndexSpec indexSpec,
-      OutputMedium outputMedium,
+      SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress
   ) throws IOException
@@ -61,7 +61,7 @@ public class DoubleDimensionHandler implements DimensionHandler<Double, Double, 
     return new DoubleDimensionMergerV9(
         dimensionName,
         indexSpec,
-        outputMedium,
+        segmentWriteOutMedium,
         capabilities,
         progress
     );

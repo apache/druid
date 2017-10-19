@@ -21,7 +21,7 @@ package io.druid.segment.data;
 
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.output.OutputMedium;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.CompressedPools;
 import io.druid.segment.serde.MetaSerdeHelper;
 
@@ -46,21 +46,21 @@ public class BlockLayoutDoubleSupplierSerializer implements DoubleSupplierSerial
   private ByteBuffer endBuffer;
 
   BlockLayoutDoubleSupplierSerializer(
-      OutputMedium outputMedium,
+      SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ByteOrder byteOrder,
       CompressionStrategy compression
   )
   {
     this.flattener = GenericIndexedWriter.ofCompressedByteBuffers(
-        outputMedium,
+        segmentWriteOutMedium,
         filenameBase,
         compression,
         CompressedPools.BUFFER_SIZE
     );
     this.compression = compression;
     CompressionStrategy.Compressor compressor = compression.getCompressor();
-    Closer closer = outputMedium.getCloser();
+    Closer closer = segmentWriteOutMedium.getCloser();
     this.endBuffer = compressor.allocateInBuffer(CompressedPools.BUFFER_SIZE, closer).order(byteOrder);
   }
 

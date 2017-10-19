@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
-import io.druid.output.OutputMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.realtime.appenderator.AppenderatorConfig;
 import io.druid.segment.realtime.plumber.IntervalStartVersioningPolicy;
@@ -96,7 +96,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   private final long handoffConditionTimeout;
   private final long alertTimeout;
   @Nullable
-  private final OutputMediumFactory outputMediumFactory;
+  private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
 
   @JsonCreator
   public RealtimeTuningConfig(
@@ -116,7 +116,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
       @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
       @JsonProperty("alertTimeout") Long alertTimeout,
-      @JsonProperty("outputMediumFactory") @Nullable OutputMediumFactory outputMediumFactory
+      @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   )
   {
     this.maxRowsInMemory = maxRowsInMemory == null ? defaultMaxRowsInMemory : maxRowsInMemory;
@@ -144,7 +144,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
 
     this.alertTimeout = alertTimeout == null ? defaultAlertTimeout : alertTimeout;
     Preconditions.checkArgument(this.alertTimeout >= 0, "alertTimeout must be >= 0");
-    this.outputMediumFactory = outputMediumFactory;
+    this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
   }
 
   @Override
@@ -250,9 +250,9 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   @Override
   @JsonProperty
   @Nullable
-  public OutputMediumFactory getOutputMediumFactory()
+  public SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory()
   {
-    return outputMediumFactory;
+    return segmentWriteOutMediumFactory;
   }
 
   public RealtimeTuningConfig withVersioningPolicy(VersioningPolicy policy)
@@ -273,7 +273,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
         reportParseExceptions,
         handoffConditionTimeout,
         alertTimeout,
-        outputMediumFactory
+        segmentWriteOutMediumFactory
     );
   }
 
@@ -295,7 +295,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
         reportParseExceptions,
         handoffConditionTimeout,
         alertTimeout,
-        outputMediumFactory
+        segmentWriteOutMediumFactory
     );
   }
 }

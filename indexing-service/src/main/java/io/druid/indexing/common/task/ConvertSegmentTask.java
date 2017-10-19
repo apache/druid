@@ -36,7 +36,7 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.output.OutputMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.loading.SegmentLoadingException;
@@ -80,7 +80,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
       IndexSpec indexSpec,
       boolean force,
       boolean validate,
-      @Nullable OutputMediumFactory outputMediumFactory,
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       Map<String, Object> context
   )
   {
@@ -93,7 +93,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
         indexSpec,
         force,
         validate,
-        outputMediumFactory,
+        segmentWriteOutMediumFactory,
         context
     );
   }
@@ -113,7 +113,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
       IndexSpec indexSpec,
       boolean force,
       boolean validate,
-      @Nullable OutputMediumFactory outputMediumFactory,
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       Map<String, Object> context
   )
   {
@@ -128,7 +128,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
         indexSpec,
         force,
         validate,
-        outputMediumFactory,
+        segmentWriteOutMediumFactory,
         context
     );
   }
@@ -150,16 +150,16 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
       @JsonProperty("force") Boolean force,
       @JsonProperty("validate") Boolean validate,
       @JsonProperty("context") Map<String, Object> context,
-      @JsonProperty("outputMediumFactory") @Nullable OutputMediumFactory outputMediumFactory
+      @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   )
   {
     final boolean isForce = force == null ? false : force;
     final boolean isValidate = validate == null ? true : validate;
     if (id == null) {
       if (segment == null) {
-        return create(dataSource, interval, indexSpec, isForce, isValidate, outputMediumFactory, context);
+        return create(dataSource, interval, indexSpec, isForce, isValidate, segmentWriteOutMediumFactory, context);
       } else {
-        return create(segment, indexSpec, isForce, isValidate, outputMediumFactory, context);
+        return create(segment, indexSpec, isForce, isValidate, segmentWriteOutMediumFactory, context);
       }
     }
     return new ConvertSegmentTask(
@@ -170,7 +170,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
         indexSpec,
         isForce,
         isValidate,
-        outputMediumFactory,
+        segmentWriteOutMediumFactory,
         context
     );
   }
@@ -181,7 +181,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
   private final boolean force;
   private final boolean validate;
   @Nullable
-  private final OutputMediumFactory outputMediumFactory;
+  private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
 
   ConvertSegmentTask(
       String id,
@@ -191,7 +191,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
       IndexSpec indexSpec,
       boolean force,
       boolean validate,
-      @Nullable OutputMediumFactory outputMediumFactory,
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       Map<String, Object> context
   )
   {
@@ -200,7 +200,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
     this.indexSpec = indexSpec == null ? new IndexSpec() : indexSpec;
     this.force = force;
     this.validate = validate;
-    this.outputMediumFactory = outputMediumFactory;
+    this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
   }
 
   @JsonProperty
@@ -235,9 +235,9 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
 
   @JsonProperty
   @Nullable
-  public OutputMediumFactory getOutputMediumFactory()
+  public SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory()
   {
-    return outputMediumFactory;
+    return segmentWriteOutMediumFactory;
   }
 
   @Override
@@ -307,7 +307,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
           @Override
           public Task apply(DataSegment input)
           {
-            return new SubTask(groupId, input, indexSpec, force, validate, outputMediumFactory, context);
+            return new SubTask(groupId, input, indexSpec, force, validate, segmentWriteOutMediumFactory, context);
           }
         }
     );
@@ -340,7 +340,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
     private final boolean force;
     private final boolean validate;
     @Nullable
-    private final OutputMediumFactory outputMediumFactory;
+    private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
 
     @JsonCreator
     public SubTask(
@@ -349,7 +349,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
         @JsonProperty("indexSpec") IndexSpec indexSpec,
         @JsonProperty("force") Boolean force,
         @JsonProperty("validate") Boolean validate,
-        @JsonProperty("outputMediumFactory") @Nullable OutputMediumFactory outputMediumFactory,
+        @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
         @JsonProperty("context") Map<String, Object> context
     )
     {
@@ -370,7 +370,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
       this.indexSpec = indexSpec == null ? new IndexSpec() : indexSpec;
       this.force = force == null ? false : force;
       this.validate = validate == null ? true : validate;
-      this.outputMediumFactory = outputMediumFactory;
+      this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
     }
 
     @JsonProperty
@@ -434,7 +434,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
       final File location = localSegments.get(segment);
       final File outLocation = new File(location, "v9_out");
       IndexIO indexIO = toolbox.getIndexIO();
-      if (indexIO.convertSegment(location, outLocation, indexSpec, force, validate, outputMediumFactory)) {
+      if (indexIO.convertSegment(location, outLocation, indexSpec, force, validate, segmentWriteOutMediumFactory)) {
         final int outVersion = IndexIO.getVersionFromDir(outLocation);
 
         // Appending to the version makes a new version that inherits most comparability parameters of the original

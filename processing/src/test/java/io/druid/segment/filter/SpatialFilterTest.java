@@ -31,7 +31,7 @@ import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
-import io.druid.output.OffHeapMemoryOutputMediumFactory;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.QueryPlus;
@@ -74,8 +74,8 @@ import java.util.Random;
 @RunWith(Parameterized.class)
 public class SpatialFilterTest
 {
-  private static IndexMerger INDEX_MERGER = TestHelper.getTestIndexMergerV9(OffHeapMemoryOutputMediumFactory.instance());
-  private static IndexIO INDEX_IO = TestHelper.getTestIndexIO(OffHeapMemoryOutputMediumFactory.instance());
+  private static IndexMerger INDEX_MERGER = TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance());
+  private static IndexIO INDEX_IO = TestHelper.getTestIndexIO(OffHeapMemorySegmentWriteOutMediumFactory.instance());
 
   public static final int NUM_POINTS = 5000;
   private static Interval DATA_INTERVAL = Intervals.of("2013-01-01/2013-01-07");

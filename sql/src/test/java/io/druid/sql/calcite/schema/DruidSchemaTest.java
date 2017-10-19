@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.Intervals;
-import io.druid.output.OffHeapMemoryOutputMediumFactory;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -88,7 +88,7 @@ public class DruidSchemaTest
     final File tmpDir = temporaryFolder.newFolder();
     final QueryableIndex index1 = IndexBuilder.create()
                                               .tmpDir(new File(tmpDir, "1"))
-                                              .outputMediumFactory(OffHeapMemoryOutputMediumFactory.instance())
+                                              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                                               .schema(
                                                   new IncrementalIndexSchema.Builder()
                                                       .withMetrics(
@@ -104,7 +104,7 @@ public class DruidSchemaTest
 
     final QueryableIndex index2 = IndexBuilder.create()
                                               .tmpDir(new File(tmpDir, "2"))
-                                              .outputMediumFactory(OffHeapMemoryOutputMediumFactory.instance())
+                                              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                                               .schema(
                                                   new IncrementalIndexSchema.Builder()
                                                       .withMetrics(new LongSumAggregatorFactory("m1", "m1"))

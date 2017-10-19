@@ -597,7 +597,7 @@ public class AppenderatorImpl implements Appenderator
             schema.getAggregators(),
             mergedTarget,
             tuningConfig.getIndexSpec(),
-            tuningConfig.getOutputMediumFactory()
+            tuningConfig.getSegmentWriteOutMediumFactory()
         );
       }
       catch (Throwable t) {
@@ -1043,7 +1043,7 @@ public class AppenderatorImpl implements Appenderator
             identifier.getInterval(),
             new File(persistDir, String.valueOf(indexToPersist.getCount())),
             indexSpec,
-            tuningConfig.getOutputMediumFactory()
+            tuningConfig.getSegmentWriteOutMediumFactory()
         );
 
         indexToPersist.swapSegment(

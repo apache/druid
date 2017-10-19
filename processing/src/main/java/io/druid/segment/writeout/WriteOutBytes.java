@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.output;
+package io.druid.segment.writeout;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,11 +31,11 @@ import java.nio.channels.WritableByteChannel;
  * #writeTo(WritableByteChannel)} and {@link #asInputStream()} allow to write the sequence somewhere else. {@link
  * #readFully} allows to access the sequence randomly.
  *
- * OutputBytes is a resource that is managed by {@link OutputMedium}, so it's own {@link #close()} method does nothing.
- * However OutputBytes should appear closed, i. e. {@link #isOpen()} returns false, after the parental OutputMedium is
- * closed.
+ * WriteOutBytes is a resource that is managed by {@link SegmentWriteOutMedium}, so it's own {@link #close()} method
+ * does nothing. However WriteOutBytes should appear closed, i. e. {@link #isOpen()} returns false, after the parental
+ * SegmentWriteOutMedium is closed.
  */
-public abstract class OutputBytes extends OutputStream implements WritableByteChannel
+public abstract class WriteOutBytes extends OutputStream implements WritableByteChannel
 {
   /**
    * Writes 4 bytes of the given value in big-endian order, i. e. similar to {@link java.io.DataOutput#writeInt(int)}.
@@ -43,23 +43,23 @@ public abstract class OutputBytes extends OutputStream implements WritableByteCh
   public abstract void writeInt(int v) throws IOException;
 
   /**
-   * Returns the number of bytes written to this OutputBytes so far.
+   * Returns the number of bytes written to this WriteOutBytes so far.
    */
   public abstract long size() throws IOException;
 
   /**
-   * Takes all bytes that are written to this OutputBytes so far and writes them into the given channel.
+   * Takes all bytes that are written to this WriteOutBytes so far and writes them into the given channel.
    */
   public abstract void writeTo(WritableByteChannel channel) throws IOException;
 
   /**
-   * Creates a finite {@link InputStream} with the bytes that are written to this OutputBytes so far. The returned
+   * Creates a finite {@link InputStream} with the bytes that are written to this WriteOutBytes so far. The returned
    * InputStream must be closed properly after it's used up.
    */
   public abstract InputStream asInputStream() throws IOException;
 
   /**
-   * Reads bytes from the byte sequences, represented by this OutputBytes, at the random position, into the given
+   * Reads bytes from the byte sequences, represented by this WriteOutBytes, at the random position, into the given
    * buffer.
    *
    * @throws java.nio.BufferUnderflowException if the byte sequence from the given pos ends before the given buffer

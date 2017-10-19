@@ -20,9 +20,9 @@
 package io.druid.segment;
 
 import com.google.common.collect.ImmutableList;
-import io.druid.output.OffHeapMemoryOutputMediumFactory;
-import io.druid.output.OutputMediumFactory;
-import io.druid.output.TmpFileOutputMediumFactory;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import io.druid.segment.data.BitmapValues;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.CompressionStrategy;
@@ -55,8 +55,8 @@ public class QueryableIndexIndexableAdapterTest
   public static Collection<?> constructorFeeder() throws IOException
   {
     return ImmutableList.of(
-        new Object[] {TmpFileOutputMediumFactory.instance()},
-        new Object[] {OffHeapMemoryOutputMediumFactory.instance()}
+        new Object[] {TmpFileSegmentWriteOutMediumFactory.instance()},
+        new Object[] {OffHeapMemorySegmentWriteOutMediumFactory.instance()}
     );
   }
 
@@ -68,10 +68,10 @@ public class QueryableIndexIndexableAdapterTest
   private final IndexMerger indexMerger;
   private final IndexIO indexIO;
 
-  public QueryableIndexIndexableAdapterTest(OutputMediumFactory outputMediumFactory)
+  public QueryableIndexIndexableAdapterTest(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
-    indexMerger = TestHelper.getTestIndexMergerV9(outputMediumFactory);
-    indexIO = TestHelper.getTestIndexIO(outputMediumFactory);
+    indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
+    indexIO = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory);
   }
 
   @Test

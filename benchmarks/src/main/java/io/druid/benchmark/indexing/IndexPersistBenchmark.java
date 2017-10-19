@@ -28,7 +28,7 @@ import io.druid.data.input.InputRow;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.output.OffHeapMemoryOutputMediumFactory;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMergerV9;
@@ -89,7 +89,7 @@ public class IndexPersistBenchmark
     JSON_MAPPER = new DefaultObjectMapper();
     INDEX_IO = new IndexIO(
         JSON_MAPPER,
-        OffHeapMemoryOutputMediumFactory.instance(),
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -99,7 +99,7 @@ public class IndexPersistBenchmark
           }
         }
     );
-    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemoryOutputMediumFactory.instance());
+    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
   }
 
   @Setup

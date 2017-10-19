@@ -188,7 +188,7 @@ public class YeOldePlumberSchool implements PlumberSchool
                 schema.getAggregators(),
                 fileToUpload,
                 config.getIndexSpec(),
-                config.getOutputMediumFactory()
+                config.getSegmentWriteOutMediumFactory()
             );
           }
 
@@ -238,7 +238,7 @@ public class YeOldePlumberSchool implements PlumberSchool
                 indexToPersist.getIndex(),
                 dirToPersist,
                 config.getIndexSpec(),
-                config.getOutputMediumFactory()
+                config.getSegmentWriteOutMediumFactory()
             );
 
             indexToPersist.swapSegment(null);

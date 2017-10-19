@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.output;
+package io.druid.segment.writeout;
 
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
@@ -36,54 +36,54 @@ import java.util.Arrays;
 import java.util.Collection;
 
 @RunWith(Parameterized.class)
-public class OutputBytesTest
+public class WriteOutBytesTest
 {
   @Parameterized.Parameters
   public static Collection<Object[]> constructorFeeder() throws IOException
   {
     return Arrays.asList(
-        new Object[] {new TmpFileOutputMedium(Files.createTempDir())},
-        new Object[] {new OffHeapMemoryOutputMedium()},
-        new Object[] {new OnHeapMemoryOutputMedium()}
+        new Object[] {new TmpFileSegmentWriteOutMedium(Files.createTempDir())},
+        new Object[] {new OffHeapMemorySegmentWriteOutMedium()},
+        new Object[] {new OnHeapMemorySegmentWriteOutMedium()}
     );
   }
 
-  private final OutputMedium outputMedium;
+  private final SegmentWriteOutMedium segmentWriteOutMedium;
 
-  public OutputBytesTest(OutputMedium outputMedium)
+  public WriteOutBytesTest(SegmentWriteOutMedium segmentWriteOutMedium)
   {
-    this.outputMedium = outputMedium;
+    this.segmentWriteOutMedium = segmentWriteOutMedium;
   }
 
   @Test
-  public void testOutputBytes() throws IOException
+  public void testWriteOutBytes() throws IOException
   {
-    OutputBytes outputBytes = outputMedium.makeOutputBytes();
+    WriteOutBytes writeOutBytes = segmentWriteOutMedium.makeWriteOutBytes();
 
-    outputBytes.write('1');
-    verifyContents(outputBytes, "1");
+    writeOutBytes.write('1');
+    verifyContents(writeOutBytes, "1");
 
-    outputBytes.writeInt(Ints.fromBytes((byte) '2', (byte) '3', (byte) '4', (byte) '5'));
-    verifyContents(outputBytes, "12345");
+    writeOutBytes.writeInt(Ints.fromBytes((byte) '2', (byte) '3', (byte) '4', (byte) '5'));
+    verifyContents(writeOutBytes, "12345");
 
-    outputBytes.write(new byte[] {'a'});
-    verifyContents(outputBytes, "12345a");
+    writeOutBytes.write(new byte[] {'a'});
+    verifyContents(writeOutBytes, "12345a");
 
-    outputBytes.write(new byte[] {'a', 'b', 'c'}, 1, 1);
-    verifyContents(outputBytes, "12345ab");
+    writeOutBytes.write(new byte[] {'a', 'b', 'c'}, 1, 1);
+    verifyContents(writeOutBytes, "12345ab");
 
     ByteBuffer bb = ByteBuffer.wrap(new byte[]{'a', 'b', 'c'});
     bb.position(2);
-    outputBytes.write(bb);
+    writeOutBytes.write(bb);
     Assert.assertEquals(3, bb.position());
-    verifyContents(outputBytes, "12345abc");
+    verifyContents(writeOutBytes, "12345abc");
   }
 
-  private void verifyContents(OutputBytes outputBytes, String expected) throws IOException
+  private void verifyContents(WriteOutBytes writeOutBytes, String expected) throws IOException
   {
-    Assert.assertEquals(expected, IOUtils.toString(outputBytes.asInputStream(), StandardCharsets.US_ASCII));
-    ByteBuffer bb = ByteBuffer.allocate((int) outputBytes.size());
-    outputBytes.readFully(0, bb);
+    Assert.assertEquals(expected, IOUtils.toString(writeOutBytes.asInputStream(), StandardCharsets.US_ASCII));
+    ByteBuffer bb = ByteBuffer.allocate((int) writeOutBytes.size());
+    writeOutBytes.readFully(0, bb);
     bb.flip();
     Assert.assertEquals(expected, StringUtils.fromUtf8(bb));
   }
@@ -91,15 +91,15 @@ public class OutputBytesTest
   @Test
   public void testCrossBufferRandomAccess() throws IOException
   {
-    OutputBytes outputBytes = outputMedium.makeOutputBytes();
-    for (int i = 0; i < ByteBufferOutputBytes.BUFFER_SIZE; i++) {
-      outputBytes.write('0');
+    WriteOutBytes writeOutBytes = segmentWriteOutMedium.makeWriteOutBytes();
+    for (int i = 0; i < ByteBufferWriteOutBytes.BUFFER_SIZE; i++) {
+      writeOutBytes.write('0');
     }
-    outputBytes.write('1');
-    outputBytes.write('2');
-    outputBytes.write('3');
+    writeOutBytes.write('1');
+    writeOutBytes.write('2');
+    writeOutBytes.write('3');
     ByteBuffer bb = ByteBuffer.allocate(4);
-    outputBytes.readFully(ByteBufferOutputBytes.BUFFER_SIZE - 1, bb);
+    writeOutBytes.readFully(ByteBufferWriteOutBytes.BUFFER_SIZE - 1, bb);
     bb.flip();
     Assert.assertEquals("0123", StringUtils.fromUtf8(bb));
   }
@@ -107,16 +107,16 @@ public class OutputBytesTest
   @Test(expected = BufferUnderflowException.class)
   public void testReadFullyUnderflow() throws IOException
   {
-    OutputBytes outputBytes = outputMedium.makeOutputBytes();
-    outputBytes.write('1');
-    outputBytes.readFully(0, ByteBuffer.allocate(2));
+    WriteOutBytes writeOutBytes = segmentWriteOutMedium.makeWriteOutBytes();
+    writeOutBytes.write('1');
+    writeOutBytes.readFully(0, ByteBuffer.allocate(2));
   }
 
   @Test
   public void testReadFullyEmptyAtTheEnd() throws IOException
   {
-    OutputBytes outputBytes = outputMedium.makeOutputBytes();
-    outputBytes.write('1');
-    outputBytes.readFully(1, ByteBuffer.allocate(0));
+    WriteOutBytes writeOutBytes = segmentWriteOutMedium.makeWriteOutBytes();
+    writeOutBytes.write('1');
+    writeOutBytes.readFully(1, ByteBuffer.allocate(0));
   }
 }

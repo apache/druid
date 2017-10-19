@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.output.OffHeapMemoryOutputMediumFactory;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.query.Druids;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -92,7 +92,7 @@ public class QuantileSqlAggregatorTest
 
     final QueryableIndex index = IndexBuilder.create()
                                              .tmpDir(temporaryFolder.newFolder())
-                                             .outputMediumFactory(OffHeapMemoryOutputMediumFactory.instance())
+                                             .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                                              .schema(
                                                  new IncrementalIndexSchema.Builder()
                                                      .withMetrics(

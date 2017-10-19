@@ -27,7 +27,7 @@ import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
-import io.druid.output.OffHeapMemoryOutputMediumFactory;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.query.Druids;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
@@ -113,7 +113,7 @@ public class AppendTest
   @Before
   public void setUp() throws Exception
   {
-    SchemalessIndexTest schemalessIndexTest = new SchemalessIndexTest(OffHeapMemoryOutputMediumFactory.instance());
+    SchemalessIndexTest schemalessIndexTest = new SchemalessIndexTest(OffHeapMemorySegmentWriteOutMediumFactory.instance());
     // (1, 2) cover overlapping segments of the form
     // |------|
     //     |--------|

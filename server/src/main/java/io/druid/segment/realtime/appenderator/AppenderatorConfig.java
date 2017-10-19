@@ -19,7 +19,7 @@
 
 package io.druid.segment.realtime.appenderator;
 
-import io.druid.output.OutputMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.segment.IndexSpec;
 import org.joda.time.Period;
 
@@ -41,5 +41,5 @@ public interface AppenderatorConfig
   File getBasePersistDirectory();
 
   @Nullable
-  OutputMediumFactory getOutputMediumFactory();
+  SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory();
 }

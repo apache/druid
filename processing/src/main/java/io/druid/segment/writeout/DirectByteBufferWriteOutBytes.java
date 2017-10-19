@@ -17,33 +17,36 @@
  * under the License.
  */
 
-package io.druid.output;
+package io.druid.segment.writeout;
 
-import io.druid.java.util.common.io.Closer;
+import io.druid.java.util.common.ByteBufferUtils;
 
-import java.io.IOException;
+import java.nio.ByteBuffer;
 
-public final class OffHeapMemoryOutputMedium implements OutputMedium
+final class DirectByteBufferWriteOutBytes extends ByteBufferWriteOutBytes
 {
-  private final Closer closer = Closer.create();
+  private boolean open = true;
 
   @Override
-  public OutputBytes makeOutputBytes()
+  protected ByteBuffer allocateBuffer()
   {
-    DirectByteBufferOutputBytes outputBytes = new DirectByteBufferOutputBytes();
-    closer.register(outputBytes::free);
-    return outputBytes;
+    return ByteBuffer.allocateDirect(BUFFER_SIZE);
   }
 
   @Override
-  public Closer getCloser()
+  public boolean isOpen()
   {
-    return closer;
+    return open;
   }
 
-  @Override
-  public void close() throws IOException
+  void free()
   {
-    closer.close();
+    open = false;
+    buffers.forEach(ByteBufferUtils::free);
+    buffers.clear();
+    headBufferIndex = -1;
+    headBuffer = null;
+    size = 0;
+    capacity = 0;
   }
 }

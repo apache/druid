@@ -21,7 +21,7 @@ package io.druid.segment.data;
 
 import com.google.common.math.LongMath;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.output.OutputMedium;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import it.unimi.dsi.fastutil.longs.Long2IntMap;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
@@ -36,7 +36,7 @@ import java.nio.channels.WritableByteChannel;
  */
 public class IntermediateLongSupplierSerializer implements LongSupplierSerializer
 {
-  private final OutputMedium outputMedium;
+  private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final String filenameBase;
   private final ByteOrder order;
   private final CompressionStrategy compression;
@@ -53,13 +53,13 @@ public class IntermediateLongSupplierSerializer implements LongSupplierSerialize
   private LongSupplierSerializer delegate;
 
   IntermediateLongSupplierSerializer(
-      OutputMedium outputMedium,
+      SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ByteOrder order,
       CompressionStrategy compression
   )
   {
-    this.outputMedium = outputMedium;
+    this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.filenameBase = filenameBase;
     this.order = order;
     this.compression = compression;
@@ -121,9 +121,9 @@ public class IntermediateLongSupplierSerializer implements LongSupplierSerialize
     }
 
     if (compression == CompressionStrategy.NONE) {
-      delegate = new EntireLayoutLongSupplierSerializer(outputMedium, writer);
+      delegate = new EntireLayoutLongSupplierSerializer(segmentWriteOutMedium, writer);
     } else {
-      delegate = new BlockLayoutLongSupplierSerializer(outputMedium, filenameBase, order, writer, compression);
+      delegate = new BlockLayoutLongSupplierSerializer(segmentWriteOutMedium, filenameBase, order, writer, compression);
     }
 
     delegate.open();

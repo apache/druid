@@ -31,9 +31,9 @@ import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.Smoosh;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.java.util.common.io.smoosh.SmooshedWriter;
-import io.druid.output.OffHeapMemoryOutputMedium;
-import io.druid.output.OutputBytes;
-import io.druid.output.OutputMedium;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
+import io.druid.segment.writeout.WriteOutBytes;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.CompressedVSizeIndexedV3Supplier;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -116,13 +116,13 @@ public class CompressedVSizeIndexedV3WriterTest
   {
     FileSmoosher smoosher = new FileSmoosher(FileUtils.getTempDirectory());
 
-    try (OutputMedium outputMedium = new OffHeapMemoryOutputMedium()) {
+    try (SegmentWriteOutMedium segmentWriteOutMedium = new OffHeapMemorySegmentWriteOutMedium()) {
       int maxValue = vals.size() > 0 ? getMaxValue(vals) : 0;
       CompressedIntsIndexedWriter offsetWriter = new CompressedIntsIndexedWriter(
-          outputMedium, "offset", offsetChunkFactor, byteOrder, compressionStrategy
+          segmentWriteOutMedium, "offset", offsetChunkFactor, byteOrder, compressionStrategy
       );
       CompressedVSizeIntsIndexedWriter valueWriter = new CompressedVSizeIntsIndexedWriter(
-          outputMedium, "value", maxValue, valueChunkFactor, byteOrder, compressionStrategy
+          segmentWriteOutMedium, "value", maxValue, valueChunkFactor, byteOrder, compressionStrategy
       );
       CompressedVSizeIndexedV3Writer writer = new CompressedVSizeIndexedV3Writer(offsetWriter, valueWriter);
       CompressedVSizeIndexedV3Supplier supplierFromIterable = CompressedVSizeIndexedV3Supplier.fromIterable(
@@ -131,22 +131,22 @@ public class CompressedVSizeIndexedV3WriterTest
           maxValue,
           byteOrder,
           compressionStrategy,
-          outputMedium.getCloser()
+          segmentWriteOutMedium.getCloser()
       );
       writer.open();
       for (int[] val : vals) {
         writer.add(val);
       }
       long writtenLength = writer.getSerializedSize();
-      final OutputBytes outputBytes = outputMedium.makeOutputBytes();
-      writer.writeTo(outputBytes, smoosher);
+      final WriteOutBytes writeOutBytes = segmentWriteOutMedium.makeWriteOutBytes();
+      writer.writeTo(writeOutBytes, smoosher);
       smoosher.close();
 
       assertEquals(writtenLength, supplierFromIterable.getSerializedSize());
 
       // read from ByteBuffer and check values
       CompressedVSizeIndexedV3Supplier supplierFromByteBuffer = CompressedVSizeIndexedV3Supplier.fromByteBuffer(
-          ByteBuffer.wrap(IOUtils.toByteArray(outputBytes.asInputStream())),
+          ByteBuffer.wrap(IOUtils.toByteArray(writeOutBytes.asInputStream())),
           byteOrder,
           null
       );
@@ -230,14 +230,14 @@ public class CompressedVSizeIndexedV3WriterTest
     FileSmoosher smoosher = new FileSmoosher(tmpDirectory);
     int maxValue = vals.size() > 0 ? getMaxValue(vals) : 0;
 
-    try (OutputMedium outputMedium = new OffHeapMemoryOutputMedium()) {
+    try (SegmentWriteOutMedium segmentWriteOutMedium = new OffHeapMemorySegmentWriteOutMedium()) {
       CompressedIntsIndexedWriter offsetWriter = new CompressedIntsIndexedWriter(
-          outputMedium,
+          segmentWriteOutMedium,
           offsetChunkFactor,
           byteOrder,
           compressionStrategy,
           GenericIndexedWriter.ofCompressedByteBuffers(
-              outputMedium,
+              segmentWriteOutMedium,
               "offset",
               compressionStrategy,
               Longs.BYTES * 250000
@@ -245,13 +245,13 @@ public class CompressedVSizeIndexedV3WriterTest
       );
 
       GenericIndexedWriter genericIndexed = GenericIndexedWriter.ofCompressedByteBuffers(
-          outputMedium,
+          segmentWriteOutMedium,
           "value",
           compressionStrategy,
           Longs.BYTES * 250000
       );
       CompressedVSizeIntsIndexedWriter valueWriter = new CompressedVSizeIntsIndexedWriter(
-          outputMedium,
+          segmentWriteOutMedium,
           maxValue,
           valueChunkFactor,
           byteOrder,

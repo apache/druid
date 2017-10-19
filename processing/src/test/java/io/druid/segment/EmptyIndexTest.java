@@ -24,9 +24,9 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.ConciseBitmapFactory;
 import io.druid.java.util.common.Intervals;
-import io.druid.output.OffHeapMemoryOutputMediumFactory;
-import io.druid.output.OutputMediumFactory;
-import io.druid.output.TmpFileOutputMediumFactory;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.column.Column;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -49,16 +49,16 @@ public class EmptyIndexTest
   public static Collection<?> constructorFeeder() throws IOException
   {
     return ImmutableList.of(
-        new Object[] {TmpFileOutputMediumFactory.instance()},
-        new Object[] {OffHeapMemoryOutputMediumFactory.instance()}
+        new Object[] {TmpFileSegmentWriteOutMediumFactory.instance()},
+        new Object[] {OffHeapMemorySegmentWriteOutMediumFactory.instance()}
     );
   }
 
-  private final OutputMediumFactory outputMediumFactory;
+  private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
 
-  public EmptyIndexTest(OutputMediumFactory outputMediumFactory)
+  public EmptyIndexTest(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
-    this.outputMediumFactory = outputMediumFactory;
+    this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
   }
 
   @Test
@@ -83,7 +83,7 @@ public class EmptyIndexTest
           emptyIndex,
           new ConciseBitmapFactory()
       );
-      TestHelper.getTestIndexMergerV9(outputMediumFactory).merge(
+      TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory).merge(
           Lists.<IndexableAdapter>newArrayList(emptyIndexAdapter),
           true,
           new AggregatorFactory[0],
@@ -91,7 +91,7 @@ public class EmptyIndexTest
           new IndexSpec()
       );
 
-      QueryableIndex emptyQueryableIndex = TestHelper.getTestIndexIO(outputMediumFactory).loadIndex(tmpDir);
+      QueryableIndex emptyQueryableIndex = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory).loadIndex(tmpDir);
 
       Assert.assertEquals("getDimensionNames", 0, Iterables.size(emptyQueryableIndex.getAvailableDimensions()));
       Assert.assertEquals("getMetricNames", 0, Iterables.size(emptyQueryableIndex.getColumnNames()));

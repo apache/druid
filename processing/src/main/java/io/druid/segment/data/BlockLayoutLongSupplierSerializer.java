@@ -20,7 +20,7 @@
 package io.druid.segment.data;
 
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.output.OutputMedium;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.CompressedPools;
 import io.druid.segment.serde.MetaSerdeHelper;
 
@@ -47,7 +47,7 @@ public class BlockLayoutLongSupplierSerializer implements LongSupplierSerializer
   private ByteBuffer endBuffer = null;
 
   BlockLayoutLongSupplierSerializer(
-      OutputMedium outputMedium,
+      SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ByteOrder byteOrder,
       CompressionFactory.LongEncodingWriter writer,
@@ -56,11 +56,11 @@ public class BlockLayoutLongSupplierSerializer implements LongSupplierSerializer
   {
     this.sizePer = writer.getBlockSize(CompressedPools.BUFFER_SIZE);
     int bufferSize = writer.getNumBytes(sizePer);
-    this.flattener = GenericIndexedWriter.ofCompressedByteBuffers(outputMedium, filenameBase, compression, bufferSize);
+    this.flattener = GenericIndexedWriter.ofCompressedByteBuffers(segmentWriteOutMedium, filenameBase, compression, bufferSize);
     this.writer = writer;
     this.compression = compression;
     CompressionStrategy.Compressor compressor = compression.getCompressor();
-    endBuffer = compressor.allocateInBuffer(writer.getNumBytes(sizePer), outputMedium.getCloser()).order(byteOrder);
+    endBuffer = compressor.allocateInBuffer(writer.getNumBytes(sizePer), segmentWriteOutMedium.getCloser()).order(byteOrder);
     writer.setBuffer(endBuffer);
     numInsertedForNextFlush = sizePer;
   }

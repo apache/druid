@@ -23,7 +23,7 @@ import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import io.druid.output.OffHeapMemoryOutputMedium;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.ObjectStrategy;
@@ -106,7 +106,7 @@ public class GenericIndexedBenchmark
   public void createGenericIndexed() throws IOException
   {
     GenericIndexedWriter<byte[]> genericIndexedWriter = new GenericIndexedWriter<>(
-        new OffHeapMemoryOutputMedium(),
+        new OffHeapMemorySegmentWriteOutMedium(),
         "genericIndexedBenchmark",
         byteArrayStrategy
     );

@@ -22,8 +22,8 @@ package io.druid.segment.data;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.output.OutputBytes;
-import io.druid.output.OutputMedium;
+import io.druid.segment.writeout.WriteOutBytes;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.serde.MetaSerdeHelper;
 import it.unimi.dsi.fastutil.ints.IntList;
 
@@ -47,14 +47,14 @@ public class VSizeIndexedWriter extends MultiValueIndexedIntsWriter
   {
     ONE_BYTE {
       @Override
-      void write(OutputBytes out, int v) throws IOException
+      void write(WriteOutBytes out, int v) throws IOException
       {
         out.write(v);
       }
     },
     TWO_BYTES {
       @Override
-      void write(OutputBytes out, int v) throws IOException
+      void write(WriteOutBytes out, int v) throws IOException
       {
         out.write(v >> 8);
         out.write(v);
@@ -62,7 +62,7 @@ public class VSizeIndexedWriter extends MultiValueIndexedIntsWriter
     },
     THREE_BYTES {
       @Override
-      void write(OutputBytes out, int v) throws IOException
+      void write(WriteOutBytes out, int v) throws IOException
       {
         out.write(v >> 16);
         out.write(v >> 8);
@@ -71,27 +71,27 @@ public class VSizeIndexedWriter extends MultiValueIndexedIntsWriter
     },
     FOUR_BYTES {
       @Override
-      void write(OutputBytes out, int v) throws IOException
+      void write(WriteOutBytes out, int v) throws IOException
       {
         out.writeInt(v);
       }
     };
 
-    abstract void write(OutputBytes out, int v) throws IOException;
+    abstract void write(WriteOutBytes out, int v) throws IOException;
   }
 
   private final int maxId;
   private final WriteInt writeInt;
 
-  private final OutputMedium outputMedium;
-  private OutputBytes headerOut = null;
-  private OutputBytes valuesOut = null;
+  private final SegmentWriteOutMedium segmentWriteOutMedium;
+  private WriteOutBytes headerOut = null;
+  private WriteOutBytes valuesOut = null;
   private int numWritten = 0;
   private boolean numBytesForMaxWritten = false;
 
-  public VSizeIndexedWriter(OutputMedium outputMedium, int maxId)
+  public VSizeIndexedWriter(SegmentWriteOutMedium segmentWriteOutMedium, int maxId)
   {
-    this.outputMedium = outputMedium;
+    this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.maxId = maxId;
     this.writeInt = WriteInt.values()[VSizeIndexedInts.getNumBytesForMax(maxId) - 1];
   }
@@ -99,8 +99,8 @@ public class VSizeIndexedWriter extends MultiValueIndexedIntsWriter
   @Override
   public void open() throws IOException
   {
-    headerOut = outputMedium.makeOutputBytes();
-    valuesOut = outputMedium.makeOutputBytes();
+    headerOut = segmentWriteOutMedium.makeWriteOutBytes();
+    valuesOut = segmentWriteOutMedium.makeWriteOutBytes();
   }
 
   @Override

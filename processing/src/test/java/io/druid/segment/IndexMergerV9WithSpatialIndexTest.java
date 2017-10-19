@@ -31,7 +31,7 @@ import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
-import io.druid.output.OutputMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.QueryPlus;
@@ -83,9 +83,9 @@ public class IndexMergerV9WithSpatialIndexTest
   public static Collection<?> constructorFeeder() throws IOException
   {
     List<Object[]> argumentArrays = new ArrayList<>();
-    for (OutputMediumFactory outputMediumFactory : OutputMediumFactory.builtInFactories()) {
-      IndexMergerV9 indexMergerV9 = TestHelper.getTestIndexMergerV9(outputMediumFactory);
-      IndexIO indexIO = TestHelper.getTestIndexIO(outputMediumFactory);
+    for (SegmentWriteOutMediumFactory segmentWriteOutMediumFactory : SegmentWriteOutMediumFactory.builtInFactories()) {
+      IndexMergerV9 indexMergerV9 = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
+      IndexIO indexIO = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory);
 
       final IndexSpec indexSpec = new IndexSpec();
       final IncrementalIndex rtIndex = makeIncrementalIndex();

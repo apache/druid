@@ -19,7 +19,7 @@
 
 package io.druid.segment;
 
-import io.druid.output.OutputMedium;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.Indexed;
@@ -85,7 +85,7 @@ public interface DimensionHandler
    * See {@link DimensionMergerV9} interface for more information.
    *
    * @param indexSpec     Specification object for the index merge
-   * @param outputMedium  this OutputMedium object could be used internally in the created merger, if needed
+   * @param segmentWriteOutMedium  this SegmentWriteOutMedium object could be used internally in the created merger, if needed
    * @param capabilities  The ColumnCapabilities of the dimension represented by this DimensionHandler
    * @param progress      ProgressIndicator used by the merging process
 
@@ -93,7 +93,7 @@ public interface DimensionHandler
    */
   DimensionMergerV9<EncodedKeyComponentType> makeMerger(
       IndexSpec indexSpec,
-      OutputMedium outputMedium,
+      SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress
   ) throws IOException;

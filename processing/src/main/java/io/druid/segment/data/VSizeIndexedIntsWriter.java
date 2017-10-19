@@ -22,8 +22,8 @@ package io.druid.segment.data;
 import com.google.common.primitives.Ints;
 import io.druid.common.utils.ByteUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.output.OutputBytes;
-import io.druid.output.OutputMedium;
+import io.druid.segment.writeout.WriteOutBytes;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.serde.MetaSerdeHelper;
 
 import java.io.IOException;
@@ -42,23 +42,23 @@ public class VSizeIndexedIntsWriter extends SingleValueIndexedIntsWriter
       .writeByte(x -> ByteUtils.checkedCast(x.numBytes))
       .writeInt(x -> Ints.checkedCast(x.valuesOut.size()));
 
-  private final OutputMedium outputMedium;
+  private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final int numBytes;
 
   private final ByteBuffer helperBuffer = ByteBuffer.allocate(Ints.BYTES);
-  private OutputBytes valuesOut = null;
+  private WriteOutBytes valuesOut = null;
   private boolean bufPaddingWritten = false;
 
-  public VSizeIndexedIntsWriter(final OutputMedium outputMedium, final int maxValue)
+  public VSizeIndexedIntsWriter(final SegmentWriteOutMedium segmentWriteOutMedium, final int maxValue)
   {
-    this.outputMedium = outputMedium;
+    this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.numBytes = VSizeIndexedInts.getNumBytesForMax(maxValue);
   }
 
   @Override
   public void open() throws IOException
   {
-    valuesOut = outputMedium.makeOutputBytes();
+    valuesOut = segmentWriteOutMedium.makeWriteOutBytes();
   }
 
   @Override

@@ -48,7 +48,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.math.expr.ExprMacroTable;
-import io.druid.output.OffHeapMemoryOutputMediumFactory;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.query.BySegmentQueryRunner;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.FinalizeResultsQueryRunner;
@@ -118,7 +118,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
     );
     INDEX_IO = new IndexIO(
         JSON_MAPPER,
-        OffHeapMemoryOutputMediumFactory.instance(),
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -128,7 +128,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
           }
         }
     );
-    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemoryOutputMediumFactory.instance());
+    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
   }
 
 
@@ -213,7 +213,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
         indexA,
         new File(tmpDir, "A"),
         new IndexSpec(),
-        OffHeapMemoryOutputMediumFactory.instance()
+        OffHeapMemorySegmentWriteOutMediumFactory.instance()
     );
     QueryableIndex qindexA = INDEX_IO.loadIndex(fileA);
 
@@ -255,7 +255,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
         indexB,
         new File(tmpDir, "B"),
         new IndexSpec(),
-        OffHeapMemoryOutputMediumFactory.instance()
+        OffHeapMemorySegmentWriteOutMediumFactory.instance()
     );
     QueryableIndex qindexB = INDEX_IO.loadIndex(fileB);
 

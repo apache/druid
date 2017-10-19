@@ -21,7 +21,7 @@ package io.druid.segment.data;
 
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.output.OutputMedium;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.IndexIO;
 import io.druid.segment.serde.MetaSerdeHelper;
 
@@ -44,13 +44,13 @@ public class CompressedIntsIndexedWriter extends SingleValueIndexedIntsWriter
       .writeByte(x -> x.compression.getId());
 
   public static CompressedIntsIndexedWriter create(
-      final OutputMedium outputMedium,
+      final SegmentWriteOutMedium segmentWriteOutMedium,
       final String filenameBase,
       final CompressionStrategy compression
   )
   {
     return new CompressedIntsIndexedWriter(
-        outputMedium,
+        segmentWriteOutMedium,
         filenameBase,
         CompressedIntsIndexedSupplier.MAX_INTS_IN_BUFFER,
         IndexIO.BYTE_ORDER,
@@ -65,7 +65,7 @@ public class CompressedIntsIndexedWriter extends SingleValueIndexedIntsWriter
   private int numInserted;
 
   CompressedIntsIndexedWriter(
-      final OutputMedium outputMedium,
+      final SegmentWriteOutMedium segmentWriteOutMedium,
       final String filenameBase,
       final int chunkFactor,
       final ByteOrder byteOrder,
@@ -73,12 +73,12 @@ public class CompressedIntsIndexedWriter extends SingleValueIndexedIntsWriter
   )
   {
     this(
-        outputMedium,
+        segmentWriteOutMedium,
         chunkFactor,
         byteOrder,
         compression,
         GenericIndexedWriter.ofCompressedByteBuffers(
-            outputMedium,
+            segmentWriteOutMedium,
             filenameBase,
             compression,
             chunkFactor * Integer.BYTES
@@ -87,7 +87,7 @@ public class CompressedIntsIndexedWriter extends SingleValueIndexedIntsWriter
   }
 
   CompressedIntsIndexedWriter(
-      final OutputMedium outputMedium,
+      final SegmentWriteOutMedium segmentWriteOutMedium,
       final int chunkFactor,
       final ByteOrder byteOrder,
       final CompressionStrategy compression,
@@ -98,7 +98,7 @@ public class CompressedIntsIndexedWriter extends SingleValueIndexedIntsWriter
     this.compression = compression;
     this.flattener = flattener;
     CompressionStrategy.Compressor compressor = compression.getCompressor();
-    Closer closer = outputMedium.getCloser();
+    Closer closer = segmentWriteOutMedium.getCloser();
     this.endBuffer = compressor.allocateInBuffer(chunkFactor * Integer.BYTES, closer).order(byteOrder);
     this.numInserted = 0;
   }

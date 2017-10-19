@@ -21,7 +21,7 @@ package io.druid.segment;
 
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.output.OutputMedium;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.FloatSupplierSerializer;
@@ -33,28 +33,28 @@ import java.nio.channels.WritableByteChannel;
 public class FloatColumnSerializer implements GenericColumnSerializer
 {
   public static FloatColumnSerializer create(
-      OutputMedium outputMedium,
+      SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       CompressionStrategy compression
   )
   {
-    return new FloatColumnSerializer(outputMedium, filenameBase, IndexIO.BYTE_ORDER, compression);
+    return new FloatColumnSerializer(segmentWriteOutMedium, filenameBase, IndexIO.BYTE_ORDER, compression);
   }
 
-  private final OutputMedium outputMedium;
+  private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final String filenameBase;
   private final ByteOrder byteOrder;
   private final CompressionStrategy compression;
   private FloatSupplierSerializer writer;
 
   private FloatColumnSerializer(
-      OutputMedium outputMedium,
+      SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ByteOrder byteOrder,
       CompressionStrategy compression
   )
   {
-    this.outputMedium = outputMedium;
+    this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.filenameBase = filenameBase;
     this.byteOrder = byteOrder;
     this.compression = compression;
@@ -64,7 +64,7 @@ public class FloatColumnSerializer implements GenericColumnSerializer
   public void open() throws IOException
   {
     writer = CompressionFactory.getFloatSerializer(
-        outputMedium,
+        segmentWriteOutMedium,
         StringUtils.format("%s.float_column", filenameBase),
         byteOrder,
         compression

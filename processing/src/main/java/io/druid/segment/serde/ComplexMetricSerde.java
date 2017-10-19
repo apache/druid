@@ -21,7 +21,7 @@ package io.druid.segment.serde;
 
 import com.google.common.base.Function;
 import io.druid.guice.annotations.ExtensionPoint;
-import io.druid.output.OutputMedium;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.ObjectStrategy;
@@ -110,8 +110,8 @@ public abstract class ComplexMetricSerde
    *
    * @return an instance of GenericColumnSerializer used for serialization.
    */
-  public GenericColumnSerializer getSerializer(OutputMedium outputMedium, String column)
+  public GenericColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
   {
-    return ComplexColumnSerializer.create(outputMedium, column, this.getObjectStrategy());
+    return ComplexColumnSerializer.create(segmentWriteOutMedium, column, this.getObjectStrategy());
   }
 }

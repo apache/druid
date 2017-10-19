@@ -21,7 +21,7 @@ package io.druid.segment;
 
 import com.google.common.base.Throwables;
 import io.druid.java.util.common.io.Closer;
-import io.druid.output.OutputMedium;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
@@ -39,13 +39,13 @@ public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
   protected ProgressIndicator progress;
   protected final IndexSpec indexSpec;
   protected ColumnCapabilities capabilities;
-  private final OutputMedium outputMedium;
+  private final SegmentWriteOutMedium segmentWriteOutMedium;
   protected LongColumnSerializer serializer;
 
   LongDimensionMergerV9(
       String dimensionName,
       IndexSpec indexSpec,
-      OutputMedium outputMedium,
+      SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress
   )
@@ -53,7 +53,7 @@ public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
     this.dimensionName = dimensionName;
     this.indexSpec = indexSpec;
     this.capabilities = capabilities;
-    this.outputMedium = outputMedium;
+    this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.progress = progress;
 
     try {
@@ -68,7 +68,7 @@ public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
   {
     final CompressionStrategy metCompression = indexSpec.getMetricCompression();
     final CompressionFactory.LongEncodingStrategy longEncoding = indexSpec.getLongEncoding();
-    this.serializer = LongColumnSerializer.create(outputMedium, dimensionName, metCompression, longEncoding);
+    this.serializer = LongColumnSerializer.create(segmentWriteOutMedium, dimensionName, metCompression, longEncoding);
     serializer.open();
   }
 

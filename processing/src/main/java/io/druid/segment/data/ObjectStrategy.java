@@ -20,7 +20,7 @@
 package io.druid.segment.data;
 
 import io.druid.guice.annotations.ExtensionPoint;
-import io.druid.output.OutputBytes;
+import io.druid.segment.writeout.WriteOutBytes;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -47,7 +47,7 @@ public interface ObjectStrategy<T> extends Comparator<T>
   T fromByteBuffer(ByteBuffer buffer, int numBytes);
   byte[] toBytes(T val);
 
-  default void writeTo(T val, OutputBytes out) throws IOException
+  default void writeTo(T val, WriteOutBytes out) throws IOException
   {
     out.write(toBytes(val));
   }

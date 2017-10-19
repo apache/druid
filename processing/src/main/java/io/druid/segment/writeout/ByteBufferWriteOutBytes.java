@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.output;
+package io.druid.segment.writeout;
 
 import com.google.common.base.Preconditions;
 import com.google.common.io.ByteSource;
@@ -35,7 +35,7 @@ import java.util.ArrayList;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public abstract class ByteBufferOutputBytes extends OutputBytes
+public abstract class ByteBufferWriteOutBytes extends WriteOutBytes
 {
   /**
    * There is no reason why 64K is chosen. Other power of 2 between 4K and 64K could be more reasonable.
@@ -48,7 +48,7 @@ public abstract class ByteBufferOutputBytes extends OutputBytes
   long size;
   long capacity;
 
-  ByteBufferOutputBytes()
+  ByteBufferWriteOutBytes()
   {
     size = 0;
     headBufferIndex = 0;
@@ -183,11 +183,11 @@ public abstract class ByteBufferOutputBytes extends OutputBytes
   }
 
   /**
-   * Takes all bytes that are written to this OutputBytes so far and writes them into the given ByteBuffer. This method
-   * changes the position of the out buffer by the {@link #size()} of this OutputBytes.
+   * Takes all bytes that are written to this WriteOutBytes so far and writes them into the given ByteBuffer. This method
+   * changes the position of the out buffer by the {@link #size()} of this WriteOutBytes.
    *
    * @throws java.nio.BufferOverflowException if the {@link ByteBuffer#remaining()} capacity of the given buffer is
-   * smaller than the size of this OutputBytes
+   * smaller than the size of this WriteOutBytes
    */
   public void writeTo(ByteBuffer out)
   {

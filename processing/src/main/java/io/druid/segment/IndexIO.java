@@ -44,7 +44,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.Smoosh;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.output.OutputMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnCapabilities;
@@ -97,13 +97,13 @@ public class IndexIO
   private static final SerializerUtils serializerUtils = new SerializerUtils();
 
   private final ObjectMapper mapper;
-  private final OutputMediumFactory defaultOutputMediumFactory;
+  private final SegmentWriteOutMediumFactory defaultSegmentWriteOutMediumFactory;
 
   @Inject
-  public IndexIO(ObjectMapper mapper, OutputMediumFactory defaultOutputMediumFactory, ColumnConfig columnConfig)
+  public IndexIO(ObjectMapper mapper, SegmentWriteOutMediumFactory defaultSegmentWriteOutMediumFactory, ColumnConfig columnConfig)
   {
     this.mapper = Preconditions.checkNotNull(mapper, "null ObjectMapper");
-    this.defaultOutputMediumFactory = Preconditions.checkNotNull(defaultOutputMediumFactory, "null OutputMediumFactory");
+    this.defaultSegmentWriteOutMediumFactory = Preconditions.checkNotNull(defaultSegmentWriteOutMediumFactory, "null SegmentWriteOutMediumFactory");
     Preconditions.checkNotNull(columnConfig, "null ColumnConfig");
     ImmutableMap.Builder<Integer, IndexLoader> indexLoadersBuilder = ImmutableMap.builder();
     LegacyIndexLoader legacyIndexLoader = new LegacyIndexLoader(new DefaultIndexIOHandler(), columnConfig);
@@ -229,16 +229,16 @@ public class IndexIO
       IndexSpec indexSpec,
       boolean forceIfCurrent,
       boolean validate,
-      @Nullable OutputMediumFactory outputMediumFactory
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException
   {
     final int version = SegmentUtils.getVersionFromDir(toConvert);
     boolean current = version == CURRENT_VERSION_ID;
     if (!current || forceIfCurrent) {
-      if (outputMediumFactory == null) {
-        outputMediumFactory = this.defaultOutputMediumFactory;
+      if (segmentWriteOutMediumFactory == null) {
+        segmentWriteOutMediumFactory = this.defaultSegmentWriteOutMediumFactory;
       }
-      new IndexMergerV9(mapper, this, outputMediumFactory).convert(toConvert, converted, indexSpec);
+      new IndexMergerV9(mapper, this, segmentWriteOutMediumFactory).convert(toConvert, converted, indexSpec);
       if (validate) {
         validateTwoSegments(toConvert, converted);
       }

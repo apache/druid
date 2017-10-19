@@ -31,7 +31,7 @@ import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.UOE;
-import io.druid.output.OffHeapMemoryOutputMediumFactory;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.data.CompressionFactory;
@@ -329,7 +329,7 @@ public class IndexIOTest
   {
     Exception ex = null;
     try {
-      TestHelper.getTestIndexIO(OffHeapMemoryOutputMediumFactory.instance()).validateTwoSegments(adapter1, adapter2);
+      TestHelper.getTestIndexIO(OffHeapMemorySegmentWriteOutMediumFactory.instance()).validateTwoSegments(adapter1, adapter2);
     }
     catch (Exception e) {
       ex = e;

@@ -33,9 +33,9 @@ import io.druid.data.input.impl.TimestampSpec;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
-import io.druid.output.OffHeapMemoryOutputMediumFactory;
-import io.druid.output.OutputMediumFactory;
-import io.druid.output.TmpFileOutputMediumFactory;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -99,8 +99,8 @@ public class IngestSegmentFirehoseTest
   public static Collection<?> constructorFeeder() throws IOException
   {
     return ImmutableList.of(
-        new Object[] {TmpFileOutputMediumFactory.instance()},
-        new Object[] {OffHeapMemoryOutputMediumFactory.instance()}
+        new Object[] {TmpFileSegmentWriteOutMediumFactory.instance()},
+        new Object[] {OffHeapMemorySegmentWriteOutMediumFactory.instance()}
     );
   }
 
@@ -110,10 +110,10 @@ public class IngestSegmentFirehoseTest
   private final IndexIO indexIO;
   private final IndexMerger indexMerger;
 
-  public IngestSegmentFirehoseTest(OutputMediumFactory outputMediumFactory)
+  public IngestSegmentFirehoseTest(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
-    indexIO = TestHelper.getTestIndexIO(outputMediumFactory);
-    indexMerger = TestHelper.getTestIndexMergerV9(outputMediumFactory);
+    indexIO = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory);
+    indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
   }
 
   @Test

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.output;
+package io.druid.segment.writeout;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -27,22 +27,25 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Set;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, defaultImpl = TmpFileOutputMediumFactory.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, defaultImpl = TmpFileSegmentWriteOutMediumFactory.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "tmpFile", value = TmpFileOutputMediumFactory.class),
-    @JsonSubTypes.Type(name = "offHeapMemory", value = OffHeapMemoryOutputMediumFactory.class),
+    @JsonSubTypes.Type(name = "tmpFile", value = TmpFileSegmentWriteOutMediumFactory.class),
+    @JsonSubTypes.Type(name = "offHeapMemory", value = OffHeapMemorySegmentWriteOutMediumFactory.class),
 })
-public interface OutputMediumFactory
+public interface SegmentWriteOutMediumFactory
 {
-  static Set<OutputMediumFactory> builtInFactories()
+  static Set<SegmentWriteOutMediumFactory> builtInFactories()
   {
-    return ImmutableSet.of(TmpFileOutputMediumFactory.instance(), OffHeapMemoryOutputMediumFactory.instance());
+    return ImmutableSet.<SegmentWriteOutMediumFactory>of(
+        TmpFileSegmentWriteOutMediumFactory.instance(),
+        OffHeapMemorySegmentWriteOutMediumFactory.instance()
+    );
   }
 
   /**
-   * Creates a new OutputMedium. If this type of OutputMedium needs to create some temprorary files, it creates
-   * a *subdirectory* in the given outDir, stores the files there, and removes the files and the subdirectory when
-   * closed.
+   * Creates a new SegmentWriteOutMedium. If this type of SegmentWriteOutMedium needs to create some temprorary files,
+   * it creates a *subdirectory* in the given outDir, stores the files there, and removes the files and the subdirectory
+   * when closed.
    */
-  OutputMedium makeOutputMedium(File outDir) throws IOException;
+  SegmentWriteOutMedium makeSegmentWriteOutMedium(File outDir) throws IOException;
 }

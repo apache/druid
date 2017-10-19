@@ -428,7 +428,7 @@ public class RealtimePlumber implements Plumber
                     schema.getAggregators(),
                     mergedTarget,
                     config.getIndexSpec(),
-                    config.getOutputMediumFactory()
+                    config.getSegmentWriteOutMediumFactory()
                 );
               }
               catch (Throwable t) {
@@ -943,7 +943,7 @@ public class RealtimePlumber implements Plumber
             interval,
             new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount())),
             indexSpec,
-            config.getOutputMediumFactory()
+            config.getSegmentWriteOutMediumFactory()
         );
 
         indexToPersist.swapSegment(

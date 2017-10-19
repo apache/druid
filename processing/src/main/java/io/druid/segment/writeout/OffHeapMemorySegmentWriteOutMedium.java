@@ -17,29 +17,33 @@
  * under the License.
  */
 
-package io.druid.output;
+package io.druid.segment.writeout;
 
 import io.druid.java.util.common.io.Closer;
 
-import java.io.Closeable;
 import java.io.IOException;
 
-/**
- * OutputMedium manages the resources of a bunch of {@link OutputBytes} objects of the same kind, created by calling
- * {@link #makeOutputBytes()} on the OutputMedium object. When OutputMedium is closed, all child OutputBytes couldn't
- * be used anymore.
- */
-public interface OutputMedium extends Closeable
+public final class OffHeapMemorySegmentWriteOutMedium implements SegmentWriteOutMedium
 {
-  /**
-   * Creates a new empty {@link OutputBytes}, attached to this OutputMedium. When this OutputMedium is closed, the
-   * returned OutputBytes couldn't be used anymore.
-   */
-  OutputBytes makeOutputBytes() throws IOException;
+  private final Closer closer = Closer.create();
 
-  /**
-   * Returns a closer of this OutputMedium, which is closed in this OutputMedium's close() method. Could be used to
-   * "attach" some random resources to this OutputMedium, to be closed at the same time.
-   */
-  Closer getCloser();
+  @Override
+  public WriteOutBytes makeWriteOutBytes()
+  {
+    DirectByteBufferWriteOutBytes writeOutBytes = new DirectByteBufferWriteOutBytes();
+    closer.register(writeOutBytes::free);
+    return writeOutBytes;
+  }
+
+  @Override
+  public Closer getCloser()
+  {
+    return closer;
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    closer.close();
+  }
 }

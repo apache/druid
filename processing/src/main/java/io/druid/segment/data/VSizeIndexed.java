@@ -25,7 +25,7 @@ import io.druid.io.Channels;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.output.HeapByteBufferOutputBytes;
+import io.druid.segment.writeout.HeapByteBufferWriteOutBytes;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.serde.MetaSerdeHelper;
 
@@ -65,8 +65,8 @@ public class VSizeIndexed implements IndexedMultivalue<IndexedInts>, WritableSup
       ++count;
     }
 
-    HeapByteBufferOutputBytes headerBytes = new HeapByteBufferOutputBytes();
-    HeapByteBufferOutputBytes valueBytes = new HeapByteBufferOutputBytes();
+    HeapByteBufferWriteOutBytes headerBytes = new HeapByteBufferWriteOutBytes();
+    HeapByteBufferWriteOutBytes valueBytes = new HeapByteBufferWriteOutBytes();
     int offset = 0;
     try {
       headerBytes.writeInt(count);

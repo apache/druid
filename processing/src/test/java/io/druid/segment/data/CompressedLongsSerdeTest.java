@@ -23,7 +23,7 @@ import com.google.common.base.Supplier;
 import com.google.common.primitives.Longs;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
-import io.druid.output.OffHeapMemoryOutputMedium;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.junit.Assert;
 import org.junit.Test;
@@ -130,7 +130,7 @@ public class CompressedLongsSerdeTest
   public void testValues(long[] values) throws Exception
   {
     LongSupplierSerializer serializer = CompressionFactory.getLongSerializer(
-        new OffHeapMemoryOutputMedium(),
+        new OffHeapMemorySegmentWriteOutMedium(),
         "test",
         order,
         encodingStrategy,

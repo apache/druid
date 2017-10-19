@@ -26,8 +26,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.StringUtils;
-import io.druid.output.OffHeapMemoryOutputMediumFactory;
-import io.druid.output.OutputMediumFactory;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -52,8 +52,8 @@ public class IndexBuilder
   private IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
       .withMetrics(new CountAggregatorFactory("count"))
       .build();
-  private OutputMediumFactory outputMediumFactory = OffHeapMemoryOutputMediumFactory.instance();
-  private IndexMerger indexMerger = TestHelper.getTestIndexMergerV9(outputMediumFactory);
+  private SegmentWriteOutMediumFactory segmentWriteOutMediumFactory = OffHeapMemorySegmentWriteOutMediumFactory.instance();
+  private IndexMerger indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
   private File tmpDir;
   private IndexSpec indexSpec = new IndexSpec();
   private int maxRows = DEFAULT_MAX_ROWS;
@@ -76,10 +76,10 @@ public class IndexBuilder
     return this;
   }
 
-  public IndexBuilder outputMediumFactory(OutputMediumFactory outputMediumFactory)
+  public IndexBuilder segmentWriteOutMediumFactory(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
-    this.outputMediumFactory = outputMediumFactory;
-    this.indexMerger = TestHelper.getTestIndexMergerV9(outputMediumFactory);
+    this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
+    this.indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
     return this;
   }
 
@@ -123,7 +123,7 @@ public class IndexBuilder
     Preconditions.checkNotNull(indexMerger, "indexMerger");
     Preconditions.checkNotNull(tmpDir, "tmpDir");
     try (final IncrementalIndex incrementalIndex = buildIncrementalIndex()) {
-      return TestHelper.getTestIndexIO(outputMediumFactory).loadIndex(
+      return TestHelper.getTestIndexIO(segmentWriteOutMediumFactory).loadIndex(
           indexMerger.persist(
               incrementalIndex,
               new File(tmpDir, StringUtils.format("testIndex-%s", new Random().nextInt(Integer.MAX_VALUE))),
@@ -139,14 +139,14 @@ public class IndexBuilder
 
   public QueryableIndex buildMMappedMergedIndex()
   {
-    IndexMerger indexMerger = TestHelper.getTestIndexMergerV9(outputMediumFactory);
+    IndexMerger indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
     Preconditions.checkNotNull(tmpDir, "tmpDir");
 
     final List<QueryableIndex> persisted = Lists.newArrayList();
     try {
       for (int i = 0; i < rows.size(); i += ROWS_PER_INDEX_FOR_MERGING) {
         persisted.add(
-            TestHelper.getTestIndexIO(outputMediumFactory).loadIndex(
+            TestHelper.getTestIndexIO(segmentWriteOutMediumFactory).loadIndex(
                 indexMerger.persist(
                     buildIncrementalIndexWithRows(
                         schema,
@@ -160,7 +160,7 @@ public class IndexBuilder
             )
         );
       }
-      final QueryableIndex merged = TestHelper.getTestIndexIO(outputMediumFactory).loadIndex(
+      final QueryableIndex merged = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory).loadIndex(
           indexMerger.merge(
               Lists.transform(
                   persisted,

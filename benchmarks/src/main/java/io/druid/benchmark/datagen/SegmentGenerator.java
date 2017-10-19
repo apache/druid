@@ -32,7 +32,7 @@ import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.output.OffHeapMemoryOutputMediumFactory;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.segment.IndexBuilder;
@@ -142,8 +142,8 @@ public class SegmentGenerator implements Closeable
       return Iterables.getOnlyElement(indexes);
     } else {
       try {
-        final QueryableIndex merged = TestHelper.getTestIndexIO(OffHeapMemoryOutputMediumFactory.instance()).loadIndex(
-            TestHelper.getTestIndexMergerV9(OffHeapMemoryOutputMediumFactory.instance()).merge(
+        final QueryableIndex merged = TestHelper.getTestIndexIO(OffHeapMemorySegmentWriteOutMediumFactory.instance()).loadIndex(
+            TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance()).merge(
                 indexes.stream().map(QueryableIndexIndexableAdapter::new).collect(Collectors.toList()),
                 false,
                 schemaInfo.getAggs()
@@ -184,7 +184,7 @@ public class SegmentGenerator implements Closeable
         .create()
         .schema(indexSchema)
         .tmpDir(new File(new File(tempDir, identifier), String.valueOf(indexNumber)))
-        .outputMediumFactory(OffHeapMemoryOutputMediumFactory.instance())
+        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
         .rows(rows)
         .buildMMappedIndex();
   }

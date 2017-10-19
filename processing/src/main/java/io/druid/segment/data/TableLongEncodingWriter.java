@@ -22,7 +22,7 @@ package io.druid.segment.data;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import io.druid.java.util.common.IAE;
-import io.druid.output.OutputBytes;
+import io.druid.segment.writeout.WriteOutBytes;
 import it.unimi.dsi.fastutil.longs.Long2IntMap;
 import it.unimi.dsi.fastutil.longs.LongList;
 
@@ -54,7 +54,7 @@ public class TableLongEncodingWriter implements CompressionFactory.LongEncodingW
   }
 
   @Override
-  public void setOutputStream(OutputBytes output)
+  public void setOutputStream(WriteOutBytes output)
   {
     serializer = VSizeLongSerde.getSerializer(bitsPerValue, output);
   }

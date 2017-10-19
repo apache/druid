@@ -45,8 +45,8 @@ import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedWriter;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.output.OutputMedium;
-import io.druid.output.OutputMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
@@ -92,15 +92,15 @@ public class IndexMergerV9 implements IndexMerger
 
   private final ObjectMapper mapper;
   private final IndexIO indexIO;
-  private final OutputMediumFactory defaultOutputMediumFactory;
+  private final SegmentWriteOutMediumFactory defaultSegmentWriteOutMediumFactory;
 
   @Inject
-  public IndexMergerV9(ObjectMapper mapper, IndexIO indexIO, OutputMediumFactory defaultOutputMediumFactory)
+  public IndexMergerV9(ObjectMapper mapper, IndexIO indexIO, SegmentWriteOutMediumFactory defaultSegmentWriteOutMediumFactory)
   {
     this.mapper = Preconditions.checkNotNull(mapper, "null ObjectMapper");
     this.indexIO = Preconditions.checkNotNull(indexIO, "null IndexIO");
-    this.defaultOutputMediumFactory =
-        Preconditions.checkNotNull(defaultOutputMediumFactory, "null OutputMediumFactory");
+    this.defaultSegmentWriteOutMediumFactory =
+        Preconditions.checkNotNull(defaultSegmentWriteOutMediumFactory, "null SegmentWriteOutMediumFactory");
   }
 
   private File makeIndexFiles(
@@ -112,7 +112,7 @@ public class IndexMergerV9 implements IndexMerger
       final List<String> mergedMetrics,
       final Function<ArrayList<Iterable<Rowboat>>, Iterable<Rowboat>> rowMergerFn,
       final IndexSpec indexSpec,
-      final @Nullable OutputMediumFactory outputMediumFactory
+      final @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException
   {
     progress.start();
@@ -152,10 +152,11 @@ public class IndexMergerV9 implements IndexMerger
       final FileSmoosher v9Smoosher = new FileSmoosher(outDir);
       FileUtils.forceMkdir(outDir);
 
-      OutputMediumFactory omf = outputMediumFactory != null ? outputMediumFactory : defaultOutputMediumFactory;
-      log.info("Using OutputMediumFactory[%s]", omf.getClass().getSimpleName());
-      OutputMedium outputMedium = omf.makeOutputMedium(outDir);
-      closer.register(outputMedium);
+      SegmentWriteOutMediumFactory omf = segmentWriteOutMediumFactory != null ? segmentWriteOutMediumFactory
+                                                                              : defaultSegmentWriteOutMediumFactory;
+      log.info("Using SegmentWriteOutMediumFactory[%s]", omf.getClass().getSimpleName());
+      SegmentWriteOutMedium segmentWriteOutMedium = omf.makeSegmentWriteOutMedium(outDir);
+      closer.register(segmentWriteOutMedium);
       long startTime = System.currentTimeMillis();
       Files.asByteSink(new File(outDir, "version.bin")).write(Ints.toByteArray(IndexIO.V9_VERSION));
       log.info("Completed version.bin in %,d millis.", System.currentTimeMillis() - startTime);
@@ -176,7 +177,7 @@ public class IndexMergerV9 implements IndexMerger
       final DimensionHandler[] handlers = makeDimensionHandlers(mergedDimensions, dimCapabilities);
       final List<DimensionMerger> mergers = new ArrayList<>();
       for (int i = 0; i < mergedDimensions.size(); i++) {
-        mergers.add(handlers[i].makeMerger(indexSpec, outputMedium, dimCapabilities.get(i), progress));
+        mergers.add(handlers[i].makeMerger(indexSpec, segmentWriteOutMedium, dimCapabilities.get(i), progress));
       }
 
       /************* Setup Dim Conversions **************/
@@ -196,9 +197,9 @@ public class IndexMergerV9 implements IndexMerger
           handlers,
           mergers
       );
-      final LongColumnSerializer timeWriter = setupTimeWriter(outputMedium, indexSpec);
+      final LongColumnSerializer timeWriter = setupTimeWriter(segmentWriteOutMedium, indexSpec);
       final ArrayList<GenericColumnSerializer> metWriters = setupMetricsWriters(
-          outputMedium,
+          segmentWriteOutMedium,
           mergedMetrics,
           metricsValueTypes,
           metricTypeNames,
@@ -498,10 +499,10 @@ public class IndexMergerV9 implements IndexMerger
     progress.stopSection(section);
   }
 
-  private LongColumnSerializer setupTimeWriter(OutputMedium outputMedium, IndexSpec indexSpec) throws IOException
+  private LongColumnSerializer setupTimeWriter(SegmentWriteOutMedium segmentWriteOutMedium, IndexSpec indexSpec) throws IOException
   {
     LongColumnSerializer timeWriter = LongColumnSerializer.create(
-        outputMedium,
+        segmentWriteOutMedium,
         "little_end_time",
         CompressionStrategy.DEFAULT_COMPRESSION_STRATEGY,
         indexSpec.getLongEncoding()
@@ -512,7 +513,7 @@ public class IndexMergerV9 implements IndexMerger
   }
 
   private ArrayList<GenericColumnSerializer> setupMetricsWriters(
-      final OutputMedium outputMedium,
+      final SegmentWriteOutMedium segmentWriteOutMedium,
       final List<String> mergedMetrics,
       final Map<String, ValueType> metricsValueTypes,
       final Map<String, String> metricTypeNames,
@@ -527,13 +528,13 @@ public class IndexMergerV9 implements IndexMerger
       GenericColumnSerializer writer;
       switch (type) {
         case LONG:
-          writer = LongColumnSerializer.create(outputMedium, metric, metCompression, longEncoding);
+          writer = LongColumnSerializer.create(segmentWriteOutMedium, metric, metCompression, longEncoding);
           break;
         case FLOAT:
-          writer = FloatColumnSerializer.create(outputMedium, metric, metCompression);
+          writer = FloatColumnSerializer.create(segmentWriteOutMedium, metric, metCompression);
           break;
         case DOUBLE:
-          writer = DoubleColumnSerializer.create(outputMedium, metric, metCompression);
+          writer = DoubleColumnSerializer.create(segmentWriteOutMedium, metric, metCompression);
           break;
         case COMPLEX:
           final String typeName = metricTypeNames.get(metric);
@@ -541,7 +542,7 @@ public class IndexMergerV9 implements IndexMerger
           if (serde == null) {
             throw new ISE("Unknown type[%s]", typeName);
           }
-          writer = serde.getSerializer(outputMedium, metric);
+          writer = serde.getSerializer(segmentWriteOutMedium, metric);
           break;
         default:
           throw new ISE("Unknown type[%s]", type);
@@ -608,10 +609,10 @@ public class IndexMergerV9 implements IndexMerger
       final IncrementalIndex index,
       File outDir,
       IndexSpec indexSpec,
-      @Nullable OutputMediumFactory outputMediumFactory
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException
   {
-    return persist(index, index.getInterval(), outDir, indexSpec, outputMediumFactory);
+    return persist(index, index.getInterval(), outDir, indexSpec, segmentWriteOutMediumFactory);
   }
 
   @Override
@@ -620,10 +621,10 @@ public class IndexMergerV9 implements IndexMerger
       final Interval dataInterval,
       File outDir,
       IndexSpec indexSpec,
-      @Nullable OutputMediumFactory outputMediumFactory
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException
   {
-    return persist(index, dataInterval, outDir, indexSpec, new BaseProgressIndicator(), outputMediumFactory);
+    return persist(index, dataInterval, outDir, indexSpec, new BaseProgressIndicator(), segmentWriteOutMediumFactory);
   }
 
   @Override
@@ -633,7 +634,7 @@ public class IndexMergerV9 implements IndexMerger
       File outDir,
       IndexSpec indexSpec,
       ProgressIndicator progress,
-      @Nullable OutputMediumFactory outputMediumFactory
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException
   {
     if (index.isEmpty()) {
@@ -671,7 +672,7 @@ public class IndexMergerV9 implements IndexMerger
         outDir,
         indexSpec,
         progress,
-        outputMediumFactory
+        segmentWriteOutMediumFactory
     );
   }
 
@@ -682,7 +683,7 @@ public class IndexMergerV9 implements IndexMerger
       final AggregatorFactory[] metricAggs,
       File outDir,
       IndexSpec indexSpec,
-      @Nullable OutputMediumFactory outputMediumFactory
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException
   {
     return mergeQueryableIndex(
@@ -692,7 +693,7 @@ public class IndexMergerV9 implements IndexMerger
         outDir,
         indexSpec,
         new BaseProgressIndicator(),
-        outputMediumFactory
+        segmentWriteOutMediumFactory
     );
   }
 
@@ -704,7 +705,7 @@ public class IndexMergerV9 implements IndexMerger
       File outDir,
       IndexSpec indexSpec,
       ProgressIndicator progress,
-      @Nullable OutputMediumFactory outputMediumFactory
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException
   {
     return merge(
@@ -714,7 +715,7 @@ public class IndexMergerV9 implements IndexMerger
         outDir,
         indexSpec,
         progress,
-        outputMediumFactory
+        segmentWriteOutMediumFactory
     );
   }
 
@@ -737,7 +738,7 @@ public class IndexMergerV9 implements IndexMerger
       File outDir,
       IndexSpec indexSpec,
       ProgressIndicator progress,
-      @Nullable OutputMediumFactory outputMediumFactory
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException
   {
     FileUtils.deleteDirectory(outDir);
@@ -843,14 +844,14 @@ public class IndexMergerV9 implements IndexMerger
         mergedMetrics,
         rowMergerFn,
         indexSpec,
-        outputMediumFactory
+        segmentWriteOutMediumFactory
     );
   }
 
   @Override
   public File convert(final File inDir, final File outDir, final IndexSpec indexSpec) throws IOException
   {
-    return convert(inDir, outDir, indexSpec, new BaseProgressIndicator(), defaultOutputMediumFactory);
+    return convert(inDir, outDir, indexSpec, new BaseProgressIndicator(), defaultSegmentWriteOutMediumFactory);
   }
 
   @Override
@@ -859,7 +860,7 @@ public class IndexMergerV9 implements IndexMerger
       final File outDir,
       final IndexSpec indexSpec,
       final ProgressIndicator progress,
-      final @Nullable OutputMediumFactory outputMediumFactory
+      final @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException
   {
     try (QueryableIndex index = indexIO.loadIndex(inDir)) {
@@ -881,7 +882,7 @@ public class IndexMergerV9 implements IndexMerger
             }
           },
           indexSpec,
-          outputMediumFactory
+          segmentWriteOutMediumFactory
       );
     }
   }
@@ -892,7 +893,7 @@ public class IndexMergerV9 implements IndexMerger
       AggregatorFactory[] aggregators,
       File outDir,
       IndexSpec indexSpec,
-      @Nullable OutputMediumFactory outputMediumFactory
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException
   {
     FileUtils.deleteDirectory(outDir);
@@ -944,7 +945,7 @@ public class IndexMergerV9 implements IndexMerger
         mergedMetrics,
         rowMergerFn,
         indexSpec,
-        outputMediumFactory
+        segmentWriteOutMediumFactory
     );
   }
 

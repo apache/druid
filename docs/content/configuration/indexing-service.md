@@ -344,7 +344,7 @@ If the peon is running in remote mode, there must be an overlord up and running.
 |`druid.peon.taskActionClient.retry.maxWait`|The maximum retry time to communicate with overlord.|PT1M|
 |`druid.peon.taskActionClient.retry.maxRetryCount`|The maximum number of retries to communicate with overlord.|60|
 
-##### OutputMediumFactory
+##### SegmentWriteOutMediumFactory
 
 When new segments are created, Druid temporarily stores some pre-processed data in some buffers. Currently two types of
 *medium* exist for those buffers: *temporary files* and *off-heap memory*.
@@ -359,10 +359,10 @@ This type of medium is preferred, but it may require to allow the JVM to have mo
 to the size of the segments being created. But definitely it doesn't make sense to add more extra off-heap memory,
 than the configured maximum *heap* size (`-Xmx`) for the same JVM.
 
-For most types of tasks OutputMediumFactory could be configured per-task (see [Tasks](../ingestion/tasks.html) page,
-"TuningConfig" section), but if it's not specified for a task, or it's not supported for a particular task type, then
-the value from the configuration below is used:
+For most types of tasks SegmentWriteOutMediumFactory could be configured per-task (see [Tasks](../ingestion/tasks.html)
+page, "TuningConfig" section), but if it's not specified for a task, or it's not supported for a particular task type,
+then the value from the configuration below is used:
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.peon.defaultOutputMediumFactory`|`tmpFile` or `offHeapMemory`, see explanation above|`tmpFile`|
+|`druid.peon.defaultSegmentWriteOutMediumFactory`|`tmpFile` or `offHeapMemory`, see explanation above|`tmpFile`|

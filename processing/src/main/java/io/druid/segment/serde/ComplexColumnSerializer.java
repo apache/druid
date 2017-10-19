@@ -22,7 +22,7 @@ package io.druid.segment.serde;
 import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.output.OutputMedium;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.ObjectStrategy;
@@ -33,19 +33,19 @@ import java.nio.channels.WritableByteChannel;
 public class ComplexColumnSerializer implements GenericColumnSerializer
 {
   @PublicApi
-  public static ComplexColumnSerializer create(OutputMedium outputMedium, String filenameBase, ObjectStrategy strategy)
+  public static ComplexColumnSerializer create(SegmentWriteOutMedium segmentWriteOutMedium, String filenameBase, ObjectStrategy strategy)
   {
-    return new ComplexColumnSerializer(outputMedium, filenameBase, strategy);
+    return new ComplexColumnSerializer(segmentWriteOutMedium, filenameBase, strategy);
   }
 
-  private final OutputMedium outputMedium;
+  private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final String filenameBase;
   private final ObjectStrategy strategy;
   private GenericIndexedWriter writer;
 
-  private ComplexColumnSerializer(OutputMedium outputMedium, String filenameBase, ObjectStrategy strategy)
+  private ComplexColumnSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String filenameBase, ObjectStrategy strategy)
   {
-    this.outputMedium = outputMedium;
+    this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.filenameBase = filenameBase;
     this.strategy = strategy;
   }
@@ -54,7 +54,7 @@ public class ComplexColumnSerializer implements GenericColumnSerializer
   @Override
   public void open() throws IOException
   {
-    writer = new GenericIndexedWriter(outputMedium, StringUtils.format("%s.complex_column", filenameBase), strategy);
+    writer = new GenericIndexedWriter(segmentWriteOutMedium, StringUtils.format("%s.complex_column", filenameBase), strategy);
     writer.open();
   }
 

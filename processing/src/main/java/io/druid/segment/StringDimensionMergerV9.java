@@ -32,7 +32,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.output.OutputMedium;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
@@ -82,7 +82,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
   private boolean convertMissingValues = false;
   private boolean hasNull = false;
   private MutableBitmap nullRowsBitmap;
-  private final OutputMedium outputMedium;
+  private final SegmentWriteOutMedium segmentWriteOutMedium;
   private int rowCount = 0;
   private ColumnCapabilities capabilities;
   private List<IndexableAdapter> adapters;
@@ -93,7 +93,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
   public StringDimensionMergerV9(
       String dimensionName,
       IndexSpec indexSpec,
-      OutputMedium outputMedium,
+      SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress
   )
@@ -101,7 +101,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     this.dimensionName = dimensionName;
     this.indexSpec = indexSpec;
     this.capabilities = capabilities;
-    this.outputMedium = outputMedium;
+    this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.progress = progress;
     nullRowsBitmap = indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap();
   }
@@ -152,7 +152,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     }
 
     String dictFilename = StringUtils.format("%s.dim_values", dimensionName);
-    dictionaryWriter = new GenericIndexedWriter<>(outputMedium, dictFilename, GenericIndexed.STRING_STRATEGY);
+    dictionaryWriter = new GenericIndexedWriter<>(segmentWriteOutMedium, dictFilename, GenericIndexed.STRING_STRATEGY);
     firstDictionaryValue = null;
     dictionarySize = 0;
     dictionaryWriter.open();
@@ -202,24 +202,24 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     if (capabilities.hasMultipleValues()) {
       if (compressionStrategy != CompressionStrategy.UNCOMPRESSED) {
         encodedValueWriter = CompressedVSizeIndexedV3Writer.create(
-            outputMedium,
+            segmentWriteOutMedium,
             filenameBase,
             cardinality,
             compressionStrategy
         );
       } else {
-        encodedValueWriter = new VSizeIndexedWriter(outputMedium, cardinality);
+        encodedValueWriter = new VSizeIndexedWriter(segmentWriteOutMedium, cardinality);
       }
     } else {
       if (compressionStrategy != CompressionStrategy.UNCOMPRESSED) {
         encodedValueWriter = CompressedVSizeIntsIndexedWriter.create(
-            outputMedium,
+            segmentWriteOutMedium,
             filenameBase,
             cardinality,
             compressionStrategy
         );
       } else {
-        encodedValueWriter = new VSizeIndexedIntsWriter(outputMedium, cardinality);
+        encodedValueWriter = new VSizeIndexedIntsWriter(segmentWriteOutMedium, cardinality);
       }
     }
     encodedValueWriter.open();
@@ -279,7 +279,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
 
     String bmpFilename = StringUtils.format("%s.inverted", dimensionName);
     bitmapWriter = new GenericIndexedWriter<>(
-        outputMedium,
+        segmentWriteOutMedium,
         bmpFilename,
         indexSpec.getBitmapSerdeFactory().getObjectStrategy()
     );
@@ -291,7 +291,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     boolean hasSpatial = capabilities.hasSpatialIndexes();
     if (hasSpatial) {
       spatialWriter = new ByteBufferWriter<>(
-          outputMedium,
+          segmentWriteOutMedium,
           new IndexedRTree.ImmutableRTreeObjectStrategy(bitmapFactory)
       );
       spatialWriter.open();

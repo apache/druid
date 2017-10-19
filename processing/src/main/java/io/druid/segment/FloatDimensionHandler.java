@@ -19,7 +19,7 @@
 
 package io.druid.segment;
 
-import io.druid.output.OutputMedium;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.FloatColumn;
@@ -53,7 +53,7 @@ public class FloatDimensionHandler implements DimensionHandler<Float, Float, Flo
   @Override
   public DimensionMergerV9<Float> makeMerger(
       IndexSpec indexSpec,
-      OutputMedium outputMedium,
+      SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress
   ) throws IOException
@@ -61,7 +61,7 @@ public class FloatDimensionHandler implements DimensionHandler<Float, Float, Flo
     return new FloatDimensionMergerV9(
         dimensionName,
         indexSpec,
-        outputMedium,
+        segmentWriteOutMedium,
         capabilities,
         progress
     );

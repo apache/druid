@@ -20,7 +20,7 @@
 package io.druid.segment;
 
 import io.druid.java.util.common.io.Closer;
-import io.druid.output.OutputMedium;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
@@ -42,7 +42,7 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
   public DoubleDimensionMergerV9(
       String dimensionName,
       IndexSpec indexSpec,
-      OutputMedium outputMedium,
+      SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress
   )
@@ -53,17 +53,17 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
     this.progress = progress;
 
     try {
-      setupEncodedValueWriter(outputMedium);
+      setupEncodedValueWriter(segmentWriteOutMedium);
     }
     catch (IOException ioe) {
       throw new RuntimeException(ioe);
     }
   }
 
-  private void setupEncodedValueWriter(OutputMedium outputMedium) throws IOException
+  private void setupEncodedValueWriter(SegmentWriteOutMedium segmentWriteOutMedium) throws IOException
   {
     final CompressionStrategy metCompression = indexSpec.getMetricCompression();
-    this.serializer = DoubleColumnSerializer.create(outputMedium, dimensionName, metCompression);
+    this.serializer = DoubleColumnSerializer.create(segmentWriteOutMedium, dimensionName, metCompression);
     serializer.open();
   }
 
