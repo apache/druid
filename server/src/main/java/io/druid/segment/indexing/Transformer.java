@@ -189,14 +189,5 @@ public class Transformer
     {
       return row.compareTo(o);
     }
-
-    private Object getValueFromRow(final String column)
-    {
-      if (column.equals(Column.TIME_COLUMN_NAME)) {
-        return row.getTimestampFromEpoch();
-      } else {
-        return row.getRaw(column);
-      }
-    }
   }
 }
