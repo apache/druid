@@ -50,7 +50,6 @@ import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
-import it.unimi.dsi.fastutil.ints.AbstractIntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterable;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntList;
@@ -385,7 +384,7 @@ public class Filters
       @Override
       public IntIterator iterator()
       {
-        return new AbstractIntIterator()
+        return new IntIterator()
         {
           private final int bitmapIndexCardinality = bitmapIndex.getCardinality();
           private int nextIndex = 0;
