@@ -75,7 +75,7 @@ public class ParametrizedUriEmitterModule implements Module
         FeedDefiningMonitor.DEFAULT_METRICS_FEED,
         emitter
     );
-    emitterMonitorProvider.setEmitterMontor(emitterMonitor);
+    emitterMonitorProvider.setEmitterMonitor(emitterMonitor);
     return emitter;
   }
 }

@@ -27,16 +27,16 @@ import javax.annotation.Nullable;
 @LazySingleton
 public class EmitterMonitorProvider
 {
-  private Monitor emitterMontor;
+  private Monitor emitterMonitor;
 
-  public void setEmitterMontor(Monitor emitterMontor)
+  public void setEmitterMonitor(Monitor emitterMonitor)
   {
-    this.emitterMontor = emitterMontor;
+    this.emitterMonitor = emitterMonitor;
   }
 
   @Nullable
-  public Monitor getEmitterMontor()
+  public Monitor getEmitterMonitor()
   {
-    return emitterMontor;
+    return emitterMonitor;
   }
 }

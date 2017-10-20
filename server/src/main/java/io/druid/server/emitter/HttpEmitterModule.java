@@ -97,7 +97,7 @@ public class HttpEmitterModule implements Module
         emitter,
         ImmutableMap.of()
     );
-    emitterMonitorProvider.setEmitterMontor(emitterMonitor);
+    emitterMonitorProvider.setEmitterMonitor(emitterMonitor);
     return emitter;
   }
 }

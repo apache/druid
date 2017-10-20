@@ -98,7 +98,7 @@ public class MetricsModule implements Module
 
       monitors.add(monitor);
     }
-    Monitor emitterMontor = emitterMonitorProvider.getEmitterMontor();
+    Monitor emitterMontor = emitterMonitorProvider.getEmitterMonitor();
     if (emitterMontor != null) {
       monitors.add(emitterMontor);
     }
