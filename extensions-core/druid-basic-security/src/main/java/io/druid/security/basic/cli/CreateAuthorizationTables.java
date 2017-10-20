@@ -19,7 +19,6 @@
 
 package io.druid.security.basic.cli;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -144,7 +143,6 @@ public class CreateAuthorizationTables extends GuiceRunnable
     ObjectMapper jsonMapper = injector.getInstance(ObjectMapper.class);
 
     dbConnector.createUserTable();
-    dbConnector.createAuthenticationToAuthorizationNameMappingTable();
     dbConnector.createRoleTable();
     dbConnector.createPermissionTable();
     dbConnector.createUserRoleTable();
@@ -205,18 +203,10 @@ public class CreateAuthorizationTables extends GuiceRunnable
     List<ResourceAction> resActs = Lists.newArrayList(datasourceR, datasourceW, configR, configW, stateR, stateW);
 
     for (ResourceAction resAct : resActs) {
-      try {
-        byte[] serializedPermission = jsonMapper.writeValueAsBytes(resAct);
-        dbConnector.addPermission(systemRole, serializedPermission, null);
-      }
-      catch (JsonProcessingException jpe) {
-        log.error("WTF? Couldn't serialize internal druid system permission.");
-      }
+      dbConnector.addPermission(systemRole, resAct);
     }
 
     dbConnector.setUserCredentials(systemUser, systemPassword.toCharArray());
-
-    dbConnector.createAuthenticationToAuthorizationNameMapping(systemUser, systemUser);
   }
 
   private void setupDefaultAdmin(BasicSecurityStorageConnector dbConnector, ObjectMapper jsonMapper)
@@ -270,17 +260,9 @@ public class CreateAuthorizationTables extends GuiceRunnable
     List<ResourceAction> resActs = Lists.newArrayList(datasourceR, datasourceW, configR, configW, stateR, stateW);
 
     for (ResourceAction resAct : resActs) {
-      try {
-        byte[] serializedPermission = jsonMapper.writeValueAsBytes(resAct);
-        dbConnector.addPermission(adminRole, serializedPermission, null);
-      }
-      catch (JsonProcessingException jpe) {
-        log.error("WTF? Couldn't serialize default admin permission.");
-      }
+      dbConnector.addPermission(adminRole, resAct);
     }
 
     dbConnector.setUserCredentials(adminUser, adminPassword.toCharArray());
-
-    dbConnector.createAuthenticationToAuthorizationNameMapping(adminUser, adminUser);
   }
 }

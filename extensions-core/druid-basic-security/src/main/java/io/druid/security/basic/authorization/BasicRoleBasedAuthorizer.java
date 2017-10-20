@@ -21,9 +21,8 @@ package io.druid.security.basic.authorization;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.common.IAE;
 import io.druid.security.basic.db.BasicSecurityStorageConnector;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
@@ -40,21 +39,14 @@ import java.util.regex.Pattern;
 @JsonTypeName("basic")
 public class BasicRoleBasedAuthorizer implements Authorizer
 {
-  private static final Logger log = new Logger(BasicRoleBasedAuthorizer.class);
-
   private final BasicSecurityStorageConnector dbConnector;
-
-  @JsonProperty
-  private final boolean remapAuthNames;
 
   @JsonCreator
   public BasicRoleBasedAuthorizer(
-      @JacksonInject BasicSecurityStorageConnector dbConnector,
-      @JsonProperty("remapAuthNames") Boolean remapAuthNames
+      @JacksonInject BasicSecurityStorageConnector dbConnector
   )
   {
     this.dbConnector = dbConnector;
-    this.remapAuthNames = remapAuthNames == null ? false : remapAuthNames;
   }
 
   @Override
@@ -63,24 +55,10 @@ public class BasicRoleBasedAuthorizer implements Authorizer
   )
   {
     if (authenticationResult == null) {
-      return new Access(false);
+      throw new IAE("WTF? authenticationResult should never be null.");
     }
 
-    String identity = null;
-    if (remapAuthNames) {
-      String authorizationName = dbConnector.getAuthorizationNameFromAuthenticationName(
-          authenticationResult.getIdentity()
-      );
-      if (authorizationName == null) {
-        return new Access(false);
-      } else {
-        identity = authorizationName;
-      }
-    } else {
-      identity = authenticationResult.getIdentity();
-    }
-
-    List<Map<String, Object>> permissions = dbConnector.getPermissionsForUser(identity);
+    List<Map<String, Object>> permissions = dbConnector.getPermissionsForUser(authenticationResult.getIdentity());
 
     // maybe optimize this later
     for (Map<String, Object> permission : permissions) {

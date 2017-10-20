@@ -39,7 +39,6 @@ public class MySQLBasicSecurityStorageConnector extends SQLBasicSecurityStorageC
   private static final Logger log = new Logger(MySQLBasicSecurityStorageConnector.class);
 
   private final DBI dbi;
-  private static final String QUOTE_STRING = "`";
 
   @Inject
   public MySQLBasicSecurityStorageConnector(
@@ -159,12 +158,6 @@ public class MySQLBasicSecurityStorageConnector extends SQLBasicSecurityStorageC
                   .bind("tableName", tableName)
                   .list()
                   .isEmpty();
-  }
-
-  @Override
-  public String getQuoteString()
-  {
-    return QUOTE_STRING;
   }
 
   @Override

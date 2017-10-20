@@ -17,27 +17,11 @@
  * under the License.
  */
 
-package io.druid.security.basic;
+package io.druid.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Binder;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.Module;
-import com.google.inject.Provides;
-import io.druid.guice.ConfigModule;
-import io.druid.guice.DruidGuiceExtensions;
-import io.druid.guice.JsonConfigProvider;
-import io.druid.guice.LazySingleton;
-import io.druid.guice.PropertiesModule;
-import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.StringUtils;
+import io.druid.security.basic.BasicAuthUtils;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.Properties;
 
 public class BasicAuthUtilsTest
 {

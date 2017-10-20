@@ -37,6 +37,10 @@ import java.util.List;
 
 public class BasicSecurityResourceFilter extends AbstractResourceFilter
 {
+  private static final List<String> applicablePaths = ImmutableList.of(
+      "druid/coordinator/v1/security/"
+  );
+
   @Inject
   public BasicSecurityResourceFilter(
       AuthorizerMapper authorizerMapper
@@ -73,7 +77,6 @@ public class BasicSecurityResourceFilter extends AbstractResourceFilter
   @Override
   public boolean isApplicable(String requestPath)
   {
-    List<String> applicablePaths = ImmutableList.of("druid/coordinator/v1/security/");
     for (String path : applicablePaths) {
       if (requestPath.startsWith(path) && !requestPath.equals(path)) {
         return true;

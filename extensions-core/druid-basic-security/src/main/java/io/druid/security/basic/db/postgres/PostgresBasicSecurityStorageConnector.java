@@ -37,11 +37,6 @@ public class PostgresBasicSecurityStorageConnector extends SQLBasicSecurityStora
 {
   private static final Logger log = new Logger(PostgresBasicSecurityStorageConnector.class);
 
-  private static final String PAYLOAD_TYPE = "BYTEA";
-  private static final String SERIAL_TYPE = "BIGSERIAL";
-  private static final String QUOTE_STRING = "\\\"";
-  public static final int DEFAULT_STREAMING_RESULT_SIZE = 100;
-
   private final DBI dbi;
 
   @Inject
@@ -78,21 +73,9 @@ public class PostgresBasicSecurityStorageConnector extends SQLBasicSecurityStora
   }
 
   @Override
-  public String getQuoteString()
-  {
-    return QUOTE_STRING;
-  }
-
-  @Override
   public DBI getDBI()
   {
     return dbi;
-  }
-
-  @Override
-  protected String getPayloadType()
-  {
-    return PAYLOAD_TYPE;
   }
 
   @Override

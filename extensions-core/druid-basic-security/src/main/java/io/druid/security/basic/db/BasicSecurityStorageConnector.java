@@ -19,9 +19,14 @@
 
 package io.druid.security.basic.db;
 
+import io.druid.server.security.ResourceAction;
+
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Interface for classes that provide access to a database that contains user/role/permission/credential information.
+ */
 public interface BasicSecurityStorageConnector
 {
   void createUser(String userName);
@@ -32,7 +37,7 @@ public interface BasicSecurityStorageConnector
 
   void deleteRole(String roleName);
 
-  void addPermission(String roleName, byte[] serializedResourceIdentifier, String action);
+  void addPermission(String roleName, ResourceAction resourceAction);
 
   void deleteAllPermissionsFromRole(String roleName);
 
@@ -68,17 +73,7 @@ public interface BasicSecurityStorageConnector
 
   void createUserCredentialsTable();
 
-  void createAuthenticationToAuthorizationNameMappingTable();
-
   void deleteAllRecords(String tableName);
-
-
-  void createAuthenticationToAuthorizationNameMapping(String authenticationName, String authorizationName);
-
-  String getAuthorizationNameFromAuthenticationName(String authenticationName);
-
-  void deleteAuthenticationToAuthorizationNameMapping(String authenticationName);
-
 
   void setUserCredentials(String userName, char[] password);
 

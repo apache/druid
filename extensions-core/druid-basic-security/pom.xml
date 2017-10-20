@@ -50,12 +50,12 @@
     <dependency>
       <groupId>mysql</groupId>
       <artifactId>mysql-connector-java</artifactId>
-      <version>5.1.38</version>
+      <version>${mysql.version}</version>
     </dependency>
     <dependency>
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
-      <version>9.4.1208.jre7</version>
+      <version>${postgresql.version}</version>
     </dependency>
     <dependency>
       <groupId>org.jdbi</groupId>

@@ -19,15 +19,12 @@
 
 package io.druid.security.basic;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
-import io.druid.guice.annotations.Json;
-import io.druid.java.util.common.StringUtils;
 import io.druid.security.basic.db.BasicSecurityStorageConnector;
 import io.druid.server.security.ResourceAction;
+import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -43,22 +40,27 @@ import javax.ws.rs.core.Response;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Configuration resource for users, roles, and permissions.
+ */
 @Path("/druid/coordinator/v1/security")
 public class BasicSecurityResource
 {
   private final BasicSecurityStorageConnector dbConnector;
-  private final ObjectMapper jsonMapper;
 
   @Inject
   public BasicSecurityResource(
-      @Json ObjectMapper jsonMapper,
       BasicSecurityStorageConnector dbConnector
   )
   {
-    this.jsonMapper = jsonMapper;
     this.dbConnector = dbConnector;
   }
 
+  /**
+   * @param req HTTP request
+   *
+   * @return List of all users
+   */
   @GET
   @Path("/users")
   @Produces(MediaType.APPLICATION_JSON)
@@ -72,6 +74,12 @@ public class BasicSecurityResource
     return Response.ok(users).build();
   }
 
+  /**
+   * @param req      HTTP request
+   * @param userName Name of user to retrieve information about
+   *
+   * @return Name, roles, and permissions of the user with userName, 400 error response if user doesn't exist
+   */
   @GET
   @Path("/users/{userName}")
   @Produces(MediaType.APPLICATION_JSON)
@@ -82,19 +90,32 @@ public class BasicSecurityResource
       @PathParam("userName") final String userName
   )
   {
-    Map<String, Object> user = dbConnector.getUser(userName);
-    List<Map<String, Object>> roles = dbConnector.getRolesForUser(userName);
-    List<Map<String, Object>> permissions = dbConnector.getPermissionsForUser(userName);
+    try {
+      Map<String, Object> user = dbConnector.getUser(userName);
+      List<Map<String, Object>> roles = dbConnector.getRolesForUser(userName);
+      List<Map<String, Object>> permissions = dbConnector.getPermissionsForUser(userName);
 
-    Map<String, Object> userInfo = ImmutableMap.of(
-        "user", user,
-        "roles", roles,
-        "permissions", permissions
-    );
+      Map<String, Object> userInfo = ImmutableMap.of(
+          "user", user,
+          "roles", roles,
+          "permissions", permissions
+      );
 
-    return Response.ok(userInfo).build();
+      return Response.ok(userInfo).build();
+    }
+    catch (CallbackFailedException cfe) {
+      return makeResponseForCallbackFailedException(cfe);
+    }
   }
 
+  /**
+   * Create a new user with name userName
+   *
+   * @param req      HTTP request
+   * @param userName Name to assign the new user
+   *
+   * @return OK response, or 400 error response if user already exists
+   */
   @POST
   @Path("/users/{userName}")
   @Produces(MediaType.APPLICATION_JSON)
@@ -105,10 +126,24 @@ public class BasicSecurityResource
       @PathParam("userName") String userName
   )
   {
-    dbConnector.createUser(userName);
-    return Response.ok().build();
+
+    try {
+      dbConnector.createUser(userName);
+      return Response.ok().build();
+    }
+    catch (CallbackFailedException cfe) {
+      return makeResponseForCallbackFailedException(cfe);
+    }
   }
 
+  /**
+   * Delete a user
+   *
+   * @param req      HTTP request
+   * @param userName Name of user to delete
+   *
+   * @return OK response, or 400 error response if user doesn't exist
+   */
   @DELETE
   @Path("/users/{userName}")
   @Produces(MediaType.APPLICATION_JSON)
@@ -119,18 +154,23 @@ public class BasicSecurityResource
       @PathParam("userName") String userName
   )
   {
-    Map<String, Object> dbUser = dbConnector.getUser(userName);
-    if (dbUser == null) {
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(ImmutableMap.<String, Object>of("error", StringUtils.format("user [%s] not found", userName)))
-                     .build();
+    try {
+      dbConnector.deleteUser(userName);
+      return Response.ok().build();
     }
-
-    dbConnector.deleteUser(userName);
-
-    return Response.ok().build();
+    catch (CallbackFailedException cfe) {
+      return makeResponseForCallbackFailedException(cfe);
+    }
   }
 
+  /**
+   * Get credential information of user
+   *
+   * @param req      HTTP request
+   * @param userName Name of user
+   *
+   * @return salt, hash, and number of iterations for this user's credentials, 400 error if user doesn't exist
+   */
   @GET
   @Path("/credentials/{userName}")
   @Produces(MediaType.APPLICATION_JSON)
@@ -141,10 +181,24 @@ public class BasicSecurityResource
       @PathParam("userName") final String userName
   )
   {
-    Map<String, Object> credentials = dbConnector.getUserCredentials(userName);
-    return Response.ok(credentials).build();
+    try {
+      Map<String, Object> credentials = dbConnector.getUserCredentials(userName);
+      return Response.ok(credentials).build();
+    }
+    catch (CallbackFailedException cfe) {
+      return makeResponseForCallbackFailedException(cfe);
+    }
   }
 
+  /**
+   * Assign credentials for a user
+   *
+   * @param req      HTTP request
+   * @param userName Name of user
+   * @param password Password to assign
+   *
+   * @return OK response, 400 error if user doesn't exist
+   */
   @POST
   @Path("/credentials/{userName}")
   @Produces(MediaType.APPLICATION_JSON)
@@ -156,17 +210,20 @@ public class BasicSecurityResource
       String password
   )
   {
-    Map<String, Object> dbUser = dbConnector.getUser(userName);
-    if (dbUser == null) {
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(ImmutableMap.<String, Object>of("error", StringUtils.format("user [%s] not found", userName)))
-                     .build();
+    try {
+      dbConnector.setUserCredentials(userName, password.toCharArray());
+      return Response.ok().build();
     }
-
-    dbConnector.setUserCredentials(userName, password.toCharArray());
-    return Response.ok().build();
+    catch (CallbackFailedException cfe) {
+      return makeResponseForCallbackFailedException(cfe);
+    }
   }
 
+  /**
+   * @param req HTTP request
+   *
+   * @return List of all roles
+   */
   @GET
   @Path("/roles")
   @Produces(MediaType.APPLICATION_JSON)
@@ -180,6 +237,14 @@ public class BasicSecurityResource
     return Response.ok(roles).build();
   }
 
+  /**
+   * Get info about a role
+   *
+   * @param req      HTTP request
+   * @param roleName Name of role
+   *
+   * @return Role name, users with role, and permissions of role. 400 error if role doesn't exist.
+   */
   @GET
   @Path("/roles/{roleName}")
   @Produces(MediaType.APPLICATION_JSON)
@@ -190,19 +255,32 @@ public class BasicSecurityResource
       @PathParam("roleName") final String roleName
   )
   {
-    Map<String, Object> role = dbConnector.getRole(roleName);
-    List<Map<String, Object>> users = dbConnector.getUsersWithRole(roleName);
-    List<Map<String, Object>> permissions = dbConnector.getPermissionsForRole(roleName);
+    try {
+      Map<String, Object> role = dbConnector.getRole(roleName);
+      List<Map<String, Object>> users = dbConnector.getUsersWithRole(roleName);
+      List<Map<String, Object>> permissions = dbConnector.getPermissionsForRole(roleName);
 
-    Map<String, Object> roleInfo = ImmutableMap.of(
-        "role", role,
-        "users", users,
-        "permissions", permissions
-    );
+      Map<String, Object> roleInfo = ImmutableMap.of(
+          "role", role,
+          "users", users,
+          "permissions", permissions
+      );
 
-    return Response.ok(roleInfo).build();
+      return Response.ok(roleInfo).build();
+    }
+    catch (CallbackFailedException cfe) {
+      return makeResponseForCallbackFailedException(cfe);
+    }
   }
 
+  /**
+   * Create a new role.
+   *
+   * @param req      HTTP request
+   * @param roleName Name of role
+   *
+   * @return OK response, 400 error if role already exists
+   */
   @POST
   @Path("/roles/{roleName}")
   @Produces(MediaType.APPLICATION_JSON)
@@ -213,10 +291,23 @@ public class BasicSecurityResource
       @PathParam("roleName") final String roleName
   )
   {
-    dbConnector.createRole(roleName);
-    return Response.ok().build();
+    try {
+      dbConnector.createRole(roleName);
+      return Response.ok().build();
+    }
+    catch (CallbackFailedException cfe) {
+      return makeResponseForCallbackFailedException(cfe);
+    }
   }
 
+  /**
+   * Delete a role.
+   *
+   * @param req      HTTP request
+   * @param roleName Name of role
+   *
+   * @return OK response, 400 error if role doesn't exist.
+   */
   @DELETE
   @Path("/roles/{roleName}")
   @Produces(MediaType.APPLICATION_JSON)
@@ -227,19 +318,24 @@ public class BasicSecurityResource
       @PathParam("roleName") String roleName
   )
   {
-    Map<String, Object> dbRole = dbConnector.getRole(roleName);
-    if (dbRole == null) {
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(ImmutableMap.<String, Object>of("error", StringUtils.format("role [%s] not found", roleName)))
-                     .build();
+    try {
+      dbConnector.deleteRole(roleName);
+      return Response.ok().build();
     }
-
-    dbConnector.deleteRole(roleName);
-
-    return Response.ok().build();
+    catch (CallbackFailedException cfe) {
+      return makeResponseForCallbackFailedException(cfe);
+    }
   }
 
-
+  /**
+   * Assign a role to a user.
+   *
+   * @param req      HTTP request
+   * @param userName Name of user
+   * @param roleName Name of role
+   *
+   * @return OK response. 400 error if user/role don't exist, or if user already has the role
+   */
   @POST
   @Path("/users/{userName}/roles/{roleName}")
   @Produces(MediaType.APPLICATION_JSON)
@@ -251,10 +347,24 @@ public class BasicSecurityResource
       @PathParam("roleName") String roleName
   )
   {
-    dbConnector.assignRole(userName, roleName);
-    return Response.ok().build();
+    try {
+      dbConnector.assignRole(userName, roleName);
+      return Response.ok().build();
+    }
+    catch (CallbackFailedException cfe) {
+      return makeResponseForCallbackFailedException(cfe);
+    }
   }
 
+  /**
+   * Remove a role from a user.
+   *
+   * @param req      HTTP request
+   * @param userName Name of user
+   * @param roleName Name of role
+   *
+   * @return OK response. 400 error if user/role don't exist, or if user does not have the role.
+   */
   @DELETE
   @Path("/users/{userName}/roles/{roleName}")
   @Produces(MediaType.APPLICATION_JSON)
@@ -266,10 +376,24 @@ public class BasicSecurityResource
       @PathParam("roleName") String roleName
   )
   {
-    dbConnector.unassignRole(userName, roleName);
-    return Response.ok().build();
+    try {
+      dbConnector.unassignRole(userName, roleName);
+      return Response.ok().build();
+    }
+    catch (CallbackFailedException cfe) {
+      return makeResponseForCallbackFailedException(cfe);
+    }
   }
 
+  /**
+   * Add permissions to a role.
+   *
+   * @param req             HTTP request
+   * @param roleName        Name of role
+   * @param resourceActions Permissions to add
+   *
+   * @return OK response. 400 error if role doesn't exist.
+   */
   @POST
   @Path("/roles/{roleName}/permissions")
   @Produces(MediaType.APPLICATION_JSON)
@@ -281,92 +405,56 @@ public class BasicSecurityResource
       List<ResourceAction> resourceActions
   )
   {
-    Map<String, Object> dbRole = dbConnector.getRole(roleName);
-    if (dbRole == null) {
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(ImmutableMap.<String, Object>of(
-                         "error",
-                         StringUtils.format("role does not exist: %s", roleName)
-                     ))
-                     .build();
-    }
-
-    for (ResourceAction resourceAction : resourceActions) {
-      try {
-        final byte[] serializedPermission = jsonMapper.writeValueAsBytes(resourceAction);
-        dbConnector.addPermission(roleName, serializedPermission, "a");
+    try {
+      for (ResourceAction resourceAction : resourceActions) {
+        dbConnector.addPermission(roleName, resourceAction);
       }
-      catch (JsonProcessingException jpe) {
-        return Response.status(Response.Status.BAD_REQUEST)
-                       .entity(ImmutableMap.<String, Object>of(
-                           "error",
-                           StringUtils.format(
-                               "cannot serialize permission: %s",
-                               resourceAction
-                           )
-                       ))
-                       .build();
-      }
-    }
 
-    return Response.ok().build();
+      return Response.ok().build();
+    }
+    catch (CallbackFailedException cfe) {
+      return makeResponseForCallbackFailedException(cfe);
+    }
   }
 
+  /**
+   * Delete a permission.
+   *
+   * @param req    HTTP request
+   * @param permId ID of permission to delete
+   *
+   * @return OK response. 400 error if permission doesn't exist.
+   */
   @DELETE
   @Path("/permissions/{permId}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
-  public Response removePermissionFromRole(
+  public Response deletePermission(
       @Context HttpServletRequest req,
-      @PathParam("roleName") String roleName,
       @PathParam("permId") Integer permId
   )
   {
-    dbConnector.deletePermission(permId);
-    return Response.ok().build();
+    try {
+      dbConnector.deletePermission(permId);
+      return Response.ok().build();
+    }
+    catch (CallbackFailedException cfe) {
+      return makeResponseForCallbackFailedException(cfe);
+    }
   }
 
-  @GET
-  @Path("/authenticationMappings/{authenticationName}")
-  @Produces(MediaType.APPLICATION_JSON)
-  @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
-  public Response getAuthenticationMapping(
-      @Context HttpServletRequest req,
-      @PathParam("authenticationName") String authenticationName
-  )
+  private static Response makeResponseForCallbackFailedException(CallbackFailedException cfe)
   {
-    String authorizationName = dbConnector.getAuthorizationNameFromAuthenticationName(authenticationName);
-    return Response.ok(authorizationName).build();
-  }
-
-  @POST
-  @Path("/authenticationMappings/{authenticationName}")
-  @Produces(MediaType.APPLICATION_JSON)
-  @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
-  public Response setAuthenticationMapping(
-      @Context HttpServletRequest req,
-      @PathParam("authenticationName") String authenticationName,
-      String authorizationName
-  )
-  {
-    dbConnector.createAuthenticationToAuthorizationNameMapping(authenticationName, authorizationName);
-    return Response.ok().build();
-  }
-
-  @DELETE
-  @Path("/authenticationMappings/{authenticationName}")
-  @Produces(MediaType.APPLICATION_JSON)
-  @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
-  public Response deleteAuthenticationMapping(
-      @Context HttpServletRequest req,
-      @PathParam("authenticationName") String authenticationName
-  )
-  {
-    dbConnector.deleteAuthenticationToAuthorizationNameMapping(authenticationName);
-    return Response.ok().build();
+    Throwable cause = cfe.getCause();
+    if (cause instanceof BasicSecurityDBResourceException) {
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity(ImmutableMap.<String, Object>of(
+                         "error", cause.getMessage()
+                     ))
+                     .build();
+    } else {
+      throw cfe;
+    }
   }
 }

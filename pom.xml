@@ -80,6 +80,8 @@
         Need to update Druid to use Jackson 2.6+ -->
         <aws.sdk.version>1.10.77</aws.sdk.version>
         <caffeine.version>2.5.5</caffeine.version>
+        <mysql.version>5.1.38</mysql.version>
+        <postgresql.version>9.4.1208.jre7</postgresql.version>
     </properties>
 
     <modules>

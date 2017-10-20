@@ -27,6 +27,7 @@ import io.druid.guice.ManageLifecycle;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.metadata.MetadataStorage;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.security.basic.BasicAuthConfig;
 import io.druid.security.basic.db.SQLBasicSecurityStorageConnector;
@@ -40,11 +41,11 @@ public class DerbySQLBasicSecurityStorageConnector extends SQLBasicSecurityStora
   private static final Logger log = new Logger(DerbySQLBasicSecurityStorageConnector.class);
 
   private final DBI dbi;
-  private final DerbyAuthorizationStorage storage;
-  private static final String QUOTE_STRING = "\\\"";
+  private final MetadataStorage storage;
 
   @Inject
   public DerbySQLBasicSecurityStorageConnector(
+      MetadataStorage storage,
       Supplier<MetadataStorageConnectorConfig> config,
       Supplier<BasicAuthConfig> basicAuthConfigSupplier,
       ObjectMapper jsonMapper
@@ -57,9 +58,23 @@ public class DerbySQLBasicSecurityStorageConnector extends SQLBasicSecurityStora
     datasource.setDriverClassName("org.apache.derby.jdbc.ClientDriver");
 
     this.dbi = new DBI(datasource);
-    this.storage = new DerbyAuthorizationStorage(config.get());
-    log.info("Derby connector instantiated with auth storage [%s].", this.storage.getClass().getName());
+    this.storage = storage;
+    log.info("Derby connector instantiated with metadata storage [%s].", this.storage.getClass().getName());
   }
+
+  public DerbySQLBasicSecurityStorageConnector(
+      MetadataStorage storage,
+      Supplier<MetadataStorageConnectorConfig> config,
+      Supplier<BasicAuthConfig> basicAuthConfigSupplier,
+      ObjectMapper jsonMapper,
+      DBI dbi
+  )
+  {
+    super(config, basicAuthConfigSupplier, jsonMapper);
+    this.dbi = dbi;
+    this.storage = storage;
+  }
+
 
   @Override
   @LifecycleStart
@@ -158,12 +173,6 @@ public class DerbySQLBasicSecurityStorageConnector extends SQLBasicSecurityStora
   public String getValidationQuery()
   {
     return "VALUES 1";
-  }
-
-  @Override
-  public String getQuoteString()
-  {
-    return QUOTE_STRING;
   }
 
   @Override

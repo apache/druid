@@ -2,7 +2,7 @@
 layout: doc_page
 ---
 
-# Druid-Basic-Security
+# Druid Basic Security
 
 This extension adds:
 - an Authenticator which supports [HTTP Basic authentication](https://en.wikipedia.org/wiki/Basic_access_authentication)
