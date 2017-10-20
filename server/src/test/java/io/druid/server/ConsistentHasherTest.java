@@ -165,7 +165,7 @@ public class ConsistentHasherTest
     nodes2.add("localhost:4");
     nodes2.add("localhost:5");
 
-    testInconsistentViewHelper("testInconsistentView1", nodes, nodes2, 0.3);
+    testInconsistentViewHelper("testInconsistentView1", nodes, nodes2, 0.33);
   }
 
   @Test
@@ -183,7 +183,7 @@ public class ConsistentHasherTest
     nodes2.add("localhost:4");
     nodes2.add("localhost:5");
 
-    testInconsistentViewHelper("testInconsistentView2", nodes, nodes2, 0.45);
+    testInconsistentViewHelper("testInconsistentView2", nodes, nodes2, 0.50);
   }
 
   @Test
@@ -199,7 +199,7 @@ public class ConsistentHasherTest
     nodes2.add("localhost:4");
     nodes2.add("localhost:5");
 
-    testInconsistentViewHelper("testInconsistentView3", nodes, nodes2, 0.6);
+    testInconsistentViewHelper("testInconsistentView3", nodes, nodes2, 0.66);
   }
 
   @Test
@@ -214,7 +214,7 @@ public class ConsistentHasherTest
     nodes2.add("localhost:4");
     nodes2.add("localhost:5");
 
-    testInconsistentViewHelper("testInconsistentView4", nodes, nodes2, 0.85);
+    testInconsistentViewHelper("testInconsistentView4", nodes, nodes2, 0.95);
   }
 
   public void testInconsistentViewHelper(

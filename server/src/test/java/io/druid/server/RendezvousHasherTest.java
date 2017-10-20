@@ -155,7 +155,7 @@ public class RendezvousHasherTest
     nodes2.add("localhost:4");
     nodes2.add("localhost:5");
 
-    testInconsistentViewHelper("testInconsistentView1", nodes, nodes2, 0.25);
+    testInconsistentViewHelper("testInconsistentView1", nodes, nodes2, 0.33);
   }
 
   @Test
@@ -173,7 +173,7 @@ public class RendezvousHasherTest
     nodes2.add("localhost:4");
     nodes2.add("localhost:5");
 
-    testInconsistentViewHelper("testInconsistentView2", nodes, nodes2, 0.5);
+    testInconsistentViewHelper("testInconsistentView2", nodes, nodes2, 0.55);
   }
 
   @Test
@@ -189,7 +189,7 @@ public class RendezvousHasherTest
     nodes2.add("localhost:4");
     nodes2.add("localhost:5");
 
-    testInconsistentViewHelper("testInconsistentView3", nodes, nodes2, 0.6);
+    testInconsistentViewHelper("testInconsistentView3", nodes, nodes2, 0.66);
   }
 
   @Test
@@ -204,7 +204,7 @@ public class RendezvousHasherTest
     nodes2.add("localhost:4");
     nodes2.add("localhost:5");
 
-    testInconsistentViewHelper("testInconsistentView4", nodes, nodes2, 0.85);
+    testInconsistentViewHelper("testInconsistentView4", nodes, nodes2, 0.95);
   }
 
   public void testInconsistentViewHelper(
