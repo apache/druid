@@ -23,7 +23,16 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 /**
- * A row transform that is part of a {@link TransformSpec}.
+ * A row transform that is part of a {@link TransformSpec}. Transforms allow adding new fields to input rows. Each
+ * one has a "name" (the name of the new field) which can be referred to by DimensionSpecs, AggregatorFactories, etc.
+ * Each also has a "row function", which produces values for this new field based on looking at the entire input row.
+ *
+ * If a transform has the same name as a field in an input row, then it will shadow the original field. Transforms
+ * that shadow fields may still refer to the fields they shadow. This can be used to transform a field "in-place".
+ *
+ * Transforms do have some limitations. They can only refer to fields present in the actual input rows; in particular,
+ * they cannot refer to other transforms. And they cannot remove fields, only add them. However, they can shadow a
+ * field with another field containing all nulls, which will act similarly to removing the field.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
@@ -32,8 +41,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 public interface Transform
 {
   /**
-   * Returns the column name for this transform. DimensionSpecs, AggregatorFactories, etc, can refer to this transform
-   * by its name.
+   * Returns the field name for this transform.
    */
   String getName();
 

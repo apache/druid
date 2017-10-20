@@ -94,8 +94,34 @@ public class TransformSpecTest
   }
 
   @Test
+  public void testTransformOverwriteField()
+  {
+    // Transforms are allowed to overwrite fields, and to refer to the fields they overwrite; double-check this.
+
+    final TransformSpec transformSpec = new TransformSpec(
+        null,
+        ImmutableList.of(
+            new ExpressionTransform("x", "concat(x,y)", TestExprMacroTable.INSTANCE)
+        )
+    );
+
+    final InputRowParser<Map<String, Object>> parser = transformSpec.decorate(PARSER);
+    final InputRow row = parser.parse(ROW1);
+
+    Assert.assertNotNull(row);
+    Assert.assertEquals(DateTimes.of("2000-01-01").getMillis(), row.getTimestampFromEpoch());
+    Assert.assertEquals(DateTimes.of("2000-01-01"), row.getTimestamp());
+    Assert.assertEquals(ImmutableList.of("f", "x", "y"), row.getDimensions());
+    Assert.assertEquals(ImmutableList.of("foobar"), row.getDimension("x"));
+    Assert.assertEquals(3.0, row.getMetric("b").doubleValue(), 0);
+    Assert.assertNull(row.getRaw("f"));
+  }
+
+  @Test
   public void testFilterOnTransforms()
   {
+    // Filters are allowed to refer to transformed fields; double-check this.
+
     final TransformSpec transformSpec = new TransformSpec(
         new AndDimFilter(
             ImmutableList.of(
