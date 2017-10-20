@@ -76,18 +76,14 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
         if (reportParseExceptions) {
           throw e;
         }
-        if (log.isDebugEnabled()) {
-          log.debug(e, "Ignoring invalid row [%s] due to parsing error", value.toString());
-        }
+        log.debug(e, "Ignoring invalid row [%s] due to parsing error", value);
         context.getCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER).increment(1);
         return; // we're ignoring this invalid row
       }
 
       if (inputRow == null) {
         // Throw away null rows from the parser.
-        if (log.isDebugEnabled()) {
-          log.debug("Throwing away row [%s]", value.toString());
-        }
+        log.debug("Throwing away row [%s]", value);
         return;
       }
 
