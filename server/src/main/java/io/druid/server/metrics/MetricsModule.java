@@ -85,6 +85,9 @@ public class MetricsModule implements Module
       MonitorsConfig monitorsConfig,
       Set<Class<? extends Monitor>> monitorSet,
       ServiceEmitter emitter,
+      // emitterMonitorProvider is guaranteed to be initialized, because ServiceEmitter is injected as the previous
+      // parameter, which depends on Emitter (e. g. HttpPostEmitter or ParametrizedUriEmitter), which initialize
+      // EmitterMonitorProvider in their @Provider methods.
       EmitterMonitorProvider emitterMonitorProvider,
       Injector injector
   )
@@ -98,9 +101,9 @@ public class MetricsModule implements Module
 
       monitors.add(monitor);
     }
-    Monitor emitterMontor = emitterMonitorProvider.getEmitterMonitor();
-    if (emitterMontor != null) {
-      monitors.add(emitterMontor);
+    Monitor emitterMonitor = emitterMonitorProvider.getEmitterMonitor();
+    if (emitterMonitor != null) {
+      monitors.add(emitterMonitor);
     }
 
     return new MonitorScheduler(
