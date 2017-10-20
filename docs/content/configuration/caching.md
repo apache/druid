@@ -78,12 +78,22 @@ Uses memcached as cache backend. This allows all nodes to share the same cache.
 
 |Property|Description|Default|
 |--------|-----------|-------|
+|`druid.cache.mode`| See the description under this table|`READ_AND_WRITE`|
 |`druid.cache.expiration`|Memcached [expiration time](https://code.google.com/p/memcached/wiki/NewCommands#Standard_Protocol).|2592000 (30 days)|
 |`druid.cache.timeout`|Maximum time in milliseconds to wait for a response from Memcached.|500|
 |`druid.cache.hosts`|Comma separated list of Memcached hosts `<host:port>`.|none|
 |`druid.cache.maxObjectSize`|Maximum object size in bytes for a Memcached object.|52428800 (50 MB)|
 |`druid.cache.memcachedPrefix`|Key prefix for all keys in Memcached.|druid|
 |`druid.cache.numConnections`|Number of memcached connections to use.|1|
+
+##### Memcached mode
+
+Possible options:
+
+ - `READ_AND_WRITE` - "normal" cache use; Default mode, both get from and put values into Memcached.
+ - `READ_ONLY` - Get values from Memcached, but never try to put into.
+ - `WRITE_ONLY` - Put values into Memcached, but never try to get from. This mode might be useful on
+historicals, if Memcached is also used on brokers.
 
 
 #### Hybrid

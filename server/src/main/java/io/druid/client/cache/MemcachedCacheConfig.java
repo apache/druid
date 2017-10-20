@@ -26,6 +26,9 @@ import javax.validation.constraints.NotNull;
 
 public class MemcachedCacheConfig
 {
+  @JsonProperty
+  private MemcachedCache.Mode mode = MemcachedCache.Mode.READ_AND_WRITE;
+
   // default to 30 day expiration for cache entries
   // values greater than 30 days are interpreted by memcached as absolute POSIX timestamps instead of duration
   @JsonProperty
@@ -56,6 +59,11 @@ public class MemcachedCacheConfig
   // size of memcached connection pool
   @JsonProperty
   private int numConnections = 1;
+
+  public MemcachedCache.Mode getMode()
+  {
+    return mode;
+  }
 
   public int getExpiration()
   {
