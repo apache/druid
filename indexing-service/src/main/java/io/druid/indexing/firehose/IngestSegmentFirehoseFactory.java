@@ -36,8 +36,8 @@ import io.druid.data.input.impl.InputRowParser;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
+import io.druid.indexing.common.task.CompactionTaskUtils;
 import io.druid.indexing.common.task.NoopTask;
-import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.filter.DimFilter;
 import io.druid.segment.IndexIO;
@@ -47,15 +47,17 @@ import io.druid.segment.realtime.firehose.IngestSegmentFirehose;
 import io.druid.segment.realtime.firehose.WindowedStorageAdapter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
-import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
+import io.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowParser>
 {
@@ -143,14 +145,8 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
           .getTaskActionClient()
           .submit(new SegmentListUsedAction(dataSource, interval, null));
       final Map<DataSegment, File> segmentFileMap = taskToolbox.fetchSegments(usedSegments);
-      VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(
-          Comparators.naturalNullsFirst()
-      );
-
-      for (DataSegment segment : usedSegments) {
-        timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
-      }
-      final List<TimelineObjectHolder<String, DataSegment>> timeLineSegments = timeline.lookup(
+      final List<TimelineObjectHolder<String, DataSegment>> timeLineSegments = CompactionTaskUtils.toTimelineSegments(
+          usedSegments,
           interval
       );
 
@@ -160,83 +156,15 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
       } else if (inputRowParser.getParseSpec().getDimensionsSpec().hasCustomDimensions()) {
         dims = inputRowParser.getParseSpec().getDimensionsSpec().getDimensionNames();
       } else {
-        Set<String> dimSet = Sets.newHashSet(
-            Iterables.concat(
-                Iterables.transform(
-                    timeLineSegments,
-                    new Function<TimelineObjectHolder<String, DataSegment>, Iterable<String>>()
-                    {
-                      @Override
-                      public Iterable<String> apply(
-                          TimelineObjectHolder<String, DataSegment> timelineObjectHolder
-                      )
-                      {
-                        return Iterables.concat(
-                            Iterables.transform(
-                                timelineObjectHolder.getObject(),
-                                new Function<PartitionChunk<DataSegment>, Iterable<String>>()
-                                {
-                                  @Override
-                                  public Iterable<String> apply(PartitionChunk<DataSegment> input)
-                                  {
-                                    return input.getObject().getDimensions();
-                                  }
-                                }
-                            )
-                        );
-                      }
-                    }
-
-                )
-            )
-        );
-        dims = Lists.newArrayList(
-            Sets.difference(
-                dimSet,
-                inputRowParser
-                    .getParseSpec()
-                    .getDimensionsSpec()
-                    .getDimensionExclusions()
-            )
-        );
+        dims = getUniqueDimensions(timeLineSegments, inputRowParser);
       }
 
       final List<String> metricsList;
       if (metrics != null) {
         metricsList = metrics;
       } else {
-        Set<String> metricsSet = Sets.newHashSet(
-            Iterables.concat(
-                Iterables.transform(
-                    timeLineSegments,
-                    new Function<TimelineObjectHolder<String, DataSegment>, Iterable<String>>()
-                    {
-                      @Override
-                      public Iterable<String> apply(
-                          TimelineObjectHolder<String, DataSegment> input
-                      )
-                      {
-                        return Iterables.concat(
-                            Iterables.transform(
-                                input.getObject(),
-                                new Function<PartitionChunk<DataSegment>, Iterable<String>>()
-                                {
-                                  @Override
-                                  public Iterable<String> apply(PartitionChunk<DataSegment> input)
-                                  {
-                                    return input.getObject().getMetrics();
-                                  }
-                                }
-                            )
-                        );
-                      }
-                    }
-                )
-            )
-        );
-        metricsList = Lists.newArrayList(metricsSet);
+        metricsList = getUniqueMetrics(timeLineSegments);
       }
-
 
       final List<WindowedStorageAdapter> adapters = Lists.newArrayList(
           Iterables.concat(
@@ -286,6 +214,50 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
     catch (IOException | SegmentLoadingException e) {
       throw Throwables.propagate(e);
     }
+  }
 
+  public static List<String> getUniqueDimensions(
+      List<TimelineObjectHolder<String, DataSegment>> timelineSegments,
+      InputRowParser inputRowParser
+  )
+  {
+    final Set<String> dimSet = timelineSegments
+        .stream()
+        .flatMap(timelineHolder -> {
+          final PartitionHolder<DataSegment> partitionHolder = timelineHolder.getObject();
+          final List<String> dims = new ArrayList<>(partitionHolder.size());
+          for (PartitionChunk<DataSegment> chunk : partitionHolder) {
+            dims.addAll(chunk.getObject().getDimensions());
+          }
+          return dims.stream();
+        })
+        .collect(Collectors.toSet());
+
+    return new ArrayList<>(
+        Sets.difference(
+            dimSet,
+            inputRowParser
+                .getParseSpec()
+                .getDimensionsSpec()
+                .getDimensionExclusions()
+        )
+    );
+  }
+
+  public static List<String> getUniqueMetrics(List<TimelineObjectHolder<String, DataSegment>> timelineSegments)
+  {
+    final Set<String> metricsSet = timelineSegments
+        .stream()
+        .flatMap(timelineHolder -> {
+          final PartitionHolder<DataSegment> partitionHolder = timelineHolder.getObject();
+          final List<String> metrics = new ArrayList<>(partitionHolder.size());
+          for (PartitionChunk<DataSegment> chunk : partitionHolder) {
+            metrics.addAll(chunk.getObject().getMetrics());
+          }
+          return metrics.stream();
+        })
+        .collect(Collectors.toSet());
+
+    return new ArrayList<>(metricsSet);
   }
 }
