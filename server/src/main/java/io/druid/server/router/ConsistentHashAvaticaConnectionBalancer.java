@@ -20,7 +20,6 @@
 package io.druid.server.router;
 
 import io.druid.client.selector.Server;
-import io.druid.server.ConsistentHasher;
 
 import java.util.Collection;
 import java.util.HashMap;

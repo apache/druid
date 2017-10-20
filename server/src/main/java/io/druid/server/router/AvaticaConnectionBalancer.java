@@ -19,15 +19,20 @@
 
 package io.druid.server.router;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.client.selector.Server;
-import io.druid.guice.annotations.ExtensionPoint;
 
 import java.util.Collection;
 
 /**
  * An AvaticaConnectionBalancer balances Avatica connections across a collection of servers.
  */
-@ExtensionPoint
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = RendezvousHashAvaticaConnectionBalancer.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "rendezvousHash", value = RendezvousHashAvaticaConnectionBalancer.class),
+    @JsonSubTypes.Type(name = "consistentHash", value = ConsistentHashAvaticaConnectionBalancer.class)
+})
 public interface AvaticaConnectionBalancer
 {
   /**

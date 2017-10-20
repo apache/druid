@@ -23,6 +23,7 @@ import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.server.router.ConsistentHasher;
 import org.junit.Assert;
 import org.junit.Test;
 

@@ -209,7 +209,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
       root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
 
-      final QueryHostFinder hostFinder = new QueryHostFinder(null)
+      final QueryHostFinder hostFinder = new QueryHostFinder(null, new RendezvousHashAvaticaConnectionBalancer())
       {
         @Override
         public io.druid.client.selector.Server getServer(Query query)
@@ -253,8 +253,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                 }
               },
               new DefaultGenericQueryMetricsFactory(jsonMapper),
-              AuthTestUtils.TEST_AUTHENTICATOR_MAPPER,
-              new RendezvousHashAvaticaConnectionBalancer()
+              AuthTestUtils.TEST_AUTHENTICATOR_MAPPER
           )
           {
             @Override

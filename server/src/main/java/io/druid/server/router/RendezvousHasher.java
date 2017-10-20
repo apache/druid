@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.server;
+package io.druid.server.router;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
@@ -31,12 +31,13 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectRBTreeMap;
 import java.util.List;
 import java.util.Set;
 
-// Distributes objects across a set of node keys using rendezvous hashing
-// See https://en.wikipedia.org/wiki/Rendezvous_hashing
+/**
+ * Distributes objects across a set of node keys using rendezvous hashing
+ * See https://en.wikipedia.org/wiki/Rendezvous_hashing
+ */
 public class RendezvousHasher
 {
-  private static final int HASH_FN_SEED = 9999;
-  private static final HashFunction HASH_FN = Hashing.murmur3_128(HASH_FN_SEED);
+  private static final HashFunction HASH_FN = Hashing.murmur3_128();
 
   public static Funnel STRING_FUNNEL = Funnels.stringFunnel(Charsets.UTF_8);
 

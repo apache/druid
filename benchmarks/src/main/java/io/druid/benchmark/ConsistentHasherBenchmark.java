@@ -21,7 +21,7 @@ package io.druid.benchmark;
 
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;;
-import io.druid.server.ConsistentHasher;
+import io.druid.server.router.ConsistentHasher;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;

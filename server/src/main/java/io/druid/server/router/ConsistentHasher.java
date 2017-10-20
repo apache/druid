@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.server;
+package io.druid.server.router;
 
 import com.google.common.base.Charsets;
 import com.google.common.hash.Funnel;
@@ -33,9 +33,11 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-// Distributes objects across a set of node keys using consistent hashing
-// See https://en.wikipedia.org/wiki/Consistent_hashing
-// Not thread-safe.
+/**
+ * Distributes objects across a set of node keys using consistent hashing.
+ * See https://en.wikipedia.org/wiki/Consistent_hashing
+ * Not thread-safe.
+ */
 public class ConsistentHasher
 {
   private static final int REPLICATION_FACTOR = 128;

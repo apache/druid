@@ -75,7 +75,7 @@ The router module uses several of the default modules in [Configuration](../conf
 |`druid.router.coordinatorServiceName`|Any string.|The service discovery name of the coordinator.|druid/coordinator|
 |`druid.router.pollPeriod`|Any ISO8601 duration.|How often to poll for new rules.|PT1M|
 |`druid.router.strategies`|An ordered JSON array of objects.|All custom strategies to use for routing.|[{"type":"timeBoundary"},{"type":"priority"}]|
-|`druid.router.avatica.balancer`|String representing an AvaticaConnectionBalancer name|Class to use for balancing Avatica queries across brokers|rendezvousHash|
+|`druid.router.avatica.balancer.type`|String representing an AvaticaConnectionBalancer name|Class to use for balancing Avatica queries across brokers|rendezvousHash|
 
 Router Strategies
 -----------------
@@ -135,7 +135,7 @@ This balancer uses [Rendezvous Hashing](https://en.wikipedia.org/wiki/Rendezvous
 To use this balancer, specify the following property:
 
 ```
-druid.router.avatica.balancer=rendezvousHash
+druid.router.avatica.balancer.type=rendezvousHash
 ```
 
 If no `druid.router.avatica.balancer` property is set, the Router will also default to using the Rendezvous Hash Balancer.
@@ -147,9 +147,10 @@ This balancer uses [Consistent Hashing](https://en.wikipedia.org/wiki/Consistent
 To use this balancer, specify the following property:
 
 ```
-druid.router.avatica.balancer=consistentHash
+druid.router.avatica.balancer.type=consistentHash
 ```
 
+This is a non-default implementation that is provided for experimentation purposes. The consistent hasher has longer setup times on initialization and when the set of brokers changes, but has a faster broker assignment time than the rendezous hasher when tested with 5 brokers. Benchmarks for both implementations have been provided in `ConsistentHasherBenchmark` and `RendezvousHasherBenchmark`. The consistent hasher also requires locking, while the rendezvous hasher does not.
 
 HTTP Endpoints
 --------------
