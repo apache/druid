@@ -20,7 +20,6 @@
 package io.druid.query.search;
 
 import com.google.common.collect.ImmutableList;
-import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.dimension.DimensionSpec;
