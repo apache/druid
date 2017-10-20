@@ -38,8 +38,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class CachingCostBalancerStrategyFactory implements BalancerStrategyFactory
@@ -119,21 +117,20 @@ public class CachingCostBalancerStrategyFactory implements BalancerStrategyFacto
   {
     if (initialized.compareAndSet(true, true)) {
       try {
+        // Calling clusterCostCacheBuilder.build() in the same thread (executor's sole thread) where
+        // clusterCostCacheBuilder is updated, to avoid problems with concurrent updates
         CompletableFuture<CachingCostBalancerStrategy> future = CompletableFuture.supplyAsync(
             () -> new CachingCostBalancerStrategy(clusterCostCacheBuilder.build(), exec),
             executor
         );
         try {
-          return future.get(1, TimeUnit.SECONDS);
+          return future.get();
         }
         catch (CancellationException e) {
           LOG.error("CachingCostBalancerStrategy creation has been cancelled");
         }
         catch (ExecutionException e) {
           LOG.error(e, "Failed to create CachingCostBalancerStrategy");
-        }
-        catch (TimeoutException e) {
-          LOG.error("CachingCostBalancerStrategy creation took more than 1 second!");
         }
         catch (InterruptedException e) {
           LOG.error("CachingCostBalancerStrategy creation has been interrupted");
