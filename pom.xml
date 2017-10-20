@@ -671,7 +671,7 @@
             <dependency>
                 <groupId>it.unimi.dsi</groupId>
                 <artifactId>fastutil</artifactId>
-                <version>7.2.0</version>
+                <version>8.1.0</version>
             </dependency>
             <dependency>
                 <groupId>net.sf.opencsv</groupId>

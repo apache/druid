@@ -36,7 +36,6 @@ import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.IntIteratorUtils;
 import io.druid.segment.column.BitmapIndex;
-import it.unimi.dsi.fastutil.ints.AbstractIntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterable;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
@@ -118,7 +117,7 @@ public class InFilter implements Filter
       @Override
       public IntIterator iterator()
       {
-        return new AbstractIntIterator()
+        return new IntIterator()
         {
           Iterator<String> iterator = values.iterator();
 

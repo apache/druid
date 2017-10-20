@@ -32,7 +32,6 @@ import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.data.Indexed;
-import it.unimi.dsi.fastutil.ints.AbstractIntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterable;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
@@ -157,7 +156,7 @@ public class LikeFilter implements Filter
       @Override
       public IntIterator iterator()
       {
-        return new AbstractIntIterator()
+        return new IntIterator()
         {
           int currIndex = startIndex;
           int found = -1;
