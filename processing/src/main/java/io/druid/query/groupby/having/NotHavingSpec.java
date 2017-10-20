@@ -22,6 +22,7 @@ package io.druid.query.groupby.having;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.data.input.Row;
+import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.column.ValueType;
 
 import java.util.Map;
@@ -49,6 +50,12 @@ public class NotHavingSpec extends BaseHavingSpec
   public void setRowSignature(Map<String, ValueType> rowSignature)
   {
     havingSpec.setRowSignature(rowSignature);
+  }
+
+  @Override
+  public void setAggregators(Map<String, AggregatorFactory> aggregators)
+  {
+    havingSpec.setAggregators(aggregators);
   }
 
   @Override

@@ -22,6 +22,7 @@ package io.druid.query.groupby.epinephelinae;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import io.druid.collections.NonBlockingPool;
 import io.druid.collections.ResourceHolder;
@@ -730,6 +731,12 @@ public class GroupByQueryEngineV2
     public Class<ByteBuffer> keyClazz()
     {
       return ByteBuffer.class;
+    }
+
+    @Override
+    public List<String> getDictionary()
+    {
+      return ImmutableList.of();
     }
 
     @Override

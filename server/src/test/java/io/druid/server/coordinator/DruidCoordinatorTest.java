@@ -141,7 +141,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         true,
         Execs.singleThreaded("coordinator_test_path_children_cache-%d")
     );
-    loadQueuePeon = new LoadQueuePeon(
+    loadQueuePeon = new CuratorLoadQueuePeon(
         curator,
         LOADPATH,
         objectMapper,

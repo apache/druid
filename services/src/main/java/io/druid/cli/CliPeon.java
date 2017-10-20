@@ -51,6 +51,7 @@ import io.druid.guice.QueryRunnerFactoryModule;
 import io.druid.guice.QueryableModule;
 import io.druid.guice.QueryablePeonModule;
 import io.druid.guice.annotations.Json;
+import io.druid.guice.annotations.Smile;
 import io.druid.indexing.common.RetryPolicyConfig;
 import io.druid.indexing.common.RetryPolicyFactory;
 import io.druid.indexing.common.TaskToolboxFactory;
@@ -87,6 +88,7 @@ import io.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider;
 import io.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierConfig;
 import io.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierFactory;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
+import io.druid.server.coordination.BatchDataSegmentAnnouncer;
 import io.druid.server.coordination.ServerType;
 import io.druid.server.http.SegmentListerResource;
 import io.druid.server.initialization.jetty.ChatHandlerServerModule;
@@ -94,6 +96,7 @@ import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.metrics.DataSourceTaskIdHolder;
 import org.eclipse.jetty.server.Server;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -265,6 +268,21 @@ public class CliPeon extends GuiceRunnable
           public String getTaskIDFromTask(final Task task)
           {
             return task.getId();
+          }
+
+          @Provides
+          public SegmentListerResource getSegmentListerResource(
+              @Json ObjectMapper jsonMapper,
+              @Smile ObjectMapper smileMapper,
+              @Nullable BatchDataSegmentAnnouncer announcer
+          )
+          {
+            return new SegmentListerResource(
+                jsonMapper,
+                smileMapper,
+                announcer,
+                null
+            );
           }
         },
         new QueryablePeonModule(),

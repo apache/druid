@@ -296,6 +296,26 @@ public class GroupByQueryRunnerTest
         return "v2SmallDictionary";
       }
     };
+    final GroupByQueryConfig v2ParallelCombineConfig = new GroupByQueryConfig()
+    {
+      @Override
+      public String getDefaultStrategy()
+      {
+        return GroupByStrategySelector.STRATEGY_V2;
+      }
+
+      @Override
+      public int getNumParallelCombineThreads()
+      {
+        return DEFAULT_PROCESSING_CONFIG.getNumThreads();
+      }
+
+      @Override
+      public String toString()
+      {
+        return "v2ParallelCombine";
+      }
+    };
 
     v1Config.setMaxIntermediateRows(10000);
     v1SingleThreadedConfig.setMaxIntermediateRows(10000);
@@ -305,7 +325,8 @@ public class GroupByQueryRunnerTest
         v1SingleThreadedConfig,
         v2Config,
         v2SmallBufferConfig,
-        v2SmallDictionaryConfig
+        v2SmallDictionaryConfig,
+        v2ParallelCombineConfig
     );
   }
 
@@ -3318,10 +3339,6 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    // havingSpec equalTo/greaterThan/lessThan do not work on complex aggregators, even if they could be finalized.
-    // See also: https://github.com/druid-io/druid/issues/2507
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage("Unknown type of metric value");
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "order-limit");
   }

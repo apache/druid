@@ -20,7 +20,6 @@
 package io.druid.query.search;
 
 import com.google.common.collect.ImmutableList;
-import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.dimension.DimensionSpec;
@@ -103,43 +102,38 @@ public class CursorOnlyStrategy extends SearchStrategy
 
       cursors.accumulate(
           retVal,
-          new Accumulator<Object2IntRBTreeMap<SearchHit>, Cursor>()
-          {
-            @Override
-            public Object2IntRBTreeMap<SearchHit> accumulate(Object2IntRBTreeMap<SearchHit> set, Cursor cursor)
-            {
-              if (set.size() >= limit) {
-                return set;
-              }
-
-              final List<ColumnSelectorPlus<SearchColumnSelectorStrategy>> selectorPlusList = Arrays.asList(
-                  DimensionHandlerUtils.createColumnSelectorPluses(
-                      SearchQueryRunner.SEARCH_COLUMN_SELECTOR_STRATEGY_FACTORY,
-                      dimsToSearch,
-                      cursor.getColumnSelectorFactory()
-                  )
-              );
-
-              while (!cursor.isDone()) {
-                for (ColumnSelectorPlus<SearchColumnSelectorStrategy> selectorPlus : selectorPlusList) {
-                  selectorPlus.getColumnSelectorStrategy().updateSearchResultSet(
-                      selectorPlus.getOutputName(),
-                      selectorPlus.getSelector(),
-                      searchQuerySpec,
-                      limit,
-                      set
-                  );
-
-                  if (set.size() >= limit) {
-                    return set;
-                  }
-                }
-
-                cursor.advance();
-              }
-
-              return set;
+          (map, cursor) -> {
+            if (map.size() >= limit) {
+              return map;
             }
+
+            final List<ColumnSelectorPlus<SearchColumnSelectorStrategy>> selectorPlusList = Arrays.asList(
+                DimensionHandlerUtils.createColumnSelectorPluses(
+                    SearchQueryRunner.SEARCH_COLUMN_SELECTOR_STRATEGY_FACTORY,
+                    dimsToSearch,
+                    cursor.getColumnSelectorFactory()
+                )
+            );
+
+            while (!cursor.isDone()) {
+              for (ColumnSelectorPlus<SearchColumnSelectorStrategy> selectorPlus : selectorPlusList) {
+                selectorPlus.getColumnSelectorStrategy().updateSearchResultSet(
+                    selectorPlus.getOutputName(),
+                    selectorPlus.getSelector(),
+                    searchQuerySpec,
+                    limit,
+                    map
+                );
+
+                if (map.size() >= limit) {
+                  return map;
+                }
+              }
+
+              cursor.advance();
+            }
+
+            return map;
           }
       );
 

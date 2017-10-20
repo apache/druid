@@ -1,15 +1,8 @@
-FROM ubuntu:14.04
-
-# Java 8
-RUN apt-get update \
-      && apt-get install -y software-properties-common \
-      && apt-add-repository -y ppa:webupd8team/java \
-      && apt-get purge --auto-remove -y software-properties-common \
-      && apt-get update \
-      && echo oracle-java-8-installer shared/accepted-oracle-license-v1-1 select true | /usr/bin/debconf-set-selections \
-      && apt-get install -y oracle-java8-installer \
-      && apt-get install -y oracle-java8-set-default \
-      && rm -rf /var/cache/oracle-jdk8-installer
+# This is intended to be a temporary unblocker for Travis CI
+# We should revert this when ppa:webupd8team/java repo maintainers fix the issue shown here: https://github.com/druid-io/druid/pull/4970
+# Or if we stick to using a non-base Ubuntu image, the custom image should reside in an org repo and not an individual repo
+# https://hub.docker.com/r/jonweiimply/ubuntu-j8/
+FROM jonweiimply/ubuntu-j8
 
 # MySQL (Metadata store)
 RUN apt-get install -y mysql-server
