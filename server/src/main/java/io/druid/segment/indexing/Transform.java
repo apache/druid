@@ -22,13 +22,24 @@ package io.druid.segment.indexing;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
+/**
+ * A row transform that is part of a {@link TransformSpec}.
+ */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "expression", value = ExpressionTransform.class)
 })
 public interface Transform
 {
+  /**
+   * Returns the column name for this transform. DimensionSpecs, AggregatorFactories, etc, can refer to this transform
+   * by its name.
+   */
   String getName();
 
+  /**
+   * Returns the function for this transform. The RowFunction takes an entire row as input and returns a column value
+   * as output.
+   */
   RowFunction getRowFunction();
 }
