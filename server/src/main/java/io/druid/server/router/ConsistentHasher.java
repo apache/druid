@@ -20,8 +20,6 @@
 package io.druid.server.router;
 
 import com.google.common.base.Charsets;
-import com.google.common.hash.Funnel;
-import com.google.common.hash.Funnels;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -41,9 +39,7 @@ import java.util.Set;
 public class ConsistentHasher
 {
   private static final int REPLICATION_FACTOR = 128;
-  private static final HashFunction DEFAULT_HASH_FN = Hashing.murmur3_128(9999);
-
-  public static Funnel STRING_FUNNEL = Funnels.stringFunnel(Charsets.UTF_8);
+  private static final HashFunction DEFAULT_HASH_FN = Hashing.murmur3_128();
 
   private final Long2ObjectRBTreeMap<String> nodeKeySlots = new Long2ObjectRBTreeMap<>();
   {
@@ -80,18 +76,13 @@ public class ConsistentHasher
     previousKeys = new HashSet<>(currentKeys);
   }
 
-  public String hashStr(String str)
-  {
-    return hash(str, STRING_FUNNEL);
-  }
-
-  public <T> String hash(T obj, Funnel<? super T> funnel)
+  public String hash(byte[] obj)
   {
     if (nodeKeySlots.size() == 0) {
       return null;
     }
 
-    long objHash = hashFn.hashObject(obj, funnel).asLong();
+    long objHash = hashFn.hashBytes(obj).asLong();
 
     Long2ObjectSortedMap<String> subMap = nodeKeySlots.tailMap(objHash);
     if (subMap.isEmpty()) {

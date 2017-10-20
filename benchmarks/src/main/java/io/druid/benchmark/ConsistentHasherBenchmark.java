@@ -21,6 +21,7 @@ package io.druid.benchmark;
 
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;;
+import io.druid.java.util.common.StringUtils;
 import io.druid.server.router.ConsistentHasher;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -82,7 +83,7 @@ public class ConsistentHasherBenchmark
   public void hash(Blackhole blackhole) throws Exception
   {
     for (String uuid : uuids) {
-      String server = hasher.hash(uuid, ConsistentHasher.STRING_FUNNEL);
+      String server = hasher.hash(StringUtils.toUtf8(uuid));
       blackhole.consume(server);
     }
   }

@@ -21,8 +21,6 @@ package io.druid.server.router;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
-import com.google.common.hash.Funnel;
-import com.google.common.hash.Funnels;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
@@ -39,14 +37,7 @@ public class RendezvousHasher
 {
   private static final HashFunction HASH_FN = Hashing.murmur3_128();
 
-  public static Funnel STRING_FUNNEL = Funnels.stringFunnel(Charsets.UTF_8);
-
-  public String chooseNode(Set<String> nodeIds, String key)
-  {
-    return chooseNode(nodeIds, key, STRING_FUNNEL);
-  }
-
-  public <KeyType> String chooseNode(Set<String> nodeIds, KeyType key, Funnel<KeyType> funnel)
+  public <KeyType> String chooseNode(Set<String> nodeIds, byte[] key)
   {
     if (nodeIds.isEmpty()) {
       return null;
@@ -56,8 +47,8 @@ public class RendezvousHasher
     weights.defaultReturnValue(null);
 
     for (String nodeId : nodeIds) {
-      HashCode keyHash = HASH_FN.hashObject(key, funnel);
-      HashCode nodeHash = HASH_FN.hashObject(nodeId, STRING_FUNNEL);
+      HashCode keyHash = HASH_FN.hashBytes(key);
+      HashCode nodeHash = HASH_FN.hashString(nodeId, Charsets.UTF_8);
       List<HashCode> hashes = Lists.newArrayList(nodeHash, keyHash);
       HashCode combinedHash = Hashing.combineOrdered(hashes);
       weights.put(combinedHash.asLong(), nodeId);

@@ -81,7 +81,7 @@ public class QueryHostFinder
 
       throw new ISE("No server found for Avatica request with connectionId[%s]", connectionId);
     }
-    log.info(
+    log.debug(
         "Balancer class [%s] sending request with connectionId[%s] to server: %s",
         avaticaConnectionBalancer.getClass(),
         connectionId,

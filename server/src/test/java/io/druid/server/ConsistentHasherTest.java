@@ -56,14 +56,14 @@ public class ConsistentHasherTest
 
     for (int i = 0; i < NUM_ITERATIONS; i++) {
       UUID objectId = UUID.randomUUID();
-      String targetServer = hasher.hashStr(objectId.toString());
+      String targetServer = hasher.hash(StringUtils.toUtf8(objectId.toString()));
       uuidServerMap.put(objectId.toString(), targetServer);
     }
 
     // check that the same UUIDs hash to the same servers on subsequent hashStr() calls
     for (int i = 0; i < 2; i++) {
       for (Map.Entry<String, String> entry : uuidServerMap.entrySet()) {
-        String targetServer = hasher.hashStr(entry.getKey());
+        String targetServer = hasher.hash(StringUtils.toUtf8(entry.getKey()));
         Assert.assertEquals(entry.getValue(), targetServer);
       }
     }
@@ -85,7 +85,7 @@ public class ConsistentHasherTest
 
     for (int i = 0; i < NUM_ITERATIONS; i++) {
       UUID objectId = UUID.randomUUID();
-      String targetServer = hasher.hashStr(objectId.toString());
+      String targetServer = hasher.hash(StringUtils.toUtf8(objectId.toString()));
       uuidServerMap.put(objectId.toString(), targetServer);
     }
 
@@ -95,7 +95,7 @@ public class ConsistentHasherTest
     int same = 0;
     int diff = 0;
     for (Map.Entry<String, String> entry : uuidServerMap.entrySet()) {
-      String targetServer = hasher.hashStr(entry.getKey());
+      String targetServer = hasher.hash(StringUtils.toUtf8(entry.getKey()));
       if (entry.getValue().equals(targetServer)) {
         same += 1;
       } else {
@@ -125,7 +125,7 @@ public class ConsistentHasherTest
 
     for (int i = 0; i < NUM_ITERATIONS; i++) {
       UUID objectId = UUID.randomUUID();
-      String targetServer = hasher.hashStr(objectId.toString());
+      String targetServer = hasher.hash(StringUtils.toUtf8(objectId.toString()));
       uuidServerMap.put(objectId.toString(), targetServer);
     }
 
@@ -135,7 +135,7 @@ public class ConsistentHasherTest
     int same = 0;
     int diff = 0;
     for (Map.Entry<String, String> entry : uuidServerMap.entrySet()) {
-      String targetServer = hasher.hashStr(entry.getKey());
+      String targetServer = hasher.hash(StringUtils.toUtf8(entry.getKey()));
       if (entry.getValue().equals(targetServer)) {
         same += 1;
       } else {
@@ -230,7 +230,7 @@ public class ConsistentHasherTest
     Map<String, String> uuidServerMap = new HashMap<>();
     for (int i = 0; i < NUM_ITERATIONS; i++) {
       UUID objectId = UUID.randomUUID();
-      String targetServer = hasher.hashStr(objectId.toString());
+      String targetServer = hasher.hash(StringUtils.toUtf8(objectId.toString()));
       uuidServerMap.put(objectId.toString(), targetServer);
     }
 
@@ -239,7 +239,7 @@ public class ConsistentHasherTest
 
     Map<String, String> uuidServerMap2 = new HashMap<>();
     for (Map.Entry<String, String> entry : uuidServerMap.entrySet()) {
-      String targetServer = hasher2.hashStr(entry.getKey());
+      String targetServer = hasher2.hash(StringUtils.toUtf8(entry.getKey()));
       uuidServerMap2.put(entry.getKey(), targetServer);
     }
 

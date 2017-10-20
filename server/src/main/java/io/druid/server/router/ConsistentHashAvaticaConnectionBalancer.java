@@ -20,6 +20,7 @@
 package io.druid.server.router;
 
 import io.druid.client.selector.Server;
+import io.druid.java.util.common.StringUtils;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -42,7 +43,7 @@ public class ConsistentHashAvaticaConnectionBalancer implements AvaticaConnectio
       }
 
       hasher.updateKeys(serverMap.keySet());
-      String chosenServer = hasher.hashStr(connectionId);
+      String chosenServer = hasher.hash(StringUtils.toUtf8(connectionId));
       return serverMap.get(chosenServer);
     }
   }

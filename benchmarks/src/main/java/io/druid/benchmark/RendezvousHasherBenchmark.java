@@ -20,6 +20,7 @@
 package io.druid.benchmark;
 
 import com.google.common.collect.Sets;
+import io.druid.java.util.common.StringUtils;
 import io.druid.server.router.RendezvousHasher;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -80,7 +81,7 @@ public class RendezvousHasherBenchmark
   public void hash(Blackhole blackhole) throws Exception
   {
     for (String uuid : uuids) {
-      String server = hasher.chooseNode(servers, uuid, RendezvousHasher.STRING_FUNNEL);
+      String server = hasher.chooseNode(servers, StringUtils.toUtf8(uuid));
       blackhole.consume(server);
     }
   }

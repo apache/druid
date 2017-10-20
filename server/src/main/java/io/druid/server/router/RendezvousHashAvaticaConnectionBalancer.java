@@ -20,6 +20,7 @@
 package io.druid.server.router;
 
 import io.druid.client.selector.Server;
+import io.druid.java.util.common.StringUtils;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -40,7 +41,7 @@ public class RendezvousHashAvaticaConnectionBalancer implements AvaticaConnectio
     for (Server server : servers) {
       serverMap.put(server.getHost(), server);
     }
-    String chosenServerId = hasher.chooseNode(serverMap.keySet(), connectionId, RendezvousHasher.STRING_FUNNEL);
+    String chosenServerId = hasher.chooseNode(serverMap.keySet(), StringUtils.toUtf8(connectionId));
     return serverMap.get(chosenServerId);
   }
 }

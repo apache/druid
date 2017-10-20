@@ -52,14 +52,14 @@ public class RendezvousHasherTest
 
     for (int i = 0; i < NUM_ITERATIONS; i++) {
       UUID objectId = UUID.randomUUID();
-      String targetServer = hasher.chooseNode(nodes, objectId.toString());
+      String targetServer = hasher.chooseNode(nodes, StringUtils.toUtf8(objectId.toString()));
       uuidServerMap.put(objectId.toString(), targetServer);
     }
 
     // check that the same UUIDs hash to the same servers on subsequent hashStr() calls
     for (int i = 0; i < 2; i++) {
       for (Map.Entry<String, String> entry : uuidServerMap.entrySet()) {
-        String targetServer = hasher.chooseNode(nodes, entry.getKey());
+        String targetServer = hasher.chooseNode(nodes, StringUtils.toUtf8(entry.getKey()));
         Assert.assertEquals(entry.getValue(), targetServer);
       }
     }
@@ -80,7 +80,7 @@ public class RendezvousHasherTest
 
     for (int i = 0; i < NUM_ITERATIONS; i++) {
       UUID objectId = UUID.randomUUID();
-      String targetServer = hasher.chooseNode(nodes, objectId.toString());
+      String targetServer = hasher.chooseNode(nodes, StringUtils.toUtf8(objectId.toString()));
       uuidServerMap.put(objectId.toString(), targetServer);
     }
 
@@ -89,7 +89,7 @@ public class RendezvousHasherTest
     int same = 0;
     int diff = 0;
     for (Map.Entry<String, String> entry : uuidServerMap.entrySet()) {
-      String targetServer = hasher.chooseNode(nodes, entry.getKey());
+      String targetServer = hasher.chooseNode(nodes, StringUtils.toUtf8(entry.getKey()));
       if (entry.getValue().equals(targetServer)) {
         same += 1;
       } else {
@@ -117,7 +117,7 @@ public class RendezvousHasherTest
 
     for (int i = 0; i < NUM_ITERATIONS; i++) {
       UUID objectId = UUID.randomUUID();
-      String targetServer = hasher.chooseNode(nodes, objectId.toString());
+      String targetServer = hasher.chooseNode(nodes, StringUtils.toUtf8(objectId.toString()));
       uuidServerMap.put(objectId.toString(), targetServer);
     }
 
@@ -126,7 +126,7 @@ public class RendezvousHasherTest
     int same = 0;
     int diff = 0;
     for (Map.Entry<String, String> entry : uuidServerMap.entrySet()) {
-      String targetServer = hasher.chooseNode(nodes, entry.getKey());
+      String targetServer = hasher.chooseNode(nodes, StringUtils.toUtf8(entry.getKey()));
       if (entry.getValue().equals(targetServer)) {
         same += 1;
       } else {
@@ -218,14 +218,14 @@ public class RendezvousHasherTest
     Map<String, String> uuidServerMap = new HashMap<>();
     for (int i = 0; i < NUM_ITERATIONS; i++) {
       UUID objectId = UUID.randomUUID();
-      String targetServer = hasher.chooseNode(nodes, objectId.toString());
+      String targetServer = hasher.chooseNode(nodes, StringUtils.toUtf8(objectId.toString()));
       uuidServerMap.put(objectId.toString(), targetServer);
     }
 
     RendezvousHasher hasher2 = new RendezvousHasher();
     Map<String, String> uuidServerMap2 = new HashMap<>();
     for (Map.Entry<String, String> entry : uuidServerMap.entrySet()) {
-      String targetServer = hasher2.chooseNode(nodes2, entry.getKey());
+      String targetServer = hasher2.chooseNode(nodes2, StringUtils.toUtf8(entry.getKey()));
       uuidServerMap2.put(entry.getKey(), targetServer);
     }
 
