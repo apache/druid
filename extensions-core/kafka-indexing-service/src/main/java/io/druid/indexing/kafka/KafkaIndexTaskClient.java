@@ -304,11 +304,6 @@ public class KafkaIndexTaskClient
     }
   }
 
-  public boolean setEndOffsets(final String id, final Map<Integer, Long> endOffsets)
-  {
-    return setEndOffsets(id, endOffsets, false, true);
-  }
-
   public boolean setEndOffsets(final String id, final Map<Integer, Long> endOffsets, final boolean resume, final boolean finalize)
   {
     log.debug("SetEndOffsets task[%s] endOffsets[%s] resume[%s] finalize[%s]", id, endOffsets, resume, finalize);
@@ -433,11 +428,6 @@ public class KafkaIndexTaskClient
           }
         }
     );
-  }
-
-  public ListenableFuture<Boolean> setEndOffsetsAsync(final String id, final Map<Integer, Long> endOffsets)
-  {
-    return setEndOffsetsAsync(id, endOffsets, false, true);
   }
 
   public ListenableFuture<Boolean> setEndOffsetsAsync(

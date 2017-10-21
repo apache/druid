@@ -782,9 +782,8 @@ public class KafkaSupervisor implements Supervisor
   private void killTasksInGroup(TaskGroup taskGroup)
   {
     if (taskGroup != null) {
-      // kill all tasks in this task group
       for (String taskId : taskGroup.tasks.keySet()) {
-        log.info("Kill task [%s] in the task group", taskId);
+        log.info("Killing task [%s] in the task group", taskId);
         killTask(taskId);
       }
     }
@@ -1115,7 +1114,7 @@ public class KafkaSupervisor implements Supervisor
    * 1. Makes sure the checkpoints information in the taskGroup is consistent with that of the tasks, if not kill
    * inconsistent tasks.
    * 2. truncates the checkpoints in the taskGroup corresponding to which segments have been published, so that any newly
-   * created tasks for the taskGroup, they start indexing from after the latest published offsets.
+   * created tasks for the taskGroup start indexing from after the latest published offsets.
    */
   private void verifyAndMergeCheckpoints(final Integer groupId)
   {
@@ -1182,7 +1181,6 @@ public class KafkaSupervisor implements Supervisor
           taskGroup.sequenceOffsets.clear();
           taskGroup.sequenceOffsets.putAll(latestCheckpoints);
         } else {
-          // kill task
           log.debug(
               "Adding task [%s] to kill list, checkpoints[%s], latestoffsets from DB [%s]",
               taskSequences.get(taskIndex).lhs,
@@ -1484,13 +1482,14 @@ public class KafkaSupervisor implements Supervisor
 
             try {
 
-              if (endOffsets.equals(taskGroup.partitionOffsets)) {
+              if (endOffsets.equals(taskGroup.sequenceOffsets.lastEntry().getValue())) {
                 log.warn(
-                    "Not adding checkpoint [%s] as its offsets are same as the start offsets [%s] for the task group [%d]",
+                    "Not adding checkpoint [%s] as its same as the start offsets [%s] of latest sequence for the task group [%d]",
                     endOffsets,
-                    taskGroup.partitionOffsets,
+                    taskGroup.sequenceOffsets.lastEntry().getValue(),
                     groupId
                 );
+                return endOffsets;
               }
 
               log.info("Setting endOffsets for tasks in taskGroup [%d] to %s and resuming", groupId, endOffsets);
@@ -1724,7 +1723,7 @@ public class KafkaSupervisor implements Supervisor
   private void createKafkaTasksForGroup(int groupId, int replicas) throws JsonProcessingException
   {
     Map<Integer, Long> startPartitions = taskGroups.get(groupId).partitionOffsets;
-    Map<Integer, Long> endPartitions = new HashMap<>(); // TODO if endOffsets were already set
+    Map<Integer, Long> endPartitions = new HashMap<>();
 
     for (Integer partition : startPartitions.keySet()) {
       endPartitions.put(partition, Long.MAX_VALUE);
