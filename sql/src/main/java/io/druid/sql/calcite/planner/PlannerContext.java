@@ -170,7 +170,8 @@ public class PlannerContext
               new DateTime("1970-01-01T00:00:00.000", localNow.getZone()),
               localNow
           ).toDurationMillis(),
-          DataContext.Variable.TIME_ZONE.camelName, localNow.getZone().toTimeZone()
+          DataContext.Variable.TIME_ZONE.camelName, localNow.getZone().toTimeZone().clone(),
+          CTX_AUTHENTICATION_RESULT, authenticationResult
       );
 
       @Override
