@@ -105,6 +105,7 @@ import io.druid.sql.calcite.util.QueryLogHook;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import io.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.calcite.plan.RelOptPlanner;
+import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -116,6 +117,8 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.util.ArrayList;
@@ -218,6 +221,9 @@ public class CalciteQueryTest
   }
 
   private static final PagingSpec FIRST_PAGING_SPEC = new PagingSpec(null, 1000, true);
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -2714,15 +2720,23 @@ public class CalciteQueryTest
   @Test
   public void testCountStarWithTimeFilterUsingStringLiterals() throws Exception
   {
-    // Strings are implicitly cast to timestamps.
+    // Strings are implicitly cast to timestamps. Test a few different forms.
 
     testQuery(
-        "SELECT COUNT(*) FROM druid.foo "
-        + "WHERE __time >= '2000-01-01 00:00:00' AND __time < '2001-01-01 00:00:00'",
+        "SELECT COUNT(*) FROM druid.foo\n"
+        + "WHERE __time >= '2000-01-01 00:00:00' AND __time < '2001-01-01T00:00:00'\n"
+        + "OR __time >= '2001-02-01' AND __time < '2001-02-02'\n"
+        + "OR __time BETWEEN '2001-03-01' AND '2001-03-02'",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Intervals.of("2000-01-01/2001-01-01")))
+                  .intervals(
+                      QSS(
+                          Intervals.of("2000-01-01/2001-01-01"),
+                          Intervals.of("2001-02-01/2001-02-02"),
+                          Intervals.of("2001-03-01/2001-03-02T00:00:00.001")
+                      )
+                  )
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
@@ -2731,6 +2745,26 @@ public class CalciteQueryTest
         ImmutableList.of(
             new Object[]{3L}
         )
+    );
+  }
+
+  @Test
+  public void testCountStarWithTimeFilterUsingStringLiteralsInvalid() throws Exception
+  {
+    // Strings are implicitly cast to timestamps. Test an invalid string.
+
+    // This error message isn't ideal but it is at least better than silently ignoring the problem.
+    expectedException.expect(RuntimeException.class);
+    expectedException.expectMessage("Error while applying rule ReduceExpressionsRule");
+    expectedException.expectCause(
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Illegal TIMESTAMP constant"))
+    );
+
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo\n"
+        + "WHERE __time >= 'z2000-01-01 00:00:00' AND __time < '2001-01-01 00:00:00'\n",
+        ImmutableList.of(),
+        ImmutableList.of()
     );
   }
 

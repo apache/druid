@@ -20,6 +20,7 @@
 package io.druid.sql.calcite.planner;
 
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.IAE;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprEval;
 import io.druid.math.expr.ExprType;
@@ -83,6 +84,10 @@ public class DruidRexExecutor implements RexExecutor
         if (sqlTypeName == SqlTypeName.BOOLEAN) {
           literal = rexBuilder.makeLiteral(exprResult.asBoolean(), constExp.getType(), true);
         } else if (sqlTypeName == SqlTypeName.DATE) {
+          if (!constExp.getType().isNullable() && exprResult.isNull()) {
+            throw new IAE("Illegal DATE constant: %s", constExp);
+          }
+
           literal = rexBuilder.makeDateLiteral(
               Calcites.jodaToCalciteDateString(
                   DateTimes.utc(exprResult.asLong()),
@@ -90,6 +95,10 @@ public class DruidRexExecutor implements RexExecutor
               )
           );
         } else if (sqlTypeName == SqlTypeName.TIMESTAMP) {
+          if (!constExp.getType().isNullable() && exprResult.isNull()) {
+            throw new IAE("Illegal TIMESTAMP constant: %s", constExp);
+          }
+
           literal = rexBuilder.makeTimestampLiteral(
               Calcites.jodaToCalciteTimestampString(
                   DateTimes.utc(exprResult.asLong()),
