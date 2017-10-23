@@ -55,6 +55,7 @@ import org.joda.time.Interval;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
@@ -235,6 +236,16 @@ public class CompactionTask extends AbstractTask
                                                                   .map(index -> index.getMetadata().getAggregators())
                                                                   .collect(Collectors.toList());
     final AggregatorFactory[] mergedAggregators = AggregatorFactory.mergeAggregators(aggregatorFactories);
+    // conver to combining aggregators
+    final AggregatorFactory[] combiningAggregators;
+    if (mergedAggregators == null) {
+      combiningAggregators = null;
+    } else {
+      final List<AggregatorFactory> combiningAggregatorList = Arrays.stream(mergedAggregators)
+                                                                    .map(AggregatorFactory::getCombiningFactory)
+                                                                    .collect(Collectors.toList());
+      combiningAggregators = combiningAggregatorList.toArray(new AggregatorFactory[combiningAggregatorList.size()]);
+    }
 
     // find granularity spec
     final GranularitySpec granularitySpec = new UniformGranularitySpec(
@@ -247,7 +258,7 @@ public class CompactionTask extends AbstractTask
     return new DataSchema(
         dataSource,
         ImmutableMap.of("type", "noop"),
-        mergedAggregators,
+        combiningAggregators,
         granularitySpec,
         jsonMapper
     );
