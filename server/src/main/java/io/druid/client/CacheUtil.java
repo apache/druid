@@ -19,6 +19,7 @@
 
 package io.druid.client;
 
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
@@ -31,6 +32,7 @@ import io.druid.query.QueryContexts;
 import io.druid.query.SegmentDescriptor;
 import org.joda.time.Interval;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -60,22 +62,14 @@ public class CacheUtil
   public static void populate(Cache cache, ObjectMapper mapper, Cache.NamedKey key, Iterable<Object> results)
   {
     try {
-      List<byte[]> bytes = Lists.newArrayList();
-      int size = 0;
-      for (Object result : results) {
-        final byte[] array = mapper.writeValueAsBytes(result);
-        size += array.length;
-        bytes.add(array);
+      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+      try (JsonGenerator gen = mapper.getFactory().createGenerator(bytes)) {
+        for (Object result : results) {
+          gen.writeObject(result);
+        }
       }
 
-      byte[] valueBytes = new byte[size];
-      int offset = 0;
-      for (byte[] array : bytes) {
-        System.arraycopy(array, 0, valueBytes, offset, array.length);
-        offset += array.length;
-      }
-
-      cache.put(key, valueBytes);
+      cache.put(key, bytes.toByteArray());
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
