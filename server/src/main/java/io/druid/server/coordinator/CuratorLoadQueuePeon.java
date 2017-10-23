@@ -51,7 +51,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
+ * Use {@link HttpLoadQueuePeon} instead.
  */
+@Deprecated
 public class CuratorLoadQueuePeon extends LoadQueuePeon
 {
   private static final EmittingLogger log = new EmittingLogger(CuratorLoadQueuePeon.class);

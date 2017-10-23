@@ -31,8 +31,9 @@ import org.apache.curator.utils.ZKPaths;
 import java.nio.ByteBuffer;
 
 /**
- * Announces that there is a particular ListenerResource at the listener_key.
+ * Starting 0.11.0 Coordinator uses announcements made by {@link io.druid.discovery.DruidNodeAnnouncer} .
  */
+@Deprecated
 public abstract class ListenerResourceAnnouncer
 {
   private static final byte[] ANNOUNCE_BYTES = ByteBuffer

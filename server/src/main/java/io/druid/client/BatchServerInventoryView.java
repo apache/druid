@@ -43,7 +43,9 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 
 /**
+ * This class is deprecated. Use {@link HttpServerInventoryView} instead.
  */
+@Deprecated
 @ManageLifecycle
 public class BatchServerInventoryView extends AbstractCuratorServerInventoryView<Set<DataSegment>>
     implements FilteredServerInventoryView

@@ -19,6 +19,10 @@
 
 package io.druid.curator.discovery;
 
+/**
+ * This class is only used by Deprecated classes.
+ */
+@Deprecated
 public class CuratorServiceUtils
 {
   /**
