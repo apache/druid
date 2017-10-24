@@ -22,8 +22,8 @@ package io.druid.query.extraction;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import io.druid.java.util.common.StringUtils;
+import io.druid.segment.NullHandlingHelper;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -62,7 +62,7 @@ public class MatchingDimExtractionFn extends DimExtractionFn
   @Override
   public String apply(@Nullable String dimValue)
   {
-    if (Strings.isNullOrEmpty(dimValue)) {
+    if (NullHandlingHelper.isNullOrDefault(dimValue)) {
       // We'd return null whether or not the pattern matched
       return null;
     }

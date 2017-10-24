@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.ibm.icu.text.SimpleDateFormat;
 import io.druid.java.util.common.StringUtils;
+import io.druid.segment.NullHandlingHelper;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -77,7 +78,7 @@ public class TimeDimExtractionFn extends DimExtractionFn
   @Override
   public String apply(@Nullable String dimValue)
   {
-    if (Strings.isNullOrEmpty(dimValue)) {
+    if (NullHandlingHelper.isNullOrDefault(dimValue)) {
       return null;
     }
 

@@ -21,7 +21,6 @@ package io.druid.query.extraction;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import io.druid.segment.NullHandlingHelper;
 
 import javax.annotation.Nullable;
@@ -70,7 +69,7 @@ public abstract class FunctionalExtraction extends DimExtractionFn
         public String apply(@Nullable String dimValue)
         {
           final String retval = extractionFunction.apply(dimValue);
-          return Strings.isNullOrEmpty(retval) ? Strings.emptyToNull(dimValue) : retval;
+          return NullHandlingHelper.isNullOrDefault(retval) ? NullHandlingHelper.defaultToNull(dimValue) : retval;
         }
       };
     } else {

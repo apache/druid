@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Strings;
 import io.druid.java.util.common.StringUtils;
+import io.druid.segment.NullHandlingHelper;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -51,7 +52,7 @@ public class UpperExtractionFn extends DimExtractionFn
   @Override
   public String apply(@Nullable String key)
   {
-    if (Strings.isNullOrEmpty(key)) {
+    if (NullHandlingHelper.isNullOrDefault(key)) {
       return null;
     }
     return key.toUpperCase(locale);

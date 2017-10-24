@@ -19,6 +19,7 @@
 
 package io.druid.query.extraction;
 
+import io.druid.segment.NullHandlingHelper;
 import org.junit.Assert;
 import org.junit.Test;
 

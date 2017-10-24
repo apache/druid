@@ -136,7 +136,7 @@ public class FunctionalExtractionTest
         false
     );
     final String out = fn.apply(in);
-    Assert.assertEquals(Strings.isNullOrEmpty(out) ? in : out, exFn.apply(in));
+    Assert.assertEquals(NullHandlingHelper.isNullOrDefault(out) ? in : out, exFn.apply(in));
   }
 
   @Test
@@ -150,7 +150,7 @@ public class FunctionalExtractionTest
         false
     );
     final String out = fn.apply(in);
-    Assert.assertEquals(Strings.isNullOrEmpty(out) ? in : out, exFn.apply(in));
+    Assert.assertEquals(NullHandlingHelper.isNullOrDefault(out) ? in : out, exFn.apply(in));
   }
 
   @Test
@@ -165,7 +165,7 @@ public class FunctionalExtractionTest
     );
     final String out = fn.apply(in);
     if (NullHandlingHelper.useDefaultValuesForNull()) {
-      Assert.assertEquals(Strings.isNullOrEmpty(out) ? MISSING : out, exFn.apply(in));
+      Assert.assertEquals(NullHandlingHelper.isNullOrDefault(out) ? MISSING : out, exFn.apply(in));
     } else {
       Assert.assertEquals(out == null ? MISSING : out, exFn.apply(in));
     }
@@ -217,7 +217,7 @@ public class FunctionalExtractionTest
         null,
         false
     );
-    if (Strings.isNullOrEmpty(fn.apply(null))) {
+    if (NullHandlingHelper.isNullOrDefault(fn.apply(null))) {
       Assert.assertEquals(null, exFn.apply(null));
     }
   }
