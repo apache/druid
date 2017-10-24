@@ -32,14 +32,12 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.query.DruidMetrics;
 import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
-import io.druid.query.QueryContexts;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryMetrics;
 import io.druid.query.QueryPlus;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.security.Access;
 import io.druid.server.security.AuthenticationResult;
@@ -75,7 +73,6 @@ public class QueryLifecycle
   private final GenericQueryMetricsFactory queryMetricsFactory;
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
-  private final ServerConfig serverConfig;
   private final AuthorizerMapper authorizerMapper;
   private final long startMs;
   private final long startNs;
@@ -91,7 +88,6 @@ public class QueryLifecycle
       final GenericQueryMetricsFactory queryMetricsFactory,
       final ServiceEmitter emitter,
       final RequestLogger requestLogger,
-      final ServerConfig serverConfig,
       final AuthorizerMapper authorizerMapper,
       final long startMs,
       final long startNs
@@ -102,7 +98,6 @@ public class QueryLifecycle
     this.queryMetricsFactory = queryMetricsFactory;
     this.emitter = emitter;
     this.requestLogger = requestLogger;
-    this.serverConfig = serverConfig;
     this.authorizerMapper = authorizerMapper;
     this.startMs = startMs;
     this.startNs = startNs;
@@ -172,12 +167,7 @@ public class QueryLifecycle
       queryId = UUID.randomUUID().toString();
     }
 
-    this.queryPlus = QueryPlus.wrap(
-        (Query) withTimeoutAndMaxScatterGatherBytes(
-            baseQuery.withId(queryId),
-            serverConfig
-        )
-    );
+    this.queryPlus = QueryPlus.wrap(baseQuery.withId(queryId));
     this.toolChest = warehouse.getToolChest(baseQuery);
   }
 
@@ -369,23 +359,6 @@ public class QueryLifecycle
     EXECUTING,
     UNAUTHORIZED,
     DONE
-  }
-
-  public static <T, QueryType extends Query<T>> QueryType withTimeoutAndMaxScatterGatherBytes(
-      final QueryType query,
-      ServerConfig serverConfig
-  )
-  {
-    return (QueryType) QueryContexts.verifyMaxQueryTimeout(
-        QueryContexts.withMaxScatterGatherBytes(
-            QueryContexts.withDefaultTimeout(
-                (Query) query,
-                serverConfig.getDefaultQueryTimeout()
-            ),
-            serverConfig.getMaxScatterGatherBytes()
-        ),
-        serverConfig.getMaxQueryTimeout()
-    );
   }
 
   public static class QueryResponse

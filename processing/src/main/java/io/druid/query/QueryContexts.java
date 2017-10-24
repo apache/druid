@@ -134,22 +134,16 @@ public class QueryContexts
 
   public static <T> Query<T> verifyMaxQueryTimeout(Query<T> query, long maxQueryTimeout)
   {
-    Object obj = query.getContextValue(TIMEOUT_KEY);
-    if (obj == null) {
-      //don't do anything if timeout is not set in the context.
-      return query;
+    long timeout = getTimeout(query);
+    if (timeout > maxQueryTimeout) {
+      throw new IAE(
+          "configured [%s = %s] is more than enforced limit of maxQueryTimeout [%s].",
+          TIMEOUT_KEY,
+          timeout,
+          maxQueryTimeout
+      );
     } else {
-      long curr = ((Number) obj).longValue();
-      if (curr > maxQueryTimeout) {
-        throw new IAE(
-            "configured [%s = %s] is more than enforced limit of maxQueryTimeout [%s].",
-            TIMEOUT_KEY,
-            curr,
-            maxQueryTimeout
-        );
-      } else {
-        return query;
-      }
+      return query;
     }
   }
 

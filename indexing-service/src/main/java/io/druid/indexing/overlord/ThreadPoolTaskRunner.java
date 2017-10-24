@@ -52,6 +52,8 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.SegmentDescriptor;
 import io.druid.server.DruidNode;
+import io.druid.server.SetAndVerifyContextQueryRunner;
+import io.druid.server.initialization.ServerConfig;
 import org.joda.time.Interval;
 
 import java.util.Collection;
@@ -83,6 +85,7 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
   private final CopyOnWriteArrayList<Pair<TaskRunnerListener, Executor>> listeners = new CopyOnWriteArrayList<>();
   private final ServiceEmitter emitter;
   private final TaskLocation location;
+  private final ServerConfig serverConfig;
 
   private volatile boolean stopping = false;
 
@@ -91,13 +94,15 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
       TaskToolboxFactory toolboxFactory,
       TaskConfig taskConfig,
       ServiceEmitter emitter,
-      @Self DruidNode node
+      @Self DruidNode node,
+      ServerConfig serverConfig
   )
   {
     this.toolboxFactory = Preconditions.checkNotNull(toolboxFactory, "toolboxFactory");
     this.taskConfig = taskConfig;
     this.emitter = Preconditions.checkNotNull(emitter, "emitter");
     this.location = TaskLocation.create(node.getHost(), node.getPlaintextPort(), node.getTlsPort());
+    this.serverConfig = serverConfig;
   }
 
   @Override
@@ -362,7 +367,10 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
       }
     }
 
-    return queryRunner == null ? new NoopQueryRunner<T>() : queryRunner;
+    return new SetAndVerifyContextQueryRunner(
+        serverConfig,
+        queryRunner == null ? new NoopQueryRunner<T>() : queryRunner
+    );
   }
 
   private static class ThreadPoolTaskRunnerWorkItem extends TaskRunnerWorkItem
