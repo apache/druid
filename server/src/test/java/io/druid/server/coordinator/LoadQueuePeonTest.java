@@ -24,7 +24,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.curator.CuratorTestBase;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Intervals;
@@ -82,7 +82,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
     final AtomicInteger requestSignalIdx = new AtomicInteger(0);
     final AtomicInteger segmentSignalIdx = new AtomicInteger(0);
 
-    loadQueuePeon = new LoadQueuePeon(
+    loadQueuePeon = new CuratorLoadQueuePeon(
         curator,
         LOAD_QUEUE_PATH,
         jsonMapper,
@@ -289,7 +289,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
     final CountDownLatch loadRequestSignal = new CountDownLatch(1);
     final CountDownLatch segmentLoadedSignal = new CountDownLatch(1);
 
-    loadQueuePeon = new LoadQueuePeon(
+    loadQueuePeon = new CuratorLoadQueuePeon(
         curator,
         LOAD_QUEUE_PATH,
         jsonMapper,

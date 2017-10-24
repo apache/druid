@@ -19,18 +19,28 @@
 
 package io.druid.segment.column;
 
+import io.druid.java.util.common.StringUtils;
+
 /**
  */
 public interface Column
 {
-  public static final String TIME_COLUMN_NAME = "__time";
-  public ColumnCapabilities getCapabilities();
+  String TIME_COLUMN_NAME = "__time";
+  String DOUBLE_STORAGE_TYPE_PROPERTY = "druid.indexing.doubleStorage";
 
-  public int getLength();
-  public DictionaryEncodedColumn getDictionaryEncoding();
-  public RunLengthColumn getRunLengthColumn();
-  public GenericColumn getGenericColumn();
-  public ComplexColumn getComplexColumn();
-  public BitmapIndex getBitmapIndex();
-  public SpatialIndex getSpatialIndex();
+  static boolean storeDoubleAsFloat()
+  {
+    String value = System.getProperty(DOUBLE_STORAGE_TYPE_PROPERTY, "float");
+    return !StringUtils.toLowerCase(value).equals("double");
+  }
+
+  ColumnCapabilities getCapabilities();
+
+  int getLength();
+  DictionaryEncodedColumn getDictionaryEncoding();
+  RunLengthColumn getRunLengthColumn();
+  GenericColumn getGenericColumn();
+  ComplexColumn getComplexColumn();
+  BitmapIndex getBitmapIndex();
+  SpatialIndex getSpatialIndex();
 }

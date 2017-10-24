@@ -25,6 +25,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -57,7 +58,7 @@ import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.FloatSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.expression.LookupExprMacro;
-import io.druid.query.expression.TestExprMacroTable;
+import io.druid.query.expression.LookupEnabledTestExprMacroTable;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
@@ -93,14 +94,13 @@ import io.druid.server.QueryLifecycleFactory;
 import io.druid.server.log.NoopRequestLogger;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthTestUtils;
-import io.druid.sql.calcite.aggregation.SqlAggregator;
 import io.druid.sql.calcite.expression.SqlOperatorConversion;
+import io.druid.sql.calcite.expression.builtin.LookupOperatorConversion;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.schema.DruidSchema;
 import io.druid.sql.calcite.view.NoopViewManager;
 import io.druid.sql.calcite.view.ViewManager;
-import io.druid.sql.guice.SqlModule;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.DateTime;
@@ -137,13 +137,16 @@ public class CalciteTests
 
           // This Module is just to get a LookupReferencesManager with a usable "lookyloo" lookup.
 
-          LookupReferencesManager testLookupReferencesManager = TestExprMacroTable.createTestLookupReferencesManager(
-              ImmutableMap.of(
-                  "a", "xa",
-                  "abc", "xabc"
-              )
-          );
-          binder.bind(LookupReferencesManager.class).toInstance(testLookupReferencesManager);
+          binder.bind(LookupReferencesManager.class)
+                .toInstance(
+                    LookupEnabledTestExprMacroTable.createTestLookupReferencesManager(
+                        ImmutableMap.of(
+                            "a", "xa",
+                            "abc", "xabc"
+                        )
+                    )
+            );
+
         }
       }
   );
@@ -382,18 +385,9 @@ public class CalciteTests
   public static DruidOperatorTable createOperatorTable()
   {
     try {
-      final Set<SqlAggregator> aggregators = new HashSet<>();
       final Set<SqlOperatorConversion> extractionOperators = new HashSet<>();
-
-      for (Class<? extends SqlAggregator> clazz : SqlModule.DEFAULT_AGGREGATOR_CLASSES) {
-        aggregators.add(INJECTOR.getInstance(clazz));
-      }
-
-      for (Class<? extends SqlOperatorConversion> clazz : SqlModule.DEFAULT_OPERATOR_CONVERSION_CLASSES) {
-        extractionOperators.add(INJECTOR.getInstance(clazz));
-      }
-
-      return new DruidOperatorTable(aggregators, extractionOperators);
+      extractionOperators.add(INJECTOR.getInstance(LookupOperatorConversion.class));
+      return new DruidOperatorTable(ImmutableSet.of(), extractionOperators);
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

@@ -52,4 +52,15 @@ public class HistoricalResource
   {
     return Response.ok(ImmutableMap.of("cacheInitialized", coordinator.isStarted())).build();
   }
+
+  @GET
+  @Path("/readiness")
+  public Response getReadiness()
+  {
+    if (coordinator.isStarted()) {
+      return Response.ok().build();
+    } else {
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
+    }
+  }
 }

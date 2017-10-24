@@ -28,8 +28,8 @@ import java.io.File;
  */
 public interface SegmentLoader
 {
-  public boolean isSegmentLoaded(DataSegment segment) throws SegmentLoadingException;
-  public Segment getSegment(DataSegment segment) throws SegmentLoadingException;
-  public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException;
-  public void cleanup(DataSegment segment) throws SegmentLoadingException;
+  boolean isSegmentLoaded(DataSegment segment) throws SegmentLoadingException;
+  Segment getSegment(DataSegment segment) throws SegmentLoadingException;
+  File getSegmentFiles(DataSegment segment) throws SegmentLoadingException;
+  void cleanup(DataSegment segment) throws SegmentLoadingException;
 }

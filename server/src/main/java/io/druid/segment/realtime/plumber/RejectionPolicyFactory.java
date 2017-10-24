@@ -31,5 +31,5 @@ import org.joda.time.Period;
 })
 public interface RejectionPolicyFactory
 {
-  public RejectionPolicy create(Period windowPeriod);
+  RejectionPolicy create(Period windowPeriod);
 }

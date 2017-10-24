@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
-
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.Aggregator;
@@ -32,7 +31,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
@@ -56,26 +55,8 @@ public class ApproximateHistogramFoldingAggregatorFactory extends ApproximateHis
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
-
-    if (selector == null) {
-      // gracefully handle undefined metrics
-
-      selector = new ObjectColumnSelector<ApproximateHistogram>()
-      {
-        @Override
-        public Class<ApproximateHistogram> classOfObject()
-        {
-          return ApproximateHistogram.class;
-        }
-
-        @Override
-        public ApproximateHistogram getObject()
-        {
-          return new ApproximateHistogram(0);
-        }
-      };
-    }
+    @SuppressWarnings("unchecked")
+    ColumnValueSelector<ApproximateHistogram> selector = metricFactory.makeColumnValueSelector(fieldName);
 
     final Class cls = selector.classOfObject();
     if (cls.equals(Object.class) || ApproximateHistogram.class.isAssignableFrom(cls)) {
@@ -97,26 +78,8 @@ public class ApproximateHistogramFoldingAggregatorFactory extends ApproximateHis
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
-
-    if (selector == null) {
-      // gracefully handle undefined metrics
-
-      selector = new ObjectColumnSelector<ApproximateHistogram>()
-      {
-        @Override
-        public Class<ApproximateHistogram> classOfObject()
-        {
-          return ApproximateHistogram.class;
-        }
-
-        @Override
-        public ApproximateHistogram getObject()
-        {
-          return new ApproximateHistogram(0);
-        }
-      };
-    }
+    @SuppressWarnings("unchecked")
+    ColumnValueSelector<ApproximateHistogram> selector = metricFactory.makeColumnValueSelector(fieldName);
 
     final Class cls = selector.classOfObject();
     if (cls.equals(Object.class) || ApproximateHistogram.class.isAssignableFrom(cls)) {

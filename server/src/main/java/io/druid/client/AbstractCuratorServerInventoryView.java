@@ -24,7 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.curator.inventory.CuratorInventoryManager;
 import io.druid.curator.inventory.CuratorInventoryManagerStrategy;
 import io.druid.curator.inventory.InventoryManagerConfig;
@@ -341,19 +341,19 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
   }
 
   protected abstract DruidServer addInnerInventory(
-      final DruidServer container,
+      DruidServer container,
       String inventoryKey,
-      final InventoryType inventory
+      InventoryType inventory
   );
 
   protected abstract DruidServer updateInnerInventory(
-      final DruidServer container,
+      DruidServer container,
       String inventoryKey,
-      final InventoryType inventory
+      InventoryType inventory
   );
 
   protected abstract DruidServer removeInnerInventory(
-      final DruidServer container,
+      DruidServer container,
       String inventoryKey
   );
 

@@ -52,12 +52,12 @@ import io.druid.query.filter.Filter;
 import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.ordering.StringComparators;
+import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
-import io.druid.segment.LongColumnSelector;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexStorageAdapter;
 import io.druid.segment.StorageAdapter;
@@ -542,7 +542,7 @@ public class FilterPartitionBenchmark
           public List<Long> apply(Cursor input)
           {
             List<Long> longvals = new ArrayList<Long>();
-            LongColumnSelector selector = input.getColumnSelectorFactory().makeLongColumnSelector("sumLongSequential");
+            BaseLongColumnValueSelector selector = input.getColumnSelectorFactory().makeColumnValueSelector("sumLongSequential");
             while (!input.isDone()) {
               long rowval = selector.getLong();
               blackhole.consume(rowval);

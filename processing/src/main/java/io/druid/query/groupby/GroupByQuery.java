@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -55,7 +54,6 @@ import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.LimitSpec;
 import io.druid.query.groupby.orderby.NoopLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
-import io.druid.query.groupby.strategy.GroupByStrategyV2;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
 import io.druid.query.spec.LegacySegmentSpec;
@@ -70,6 +68,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -102,7 +101,6 @@ public class GroupByQuery extends BaseQuery<Row>
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
 
-  private final Function<Sequence<Row>, Sequence<Row>> limitFn;
   private final boolean applyLimitPushDown;
   private final Function<Sequence<Row>, Sequence<Row>> postProcessingFn;
 
@@ -147,6 +145,7 @@ public class GroupByQuery extends BaseQuery<Row>
           postProcessingFn,
           (Sequence<Row> input) -> {
             havingSpec.setRowSignature(GroupByQueryHelper.rowSignatureFor(GroupByQuery.this));
+            havingSpec.setAggregators(getAggregatorsMap(aggregatorSpecs));
             return Sequences.filter(input, havingSpec::eval);
           }
       );
@@ -201,42 +200,6 @@ public class GroupByQuery extends BaseQuery<Row>
 
     // Check if limit push down configuration is valid and check if limit push down will be applied
     this.applyLimitPushDown = determineApplyLimitPushDown();
-
-    // On an inner query, we may sometimes get a LimitSpec so that row orderings can be determined for limit push down
-    // However, it's not necessary to build the real limitFn from it at this stage.
-    Function<Sequence<Row>, Sequence<Row>> postProcFn;
-    if (getContextBoolean(GroupByStrategyV2.CTX_KEY_OUTERMOST, true)) {
-      postProcFn = this.limitSpec.build(this.dimensions, this.aggregatorSpecs, this.postAggregatorSpecs);
-    } else {
-      postProcFn = NoopLimitSpec.INSTANCE.build(this.dimensions, this.aggregatorSpecs, this.postAggregatorSpecs);
-    }
-
-    if (havingSpec != null) {
-      postProcFn = Functions.compose(
-          postProcFn,
-          new Function<Sequence<Row>, Sequence<Row>>()
-          {
-            @Override
-            public Sequence<Row> apply(Sequence<Row> input)
-            {
-              GroupByQuery.this.havingSpec.setRowSignature(GroupByQueryHelper.rowSignatureFor(GroupByQuery.this));
-              return Sequences.filter(
-                  input,
-                  new Predicate<Row>()
-                  {
-                    @Override
-                    public boolean apply(Row input)
-                    {
-                      return GroupByQuery.this.havingSpec.eval(input);
-                    }
-                  }
-              );
-            }
-          }
-      );
-    }
-
-    limitFn = postProcFn;
   }
 
   @JsonProperty
@@ -626,10 +589,10 @@ public class GroupByQuery extends BaseQuery<Row>
       }
 
       if (isNumericField.get(i)) {
-        if (comparator == StringComparators.NUMERIC) {
+        if (comparator.equals(StringComparators.NUMERIC)) {
           dimCompare = ((Ordering) Comparators.naturalNullsFirst()).compare(
-              rhs.getRaw(fieldName),
-              lhs.getRaw(fieldName)
+              lhs.getRaw(fieldName),
+              rhs.getRaw(fieldName)
           );
         } else {
           dimCompare = comparator.compare(String.valueOf(lhsObj), String.valueOf(rhsObj));
@@ -733,6 +696,13 @@ public class GroupByQuery extends BaseQuery<Row>
           Column.TIME_COLUMN_NAME
       );
     }
+  }
+
+  private static Map<String, AggregatorFactory> getAggregatorsMap(List<AggregatorFactory> aggregatorSpecs)
+  {
+    Map<String, AggregatorFactory> map = new HashMap<>(aggregatorSpecs.size());
+    aggregatorSpecs.stream().forEach(v -> map.put(v.getName(), v));
+    return map;
   }
 
   public static class Builder

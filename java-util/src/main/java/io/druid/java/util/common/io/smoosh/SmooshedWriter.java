@@ -28,5 +28,5 @@ import java.nio.channels.GatheringByteChannel;
  */
 public interface SmooshedWriter extends Closeable, GatheringByteChannel
 {
-  public int write(InputStream in) throws IOException;
+  int write(InputStream in) throws IOException;
 }

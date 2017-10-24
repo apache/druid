@@ -120,8 +120,8 @@ public class HyperUniquesAggregationTest
     );
 
     MapBasedRow row = (MapBasedRow) Sequences.toList(seq, Lists.newArrayList()).get(0);
-    Assert.assertEquals(3.0, row.getFloatMetric("index_hll"), 0.1);
-    Assert.assertEquals(3.0, row.getFloatMetric("index_unique_count"), 0.1);
+    Assert.assertEquals(3.0, row.getMetric("index_hll").floatValue(), 0.1);
+    Assert.assertEquals(3.0, row.getMetric("index_unique_count").floatValue(), 0.1);
   }
 
   @Test
@@ -182,7 +182,7 @@ public class HyperUniquesAggregationTest
     );
 
     MapBasedRow row = (MapBasedRow) Sequences.toList(seq, Lists.newArrayList()).get(0);
-    Assert.assertEquals(4.0, row.getFloatMetric("index_hll"), 0.1);
-    Assert.assertEquals(4.0, row.getFloatMetric("index_unique_count"), 0.1);
+    Assert.assertEquals(4.0, row.getMetric("index_hll").floatValue(), 0.1);
+    Assert.assertEquals(4.0, row.getMetric("index_unique_count").floatValue(), 0.1);
   }
 }

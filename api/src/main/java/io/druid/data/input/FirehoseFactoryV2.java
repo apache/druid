@@ -41,6 +41,5 @@ import java.io.IOException;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public interface FirehoseFactoryV2<T extends InputRowParser>
 {
-  public FirehoseV2 connect(T parser, Object lastCommit) throws IOException, ParseException;
-
+  FirehoseV2 connect(T parser, Object lastCommit) throws IOException, ParseException;
 }

@@ -19,6 +19,7 @@
 
 package io.druid.segment.data;
 
+import io.druid.guice.annotations.PublicApi;
 import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import io.druid.query.monomorphicprocessing.HotLoopCallee;
 
@@ -31,6 +32,7 @@ import java.util.function.IntConsumer;
  * Doesn't extend {@link Iterable} (or {@link it.unimi.dsi.fastutil.ints.IntIterable} to avoid accidential
  * for-each iteration with boxing.
  */
+@PublicApi
 public interface IndexedInts extends Closeable, HotLoopCallee
 {
   @CalledFromHotLoop

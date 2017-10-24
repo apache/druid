@@ -29,8 +29,15 @@ import io.druid.sql.calcite.rule.DruidSemiJoinRule;
 import io.druid.sql.calcite.rule.DruidTableScanRule;
 import io.druid.sql.calcite.rule.SortCollapseRule;
 import org.apache.calcite.interpreter.Bindables;
+import org.apache.calcite.plan.RelOptLattice;
+import org.apache.calcite.plan.RelOptMaterialization;
+import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptRule;
+import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.plan.volcano.AbstractConverter;
+import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.RelFactories;
+import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
 import org.apache.calcite.rel.rules.AggregateExpandDistinctAggregatesRule;
 import org.apache.calcite.rel.rules.AggregateJoinTransposeRule;
 import org.apache.calcite.rel.rules.AggregateProjectMergeRule;
@@ -59,13 +66,17 @@ import org.apache.calcite.rel.rules.SortJoinTransposeRule;
 import org.apache.calcite.rel.rules.SortProjectTransposeRule;
 import org.apache.calcite.rel.rules.SortRemoveRule;
 import org.apache.calcite.rel.rules.SortUnionTransposeRule;
+import org.apache.calcite.rel.rules.SubQueryRemoveRule;
 import org.apache.calcite.rel.rules.TableScanRule;
 import org.apache.calcite.rel.rules.UnionMergeRule;
 import org.apache.calcite.rel.rules.UnionPullUpConstantsRule;
 import org.apache.calcite.rel.rules.UnionToDistinctRule;
 import org.apache.calcite.rel.rules.ValuesReduceRule;
+import org.apache.calcite.sql2rel.RelDecorrelator;
+import org.apache.calcite.sql2rel.RelFieldTrimmer;
 import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
+import org.apache.calcite.tools.RelBuilder;
 
 import java.util.List;
 
@@ -153,6 +164,13 @@ public class Rules
           FilterMergeRule.INSTANCE
       );
 
+  private static final List<RelOptRule> SUB_QUERY_REMOVE_RULES =
+      ImmutableList.of(
+          SubQueryRemoveRule.PROJECT,
+          SubQueryRemoveRule.FILTER,
+          SubQueryRemoveRule.JOIN
+      );
+
   private Rules()
   {
     // No instantiation.
@@ -160,9 +178,14 @@ public class Rules
 
   public static List<Program> programs(final PlannerContext plannerContext, final QueryMaker queryMaker)
   {
+    final Program hepProgram =
+        Programs.sequence(
+            Programs.subQuery(DefaultRelMetadataProvider.INSTANCE),
+            new DecorrelateAndTrimFieldsProgram()
+        );
     return ImmutableList.of(
-        Programs.ofRules(druidConventionRuleSet(plannerContext, queryMaker)),
-        Programs.ofRules(bindableConventionRuleSet(plannerContext, queryMaker))
+        Programs.sequence(hepProgram, Programs.ofRules(druidConventionRuleSet(plannerContext, queryMaker))),
+        Programs.sequence(hepProgram, Programs.ofRules(bindableConventionRuleSet(plannerContext, queryMaker)))
     );
   }
 
@@ -202,6 +225,7 @@ public class Rules
     rules.addAll(CONSTANT_REDUCTION_RULES);
     rules.addAll(VOLCANO_ABSTRACT_RULES);
     rules.addAll(RELOPTUTIL_ABSTRACT_RULES);
+    rules.addAll(SUB_QUERY_REMOVE_RULES);
 
     if (!plannerConfig.isUseApproximateCountDistinct()) {
       // We'll need this to expand COUNT DISTINCTs.
@@ -225,5 +249,24 @@ public class Rules
     }
 
     return rules.build();
+  }
+
+  // Based on Calcite's Programs.DecorrelateProgram and Programs.TrimFieldsProgram, which are private and only
+  // accessible through Programs.standard (which we don't want, since it also adds Enumerable rules).
+  private static class DecorrelateAndTrimFieldsProgram implements Program
+  {
+    @Override
+    public RelNode run(
+        RelOptPlanner planner,
+        RelNode rel,
+        RelTraitSet requiredOutputTraits,
+        List<RelOptMaterialization> materializations,
+        List<RelOptLattice> lattices
+    )
+    {
+      final RelNode decorrelatedRel = RelDecorrelator.decorrelateQuery(rel);
+      final RelBuilder relBuilder = RelFactories.LOGICAL_BUILDER.create(decorrelatedRel.getCluster(), null);
+      return new RelFieldTrimmer(null, relBuilder).trim(decorrelatedRel);
+    }
   }
 }

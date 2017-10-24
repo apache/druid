@@ -28,7 +28,6 @@ import com.google.common.primitives.Longs;
 import io.druid.java.util.common.StringUtils;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
-import io.druid.segment.ObjectColumnSelector;
 import org.apache.commons.codec.binary.Base64;
 
 import javax.annotation.Nullable;
@@ -67,16 +66,13 @@ public class HistogramAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new HistogramAggregator(metricFactory.makeFloatColumnSelector(fieldName), breaks);
+    return new HistogramAggregator(metricFactory.makeColumnValueSelector(fieldName), breaks);
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new HistogramBufferAggregator(
-        metricFactory.makeFloatColumnSelector(fieldName),
-        breaks
-    );
+    return new HistogramBufferAggregator(metricFactory.makeColumnValueSelector(fieldName), breaks);
   }
 
   @Override
@@ -103,8 +99,7 @@ public class HistogramAggregatorFactory extends AggregatorFactory
       @Override
       public void reset(ColumnValueSelector selector)
       {
-        @SuppressWarnings("unchecked")
-        Histogram first = ((ObjectColumnSelector<Histogram>) selector).getObject();
+        Histogram first = (Histogram) selector.getObject();
         if (combined == null) {
           combined = new Histogram(first);
         } else {
@@ -115,8 +110,7 @@ public class HistogramAggregatorFactory extends AggregatorFactory
       @Override
       public void fold(ColumnValueSelector selector)
       {
-        @SuppressWarnings("unchecked")
-        Histogram other = ((ObjectColumnSelector<Histogram>) selector).getObject();
+        Histogram other = (Histogram) selector.getObject();
         combined.fold(other);
       }
 

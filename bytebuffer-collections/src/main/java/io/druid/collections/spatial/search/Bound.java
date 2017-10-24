@@ -34,15 +34,15 @@ import io.druid.collections.spatial.ImmutablePoint;
 })
 public interface Bound
 {
-  public int getLimit();
+  int getLimit();
 
-  public int getNumDims();
+  int getNumDims();
 
-  public boolean overlaps(ImmutableNode node);
+  boolean overlaps(ImmutableNode node);
 
-  public boolean contains(float[] coords);
+  boolean contains(float[] coords);
 
-  public Iterable<ImmutablePoint> filter(Iterable<ImmutablePoint> points);
+  Iterable<ImmutablePoint> filter(Iterable<ImmutablePoint> points);
 
-  public byte[] getCacheKey();
+  byte[] getCacheKey();
 }

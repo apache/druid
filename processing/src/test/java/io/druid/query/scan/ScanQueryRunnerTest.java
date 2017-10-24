@@ -688,7 +688,7 @@ public class ScanQueryRunnerTest
     return expected;
   }
 
-  private static void verify(
+  public static void verify(
       Iterable<ScanResultValue> expectedResults,
       Iterable<ScanResultValue> actualResults
   )
@@ -719,8 +719,13 @@ public class ScanQueryRunnerTest
           if (actVal instanceof String[]) {
             actVal = Arrays.asList((String[]) actVal);
           }
-
-          Assert.assertEquals("invalid value for " + ex.getKey(), ex.getValue(), actVal);
+          Object exValue = ex.getValue();
+          if (exValue instanceof Double || exValue instanceof Float) {
+            final double expectedDoubleValue = ((Number) exValue).doubleValue();
+            Assert.assertEquals("invalid value for " + ex.getKey(), expectedDoubleValue, ((Number) actVal).doubleValue(), expectedDoubleValue * 1e-6);
+          } else {
+            Assert.assertEquals("invalid value for " + ex.getKey(), ex.getValue(), actVal);
+          }
         }
 
         for (Map.Entry<String, Object> ac : acHolder.entrySet()) {
@@ -731,7 +736,18 @@ public class ScanQueryRunnerTest
             actVal = Arrays.asList((String[]) actVal);
           }
 
-          Assert.assertEquals("invalid value for " + ac.getKey(), exVal, actVal);
+          if (exVal instanceof Double || exVal instanceof Float) {
+            final double exDoubleValue = ((Number) exVal).doubleValue();
+            Assert.assertEquals(
+                "invalid value for " + ac.getKey(),
+                exDoubleValue,
+                ((Number) actVal).doubleValue(),
+                exDoubleValue * 1e-6
+            );
+          } else {
+            Assert.assertEquals("invalid value for " + ac.getKey(), exVal, actVal);
+          }
+
         }
       }
 

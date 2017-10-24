@@ -26,11 +26,16 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableSet;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.indexing.common.task.Task;
+import io.druid.indexing.overlord.CriticalAction;
+import io.druid.java.util.common.ISE;
 import io.druid.query.DruidMetrics;
 import io.druid.timeline.DataSegment;
+import org.joda.time.Interval;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class SegmentNukeAction implements TaskAction<Void>
 {
@@ -62,8 +67,32 @@ public class SegmentNukeAction implements TaskAction<Void>
   @Override
   public Void perform(Task task, TaskActionToolbox toolbox) throws IOException
   {
-    toolbox.verifyTaskLocks(task, segments);
-    toolbox.getIndexerMetadataStorageCoordinator().deleteSegments(segments);
+    TaskActionPreconditions.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
+
+    final List<Interval> intervals = segments.stream().map(DataSegment::getInterval).collect(Collectors.toList());
+
+    try {
+      toolbox.getTaskLockbox().doInCriticalSection(
+          task,
+          intervals,
+          CriticalAction.builder()
+                        .onValidLocks(
+                            () -> {
+                              toolbox.getIndexerMetadataStorageCoordinator().deleteSegments(segments);
+                              return null;
+                            }
+                        )
+                        .onInvalidLocks(
+                            () -> {
+                              throw new ISE("Some locks for task[%s] are already revoked", task.getId());
+                            }
+                        )
+                        .build()
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
 
     // Emit metrics
     final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()

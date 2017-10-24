@@ -27,5 +27,5 @@ import java.util.Map;
 @ExtensionPoint
 public interface DataSegmentMover
 {
-  public DataSegment move(DataSegment segment, Map<String, Object> targetLoadSpec) throws SegmentLoadingException;
+  DataSegment move(DataSegment segment, Map<String, Object> targetLoadSpec) throws SegmentLoadingException;
 }

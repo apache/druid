@@ -30,7 +30,7 @@ import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.client.SingleServerInventoryView;
 import io.druid.common.config.JacksonConfigManager;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.curator.CuratorTestBase;
 import io.druid.curator.discovery.NoopServiceAnnouncer;
 import io.druid.discovery.DruidLeaderSelector;
@@ -141,7 +141,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         true,
         Execs.singleThreaded("coordinator_test_path_children_cache-%d")
     );
-    loadQueuePeon = new LoadQueuePeon(
+    loadQueuePeon = new CuratorLoadQueuePeon(
         curator,
         LOADPATH,
         objectMapper,

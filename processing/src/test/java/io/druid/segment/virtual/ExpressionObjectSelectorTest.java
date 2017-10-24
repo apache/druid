@@ -22,8 +22,9 @@ package io.druid.segment.virtual;
 import com.google.common.base.Supplier;
 import io.druid.common.guava.SettableSupplier;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.TestObjectColumnSelector;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -142,12 +143,12 @@ public class ExpressionObjectSelectorTest
     };
   }
 
-  private static <T> ObjectColumnSelector<T> objectSelectorFromSupplier(
+  private static <T> ColumnValueSelector<T> objectSelectorFromSupplier(
       final Supplier<T> supplier,
       final Class<T> clazz
   )
   {
-    return new ObjectColumnSelector<T>()
+    return new TestObjectColumnSelector<T>()
     {
       @Override
       public Class<T> classOfObject()

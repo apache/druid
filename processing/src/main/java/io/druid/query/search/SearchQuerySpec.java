@@ -36,7 +36,7 @@ import javax.annotation.Nullable;
 })
 public interface SearchQuerySpec
 {
-  public boolean accept(@Nullable String dimVal);
+  boolean accept(@Nullable String dimVal);
 
-  public byte[] getCacheKey();
+  byte[] getCacheKey();
 }
