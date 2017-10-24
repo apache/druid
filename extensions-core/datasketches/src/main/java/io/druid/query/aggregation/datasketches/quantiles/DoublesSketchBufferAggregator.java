@@ -52,7 +52,7 @@ public class DoublesSketchBufferAggregator implements BufferAggregator
   }
 
   @Override
-  public void init(final ByteBuffer buffer, final int position)
+  public synchronized void init(final ByteBuffer buffer, final int position)
   {
     final WritableMemory mem = getMemory(buffer);
     final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
@@ -72,7 +72,7 @@ public class DoublesSketchBufferAggregator implements BufferAggregator
   }
 
   @Override
-  public Object get(final ByteBuffer buffer, final int position)
+  public synchronized Object get(final ByteBuffer buffer, final int position)
   {
     return unions.get(buffer).get(position).getResult();
   }
@@ -90,14 +90,14 @@ public class DoublesSketchBufferAggregator implements BufferAggregator
   }
 
   @Override
-  public void close()
+  public synchronized void close()
   {
     unions.clear();
     memCache.clear();
   }
 
   @Override
-  public void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
+  public synchronized void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
   {
     DoublesUnion union = unions.get(oldBuffer).get(oldPosition);
     final WritableMemory oldMem = getMemory(oldBuffer).writableRegion(oldPosition, maxIntermediateSize);

@@ -46,7 +46,7 @@ public class DoublesSketchDoubleAggregator implements Aggregator
   }
 
   @Override
-  public Object get()
+  public synchronized Object get()
   {
     return sketch;
   }
@@ -64,13 +64,13 @@ public class DoublesSketchDoubleAggregator implements Aggregator
   }
 
   @Override
-  public void reset()
+  public synchronized void reset()
   {
     sketch = UpdateDoublesSketch.builder().setK(size).build();
   }
 
   @Override
-  public void close()
+  public synchronized void close()
   {
     sketch = null;
   }

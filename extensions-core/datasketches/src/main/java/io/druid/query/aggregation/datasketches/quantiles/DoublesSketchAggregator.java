@@ -48,7 +48,7 @@ public class DoublesSketchAggregator implements Aggregator
   }
 
   @Override
-  public Object get()
+  public synchronized Object get()
   {
     return union.getResult();
   }
@@ -66,13 +66,13 @@ public class DoublesSketchAggregator implements Aggregator
   }
 
   @Override
-  public void reset()
+  public synchronized void reset()
   {
     union.reset();
   }
 
   @Override
-  public void close()
+  public synchronized void close()
   {
     union = null;
   }
