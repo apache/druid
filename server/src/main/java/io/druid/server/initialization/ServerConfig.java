@@ -108,7 +108,7 @@ public class ServerConfig
            defaultQueryTimeout == that.defaultQueryTimeout &&
            maxScatterGatherBytes == that.maxScatterGatherBytes &&
            Objects.equals(maxIdleTime, that.maxIdleTime) &&
-           maxQueryTimeout == that.maxQueryTimeout ;
+           maxQueryTimeout == that.maxQueryTimeout;
   }
 
   @Override
