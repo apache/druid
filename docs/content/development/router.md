@@ -128,6 +128,8 @@ All Avatica JDBC requests with a given connection ID must be routed to the same 
 
 To accomplish this, Druid provides two built-in balancers that use rendezvous hashing and consistent hashing of a request's connection ID respectively to assign requests to brokers.
 
+Note that when multiple routers are used, all routers should have identical balancer configuration to ensure that they make the same routing decisions.
+
 ### Rendezvous Hash Balancer
 
 This balancer uses [Rendezvous Hashing](https://en.wikipedia.org/wiki/Rendezvous_hashing) on an Avatica request's connection ID to assign the request to a broker.
