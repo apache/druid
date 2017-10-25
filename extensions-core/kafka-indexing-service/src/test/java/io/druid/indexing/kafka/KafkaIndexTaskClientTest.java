@@ -108,7 +108,8 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     headers = createMock(HttpHeaders.class);
 
     client = new TestableKafkaIndexTaskClient(httpClient, objectMapper, taskInfoProvider);
-    expect(taskInfoProvider.getTaskLocation(TEST_ID)).andReturn(new TaskLocation(TEST_HOST, TEST_PORT, TEST_TLS_PORT)).anyTimes();
+    expect(taskInfoProvider.getTaskLocation(TEST_ID)).andReturn(new TaskLocation(TEST_HOST, TEST_PORT, TEST_TLS_PORT))
+                                                     .anyTimes();
     expect(taskInfoProvider.getTaskStatus(TEST_ID)).andReturn(Optional.of(TaskStatus.running(TEST_ID))).anyTimes();
 
     for (String testId : TEST_IDS) {
@@ -153,7 +154,8 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   public void testTaskNotRunnableException() throws Exception
   {
     reset(taskInfoProvider);
-    expect(taskInfoProvider.getTaskLocation(TEST_ID)).andReturn(new TaskLocation(TEST_HOST, TEST_PORT, TEST_TLS_PORT)).anyTimes();
+    expect(taskInfoProvider.getTaskLocation(TEST_ID)).andReturn(new TaskLocation(TEST_HOST, TEST_PORT, TEST_TLS_PORT))
+                                                     .anyTimes();
     expect(taskInfoProvider.getTaskStatus(TEST_ID)).andReturn(Optional.of(TaskStatus.failure(TEST_ID))).anyTimes();
     replayAll();
 
@@ -902,7 +904,13 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     List<URL> expectedUrls = Lists.newArrayList();
     List<ListenableFuture<Boolean>> futures = Lists.newArrayList();
     for (String testId : TEST_IDS) {
-      expectedUrls.add(new URL(StringUtils.format(URL_FORMATTER, TEST_HOST, TEST_PORT, testId, StringUtils.format("offsets/end?resume=%s&finish=%s", false, true))));
+      expectedUrls.add(new URL(StringUtils.format(
+          URL_FORMATTER,
+          TEST_HOST,
+          TEST_PORT,
+          testId,
+          StringUtils.format("offsets/end?resume=%s&finish=%s", false, true)
+      )));
       futures.add(client.setEndOffsetsAsync(testId, endOffsets, false, true));
     }
 

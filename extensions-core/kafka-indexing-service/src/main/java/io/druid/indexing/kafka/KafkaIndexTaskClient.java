@@ -277,7 +277,9 @@ public class KafkaIndexTaskClient
     log.debug("GetCheckpoints task[%s] retry[%s]", id, retry);
     try {
       final FullResponseHolder response = submitRequest(id, HttpMethod.GET, "checkpoints", null, retry);
-      return jsonMapper.readValue(response.getContent(), new TypeReference<TreeMap<Integer, TreeMap<Integer, Long>>>() {});
+      return jsonMapper.readValue(response.getContent(), new TypeReference<TreeMap<Integer, TreeMap<Integer, Long>>>()
+      {
+      });
     }
     catch (NoTaskLocationException e) {
       return EMPTY_TREE_MAP;
@@ -287,7 +289,11 @@ public class KafkaIndexTaskClient
     }
   }
 
-  public ListenableFuture<TreeMap<Integer, Map<Integer, Long>>> getCheckpointsAsync(final String id, final boolean retry) {
+  public ListenableFuture<TreeMap<Integer, Map<Integer, Long>>> getCheckpointsAsync(
+      final String id,
+      final boolean retry
+  )
+  {
     return executorService.submit(
         () -> getCheckpoints(id, retry)
     );
@@ -311,7 +317,12 @@ public class KafkaIndexTaskClient
     }
   }
 
-  public boolean setEndOffsets(final String id, final Map<Integer, Long> endOffsets, final boolean resume, final boolean finalize)
+  public boolean setEndOffsets(
+      final String id,
+      final Map<Integer, Long> endOffsets,
+      final boolean resume,
+      final boolean finalize
+  )
   {
     log.debug("SetEndOffsets task[%s] endOffsets[%s] resume[%s] finalize[%s]", id, endOffsets, resume, finalize);
 
@@ -496,7 +507,10 @@ public class KafkaIndexTaskClient
 
       Optional<TaskStatus> status = taskInfoProvider.getTaskStatus(id);
       if (!status.isPresent() || !status.get().isRunnable()) {
-        throw new TaskNotRunnableException(StringUtils.format("Aborting request because task [%s] is not runnable", id));
+        throw new TaskNotRunnableException(StringUtils.format(
+            "Aborting request because task [%s] is not runnable",
+            id
+        ));
       }
 
       String host = location.getHost();

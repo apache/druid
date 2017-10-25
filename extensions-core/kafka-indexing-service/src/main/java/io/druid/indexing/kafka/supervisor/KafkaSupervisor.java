@@ -1126,7 +1126,10 @@ public class KafkaSupervisor implements Supervisor
     final List<ListenableFuture<TreeMap<Integer, Map<Integer, Long>>>> futures = new ArrayList<>();
 
     for (String taskId : taskGroup.taskIds()) {
-      final ListenableFuture<TreeMap<Integer, Map<Integer, Long>>> checkpointsFuture = taskClient.getCheckpointsAsync(taskId, true);
+      final ListenableFuture<TreeMap<Integer, Map<Integer, Long>>> checkpointsFuture = taskClient.getCheckpointsAsync(
+          taskId,
+          true
+      );
       futures.add(checkpointsFuture);
       Futures.addCallback(
           checkpointsFuture,

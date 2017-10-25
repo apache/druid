@@ -1084,6 +1084,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         if ((latestSequence.getStartOffsets().equals(offsets) && !finish) ||
             (latestSequence.getEndOffsets().equals(offsets) && finish)) {
           log.warn("Ignoring duplicate request, end offsets already set for sequences [%s]", sequences);
+          return Response.ok(offsets).build();
         } else if (latestSequence.isCheckpointed() && !ioConfig.isPauseAfterRead()) {
           return Response.status(Response.Status.BAD_REQUEST)
                          .entity(StringUtils.format(
@@ -1145,7 +1146,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       resume();
     }
 
-    return Response.ok(endOffsets).build();
+    return Response.ok(offsets).build();
   }
 
   @GET
@@ -1283,7 +1284,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     return status == Status.PAUSED;
   }
 
-  private void requestPause(long pauseMillis) {
+  private void requestPause(long pauseMillis)
+  {
     this.pauseMillis = pauseMillis;
     pauseRequested = true;
   }
