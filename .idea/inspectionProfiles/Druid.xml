@@ -106,9 +106,6 @@
     <inspection_tool class="SuspiciousNameCombination" enabled="true" level="ERROR" enabled_by_default="true">
       <group names="x,width,left,right" />
       <group names="y,height,top,bottom" />
-      <ignored>
-        <option name="METHOD_MATCHER_CONFIG" value="java.io.PrintStream,println,java.io.PrintWriter,println,java.lang.System,identityHashCode,java.sql.PreparedStatement,set.*,java.sql.ResultSet,update.*,java.sql.SQLOutput,write.*,java.lang.Integer,compare.*,java.lang.Long,compare.*,java.lang.Short,compare,java.lang.Byte,compare,java.lang.Character,compare,java.lang.Boolean,compare,java.lang.Math,.*,java.lang.StrictMath,.*" />
-      </ignored>
     </inspection_tool>
     <inspection_tool class="SuspiciousSystemArraycopy" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="SuspiciousToArrayCall" enabled="true" level="ERROR" enabled_by_default="true" />
@@ -119,10 +116,8 @@
     <inspection_tool class="UnnecessaryFullyQualifiedName" enabled="true" level="WARNING" enabled_by_default="true">
       <scope name="NonGeneratedFiles" level="ERROR" enabled="true">
         <option name="m_ignoreJavadoc" value="true" />
-        <option name="ignoreInModuleStatements" value="true" />
       </scope>
       <option name="m_ignoreJavadoc" value="true" />
-      <option name="ignoreInModuleStatements" value="true" />
     </inspection_tool>
     <inspection_tool class="UnnecessaryInterfaceModifier" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="UseOfPropertiesAsHashtable" enabled="true" level="WARNING" enabled_by_default="true" />

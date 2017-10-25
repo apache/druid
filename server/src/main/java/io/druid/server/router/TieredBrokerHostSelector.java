@@ -44,6 +44,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  */
@@ -277,7 +278,7 @@ public class TieredBrokerHostSelector<T>
 
   private static class NodesHolder
   {
-    private int roundRobinIndex = 0;
+    private AtomicInteger roundRobinIndex = new AtomicInteger(0);
 
     private Map<String, Server> nodesMap = new HashMap<>();
     private ImmutableList<Server> nodes = ImmutableList.of();
@@ -308,15 +309,15 @@ public class TieredBrokerHostSelector<T>
     {
       ImmutableList<Server> currNodes = nodes;
 
+      int index = roundRobinIndex.getAndIncrement();
+
       if (currNodes.size() == 0) {
         return null;
       }
 
-      if (roundRobinIndex >= currNodes.size()) {
-        roundRobinIndex %= currNodes.size();
-      }
+      index %= currNodes.size();
 
-      return currNodes.get(roundRobinIndex++);
+      return currNodes.get(index);
     }
   }
 }
