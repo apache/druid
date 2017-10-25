@@ -50,18 +50,10 @@ public class PriorityTieredBrokerSelectorStrategy implements TieredBrokerSelecto
 
     if (priority < minPriority) {
       return Optional.of(
-          Iterables.getLast(
-              tierConfig.getTierToBrokerMap().values(),
-              tierConfig.getDefaultBrokerServiceName()
-          )
+          tierConfig.getDefaultBrokerServiceName()
       );
     } else if (priority >= maxPriority) {
-      return Optional.of(
-          Iterables.getFirst(
-              tierConfig.getTierToBrokerMap().values(),
-              tierConfig.getDefaultBrokerServiceName()
-          )
-      );
+      return Optional.of(tierConfig.getDefaultBrokerServiceName());
     }
 
     return Optional.absent();
