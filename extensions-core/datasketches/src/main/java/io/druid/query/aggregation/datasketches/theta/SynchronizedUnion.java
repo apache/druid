@@ -68,18 +68,21 @@ public class SynchronizedUnion extends Union
   }
 
   @Override
+  @SuppressWarnings("ParameterPackage")
   public synchronized void update(byte[] data)
   {
     delegate.update(data);
   }
 
   @Override
+  @SuppressWarnings("ParameterPackage")
   public synchronized void update(int[] data)
   {
     delegate.update(data);
   }
 
   @Override
+  @SuppressWarnings("ParameterPackage")
   public synchronized void update(char[] chars)
   {
     delegate.update(chars);
