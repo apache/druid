@@ -127,28 +127,9 @@ public class IndexTask extends AbstractTask
   {
     this(
         id,
+        makeGroupId(ingestionSchema),
         taskResource,
         ingestionSchema.dataSchema.getDataSource(),
-        ingestionSchema.ioConfig.appendToExisting,
-        ingestionSchema,
-        context
-    );
-  }
-
-  IndexTask(
-      String id,
-      TaskResource resource,
-      String dataSource,
-      boolean appendToExisting,
-      IndexIngestionSpec ingestionSchema,
-      Map<String, Object> context
-  )
-  {
-    this(
-        getOrMakeId(id, TYPE, dataSource),
-        makeGroupId(appendToExisting, dataSource),
-        resource,
-        dataSource,
         ingestionSchema,
         context
     );
@@ -172,6 +153,11 @@ public class IndexTask extends AbstractTask
     );
 
     this.ingestionSchema = ingestionSchema;
+  }
+
+  private static String makeGroupId(IndexIngestionSpec ingestionSchema)
+  {
+    return makeGroupId(ingestionSchema.ioConfig.appendToExisting, ingestionSchema.dataSchema.getDataSource());
   }
 
   private static String makeGroupId(boolean isAppendToExisting, String dataSource)

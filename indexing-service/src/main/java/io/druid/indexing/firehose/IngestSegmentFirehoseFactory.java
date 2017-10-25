@@ -36,7 +36,6 @@ import io.druid.data.input.impl.InputRowParser;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
-import io.druid.indexing.common.task.CompactionTaskUtils;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.filter.DimFilter;
@@ -47,6 +46,7 @@ import io.druid.segment.realtime.firehose.IngestSegmentFirehose;
 import io.druid.segment.realtime.firehose.WindowedStorageAdapter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
+import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
@@ -145,10 +145,9 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
           .getTaskActionClient()
           .submit(new SegmentListUsedAction(dataSource, interval, null));
       final Map<DataSegment, File> segmentFileMap = taskToolbox.fetchSegments(usedSegments);
-      final List<TimelineObjectHolder<String, DataSegment>> timeLineSegments = CompactionTaskUtils.toTimelineSegments(
-          usedSegments,
-          interval
-      );
+      final List<TimelineObjectHolder<String, DataSegment>> timeLineSegments = VersionedIntervalTimeline
+          .forSegments(usedSegments)
+          .lookup(interval);
 
       final List<String> dims;
       if (dimensions != null) {
@@ -216,7 +215,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
     }
   }
 
-  public static List<String> getUniqueDimensions(
+  private static List<String> getUniqueDimensions(
       List<TimelineObjectHolder<String, DataSegment>> timelineSegments,
       InputRowParser inputRowParser
   )
@@ -244,7 +243,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
     );
   }
 
-  public static List<String> getUniqueMetrics(List<TimelineObjectHolder<String, DataSegment>> timelineSegments)
+  private static List<String> getUniqueMetrics(List<TimelineObjectHolder<String, DataSegment>> timelineSegments)
   {
     final Set<String> metricsSet = timelineSegments
         .stream()

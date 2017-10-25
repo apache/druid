@@ -104,7 +104,7 @@ Tasks can have different default priorities depening on their types. Here are a 
 |---------|----------------|
 |Realtime index task|75|
 |Batch index task|50|
-|Merge/Append/Compation task|25|
+|Merge/Append/Compaction task|25|
 |Other tasks|0|
 
 You can override the task priority by setting your priority in the task context like below.
@@ -273,13 +273,14 @@ An example of compaction task is
 }
 ```
 
-This compaction task merges _all segments_ of the interval `2017-01-01/2018-01-01`. 
+This compaction task merges _all segments_ of the interval `2017-01-01/2018-01-01` into a _single segment_.
 
-A compaction task internally generates an indexTask spec for performing compaction work with some fixed parameters.
+A compaction task internally generates an `index` task spec for performing compaction work with some fixed parameters.
 For example, its `firehose` is always the [ingestSegmentSpec](./firehose.html) and `dimensionsSpec` and `metricsSpec`
 always include all dimensions and metrics of the input segments.
 
-Note that all input segments should have the same `queryGranularity` and `rollup`. See [Segment Metadata Queries](../querying/segmentmetadataquery.html#analysistypes) for more details.
+Note that the output segment is rolled up only when `rollup` is set for all input segments.
+See [Segment Metadata Queries](../querying/segmentmetadataquery.html#analysistypes) for more details about `rollup`.
 
 Segment Destroying Tasks
 ------------------------
