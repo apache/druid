@@ -199,7 +199,7 @@ public class InformationSchema extends AbstractSchema
                   final SchemaPlus subSchema = rootSchema.getSubSchema(schemaName);
 
                   final AuthenticationResult authenticationResult =
-                      (AuthenticationResult) root.get(PlannerContext.CTX_AUTHENTICATION_RESULT);
+                      (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
 
                   final Set<String> authorizedTableNames = getAuthorizedTableNamesFromSubSchema(
                       subSchema,
@@ -293,7 +293,7 @@ public class InformationSchema extends AbstractSchema
                   final JavaTypeFactoryImpl typeFactory = new JavaTypeFactoryImpl(TYPE_SYSTEM);
 
                   final AuthenticationResult authenticationResult =
-                      (AuthenticationResult) root.get(PlannerContext.CTX_AUTHENTICATION_RESULT);
+                      (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
 
                   final Set<String> authorizedTableNames = getAuthorizedTableNamesFromSubSchema(
                       subSchema,

@@ -246,7 +246,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT 1 + 1",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{2}
@@ -259,7 +258,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT 1 + 1, dim1 FROM foo LIMIT 1",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -297,7 +295,6 @@ public class CalciteQueryTest
         + "RTRIM('xfoox', 'x'),\n"
         + "COUNT(*)\n"
         + "FROM foo",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -333,7 +330,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "EXPLAIN PLAN FOR SELECT 1 + 1",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{"BindableValues(tuples=[[{ 2 }]])\n"}
@@ -346,7 +342,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT DISTINCT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{"druid"},
@@ -362,7 +357,6 @@ public class CalciteQueryTest
         "SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE\n"
         + "FROM INFORMATION_SCHEMA.TABLES\n"
         + "WHERE TABLE_TYPE IN ('SYSTEM_TABLE', 'TABLE', 'VIEW')",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{"druid", "foo", "TABLE"},
@@ -376,6 +370,7 @@ public class CalciteQueryTest
     );
 
     testQuery(
+        PLANNER_CONFIG_DEFAULT,
         "SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE\n"
         + "FROM INFORMATION_SCHEMA.TABLES\n"
         + "WHERE TABLE_TYPE IN ('SYSTEM_TABLE', 'TABLE', 'VIEW')",
@@ -401,7 +396,6 @@ public class CalciteQueryTest
         "SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE\n"
         + "FROM INFORMATION_SCHEMA.COLUMNS\n"
         + "WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = 'foo'",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{"__time", "TIMESTAMP", "NO"},
@@ -422,12 +416,12 @@ public class CalciteQueryTest
         "SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE\n"
         + "FROM INFORMATION_SCHEMA.COLUMNS\n"
         + "WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = 'forbiddenDatasource'",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of()
     );
 
     testQuery(
+        PLANNER_CONFIG_DEFAULT,
         "SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE\n"
         + "FROM INFORMATION_SCHEMA.COLUMNS\n"
         + "WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = 'forbiddenDatasource'",
@@ -453,7 +447,6 @@ public class CalciteQueryTest
         "SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE\n"
         + "FROM INFORMATION_SCHEMA.COLUMNS\n"
         + "WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = 'aview'",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{"dim1_firstchar", "VARCHAR", "YES"}
@@ -474,7 +467,6 @@ public class CalciteQueryTest
         + "SELECT COLUMN_NAME, DATA_TYPE\n"
         + "FROM INFORMATION_SCHEMA.COLUMNS\n"
         + "WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = 'foo'",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{explanation}
@@ -487,7 +479,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT * FROM druid.foo",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.<Query>of(
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -517,6 +508,7 @@ public class CalciteQueryTest
     );
 
     testQuery(
+        PLANNER_CONFIG_DEFAULT,
         "SELECT * FROM druid.forbiddenDatasource",
         CalciteTests.SUPER_USER_AUTH_RESULT,
         ImmutableList.<Query>of(
@@ -539,7 +531,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT COUNT(*) FROM foo",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -560,7 +551,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "EXPLAIN PLAN FOR SELECT * FROM druid.foo",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{
@@ -575,7 +565,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT * FROM druid.foo LIMIT 2",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -598,7 +587,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT SUBSTRING(dim2, 1, 1) FROM druid.foo LIMIT 2",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -624,7 +612,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT * FROM druid.foo ORDER BY __time DESC LIMIT 2",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newSelectQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -649,7 +636,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT * FROM druid.foo ORDER BY __time",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newSelectQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -694,7 +680,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT dim2 x, dim2 y FROM druid.foo LIMIT 2",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -717,7 +702,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT dim1 FROM druid.foo ORDER BY __time DESC LIMIT 2",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newSelectQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -840,7 +824,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT cnt, COUNT(*) FROM druid.foo GROUP BY cnt",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -862,7 +845,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT cnt, COUNT(*) FROM druid.foo GROUP BY 1",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -885,7 +867,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT cnt AS theCnt, COUNT(*) FROM druid.foo GROUP BY theCnt ORDER BY theCnt ASC",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -923,7 +904,6 @@ public class CalciteQueryTest
         + "COUNT(*)\n"
         + "FROM druid.foo\n"
         + "GROUP BY FLOOR(__time TO MONTH)",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -945,7 +925,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT cnt as theCnt, COUNT(*) FROM druid.foo GROUP BY 1 ORDER BY 1 ASC",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -979,7 +958,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT m1, COUNT(*) FROM druid.foo GROUP BY m1",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -1006,7 +984,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT m2, COUNT(*) FROM druid.foo GROUP BY m2",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -1033,7 +1010,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE m1 = 1.0",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -1055,7 +1031,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE m2 = 1.0",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -1077,7 +1052,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT dim1, SUM(m1) AS m1_sum FROM druid.foo GROUP BY dim1 HAVING SUM(m1) > 1",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -1158,7 +1132,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT dim1, m1, COUNT(*) FROM druid.foo WHERE m1 - 1 = dim1 GROUP BY dim1, m1",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -1192,7 +1165,6 @@ public class CalciteQueryTest
         + "FROM druid.foo\n"
         + "GROUP BY dim1\n"
         + "HAVING COUNT(*) FILTER(WHERE dim2 <> 'a')/COUNT(*) = 1",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -1231,7 +1203,6 @@ public class CalciteQueryTest
         + "  SUBSTRING(dim1, 2)\n"
         + "FROM druid.foo\n"
         + "GROUP BY dim1\n",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -1265,7 +1236,6 @@ public class CalciteQueryTest
         + "FROM druid.foo\n"
         + "GROUP BY dim1\n"
         + "ORDER BY CHARACTER_LENGTH(dim1) DESC, dim1",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -1315,7 +1285,6 @@ public class CalciteQueryTest
         + "FROM druid.foo\n"
         + "GROUP BY dim1\n"
         + "LIMIT 10",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -1352,7 +1321,6 @@ public class CalciteQueryTest
         + "GROUP BY dim1\n"
         + "ORDER BY CHARACTER_LENGTH(dim1) DESC\n"
         + "LIMIT 10",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -1397,7 +1365,6 @@ public class CalciteQueryTest
         + "    WHEN cnt THEN 'match-cnt'\n"
         + "    WHEN 0 THEN 'zero'"
         + "    END",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -1446,7 +1413,6 @@ public class CalciteQueryTest
           "SELECT COUNT(*)\n"
           + "FROM druid.foo\n"
           + "WHERE " + where,
-          CalciteTests.REGULAR_USER_AUTH_RESULT,
           ImmutableList.of(
               Druids.newTimeseriesQueryBuilder()
                     .dataSource(CalciteTests.DATASOURCE1)
@@ -1473,7 +1439,6 @@ public class CalciteQueryTest
 
     testQuery(
         "SELECT COALESCE(dim2, dim1), COUNT(*) FROM druid.foo GROUP BY COALESCE(dim2, dim1)\n",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -1508,7 +1473,6 @@ public class CalciteQueryTest
 
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE dim2 IS NULL\n",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -1580,6 +1544,9 @@ public class CalciteQueryTest
     }
   }
 
+  /**
+   * Provided for tests that wish to check multiple queries instead of relying on ExpectedException.
+   */
   private void assertQueryIsForbidden(final String sql, final AuthenticationResult authenticationResult)
   {
     assertQueryIsForbidden(PLANNER_CONFIG_DEFAULT, sql, authenticationResult);
@@ -1610,7 +1577,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT * FROM druid.foo WHERE dim1 > 'd' OR dim2 = 'a'",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.<Query>of(
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -1639,7 +1605,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT COUNT(*), MAX(cnt) FROM druid.foo WHERE 1 = 0",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{0L, null}
@@ -1652,7 +1617,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT COUNT(*), MAX(cnt) FROM druid.foo WHERE 1 = 0 GROUP BY dim1",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of()
     );
@@ -1666,7 +1630,6 @@ public class CalciteQueryTest
 
     testQuery(
         "SELECT COUNT(*), MAX(cnt) FROM druid.foo WHERE dim1 = 'foobar'",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -1689,7 +1652,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT COUNT(*), MAX(cnt) FROM druid.foo WHERE dim1 = 'foobar' GROUP BY 'dummy'",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -1712,7 +1674,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT COUNT(cnt) FROM druid.foo",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -1733,7 +1694,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT COUNT(dim2) FROM druid.foo",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -1759,7 +1719,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT COUNT(CASE WHEN dim2 = 'abc' THEN 'yes' WHEN dim2 = 'def' THEN 'yes' END) FROM druid.foo",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -1787,7 +1746,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -1809,7 +1767,6 @@ public class CalciteQueryTest
     testQuery(
         "WITH beep (dim1_firstchar) AS (SELECT SUBSTRING(dim1, 1, 1) FROM foo WHERE dim2 = 'a')\n"
         + "SELECT COUNT(*) FROM beep WHERE dim1_firstchar <> 'z'",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -1834,7 +1791,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.aview WHERE dim1_firstchar <> 'z'",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -1873,7 +1829,6 @@ public class CalciteQueryTest
 
     testQuery(
         "EXPLAIN PLAN FOR SELECT COUNT(*) FROM aview WHERE dim1_firstchar <> 'z'",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{explanation}
@@ -1886,7 +1841,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE dim1 like 'a%' OR dim2 like '%xb%' escape 'x'",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -1913,7 +1867,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE cnt >= 3 OR cnt = 1",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -1940,7 +1893,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE cnt > 1.1 and cnt < 100000001.0",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -1958,7 +1910,6 @@ public class CalciteQueryTest
 
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE cnt = 1.0",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -1978,7 +1929,6 @@ public class CalciteQueryTest
 
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE cnt = 100000001.0",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -1996,7 +1946,6 @@ public class CalciteQueryTest
 
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE cnt = 1.0 or cnt = 100000001.0",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -2020,7 +1969,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE cnt = 1 OR cnt = 2",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -2044,7 +1992,6 @@ public class CalciteQueryTest
         "SELECT distinct dim1 FROM druid.foo WHERE "
         + "dim1 = 10 OR "
         + "(floor(CAST(dim1 AS float)) = 10.00 and CAST(dim1 AS float) > 9 and CAST(dim1 AS float) <= 10.5)",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -2074,7 +2021,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT COUNT(*), COUNT(cnt), COUNT(dim1), AVG(cnt), SUM(cnt), SUM(cnt) + MIN(cnt) + MAX(cnt) FROM druid.foo",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -2123,7 +2069,6 @@ public class CalciteQueryTest
 
     testQuery(
         "SELECT dim1, MIN(m1) + MAX(m1) AS x FROM druid.foo GROUP BY dim1 ORDER BY x LIMIT 3",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -2263,7 +2208,6 @@ public class CalciteQueryTest
         + "SUM(CASE WHEN dim1 <> '1' THEN cnt ELSE 0 END), "
         + "MAX(CASE WHEN dim1 <> '1' THEN cnt END) "
         + "FROM druid.foo",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.<Query>of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -2335,7 +2279,6 @@ public class CalciteQueryTest
         + "  SUM(CASE WHEN dim1 <> '1' THEN 1 ELSE 0 END) + SUM(cnt)\n"
         + "FROM druid.foo\n"
         + "GROUP BY cnt",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -2368,7 +2311,6 @@ public class CalciteQueryTest
         + "COUNT(*) filter(WHERE dim1 NOT IN ('1')),\n"
         + "COUNT(dim2) filter(WHERE dim1 NOT IN ('1'))\n"
         + "FROM druid.foo",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -2397,7 +2339,6 @@ public class CalciteQueryTest
         + "  SUM(CHARACTER_LENGTH(CAST(cnt * 10 AS VARCHAR))),\n"
         + "  MAX(CHARACTER_LENGTH(dim2) + LN(m1))\n"
         + "FROM druid.foo",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -2434,7 +2375,6 @@ public class CalciteQueryTest
         + "WHERE FLOOR(m1 / 2) * 2 > -1\n"
         + "GROUP BY FLOOR(m1 / 2) * 2\n"
         + "ORDER BY 1 DESC",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -2481,7 +2421,6 @@ public class CalciteQueryTest
         + "WHERE CAST(m1 AS BIGINT) / 2 * 2 > -1\n"
         + "GROUP BY CAST(m1 AS BIGINT) / 2 * 2\n"
         + "ORDER BY 1 DESC",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -2530,7 +2469,6 @@ public class CalciteQueryTest
         + "WHERE FLOOR(CAST(dim1 AS FLOAT) / 2) * 2 > -1\n"
         + "GROUP BY FLOOR(CAST(dim1 AS FLOAT) / 2) * 2\n"
         + "ORDER BY 1 DESC",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -2576,7 +2514,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT dim1, COUNT(*) FROM druid.foo WHERE dim1 IN ('abc', 'def', 'ghi') GROUP BY dim1",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -2616,7 +2553,6 @@ public class CalciteQueryTest
 
     testQuery(
         "SELECT dim1, COUNT(*) FROM druid.foo WHERE dim1 IN (" + elementsString + ") GROUP BY dim1",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -2644,7 +2580,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE dim2 = 'a' and (dim1 > 'a' OR dim1 < 'b')",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -2666,7 +2601,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE dim2 = 'a' and not (dim1 > 'a' OR dim1 < 'b')",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(new Object[]{0L})
     );
@@ -2677,7 +2611,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE (dim1 >= 'a' and dim1 < 'b') OR dim1 = 'ab'",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -2699,7 +2632,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE (dim1 >= 'a' and dim1 < 'b') and dim1 = 'abc'",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -2721,7 +2653,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE CAST(dim1 AS bigint) = 2",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -2744,7 +2675,6 @@ public class CalciteQueryTest
     testQuery(
         "SELECT COUNT(*) FROM druid.foo "
         + "WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2001-01-01 00:00:00'",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -2768,7 +2698,6 @@ public class CalciteQueryTest
     testQuery(
         "SELECT COUNT(*) FROM druid.foo "
         + "WHERE __time >= '2000-01-01 00:00:00' AND __time < '2001-01-01 00:00:00'",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -2789,7 +2718,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE __time = TIMESTAMP '2000-01-01 00:00:00'",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -2811,7 +2739,6 @@ public class CalciteQueryTest
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE "
         + "__time = TIMESTAMP '2000-01-01 00:00:00' OR __time = TIMESTAMP '2000-01-01 00:00:00' + INTERVAL '1' DAY",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -2845,7 +2772,6 @@ public class CalciteQueryTest
         + "    and dim1 = 'abc'"
         + "  )"
         + ")",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -2887,7 +2813,6 @@ public class CalciteQueryTest
         + "    )"
         + "  )"
         + ")",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -2923,7 +2848,6 @@ public class CalciteQueryTest
         + "WHERE dim1 <> 'xxx' and not ("
         + "    (__time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2001-01-01 00:00:00')"
         + "    OR (__time >= TIMESTAMP '2003-01-01 00:00:00' AND __time < TIMESTAMP '2004-01-01 00:00:00'))",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -2953,7 +2877,6 @@ public class CalciteQueryTest
         "SELECT COUNT(*) FROM druid.foo "
         + "WHERE dim2 <> 'a' "
         + "and __time BETWEEN TIMESTAMP '2000-01-01 00:00:00' AND TIMESTAMP '2000-12-31 23:59:59.999'",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -2977,7 +2900,6 @@ public class CalciteQueryTest
         "SELECT COUNT(*) FROM druid.foo "
         + "WHERE dim2 <> 'a' "
         + "or __time BETWEEN TIMESTAMP '2000-01-01 00:00:00' AND TIMESTAMP '2000-12-31 23:59:59.999'",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -3014,7 +2936,6 @@ public class CalciteQueryTest
         "SELECT COUNT(*) FROM druid.foo WHERE "
         + "cnt >= EXTRACT(EPOCH FROM TIMESTAMP '1970-01-01 00:00:00') * 1000 "
         + "AND cnt < EXTRACT(EPOCH FROM TIMESTAMP '1970-01-02 00:00:00') * 1000",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -3048,7 +2969,6 @@ public class CalciteQueryTest
         "SELECT COUNT(*) FROM druid.foo WHERE "
         + "cnt >= TIMESTAMP_TO_MILLIS(TIMESTAMP '1970-01-01 00:00:00') "
         + "AND cnt < TIMESTAMP_TO_MILLIS(TIMESTAMP '1970-01-02 00:00:00')",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -3082,7 +3002,6 @@ public class CalciteQueryTest
 
     testQuery(
         "SELECT SUM(CAST(dim1 AS INTEGER)) FROM druid.foo",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -3112,7 +3031,6 @@ public class CalciteQueryTest
 
     testQuery(
         "SELECT SUM(CAST(SUBSTRING(dim1, 1, 10) AS INTEGER)) FROM druid.foo",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -3149,7 +3067,6 @@ public class CalciteQueryTest
         + "  AND MILLIS_TO_TIMESTAMP(cnt) < TIMESTAMP '1970-01-02 00:00:00'\n"
         + "GROUP BY\n"
         + "  FLOOR(MILLIS_TO_TIMESTAMP(cnt) TO YEAR)",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             new GroupByQuery.Builder()
                 .setDataSource(CalciteTests.DATASOURCE1)
@@ -3189,7 +3106,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT distinct dim1 FROM druid.foo WHERE substring(substring(dim1, 2), 1, 1) = 'e' OR dim2 = 'a'",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -3226,7 +3142,6 @@ public class CalciteQueryTest
     testQuery(
         "SELECT distinct dim1 FROM druid.foo "
         + "WHERE CHARACTER_LENGTH(dim1) = 3 OR CAST(CHARACTER_LENGTH(dim1) AS varchar) = 3",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -3256,7 +3171,6 @@ public class CalciteQueryTest
 
     testQuery(
         "SELECT DISTINCT dim2 FROM druid.foo LIMIT 10",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -3281,7 +3195,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT * FROM (SELECT DISTINCT dim2 FROM druid.foo ORDER BY dim2) LIMIT 10",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -3306,7 +3219,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT * FROM (SELECT DISTINCT dim2 FROM druid.foo ORDER BY dim2 LIMIT 5) LIMIT 10",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -3333,7 +3245,6 @@ public class CalciteQueryTest
 
     testQuery(
         "SELECT * FROM (SELECT DISTINCT dim2 FROM druid.foo ORDER BY dim2 LIMIT 2 OFFSET 5) OFFSET 2",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of()
     );
@@ -3344,7 +3255,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT * FROM (SELECT DISTINCT dim2 FROM druid.foo ORDER BY dim2 DESC LIMIT 5) LIMIT 10",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -3369,7 +3279,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT SUM(cnt), COUNT(distinct dim2), COUNT(distinct unique_dim1) FROM druid.foo",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -3529,7 +3438,6 @@ public class CalciteQueryTest
         + "  APPROX_COUNT_DISTINCT(SUBSTRING(dim2, 1, 1) || 'x'),\n" // on expression
         + "  approx_count_distinct(unique_dim1)\n" // on native hyperUnique column
         + "FROM druid.foo",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -3610,7 +3518,6 @@ public class CalciteQueryTest
         + "    GROUP BY m2, dim1\n"
         + ")\n"
         + "GROUP BY FLOOR(__time to hour), dim1",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(
@@ -3665,7 +3572,6 @@ public class CalciteQueryTest
         + "  ) t1\n"
         + "  GROUP BY dim2\n"
         + ") t2",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(
@@ -3725,7 +3631,6 @@ public class CalciteQueryTest
         + "  ) t1\n"
         + "  GROUP BY dim2\n"
         + ") t2",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{explanation}
@@ -3790,7 +3695,6 @@ public class CalciteQueryTest
         + ") t2 ON (t1.dim2 = t2.dim2)\n"
         + "GROUP BY t1.dim1\n"
         + "ORDER BY 1\n",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -3853,7 +3757,6 @@ public class CalciteQueryTest
         + "  LIMIT 2\n"
         + ") t2 ON (t1.dim2 = t2.dim2)\n"
         + "GROUP BY SUBSTRING(t1.dim1, 1, 10)",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -3916,7 +3819,6 @@ public class CalciteQueryTest
         + ") t2 ON (t1.dim2 = t2.dim2)\n"
         + "GROUP BY t1.dim1\n"
         + "ORDER BY 1\n",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -3962,7 +3864,6 @@ public class CalciteQueryTest
         + "    SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo WHERE dim1 <> ''\n"
         + "  )\n"
         + ")",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -4024,7 +3925,6 @@ public class CalciteQueryTest
         + "    SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo WHERE dim1 <> ''\n"
         + "  )\n"
         + ")",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(new Object[]{explanation})
     );
@@ -4039,7 +3939,6 @@ public class CalciteQueryTest
         + "  COUNT(*)\n"
         + "FROM (SELECT dim2, SUM(cnt) AS cnt FROM druid.foo GROUP BY dim2)\n"
         + "WHERE dim2 <> ''",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(
@@ -4079,7 +3978,6 @@ public class CalciteQueryTest
         + "  COUNT(*)\n"
         + "FROM (SELECT dim2, SUM(cnt) AS cnt FROM druid.foo GROUP BY dim2 LIMIT 1)"
         + "WHERE cnt > 0",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(
@@ -4120,7 +4018,6 @@ public class CalciteQueryTest
         + "  COUNT(DISTINCT dim1) AS approx_count,\n"
         + "  (CAST(1 AS FLOAT) - COUNT(DISTINCT dim1) / COUNT(*)) * 100 AS error_pct\n"
         + "FROM (SELECT DISTINCT dim1 FROM druid.foo WHERE dim1 <> '')",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(
@@ -4170,7 +4067,6 @@ public class CalciteQueryTest
         + "  COUNT(*)\n"
         + "FROM (SELECT dim2, SUM(cnt) AS thecnt FROM druid.foo GROUP BY dim2)\n"
         + "GROUP BY CAST(thecnt AS VARCHAR)",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(
@@ -4211,7 +4107,6 @@ public class CalciteQueryTest
         + "  COUNT(*)\n"
         + "FROM (SELECT dim2, SUM(cnt) AS thecnt FROM druid.foo GROUP BY dim2)\n"
         + "GROUP BY CAST(thecnt AS VARCHAR) ORDER BY CAST(thecnt AS VARCHAR) LIMIT 2",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(
@@ -4264,7 +4159,6 @@ public class CalciteQueryTest
         + "  SUM(cnt) / COUNT(DISTINCT dim2) + 3,\n"
         + "  CAST(SUM(cnt) AS FLOAT) / CAST(COUNT(DISTINCT dim2) AS FLOAT) + 3\n"
         + "FROM druid.foo",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -4302,7 +4196,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT COUNT(DISTINCT SUBSTRING(dim1, 1, 1)) FROM druid.foo WHERE dim1 <> ''",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -4342,7 +4235,6 @@ public class CalciteQueryTest
 
     testQuery(
         "SELECT COUNT(DISTINCT TRIM(BOTH ' ' FROM dim1)) FROM druid.foo WHERE TRIM(dim1) <> ''",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -4380,7 +4272,6 @@ public class CalciteQueryTest
         "SELECT CAST((EXTRACT(MONTH FROM __time) - 1 ) / 3 + 1 AS INTEGER) AS quarter, COUNT(*)\n"
         + "FROM foo\n"
         + "GROUP BY CAST((EXTRACT(MONTH FROM __time) - 1 ) / 3 + 1 AS INTEGER)",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -4411,7 +4302,6 @@ public class CalciteQueryTest
         + "  REGEXP_EXTRACT(dim1, '^(.)', 1)\n"
         + "FROM foo\n"
         + "WHERE REGEXP_EXTRACT(dim1, '^(.)', 1) <> 'x'",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -4456,7 +4346,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT dim2, dim1, SUM(cnt) FROM druid.foo GROUP BY dim2, dim1 ORDER BY dim1 LIMIT 4",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -4503,7 +4392,6 @@ public class CalciteQueryTest
         + "having SUM(cnt) = 1 "
         + "order by dim2 "
         + "limit 4",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -4549,7 +4437,6 @@ public class CalciteQueryTest
         + "WHERE\n"
         + "FLOOR(__time TO MONTH) = TIMESTAMP '2000-01-01 00:00:00'\n"
         + "OR FLOOR(__time TO MONTH) = TIMESTAMP '2000-02-01 00:00:00'",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -4573,7 +4460,6 @@ public class CalciteQueryTest
         + "WHERE\n"
         + "  __time >= CURRENT_TIMESTAMP + INTERVAL '01:02' HOUR TO MINUTE\n"
         + "  AND __time < TIMESTAMP '2003-02-02 01:00:00' - INTERVAL '1 1' DAY TO HOUR - INTERVAL '1-1' YEAR TO MONTH",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -4633,7 +4519,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT * FROM bview",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -4682,7 +4567,6 @@ public class CalciteQueryTest
         "SELECT COUNT(*) FROM druid.foo\n"
         + "WHERE\n"
         + "FLOOR(__time TO MONTH) <> TIMESTAMP '2001-01-01 00:00:00'",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -4708,7 +4592,6 @@ public class CalciteQueryTest
         "SELECT COUNT(*) FROM druid.foo\n"
         + "WHERE\n"
         + "FLOOR(__time TO MONTH) < TIMESTAMP '2000-02-01 00:00:00'",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -4731,7 +4614,6 @@ public class CalciteQueryTest
         "SELECT COUNT(*) FROM druid.foo\n"
         + "WHERE\n"
         + "FLOOR(__time TO MONTH) < TIMESTAMP '2000-02-01 00:00:01'",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -4755,7 +4637,6 @@ public class CalciteQueryTest
         "SELECT COUNT(*) FROM druid.foo\n"
         + "WHERE EXTRACT(YEAR FROM __time) = 2000\n"
         + "AND EXTRACT(MONTH FROM __time) = 1",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -4779,7 +4660,6 @@ public class CalciteQueryTest
         "SELECT COUNT(*) FROM druid.foo\n"
         + "WHERE EXTRACT(YEAR FROM __time) = 2000\n"
         + "AND EXTRACT(MONTH FROM __time) IN (2, 3, 5)",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -4801,7 +4681,6 @@ public class CalciteQueryTest
     testQuery(
         "SELECT COUNT(*) FROM druid.foo "
         + "WHERE floor(__time TO month) = TIMESTAMP '2000-01-01 00:00:01'",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -4849,7 +4728,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT floor(CAST(dim1 AS float)) AS fl, COUNT(*) FROM druid.foo GROUP BY floor(CAST(dim1 AS float)) ORDER BY fl DESC",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -4904,7 +4782,6 @@ public class CalciteQueryTest
         + " FROM druid.foo"
         + " GROUP BY floor(__time TO year), dim2"
         + " ORDER BY floor(__time TO year), dim2, COUNT(*) DESC",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -4966,7 +4843,6 @@ public class CalciteQueryTest
   {
     testQuery(
         "SELECT CHARACTER_LENGTH(dim1), COUNT(*) FROM druid.foo GROUP BY CHARACTER_LENGTH(dim1)",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -5003,7 +4879,6 @@ public class CalciteQueryTest
         "SELECT LOOKUP(dim1, 'lookyloo'), COUNT(*) FROM foo\n"
         + "WHERE LOOKUP(dim1, 'lookyloo') <> 'xxx'\n"
         + "GROUP BY LOOKUP(dim1, 'lookyloo')",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -5055,7 +4930,6 @@ public class CalciteQueryTest
 
     testQuery(
         "SELECT COUNT(DISTINCT LOOKUP(dim1, 'lookyloo')) FROM foo",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -5089,7 +4963,6 @@ public class CalciteQueryTest
         + ") AS x\n"
         + "GROUP BY gran\n"
         + "ORDER BY gran",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -5119,7 +4992,6 @@ public class CalciteQueryTest
         + "WHERE\n"
         + "  __time >= TIMESTAMP '2000-01-01 00:00:00'\n"
         + "  AND __time < TIMESTAMP '2001-02-01 00:00:00'",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -5201,7 +5073,6 @@ public class CalciteQueryTest
         + ") AS x\n"
         + "GROUP BY gran\n"
         + "ORDER BY gran",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -5228,7 +5099,6 @@ public class CalciteQueryTest
         + ") AS x\n"
         + "GROUP BY gran\n"
         + "ORDER BY gran",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -5277,7 +5147,6 @@ public class CalciteQueryTest
         + ") AS x\n"
         + "GROUP BY gran\n"
         + "ORDER BY gran",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -5312,7 +5181,6 @@ public class CalciteQueryTest
         + ") AS x\n"
         + "GROUP BY gran\n"
         + "ORDER BY gran",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -5425,7 +5293,6 @@ public class CalciteQueryTest
         + ") AS x\n"
         + "GROUP BY dt\n"
         + "ORDER BY dt",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -5456,7 +5323,6 @@ public class CalciteQueryTest
         + ") AS x\n"
         + "GROUP BY gran\n"
         + "ORDER BY gran DESC",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -5484,7 +5350,6 @@ public class CalciteQueryTest
         + "FROM druid.foo\n"
         + "GROUP BY EXTRACT(YEAR FROM __time)\n"
         + "ORDER BY 1",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -5539,7 +5404,6 @@ public class CalciteQueryTest
         + "FROM druid.foo\n"
         + "GROUP BY TIME_FORMAT(__time, 'yyyy MM')\n"
         + "ORDER BY 1",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -5592,7 +5456,6 @@ public class CalciteQueryTest
         + "EXTRACT(YEAR FROM FLOOR(__time TO YEAR)) AS \"year\", SUM(cnt)\n"
         + "FROM druid.foo\n"
         + "GROUP BY EXTRACT(YEAR FROM FLOOR(__time TO YEAR))",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -5731,7 +5594,6 @@ public class CalciteQueryTest
         + ") AS x\n"
         + "GROUP BY gran\n"
         + "LIMIT 1",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -5769,7 +5631,6 @@ public class CalciteQueryTest
         + "GROUP BY gran\n"
         + "ORDER BY gran\n"
         + "LIMIT 1",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -5803,7 +5664,6 @@ public class CalciteQueryTest
         + "FROM (SELECT FLOOR(__time TO MONTH) AS gran, dim2, cnt FROM druid.foo) AS x\n"
         + "GROUP BY dim2, gran\n"
         + "ORDER BY dim2, gran",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -5955,7 +5815,6 @@ public class CalciteQueryTest
         + "     HAVING COUNT(*) = 1"
         + "   )"
         + " )",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -5998,7 +5857,6 @@ public class CalciteQueryTest
         + "   GROUP BY dim2\n"
         + "   ORDER BY dim2 DESC\n"
         + " )",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -6045,7 +5903,6 @@ public class CalciteQueryTest
         "SELECT dim2, COUNT(*) FROM druid.foo "
         + "WHERE substring(dim2, 1, 1) IN (SELECT substring(dim1, 1, 1) FROM druid.foo WHERE dim1 <> '')"
         + "group by dim2",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -6091,7 +5948,6 @@ public class CalciteQueryTest
         + "  dim1 LIKE U&'\u05D3\\05E8%'\n" // First char is actually in the string; second is a SQL U& escape
         + "  OR dim1 = 'друид'\n"
         + "GROUP BY dim1, dim2",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE2)
@@ -6118,7 +5974,6 @@ public class CalciteQueryTest
 
   private void testQuery(
       final String sql,
-      final AuthenticationResult authenticationResult,
       final List<Query> expectedQueries,
       final List<Object[]> expectedResults
   ) throws Exception
@@ -6127,7 +5982,7 @@ public class CalciteQueryTest
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_DEFAULT,
         sql,
-        authenticationResult,
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         expectedQueries,
         expectedResults
     );
