@@ -567,6 +567,7 @@ public class AppenderatorDriver implements Closeable
                    .filter(sequenceName -> !publishingSequences.contains(sequenceName))
                    .forEach(sequenceName -> {
                      if (segments.containsKey(sequenceName)) {
+                       publishingSequences.add(sequenceName);
                        segments.get(sequenceName)
                                .values()
                                .stream()

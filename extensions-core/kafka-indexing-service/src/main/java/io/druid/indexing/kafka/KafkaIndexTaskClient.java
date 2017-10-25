@@ -34,7 +34,6 @@ import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.FullResponseHandler;
 import com.metamx.http.client.response.FullResponseHolder;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.indexing.common.RetryPolicy;
 import io.druid.indexing.common.RetryPolicyConfig;
 import io.druid.indexing.common.RetryPolicyFactory;
@@ -45,6 +44,7 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.segment.realtime.firehose.ChatHandlerResource;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -85,6 +85,7 @@ public class KafkaIndexTaskClient
   private static final EmittingLogger log = new EmittingLogger(KafkaIndexTaskClient.class);
   private static final String BASE_PATH = "/druid/worker/v1/chat";
   private static final int TASK_MISMATCH_RETRY_DELAY_SECONDS = 5;
+  private static final TreeMap EMPTY_TREE_MAP = new TreeMap();
 
   private final HttpClient httpClient;
   private final ObjectMapper jsonMapper;
@@ -279,11 +280,17 @@ public class KafkaIndexTaskClient
       return jsonMapper.readValue(response.getContent(), new TypeReference<TreeMap<Integer, TreeMap<Integer, Long>>>() {});
     }
     catch (NoTaskLocationException e) {
-      return new TreeMap<>();
+      return EMPTY_TREE_MAP;
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
     }
+  }
+
+  public ListenableFuture<TreeMap<Integer, Map<Integer, Long>>> getCheckpointsAsync(final String id, final boolean retry) {
+    return executorService.submit(
+        () -> getCheckpoints(id, retry)
+    );
   }
 
   public Map<Integer, Long> getEndOffsets(final String id)

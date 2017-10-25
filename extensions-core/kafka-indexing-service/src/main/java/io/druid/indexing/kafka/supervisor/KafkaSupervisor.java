@@ -38,6 +38,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -1122,26 +1123,41 @@ public class KafkaSupervisor implements Supervisor
 
     // List<TaskId, Map -> {SequenceId, Checkpoints}>
     final List<Pair<String, TreeMap<Integer, Map<Integer, Long>>>> taskSequences = new ArrayList<>();
+    final List<ListenableFuture<TreeMap<Integer, Map<Integer, Long>>>> futures = new ArrayList<>();
 
     for (String taskId : taskGroup.taskIds()) {
-      TreeMap<Integer, Map<Integer, Long>> checkpoints = null;
-      try {
-        checkpoints = taskClient.getCheckpoints(
-            taskId,
-            true
-        );
-      }
-      catch (Exception e) {
-        log.error(e, "Exception while getting checkpoints for task [%s]", taskId);
-      }
+      final ListenableFuture<TreeMap<Integer, Map<Integer, Long>>> checkpointsFuture = taskClient.getCheckpointsAsync(taskId, true);
+      futures.add(checkpointsFuture);
+      Futures.addCallback(
+          checkpointsFuture,
+          new FutureCallback<TreeMap<Integer, Map<Integer, Long>>>()
+          {
+            @Override
+            public void onSuccess(TreeMap<Integer, Map<Integer, Long>> checkpoints)
+            {
+              if (!checkpoints.isEmpty()) {
+                taskSequences.add(new Pair<>(taskId, checkpoints));
+              } else {
+                log.warn("Ignoring task [%s], as probably it is not started running yet", taskId);
+              }
+            }
 
-      if (checkpoints == null) {
-        log.error("Task [%s] returned no checkpoints, killing task", taskId);
-        killTask(taskId);
-        taskGroup.tasks.remove(taskId);
-      } else if (!checkpoints.isEmpty()) {
-        taskSequences.add(new Pair<>(taskId, checkpoints));
-      } // otherwise task not started yet, continue
+            @Override
+            public void onFailure(Throwable t)
+            {
+              log.error(t, "Problem while getting checkpoints for task [%s], killing the task", taskId);
+              killTask(taskId);
+              taskGroup.tasks.remove(taskId);
+            }
+          }
+      );
+    }
+
+    try {
+      Futures.allAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+    }
+    catch (Exception e) {
+      Throwables.propagate(e);
     }
 
     final KafkaDataSourceMetadata latestDataSourceMetadata = (KafkaDataSourceMetadata) indexerMetadataStorageCoordinator

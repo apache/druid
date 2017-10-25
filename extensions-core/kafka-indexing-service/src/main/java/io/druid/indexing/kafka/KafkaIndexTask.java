@@ -114,7 +114,6 @@ import javax.ws.rs.core.Response;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -228,7 +227,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
   private final Set<String> publishingSequences = Sets.newConcurrentHashSet();
   private final BlockingQueue<SequenceMetadata> publishQueue = new LinkedBlockingQueue<>();
-  private final List<ListenableFuture<SegmentsAndMetadata>> handOffWaitList = new ArrayList<>();
+  private final List<ListenableFuture<SegmentsAndMetadata>> handOffWaitList = new CopyOnWriteArrayList<>(); // to prevent concurrency visibility issue
   private final CountDownLatch waitForPublishes = new CountDownLatch(1);
   private final AtomicReference<Throwable> throwableAtomicReference = new AtomicReference<>();
   private final String topic;
@@ -730,7 +729,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                 sequenceToCheckpoint,
                 sequences
             );
-            pause(PAUSE_FOREVER);
+            requestPause(PAUSE_FOREVER);
             if (!toolbox.getTaskActionClient().submit(new CheckPointDataSourceMetadataAction(
                 getDataSource(),
                 ioConfig.getBaseSequenceName(),
@@ -917,7 +916,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     return access;
   }
 
-  // used for unit tests
+  @VisibleForTesting
   Appenderator getAppenderator()
   {
     return appenderator;
@@ -1284,6 +1283,11 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     return status == Status.PAUSED;
   }
 
+  private void requestPause(long pauseMillis) {
+    this.pauseMillis = pauseMillis;
+    pauseRequested = true;
+  }
+
   private Appenderator newAppenderator(FireDepartmentMetrics metrics, TaskToolbox toolbox)
   {
     return Appenderators.createRealtime(
@@ -1513,12 +1517,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
          .addData("partitions", partitionOffsetMap.keySet())
          .emit();
       // wait for being killed by supervisor
-      try {
-        pause(-1);
-      }
-      catch (InterruptedException e) {
-        throw new RuntimeException("Got interrupted while pausing task");
-      }
+      requestPause(PAUSE_FOREVER);
     } else {
       log.makeAlert("Failed to send reset request for partitions [%s]", partitionOffsetMap.keySet()).emit();
     }
