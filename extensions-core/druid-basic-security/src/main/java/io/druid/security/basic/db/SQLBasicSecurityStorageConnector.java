@@ -217,12 +217,6 @@ public abstract class SQLBasicSecurityStorageConnector
     );
   }
 
-  @Override
-  public void deleteAllRecords(String tableName)
-  {
-    throw new UnsupportedOperationException("delete all not supported yet for authorization storage");
-  }
-
   public MetadataStorageConnectorConfig getConfig()
   {
     return config.get();
@@ -258,7 +252,7 @@ public abstract class SQLBasicSecurityStorageConnector
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int count = getUserCountInTransaction(handle, userName);
+            int count = getUserCount(handle, userName);
             if (count != 0) {
               throw new BasicSecurityDBResourceException("User [%s] already exists.", userName);
             }
@@ -285,7 +279,7 @@ public abstract class SQLBasicSecurityStorageConnector
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int count = getUserCountInTransaction(handle, userName);
+            int count = getUserCount(handle, userName);
             if (count == 0) {
               throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
             }
@@ -311,7 +305,7 @@ public abstract class SQLBasicSecurityStorageConnector
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int count = getRoleCountInTransaction(handle, roleName);
+            int count = getRoleCount(handle, roleName);
             if (count != 0) {
               throw new BasicSecurityDBResourceException("Role [%s] already exists.", roleName);
             }
@@ -337,7 +331,7 @@ public abstract class SQLBasicSecurityStorageConnector
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int count = getRoleCountInTransaction(handle, roleName);
+            int count = getRoleCount(handle, roleName);
             if (count == 0) {
               throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
             }
@@ -363,7 +357,7 @@ public abstract class SQLBasicSecurityStorageConnector
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int roleCount = getRoleCountInTransaction(handle, roleName);
+            int roleCount = getRoleCount(handle, roleName);
             if (roleCount == 0) {
               throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
             }
@@ -391,35 +385,6 @@ public abstract class SQLBasicSecurityStorageConnector
   }
 
   @Override
-  public void deleteAllPermissionsFromRole(String roleName)
-  {
-    getDBI().inTransaction(
-        new TransactionCallback<Void>()
-        {
-          @Override
-          public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
-          {
-            int roleCount = getRoleCountInTransaction(handle, roleName);
-            if (roleCount == 0) {
-              throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
-            }
-
-            handle.createStatement(
-                StringUtils.format(
-                    "DELETE FROM %1$s WHERE role_name = :roleName",
-                    PERMISSIONS
-                )
-            )
-                  .bind("roleName", roleName)
-                  .execute();
-
-            return null;
-          }
-        }
-    );
-  }
-
-  @Override
   public void deletePermission(int permissionId)
   {
     getDBI().inTransaction(
@@ -428,7 +393,7 @@ public abstract class SQLBasicSecurityStorageConnector
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int permCount = getPermissionCountInTransaction(handle, permissionId);
+            int permCount = getPermissionCount(handle, permissionId);
             if (permCount == 0) {
               throw new BasicSecurityDBResourceException("Permission with id [%s] does not exist.", permissionId);
             }
@@ -454,8 +419,8 @@ public abstract class SQLBasicSecurityStorageConnector
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int userCount = getUserCountInTransaction(handle, userName);
-            int roleCount = getRoleCountInTransaction(handle, roleName);
+            int userCount = getUserCount(handle, userName);
+            int roleCount = getRoleCount(handle, roleName);
 
             if (userCount == 0) {
               throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
@@ -465,7 +430,7 @@ public abstract class SQLBasicSecurityStorageConnector
               throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
             }
 
-            int userRoleMappingCount = getUserRoleMappingCountInTransaction(handle, userName, roleName);
+            int userRoleMappingCount = getUserRoleMappingCount(handle, userName, roleName);
             if (userRoleMappingCount != 0) {
               throw new BasicSecurityDBResourceException("User [%s] already has role [%s].", userName, roleName);
             }
@@ -493,8 +458,8 @@ public abstract class SQLBasicSecurityStorageConnector
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int userCount = getUserCountInTransaction(handle, userName);
-            int roleCount = getRoleCountInTransaction(handle, roleName);
+            int userCount = getUserCount(handle, userName);
+            int roleCount = getRoleCount(handle, roleName);
 
             if (userCount == 0) {
               throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
@@ -504,7 +469,7 @@ public abstract class SQLBasicSecurityStorageConnector
               throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
             }
 
-            int userRoleMappingCount = getUserRoleMappingCountInTransaction(handle, userName, roleName);
+            int userRoleMappingCount = getUserRoleMappingCount(handle, userName, roleName);
             if (userRoleMappingCount == 0) {
               throw new BasicSecurityDBResourceException("User [%s] does not have role [%s].", userName, roleName);
             }
@@ -614,7 +579,7 @@ public abstract class SQLBasicSecurityStorageConnector
           public List<Map<String, Object>> inTransaction(Handle handle, TransactionStatus transactionStatus)
               throws Exception
           {
-            int userCount = getUserCountInTransaction(handle, userName);
+            int userCount = getUserCount(handle, userName);
             if (userCount == 0) {
               throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
             }
@@ -646,7 +611,7 @@ public abstract class SQLBasicSecurityStorageConnector
           public List<Map<String, Object>> inTransaction(Handle handle, TransactionStatus transactionStatus)
               throws Exception
           {
-            int roleCount = getRoleCountInTransaction(handle, roleName);
+            int roleCount = getRoleCount(handle, roleName);
             if (roleCount == 0) {
               throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
             }
@@ -699,7 +664,7 @@ public abstract class SQLBasicSecurityStorageConnector
           public List<Map<String, Object>> inTransaction(Handle handle, TransactionStatus transactionStatus)
               throws Exception
           {
-            int roleCount = getRoleCountInTransaction(handle, roleName);
+            int roleCount = getRoleCount(handle, roleName);
             if (roleCount == 0) {
               throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
             }
@@ -730,7 +695,7 @@ public abstract class SQLBasicSecurityStorageConnector
           public List<Map<String, Object>> inTransaction(Handle handle, TransactionStatus transactionStatus)
               throws Exception
           {
-            int userCount = getUserCountInTransaction(handle, userName);
+            int userCount = getUserCount(handle, userName);
             if (userCount == 0) {
               throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
             }
@@ -784,7 +749,7 @@ public abstract class SQLBasicSecurityStorageConnector
           @Override
           public Map<String, Object> inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int userCount = getUserCountInTransaction(handle, userName);
+            int userCount = getUserCount(handle, userName);
             if (userCount == 0) {
               throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
             }
@@ -810,7 +775,7 @@ public abstract class SQLBasicSecurityStorageConnector
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int userCount = getUserCountInTransaction(handle, userName);
+            int userCount = getUserCount(handle, userName);
             if (userCount == 0) {
               throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
             }
@@ -902,7 +867,7 @@ public abstract class SQLBasicSecurityStorageConnector
     );
   }
 
-  private int getUserCountInTransaction(Handle handle, String userName)
+  private int getUserCount(Handle handle, String userName)
   {
     return handle
         .createQuery(
@@ -913,7 +878,7 @@ public abstract class SQLBasicSecurityStorageConnector
         .first();
   }
 
-  private int getRoleCountInTransaction(Handle handle, String roleName)
+  private int getRoleCount(Handle handle, String roleName)
   {
     return handle
         .createQuery(
@@ -924,7 +889,7 @@ public abstract class SQLBasicSecurityStorageConnector
         .first();
   }
 
-  private int getPermissionCountInTransaction(Handle handle, int permissionId)
+  private int getPermissionCount(Handle handle, int permissionId)
   {
     return handle
         .createQuery(
@@ -935,7 +900,7 @@ public abstract class SQLBasicSecurityStorageConnector
         .first();
   }
 
-  private int getUserRoleMappingCountInTransaction(Handle handle, String userName, String roleName)
+  private int getUserRoleMappingCount(Handle handle, String userName, String roleName)
   {
     return handle
         .createQuery(

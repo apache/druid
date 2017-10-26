@@ -39,8 +39,6 @@ public interface BasicSecurityStorageConnector
 
   void addPermission(String roleName, ResourceAction resourceAction);
 
-  void deleteAllPermissionsFromRole(String roleName);
-
   void deletePermission(int permissionId);
 
   void assignRole(String userName, String roleName);
@@ -72,8 +70,6 @@ public interface BasicSecurityStorageConnector
   void createUserRoleTable();
 
   void createUserCredentialsTable();
-
-  void deleteAllRecords(String tableName);
 
   void setUserCredentials(String userName, char[] password);
 
