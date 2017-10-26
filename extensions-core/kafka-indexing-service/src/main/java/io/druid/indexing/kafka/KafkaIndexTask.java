@@ -80,8 +80,8 @@ import io.druid.segment.realtime.firehose.ChatHandler;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
-import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.ForbiddenException;
 import io.druid.server.security.Resource;
 import io.druid.server.security.ResourceAction;
@@ -491,21 +491,6 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
                   fireDepartmentMetrics.incrementProcessed();
                 } else {
-                  if (log.isDebugEnabled()) {
-                    if (beforeMinimumMessageTime) {
-                      log.debug(
-                          "CurrentTimeStamp[%s] is before MinimumMessageTime[%s]",
-                          row.getTimestamp(),
-                          ioConfig.getMinimumMessageTime().get()
-                      );
-                    } else if (afterMaximumMessageTime) {
-                      log.debug(
-                          "CurrentTimeStamp[%s] is after MaximumMessageTime[%s]",
-                          row.getTimestamp(),
-                          ioConfig.getMaximumMessageTime().get()
-                      );
-                    }
-                  }
                   fireDepartmentMetrics.incrementThrownAway();
                 }
               }
@@ -1225,8 +1210,28 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
   private boolean withinMinMaxRecordTime(final InputRow row)
   {
-    final boolean beforeMinimumMessageTime = ioConfig.getMinimumMessageTime().isPresent() && ioConfig.getMinimumMessageTime().get().isAfter(row.getTimestamp());
-    final boolean afterMaximumMessageTime = ioConfig.getMaximumMessageTime().isPresent() && ioConfig.getMaximumMessageTime().get().isBefore(row.getTimestamp());
+    final boolean beforeMinimumMessageTime = ioConfig.getMinimumMessageTime().isPresent()
+                                             && ioConfig.getMinimumMessageTime().get().isAfter(row.getTimestamp());
+
+    final boolean afterMaximumMessageTime = ioConfig.getMaximumMessageTime().isPresent()
+                                            && ioConfig.getMaximumMessageTime().get().isBefore(row.getTimestamp());
+
+    if (log.isDebugEnabled()) {
+      if (beforeMinimumMessageTime) {
+        log.debug(
+            "CurrentTimeStamp[%s] is before MinimumMessageTime[%s]",
+            row.getTimestamp(),
+            ioConfig.getMinimumMessageTime().get()
+        );
+      } else if (afterMaximumMessageTime) {
+        log.debug(
+            "CurrentTimeStamp[%s] is after MaximumMessageTime[%s]",
+            row.getTimestamp(),
+            ioConfig.getMaximumMessageTime().get()
+        );
+      }
+    }
+
     return !beforeMinimumMessageTime && !afterMaximumMessageTime;
   }
 }
