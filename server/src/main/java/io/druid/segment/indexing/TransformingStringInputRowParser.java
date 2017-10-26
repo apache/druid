@@ -58,7 +58,7 @@ public class TransformingStringInputRowParser extends StringInputRowParser
   @Override
   public StringInputRowParser withParseSpec(final ParseSpec parseSpec)
   {
-    return new TransformingStringInputRowParser(getParseSpec(), getEncoding(), transformSpec);
+    return new TransformingStringInputRowParser(parseSpec, getEncoding(), transformSpec);
   }
 
   public TransformSpec getTransformSpec()

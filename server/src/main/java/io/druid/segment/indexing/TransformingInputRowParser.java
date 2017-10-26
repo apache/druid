@@ -49,6 +49,7 @@ public class TransformingInputRowParser<T> implements InputRowParser<T>
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public InputRowParser<T> withParseSpec(final ParseSpec parseSpec)
   {
     return new TransformingInputRowParser<>(parser.withParseSpec(parseSpec), transformSpec);

@@ -322,7 +322,7 @@ public class DataSchemaTest
             null
         )
     );
-    Assert.assertEquals(
+    Assert.assertArrayEquals(
         actual.getAggregators(),
         new AggregatorFactory[]{
             new DoubleSumAggregatorFactory("metric1", "col1")
