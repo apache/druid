@@ -436,11 +436,11 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     Assert.assertTrue(
         "maximumMessageTime",
-        task1.getIOConfig().getMaximumMessageTime().get().minusMinutes(59).isAfterNow()
+        task1.getIOConfig().getMaximumMessageTime().get().minusMinutes(59 + 60).isAfterNow()
     );
     Assert.assertTrue(
         "maximumMessageTime",
-        task1.getIOConfig().getMaximumMessageTime().get().minusMinutes(61).isBeforeNow()
+        task1.getIOConfig().getMaximumMessageTime().get().minusMinutes(61 + 60).isBeforeNow()
     );
     Assert.assertEquals(
         task1.getIOConfig().getMaximumMessageTime().get(),
@@ -861,7 +861,10 @@ public class KafkaSupervisorTest extends EasyMockSupport
     // check that failed tasks are recreated with the same minimumMessageTime as the task it replaced, even if that
     // task came from another supervisor
     Assert.assertEquals(now, ((KafkaIndexTask) aNewTaskCapture.getValue()).getIOConfig().getMinimumMessageTime().get());
-    Assert.assertEquals(maxi, ((KafkaIndexTask) aNewTaskCapture.getValue()).getIOConfig().getMaximumMessageTime().get());
+    Assert.assertEquals(
+        maxi,
+        ((KafkaIndexTask) aNewTaskCapture.getValue()).getIOConfig().getMaximumMessageTime().get()
+    );
   }
 
   @Test
