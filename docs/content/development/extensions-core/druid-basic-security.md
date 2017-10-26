@@ -19,6 +19,7 @@ Make sure to [include](../../operations/including-extensions.html) `druid-basic-
 |--------|-----------|-------|--------|
 |`druid.auth.basic.initialAdminPassword`|Password to assign when Druid automatically creates the default admin account. See [Default user accounts](#default-user-accounts) for more information.|"druid"|No|
 |`druid.auth.basic.initialInternalClientPassword`|Password to assign when Druid automatically creates the default admin account. See [Default user accounts](#default-user-accounts) for more information.|"druid"|No|
+|`druid.auth.basic.permissionCacheSize`|Resource names are used as regexes in permissions. Compiled regex Pattern objects are cached by the Basic authorizer. This property controls how many cached Pattern objects are stored.|5000|No|
 
 ### Creating an Authenticator
 ```
@@ -143,6 +144,10 @@ Content: List of JSON Resource-Action objects, e.g.:
 ]
 ```
 
+The "name" field for resources in the permission definitions are regexes used to match resource names during authorization checks. 
+
+Please see [Defining permissions](#defining-permissions) for more details.
+
 `DELETE(/permissions/{permId})`
 Delete the permission with ID {permId}. Permission IDs are available from the output of individual user/role GET endpoints.
 
@@ -155,3 +160,60 @@ A default internal system user account with full privileges, meant for internal 
 The values for `druid.authenticator.<authenticatorName>.internalClientUsername` and `druid.authenticator.<authenticatorName>.internalClientPassword` must match the credentials of the internal system user account.
 
 Cluster administrators should change the default passwords for these accounts before exposing a cluster to users.
+
+## Defining permissions
+
+There are two action types in Druid: READ and WRITE
+
+There are three resource types in Druid: DATASOURCE, CONFIG, and STATE.
+
+### DATASOURCE
+Resource names for this type are datasource names. Specifying a datasource permission allows the administrator to grant users access to specific datasources.
+
+### CONFIG
+There are two possible resource names for the "CONFIG" resource type, "CONFIG" and "security". Granting a user access to CONFIG resources allows them to access the following endpoints.
+
+"CONFIG" resource name covers the following endpoints:
+
+|Endpoint|Node Type|
+|--------|---------|
+|`/druid/coordinator/v1/config`|coordinator|
+|`/druid/indexer/v1/worker`|overlord|
+|`/druid/indexer/v1/worker/history`|overlord|
+|`/druid/worker/v1/disable`|middleManager|
+|`/druid/worker/v1/enable`|middleManager|
+
+"security" resource name covers the following endpoint:
+
+|Endpoint|Node Type|
+|--------|---------|
+|`/druid/coordinator/v1/security`|coordinator|
+
+### STATE
+There is only one possible resource name for the "STATE" config resource type, "STATE". Granting a user access to STATE resources allows them to access the following endpoints.
+
+"STATE" resource name covers the following endpoints:
+
+|Endpoint|Node Type|
+|--------|---------|
+|`/druid/coordinator/v1`|coordinator|
+|`/druid/coordinator/v1/rules`|coordinator|
+|`/druid/coordinator/v1/rules/history`|coordinator|
+|`/druid/coordinator/v1/servers`|coordinator|
+|`/druid/coordinator/v1/tiers`|coordinator|
+|`/druid/broker/v1`|broker|
+|`/druid/v2/candidates`|broker|
+|`/druid/indexer/v1/leader`|overlord|
+|`/druid/indexer/v1/isLeader`|overlord|
+|`/druid/indexer/v1/action`|overlord|
+|`/druid/indexer/v1/workers`|overlord|
+|`/druid/indexer/v1/scaling`|overlord|
+|`/druid/worker/v1/enabled`|middleManager|
+|`/druid/worker/v1/tasks`|middleManager|
+|`/druid/worker/v1/task/{taskid}/shutdown`|middleManager|
+|`/druid/worker/v1//task/{taskid}/log`|middleManager|
+|`/druid/historical/v1`|historical|
+|`/druid-internal/v1/segments/`|historical|
+|`/druid-internal/v1/segments/`|peon|
+|`/druid-internal/v1/segments/`|realtime|
+|`/status`|all nodes|

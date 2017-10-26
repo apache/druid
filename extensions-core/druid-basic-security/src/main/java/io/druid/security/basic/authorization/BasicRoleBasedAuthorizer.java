@@ -22,7 +22,10 @@ package io.druid.security.basic.authorization;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import io.druid.java.util.common.IAE;
+import io.druid.security.basic.BasicAuthConfig;
 import io.druid.security.basic.db.BasicSecurityStorageConnector;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
@@ -40,13 +43,18 @@ import java.util.regex.Pattern;
 public class BasicRoleBasedAuthorizer implements Authorizer
 {
   private final BasicSecurityStorageConnector dbConnector;
+  private final LoadingCache<String, Pattern> permissionPatternCache;
 
   @JsonCreator
   public BasicRoleBasedAuthorizer(
-      @JacksonInject BasicSecurityStorageConnector dbConnector
+      @JacksonInject BasicSecurityStorageConnector dbConnector,
+      @JacksonInject BasicAuthConfig authConfig
   )
   {
     this.dbConnector = dbConnector;
+    this.permissionPatternCache = Caffeine.newBuilder()
+                                          .maximumSize(authConfig.getPermissionCacheSize())
+                                          .build(regexStr -> Pattern.compile(regexStr));
   }
 
   @Override
@@ -60,7 +68,6 @@ public class BasicRoleBasedAuthorizer implements Authorizer
 
     List<Map<String, Object>> permissions = dbConnector.getPermissionsForUser(authenticationResult.getIdentity());
 
-    // maybe optimize this later
     for (Map<String, Object> permission : permissions) {
       if (permissionCheck(resource, action, permission)) {
         return new Access(true);
@@ -83,7 +90,8 @@ public class BasicRoleBasedAuthorizer implements Authorizer
     }
 
     String permissionResourceName = permissionResource.getName();
-    Pattern resourceNamePattern = Pattern.compile(permissionResourceName);
+
+    Pattern resourceNamePattern = permissionPatternCache.get(permissionResourceName);
     Matcher resourceNameMatcher = resourceNamePattern.matcher(resource.getName());
     return resourceNameMatcher.matches();
   }

@@ -29,6 +29,9 @@ public class BasicAuthConfig
   @JsonProperty
   private String initialInternalClientPassword = "druid";
 
+  @JsonProperty
+  private int permissionCacheSize = 5000;
+
   public String getInitialAdminPassword()
   {
     return initialAdminPassword;
@@ -37,5 +40,10 @@ public class BasicAuthConfig
   public String getInitialInternalClientPassword()
   {
     return initialInternalClientPassword;
+  }
+
+  public int getPermissionCacheSize()
+  {
+    return permissionCacheSize;
   }
 }
