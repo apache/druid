@@ -22,12 +22,14 @@ package io.druid.indexing.firehose;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.google.inject.Injector;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
@@ -48,16 +50,15 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
-import io.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowParser>
 {
@@ -158,12 +159,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
         dims = getUniqueDimensions(timeLineSegments, inputRowParser);
       }
 
-      final List<String> metricsList;
-      if (metrics != null) {
-        metricsList = metrics;
-      } else {
-        metricsList = getUniqueMetrics(timeLineSegments);
-      }
+      final List<String> metricsList = metrics == null ? getUniqueMetrics(timeLineSegments) : metrics;
 
       final List<WindowedStorageAdapter> adapters = Lists.newArrayList(
           Iterables.concat(
@@ -215,48 +211,63 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
     }
   }
 
-  private static List<String> getUniqueDimensions(
+  @VisibleForTesting
+  static List<String> getUniqueDimensions(
       List<TimelineObjectHolder<String, DataSegment>> timelineSegments,
       InputRowParser inputRowParser
   )
   {
-    final Set<String> dimSet = timelineSegments
-        .stream()
-        .flatMap(timelineHolder -> {
-          final PartitionHolder<DataSegment> partitionHolder = timelineHolder.getObject();
-          final List<String> dims = new ArrayList<>(partitionHolder.size());
-          for (PartitionChunk<DataSegment> chunk : partitionHolder) {
-            dims.addAll(chunk.getObject().getDimensions());
-          }
-          return dims.stream();
-        })
-        .collect(Collectors.toSet());
+    final Set<String> exclusions = inputRowParser.getParseSpec().getDimensionsSpec().getDimensionExclusions();
+    final BiMap<String, Integer> uniqueDims = HashBiMap.create();
 
-    return new ArrayList<>(
-        Sets.difference(
-            dimSet,
-            inputRowParser
-                .getParseSpec()
-                .getDimensionsSpec()
-                .getDimensionExclusions()
-        )
-    );
+    // Here, we try to retain the order of dimensions as they were specified since the order of dimensions may be
+    // optimized for performance.
+    // Dimensions are extracted from the recent segments to olders because recent segments are likely to be queried more
+    // frequently, and thus the performance should be optimized for recent ones rather than old ones.
+
+    // timelineSegments are sorted in order of interval
+    int index = 0;
+    for (TimelineObjectHolder<String, DataSegment> timelineHolder : Lists.reverse(timelineSegments)) {
+      for (PartitionChunk<DataSegment> chunk : timelineHolder.getObject()) {
+        for (String dimension : chunk.getObject().getDimensions()) {
+          if (!uniqueDims.containsKey(dimension) && !exclusions.contains(dimension)) {
+            uniqueDims.put(dimension, index++);
+          }
+        }
+      }
+    }
+
+    final BiMap<Integer, String> orderedDims = uniqueDims.inverse();
+    return IntStream.range(0, orderedDims.size())
+                    .mapToObj(orderedDims::get)
+                    .collect(Collectors.toList());
   }
 
-  private static List<String> getUniqueMetrics(List<TimelineObjectHolder<String, DataSegment>> timelineSegments)
+  @VisibleForTesting
+  static List<String> getUniqueMetrics(List<TimelineObjectHolder<String, DataSegment>> timelineSegments)
   {
-    final Set<String> metricsSet = timelineSegments
-        .stream()
-        .flatMap(timelineHolder -> {
-          final PartitionHolder<DataSegment> partitionHolder = timelineHolder.getObject();
-          final List<String> metrics = new ArrayList<>(partitionHolder.size());
-          for (PartitionChunk<DataSegment> chunk : partitionHolder) {
-            metrics.addAll(chunk.getObject().getMetrics());
-          }
-          return metrics.stream();
-        })
-        .collect(Collectors.toSet());
+    final BiMap<String, Integer> uniqueMetrics = HashBiMap.create();
 
-    return new ArrayList<>(metricsSet);
+    // Here, we try to retain the order of metrics as they were specified since the order of metrics may be
+    // optimized for performance.
+    // Metrics are extracted from the recent segments to olders because recent segments are likely to be queried more
+    // frequently, and thus the performance should be optimized for recent ones rather than old ones.
+
+    // timelineSegments are sorted in order of interval
+    int index = 0;
+    for (TimelineObjectHolder<String, DataSegment> timelineHolder : Lists.reverse(timelineSegments)) {
+      for (PartitionChunk<DataSegment> chunk : timelineHolder.getObject()) {
+        for (String metric : chunk.getObject().getMetrics()) {
+          if (!uniqueMetrics.containsKey(metric)) {
+            uniqueMetrics.put(metric, index++);
+          }
+        }
+      }
+    }
+
+    final BiMap<Integer, String> orderedMetrics = uniqueMetrics.inverse();
+    return IntStream.range(0, orderedMetrics.size())
+        .mapToObj(orderedMetrics::get)
+        .collect(Collectors.toList());
   }
 }
