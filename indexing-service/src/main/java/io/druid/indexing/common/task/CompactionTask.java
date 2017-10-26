@@ -28,6 +28,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
+import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
@@ -71,6 +72,7 @@ public class CompactionTask extends AbstractTask
   private static final String TYPE = "compact";
 
   private final Interval interval;
+  private final DimensionsSpec dimensionsSpec;
   private final IndexTuningConfig tuningConfig;
   private final Injector injector;
   private final IndexIO indexIO;
@@ -85,6 +87,7 @@ public class CompactionTask extends AbstractTask
       @JsonProperty("resource") final TaskResource taskResource,
       @JsonProperty("dataSource") final String dataSource,
       @JsonProperty("interval") final Interval interval,
+      @JsonProperty("dimensionsSpec") final DimensionsSpec dimensionsSpec,
       @JsonProperty("tuningConfig") final IndexTuningConfig tuningConfig,
       @JsonProperty("context") final Map<String, Object> context,
       @JacksonInject Injector injector,
@@ -94,6 +97,7 @@ public class CompactionTask extends AbstractTask
   {
     super(getOrMakeId(id, TYPE, dataSource), null, taskResource, dataSource, context);
     this.interval = Preconditions.checkNotNull(interval, "interval");
+    this.dimensionsSpec = dimensionsSpec;
     this.tuningConfig = tuningConfig;
     this.injector = injector;
     this.indexIO = indexIO;
@@ -140,6 +144,7 @@ public class CompactionTask extends AbstractTask
           toolbox,
           getDataSource(),
           interval,
+          dimensionsSpec,
           tuningConfig,
           indexIO,
           injector,
@@ -166,6 +171,7 @@ public class CompactionTask extends AbstractTask
       TaskToolbox toolbox,
       String dataSource,
       Interval interval,
+      DimensionsSpec dimensionsSpec,
       IndexTuningConfig tuningConfig,
       IndexIO indexIO,
       Injector injector,
@@ -180,7 +186,7 @@ public class CompactionTask extends AbstractTask
     final Map<DataSegment, File> segmentFileMap = pair.lhs;
     final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = pair.rhs;
     return new IndexIngestionSpec(
-        createDataSchema(dataSource, interval, indexIO, jsonMapper, timelineSegments, segmentFileMap),
+        createDataSchema(dataSource, interval, dimensionsSpec, indexIO, jsonMapper, timelineSegments, segmentFileMap),
         new IndexIOConfig(
             new IngestSegmentFirehoseFactory(
                 dataSource,
@@ -216,6 +222,7 @@ public class CompactionTask extends AbstractTask
   private static DataSchema createDataSchema(
       String dataSource,
       Interval interval,
+      DimensionsSpec dimensionsSpec,
       IndexIO indexIO,
       ObjectMapper jsonMapper,
       List<TimelineObjectHolder<String, DataSegment>> timelineSegments,
@@ -256,7 +263,13 @@ public class CompactionTask extends AbstractTask
 
     return new DataSchema(
         dataSource,
-        ImmutableMap.of("type", "noop"),
+        dimensionsSpec == null ? ImmutableMap.of("type", "noop")
+                               : ImmutableMap.of(
+                                   "type",
+                                   "noop",
+                                   "parseSpec",
+                                   ImmutableMap.of("type", "timeAndDims", "dimensionsSpec", dimensionsSpec)
+                               ),
         combiningAggregators,
         granularitySpec,
         jsonMapper
