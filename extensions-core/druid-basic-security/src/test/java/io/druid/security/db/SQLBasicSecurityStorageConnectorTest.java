@@ -271,6 +271,19 @@ public class SQLBasicSecurityStorageConnectorTest
   }
 
   @Test
+  public void testAddBadPermission() throws Exception
+  {
+    expectedException.expect(CallbackFailedException.class);
+    expectedException.expectMessage("Invalid permission, resource name regex[??????????] does not compile.");
+    connector.createRole("druidRole");
+    ResourceAction permission = new ResourceAction(
+        new Resource("??????????", ResourceType.DATASOURCE),
+        Action.WRITE
+    );
+    connector.addPermission("druidRole", permission);
+  }
+
+  @Test
   public void testGetPermissionForNonExistentRole() throws Exception
   {
     expectedException.expect(CallbackFailedException.class);

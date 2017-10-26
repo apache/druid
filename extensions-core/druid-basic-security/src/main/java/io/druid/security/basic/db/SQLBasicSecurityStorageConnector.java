@@ -53,6 +53,8 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 /**
  * Base class for BasicSecurityStorageConnector implementations that interface with a database using SQL.
@@ -360,6 +362,17 @@ public abstract class SQLBasicSecurityStorageConnector
             int roleCount = getRoleCount(handle, roleName);
             if (roleCount == 0) {
               throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
+            }
+
+            // make sure the resource regex compiles
+            try {
+              Pattern pattern = Pattern.compile(resourceAction.getResource().getName());
+            }
+            catch (PatternSyntaxException pse) {
+              throw new BasicSecurityDBResourceException(
+                  "Invalid permission, resource name regex[%s] does not compile.",
+                  resourceAction.getResource().getName()
+              );
             }
 
             try {
