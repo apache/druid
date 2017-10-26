@@ -41,9 +41,12 @@ import java.util.Map;
  */
 public class PlannerContext
 {
+  // query context keys
   public static final String CTX_SQL_CURRENT_TIMESTAMP = "sqlCurrentTimestamp";
   public static final String CTX_SQL_TIME_ZONE = "sqlTimeZone";
-  public static final String CTX_AUTHENTICATION_RESULT = "authenticationResult";
+
+  // DataContext keys
+  public static final String DATA_CTX_AUTHENTICATION_RESULT = "authenticationResult";
 
   private final DruidOperatorTable operatorTable;
   private final ExprMacroTable macroTable;
@@ -170,7 +173,8 @@ public class PlannerContext
               new DateTime("1970-01-01T00:00:00.000", localNow.getZone()),
               localNow
           ).toDurationMillis(),
-          DataContext.Variable.TIME_ZONE.camelName, localNow.getZone().toTimeZone()
+          DataContext.Variable.TIME_ZONE.camelName, localNow.getZone().toTimeZone().clone(),
+          DATA_CTX_AUTHENTICATION_RESULT, authenticationResult
       );
 
       @Override
