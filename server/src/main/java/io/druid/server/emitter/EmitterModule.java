@@ -31,6 +31,7 @@ import com.google.inject.Module;
 import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
+import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import com.metamx.emitter.EmittingLogger;
@@ -45,6 +46,7 @@ import io.druid.server.DruidNode;
 
 import java.lang.annotation.Annotation;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -76,24 +78,35 @@ public class EmitterModule implements Module
     binder.install(new ComposingEmitterModule());
 
     binder.bind(Emitter.class).toProvider(new EmitterProvider(emitterType)).in(LazySingleton.class);
+
+    MapBinder<String, String> extraServiceDimensions = MapBinder.newMapBinder(
+        binder,
+        String.class,
+        String.class,
+        ExtraServiceDimensions.class
+    );
+    String version = getClass().getPackage().getImplementationVersion();
+    extraServiceDimensions
+        .addBinding("version")
+        .toInstance(Strings.nullToEmpty(version)); // Version is null during `mvn test`.
   }
 
   @Provides
   @ManageLifecycle
-  public ServiceEmitter getServiceEmitter(@Self Supplier<DruidNode> configSupplier, Emitter emitter)
+  public ServiceEmitter getServiceEmitter(
+      @Self Supplier<DruidNode> configSupplier,
+      Emitter emitter,
+      @ExtraServiceDimensions Map<String, String> extraServiceDimensions
+  )
   {
     final DruidNode config = configSupplier.get();
-    String version = getClass().getPackage().getImplementationVersion();
-    final ImmutableMap<String, String> otherServiceDimensions = ImmutableMap.of(
-        "version",
-        Strings.nullToEmpty(version) // Version is null during `mvn test`.
-    );
     log.info("Underlying emitter for ServiceEmitter: %s", emitter);
+    log.info("Extra service dimensions: %s", extraServiceDimensions);
     final ServiceEmitter retVal = new ServiceEmitter(
         config.getServiceName(),
         config.getHostAndPortToUse(),
         emitter,
-        otherServiceDimensions
+        ImmutableMap.copyOf(extraServiceDimensions)
     );
     EmittingLogger.registerEmitter(retVal);
     return retVal;
