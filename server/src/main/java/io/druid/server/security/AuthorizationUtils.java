@@ -193,6 +193,48 @@ public class AuthorizationUtils
       throw new ISE("Null authentication result");
     }
 
+    final Iterable<ResType> filteredResources = filterAuthorizedResources(
+        authenticationResult,
+        resources,
+        resourceActionGenerator,
+        authorizerMapper
+    );
+
+    // We're filtering, so having access to none of the objects isn't an authorization failure (in terms of whether
+    // to send an error response or not.)
+    request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+
+    return filteredResources;
+  }
+
+  /**
+   * Filter a collection of resources by applying the resourceActionGenerator to each resource, return an iterable
+   * containing the filtered resources.
+   *
+   * The resourceActionGenerator returns an Iterable<ResourceAction> for each resource.
+   *
+   * If every resource-action in the iterable is authorized, the resource will be added to the filtered resources.
+   *
+   * If there is an authorization failure for one of the resource-actions, the resource will not be
+   * added to the returned filtered resources..
+   *
+   * If the resourceActionGenerator returns null for a resource, that resource will not be added to the filtered
+   * resources.
+   *
+   * @param authenticationResult    Authentication result representing identity of requester
+   * @param resources               resources to be processed into resource-actions
+   * @param resourceActionGenerator Function that creates an iterable of resource-actions from a resource
+   * @param authorizerMapper        authorizer mapper
+   *
+   * @return Iterable containing resources that were authorized
+   */
+  public static <ResType> Iterable<ResType> filterAuthorizedResources(
+      final AuthenticationResult authenticationResult,
+      final Iterable<ResType> resources,
+      final Function<? super ResType, Iterable<ResourceAction>> resourceActionGenerator,
+      final AuthorizerMapper authorizerMapper
+  )
+  {
     final Authorizer authorizer = authorizerMapper.getAuthorizer(authenticationResult.getAuthorizerName());
     if (authorizer == null) {
       throw new ISE("No authorizer found with name: [%s].", authenticationResult.getAuthorizerName());
@@ -222,10 +264,6 @@ public class AuthorizationUtils
           return true;
         }
     );
-
-    // We're filtering, so having access to none of the objects isn't an authorization failure (in terms of whether
-    // to send an error response or not.)
-    request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
 
     return filteredResources;
   }

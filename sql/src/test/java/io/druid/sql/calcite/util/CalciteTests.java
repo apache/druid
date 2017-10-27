@@ -25,6 +25,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -92,9 +93,18 @@ import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.server.QueryLifecycleFactory;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.NoopRequestLogger;
+import io.druid.server.security.Access;
+import io.druid.server.security.Action;
+import io.druid.server.security.AllowAllAuthenticator;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.aggregation.SqlAggregator;
+import io.druid.server.security.AuthenticationResult;
+import io.druid.server.security.Authenticator;
+import io.druid.server.security.AuthenticatorMapper;
+import io.druid.server.security.Authorizer;
+import io.druid.server.security.AuthorizerMapper;
+import io.druid.server.security.Resource;
+import io.druid.server.security.ResourceType;
 import io.druid.sql.calcite.expression.SqlOperatorConversion;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
@@ -122,6 +132,66 @@ public class CalciteTests
 {
   public static final String DATASOURCE1 = "foo";
   public static final String DATASOURCE2 = "foo2";
+  public static final String FORBIDDEN_DATASOURCE = "forbiddenDatasource";
+
+  public static final String TEST_SUPERUSER_NAME = "testSuperuser";
+  public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null) {
+    @Override
+    public Authorizer getAuthorizer(String name)
+    {
+      return new Authorizer()
+      {
+        @Override
+        public Access authorize(
+            AuthenticationResult authenticationResult, Resource resource, Action action
+        )
+        {
+          if (authenticationResult.getIdentity().equals(TEST_SUPERUSER_NAME)) {
+            return Access.OK;
+          }
+
+          if (resource.getType() == ResourceType.DATASOURCE && resource.getName().equals(FORBIDDEN_DATASOURCE)) {
+            return new Access(false);
+          } else {
+            return Access.OK;
+          }
+        }
+      };
+    }
+  };
+  public static final AuthenticatorMapper TEST_AUTHENTICATOR_MAPPER;
+  static {
+    final Map<String, Authenticator> defaultMap = Maps.newHashMap();
+    defaultMap.put(
+        "allowAll",
+        new AllowAllAuthenticator() {
+          @Override
+          public AuthenticationResult authenticateJDBCContext(Map<String, Object> context)
+          {
+            return new AuthenticationResult((String) context.get("user"), "allowAll", null);
+          }
+
+          @Override
+          public AuthenticationResult createEscalatedAuthenticationResult()
+          {
+            return new AuthenticationResult(TEST_SUPERUSER_NAME, "allowAll", null);
+          }
+        }
+    );
+    TEST_AUTHENTICATOR_MAPPER = new AuthenticatorMapper(defaultMap, "allowAll");
+  }
+
+  public static final AuthenticationResult REGULAR_USER_AUTH_RESULT = new AuthenticationResult(
+      "allowAll",
+      "allowAll",
+      null
+  );
+
+  public static final AuthenticationResult SUPER_USER_AUTH_RESULT = new AuthenticationResult(
+      TEST_SUPERUSER_NAME,
+      "allowAll",
+      null
+  );
 
   private static final String TIMESTAMP_COLUMN = "t";
   private static final Supplier<SelectQueryConfig> SELECT_CONFIG_SUPPLIER = Suppliers.ofInstance(
@@ -302,6 +372,10 @@ public class CalciteTests
       createRow("2000-01-01", "друид", "ru", 1.0)
   );
 
+  public static final List<InputRow> FORBIDDEN_ROWS = ImmutableList.of(
+      createRow("2000-01-01", "forbidden", "abcd", 9999.0)
+  );
+
   private CalciteTests()
   {
     // No instantiation.
@@ -329,7 +403,7 @@ public class CalciteTests
         new NoopRequestLogger(),
         new ServerConfig(),
         new AuthConfig(),
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER
+        TEST_AUTHORIZER_MAPPER
     );
   }
 
@@ -354,6 +428,13 @@ public class CalciteTests
                                               .rows(ROWS2)
                                               .buildMMappedIndex();
 
+    final QueryableIndex forbiddenIndex = IndexBuilder.create()
+                                                      .tmpDir(new File(tmpDir, "forbidden"))
+                                                      .indexMerger(TestHelper.getTestIndexMergerV9())
+                                                      .schema(INDEX_SCHEMA)
+                                                      .rows(FORBIDDEN_ROWS)
+                                                      .buildMMappedIndex();
+
     return new SpecificSegmentsQuerySegmentWalker(queryRunnerFactoryConglomerate()).add(
         DataSegment.builder()
                    .dataSource(DATASOURCE1)
@@ -370,6 +451,14 @@ public class CalciteTests
                    .shardSpec(new LinearShardSpec(0))
                    .build(),
         index2
+    ).add(
+        DataSegment.builder()
+                   .dataSource(FORBIDDEN_DATASOURCE)
+                   .interval(forbiddenIndex.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .build(),
+        forbiddenIndex
     );
   }
 
@@ -423,7 +512,7 @@ public class CalciteTests
         new TestServerInventoryView(walker.getSegments()),
         plannerConfig,
         viewManager,
-        AuthTestUtils.TEST_AUTHENTICATOR_MAPPER
+        TEST_AUTHENTICATOR_MAPPER
     );
 
     schema.start();

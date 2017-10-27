@@ -28,6 +28,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
 import io.druid.segment.column.ValueType;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.sql.calcite.schema.DruidSchema;
 import io.druid.sql.calcite.schema.InformationSchema;
 import org.apache.calcite.jdbc.CalciteSchema;
@@ -77,11 +78,11 @@ public class Calcites
     return DEFAULT_CHARSET;
   }
 
-  public static SchemaPlus createRootSchema(final Schema druidSchema)
+  public static SchemaPlus createRootSchema(final Schema druidSchema, final AuthorizerMapper authorizerMapper)
   {
     final SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
     rootSchema.add(DruidSchema.NAME, druidSchema);
-    rootSchema.add(InformationSchema.NAME, new InformationSchema(rootSchema));
+    rootSchema.add(InformationSchema.NAME, new InformationSchema(rootSchema, authorizerMapper));
     return rootSchema;
   }
 
