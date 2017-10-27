@@ -52,6 +52,7 @@ import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -217,7 +218,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
   @VisibleForTesting
   static List<String> getUniqueDimensions(
       List<TimelineObjectHolder<String, DataSegment>> timelineSegments,
-      Set<String> excludeDimensions
+      @Nullable Set<String> excludeDimensions
   )
   {
     final BiMap<String, Integer> uniqueDims = HashBiMap.create();
@@ -232,7 +233,8 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
     for (TimelineObjectHolder<String, DataSegment> timelineHolder : Lists.reverse(timelineSegments)) {
       for (PartitionChunk<DataSegment> chunk : timelineHolder.getObject()) {
         for (String dimension : chunk.getObject().getDimensions()) {
-          if (!uniqueDims.containsKey(dimension) && !excludeDimensions.contains(dimension)) {
+          if (!uniqueDims.containsKey(dimension) &&
+              (excludeDimensions == null || !excludeDimensions.contains(dimension))) {
             uniqueDims.put(dimension, index++);
           }
         }

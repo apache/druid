@@ -38,7 +38,6 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.MapInputRowParser;
-import io.druid.data.input.impl.NoopInputRowParser;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.guice.GuiceAnnotationIntrospector;
@@ -622,7 +621,7 @@ public class IngestSegmentFirehoseFactoryTest
     };
     Assert.assertEquals(
         Arrays.asList(expectedDims),
-        IngestSegmentFirehoseFactory.getUniqueDimensions(timelineSegments, new NoopInputRowParser(null))
+        IngestSegmentFirehoseFactory.getUniqueDimensions(timelineSegments, null)
     );
     Assert.assertEquals(
         Arrays.asList(expectedMetrics),
