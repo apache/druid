@@ -28,6 +28,11 @@
             <version>1.8.2</version>
         </dependency>
         <dependency>
+            <groupId>org.xerial.snappy</groupId>
+            <artifactId>snappy-java</artifactId>
+            <version>1.1.4</version>
+        </dependency>
+        <dependency>
             <groupId>io.druid</groupId>
             <artifactId>druid-indexing-hadoop</artifactId>
             <version>${project.parent.version}</version>
