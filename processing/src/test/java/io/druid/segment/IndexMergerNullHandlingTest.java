@@ -24,10 +24,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.Sets;
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.data.IncrementalIndexTest;
@@ -37,6 +39,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.roaringbitmap.IntIterator;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -162,6 +165,35 @@ public class IndexMergerNullHandlingTest
                              .collect(Collectors.toList())
                 )
             );
+
+            // Verify that the bitmap index for null is correct.
+            final BitmapIndex bitmapIndex = column.getBitmapIndex();
+
+            // Read through the column to find all the rows that should match null.
+            final List<Integer> expectedNullRows = new ArrayList<>();
+            for (int i = 0; i < index.getNumRows(); i++) {
+              final List<String> row = getRow(dictionaryColumn, i);
+              if (row.isEmpty() || row.stream().anyMatch(Strings::isNullOrEmpty)) {
+                expectedNullRows.add(i);
+              }
+            }
+
+            Assert.assertEquals(subsetList.toString(), expectedNullRows.size() > 0, bitmapIndex.hasNulls());
+
+            if (expectedNullRows.size() > 0) {
+              Assert.assertEquals(subsetList.toString(), 0, bitmapIndex.getIndex(null));
+
+              final ImmutableBitmap nullBitmap = bitmapIndex.getBitmap(bitmapIndex.getIndex(null));
+              final List<Integer> actualNullRows = new ArrayList<>();
+              final IntIterator iterator = nullBitmap.iterator();
+              while (iterator.hasNext()) {
+                actualNullRows.add(iterator.next());
+              }
+
+              Assert.assertEquals(subsetList.toString(), expectedNullRows, actualNullRows);
+            } else {
+              Assert.assertEquals(-1, bitmapIndex.getIndex(null));
+            }
           }
         }
       }
