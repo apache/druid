@@ -23,10 +23,10 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultiset;
-import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.DictionaryEncodedColumn;
@@ -135,7 +135,7 @@ public class IndexMergerNullHandlingTest
             // Verify unique values against the dictionary.
             Assert.assertEquals(
                 subsetList.toString(),
-                uniqueValues.stream().sorted(Ordering.natural().nullsFirst()).collect(Collectors.toList()),
+                uniqueValues.stream().sorted(Comparators.naturalNullsFirst()).collect(Collectors.toList()),
                 IntStream.range(0, dictionaryColumn.getCardinality())
                          .mapToObj(dictionaryColumn::lookupName)
                          .collect(Collectors.toList())
