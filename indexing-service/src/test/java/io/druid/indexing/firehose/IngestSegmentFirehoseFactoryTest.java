@@ -400,7 +400,9 @@ public class IngestSegmentFirehoseFactoryTest
   )
   {
     this.factory = factory;
-    this.rowParser = rowParser;
+
+    // Must decorate the parser, since IngestSegmentFirehoseFactory will undecorate it.
+    this.rowParser = TransformSpec.NONE.decorate(rowParser);
   }
 
   private static final Logger log = new Logger(IngestSegmentFirehoseFactoryTest.class);
