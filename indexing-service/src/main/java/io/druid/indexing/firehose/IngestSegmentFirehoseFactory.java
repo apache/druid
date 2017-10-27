@@ -156,7 +156,10 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
       } else if (inputRowParser.getParseSpec().getDimensionsSpec().hasCustomDimensions()) {
         dims = inputRowParser.getParseSpec().getDimensionsSpec().getDimensionNames();
       } else {
-        dims = getUniqueDimensions(timeLineSegments, inputRowParser);
+        dims = getUniqueDimensions(
+            timeLineSegments,
+            inputRowParser.getParseSpec().getDimensionsSpec().getDimensionExclusions()
+        );
       }
 
       final List<String> metricsList = metrics == null ? getUniqueMetrics(timeLineSegments) : metrics;
@@ -214,10 +217,9 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
   @VisibleForTesting
   static List<String> getUniqueDimensions(
       List<TimelineObjectHolder<String, DataSegment>> timelineSegments,
-      InputRowParser inputRowParser
+      Set<String> excludeDimensions
   )
   {
-    final Set<String> exclusions = inputRowParser.getParseSpec().getDimensionsSpec().getDimensionExclusions();
     final BiMap<String, Integer> uniqueDims = HashBiMap.create();
 
     // Here, we try to retain the order of dimensions as they were specified since the order of dimensions may be
@@ -230,7 +232,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
     for (TimelineObjectHolder<String, DataSegment> timelineHolder : Lists.reverse(timelineSegments)) {
       for (PartitionChunk<DataSegment> chunk : timelineHolder.getObject()) {
         for (String dimension : chunk.getObject().getDimensions()) {
-          if (!uniqueDims.containsKey(dimension) && !exclusions.contains(dimension)) {
+          if (!uniqueDims.containsKey(dimension) && !excludeDimensions.contains(dimension)) {
             uniqueDims.put(dimension, index++);
           }
         }
@@ -248,10 +250,8 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
   {
     final BiMap<String, Integer> uniqueMetrics = HashBiMap.create();
 
-    // Here, we try to retain the order of metrics as they were specified since the order of metrics may be
-    // optimized for performance.
-    // Metrics are extracted from the recent segments to olders because recent segments are likely to be queried more
-    // frequently, and thus the performance should be optimized for recent ones rather than old ones.
+    // Here, we try to retain the order of metrics as they were specified. Metrics are extracted from the recent
+    // segments to olders.
 
     // timelineSegments are sorted in order of interval
     int index = 0;

@@ -274,6 +274,7 @@ An example of compaction task is
 ```
 
 This compaction task merges _all segments_ of the interval `2017-01-01/2018-01-01` into a _single segment_.
+To merge each day's worth of data into a separate segment, you can submit multiple `compact` tasks, one for each day. They will run in parallel.
 
 A compaction task internally generates an `index` task spec for performing compaction work with some fixed parameters.
 For example, its `firehose` is always the [ingestSegmentSpec](./firehose.html) and `dimensionsSpec` and `metricsSpec`
