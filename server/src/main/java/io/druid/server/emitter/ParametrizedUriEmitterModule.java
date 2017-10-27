@@ -27,14 +27,17 @@ import com.google.inject.Provides;
 import com.google.inject.name.Named;
 import com.metamx.emitter.core.Emitter;
 import com.metamx.emitter.core.ParametrizedUriEmitter;
-import com.metamx.http.client.HttpClientConfig;
-import com.metamx.http.client.HttpClientInit;
+import com.metamx.emitter.core.ParametrizedUriEmitterConfig;
 import com.metamx.metrics.FeedDefiningMonitor;
 import com.metamx.metrics.ParametrizedUriEmitterMonitor;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.ManageLifecycle;
-import io.druid.guice.http.LifecycleUtils;
 import io.druid.java.util.common.lifecycle.Lifecycle;
+import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.JdkSslContext;
+import org.asynchttpclient.AsyncHttpClient;
+import org.asynchttpclient.DefaultAsyncHttpClient;
+import org.asynchttpclient.DefaultAsyncHttpClientConfig;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLContext;
@@ -59,19 +62,16 @@ public class ParametrizedUriEmitterModule implements Module
       EmitterMonitorProvider emitterMonitorProvider
   )
   {
-    final HttpClientConfig.Builder builder = HttpClientConfig
-        .builder()
-        .withNumConnections(1)
-        .withReadTimeout(config.get().getReadTimeout().toStandardDuration());
+    final DefaultAsyncHttpClientConfig.Builder builder = new DefaultAsyncHttpClientConfig.Builder();
     if (sslContext != null) {
-      builder.withSslContext(sslContext);
+      builder.setSslContext(new JdkSslContext(sslContext, true, ClientAuth.NONE));
     }
-    ParametrizedUriEmitter emitter = new ParametrizedUriEmitter(
-        config.get(),
-        HttpClientInit.createClient(builder.build(), LifecycleUtils.asMmxLifecycle(lifecycle)),
-        jsonMapper
-    );
-    ParametrizedUriEmitterMonitor emitterMonitor = new ParametrizedUriEmitterMonitor(
+    final AsyncHttpClient client = new DefaultAsyncHttpClient(builder.build());
+    lifecycle.addCloseableInstance(client);
+
+    final ParametrizedUriEmitter emitter = new ParametrizedUriEmitter(config.get(), client, jsonMapper);
+
+    final ParametrizedUriEmitterMonitor emitterMonitor = new ParametrizedUriEmitterMonitor(
         FeedDefiningMonitor.DEFAULT_METRICS_FEED,
         emitter
     );
