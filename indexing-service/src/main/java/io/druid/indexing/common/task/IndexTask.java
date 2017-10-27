@@ -96,6 +96,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
@@ -1149,6 +1150,84 @@ public class IndexTask extends AbstractTask
     public Period getIntermediatePersistPeriod()
     {
       return new Period(Integer.MAX_VALUE); // intermediate persist doesn't make much sense for batch jobs
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      final IndexTuningConfig that = (IndexTuningConfig) o;
+
+      if (!Objects.equals(targetPartitionSize, that.targetPartitionSize)) {
+        return false;
+      }
+
+      if (maxRowsInMemory != that.maxRowsInMemory) {
+        return false;
+      }
+
+      if (maxTotalRows != that.maxTotalRows) {
+        return false;
+      }
+
+      if (!Objects.equals(numShards, that.numShards)) {
+        return false;
+      }
+
+      if (!Objects.equals(indexSpec, that.indexSpec)) {
+        return false;
+      }
+
+      if (!Objects.equals(basePersistDirectory, that.basePersistDirectory)) {
+        return false;
+      }
+
+      if (maxPendingPersists != that.maxPendingPersists) {
+        return false;
+      }
+
+      if (forceExtendableShardSpecs != that.forceExtendableShardSpecs) {
+        return false;
+      }
+
+      if (forceGuaranteedRollup != that.forceGuaranteedRollup) {
+        return false;
+      }
+
+      if (reportParseExceptions != that.reportParseExceptions) {
+        return false;
+      }
+
+      if (publishTimeout != that.publishTimeout) {
+        return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(
+          targetPartitionSize,
+          maxRowsInMemory,
+          maxTotalRows,
+          numShards,
+          indexSpec,
+          basePersistDirectory,
+          maxPendingPersists,
+          forceExtendableShardSpecs,
+          forceGuaranteedRollup,
+          reportParseExceptions,
+          publishTimeout
+      );
     }
   }
 }

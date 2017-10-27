@@ -29,6 +29,8 @@ import com.google.common.base.Preconditions;
 import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.StringUtils;
 
+import java.util.Objects;
+
 /**
  */
 @PublicApi
@@ -149,13 +151,30 @@ public abstract class DimensionSchema
 
     DimensionSchema that = (DimensionSchema) o;
 
-    return name.equals(that.name);
+    if (!name.equals(that.name)) {
+      return false;
+    }
 
+    if (!getValueType().equals(that.getValueType())) {
+      return false;
+    }
+
+    return Objects.equals(multiValueHandling, that.multiValueHandling);
   }
 
   @Override
   public int hashCode()
   {
-    return name.hashCode();
+    return Objects.hash(name, getValueType(), multiValueHandling);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "DimensionSchema{" +
+           "name='" + name + "'" +
+           ", valueType='" + getValueType() + "'" +
+           ", multiValueHandling='" + getMultiValueHandling() + "'" +
+           "}";
   }
 }

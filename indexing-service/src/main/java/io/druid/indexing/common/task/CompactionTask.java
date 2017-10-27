@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
@@ -91,7 +92,6 @@ public class CompactionTask extends AbstractTask
   private final Interval interval;
   private final IndexTuningConfig tuningConfig;
   private final Injector injector;
-  private final IndexIO indexIO;
   private final ObjectMapper jsonMapper;
 
   @JsonIgnore
@@ -106,7 +106,6 @@ public class CompactionTask extends AbstractTask
       @JsonProperty("tuningConfig") final IndexTuningConfig tuningConfig,
       @JsonProperty("context") final Map<String, Object> context,
       @JacksonInject Injector injector,
-      @JacksonInject IndexIO indexIO,
       @JacksonInject ObjectMapper jsonMapper
   )
   {
@@ -114,7 +113,6 @@ public class CompactionTask extends AbstractTask
     this.interval = Preconditions.checkNotNull(interval, "interval");
     this.tuningConfig = tuningConfig;
     this.injector = injector;
-    this.indexIO = indexIO;
     this.jsonMapper = jsonMapper;
   }
 
@@ -159,7 +157,6 @@ public class CompactionTask extends AbstractTask
           getDataSource(),
           interval,
           tuningConfig,
-          indexIO,
           injector,
           jsonMapper
       );
@@ -180,12 +177,12 @@ public class CompactionTask extends AbstractTask
     return indexTaskSpec.run(toolbox);
   }
 
-  private static IndexIngestionSpec createIngestionSchema(
+  @VisibleForTesting
+  static IndexIngestionSpec createIngestionSchema(
       TaskToolbox toolbox,
       String dataSource,
       Interval interval,
       IndexTuningConfig tuningConfig,
-      IndexIO indexIO,
       Injector injector,
       ObjectMapper jsonMapper
   ) throws IOException, SegmentLoadingException
@@ -200,7 +197,7 @@ public class CompactionTask extends AbstractTask
     final DataSchema dataSchema = createDataSchema(
         dataSource,
         interval,
-        indexIO,
+        toolbox.getIndexIO(),
         jsonMapper,
         timelineSegments,
         segmentFileMap
@@ -216,7 +213,7 @@ public class CompactionTask extends AbstractTask
                 dataSchema.getParser().getParseSpec().getDimensionsSpec().getDimensionNames(),
                 Arrays.stream(dataSchema.getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toList()),
                 injector,
-                indexIO
+                toolbox.getIndexIO()
             ),
             false
         ),
@@ -263,14 +260,6 @@ public class CompactionTask extends AbstractTask
       throw new ISE("Failed to merge aggregators[%s]", aggregatorFactories);
     }
 
-    // convert to combining aggregators
-    final List<AggregatorFactory> combiningAggregatorList = Arrays.stream(mergedAggregators)
-                                                                  .map(AggregatorFactory::getCombiningFactory)
-                                                                  .collect(Collectors.toList());
-    final AggregatorFactory[] combiningAggregators = combiningAggregatorList.toArray(
-        new AggregatorFactory[combiningAggregatorList.size()]
-    );
-
     // find granularity spec
     // set rollup only if rollup is set for all segments
     final boolean rollup = queryableIndices.stream().allMatch(index -> index.getMetadata().isRollup());
@@ -287,7 +276,7 @@ public class CompactionTask extends AbstractTask
     return new DataSchema(
         dataSource,
         jsonMapper.convertValue(parser, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT),
-        combiningAggregators,
+        mergedAggregators,
         granularitySpec,
         jsonMapper
     );
