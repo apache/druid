@@ -161,9 +161,13 @@ public abstract class AggregatorFactory implements Cacheable
 
     if (aggregatorsList.size() == 1) {
       final AggregatorFactory[] aggregatorFactories = aggregatorsList.get(0);
-      final AggregatorFactory[] combiningFactories = new AggregatorFactory[aggregatorFactories.length];
-      Arrays.setAll(combiningFactories, i -> aggregatorFactories[i].getCombiningFactory());
-      return combiningFactories;
+      if (aggregatorFactories != null) {
+        final AggregatorFactory[] combiningFactories = new AggregatorFactory[aggregatorFactories.length];
+        Arrays.setAll(combiningFactories, i -> aggregatorFactories[i].getCombiningFactory());
+        return combiningFactories;
+      } else {
+        return null;
+      }
     }
 
     Map<String, AggregatorFactory> mergedAggregators = new LinkedHashMap<>();
