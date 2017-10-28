@@ -280,8 +280,17 @@ A compaction task internally generates an `index` task spec for performing compa
 For example, its `firehose` is always the [ingestSegmentSpec](./firehose.html) and `dimensionsSpec` and `metricsSpec`
 always include all dimensions and metrics of the input segments.
 
-Note that the output segment is rolled up only when `rollup` is set for all input segments.
-See [Segment Metadata Queries](../querying/segmentmetadataquery.html#analysistypes) for more details about `rollup`.
+The output segment can have different metadata from the input segments unless all input segments have the same metadata.
+
+- Dimensions: since Druid supports schema change, the dimensions can be different across segments even if they are a part of the same dataSource.
+If the input segments have different dimensions, the output segment basically includes all dimensions of the input segments.
+Furthermore, even the dimension order or the data type of dimensions can be changed for more optimized performance. For example, the data type of some dimensions can be
+changed from `string` to primitive types, or the order of dimensions can be changed for better locality (See [Partitioning](batch-ingestion.html#partitioning-specification)).
+In this case, the dimensions of recent segments precede those of older segments in terms of data types and the ordering.
+This is because more recent segments are more likely to have the new desired order and data types.
+- Roll-up: the output segment is rolled up only when `rollup` is set for all input segments.
+See [Roll-up](../design/index.html#roll-up) for more details. 
+You can check that your segments are rolled up or not by using [Segment Metadata Queries](../querying/segmentmetadataquery.html#analysistypes).
 
 Segment Destroying Tasks
 ------------------------

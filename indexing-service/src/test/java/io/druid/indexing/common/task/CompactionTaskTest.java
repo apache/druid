@@ -23,12 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.impl.DimensionSchema;
-import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.data.input.impl.DoubleDimensionSchema;
 import io.druid.data.input.impl.FloatDimensionSchema;
 import io.druid.data.input.impl.InputRowParser;
@@ -76,7 +73,6 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -96,12 +92,24 @@ public class CompactionTaskTest
 {
   private static final String DATA_SOURCE = "dataSource";
   private static final String TIMESTAMP_COLUMN = "timestamp";
-  private static final Interval INTERVAL = Intervals.of("2017-01-01/2018-01-01");
+  private static final String MIXED_TYPE_COLUMN = "string_to_double";
+  private static final Interval COMPACTION_INTERVAL = Intervals.of("2017-01-01/2017-06-01");
+  private static final Map<Interval, DimensionSchema> MIXED_TYPE_COLUMN_MAP = ImmutableMap.of(
+      Intervals.of("2017-01-01/2017-02-01"),
+      new StringDimensionSchema(MIXED_TYPE_COLUMN, null),
+      Intervals.of("2017-02-01/2017-03-01"),
+      new StringDimensionSchema(MIXED_TYPE_COLUMN, null),
+      Intervals.of("2017-03-01/2017-04-01"),
+      new StringDimensionSchema(MIXED_TYPE_COLUMN, null),
+      Intervals.of("2017-04-01/2017-05-01"),
+      new StringDimensionSchema(MIXED_TYPE_COLUMN, null),
+      Intervals.of("2017-05-01/2017-06-01"),
+      new DoubleDimensionSchema(MIXED_TYPE_COLUMN)
+  );
   private static final IndexTuningConfig TUNING_CONFIG = createTuningConfig();
 
   private static Map<String, DimensionSchema> DIMENSIONS;
   private static Map<String, AggregatorFactory> AGGREGATORS;
-  private static Map<DataSegment, File> SEGMENT_MAP;
   private static ObjectMapper objectMapper = new DefaultObjectMapper();
   private static TaskToolbox toolbox;
 
@@ -116,7 +124,7 @@ public class CompactionTaskTest
     for (int i = 0; i < 5; i++) {
       final StringDimensionSchema schema = new StringDimensionSchema(
           "string_dim_" + i,
-          MultiValueHandling.SORTED_ARRAY
+          null
       );
       DIMENSIONS.put(schema.getName(), schema);
     }
@@ -139,17 +147,18 @@ public class CompactionTaskTest
     AGGREGATORS.put("agg_3", new FloatFirstAggregatorFactory("agg_3", "float_dim_3"));
     AGGREGATORS.put("agg_4", new DoubleLastAggregatorFactory("agg_4", "double_dim_4"));
 
-    SEGMENT_MAP = new HashMap<>(5);
+    final Map<DataSegment, File> segmentMap = new HashMap<>(5);
     for (int i = 0; i < 5; i++) {
-      SEGMENT_MAP.put(
+      final Interval segmentInterval = Intervals.of(String.format("2017-0%d-01/2017-0%d-01", (i + 1), (i + 2)));
+      segmentMap.put(
           new DataSegment(
               DATA_SOURCE,
-              INTERVAL,
+              segmentInterval,
               "version",
               ImmutableMap.of(),
-              findDimensions(i),
+              findDimensions(i, segmentInterval),
               new ArrayList<>(AGGREGATORS.keySet()),
-              new NumberedShardSpec(i, 5),
+              new NumberedShardSpec(0, 1),
               0,
               1
           ),
@@ -158,22 +167,25 @@ public class CompactionTaskTest
     }
 
     toolbox = new TestTaskToolbox(
-        new TestTaskActionClient(new ArrayList<>(SEGMENT_MAP.keySet())),
-        new TestIndexIO(objectMapper, SEGMENT_MAP),
-        SEGMENT_MAP
+        new TestTaskActionClient(new ArrayList<>(segmentMap.keySet())),
+        new TestIndexIO(objectMapper, segmentMap),
+        segmentMap
     );
   }
 
-  private static List<String> findDimensions(int index)
+  private static List<String> findDimensions(int startIndex, Interval segmentInterval)
   {
     final List<String> dimensions = new ArrayList<>();
     dimensions.add(TIMESTAMP_COLUMN);
-    for (int i = index; i < Math.min(index + 3, 5); i++) {
-      dimensions.add("string_dim_" + i);
-      dimensions.add("long_dim_" + i);
-      dimensions.add("float_dim_" + i);
-      dimensions.add("double_dim_" + i);
+    for (int i = 0; i < 5; i++) {
+      int postfix = i + startIndex;
+      postfix = postfix >= 5 ? postfix - 5 : postfix;
+      dimensions.add("string_dim_" + postfix);
+      dimensions.add("long_dim_" + postfix);
+      dimensions.add("float_dim_" + postfix);
+      dimensions.add("double_dim_" + postfix);
     }
+    dimensions.add(MIXED_TYPE_COLUMN_MAP.get(segmentInterval).getName());
     return dimensions;
   }
 
@@ -200,19 +212,13 @@ public class CompactionTaskTest
     );
   }
 
-  @Before
-  public void setup() throws IOException
-  {
-
-  }
-
   @Test
   public void testCreateIngestionSchema() throws IOException, SegmentLoadingException
   {
     final IndexIngestionSpec ingestionSchema = CompactionTask.createIngestionSchema(
         toolbox,
         DATA_SOURCE,
-        INTERVAL,
+        COMPACTION_INTERVAL,
         TUNING_CONFIG,
         GuiceInjectors.makeStartupInjector(),
         objectMapper
@@ -226,9 +232,7 @@ public class CompactionTaskTest
     Assert.assertTrue(parser instanceof NoopInputRowParser);
     Assert.assertTrue(parser.getParseSpec() instanceof TimeAndDimsParseSpec);
     Assert.assertEquals(
-        new HashSet<>(Sets.difference(
-            new HashSet<>(DIMENSIONS.values()), ImmutableSet.of(new LongDimensionSchema(Column.TIME_COLUMN_NAME)))
-        ),
+        findExpectedDimensions(),
         new HashSet<>(parser.getParseSpec().getDimensionsSpec().getDimensions())
     );
     final Set<AggregatorFactory> expectedAggregators = AGGREGATORS.values()
@@ -237,7 +241,7 @@ public class CompactionTaskTest
                                                                   .collect(Collectors.toSet());
     Assert.assertEquals(expectedAggregators, new HashSet<>(Arrays.asList(dataSchema.getAggregators())));
     Assert.assertEquals(
-        new ArbitraryGranularitySpec(Granularities.NONE, false, ImmutableList.of(INTERVAL)),
+        new ArbitraryGranularitySpec(Granularities.NONE, false, ImmutableList.of(COMPACTION_INTERVAL)),
         dataSchema.getGranularitySpec()
     );
 
@@ -248,7 +252,7 @@ public class CompactionTaskTest
     Assert.assertTrue(firehoseFactory instanceof IngestSegmentFirehoseFactory);
     final IngestSegmentFirehoseFactory ingestSegmentFirehoseFactory = (IngestSegmentFirehoseFactory) firehoseFactory;
     Assert.assertEquals(DATA_SOURCE, ingestSegmentFirehoseFactory.getDataSource());
-    Assert.assertEquals(INTERVAL, ingestSegmentFirehoseFactory.getInterval());
+    Assert.assertEquals(COMPACTION_INTERVAL, ingestSegmentFirehoseFactory.getInterval());
     Assert.assertNull(ingestSegmentFirehoseFactory.getDimensionsFilter());
     // check the order of dimensions
     Assert.assertEquals(
@@ -258,22 +262,23 @@ public class CompactionTaskTest
             "long_dim_4",
             "float_dim_4",
             "double_dim_4",
-            "string_dim_3",
-            "long_dim_3",
-            "float_dim_3",
-            "double_dim_3",
-            "string_dim_2",
-            "long_dim_2",
-            "float_dim_2",
-            "double_dim_2",
+            "string_dim_0",
+            "long_dim_0",
+            "float_dim_0",
+            "double_dim_0",
             "string_dim_1",
             "long_dim_1",
             "float_dim_1",
             "double_dim_1",
-            "string_dim_0",
-            "long_dim_0",
-            "float_dim_0",
-            "double_dim_0"
+            "string_dim_2",
+            "long_dim_2",
+            "float_dim_2",
+            "double_dim_2",
+            "string_dim_3",
+            "long_dim_3",
+            "float_dim_3",
+            "double_dim_3",
+            "string_to_double"
         ),
         ingestSegmentFirehoseFactory.getDimensions()
     );
@@ -285,6 +290,17 @@ public class CompactionTaskTest
 
     // assert tuningConfig
     Assert.assertEquals(createTuningConfig(), ingestionSchema.getTuningConfig());
+  }
+
+  private static Set<DimensionSchema> findExpectedDimensions()
+  {
+    final Set<DimensionSchema> expectedDimensions = new HashSet<>();
+    expectedDimensions.addAll(DIMENSIONS.values());
+    // __time column is not included
+    expectedDimensions.remove(new LongDimensionSchema(Column.TIME_COLUMN_NAME));
+    // this column should be double type
+    expectedDimensions.add(new DoubleDimensionSchema(MIXED_TYPE_COLUMN));
+    return expectedDimensions;
   }
 
   private static class TestTaskToolbox extends TaskToolbox
@@ -380,7 +396,9 @@ public class CompactionTaskTest
         final List<AggregatorFactory> aggregatorFactories = new ArrayList<>(segment.getMetrics().size());
 
         for (String columnName : columnNames) {
-          if (DIMENSIONS.containsKey(columnName)) {
+          if (columnName.equals(MIXED_TYPE_COLUMN)) {
+            columnMap.put(columnName, createColumn(MIXED_TYPE_COLUMN_MAP.get(segment.getInterval())));
+          } else if (DIMENSIONS.containsKey(columnName)) {
             columnMap.put(columnName, createColumn(DIMENSIONS.get(columnName)));
           } else if (AGGREGATORS.containsKey(columnName)) {
             columnMap.put(columnName, createColumn(AGGREGATORS.get(columnName)));

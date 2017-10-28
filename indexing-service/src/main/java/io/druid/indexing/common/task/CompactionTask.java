@@ -171,6 +171,10 @@ public class CompactionTask extends AbstractTask
       );
     }
 
+    if (indexTaskSpec.getIngestionSchema() == null) {
+      log.info("Cannot find segments for interval");
+    }
+
     final String json = jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(indexTaskSpec);
     log.info("Generated compaction task details: " + json);
 
@@ -194,6 +198,11 @@ public class CompactionTask extends AbstractTask
     );
     final Map<DataSegment, File> segmentFileMap = pair.lhs;
     final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = pair.rhs;
+
+    if (timelineSegments.size() == 0) {
+      return null;
+    }
+
     final DataSchema dataSchema = createDataSchema(
         dataSource,
         interval,
