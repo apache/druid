@@ -72,6 +72,7 @@ import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -90,6 +91,7 @@ public class CompactionTask extends AbstractTask
   private static final String TYPE = "compact";
 
   private final Interval interval;
+  private final DimensionsSpec dimensionsSpec;
   private final IndexTuningConfig tuningConfig;
   private final Injector injector;
   private final ObjectMapper jsonMapper;
@@ -103,14 +105,16 @@ public class CompactionTask extends AbstractTask
       @JsonProperty("resource") final TaskResource taskResource,
       @JsonProperty("dataSource") final String dataSource,
       @JsonProperty("interval") final Interval interval,
-      @JsonProperty("tuningConfig") final IndexTuningConfig tuningConfig,
-      @JsonProperty("context") final Map<String, Object> context,
+      @Nullable @JsonProperty("dimensions") final DimensionsSpec dimensionsSpec,
+      @Nullable @JsonProperty("tuningConfig") final IndexTuningConfig tuningConfig,
+      @Nullable @JsonProperty("context") final Map<String, Object> context,
       @JacksonInject Injector injector,
       @JacksonInject ObjectMapper jsonMapper
   )
   {
     super(getOrMakeId(id, TYPE, dataSource), null, taskResource, dataSource, context);
     this.interval = Preconditions.checkNotNull(interval, "interval");
+    this.dimensionsSpec = dimensionsSpec;
     this.tuningConfig = tuningConfig;
     this.injector = injector;
     this.jsonMapper = jsonMapper;
@@ -120,6 +124,12 @@ public class CompactionTask extends AbstractTask
   public Interval getInterval()
   {
     return interval;
+  }
+
+  @JsonProperty
+  public DimensionsSpec getDimensionsSpec()
+  {
+    return dimensionsSpec;
   }
 
   @JsonProperty
@@ -156,6 +166,7 @@ public class CompactionTask extends AbstractTask
           toolbox,
           getDataSource(),
           interval,
+          dimensionsSpec,
           tuningConfig,
           injector,
           jsonMapper
@@ -186,6 +197,7 @@ public class CompactionTask extends AbstractTask
       TaskToolbox toolbox,
       String dataSource,
       Interval interval,
+      DimensionsSpec dimensionsSpec,
       IndexTuningConfig tuningConfig,
       Injector injector,
       ObjectMapper jsonMapper
@@ -206,6 +218,7 @@ public class CompactionTask extends AbstractTask
     final DataSchema dataSchema = createDataSchema(
         dataSource,
         interval,
+        dimensionsSpec,
         toolbox.getIndexIO(),
         jsonMapper,
         timelineSegments,
@@ -248,6 +261,7 @@ public class CompactionTask extends AbstractTask
   private static DataSchema createDataSchema(
       String dataSource,
       Interval interval,
+      DimensionsSpec dimensionsSpec,
       IndexIO indexIO,
       ObjectMapper jsonMapper,
       List<TimelineObjectHolder<String, DataSegment>> timelineSegments,
@@ -279,8 +293,10 @@ public class CompactionTask extends AbstractTask
     );
 
     // find unique dimensions
-    final DimensionsSpec dimensionsSpec = createDimensionsSpec(queryableIndices);
-    final InputRowParser parser = new NoopInputRowParser(new TimeAndDimsParseSpec(null, dimensionsSpec));
+    final DimensionsSpec finalDimensionsSpec = dimensionsSpec == null ?
+                                               createDimensionsSpec(queryableIndices) :
+                                               dimensionsSpec;
+    final InputRowParser parser = new NoopInputRowParser(new TimeAndDimsParseSpec(null, finalDimensionsSpec));
 
     return new DataSchema(
         dataSource,

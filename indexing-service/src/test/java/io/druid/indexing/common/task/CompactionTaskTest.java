@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.impl.DimensionSchema;
+import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.DoubleDimensionSchema;
 import io.druid.data.input.impl.FloatDimensionSchema;
 import io.druid.data.input.impl.InputRowParser;
@@ -75,11 +76,15 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -88,6 +93,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@RunWith(Parameterized.class)
 public class CompactionTaskTest
 {
   private static final String DATA_SOURCE = "dataSource";
@@ -114,7 +120,7 @@ public class CompactionTaskTest
   private static TaskToolbox toolbox;
 
   @BeforeClass
-  public static void setupClass()
+  public static void setup()
   {
     DIMENSIONS = new HashMap<>();
     AGGREGATORS = new HashMap<>();
@@ -212,18 +218,100 @@ public class CompactionTaskTest
     );
   }
 
-  @Test
-  public void testCreateIngestionSchema() throws IOException, SegmentLoadingException
+  @Parameters(name = "{0}")
+  public static Collection<Object[]> constructorFeeder()
   {
-    final IndexIngestionSpec ingestionSchema = CompactionTask.createIngestionSchema(
+    final DimensionsSpec customSpec = new DimensionsSpec(
+        Lists.newArrayList(
+            new LongDimensionSchema("timestamp"),
+            new StringDimensionSchema("string_dim_0"),
+            new StringDimensionSchema("string_dim_1"),
+            new StringDimensionSchema("string_dim_2"),
+            new StringDimensionSchema("string_dim_3"),
+            new StringDimensionSchema("string_dim_4"),
+            new LongDimensionSchema("long_dim_0"),
+            new LongDimensionSchema("long_dim_1"),
+            new LongDimensionSchema("long_dim_2"),
+            new LongDimensionSchema("long_dim_3"),
+            new LongDimensionSchema("long_dim_4"),
+            new FloatDimensionSchema("float_dim_0"),
+            new FloatDimensionSchema("float_dim_1"),
+            new FloatDimensionSchema("float_dim_2"),
+            new FloatDimensionSchema("float_dim_3"),
+            new FloatDimensionSchema("float_dim_4"),
+            new DoubleDimensionSchema("double_dim_0"),
+            new DoubleDimensionSchema("double_dim_1"),
+            new DoubleDimensionSchema("double_dim_2"),
+            new DoubleDimensionSchema("double_dim_3"),
+            new DoubleDimensionSchema("double_dim_4"),
+            new StringDimensionSchema(MIXED_TYPE_COLUMN)
+        ),
+        null,
+        null
+    );
+
+    return ImmutableList.of(
+        new Object[]{
+            "autoDimensionsSpec",
+            null,
+            new DimensionsSpec(
+                Lists.newArrayList(
+                    new LongDimensionSchema("timestamp"),
+                    new StringDimensionSchema("string_dim_4"),
+                    new LongDimensionSchema("long_dim_4"),
+                    new FloatDimensionSchema("float_dim_4"),
+                    new DoubleDimensionSchema("double_dim_4"),
+                    new StringDimensionSchema("string_dim_0"),
+                    new LongDimensionSchema("long_dim_0"),
+                    new FloatDimensionSchema("float_dim_0"),
+                    new DoubleDimensionSchema("double_dim_0"),
+                    new StringDimensionSchema("string_dim_1"),
+                    new LongDimensionSchema("long_dim_1"),
+                    new FloatDimensionSchema("float_dim_1"),
+                    new DoubleDimensionSchema("double_dim_1"),
+                    new StringDimensionSchema("string_dim_2"),
+                    new LongDimensionSchema("long_dim_2"),
+                    new FloatDimensionSchema("float_dim_2"),
+                    new DoubleDimensionSchema("double_dim_2"),
+                    new StringDimensionSchema("string_dim_3"),
+                    new LongDimensionSchema("long_dim_3"),
+                    new FloatDimensionSchema("float_dim_3"),
+                    new DoubleDimensionSchema("double_dim_3"),
+                    new DoubleDimensionSchema("string_to_double")
+                ),
+                null,
+                null
+            )
+        },
+        new Object[]{
+            "customDimensionsSpec",
+            customSpec,
+            customSpec
+        }
+    );
+  }
+
+  private final IndexIngestionSpec ingestionSchema;
+  private final DimensionsSpec expectedDimensionsSpec;
+
+  public CompactionTaskTest(String testName, DimensionsSpec dimensionsSpec, DimensionsSpec expectedDimensionsSpec)
+      throws IOException, SegmentLoadingException
+  {
+    this.ingestionSchema = CompactionTask.createIngestionSchema(
         toolbox,
         DATA_SOURCE,
         COMPACTION_INTERVAL,
+        dimensionsSpec,
         TUNING_CONFIG,
         GuiceInjectors.makeStartupInjector(),
         objectMapper
     );
+    this.expectedDimensionsSpec = expectedDimensionsSpec;
+  }
 
+  @Test
+  public void testCreateIngestionSchema() throws IOException, SegmentLoadingException
+  {
     // assert dataSchema
     final DataSchema dataSchema = ingestionSchema.getDataSchema();
     Assert.assertEquals(DATA_SOURCE, dataSchema.getDataSource());
@@ -232,7 +320,7 @@ public class CompactionTaskTest
     Assert.assertTrue(parser instanceof NoopInputRowParser);
     Assert.assertTrue(parser.getParseSpec() instanceof TimeAndDimsParseSpec);
     Assert.assertEquals(
-        findExpectedDimensions(),
+        new HashSet<>(expectedDimensionsSpec.getDimensions()),
         new HashSet<>(parser.getParseSpec().getDimensionsSpec().getDimensions())
     );
     final Set<AggregatorFactory> expectedAggregators = AGGREGATORS.values()
@@ -254,34 +342,9 @@ public class CompactionTaskTest
     Assert.assertEquals(DATA_SOURCE, ingestSegmentFirehoseFactory.getDataSource());
     Assert.assertEquals(COMPACTION_INTERVAL, ingestSegmentFirehoseFactory.getInterval());
     Assert.assertNull(ingestSegmentFirehoseFactory.getDimensionsFilter());
+
     // check the order of dimensions
-    Assert.assertEquals(
-        Lists.newArrayList(
-            "timestamp",
-            "string_dim_4",
-            "long_dim_4",
-            "float_dim_4",
-            "double_dim_4",
-            "string_dim_0",
-            "long_dim_0",
-            "float_dim_0",
-            "double_dim_0",
-            "string_dim_1",
-            "long_dim_1",
-            "float_dim_1",
-            "double_dim_1",
-            "string_dim_2",
-            "long_dim_2",
-            "float_dim_2",
-            "double_dim_2",
-            "string_dim_3",
-            "long_dim_3",
-            "float_dim_3",
-            "double_dim_3",
-            "string_to_double"
-        ),
-        ingestSegmentFirehoseFactory.getDimensions()
-    );
+    Assert.assertEquals(expectedDimensionsSpec.getDimensionNames(), ingestSegmentFirehoseFactory.getDimensions());
     // check the order of metrics
     Assert.assertEquals(
         Lists.newArrayList("agg_4", "agg_3", "agg_2", "agg_1", "agg_0"),
@@ -290,17 +353,6 @@ public class CompactionTaskTest
 
     // assert tuningConfig
     Assert.assertEquals(createTuningConfig(), ingestionSchema.getTuningConfig());
-  }
-
-  private static Set<DimensionSchema> findExpectedDimensions()
-  {
-    final Set<DimensionSchema> expectedDimensions = new HashSet<>();
-    expectedDimensions.addAll(DIMENSIONS.values());
-    // __time column is not included
-    expectedDimensions.remove(new LongDimensionSchema(Column.TIME_COLUMN_NAME));
-    // this column should be double type
-    expectedDimensions.add(new DoubleDimensionSchema(MIXED_TYPE_COLUMN));
-    return expectedDimensions;
   }
 
   private static class TestTaskToolbox extends TaskToolbox
