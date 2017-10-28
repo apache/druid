@@ -59,6 +59,7 @@ import java.util.function.Function;
 public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], String>
 {
   private static final Function<Object, String> STRING_TRANSFORMER = o -> o != null ? o.toString() : null;
+  private static final int[] EMPTY_INT_ARRAY = new int[]{};
 
   private static class DimensionDictionary
   {
@@ -87,13 +88,6 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     {
       synchronized (lock) {
         return Strings.emptyToNull(idToValue.get(id));
-      }
-    }
-
-    public boolean contains(String value)
-    {
-      synchronized (lock) {
-        return valueToId.containsKey(value);
       }
     }
 
@@ -215,7 +209,10 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       encodedDimensionValues = null;
     } else if (dimValues instanceof List) {
       List<Object> dimValuesList = (List) dimValues;
-      if (dimValuesList.size() == 1) {
+      if (dimValuesList.isEmpty()) {
+        dimLookup.add(null);
+        encodedDimensionValues = EMPTY_INT_ARRAY;
+      } else if (dimValuesList.size() == 1) {
         encodedDimensionValues = new int[]{dimLookup.add(STRING_TRANSFORMER.apply(dimValuesList.get(0)))};
       } else {
         final String[] dimensionValues = new String[dimValuesList.size()];
