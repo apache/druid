@@ -59,8 +59,8 @@ public class RemoteTaskRunnerRunPendingTasksConcurrencyTest
   @Test(timeout = 60_000)
   public void testConcurrency() throws Exception
   {
-    rtrTestUtils.makeWorker("worker0");
-    rtrTestUtils.makeWorker("worker1");
+    rtrTestUtils.makeWorker("worker0", 3);
+    rtrTestUtils.makeWorker("worker1", 3);
 
     remoteTaskRunner = rtrTestUtils.makeRemoteTaskRunner(
         new TestRemoteTaskRunnerConfig(new Period("PT3600S"))

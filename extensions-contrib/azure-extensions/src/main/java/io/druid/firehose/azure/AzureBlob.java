@@ -22,9 +22,11 @@ package io.druid.firehose.azure;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.validation.constraints.NotNull;
+import java.util.Objects;
 
 
-public class AzureBlob {
+public class AzureBlob
+{
   @JsonProperty
   @NotNull
   private String container = null;
@@ -33,19 +35,23 @@ public class AzureBlob {
   @NotNull
   private String path = null;
 
-  public AzureBlob() {
+  public AzureBlob()
+  {
   }
 
-  public AzureBlob(String container, String path) {
+  public AzureBlob(String container, String path)
+  {
     this.container = container;
     this.path = path;
   }
 
-  public String getContainer() {
+  public String getContainer()
+  {
     return container;
   }
 
-  public String getPath() {
+  public String getPath()
+  {
     return path;
   }
 
@@ -56,5 +62,27 @@ public class AzureBlob {
         + "container=" + container
         + ",path=" + path
         + "}";
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (o == this) {
+      return true;
+    }
+
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    final AzureBlob that = (AzureBlob) o;
+    return Objects.equals(container, that.container) &&
+           Objects.equals(path, that.path);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(container, path);
   }
 }

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import io.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -60,8 +61,9 @@ public class SubstringDimExtractionFn extends DimExtractionFn
                      .array();
   }
 
+  @Nullable
   @Override
-  public String apply(String dimValue)
+  public String apply(@Nullable String dimValue)
   {
     if (Strings.isNullOrEmpty(dimValue)) {
       return null;
@@ -134,6 +136,6 @@ public class SubstringDimExtractionFn extends DimExtractionFn
   @Override
   public String toString()
   {
-    return String.format("substring(%s, %s)", index, getLength());
+    return StringUtils.format("substring(%s, %s)", index, getLength());
   }
 }

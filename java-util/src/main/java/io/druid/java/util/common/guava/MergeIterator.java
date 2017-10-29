@@ -63,13 +63,13 @@ public class MergeIterator<T> implements Iterator<T>
   @Override
   public boolean hasNext()
   {
-    return ! pQueue.isEmpty();
+    return !pQueue.isEmpty();
   }
 
   @Override
   public T next()
   {
-    if (! hasNext()) {
+    if (!hasNext()) {
       throw new NoSuchElementException();
     }
 

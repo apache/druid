@@ -335,6 +335,6 @@ public class ConciseSetUtils
 
   public static int onesUntil(int bit)
   {
-    return 0x80000000 | ((1<<bit) - 1);
+    return 0x80000000 | ((1 << bit) - 1);
   }
 }

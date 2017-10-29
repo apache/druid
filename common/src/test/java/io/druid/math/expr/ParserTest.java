@@ -33,7 +33,7 @@ public class ParserTest
   @Test
   public void testSimple()
   {
-    String actual = Parser.parse("1").toString();
+    String actual = Parser.parse("1", ExprMacroTable.nil()).toString();
     String expected = "1";
     Assert.assertEquals(expected, actual);
   }
@@ -41,11 +41,11 @@ public class ParserTest
   @Test
   public void testSimpleUnaryOps1()
   {
-    String actual = Parser.parse("-x").toString();
+    String actual = Parser.parse("-x", ExprMacroTable.nil()).toString();
     String expected = "-x";
     Assert.assertEquals(expected, actual);
 
-    actual = Parser.parse("!x").toString();
+    actual = Parser.parse("!x", ExprMacroTable.nil()).toString();
     expected = "!x";
     Assert.assertEquals(expected, actual);
   }
@@ -188,14 +188,15 @@ public class ParserTest
 
   private void validateFlatten(String expression, String withoutFlatten, String withFlatten)
   {
-    Assert.assertEquals(expression, withoutFlatten, Parser.parse(expression, false).toString());
-    Assert.assertEquals(expression, withFlatten, Parser.parse(expression, true).toString());
+    Assert.assertEquals(expression, withoutFlatten, Parser.parse(expression, ExprMacroTable.nil(), false).toString());
+    Assert.assertEquals(expression, withFlatten, Parser.parse(expression, ExprMacroTable.nil(), true).toString());
   }
 
   private void validateParser(String expression, String expected, List<String> identifiers)
   {
-    Assert.assertEquals(expression, expected, Parser.parse(expression).toString());
-    Assert.assertEquals(expression, identifiers, Parser.findRequiredBindings(expression));
+    final Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
+    Assert.assertEquals(expression, expected, parsed.toString());
+    Assert.assertEquals(expression, identifiers, Parser.findRequiredBindings(parsed));
   }
 
   private void validateConstantExpression(String expression, Object expected)
@@ -203,7 +204,7 @@ public class ParserTest
     Assert.assertEquals(
         expression,
         expected,
-        Parser.parse(expression).eval(Parser.withMap(ImmutableMap.<String, Object>of())).value()
+        Parser.parse(expression, ExprMacroTable.nil()).eval(Parser.withMap(ImmutableMap.of())).value()
     );
   }
 }

@@ -31,9 +31,8 @@ public class ComplexColumnPartSupplier implements Supplier<ComplexColumn>
   private final GenericIndexed complexType;
   private final String typeName;
 
-  public ComplexColumnPartSupplier(
-      final String typeName, final GenericIndexed complexType
-  ) {
+  public ComplexColumnPartSupplier(final String typeName, final GenericIndexed complexType)
+  {
     this.complexType = complexType;
     this.typeName = typeName;
   }

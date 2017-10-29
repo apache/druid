@@ -39,7 +39,7 @@ import com.google.common.collect.Lists;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.indexing.overlord.autoscaling.AutoScaler;
 import io.druid.indexing.overlord.autoscaling.AutoScalingData;
-import io.druid.indexing.overlord.autoscaling.SimpleWorkerResourceManagementConfig;
+import io.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningConfig;
 
 import java.util.List;
 
@@ -54,7 +54,7 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
   private final int maxNumWorkers;
   private final EC2EnvironmentConfig envConfig;
   private final AmazonEC2 amazonEC2Client;
-  private final SimpleWorkerResourceManagementConfig config;
+  private final SimpleWorkerProvisioningConfig config;
 
   @JsonCreator
   public EC2AutoScaler(
@@ -62,7 +62,7 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
       @JsonProperty("maxNumWorkers") int maxNumWorkers,
       @JsonProperty("envConfig") EC2EnvironmentConfig envConfig,
       @JacksonInject AmazonEC2 amazonEC2Client,
-      @JacksonInject SimpleWorkerResourceManagementConfig config
+      @JacksonInject SimpleWorkerProvisioningConfig config
   )
   {
     this.minNumWorkers = minNumWorkers;

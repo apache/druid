@@ -19,22 +19,23 @@
 
 package io.druid.guice;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.ProvisionException;
-
 import io.druid.client.cache.CacheConfig;
 import io.druid.collections.BlockingPool;
+import io.druid.collections.DefaultBlockingPool;
+import io.druid.collections.NonBlockingPool;
 import io.druid.collections.StupidPool;
 import io.druid.common.utils.VMUtils;
 import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Merging;
 import io.druid.guice.annotations.Processing;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.ExecutorServiceConfig;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
@@ -58,7 +59,6 @@ public class DruidProcessingModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    ConfigProvider.bind(binder, DruidProcessingConfig.class, ImmutableMap.of("base_path", "druid.processing"));
     binder.bind(ExecutorServiceConfig.class).to(DruidProcessingConfig.class);
     MetricsModule.register(binder, ExecutorServiceMonitor.class);
   }
@@ -105,7 +105,7 @@ public class DruidProcessingModule implements Module
   @Provides
   @LazySingleton
   @Global
-  public StupidPool<ByteBuffer> getIntermediateResultsPool(DruidProcessingConfig config)
+  public NonBlockingPool<ByteBuffer> getIntermediateResultsPool(DruidProcessingConfig config)
   {
     verifyDirectMemory(config);
     return new StupidPool<>(
@@ -122,7 +122,7 @@ public class DruidProcessingModule implements Module
   public BlockingPool<ByteBuffer> getMergeBufferPool(DruidProcessingConfig config)
   {
     verifyDirectMemory(config);
-    return new BlockingPool<>(
+    return new DefaultBlockingPool<>(
         new OffheapBufferGenerator("result merging", config.intermediateComputeSizeBytes()),
         config.getNumMergeBuffers()
     );
@@ -137,7 +137,7 @@ public class DruidProcessingModule implements Module
 
       if (maxDirectMemory < memoryNeeded) {
         throw new ProvisionException(
-            String.format(
+            StringUtils.format(
                 "Not enough direct memory.  Please adjust -XX:MaxDirectMemorySize, druid.processing.buffer.sizeBytes, druid.processing.numThreads, or druid.processing.numMergeBuffers: "
                 + "maxDirectMemory[%,d], memoryNeeded[%,d] = druid.processing.buffer.sizeBytes[%,d] * (druid.processing.numMergeBuffers[%,d] + druid.processing.numThreads[%,d] + 1)",
                 maxDirectMemory,

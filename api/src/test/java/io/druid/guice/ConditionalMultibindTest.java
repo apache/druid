@@ -268,18 +268,14 @@ public class ConditionalMultibindTest
           @Override
           public void configure(Binder binder)
           {
-            ConditionalMultibind.create(props, binder,
-                                        new TypeLiteral<Set<Animal>>()
-                                        {
-                                        }
-            ).addConditionBinding(ANIMAL_TYPE, Predicates.equalTo("pets"), set1
-            ).addConditionBinding(ANIMAL_TYPE, Predicates.equalTo("pets"), set2);
+            ConditionalMultibind
+                .create(props, binder, new TypeLiteral<Set<Animal>>() {})
+                .addConditionBinding(ANIMAL_TYPE, Predicates.equalTo("pets"), set1)
+                .addConditionBinding(ANIMAL_TYPE, Predicates.equalTo("pets"), set2);
 
-            ConditionalMultibind.create(props, binder,
-                                        new TypeLiteral<Zoo<Animal>>()
-                                        {
-                                        }
-            ).addConditionBinding(ANIMAL_TYPE, Predicates.equalTo("pets"), zoo1);
+            ConditionalMultibind
+                .create(props, binder, new TypeLiteral<Zoo<Animal>>() {})
+                .addConditionBinding(ANIMAL_TYPE, Predicates.equalTo("pets"), zoo1);
           }
         },
         new Module()
@@ -287,46 +283,31 @@ public class ConditionalMultibindTest
           @Override
           public void configure(Binder binder)
           {
-            ConditionalMultibind.create(props, binder,
-                                        new TypeLiteral<Set<Animal>>()
-                                        {
-                                        }
-            ).addConditionBinding(ANIMAL_TYPE, Predicates.equalTo("pets"), set3);
+            ConditionalMultibind
+                .create(props, binder, new TypeLiteral<Set<Animal>>() {})
+                .addConditionBinding(ANIMAL_TYPE, Predicates.equalTo("pets"), set3);
 
-            ConditionalMultibind.create(props, binder,
-                                        new TypeLiteral<Set<Animal>>()
-                                        {
-                                        },
-                                        SanDiego.class
-            ).addConditionBinding(ANIMAL_TYPE, Predicates.equalTo("pets"), union);
+            ConditionalMultibind
+                .create(props, binder, new TypeLiteral<Set<Animal>>() {}, SanDiego.class)
+                .addConditionBinding(ANIMAL_TYPE, Predicates.equalTo("pets"), union);
 
-            ConditionalMultibind.create(props, binder,
-                                        new TypeLiteral<Zoo<Animal>>()
-                                        {
-                                        }
-            ).addBinding(new TypeLiteral<Zoo<Animal>>()
-            {
-            });
+            ConditionalMultibind
+                .create(props, binder, new TypeLiteral<Zoo<Animal>>() {})
+                .addBinding(new TypeLiteral<Zoo<Animal>>() {});
 
           }
         }
     );
 
-    Set<Set<Animal>> actualAnimalSet = injector.getInstance(Key.get(new TypeLiteral<Set<Set<Animal>>>()
-    {
-    }));
+    Set<Set<Animal>> actualAnimalSet = injector.getInstance(Key.get(new TypeLiteral<Set<Set<Animal>>>() {}));
     Assert.assertEquals(3, actualAnimalSet.size());
     Assert.assertEquals(ImmutableSet.of(set1, set2, set3), actualAnimalSet);
 
-    actualAnimalSet = injector.getInstance(Key.get(new TypeLiteral<Set<Set<Animal>>>()
-    {
-    }, SanDiego.class));
+    actualAnimalSet = injector.getInstance(Key.get(new TypeLiteral<Set<Set<Animal>>>() {}, SanDiego.class));
     Assert.assertEquals(1, actualAnimalSet.size());
     Assert.assertEquals(ImmutableSet.of(union), actualAnimalSet);
 
-    final Set<Zoo<Animal>> actualZooSet = injector.getInstance(Key.get(new TypeLiteral<Set<Zoo<Animal>>>()
-    {
-    }));
+    final Set<Zoo<Animal>> actualZooSet = injector.getInstance(Key.get(new TypeLiteral<Set<Zoo<Animal>>>() {}));
     Assert.assertEquals(2, actualZooSet.size());
     Assert.assertEquals(ImmutableSet.of(zoo1, zoo2), actualZooSet);
   }

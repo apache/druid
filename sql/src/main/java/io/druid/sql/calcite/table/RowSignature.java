@@ -31,13 +31,15 @@ import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
-import io.druid.sql.calcite.expression.RowExtraction;
+import io.druid.sql.calcite.expression.SimpleExtraction;
 import io.druid.sql.calcite.planner.Calcites;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.SqlCollation;
 import org.apache.calcite.sql.type.SqlTypeName;
 
+import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
 
@@ -71,6 +73,30 @@ public class RowSignature
     this.columnNames = columnNamesBuilder.build();
   }
 
+  public static RowSignature from(final List<String> rowOrder, final RelDataType rowType)
+  {
+    if (rowOrder.size() != rowType.getFieldCount()) {
+      throw new IAE("Field count %d != %d", rowOrder.size(), rowType.getFieldCount());
+    }
+
+    final RowSignature.Builder rowSignatureBuilder = builder();
+
+    for (int i = 0; i < rowOrder.size(); i++) {
+      final RelDataTypeField field = rowType.getFieldList().get(i);
+      final SqlTypeName sqlTypeName = field.getType().getSqlTypeName();
+      final ValueType valueType;
+
+      valueType = Calcites.getValueTypeForSqlTypeName(sqlTypeName);
+      if (valueType == null) {
+        throw new ISE("Cannot translate sqlTypeName[%s] to Druid type for field[%s]", sqlTypeName, rowOrder.get(i));
+      }
+
+      rowSignatureBuilder.add(rowOrder.get(i), valueType);
+    }
+
+    return rowSignatureBuilder.build();
+  }
+
   public static Builder builder()
   {
     return new Builder();
@@ -95,15 +121,16 @@ public class RowSignature
    * Return the "natural" {@link StringComparator} for an extraction from this row signature. This will be a
    * lexicographic comparator for String types and a numeric comparator for Number types.
    *
-   * @param rowExtraction extraction from this kind of row
+   * @param simpleExtraction extraction from this kind of row
    *
    * @return natural comparator
    */
-  public StringComparator naturalStringComparator(final RowExtraction rowExtraction)
+  @Nonnull
+  public StringComparator naturalStringComparator(final SimpleExtraction simpleExtraction)
   {
-    Preconditions.checkNotNull(rowExtraction, "rowExtraction");
-    if (rowExtraction.getExtractionFn() != null
-        || getColumnType(rowExtraction.getColumn()) == ValueType.STRING) {
+    Preconditions.checkNotNull(simpleExtraction, "simpleExtraction");
+    if (simpleExtraction.getExtractionFn() != null
+        || getColumnType(simpleExtraction.getColumn()) == ValueType.STRING) {
       return StringComparators.LEXICOGRAPHIC;
     } else {
       return StringComparators.NUMERIC;
@@ -130,10 +157,13 @@ public class RowSignature
         switch (columnType) {
           case STRING:
             // Note that there is no attempt here to handle multi-value in any special way. Maybe one day...
-            type = typeFactory.createTypeWithCharsetAndCollation(
-                typeFactory.createSqlType(SqlTypeName.VARCHAR),
-                Calcites.defaultCharset(),
-                SqlCollation.IMPLICIT
+            type = typeFactory.createTypeWithNullability(
+                typeFactory.createTypeWithCharsetAndCollation(
+                    typeFactory.createSqlType(SqlTypeName.VARCHAR),
+                    Calcites.defaultCharset(),
+                    SqlCollation.IMPLICIT
+                ),
+                true
             );
             break;
           case LONG:
@@ -141,6 +171,9 @@ public class RowSignature
             break;
           case FLOAT:
             type = typeFactory.createSqlType(SqlTypeName.FLOAT);
+            break;
+          case DOUBLE:
+            type = typeFactory.createSqlType(SqlTypeName.DOUBLE);
             break;
           case COMPLEX:
             // Loses information about exactly what kind of complex column this is.
@@ -186,7 +219,7 @@ public class RowSignature
   @Override
   public String toString()
   {
-    final StringBuilder s = new StringBuilder("RowSignature{");
+    final StringBuilder s = new StringBuilder("{");
     for (int i = 0; i < columnNames.size(); i++) {
       if (i > 0) {
         s.append(", ");
@@ -208,6 +241,9 @@ public class RowSignature
 
     public Builder add(String columnName, ValueType columnType)
     {
+      Preconditions.checkNotNull(columnName, "columnName");
+      Preconditions.checkNotNull(columnType, "columnType");
+
       columnTypeList.add(Pair.of(columnName, columnType));
       return this;
     }

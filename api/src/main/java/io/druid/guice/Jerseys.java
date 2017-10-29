@@ -23,9 +23,11 @@ import com.google.inject.Binder;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.Multibinder;
 import io.druid.guice.annotations.JSR311Resource;
+import io.druid.guice.annotations.PublicApi;
 
 /**
  */
+@PublicApi
 public class Jerseys
 {
   public static void addResource(Binder binder, Class<?> resourceClazz)

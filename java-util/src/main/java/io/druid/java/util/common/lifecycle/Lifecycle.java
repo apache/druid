@@ -19,20 +19,21 @@
 
 package io.druid.java.util.common.lifecycle;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
-import java.util.Arrays;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * A manager of object Lifecycles.
@@ -53,22 +54,34 @@ public class Lifecycle
 {
   private static final Logger log = new Logger(Lifecycle.class);
 
-  private final Map<Stage, CopyOnWriteArrayList<Handler>> handlers;
-  private final AtomicBoolean started = new AtomicBoolean(false);
-  private final AtomicBoolean shutdownHookRegistered = new AtomicBoolean(false);
-  private volatile Stage currStage = null;
-
-  public static enum Stage
+  public enum Stage
   {
     NORMAL,
     LAST
   }
 
+  private enum State
+  {
+    /** Lifecycle's state before {@link #start()} is called. */
+    NOT_STARTED,
+    /** Lifecycle's state since {@link #start()} and before {@link #stop()} is called. */
+    RUNNING,
+    /** Lifecycle's state since {@link #stop()} is called. */
+    STOP
+  }
+
+  private final NavigableMap<Stage, CopyOnWriteArrayList<Handler>> handlers;
+  /** This lock is used to linearize all calls to Handler.start() and Handler.stop() on the managed handlers. */
+  private final Lock startStopLock = new ReentrantLock();
+  private final AtomicReference<State> state = new AtomicReference<>(State.NOT_STARTED);
+  private Stage currStage = null;
+  private final AtomicBoolean shutdownHookRegistered = new AtomicBoolean(false);
+
   public Lifecycle()
   {
-    handlers = Maps.newHashMap();
+    handlers = new TreeMap<>();
     for (Stage stage : Stage.values()) {
-      handlers.put(stage, new CopyOnWriteArrayList<Handler>());
+      handlers.put(stage, new CopyOnWriteArrayList<>());
     }
   }
 
@@ -153,11 +166,17 @@ public class Lifecycle
    */
   public void addHandler(Handler handler, Stage stage)
   {
-    synchronized (handlers) {
-      if (started.get()) {
+    if (!startStopLock.tryLock()) {
+      throw new ISE("Cannot add a handler in the process of Lifecycle starting or stopping");
+    }
+    try {
+      if (!state.get().equals(State.NOT_STARTED)) {
         throw new ISE("Cannot add a handler after the Lifecycle has started, it doesn't work that way.");
       }
       handlers.get(stage).add(handler);
+    }
+    finally {
+      startStopLock.unlock();
     }
   }
 
@@ -241,58 +260,84 @@ public class Lifecycle
    */
   public void addMaybeStartHandler(Handler handler, Stage stage) throws Exception
   {
-    synchronized (handlers) {
-      if (started.get()) {
-        if (currStage == null || stage.compareTo(currStage) < 1) {
+    if (!startStopLock.tryLock()) {
+      // (*) This check is why the state should be changed before startStopLock.lock() in stop(). This check allows to
+      // spot wrong use of Lifecycle instead of entering deadlock, like https://github.com/druid-io/druid/issues/3579.
+      if (state.get().equals(State.STOP)) {
+        throw new ISE("Cannot add a handler in the process of Lifecycle stopping");
+      }
+      startStopLock.lock();
+    }
+    try {
+      if (state.get().equals(State.STOP)) {
+        throw new ISE("Cannot add a handler after the Lifecycle has stopped");
+      }
+      if (state.get().equals(State.RUNNING)) {
+        if (stage.compareTo(currStage) <= 0) {
           handler.start();
         }
       }
       handlers.get(stage).add(handler);
     }
+    finally {
+      startStopLock.unlock();
+    }
   }
 
   public void start() throws Exception
   {
-    synchronized (handlers) {
-      if (!started.compareAndSet(false, true)) {
+    startStopLock.lock();
+    try {
+      if (!state.get().equals(State.NOT_STARTED)) {
         throw new ISE("Already started");
       }
-      for (Stage stage : stagesOrdered()) {
-        currStage = stage;
-        for (Handler handler : handlers.get(stage)) {
+      if (!state.compareAndSet(State.NOT_STARTED, State.RUNNING)) {
+        throw new ISE("stop() is called concurrently with start()");
+      }
+      for (Map.Entry<Stage, ? extends List<Handler>> e : handlers.entrySet()) {
+        currStage = e.getKey();
+        for (Handler handler : e.getValue()) {
           handler.start();
         }
       }
+    }
+    finally {
+      startStopLock.unlock();
     }
   }
 
   public void stop()
   {
-    synchronized (handlers) {
-      if (!started.compareAndSet(true, false)) {
-        log.info("Already stopped and stop was called. Silently skipping");
-        return;
-      }
-      List<Exception> exceptions = Lists.newArrayList();
-
-      for (Stage stage : Lists.reverse(stagesOrdered())) {
-        final CopyOnWriteArrayList<Handler> stageHandlers = handlers.get(stage);
-        final ListIterator<Handler> iter = stageHandlers.listIterator(stageHandlers.size());
-        while (iter.hasPrevious()) {
-          final Handler handler = iter.previous();
+    // This CAS outside of a block guarded by startStopLock is the only reason why state is AtomicReference rather than
+    // a simple variable. State change before startStopLock.lock() is needed for the new state visibility during the
+    // check in addMaybeStartHandler() marked by (*).
+    if (!state.compareAndSet(State.RUNNING, State.STOP)) {
+      log.info("Already stopped and stop was called. Silently skipping");
+      return;
+    }
+    startStopLock.lock();
+    try {
+      RuntimeException thrown = null;
+      for (List<Handler> stageHandlers : handlers.descendingMap().values()) {
+        for (Handler handler : Lists.reverse(stageHandlers)) {
           try {
             handler.stop();
           }
-          catch (Exception e) {
+          catch (RuntimeException e) {
             log.warn(e, "exception thrown when stopping %s", handler);
-            exceptions.add(e);
+            if (thrown == null) {
+              thrown = e;
+            }
           }
         }
       }
 
-      if (!exceptions.isEmpty()) {
-        throw Throwables.propagate(exceptions.get(0));
+      if (thrown != null) {
+        throw thrown;
       }
+    }
+    finally {
+      startStopLock.unlock();
     }
   }
 
@@ -321,17 +366,11 @@ public class Lifecycle
     Thread.currentThread().join();
   }
 
-  private static List<Stage> stagesOrdered()
+  public interface Handler
   {
-    return Arrays.asList(Stage.NORMAL, Stage.LAST);
-  }
+    void start() throws Exception;
 
-
-  public static interface Handler
-  {
-    public void start() throws Exception;
-
-    public void stop();
+    void stop();
   }
 
   private static class AnnotationBasedHandler implements Handler
@@ -391,11 +430,6 @@ public class Lifecycle
         }
       }
     }
-  }
-
-  public boolean isStarted()
-  {
-    return started.get();
   }
 
   private static class StartCloseHandler implements Handler

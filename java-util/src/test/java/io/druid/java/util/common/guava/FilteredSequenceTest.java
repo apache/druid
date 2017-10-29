@@ -22,6 +22,7 @@ package io.druid.java.util.common.guava;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.StringUtils;
 import org.junit.Test;
 
 import java.util.List;
@@ -49,7 +50,7 @@ public class FilteredSequenceTest
       }
 
       SequenceTestHelper.testAll(
-          String.format("Run %,d: ", i),
+          StringUtils.format("Run %,d: ", i),
           new FilteredSequence<>(Sequences.simple(vals), pred),
           Lists.newArrayList(Iterables.filter(vals, pred))
       );

@@ -50,7 +50,10 @@ public class QueryDataSource implements DataSource
   }
 
   @Override
-  public String toString() { return query.toString(); }
+  public String toString()
+  {
+    return query.toString();
+  }
 
   @Override
   public boolean equals(Object o)

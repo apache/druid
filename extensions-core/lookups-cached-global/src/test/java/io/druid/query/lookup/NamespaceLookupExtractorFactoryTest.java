@@ -19,7 +19,6 @@
 
 package io.druid.query.lookup;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.InjectableValues;
@@ -38,8 +37,9 @@ import io.druid.guice.annotations.Self;
 import io.druid.initialization.Initialization;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
-import io.druid.query.lookup.namespace.URIExtractionNamespace;
+import io.druid.query.lookup.namespace.UriExtractionNamespace;
 import io.druid.server.DruidNode;
 import io.druid.server.lookup.namespace.cache.CacheScheduler;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
@@ -94,10 +94,13 @@ public class NamespaceLookupExtractorFactoryTest
               Object valueId, DeserializationContext ctxt, BeanProperty forProperty, Object beanInstance
           )
           {
-            if ("io.druid.server.lookup.namespace.cache.CacheScheduler".equals(valueId)) {
+            if (CacheScheduler.class.getName().equals(valueId)) {
               return scheduler;
+            } else if (ObjectMapper.class.getName().equals(valueId)) {
+              return mapper;
+            } else {
+              return null;
             }
-            return null;
           }
         }
     );
@@ -106,10 +109,10 @@ public class NamespaceLookupExtractorFactoryTest
   @Test
   public void testSimpleSerde() throws Exception
   {
-    final URIExtractionNamespace uriExtractionNamespace = new URIExtractionNamespace(
+    final UriExtractionNamespace uriExtractionNamespace = new UriExtractionNamespace(
         temporaryFolder.newFolder().toURI(),
         null, null,
-        new URIExtractionNamespace.ObjectMapperFlatDataParser(mapper),
+        new UriExtractionNamespace.ObjectMapperFlatDataParser(mapper),
 
         Period.millis(0),
         null
@@ -402,7 +405,9 @@ public class NamespaceLookupExtractorFactoryTest
     final NamespaceLookupExtractorFactory f1 = new NamespaceLookupExtractorFactory(
         en1,
         scheduler
-    ), f2 = new NamespaceLookupExtractorFactory(en2, scheduler), f1b = new NamespaceLookupExtractorFactory(
+    );
+    final NamespaceLookupExtractorFactory f2 = new NamespaceLookupExtractorFactory(en2, scheduler);
+    final NamespaceLookupExtractorFactory f1b = new NamespaceLookupExtractorFactory(
         en1,
         scheduler
     );
@@ -452,15 +457,13 @@ public class NamespaceLookupExtractorFactoryTest
         LookupExtractorFactory.class
     )));
     Assert.assertEquals(
-        URIExtractionNamespace.class,
+        UriExtractionNamespace.class,
         namespaceLookupExtractorFactory.getExtractionNamespace().getClass()
     );
     Assert.assertFalse(namespaceLookupExtractorFactory.replaces(mapper.readValue(str, LookupExtractorFactory.class)));
     final Map<String, Object> map = new HashMap<>(mapper.<Map<String, Object>>readValue(
         str,
-        new TypeReference<Map<String, Object>>()
-        {
-        }
+        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     ));
     map.put("firstCacheTimeout", "1");
     Assert.assertTrue(namespaceLookupExtractorFactory.replaces(mapper.convertValue(map, LookupExtractorFactory.class)));
@@ -521,7 +524,7 @@ public class NamespaceLookupExtractorFactoryTest
               public void configure(Binder binder)
               {
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null)
+                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null, null, true, false)
                 );
               }
             }

@@ -20,58 +20,191 @@
 package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.primitives.Longs;
+import com.google.common.util.concurrent.MoreExecutors;
+import io.druid.collections.ResourceHolder;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
-import io.druid.query.groupby.epinephelinae.Grouper.KeyComparator;
+import io.druid.query.groupby.epinephelinae.Grouper.BufferComparator;
+import io.druid.query.groupby.epinephelinae.Grouper.Entry;
 import io.druid.query.groupby.epinephelinae.Grouper.KeySerde;
 import io.druid.query.groupby.epinephelinae.Grouper.KeySerdeFactory;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
-import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.ColumnCapabilities;
 import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+@RunWith(Parameterized.class)
 public class ConcurrentGrouperTest
 {
-  private static final ExecutorService service = Executors.newFixedThreadPool(8);
+  private static final ExecutorService SERVICE = Executors.newFixedThreadPool(8);
+  private static final TestResourceHolder TEST_RESOURCE_HOLDER = new TestResourceHolder(256);
+  private static final KeySerdeFactory<Long> KEY_SERDE_FACTORY = new TestKeySerdeFactory();
+  private static final Supplier<ResourceHolder<ByteBuffer>> COMBINE_BUFFER_SUPPLIER = new TestBufferSupplier();
+  private static final ColumnSelectorFactory NULL_FACTORY = new TestColumnSelectorFactory();
+
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  private Supplier<ByteBuffer> bufferSupplier;
+
+  @Parameters(name = "bufferSize={0}")
+  public static Collection<Object[]> constructorFeeder()
+  {
+    return ImmutableList.of(
+        new Object[]{1024 * 32},
+        new Object[]{1024 * 1024}
+    );
+  }
 
   @AfterClass
   public static void teardown()
   {
-    service.shutdown();
+    SERVICE.shutdown();
   }
 
-  private static final Supplier<ByteBuffer> bufferSupplier = new Supplier<ByteBuffer>()
+  public ConcurrentGrouperTest(int bufferSize)
   {
-    private final AtomicBoolean called = new AtomicBoolean(false);
+    bufferSupplier = new Supplier<ByteBuffer>()
+    {
+      private final AtomicBoolean called = new AtomicBoolean(false);
+      private ByteBuffer buffer;
+
+      @Override
+      public ByteBuffer get()
+      {
+        if (called.compareAndSet(false, true)) {
+          buffer = ByteBuffer.allocate(bufferSize);
+        }
+
+        return buffer;
+      }
+    };
+  }
+
+  @Test()
+  public void testAggregate() throws InterruptedException, ExecutionException, IOException
+  {
+    final ConcurrentGrouper<Long> grouper = new ConcurrentGrouper<>(
+        bufferSupplier,
+        COMBINE_BUFFER_SUPPLIER,
+        KEY_SERDE_FACTORY,
+        KEY_SERDE_FACTORY,
+        NULL_FACTORY,
+        new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
+        1024,
+        0.7f,
+        1,
+        new LimitedTemporaryStorage(temporaryFolder.newFolder(), 1024 * 1024),
+        new DefaultObjectMapper(),
+        8,
+        null,
+        false,
+        MoreExecutors.listeningDecorator(SERVICE),
+        0,
+        false,
+        0,
+        4,
+        8
+    );
+    grouper.init();
+
+    final int numRows = 1000;
+
+    Future<?>[] futures = new Future[8];
+
+    for (int i = 0; i < 8; i++) {
+      futures[i] = SERVICE.submit(new Runnable()
+      {
+        @Override
+        public void run()
+        {
+          for (long i = 0; i < numRows; i++) {
+            grouper.aggregate(i);
+          }
+        }
+      });
+    }
+
+    for (Future eachFuture : futures) {
+      eachFuture.get();
+    }
+
+    final CloseableIterator<Entry<Long>> iterator = grouper.iterator(true);
+    final List<Entry<Long>> actual = Lists.newArrayList(iterator);
+    iterator.close();
+
+    Assert.assertTrue(!TEST_RESOURCE_HOLDER.taken || TEST_RESOURCE_HOLDER.closed);
+
+    final List<Entry<Long>> expected = new ArrayList<>();
+    for (long i = 0; i < numRows; i++) {
+      expected.add(new Entry<>(i, new Object[]{8L}));
+    }
+
+    Assert.assertEquals(expected, actual);
+
+    grouper.close();
+  }
+
+  static class TestResourceHolder implements ResourceHolder<ByteBuffer>
+  {
+    private boolean taken;
+    private boolean closed;
+    private ByteBuffer buffer;
+
+    TestResourceHolder(int bufferSize)
+    {
+      buffer = ByteBuffer.allocate(bufferSize);
+    }
 
     @Override
     public ByteBuffer get()
     {
-      if (called.compareAndSet(false, true)) {
-        return ByteBuffer.allocate(192);
-      } else {
-        throw new IAE("should be called once");
-      }
+      taken = true;
+      return buffer;
     }
-  };
 
-  private static final KeySerdeFactory<Long> keySerdeFactory = new KeySerdeFactory<Long>()
+    @Override
+    public void close()
+    {
+      closed = true;
+    }
+  }
+
+  static class TestKeySerdeFactory implements KeySerdeFactory<Long>
   {
+    @Override
+    public long getMaxDictionarySize()
+    {
+      return 0;
+    }
+
     @Override
     public KeySerde<Long> factorize()
     {
@@ -92,6 +225,12 @@ public class ConcurrentGrouperTest
         }
 
         @Override
+        public List<String> getDictionary()
+        {
+          return ImmutableList.of();
+        }
+
+        @Override
         public ByteBuffer toByteBuffer(Long key)
         {
           buffer.rewind();
@@ -107,9 +246,9 @@ public class ConcurrentGrouperTest
         }
 
         @Override
-        public KeyComparator bufferComparator()
+        public BufferComparator bufferComparator()
         {
-          return new KeyComparator()
+          return new BufferComparator()
           {
             @Override
             public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
@@ -120,25 +259,55 @@ public class ConcurrentGrouperTest
         }
 
         @Override
+        public BufferComparator bufferComparatorWithAggregators(
+            AggregatorFactory[] aggregatorFactories,
+            int[] aggregatorOffsets
+        )
+        {
+          return null;
+        }
+
+        @Override
         public void reset() {}
       };
     }
 
     @Override
-    public Comparator<Long> objectComparator()
+    public KeySerde<Long> factorizeWithDictionary(List<String> dictionary)
     {
-      return new Comparator<Long>()
+      return factorize();
+    }
+
+    @Override
+    public Comparator<Grouper.Entry<Long>> objectComparator(boolean forceDefaultOrder)
+    {
+      return new Comparator<Grouper.Entry<Long>>()
       {
         @Override
-        public int compare(Long o1, Long o2)
+        public int compare(Grouper.Entry<Long> o1, Grouper.Entry<Long> o2)
         {
-          return o1.compareTo(o2);
+          return o1.getKey().compareTo(o2.getKey());
         }
       };
     }
-  };
+  }
 
-  private static final ColumnSelectorFactory null_factory = new ColumnSelectorFactory()
+  private static class TestBufferSupplier implements Supplier<ResourceHolder<ByteBuffer>>
+  {
+    private final AtomicBoolean called = new AtomicBoolean(false);
+
+    @Override
+    public ResourceHolder<ByteBuffer> get()
+    {
+      if (called.compareAndSet(false, true)) {
+        return TEST_RESOURCE_HOLDER;
+      } else {
+        throw new IAE("should be called once");
+      }
+    }
+  }
+
+  private static class TestColumnSelectorFactory implements ColumnSelectorFactory
   {
     @Override
     public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
@@ -147,19 +316,7 @@ public class ConcurrentGrouperTest
     }
 
     @Override
-    public FloatColumnSelector makeFloatColumnSelector(String columnName)
-    {
-      return null;
-    }
-
-    @Override
-    public LongColumnSelector makeLongColumnSelector(String columnName)
-    {
-      return null;
-    }
-
-    @Override
-    public ObjectColumnSelector makeObjectColumnSelector(String columnName)
+    public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
     {
       return null;
     }
@@ -169,44 +326,5 @@ public class ConcurrentGrouperTest
     {
       return null;
     }
-  };
-
-  @Test
-  public void testAggregate() throws InterruptedException, ExecutionException
-  {
-    final ConcurrentGrouper<Long> grouper = new ConcurrentGrouper<>(
-        bufferSupplier,
-        keySerdeFactory,
-        null_factory,
-        new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
-        24,
-        0.7f,
-        1,
-        null,
-        null,
-        8
-    );
-
-    Future<?>[] futures = new Future[8];
-
-    for (int i = 0; i < 8; i++) {
-      futures[i] = service.submit(new Runnable()
-      {
-        @Override
-        public void run()
-        {
-          grouper.init();
-          for (long i = 0; i < 100; i++) {
-            grouper.aggregate(0L);
-          }
-        }
-      });
-    }
-
-    for (Future eachFuture : futures) {
-      eachFuture.get();
-    }
-
-    grouper.close();
   }
 }

@@ -31,7 +31,9 @@ import com.google.common.io.Closeables;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
 import io.druid.hll.HyperLogLogCollector;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -86,7 +88,7 @@ public class DetermineHashedPartitionsJob implements Jobby
       final long startTime = System.currentTimeMillis();
       final Job groupByJob = Job.getInstance(
           new Configuration(),
-          String.format("%s-determine_partitions_hashed-%s", config.getDataSource(), config.getIntervals())
+          StringUtils.format("%s-determine_partitions_hashed-%s", config.getDataSource(), config.getIntervals())
       );
 
       JobHelper.injectSystemProperties(groupByJob);
@@ -135,9 +137,8 @@ public class DetermineHashedPartitionsJob implements Jobby
           throw new ISE("Path[%s] didn't exist!?", intervalInfoPath);
         }
         List<Interval> intervals = config.JSON_MAPPER.readValue(
-            Utils.openInputStream(groupByJob, intervalInfoPath), new TypeReference<List<Interval>>()
-        {
-        }
+            Utils.openInputStream(groupByJob, intervalInfoPath),
+            new TypeReference<List<Interval>>() {}
         );
         config.setGranularitySpec(
             new UniformGranularitySpec(
@@ -160,9 +161,8 @@ public class DetermineHashedPartitionsJob implements Jobby
         }
         if (Utils.exists(groupByJob, fileSystem, partitionInfoPath)) {
           final Long numRows = config.JSON_MAPPER.readValue(
-              Utils.openInputStream(groupByJob, partitionInfoPath), new TypeReference<Long>()
-          {
-          }
+              Utils.openInputStream(groupByJob, partitionInfoPath),
+              new TypeReference<Long>() {}
           );
 
           log.info("Found approximately [%,d] rows in data.", numRows);
@@ -256,25 +256,23 @@ public class DetermineHashedPartitionsJob implements Jobby
       if (determineIntervals) {
         interval = config.getGranularitySpec()
                          .getSegmentGranularity()
-                         .bucket(new DateTime(inputRow.getTimestampFromEpoch()));
+                         .bucket(DateTimes.utc(inputRow.getTimestampFromEpoch()));
 
         if (!hyperLogLogs.containsKey(interval)) {
           hyperLogLogs.put(interval, HyperLogLogCollector.makeLatestCollector());
         }
       } else {
         final Optional<Interval> maybeInterval = config.getGranularitySpec()
-                                                       .bucketInterval(new DateTime(inputRow.getTimestampFromEpoch()));
+                                                       .bucketInterval(DateTimes.utc(inputRow.getTimestampFromEpoch()));
 
         if (!maybeInterval.isPresent()) {
           throw new ISE("WTF?! No bucket found for timestamp: %s", inputRow.getTimestampFromEpoch());
         }
         interval = maybeInterval.get();
       }
-      hyperLogLogs.get(interval)
-                  .add(
-                      hashFunction.hashBytes(HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsBytes(groupKey))
-                                  .asBytes()
-                  );
+      hyperLogLogs
+          .get(interval)
+          .add(hashFunction.hashBytes(HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsBytes(groupKey)).asBytes());
     }
 
     @Override
@@ -302,12 +300,14 @@ public class DetermineHashedPartitionsJob implements Jobby
   {
     private final List<Interval> intervals = Lists.newArrayList();
     protected HadoopDruidIndexerConfig config = null;
+    private boolean determineIntervals;
 
     @Override
     protected void setup(Context context)
         throws IOException, InterruptedException
     {
       config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
+      determineIntervals = !config.getSegmentGranularIntervals().isPresent();
     }
 
     @Override
@@ -323,12 +323,20 @@ public class DetermineHashedPartitionsJob implements Jobby
             HyperLogLogCollector.makeCollector(ByteBuffer.wrap(value.getBytes(), 0, value.getLength()))
         );
       }
-      Optional<Interval> intervalOptional = config.getGranularitySpec().bucketInterval(new DateTime(key.get()));
 
-      if (!intervalOptional.isPresent()) {
-        throw new ISE("WTF?! No bucket found for timestamp: %s", key.get());
+      Interval interval;
+
+      if (determineIntervals) {
+        interval = config.getGranularitySpec().getSegmentGranularity().bucket(DateTimes.utc(key.get()));
+      } else {
+        Optional<Interval> intervalOptional = config.getGranularitySpec().bucketInterval(DateTimes.utc(key.get()));
+
+        if (!intervalOptional.isPresent()) {
+          throw new ISE("WTF?! No bucket found for timestamp: %s", key.get());
+        }
+        interval = intervalOptional.get();
       }
-      Interval interval = intervalOptional.get();
+
       intervals.add(interval);
       final Path outPath = config.makeSegmentPartitionInfoPath(interval);
       final OutputStream out = Utils.makePathAndOutputStream(
@@ -342,7 +350,7 @@ public class DetermineHashedPartitionsJob implements Jobby
             }
         ).writeValue(
             out,
-            new Double(aggregate.estimateCardinality()).longValue()
+            aggregate.estimateCardinalityRound()
         );
       }
       finally {
@@ -355,7 +363,7 @@ public class DetermineHashedPartitionsJob implements Jobby
         throws IOException, InterruptedException
     {
       super.run(context);
-      if (!config.getSegmentGranularIntervals().isPresent()) {
+      if (determineIntervals) {
         final Path outPath = config.makeIntervalInfoPath();
         final OutputStream out = Utils.makePathAndOutputStream(
             context, outPath, config.isOverwriteFiles()

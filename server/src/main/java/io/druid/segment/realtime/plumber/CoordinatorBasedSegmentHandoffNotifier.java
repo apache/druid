@@ -21,11 +21,9 @@ package io.druid.segment.realtime.plumber;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
-
 import io.druid.client.ImmutableSegmentLoadInfo;
 import io.druid.client.coordinator.CoordinatorClient;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.SegmentDescriptor;
@@ -34,6 +32,7 @@ import io.druid.server.coordination.DruidServerMetadata;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
@@ -43,7 +42,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
 {
   private static final Logger log = new Logger(CoordinatorBasedSegmentHandoffNotifier.class);
 
-  private final ConcurrentMap<SegmentDescriptor, Pair<Executor, Runnable>> handOffCallbacks = Maps.newConcurrentMap();
+  private final ConcurrentMap<SegmentDescriptor, Pair<Executor, Runnable>> handOffCallbacks = new ConcurrentHashMap<>();
   private final CoordinatorClient coordinatorClient;
   private volatile ScheduledExecutorService scheduledExecutor;
   private final long pollDurationMillis;
@@ -127,7 +126,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
     catch (Throwable t) {
       log.error(
           t,
-          "Exception while checking handoff for dataSource[%s] Segment[%s], Will try again after [%d]secs",
+          "Exception while checking handoff for dataSource[%s], Will try again after [%d]secs",
           dataSource,
           pollDurationMillis
       );

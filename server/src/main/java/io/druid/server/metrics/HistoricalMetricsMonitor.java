@@ -24,11 +24,12 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.metrics.AbstractMonitor;
 import io.druid.client.DruidServerConfig;
-import io.druid.java.util.common.collect.CountingMap;
 import io.druid.query.DruidMetrics;
 import io.druid.server.SegmentManager;
-import io.druid.server.coordination.ZkCoordinator;
+import io.druid.server.coordination.SegmentLoadDropHandler;
 import io.druid.timeline.DataSegment;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 
 import java.util.Map;
 
@@ -36,18 +37,18 @@ public class HistoricalMetricsMonitor extends AbstractMonitor
 {
   private final DruidServerConfig serverConfig;
   private final SegmentManager segmentManager;
-  private final ZkCoordinator zkCoordinator;
+  private final SegmentLoadDropHandler segmentLoadDropMgr;
 
   @Inject
   public HistoricalMetricsMonitor(
       DruidServerConfig serverConfig,
       SegmentManager segmentManager,
-      ZkCoordinator zkCoordinator
+      SegmentLoadDropHandler segmentLoadDropMgr
   )
   {
     this.serverConfig = serverConfig;
     this.segmentManager = segmentManager;
-    this.zkCoordinator = zkCoordinator;
+    this.segmentLoadDropMgr = segmentLoadDropMgr;
   }
 
   @Override
@@ -55,15 +56,16 @@ public class HistoricalMetricsMonitor extends AbstractMonitor
   {
     emitter.emit(new ServiceMetricEvent.Builder().build("segment/max", serverConfig.getMaxSize()));
 
-    final CountingMap<String> pendingDeleteSizes = new CountingMap<String>();
+    final Object2LongOpenHashMap<String> pendingDeleteSizes = new Object2LongOpenHashMap<>();
 
-    for (DataSegment segment : zkCoordinator.getPendingDeleteSnapshot()) {
-      pendingDeleteSizes.add(segment.getDataSource(), segment.getSize());
+    for (DataSegment segment : segmentLoadDropMgr.getPendingDeleteSnapshot()) {
+      pendingDeleteSizes.addTo(segment.getDataSource(), segment.getSize());
     }
 
-    for (Map.Entry<String, Long> entry : pendingDeleteSizes.entrySet()) {
+    for (final Object2LongMap.Entry<String> entry : pendingDeleteSizes.object2LongEntrySet()) {
+
       final String dataSource = entry.getKey();
-      final long pendingDeleteSize = entry.getValue();
+      final long pendingDeleteSize = entry.getLongValue();
       emitter.emit(
           new ServiceMetricEvent.Builder()
               .setDimension(DruidMetrics.DATASOURCE, dataSource)

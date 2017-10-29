@@ -18,9 +18,12 @@
  */
 package io.druid.data.input;
 
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Closeables;
 import com.google.common.io.Files;
+import io.druid.data.input.avro.AvroExtensionsModule;
+import io.druid.java.util.common.StringUtils;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.file.FileReader;
@@ -30,11 +33,13 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.commons.io.FileUtils;
 import org.apache.pig.ExecType;
 import org.apache.pig.PigServer;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
 
+import static io.druid.data.input.AvroStreamInputRowParserTest.DIMENSIONS;
 import static io.druid.data.input.AvroStreamInputRowParserTest.PARSE_SPEC;
 import static io.druid.data.input.AvroStreamInputRowParserTest.assertInputRowCorrect;
 import static io.druid.data.input.AvroStreamInputRowParserTest.buildSomeAvroDatum;
@@ -42,6 +47,14 @@ import static io.druid.data.input.AvroStreamInputRowParserTest.buildSomeAvroDatu
 public class AvroHadoopInputRowParserTest
 {
   private final ObjectMapper jsonMapper = new ObjectMapper();
+
+  @Before
+  public void setUp()
+  {
+    for (Module jacksonModule : new AvroExtensionsModule().getJacksonModules()) {
+      jsonMapper.registerModule(jacksonModule);
+    }
+  }
 
   @Test
   public void testParseNotFromPigAvroStorage() throws IOException
@@ -69,7 +82,7 @@ public class AvroHadoopInputRowParserTest
         AvroHadoopInputRowParser.class
     );
     InputRow inputRow = parser2.parse(record);
-    assertInputRowCorrect(inputRow);
+    assertInputRowCorrect(inputRow, DIMENSIONS);
   }
 
 
@@ -105,7 +118,7 @@ public class AvroHadoopInputRowParserTest
       // 1. read avro files into Pig
       pigServer = new PigServer(ExecType.LOCAL);
       pigServer.registerQuery(
-          String.format(
+          StringUtils.format(
               "A = LOAD '%s' USING %s;",
               someAvroDatumFile,
               inputStorage

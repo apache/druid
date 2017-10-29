@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import io.druid.java.util.common.StringUtils;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
@@ -42,6 +43,7 @@ public class KafkaSupervisorIOConfig
   private final boolean useEarliestOffset;
   private final Duration completionTimeout;
   private final Optional<Duration> lateMessageRejectionPeriod;
+  private final Optional<Duration> earlyMessageRejectionPeriod;
   private final boolean skipOffsetGaps;
 
   @JsonCreator
@@ -56,6 +58,7 @@ public class KafkaSupervisorIOConfig
       @JsonProperty("useEarliestOffset") Boolean useEarliestOffset,
       @JsonProperty("completionTimeout") Period completionTimeout,
       @JsonProperty("lateMessageRejectionPeriod") Period lateMessageRejectionPeriod,
+      @JsonProperty("earlyMessageRejectionPeriod") Period earlyMessageRejectionPeriod,
       @JsonProperty("skipOffsetGaps") Boolean skipOffsetGaps
   )
   {
@@ -63,7 +66,7 @@ public class KafkaSupervisorIOConfig
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
     Preconditions.checkNotNull(
         consumerProperties.get(BOOTSTRAP_SERVERS_KEY),
-        String.format("consumerProperties must contain entry for [%s]", BOOTSTRAP_SERVERS_KEY)
+        StringUtils.format("consumerProperties must contain entry for [%s]", BOOTSTRAP_SERVERS_KEY)
     );
 
     this.replicas = replicas != null ? replicas : 1;
@@ -76,6 +79,9 @@ public class KafkaSupervisorIOConfig
     this.lateMessageRejectionPeriod = lateMessageRejectionPeriod == null
                                       ? Optional.<Duration>absent()
                                       : Optional.of(lateMessageRejectionPeriod.toStandardDuration());
+    this.earlyMessageRejectionPeriod = earlyMessageRejectionPeriod == null
+                                       ? Optional.<Duration>absent()
+                                       : Optional.of(earlyMessageRejectionPeriod.toStandardDuration());
     this.skipOffsetGaps = skipOffsetGaps != null ? skipOffsetGaps : false;
   }
 
@@ -131,6 +137,12 @@ public class KafkaSupervisorIOConfig
   public Duration getCompletionTimeout()
   {
     return completionTimeout;
+  }
+
+  @JsonProperty
+  public Optional<Duration> getEarlyMessageRejectionPeriod()
+  {
+    return earlyMessageRejectionPeriod;
   }
 
   @JsonProperty

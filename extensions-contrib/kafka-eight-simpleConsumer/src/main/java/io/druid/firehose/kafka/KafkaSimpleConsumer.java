@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.net.HostAndPort;
 
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.logger.Logger;
 import kafka.api.FetchRequest;
@@ -96,7 +97,7 @@ public class KafkaSimpleConsumer
     this.allBrokers = Collections.unmodifiableList(brokerList);
     this.topic = topic;
     this.partitionId = partitionId;
-    this.clientId = String.format("%s_%d_%s", topic, partitionId, clientId);
+    this.clientId = StringUtils.format("%s_%d_%s", topic, partitionId, clientId);
     this.leaderLookupClientId = clientId + "leaderLookup";
     this.replicaBrokers = new ArrayList<>();
     this.replicaBrokers.addAll(this.allBrokers);
@@ -239,7 +240,7 @@ public class KafkaSimpleConsumer
       }
       catch (Exception e) {
         ensureNotInterrupted(e);
-        log.warn(e, "caught exception in fetch {} - {}", topic, partitionId);
+        log.warn(e, "caught exception in fetch %s - %d", topic, partitionId);
         response = null;
       }
 

@@ -19,7 +19,7 @@
 
 package io.druid.segment.filter;
 
-import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.query.BitmapResultFactory;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
@@ -41,10 +41,10 @@ public class NotFilter implements Filter
   }
 
   @Override
-  public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
+  public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
   {
-    return selector.getBitmapFactory().complement(
-        baseFilter.getBitmapIndex(selector),
+    return bitmapResultFactory.complement(
+        baseFilter.getBitmapResult(selector, bitmapResultFactory),
         selector.getNumRows()
     );
   }

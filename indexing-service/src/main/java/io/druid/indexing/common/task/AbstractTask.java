@@ -26,14 +26,15 @@ import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
-import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockListAction;
+import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.java.util.common.DateTimes;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 public abstract class AbstractTask implements Task
@@ -86,7 +87,7 @@ public abstract class AbstractTask implements Task
         dataSource,
         interval.getStart(),
         interval.getEnd(),
-        new DateTime().toString()
+        DateTimes.nowUtc().toString()
     );
   }
 
@@ -201,9 +202,9 @@ public abstract class AbstractTask implements Task
     return id.hashCode();
   }
 
-  protected Iterable<TaskLock> getTaskLocks(TaskToolbox toolbox) throws IOException
+  protected List<TaskLock> getTaskLocks(TaskActionClient client) throws IOException
   {
-    return toolbox.getTaskActionClient().submit(new LockListAction());
+    return client.submit(new LockListAction());
   }
 
   @Override
@@ -212,11 +213,4 @@ public abstract class AbstractTask implements Task
   {
     return context;
   }
-
-  @Override
-  public Object getContextValue(String key)
-  {
-    return context == null ? null : context.get(key);
-  }
-
 }

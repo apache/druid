@@ -21,17 +21,23 @@ package io.druid.sql.calcite.planner;
 
 import com.google.common.collect.ImmutableList;
 import io.druid.sql.calcite.rel.QueryMaker;
-import io.druid.sql.calcite.rule.DruidFilterRule;
+import io.druid.sql.calcite.rule.CaseFilteredAggregatorRule;
 import io.druid.sql.calcite.rule.DruidRelToBindableRule;
 import io.druid.sql.calcite.rule.DruidRelToDruidRule;
+import io.druid.sql.calcite.rule.DruidRules;
 import io.druid.sql.calcite.rule.DruidSemiJoinRule;
 import io.druid.sql.calcite.rule.DruidTableScanRule;
-import io.druid.sql.calcite.rule.GroupByRules;
-import io.druid.sql.calcite.rule.SelectRules;
 import io.druid.sql.calcite.rule.SortCollapseRule;
 import org.apache.calcite.interpreter.Bindables;
+import org.apache.calcite.plan.RelOptLattice;
+import org.apache.calcite.plan.RelOptMaterialization;
+import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptRule;
+import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.plan.volcano.AbstractConverter;
+import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.RelFactories;
+import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
 import org.apache.calcite.rel.rules.AggregateExpandDistinctAggregatesRule;
 import org.apache.calcite.rel.rules.AggregateJoinTransposeRule;
 import org.apache.calcite.rel.rules.AggregateProjectMergeRule;
@@ -60,13 +66,17 @@ import org.apache.calcite.rel.rules.SortJoinTransposeRule;
 import org.apache.calcite.rel.rules.SortProjectTransposeRule;
 import org.apache.calcite.rel.rules.SortRemoveRule;
 import org.apache.calcite.rel.rules.SortUnionTransposeRule;
+import org.apache.calcite.rel.rules.SubQueryRemoveRule;
 import org.apache.calcite.rel.rules.TableScanRule;
 import org.apache.calcite.rel.rules.UnionMergeRule;
 import org.apache.calcite.rel.rules.UnionPullUpConstantsRule;
 import org.apache.calcite.rel.rules.UnionToDistinctRule;
 import org.apache.calcite.rel.rules.ValuesReduceRule;
+import org.apache.calcite.sql2rel.RelDecorrelator;
+import org.apache.calcite.sql2rel.RelFieldTrimmer;
 import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
+import org.apache.calcite.tools.RelBuilder;
 
 import java.util.List;
 
@@ -154,47 +164,59 @@ public class Rules
           FilterMergeRule.INSTANCE
       );
 
+  private static final List<RelOptRule> SUB_QUERY_REMOVE_RULES =
+      ImmutableList.of(
+          SubQueryRemoveRule.PROJECT,
+          SubQueryRemoveRule.FILTER,
+          SubQueryRemoveRule.JOIN
+      );
+
   private Rules()
   {
     // No instantiation.
   }
 
-  public static List<Program> programs(final QueryMaker queryMaker, final DruidOperatorTable operatorTable)
+  public static List<Program> programs(final PlannerContext plannerContext, final QueryMaker queryMaker)
   {
+    final Program hepProgram =
+        Programs.sequence(
+            Programs.subQuery(DefaultRelMetadataProvider.INSTANCE),
+            new DecorrelateAndTrimFieldsProgram()
+        );
     return ImmutableList.of(
-        Programs.ofRules(druidConventionRuleSet(queryMaker, operatorTable)),
-        Programs.ofRules(bindableConventionRuleSet(queryMaker, operatorTable))
+        Programs.sequence(hepProgram, Programs.ofRules(druidConventionRuleSet(plannerContext, queryMaker))),
+        Programs.sequence(hepProgram, Programs.ofRules(bindableConventionRuleSet(plannerContext, queryMaker)))
     );
   }
 
   private static List<RelOptRule> druidConventionRuleSet(
-      final QueryMaker queryMaker,
-      final DruidOperatorTable operatorTable
+      final PlannerContext plannerContext,
+      final QueryMaker queryMaker
   )
   {
     return ImmutableList.<RelOptRule>builder()
-        .addAll(baseRuleSet(queryMaker, operatorTable))
+        .addAll(baseRuleSet(plannerContext, queryMaker))
         .add(DruidRelToDruidRule.instance())
         .build();
   }
 
   private static List<RelOptRule> bindableConventionRuleSet(
-      final QueryMaker queryMaker,
-      final DruidOperatorTable operatorTable
+      final PlannerContext plannerContext,
+      final QueryMaker queryMaker
   )
   {
     return ImmutableList.<RelOptRule>builder()
-        .addAll(baseRuleSet(queryMaker, operatorTable))
+        .addAll(baseRuleSet(plannerContext, queryMaker))
         .addAll(Bindables.RULES)
         .build();
   }
 
   private static List<RelOptRule> baseRuleSet(
-      final QueryMaker queryMaker,
-      final DruidOperatorTable operatorTable
+      final PlannerContext plannerContext,
+      final QueryMaker queryMaker
   )
   {
-    final PlannerConfig plannerConfig = queryMaker.getPlannerContext().getPlannerConfig();
+    final PlannerConfig plannerConfig = plannerContext.getPlannerConfig();
     final ImmutableList.Builder<RelOptRule> rules = ImmutableList.builder();
 
     // Calcite rules.
@@ -203,6 +225,7 @@ public class Rules
     rules.addAll(CONSTANT_REDUCTION_RULES);
     rules.addAll(VOLCANO_ABSTRACT_RULES);
     rules.addAll(RELOPTUTIL_ABSTRACT_RULES);
+    rules.addAll(SUB_QUERY_REMOVE_RULES);
 
     if (!plannerConfig.isUseApproximateCountDistinct()) {
       // We'll need this to expand COUNT DISTINCTs.
@@ -215,18 +238,35 @@ public class Rules
     }
 
     rules.add(SortCollapseRule.instance());
+    rules.add(CaseFilteredAggregatorRule.instance());
 
     // Druid-specific rules.
     rules.add(new DruidTableScanRule(queryMaker));
-    rules.add(new DruidFilterRule(operatorTable));
+    rules.addAll(DruidRules.rules());
 
     if (plannerConfig.getMaxSemiJoinRowsInMemory() > 0) {
       rules.add(DruidSemiJoinRule.instance());
     }
 
-    rules.addAll(SelectRules.rules(operatorTable));
-    rules.addAll(GroupByRules.rules(operatorTable));
-
     return rules.build();
+  }
+
+  // Based on Calcite's Programs.DecorrelateProgram and Programs.TrimFieldsProgram, which are private and only
+  // accessible through Programs.standard (which we don't want, since it also adds Enumerable rules).
+  private static class DecorrelateAndTrimFieldsProgram implements Program
+  {
+    @Override
+    public RelNode run(
+        RelOptPlanner planner,
+        RelNode rel,
+        RelTraitSet requiredOutputTraits,
+        List<RelOptMaterialization> materializations,
+        List<RelOptLattice> lattices
+    )
+    {
+      final RelNode decorrelatedRel = RelDecorrelator.decorrelateQuery(rel);
+      final RelBuilder relBuilder = RelFactories.LOGICAL_BUILDER.create(decorrelatedRel.getCluster(), null);
+      return new RelFieldTrimmer(null, relBuilder).trim(decorrelatedRel);
+    }
   }
 }

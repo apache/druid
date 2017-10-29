@@ -22,6 +22,7 @@ import com.google.common.base.Optional;
 import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
 import com.google.inject.Inject;
+import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.tasklogs.TaskLogs;
 import org.apache.hadoop.conf.Configuration;
@@ -135,7 +136,7 @@ public class HdfsTaskLogs implements TaskLogs
     if (fs.exists(taskLogDir)) {
 
       if (!fs.isDirectory(taskLogDir)) {
-        throw new IOException(String.format("taskLogDir [%s] must be a directory.", taskLogDir));
+        throw new IOE("taskLogDir [%s] must be a directory.", taskLogDir);
       }
 
       RemoteIterator<LocatedFileStatus> iter = fs.listLocatedStatus(taskLogDir);

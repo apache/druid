@@ -31,9 +31,8 @@ public class ConcatQueryRunner<T> implements QueryRunner<T>
 {
   private final Sequence<QueryRunner<T>> queryRunners;
 
-  public ConcatQueryRunner(
-      Sequence<QueryRunner<T>> queryRunners
-  ) {
+  public ConcatQueryRunner(Sequence<QueryRunner<T>> queryRunners)
+  {
     this.queryRunners = queryRunners;
   }
 

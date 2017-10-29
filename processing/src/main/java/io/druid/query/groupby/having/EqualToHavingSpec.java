@@ -22,6 +22,9 @@ package io.druid.query.groupby.having;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.data.input.Row;
+import io.druid.query.aggregation.AggregatorFactory;
+
+import java.util.Map;
 
 /**
  * The "=" operator in a "having" clause. This is similar to SQL's "having aggregation = value",
@@ -31,6 +34,8 @@ public class EqualToHavingSpec extends BaseHavingSpec
 {
   private final String aggregationName;
   private final Number value;
+
+  private volatile Map<String, AggregatorFactory> aggregators;
 
   @JsonCreator
   public EqualToHavingSpec(
@@ -55,9 +60,15 @@ public class EqualToHavingSpec extends BaseHavingSpec
   }
 
   @Override
+  public void setAggregators(Map<String, AggregatorFactory> aggregators)
+  {
+    this.aggregators = aggregators;
+  }
+
+  @Override
   public boolean eval(Row row)
   {
-    return HavingSpecMetricComparator.compare(row, aggregationName, value) == 0;
+    return HavingSpecMetricComparator.compare(row, aggregationName, value, aggregators) == 0;
   }
 
   /**

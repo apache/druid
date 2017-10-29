@@ -32,7 +32,7 @@ import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
@@ -43,6 +43,8 @@ import io.druid.initialization.Initialization;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.jetty.JettyBindings;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
+import io.druid.server.security.AuthTestUtils;
+import io.druid.server.security.AuthorizerMapper;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -69,15 +71,16 @@ public class JettyQosTest extends BaseJettyTest
               public void configure(Binder binder)
               {
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test", "localhost", null)
+                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test", "localhost", null, null, true, false)
                 );
                 binder.bind(JettyServerInitializer.class).to(JettyServerInit.class).in(LazySingleton.class);
                 Jerseys.addResource(binder, SlowResource.class);
                 Jerseys.addResource(binder, ExceptionResource.class);
                 Jerseys.addResource(binder, DefaultResource.class);
+                binder.bind(AuthorizerMapper.class).toInstance(AuthTestUtils.TEST_AUTHORIZER_MAPPER);
                 JettyBindings.addQosFilter(binder, "/slow/*", 2);
                 final ServerConfig serverConfig = new ObjectMapper().convertValue(
-                    ImmutableMap.of("numThreads", "10"),
+                    ImmutableMap.of("numThreads", "2"),
                     ServerConfig.class
                 );
                 binder.bind(ServerConfig.class).toInstance(serverConfig);
@@ -98,7 +101,7 @@ public class JettyQosTest extends BaseJettyTest
     );
   }
 
-  @Test(timeout = 60_000L)
+  @Test(timeout = 120_000L)
   public void testQoS() throws Exception
   {
     final int fastThreads = 20;

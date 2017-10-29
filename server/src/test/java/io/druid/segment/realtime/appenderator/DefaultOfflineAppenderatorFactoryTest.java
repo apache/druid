@@ -32,6 +32,7 @@ import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.guice.GuiceInjectors;
 import io.druid.initialization.Initialization;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -44,7 +45,6 @@ import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.plumber.Committers;
 import io.druid.timeline.partition.LinearShardSpec;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -63,44 +63,46 @@ public class DefaultOfflineAppenderatorFactoryTest
   {
     Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
-        ImmutableList.<Module>of(new Module()
-                                 {
-                                   @Override
-                                   public void configure(Binder binder)
-                                   {
-                                     binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/tool");
-                                     binder.bindConstant().annotatedWith(Names.named("servicePort")).to(9999);
-                                     binder.bind(DruidProcessingConfig.class).toInstance(
-                                         new DruidProcessingConfig()
-                                         {
-                                           @Override
-                                           public String getFormatString()
-                                           {
-                                             return "processing-%s";
-                                           }
+        ImmutableList.<Module>of(
+            new Module()
+            {
+              @Override
+              public void configure(Binder binder)
+              {
+                binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/tool");
+                binder.bindConstant().annotatedWith(Names.named("servicePort")).to(9999);
+                binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
+                binder.bind(DruidProcessingConfig.class).toInstance(
+                    new DruidProcessingConfig()
+                    {
+                      @Override
+                      public String getFormatString()
+                      {
+                        return "processing-%s";
+                      }
 
-                                           @Override
-                                           public int intermediateComputeSizeBytes()
-                                           {
-                                             return 100 * 1024 * 1024;
-                                           }
+                      @Override
+                      public int intermediateComputeSizeBytes()
+                      {
+                        return 100 * 1024 * 1024;
+                      }
 
-                                           @Override
-                                           public int getNumThreads()
-                                           {
-                                             return 1;
-                                           }
+                      @Override
+                      public int getNumThreads()
+                      {
+                        return 1;
+                      }
 
-                                           @Override
-                                           public int columnCacheSizeBytes()
-                                           {
-                                             return 25 * 1024 * 1024;
-                                           }
-                                         }
-                                     );
-                                     binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class);
-                                   }
-                                 }
+                      @Override
+                      public int columnCacheSizeBytes()
+                      {
+                        return 25 * 1024 * 1024;
+                      }
+                    }
+                );
+                binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class);
+              }
+            }
         )
     );
     ObjectMapper objectMapper = injector.getInstance(ObjectMapper.class);
@@ -156,7 +158,7 @@ public class DefaultOfflineAppenderatorFactoryTest
       Assert.assertEquals(null, appenderator.startJob());
       SegmentIdentifier identifier = new SegmentIdentifier(
           "dataSourceName",
-          new Interval("2000/2001"),
+          Intervals.of("2000/2001"),
           "A",
           new LinearShardSpec(0)
       );

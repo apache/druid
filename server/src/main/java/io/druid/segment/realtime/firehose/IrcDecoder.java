@@ -30,5 +30,5 @@ import org.joda.time.DateTime;
 })
 public interface IrcDecoder
 {
-  public InputRow decodeMessage(DateTime timestamp, String channel, String msg);
+  InputRow decodeMessage(DateTime timestamp, String channel, String msg);
 }

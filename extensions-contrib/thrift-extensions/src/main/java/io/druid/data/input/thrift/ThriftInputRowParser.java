@@ -52,7 +52,7 @@ public class ThriftInputRowParser implements InputRowParser<Object>
   private final String jarPath;
   private final String thriftClassName;
 
-  final private Parser<String, Object> parser;
+  private Parser<String, Object> parser;
   volatile private Class<TBase> thriftClass = null;
 
   @JsonCreator
@@ -67,7 +67,6 @@ public class ThriftInputRowParser implements InputRowParser<Object>
     Preconditions.checkNotNull(thriftClassName, "thrift class name");
 
     this.parseSpec = parseSpec;
-    parser = parseSpec.makeParser();
   }
 
   public Class<TBase> getThriftClass()
@@ -92,6 +91,12 @@ public class ThriftInputRowParser implements InputRowParser<Object>
   @Override
   public InputRow parse(Object input)
   {
+    if (parser == null) {
+      // parser should be created when it is really used to avoid unnecessary initialization of the underlying
+      // parseSpec.
+      parser = parseSpec.makeParser();
+    }
+
     // There is a Parser check in phase 2 of mapreduce job, thrift jar may not present in peon side.
     // Place it this initialization in constructor will get ClassNotFoundException
     try {

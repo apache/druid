@@ -65,7 +65,7 @@ public class VSizeLongSerdeTest
   @Test
   public void testSerdeValues() throws IOException
   {
-    for (int i : VSizeLongSerde.SUPPORTED_SIZE) {
+    for (int i : VSizeLongSerde.SUPPORTED_SIZES) {
       testSerde(i, values0);
       if (i >= 1) {
         testSerde(i, values1);
@@ -89,7 +89,7 @@ public class VSizeLongSerdeTest
   @Test
   public void testSerdeLoop() throws IOException
   {
-    for (int i : VSizeLongSerde.SUPPORTED_SIZE) {
+    for (int i : VSizeLongSerde.SUPPORTED_SIZES) {
       if (i >= 8) {
         testSerdeIncLoop(i, 0, 256);
       }

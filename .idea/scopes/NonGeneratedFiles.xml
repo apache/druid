@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="NonGeneratedFiles" pattern="(src:*..*||test:*..*)&amp;&amp;!test[druid-protobuf-extensions]:io.druid.data.input.protobuf.ProtoTestEventWrapper" />
+</component>

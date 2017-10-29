@@ -19,7 +19,11 @@
 
 package io.druid.math.expr;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.primitives.Doubles;
+import com.google.common.primitives.Ints;
+import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.IAE;
 
 /**
@@ -72,9 +76,9 @@ public abstract class ExprEval<T>
     }
     if (val instanceof Number) {
       if (val instanceof Float || val instanceof Double) {
-        return new DoubleExprEval((Number)val);
+        return new DoubleExprEval((Number) val);
       }
-      return new LongExprEval((Number)val);
+      return new LongExprEval((Number) val);
     }
     return new StringExprEval(val == null ? null : String.valueOf(val));
   }
@@ -98,11 +102,6 @@ public abstract class ExprEval<T>
     return value == null;
   }
 
-  public Number numericValue()
-  {
-    return (Number) value;
-  }
-
   public abstract int asInt();
 
   public abstract long asLong();
@@ -120,7 +119,8 @@ public abstract class ExprEval<T>
 
   public abstract Expr toExpr();
 
-  private static abstract class NumericExprEval extends ExprEval<Number> {
+  private static abstract class NumericExprEval extends ExprEval<Number>
+  {
 
     private NumericExprEval(Number value)
     {
@@ -150,7 +150,7 @@ public abstract class ExprEval<T>
   {
     private DoubleExprEval(Number value)
     {
-      super(value);
+      super(Preconditions.checkNotNull(value, "value"));
     }
 
     @Override
@@ -182,7 +182,7 @@ public abstract class ExprEval<T>
     @Override
     public Expr toExpr()
     {
-      return new DoubleExpr(value == null ? null : value.doubleValue());
+      return new DoubleExpr(value.doubleValue());
     }
   }
 
@@ -190,7 +190,7 @@ public abstract class ExprEval<T>
   {
     private LongExprEval(Number value)
     {
-      super(value);
+      super(Preconditions.checkNotNull(value, "value"));
     }
 
     @Override
@@ -222,7 +222,7 @@ public abstract class ExprEval<T>
     @Override
     public Expr toExpr()
     {
-      return new LongExpr(value == null ? null : value.longValue());
+      return new LongExpr(value.longValue());
     }
   }
 
@@ -230,7 +230,7 @@ public abstract class ExprEval<T>
   {
     private StringExprEval(String value)
     {
-      super(value);
+      super(Strings.emptyToNull(value));
     }
 
     @Override
@@ -240,27 +240,33 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public final boolean isNull()
-    {
-      return Strings.isNullOrEmpty(value);
-    }
-
-    @Override
     public final int asInt()
     {
-      return Integer.parseInt(value);
+      if (value == null) {
+        return 0;
+      }
+
+      final Integer theInt = Ints.tryParse(value);
+      return theInt == null ? 0 : theInt;
     }
 
     @Override
     public final long asLong()
     {
-      return Long.parseLong(value);
+      // GuavaUtils.tryParseLong handles nulls, no need for special null handling here.
+      final Long theLong = GuavaUtils.tryParseLong(value);
+      return theLong == null ? 0L : theLong;
     }
 
     @Override
     public final double asDouble()
     {
-      return Double.parseDouble(value);
+      if (value == null) {
+        return 0.0;
+      }
+
+      final Double theDouble = Doubles.tryParse(value);
+      return theDouble == null ? 0.0 : theDouble;
     }
 
     @Override

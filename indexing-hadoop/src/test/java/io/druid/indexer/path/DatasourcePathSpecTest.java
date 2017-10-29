@@ -44,6 +44,7 @@ import io.druid.indexer.hadoop.WindowedDataSegment;
 import io.druid.initialization.Initialization;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -55,7 +56,6 @@ import io.druid.timeline.partition.NoneShardSpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
 import org.easymock.EasyMock;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -73,7 +73,7 @@ public class DatasourcePathSpecTest
   {
     this.ingestionSpec = new DatasourceIngestionSpec(
         "test",
-        Interval.parse("2000/3000"),
+        Intervals.of("2000/3000"),
         null,
         null,
         null,
@@ -86,7 +86,7 @@ public class DatasourcePathSpecTest
         WindowedDataSegment.of(
             new DataSegment(
                 ingestionSpec.getDataSource(),
-                Interval.parse("2000/3000"),
+                Intervals.of("2000/3000"),
                 "ver",
                 ImmutableMap.<String, Object>of(
                     "type", "local",
@@ -102,7 +102,7 @@ public class DatasourcePathSpecTest
         WindowedDataSegment.of(
             new DataSegment(
                 ingestionSpec.getDataSource(),
-                Interval.parse("2050/3000"),
+                Intervals.of("2050/3000"),
                 "ver",
                 ImmutableMap.<String, Object>of(
                     "type", "hdfs",
@@ -135,7 +135,7 @@ public class DatasourcePathSpecTest
               {
                 binder.bind(UsedSegmentLister.class).toInstance(segmentList);
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("dummy-node", null, null)
+                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("dummy-node", null, null, null, true, false)
                 );
               }
             }
@@ -277,7 +277,7 @@ public class DatasourcePathSpecTest
                     new LongSumAggregatorFactory("visited_sum", "visited")
                 },
                 new UniformGranularitySpec(
-                    Granularities.DAY, Granularities.NONE, ImmutableList.of(Interval.parse("2000/3000"))
+                    Granularities.DAY, Granularities.NONE, ImmutableList.of(Intervals.of("2000/3000"))
                 ),
                 HadoopDruidIndexerConfig.JSON_MAPPER
             ),

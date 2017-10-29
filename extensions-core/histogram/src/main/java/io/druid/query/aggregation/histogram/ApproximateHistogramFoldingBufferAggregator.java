@@ -21,13 +21,13 @@ package io.druid.query.aggregation.histogram;
 
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.BaseObjectColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
 public class ApproximateHistogramFoldingBufferAggregator implements BufferAggregator
 {
-  private final ObjectColumnSelector<ApproximateHistogram> selector;
+  private final BaseObjectColumnValueSelector<ApproximateHistogram> selector;
   private final int resolution;
   private final float upperLimit;
   private final float lowerLimit;
@@ -36,7 +36,7 @@ public class ApproximateHistogramFoldingBufferAggregator implements BufferAggreg
   private long[] tmpBufferB;
 
   public ApproximateHistogramFoldingBufferAggregator(
-      ObjectColumnSelector<ApproximateHistogram> selector,
+      BaseObjectColumnValueSelector<ApproximateHistogram> selector,
       int resolution,
       float lowerLimit,
       float upperLimit
@@ -65,13 +65,16 @@ public class ApproximateHistogramFoldingBufferAggregator implements BufferAggreg
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
+    ApproximateHistogram hNext = selector.getObject();
+    if (hNext == null) {
+      return;
+    }
     ByteBuffer mutationBuffer = buf.duplicate();
     mutationBuffer.position(position);
 
     ApproximateHistogram h0 = ApproximateHistogram.fromBytesDense(mutationBuffer);
     h0.setLowerLimit(lowerLimit);
     h0.setUpperLimit(upperLimit);
-    ApproximateHistogram hNext = selector.get();
     h0.foldFast(hNext, tmpBufferP, tmpBufferB);
 
     mutationBuffer.position(position);
@@ -98,6 +101,11 @@ public class ApproximateHistogramFoldingBufferAggregator implements BufferAggreg
     throw new UnsupportedOperationException("ApproximateHistogramFoldingBufferAggregator does not support getLong()");
   }
 
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("ApproximateHistogramFoldingBufferAggregator does not support getDouble()");
+  }
   @Override
   public void close()
   {

@@ -28,9 +28,10 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.discovery.NoopServiceAnnouncer;
+import io.druid.discovery.DruidLeaderSelector;
 import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
@@ -58,6 +59,8 @@ import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthTestUtils;
+import io.druid.server.security.AuthenticationResult;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryOneTime;
@@ -84,7 +87,7 @@ import java.util.concurrent.Executor;
 
 public class OverlordTest
 {
-  private static final TaskLocation TASK_LOCATION = new TaskLocation("dummy", 1000);
+  private static final TaskLocation TASK_LOCATION = new TaskLocation("dummy", 1000, -1);
 
   private TestingServer server;
   private Timing timing;
@@ -124,7 +127,13 @@ public class OverlordTest
   @Before
   public void setUp() throws Exception
   {
-    req = EasyMock.createStrictMock(HttpServletRequest.class);
+    req = EasyMock.createMock(HttpServletRequest.class);
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
+        new AuthenticationResult("druid", "druid", null)
+    ).anyTimes();
+    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    EasyMock.expectLastCall().anyTimes();
     supervisorManager = EasyMock.createMock(SupervisorManager.class);
     taskLockbox = EasyMock.createStrictMock(TaskLockbox.class);
     taskLockbox.syncFromStorage();
@@ -143,7 +152,7 @@ public class OverlordTest
     taskActionClientFactory = EasyMock.createStrictMock(TaskActionClientFactory.class);
     EasyMock.expect(taskActionClientFactory.create(EasyMock.<Task>anyObject()))
             .andReturn(null).anyTimes();
-    EasyMock.replay(taskLockbox, taskActionClientFactory);
+    EasyMock.replay(taskLockbox, taskActionClientFactory, req);
 
     taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
     runTaskCountDownLatches = new CountDownLatch[2];
@@ -153,12 +162,11 @@ public class OverlordTest
     taskCompletionCountDownLatches[0] = new CountDownLatch(1);
     taskCompletionCountDownLatches[1] = new CountDownLatch(1);
     announcementLatch = new CountDownLatch(1);
-    IndexerZkConfig indexerZkConfig = new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null, null);
+    IndexerZkConfig indexerZkConfig = new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null);
     setupServerAndCurator();
     curator.start();
     curator.blockUntilConnected();
-    curator.create().creatingParentsIfNeeded().forPath(indexerZkConfig.getLeaderLatchPath());
-    druidNode = new DruidNode("hey", "what", 1234);
+    druidNode = new DruidNode("hey", "what", 1234, null, true, false);
     ServiceEmitter serviceEmitter = new NoopServiceEmitter();
     taskMaster = new TaskMaster(
         new TaskQueueConfig(null, new Period(1), null, new Period(10)),
@@ -166,7 +174,6 @@ public class OverlordTest
         taskStorage,
         taskActionClientFactory,
         druidNode,
-        indexerZkConfig,
         new TaskRunnerFactory<MockTaskRunner>()
         {
           @Override
@@ -175,7 +182,6 @@ public class OverlordTest
             return new MockTaskRunner(runTaskCountDownLatches, taskCompletionCountDownLatches);
           }
         },
-        curator,
         new NoopServiceAnnouncer()
         {
           @Override
@@ -187,7 +193,8 @@ public class OverlordTest
         new CoordinatorOverlordServiceConfig(null, null),
         serviceEmitter,
         supervisorManager,
-        EasyMock.createNiceMock(OverlordHelperManager.class)
+        EasyMock.createNiceMock(OverlordHelperManager.class),
+        new TestDruidLeaderSelector()
     );
     EmittingLogger.registerEmitter(serviceEmitter);
   }
@@ -203,6 +210,7 @@ public class OverlordTest
       Thread.sleep(10);
     }
     Assert.assertEquals(taskMaster.getCurrentLeader(), druidNode.getHostAndPort());
+
     // Test Overlord resource stuff
     overlordResource = new OverlordResource(
         taskMaster,
@@ -210,7 +218,7 @@ public class OverlordTest
         null,
         null,
         null,
-        new AuthConfig()
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER
     );
     Response response = overlordResource.getLeader();
     Assert.assertEquals(druidNode.getHostAndPort(), response.getEntity());
@@ -402,7 +410,7 @@ public class OverlordTest
     }
 
     @Override
-    public Collection<? extends TaskRunnerWorkItem> getPendingTasks()
+    public Collection<TaskRunnerWorkItem> getPendingTasks()
     {
       return ImmutableList.of();
     }
@@ -423,6 +431,46 @@ public class OverlordTest
     public void start()
     {
       //Do nothing
+    }
+  }
+
+  private static class TestDruidLeaderSelector implements DruidLeaderSelector
+  {
+    private volatile Listener listener;
+    private volatile String leader;
+
+    @Override
+    public String getCurrentLeader()
+    {
+      return leader;
+    }
+
+    @Override
+    public boolean isLeader()
+    {
+      return leader != null;
+    }
+
+    @Override
+    public int localTerm()
+    {
+      return 0;
+    }
+
+    @Override
+    public void registerListener(Listener listener)
+    {
+      this.listener = listener;
+
+      leader = "what:1234";
+      listener.becomeLeader();
+    }
+
+    @Override
+    public void unregisterListener()
+    {
+      leader = null;
+      listener.stopBeingLeader();
     }
   }
 }

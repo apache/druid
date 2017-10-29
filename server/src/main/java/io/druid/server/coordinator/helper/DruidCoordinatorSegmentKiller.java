@@ -24,7 +24,8 @@ import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 import io.druid.client.indexing.IndexingServiceClient;
-import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataSegmentManager;
 import io.druid.server.coordinator.DruidCoordinatorConfig;
@@ -121,11 +122,7 @@ public class DruidCoordinatorSegmentKiller implements DruidCoordinatorHelper
   {
     List<Interval> unusedSegmentIntervals = segmentManager.getUnusedSegmentIntervals(
         dataSource,
-        new Interval(
-            0,
-            System.currentTimeMillis()
-            - retainDuration
-        ),
+        new Interval(DateTimes.EPOCH, DateTimes.nowUtc().minus(retainDuration)),
         limit
     );
 

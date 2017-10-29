@@ -50,7 +50,7 @@ public class LowerExtractionFn extends DimExtractionFn
 
   @Nullable
   @Override
-  public String apply(String key)
+  public String apply(@Nullable String key)
   {
     if (Strings.isNullOrEmpty(key)) {
       return null;

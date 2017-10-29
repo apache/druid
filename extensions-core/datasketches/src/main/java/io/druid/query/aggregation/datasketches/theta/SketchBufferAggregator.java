@@ -19,15 +19,13 @@
 
 package io.druid.query.aggregation.datasketches.theta;
 
-import com.yahoo.memory.Memory;
-import com.yahoo.memory.MemoryRegion;
-import com.yahoo.memory.NativeMemory;
+import com.yahoo.memory.WritableMemory;
 import com.yahoo.sketches.Family;
 import com.yahoo.sketches.theta.SetOperation;
 import com.yahoo.sketches.theta.Union;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.BaseObjectColumnValueSelector;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
@@ -36,13 +34,13 @@ import java.util.IdentityHashMap;
 
 public class SketchBufferAggregator implements BufferAggregator
 {
-  private final ObjectColumnSelector selector;
+  private final BaseObjectColumnValueSelector selector;
   private final int size;
   private final int maxIntermediateSize;
   private final IdentityHashMap<ByteBuffer, Int2ObjectMap<Union>> unions = new IdentityHashMap<>();
-  private final IdentityHashMap<ByteBuffer, NativeMemory> nmCache = new IdentityHashMap<>();
+  private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
 
-  public SketchBufferAggregator(ObjectColumnSelector selector, int size, int maxIntermediateSize)
+  public SketchBufferAggregator(BaseObjectColumnValueSelector selector, int size, int maxIntermediateSize)
   {
     this.selector = selector;
     this.size = size;
@@ -58,28 +56,32 @@ public class SketchBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    Object update = selector.get();
+    Object update = selector.getObject();
     if (update == null) {
       return;
     }
 
-    Union union = getUnion(buf, position);
+    Union union = getOrCreateUnion(buf, position);
     SketchAggregator.updateUnion(union, update);
   }
 
   @Override
   public Object get(ByteBuffer buf, int position)
   {
+    Int2ObjectMap<Union> unionMap = unions.get(buf);
+    Union union = unionMap != null ? unionMap.get(position) : null;
+    if (union == null) {
+      return SketchHolder.EMPTY;
+    }
     //in the code below, I am returning SetOp.getResult(true, null)
     //"true" returns an ordered sketch but slower to compute than unordered sketch.
     //however, advantage of ordered sketch is that they are faster to "union" later
     //given that results from the aggregator will be combined further, it is better
     //to return the ordered sketch here
-    return SketchHolder.of(getUnion(buf, position).getResult(true, null));
+    return SketchHolder.of(union.getResult(true, null));
   }
 
-  //Note that this is not threadsafe and I don't think it needs to be
-  private Union getUnion(ByteBuffer buf, int position)
+  private Union getOrCreateUnion(ByteBuffer buf, int position)
   {
     Int2ObjectMap<Union> unionMap = unions.get(buf);
     Union union = unionMap != null ? unionMap.get(position) : null;
@@ -91,11 +93,10 @@ public class SketchBufferAggregator implements BufferAggregator
 
   private Union createNewUnion(ByteBuffer buf, int position, boolean isWrapped)
   {
-    NativeMemory nm = getNativeMemory(buf);
-    Memory mem = new MemoryRegion(nm, position, maxIntermediateSize);
+    WritableMemory mem = getMemory(buf).writableRegion(position, maxIntermediateSize);
     Union union = isWrapped
                   ? (Union) SetOperation.wrap(mem)
-                  : (Union) SetOperation.builder().initMemory(mem).build(size, Family.UNION);
+                  : (Union) SetOperation.builder().setNominalEntries(size).build(Family.UNION, mem);
     Int2ObjectMap<Union> unionMap = unions.get(buf);
     if (unionMap == null) {
       unionMap = new Int2ObjectOpenHashMap<>();
@@ -118,9 +119,16 @@ public class SketchBufferAggregator implements BufferAggregator
   }
 
   @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @Override
   public void close()
   {
     unions.clear();
+    memCache.clear();
   }
 
   @Override
@@ -138,19 +146,19 @@ public class SketchBufferAggregator implements BufferAggregator
       unionMap.remove(oldPosition);
       if (unionMap.isEmpty()) {
         unions.remove(oldBuffer);
-        nmCache.remove(oldBuffer);
+        memCache.remove(oldBuffer);
       }
     }
   }
 
-  private NativeMemory getNativeMemory(ByteBuffer buffer)
+  private WritableMemory getMemory(ByteBuffer buffer)
   {
-    NativeMemory nm = nmCache.get(buffer);
-    if (nm == null) {
-      nm = new NativeMemory(buffer);
-      nmCache.put(buffer, nm);
+    WritableMemory mem = memCache.get(buffer);
+    if (mem == null) {
+      mem = WritableMemory.wrap(buffer);
+      memCache.put(buffer, mem);
     }
-    return nm;
+    return mem;
   }
 
 }

@@ -22,6 +22,7 @@ package io.druid.emitter.ambari.metrics;
 import com.google.common.collect.Maps;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.apache.hadoop.metrics2.sink.timeline.TimelineMetric;
@@ -44,7 +45,7 @@ public class WhiteListBasedDruidToTimelineEventConverterTest
       new DefaultObjectMapper()
   );
   private ServiceMetricEvent event;
-  private final DateTime createdTime = new DateTime();
+  private final DateTime createdTime = DateTimes.nowUtc();
   private final String hostname = "testHost:8080";
   private final String serviceName = "historical";
   private final String defaultNamespace = prefix + "." + serviceName;

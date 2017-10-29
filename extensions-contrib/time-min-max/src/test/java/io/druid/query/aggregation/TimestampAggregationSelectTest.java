@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -32,7 +33,6 @@ import io.druid.query.Result;
 import io.druid.query.select.SelectResultValue;
 import io.druid.segment.ColumnSelectorFactory;
 import org.easymock.EasyMock;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -60,13 +60,13 @@ public class TimestampAggregationSelectTest
 
   private Timestamp[] values = new Timestamp[10];
 
-  @Parameterized.Parameters(name="{index}: Test for {0}")
+  @Parameterized.Parameters(name = "{index}: Test for {0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return Iterables.transform(
         ImmutableList.of(
-            ImmutableList.of("timeMin", "tmin", TimestampMinAggregatorFactory.class, DateTime.parse("2011-01-12T01:00:00.000Z").getMillis()),
-            ImmutableList.of("timeMax", "tmax", TimestampMaxAggregatorFactory.class, DateTime.parse("2011-01-31T01:00:00.000Z").getMillis())
+            ImmutableList.of("timeMin", "tmin", TimestampMinAggregatorFactory.class, DateTimes.of("2011-01-12T01:00:00.000Z").getMillis()),
+            ImmutableList.of("timeMax", "tmax", TimestampMaxAggregatorFactory.class, DateTimes.of("2011-01-31T01:00:00.000Z").getMillis())
         ),
         new Function<List<?>, Object[]>()
         {
@@ -101,9 +101,9 @@ public class TimestampAggregationSelectTest
         temporaryFolder
     );
 
-    selector = new TestObjectColumnSelector(values);
+    selector = new TestObjectColumnSelector<>(values);
     selectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
-    EasyMock.expect(selectorFactory.makeObjectColumnSelector("test")).andReturn(selector);
+    EasyMock.expect(selectorFactory.makeColumnValueSelector("test")).andReturn(selector);
     EasyMock.replay(selectorFactory);
 
   }
@@ -144,7 +144,7 @@ public class TimestampAggregationSelectTest
         "  }\n" +
         "]";
     ZipFile zip = new ZipFile(new File(this.getClass().getClassLoader().getResource("druid.sample.tsv.zip").toURI()));
-    Sequence seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<?> seq = helper.createIndexAndRunQueryOnSegment(
         zip.getInputStream(zip.getEntry("druid.sample.tsv")),
         recordParser,
         aggregator,

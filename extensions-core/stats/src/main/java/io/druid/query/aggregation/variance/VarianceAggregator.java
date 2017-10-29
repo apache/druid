@@ -20,9 +20,9 @@
 package io.druid.query.aggregation.variance;
 
 import io.druid.query.aggregation.Aggregator;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
-import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.BaseFloatColumnValueSelector;
+import io.druid.segment.BaseLongColumnValueSelector;
+import io.druid.segment.BaseObjectColumnValueSelector;
 
 /**
  */
@@ -63,11 +63,17 @@ public abstract class VarianceAggregator implements Aggregator
     throw new UnsupportedOperationException("VarianceAggregator does not support getLong()");
   }
 
+  @Override
+  public double getDouble()
+  {
+    throw new UnsupportedOperationException("VarianceAggregator does not support getDouble()");
+  }
+
   public static final class FloatVarianceAggregator extends VarianceAggregator
   {
-    private final FloatColumnSelector selector;
+    private final BaseFloatColumnValueSelector selector;
 
-    public FloatVarianceAggregator(FloatColumnSelector selector)
+    public FloatVarianceAggregator(BaseFloatColumnValueSelector selector)
     {
       super();
       this.selector = selector;
@@ -76,15 +82,15 @@ public abstract class VarianceAggregator implements Aggregator
     @Override
     public void aggregate()
     {
-      holder.add(selector.get());
+      holder.add(selector.getFloat());
     }
   }
 
   public static final class LongVarianceAggregator extends VarianceAggregator
   {
-    private final LongColumnSelector selector;
+    private final BaseLongColumnValueSelector selector;
 
-    public LongVarianceAggregator(LongColumnSelector selector)
+    public LongVarianceAggregator(BaseLongColumnValueSelector selector)
     {
       super();
       this.selector = selector;
@@ -93,15 +99,15 @@ public abstract class VarianceAggregator implements Aggregator
     @Override
     public void aggregate()
     {
-      holder.add(selector.get());
+      holder.add(selector.getLong());
     }
   }
 
   public static final class ObjectVarianceAggregator extends VarianceAggregator
   {
-    private final ObjectColumnSelector selector;
+    private final BaseObjectColumnValueSelector<?> selector;
 
-    public ObjectVarianceAggregator(ObjectColumnSelector selector)
+    public ObjectVarianceAggregator(BaseObjectColumnValueSelector<?> selector)
     {
       super();
       this.selector = selector;
@@ -110,7 +116,7 @@ public abstract class VarianceAggregator implements Aggregator
     @Override
     public void aggregate()
     {
-      VarianceAggregatorCollector.combineValues(holder, selector.get());
+      VarianceAggregatorCollector.combineValues(holder, selector.getObject());
     }
   }
 }

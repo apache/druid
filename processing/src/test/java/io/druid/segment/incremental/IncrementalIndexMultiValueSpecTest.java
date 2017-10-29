@@ -77,7 +77,10 @@ public class IncrementalIndexMultiValueSpecTest
         return null;
       }
     };
-    IncrementalIndex<?> index = new OnheapIncrementalIndex(schema, true, 10000);
+    IncrementalIndex<?> index = new IncrementalIndex.Builder()
+        .setIndexSchema(schema)
+        .setMaxRowCount(10000)
+        .buildOnheap();
     index.add(
         new MapBasedInputRow(
             0, Arrays.asList(

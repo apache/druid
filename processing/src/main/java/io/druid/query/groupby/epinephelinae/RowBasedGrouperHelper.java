@@ -22,19 +22,23 @@ package io.druid.query.groupby.epinephelinae;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Chars;
+import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import io.druid.collections.ResourceHolder;
+import io.druid.common.utils.IntArrayUtils;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.AllGranularity;
 import io.druid.java.util.common.guava.Accumulator;
@@ -47,16 +51,25 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.RowBasedColumnSelectorFactory;
+import io.druid.query.groupby.epinephelinae.Grouper.BufferComparator;
+import io.druid.query.groupby.orderby.DefaultLimitSpec;
+import io.druid.query.groupby.orderby.OrderByColumnSpec;
 import io.druid.query.groupby.strategy.GroupByStrategyV2;
+import io.druid.query.ordering.StringComparator;
+import io.druid.query.ordering.StringComparators;
+import io.druid.segment.BaseDoubleColumnValueSelector;
+import io.druid.segment.BaseFloatColumnValueSelector;
+import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
+import it.unimi.dsi.fastutil.ints.IntArrays;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -65,12 +78,57 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.IntStream;
 
 // this class contains shared code between GroupByMergingQueryRunnerV2 and GroupByRowProcessor
 public class RowBasedGrouperHelper
 {
+  // Entry in dictionary, node pointer in reverseDictionary, hash + k/v/next pointer in reverseDictionary nodes
+  private static final int ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY = Longs.BYTES * 5 + Ints.BYTES;
+
+  private static final int SINGLE_THREAD_CONCURRENCY_HINT = -1;
+  private static final int UNKNOWN_THREAD_PRIORITY = -1;
+  private static final long UNKNOWN_TIMEOUT = -1L;
+
+  /**
+   * Create a single-threaded grouper and accumulator.
+   */
+  public static Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, Row>> createGrouperAccumulatorPair(
+      final GroupByQuery query,
+      final boolean isInputRaw,
+      final Map<String, ValueType> rawInputRowSignature,
+      final GroupByQueryConfig config,
+      final Supplier<ByteBuffer> bufferSupplier,
+      final LimitedTemporaryStorage temporaryStorage,
+      final ObjectMapper spillMapper,
+      final AggregatorFactory[] aggregatorFactories,
+      final int mergeBufferSize
+  )
+  {
+    return createGrouperAccumulatorPair(
+        query,
+        isInputRaw,
+        rawInputRowSignature,
+        config,
+        bufferSupplier,
+        null,
+        SINGLE_THREAD_CONCURRENCY_HINT,
+        temporaryStorage,
+        spillMapper,
+        aggregatorFactories,
+        null,
+        UNKNOWN_THREAD_PRIORITY,
+        false,
+        UNKNOWN_TIMEOUT,
+        mergeBufferSize
+    );
+  }
+
   /**
    * If isInputRaw is true, transformations such as timestamp truncation and extraction functions have not
    * been applied to the input rows yet, for example, in a nested query, if an extraction function is being
@@ -82,10 +140,16 @@ public class RowBasedGrouperHelper
       final Map<String, ValueType> rawInputRowSignature,
       final GroupByQueryConfig config,
       final Supplier<ByteBuffer> bufferSupplier,
+      final Supplier<ResourceHolder<ByteBuffer>> combineBufferSupplier,
       final int concurrencyHint,
       final LimitedTemporaryStorage temporaryStorage,
       final ObjectMapper spillMapper,
-      final AggregatorFactory[] aggregatorFactories
+      final AggregatorFactory[] aggregatorFactories,
+      @Nullable final ListeningExecutorService grouperSorter,
+      final int priority,
+      final boolean hasQueryTimeout,
+      final long queryTimeoutAt,
+      final int mergeBufferSize
   )
   {
     // concurrencyHint >= 1 for concurrent groupers, -1 for single-threaded
@@ -95,13 +159,7 @@ public class RowBasedGrouperHelper
 
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
     final boolean includeTimestamp = GroupByStrategyV2.getUniversalTimestamp(query) == null;
-    final Grouper.KeySerdeFactory<RowBasedKey> keySerdeFactory = new RowBasedKeySerdeFactory(
-        includeTimestamp,
-        query.getContextSortByDimsFirst(),
-        query.getDimensions().size(),
-        querySpecificConfig.getMaxMergingDictionarySize() / (concurrencyHint == -1 ? 1 : concurrencyHint),
-        valueTypes
-    );
+
     final ThreadLocal<Row> columnSelectorRow = new ThreadLocal<>();
     final ColumnSelectorFactory columnSelectorFactory = query.getVirtualColumns().wrap(
         RowBasedColumnSelectorFactory.create(
@@ -109,6 +167,27 @@ public class RowBasedGrouperHelper
             rawInputRowSignature
         )
     );
+
+    final boolean willApplyLimitPushDown = query.isApplyLimitPushDown();
+    final DefaultLimitSpec limitSpec = willApplyLimitPushDown ? (DefaultLimitSpec) query.getLimitSpec() : null;
+    boolean sortHasNonGroupingFields = false;
+    if (willApplyLimitPushDown) {
+      sortHasNonGroupingFields = DefaultLimitSpec.sortingOrderHasNonGroupingFields(
+          limitSpec,
+          query.getDimensions()
+      );
+    }
+
+    final Grouper.KeySerdeFactory<RowBasedKey> keySerdeFactory = new RowBasedKeySerdeFactory(
+        includeTimestamp,
+        query.getContextSortByDimsFirst(),
+        query.getDimensions(),
+        querySpecificConfig.getMaxMergingDictionarySize() / (concurrencyHint == -1 ? 1 : concurrencyHint),
+        valueTypes,
+        aggregatorFactories,
+        limitSpec
+    );
+
     final Grouper<RowBasedKey> grouper;
     if (concurrencyHint == -1) {
       grouper = new SpillingGrouper<>(
@@ -121,20 +200,39 @@ public class RowBasedGrouperHelper
           querySpecificConfig.getBufferGrouperInitialBuckets(),
           temporaryStorage,
           spillMapper,
-          true
+          true,
+          limitSpec,
+          sortHasNonGroupingFields,
+          mergeBufferSize
       );
     } else {
+      final Grouper.KeySerdeFactory<RowBasedKey> combineKeySerdeFactory = new RowBasedKeySerdeFactory(
+          includeTimestamp,
+          query.getContextSortByDimsFirst(),
+          query.getDimensions(),
+          querySpecificConfig.getMaxMergingDictionarySize(), // use entire dictionary space for combining key serde
+          valueTypes,
+          aggregatorFactories,
+          limitSpec
+      );
+
       grouper = new ConcurrentGrouper<>(
+          querySpecificConfig,
           bufferSupplier,
+          combineBufferSupplier,
           keySerdeFactory,
+          combineKeySerdeFactory,
           columnSelectorFactory,
           aggregatorFactories,
-          querySpecificConfig.getBufferGrouperMaxSize(),
-          querySpecificConfig.getBufferGrouperMaxLoadFactor(),
-          querySpecificConfig.getBufferGrouperInitialBuckets(),
           temporaryStorage,
           spillMapper,
-          concurrencyHint
+          concurrencyHint,
+          limitSpec,
+          sortHasNonGroupingFields,
+          grouperSorter,
+          priority,
+          hasQueryTimeout,
+          queryTimeoutAt
       );
     }
 
@@ -448,42 +546,8 @@ public class RowBasedGrouperHelper
     }
   }
 
-  private static class LongInputRawSupplierColumnSelectorStrategy
-      implements InputRawSupplierColumnSelectorStrategy<LongColumnSelector>
-  {
-    @Override
-    public Supplier<Comparable> makeInputRawSupplier(LongColumnSelector selector)
-    {
-      return new Supplier<Comparable>()
-      {
-        @Override
-        public Comparable get()
-        {
-          return selector.get();
-        }
-      };
-    }
-  }
-
-  private static class FloatInputRawSupplierColumnSelectorStrategy
-      implements InputRawSupplierColumnSelectorStrategy<FloatColumnSelector>
-  {
-    @Override
-    public Supplier<Comparable> makeInputRawSupplier(FloatColumnSelector selector)
-    {
-      return new Supplier<Comparable>()
-      {
-        @Override
-        public Comparable get()
-        {
-          return selector.get();
-        }
-      };
-    }
-  }
-
   private static class InputRawSupplierColumnSelectorStrategyFactory
-    implements ColumnSelectorStrategyFactory<InputRawSupplierColumnSelectorStrategy>
+      implements ColumnSelectorStrategyFactory<InputRawSupplierColumnSelectorStrategy>
   {
     @Override
     public InputRawSupplierColumnSelectorStrategy makeColumnSelectorStrategy(
@@ -491,13 +555,18 @@ public class RowBasedGrouperHelper
     )
     {
       ValueType type = capabilities.getType();
-      switch(type) {
+      switch (type) {
         case STRING:
           return new StringInputRawSupplierColumnSelectorStrategy();
         case LONG:
-          return new LongInputRawSupplierColumnSelectorStrategy();
+          return (InputRawSupplierColumnSelectorStrategy<BaseLongColumnValueSelector>)
+              columnSelector -> columnSelector::getLong;
         case FLOAT:
-          return new FloatInputRawSupplierColumnSelectorStrategy();
+          return (InputRawSupplierColumnSelectorStrategy<BaseFloatColumnValueSelector>)
+              columnSelector -> columnSelector::getFloat;
+        case DOUBLE:
+          return (InputRawSupplierColumnSelectorStrategy<BaseDoubleColumnValueSelector>)
+              columnSelector -> columnSelector::getDouble;
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", type);
       }
@@ -539,40 +608,29 @@ public class RowBasedGrouperHelper
       type = type == null ? ValueType.STRING : type;
       switch (type) {
         case STRING:
-          functions[i] = new Function<Comparable, Comparable>()
-          {
-            @Override
-            public Comparable apply(@Nullable Comparable input)
-            {
-              return input == null ? "" : input.toString();
-            }
-          };
+          functions[i] = input -> input == null ? "" : input.toString();
           break;
 
         case LONG:
-          functions[i] = new Function<Comparable, Comparable>()
-          {
-            @Override
-            public Comparable apply(@Nullable Comparable input)
-            {
-              final Long val = DimensionHandlerUtils.convertObjectToLong(input);
-              return val == null ? 0L : val;
-            }
+          functions[i] = input -> {
+            final Long val = DimensionHandlerUtils.convertObjectToLong(input);
+            return val == null ? 0L : val;
           };
           break;
 
         case FLOAT:
-          functions[i] = new Function<Comparable, Comparable>()
-          {
-            @Override
-            public Comparable apply(@Nullable Comparable input)
-            {
-              final Float val = DimensionHandlerUtils.convertObjectToFloat(input);
-              return val == null ? 0.f : val;
-            }
+          functions[i] = input -> {
+            final Float val = DimensionHandlerUtils.convertObjectToFloat(input);
+            return val == null ? 0.f : val;
           };
           break;
 
+        case DOUBLE:
+          functions[i] = input -> {
+            Double val = DimensionHandlerUtils.convertObjectToDouble(input);
+            return val == null ? 0.0 : val;
+          };
+          break;
         default:
           throw new IAE("invalid type: [%s]", type);
       }
@@ -586,70 +644,228 @@ public class RowBasedGrouperHelper
     private final boolean sortByDimsFirst;
     private final int dimCount;
     private final long maxDictionarySize;
+    private final DefaultLimitSpec limitSpec;
+    private final List<DimensionSpec> dimensions;
+    final AggregatorFactory[] aggregatorFactories;
     private final List<ValueType> valueTypes;
 
     RowBasedKeySerdeFactory(
         boolean includeTimestamp,
         boolean sortByDimsFirst,
-        int dimCount,
+        List<DimensionSpec> dimensions,
         long maxDictionarySize,
-        List<ValueType> valueTypes
+        List<ValueType> valueTypes,
+        final AggregatorFactory[] aggregatorFactories,
+        DefaultLimitSpec limitSpec
     )
     {
       this.includeTimestamp = includeTimestamp;
       this.sortByDimsFirst = sortByDimsFirst;
-      this.dimCount = dimCount;
+      this.dimensions = dimensions;
+      this.dimCount = dimensions.size();
       this.maxDictionarySize = maxDictionarySize;
+      this.limitSpec = limitSpec;
+      this.aggregatorFactories = aggregatorFactories;
       this.valueTypes = valueTypes;
+    }
+
+    @Override
+    public long getMaxDictionarySize()
+    {
+      return maxDictionarySize;
     }
 
     @Override
     public Grouper.KeySerde<RowBasedKey> factorize()
     {
-      return new RowBasedKeySerde(includeTimestamp, sortByDimsFirst, dimCount, maxDictionarySize, valueTypes);
+      return new RowBasedKeySerde(
+          includeTimestamp,
+          sortByDimsFirst,
+          dimensions,
+          maxDictionarySize,
+          limitSpec,
+          valueTypes,
+          null
+      );
     }
 
     @Override
-    public Comparator<RowBasedKey> objectComparator()
+    public Grouper.KeySerde<RowBasedKey> factorizeWithDictionary(List<String> dictionary)
     {
+      return new RowBasedKeySerde(
+          includeTimestamp,
+          sortByDimsFirst,
+          dimensions,
+          maxDictionarySize,
+          limitSpec,
+          valueTypes,
+          dictionary
+      );
+    }
+
+    @Override
+    public Comparator<Grouper.Entry<RowBasedKey>> objectComparator(boolean forceDefaultOrder)
+    {
+      if (limitSpec != null && !forceDefaultOrder) {
+        return objectComparatorWithAggs();
+      }
+
       if (includeTimestamp) {
         if (sortByDimsFirst) {
-          return new Comparator<RowBasedKey>()
+          return new Comparator<Grouper.Entry<RowBasedKey>>()
           {
             @Override
-            public int compare(RowBasedKey key1, RowBasedKey key2)
+            public int compare(Grouper.Entry<RowBasedKey> entry1, Grouper.Entry<RowBasedKey> entry2)
             {
-              final int cmp = compareDimsInRows(key1, key2, 1);
+              final int cmp = compareDimsInRows(entry1.getKey(), entry2.getKey(), 1);
               if (cmp != 0) {
                 return cmp;
               }
 
-              return Longs.compare((long) key1.getKey()[0], (long) key2.getKey()[0]);
+              return Longs.compare((long) entry1.getKey().getKey()[0], (long) entry2.getKey().getKey()[0]);
             }
           };
         } else {
-          return new Comparator<RowBasedKey>()
+          return new Comparator<Grouper.Entry<RowBasedKey>>()
           {
             @Override
-            public int compare(RowBasedKey key1, RowBasedKey key2)
+            public int compare(Grouper.Entry<RowBasedKey> entry1, Grouper.Entry<RowBasedKey> entry2)
             {
-              final int timeCompare = Longs.compare((long) key1.getKey()[0], (long) key2.getKey()[0]);
+              final int timeCompare = Longs.compare(
+                  (long) entry1.getKey().getKey()[0],
+                  (long) entry2.getKey().getKey()[0]
+              );
 
               if (timeCompare != 0) {
                 return timeCompare;
               }
 
-              return compareDimsInRows(key1, key2, 1);
+              return compareDimsInRows(entry1.getKey(), entry2.getKey(), 1);
             }
           };
         }
       } else {
-        return new Comparator<RowBasedKey>()
+        return new Comparator<Grouper.Entry<RowBasedKey>>()
         {
           @Override
-          public int compare(RowBasedKey key1, RowBasedKey key2)
+          public int compare(Grouper.Entry<RowBasedKey> entry1, Grouper.Entry<RowBasedKey> entry2)
           {
-            return compareDimsInRows(key1, key2, 0);
+            return compareDimsInRows(entry1.getKey(), entry2.getKey(), 0);
+          }
+        };
+      }
+    }
+
+    private Comparator<Grouper.Entry<RowBasedKey>> objectComparatorWithAggs()
+    {
+      // use the actual sort order from the limitspec if pushing down to merge partial results correctly
+      final List<Boolean> needsReverses = Lists.newArrayList();
+      final List<Boolean> aggFlags = Lists.newArrayList();
+      final List<Boolean> isNumericField = Lists.newArrayList();
+      final List<StringComparator> comparators = Lists.newArrayList();
+      final List<Integer> fieldIndices = Lists.newArrayList();
+      final Set<Integer> orderByIndices = new HashSet<>();
+
+      for (OrderByColumnSpec orderSpec : limitSpec.getColumns()) {
+        final boolean needsReverse = orderSpec.getDirection() != OrderByColumnSpec.Direction.ASCENDING;
+        int dimIndex = OrderByColumnSpec.getDimIndexForOrderBy(orderSpec, dimensions);
+        if (dimIndex >= 0) {
+          fieldIndices.add(dimIndex);
+          orderByIndices.add(dimIndex);
+          needsReverses.add(needsReverse);
+          aggFlags.add(false);
+          final ValueType type = dimensions.get(dimIndex).getOutputType();
+          isNumericField.add(ValueType.isNumeric(type));
+          comparators.add(orderSpec.getDimensionComparator());
+        } else {
+          int aggIndex = OrderByColumnSpec.getAggIndexForOrderBy(orderSpec, Arrays.asList(aggregatorFactories));
+          if (aggIndex >= 0) {
+            fieldIndices.add(aggIndex);
+            needsReverses.add(needsReverse);
+            aggFlags.add(true);
+            final String typeName = aggregatorFactories[aggIndex].getTypeName();
+            isNumericField.add(ValueType.isNumeric(ValueType.fromString(typeName)));
+            comparators.add(orderSpec.getDimensionComparator());
+          }
+        }
+      }
+
+      for (int i = 0; i < dimCount; i++) {
+        if (!orderByIndices.contains(i)) {
+          fieldIndices.add(i);
+          aggFlags.add(false);
+          needsReverses.add(false);
+          final ValueType type = dimensions.get(i).getOutputType();
+          isNumericField.add(ValueType.isNumeric(type));
+          comparators.add(StringComparators.LEXICOGRAPHIC);
+        }
+      }
+
+      if (includeTimestamp) {
+        if (sortByDimsFirst) {
+          return new Comparator<Grouper.Entry<RowBasedKey>>()
+          {
+            @Override
+            public int compare(Grouper.Entry<RowBasedKey> entry1, Grouper.Entry<RowBasedKey> entry2)
+            {
+              final int cmp = compareDimsInRowsWithAggs(
+                  entry1,
+                  entry2,
+                  1,
+                  needsReverses,
+                  aggFlags,
+                  fieldIndices,
+                  isNumericField,
+                  comparators
+              );
+              if (cmp != 0) {
+                return cmp;
+              }
+
+              return Longs.compare((long) entry1.getKey().getKey()[0], (long) entry2.getKey().getKey()[0]);
+            }
+          };
+        } else {
+          return new Comparator<Grouper.Entry<RowBasedKey>>()
+          {
+            @Override
+            public int compare(Grouper.Entry<RowBasedKey> entry1, Grouper.Entry<RowBasedKey> entry2)
+            {
+              final int timeCompare = Longs.compare((long) entry1.getKey().getKey()[0], (long) entry2.getKey().getKey()[0]);
+
+              if (timeCompare != 0) {
+                return timeCompare;
+              }
+
+              return compareDimsInRowsWithAggs(
+                  entry1,
+                  entry2,
+                  1,
+                  needsReverses,
+                  aggFlags,
+                  fieldIndices,
+                  isNumericField,
+                  comparators
+              );
+            }
+          };
+        }
+      } else {
+        return new Comparator<Grouper.Entry<RowBasedKey>>()
+        {
+          @Override
+          public int compare(Grouper.Entry<RowBasedKey> entry1, Grouper.Entry<RowBasedKey> entry2)
+          {
+            return compareDimsInRowsWithAggs(
+                entry1,
+                entry2,
+                0,
+                needsReverses,
+                aggFlags,
+                fieldIndices,
+                isNumericField,
+                comparators
+            );
           }
         };
       }
@@ -666,46 +882,155 @@ public class RowBasedGrouperHelper
 
       return 0;
     }
+
+    private static int compareDimsInRowsWithAggs(
+        Grouper.Entry<RowBasedKey> entry1,
+        Grouper.Entry<RowBasedKey> entry2,
+        int dimStart,
+        final List<Boolean> needsReverses,
+        final List<Boolean> aggFlags,
+        final List<Integer> fieldIndices,
+        final List<Boolean> isNumericField,
+        final List<StringComparator> comparators
+    )
+    {
+      for (int i = 0; i < fieldIndices.size(); i++) {
+        final int fieldIndex = fieldIndices.get(i);
+        final boolean needsReverse = needsReverses.get(i);
+        final int cmp;
+        final Comparable lhs;
+        final Comparable rhs;
+
+        if (aggFlags.get(i)) {
+          if (needsReverse) {
+            lhs = (Comparable) entry2.getValues()[fieldIndex];
+            rhs = (Comparable) entry1.getValues()[fieldIndex];
+          } else {
+            lhs = (Comparable) entry1.getValues()[fieldIndex];
+            rhs = (Comparable) entry2.getValues()[fieldIndex];
+          }
+        } else {
+          if (needsReverse) {
+            lhs = (Comparable) entry2.getKey().getKey()[fieldIndex + dimStart];
+            rhs = (Comparable) entry1.getKey().getKey()[fieldIndex + dimStart];
+          } else {
+            lhs = (Comparable) entry1.getKey().getKey()[fieldIndex + dimStart];
+            rhs = (Comparable) entry2.getKey().getKey()[fieldIndex + dimStart];
+          }
+        }
+
+        final StringComparator comparator = comparators.get(i);
+
+        if (isNumericField.get(i) && comparator.equals(StringComparators.NUMERIC)) {
+          // use natural comparison
+          cmp = lhs.compareTo(rhs);
+        } else {
+          cmp = comparator.compare(lhs.toString(), rhs.toString());
+        }
+
+        if (cmp != 0) {
+          return cmp;
+        }
+      }
+
+      return 0;
+    }
   }
 
-  private static class RowBasedKeySerde implements Grouper.KeySerde<RowBasedKey>
+  static long estimateStringKeySize(String key)
   {
-    // Entry in dictionary, node pointer in reverseDictionary, hash + k/v/next pointer in reverseDictionary nodes
-    private static final int ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY = Longs.BYTES * 5 + Ints.BYTES;
+    return (long) key.length() * Chars.BYTES + ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY;
+  }
+
+  private static class RowBasedKeySerde implements Grouper.KeySerde<RowBasedGrouperHelper.RowBasedKey>
+  {
+    private static final int DICTIONARY_INITIAL_CAPACITY = 10000;
+    private static final int UNKNOWN_DICTIONARY_ID = -1;
 
     private final boolean includeTimestamp;
     private final boolean sortByDimsFirst;
+    private final List<DimensionSpec> dimensions;
     private final int dimCount;
     private final int keySize;
     private final ByteBuffer keyBuffer;
-    private final List<String> dictionary = Lists.newArrayList();
-    private final Map<String, Integer> reverseDictionary = Maps.newHashMap();
+    private final RowBasedKeySerdeHelper[] serdeHelpers;
+    private final BufferComparator[] serdeHelperComparators;
+    private final DefaultLimitSpec limitSpec;
     private final List<ValueType> valueTypes;
-    private final List<RowBasedKeySerdeHelper> serdeHelpers;
+
+    private final boolean enableRuntimeDictionaryGeneration;
+
+    private final List<String> dictionary;
+    private final Object2IntMap<String> reverseDictionary;
 
     // Size limiting for the dictionary, in (roughly estimated) bytes.
     private final long maxDictionarySize;
+
     private long currentEstimatedSize = 0;
 
-    // dictionary id -> its position if it were sorted by dictionary value
-    private int[] sortableIds = null;
+    // dictionary id -> rank of the sorted dictionary
+    // This is initialized in the constructor and bufferComparator() with static dictionary and dynamic dictionary,
+    // respectively.
+    private int[] rankOfDictionaryIds = null;
 
     RowBasedKeySerde(
         final boolean includeTimestamp,
         final boolean sortByDimsFirst,
-        final int dimCount,
+        final List<DimensionSpec> dimensions,
         final long maxDictionarySize,
-        final List<ValueType> valueTypes
+        final DefaultLimitSpec limitSpec,
+        final List<ValueType> valueTypes,
+        @Nullable final List<String> dictionary
     )
     {
       this.includeTimestamp = includeTimestamp;
       this.sortByDimsFirst = sortByDimsFirst;
-      this.dimCount = dimCount;
-      this.maxDictionarySize = maxDictionarySize;
+      this.dimensions = dimensions;
+      this.dimCount = dimensions.size();
       this.valueTypes = valueTypes;
-      this.serdeHelpers = makeSerdeHelpers();
+      this.limitSpec = limitSpec;
+      this.enableRuntimeDictionaryGeneration = dictionary == null;
+      this.dictionary = enableRuntimeDictionaryGeneration ? new ArrayList<>(DICTIONARY_INITIAL_CAPACITY) : dictionary;
+      this.reverseDictionary = enableRuntimeDictionaryGeneration ?
+                               new Object2IntOpenHashMap<>(DICTIONARY_INITIAL_CAPACITY) :
+                               new Object2IntOpenHashMap<>(dictionary.size());
+      this.reverseDictionary.defaultReturnValue(UNKNOWN_DICTIONARY_ID);
+      this.maxDictionarySize = maxDictionarySize;
+      this.serdeHelpers = makeSerdeHelpers(limitSpec != null, enableRuntimeDictionaryGeneration);
+      this.serdeHelperComparators = new BufferComparator[serdeHelpers.length];
+      Arrays.setAll(serdeHelperComparators, i -> serdeHelpers[i].getBufferComparator());
       this.keySize = (includeTimestamp ? Longs.BYTES : 0) + getTotalKeySize();
       this.keyBuffer = ByteBuffer.allocate(keySize);
+
+      if (!enableRuntimeDictionaryGeneration) {
+        final long initialDictionarySize = dictionary.stream()
+                                                     .mapToLong(RowBasedGrouperHelper::estimateStringKeySize)
+                                                     .sum();
+        Preconditions.checkState(
+            maxDictionarySize >= initialDictionarySize,
+            "Dictionary size[%s] exceeds threshold[%s]",
+            initialDictionarySize,
+            maxDictionarySize
+        );
+
+        for (int i = 0; i < dictionary.size(); i++) {
+          reverseDictionary.put(dictionary.get(i), i);
+        }
+
+        initializeRankOfDictionaryIds();
+      }
+    }
+
+    private void initializeRankOfDictionaryIds()
+    {
+      final int dictionarySize = dictionary.size();
+      rankOfDictionaryIds = IntStream.range(0, dictionarySize).toArray();
+      IntArrays.quickSort(
+          rankOfDictionaryIds,
+          (i1, i2) -> dictionary.get(i1).compareTo(dictionary.get(i2))
+      );
+
+      IntArrayUtils.inverse(rankOfDictionaryIds);
     }
 
     @Override
@@ -721,6 +1046,12 @@ public class RowBasedGrouperHelper
     }
 
     @Override
+    public List<String> getDictionary()
+    {
+      return dictionary;
+    }
+
+    @Override
     public ByteBuffer toByteBuffer(RowBasedKey key)
     {
       keyBuffer.rewind();
@@ -733,7 +1064,7 @@ public class RowBasedGrouperHelper
         dimStart = 0;
       }
       for (int i = dimStart; i < key.getKey().length; i++) {
-        if (!serdeHelpers.get(i - dimStart).putToKeyBuffer(key, i)) {
+        if (!serdeHelpers[i - dimStart].putToKeyBuffer(key, i)) {
           return null;
         }
       }
@@ -762,38 +1093,28 @@ public class RowBasedGrouperHelper
 
       for (int i = dimStart; i < key.length; i++) {
         // Writes value from buffer to key[i]
-        serdeHelpers.get(i - dimStart).getFromByteBuffer(buffer, dimsPosition, i, key);
+        serdeHelpers[i - dimStart].getFromByteBuffer(buffer, dimsPosition, i, key);
       }
 
       return new RowBasedKey(key);
     }
 
     @Override
-    public Grouper.KeyComparator bufferComparator()
+    public Grouper.BufferComparator bufferComparator()
     {
-      if (sortableIds == null) {
-        Map<String, Integer> sortedMap = Maps.newTreeMap();
-        for (int id = 0; id < dictionary.size(); id++) {
-          sortedMap.put(dictionary.get(id), id);
-        }
-        sortableIds = new int[dictionary.size()];
-        int index = 0;
-        for (final Integer id : sortedMap.values()) {
-          sortableIds[id] = index++;
-        }
+      if (rankOfDictionaryIds == null) {
+        initializeRankOfDictionaryIds();
       }
 
       if (includeTimestamp) {
         if (sortByDimsFirst) {
-          return new Grouper.KeyComparator()
+          return new Grouper.BufferComparator()
           {
             @Override
             public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
             {
               final int cmp = compareDimsInBuffersForNullFudgeTimestamp(
-                  serdeHelpers,
-                  sortableIds,
-                  dimCount,
+                  serdeHelperComparators,
                   lhsBuffer,
                   rhsBuffer,
                   lhsPosition,
@@ -807,7 +1128,7 @@ public class RowBasedGrouperHelper
             }
           };
         } else {
-          return new Grouper.KeyComparator()
+          return new Grouper.BufferComparator()
           {
             @Override
             public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
@@ -819,9 +1140,7 @@ public class RowBasedGrouperHelper
               }
 
               return compareDimsInBuffersForNullFudgeTimestamp(
-                  serdeHelpers,
-                  sortableIds,
-                  dimCount,
+                  serdeHelperComparators,
                   lhsBuffer,
                   rhsBuffer,
                   lhsPosition,
@@ -831,13 +1150,13 @@ public class RowBasedGrouperHelper
           };
         }
       } else {
-        return new Grouper.KeyComparator()
+        return new Grouper.BufferComparator()
         {
           @Override
           public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
           {
             for (int i = 0; i < dimCount; i++) {
-              final int cmp = serdeHelpers.get(i).compare(
+              final int cmp = serdeHelperComparators[i].compare(
                   lhsBuffer,
                   rhsBuffer,
                   lhsPosition,
@@ -855,63 +1174,159 @@ public class RowBasedGrouperHelper
       }
     }
 
-    private static int compareDimsInBuffersForNullFudgeTimestamp(
-        List<RowBasedKeySerdeHelper> serdeHelpers,
-        int[] sortableIds,
-        int dimCount,
-        ByteBuffer lhsBuffer,
-        ByteBuffer rhsBuffer,
-        int lhsPosition,
-        int rhsPosition
+    @Override
+    public Grouper.BufferComparator bufferComparatorWithAggregators(
+        AggregatorFactory[] aggregatorFactories,
+        int[] aggregatorOffsets
     )
     {
-      for (int i = 0; i < dimCount; i++) {
-        final int cmp = serdeHelpers.get(i).compare(
-            lhsBuffer,
-            rhsBuffer,
-            lhsPosition + Longs.BYTES,
-            rhsPosition + Longs.BYTES
-        );
-        if (cmp != 0) {
-          return cmp;
+      final List<RowBasedKeySerdeHelper> adjustedSerdeHelpers;
+      final List<Boolean> needsReverses = Lists.newArrayList();
+      List<RowBasedKeySerdeHelper> orderByHelpers = new ArrayList<>();
+      List<RowBasedKeySerdeHelper> otherDimHelpers = new ArrayList<>();
+      Set<Integer> orderByIndices = new HashSet<>();
+
+      int aggCount = 0;
+      boolean needsReverse;
+      for (OrderByColumnSpec orderSpec : limitSpec.getColumns()) {
+        needsReverse = orderSpec.getDirection() != OrderByColumnSpec.Direction.ASCENDING;
+        int dimIndex = OrderByColumnSpec.getDimIndexForOrderBy(orderSpec, dimensions);
+        if (dimIndex >= 0) {
+          RowBasedKeySerdeHelper serdeHelper = serdeHelpers[dimIndex];
+          orderByHelpers.add(serdeHelper);
+          orderByIndices.add(dimIndex);
+          needsReverses.add(needsReverse);
+        } else {
+          int aggIndex = OrderByColumnSpec.getAggIndexForOrderBy(orderSpec, Arrays.asList(aggregatorFactories));
+          if (aggIndex >= 0) {
+            final RowBasedKeySerdeHelper serdeHelper;
+            final StringComparator stringComparator = orderSpec.getDimensionComparator();
+            final String typeName = aggregatorFactories[aggIndex].getTypeName();
+            final int aggOffset = aggregatorOffsets[aggIndex] - Ints.BYTES;
+
+            aggCount++;
+
+            final ValueType valueType = ValueType.fromString(typeName);
+            if (!ValueType.isNumeric(valueType)) {
+              throw new IAE("Cannot order by a non-numeric aggregator[%s]", orderSpec);
+            }
+
+            serdeHelper = makeNumericSerdeHelper(valueType, aggOffset, true, stringComparator);
+
+            orderByHelpers.add(serdeHelper);
+            needsReverses.add(needsReverse);
+          }
         }
       }
 
-      return 0;
+      for (int i = 0; i < dimCount; i++) {
+        if (!orderByIndices.contains(i)) {
+          otherDimHelpers.add(serdeHelpers[i]);
+          needsReverses.add(false); // default to Ascending order if dim is not in an orderby spec
+        }
+      }
+
+      adjustedSerdeHelpers = orderByHelpers;
+      adjustedSerdeHelpers.addAll(otherDimHelpers);
+
+      final BufferComparator[] adjustedSerdeHelperComparators = new BufferComparator[adjustedSerdeHelpers.size()];
+      Arrays.setAll(adjustedSerdeHelperComparators, i -> adjustedSerdeHelpers.get(i).getBufferComparator());
+
+      final int fieldCount = dimCount + aggCount;
+
+      if (includeTimestamp) {
+        if (sortByDimsFirst) {
+          return new Grouper.BufferComparator()
+          {
+            @Override
+            public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
+            {
+              final int cmp = compareDimsInBuffersForNullFudgeTimestampForPushDown(
+                  adjustedSerdeHelperComparators,
+                  needsReverses,
+                  fieldCount,
+                  lhsBuffer,
+                  rhsBuffer,
+                  lhsPosition,
+                  rhsPosition
+              );
+              if (cmp != 0) {
+                return cmp;
+              }
+
+              return Longs.compare(lhsBuffer.getLong(lhsPosition), rhsBuffer.getLong(rhsPosition));
+            }
+          };
+        } else {
+          return new Grouper.BufferComparator()
+          {
+            @Override
+            public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
+            {
+              final int timeCompare = Longs.compare(lhsBuffer.getLong(lhsPosition), rhsBuffer.getLong(rhsPosition));
+
+              if (timeCompare != 0) {
+                return timeCompare;
+              }
+
+              int cmp = compareDimsInBuffersForNullFudgeTimestampForPushDown(
+                  adjustedSerdeHelperComparators,
+                  needsReverses,
+                  fieldCount,
+                  lhsBuffer,
+                  rhsBuffer,
+                  lhsPosition,
+                  rhsPosition
+              );
+
+              return cmp;
+            }
+          };
+        }
+      } else {
+        return new Grouper.BufferComparator()
+        {
+          @Override
+          public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
+          {
+            for (int i = 0; i < fieldCount; i++) {
+              final int cmp;
+              if (needsReverses.get(i)) {
+                cmp = adjustedSerdeHelperComparators[i].compare(
+                    rhsBuffer,
+                    lhsBuffer,
+                    rhsPosition,
+                    lhsPosition
+                );
+              } else {
+                cmp = adjustedSerdeHelperComparators[i].compare(
+                    lhsBuffer,
+                    rhsBuffer,
+                    lhsPosition,
+                    rhsPosition
+                );
+              }
+
+              if (cmp != 0) {
+                return cmp;
+              }
+            }
+
+            return 0;
+          }
+        };
+      }
     }
 
     @Override
     public void reset()
     {
-      dictionary.clear();
-      reverseDictionary.clear();
-      sortableIds = null;
-      currentEstimatedSize = 0;
-    }
-
-    /**
-     * Adds s to the dictionary. If the dictionary's size limit would be exceeded by adding this key, then
-     * this returns -1.
-     *
-     * @param s a string
-     *
-     * @return id for this string, or -1
-     */
-    private int addToDictionary(final String s)
-    {
-      Integer idx = reverseDictionary.get(s);
-      if (idx == null) {
-        final long additionalEstimatedSize = (long) s.length() * Chars.BYTES + ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY;
-        if (currentEstimatedSize + additionalEstimatedSize > maxDictionarySize) {
-          return -1;
-        }
-
-        idx = dictionary.size();
-        reverseDictionary.put(s, idx);
-        dictionary.add(s);
-        currentEstimatedSize += additionalEstimatedSize;
+      if (enableRuntimeDictionaryGeneration) {
+        dictionary.clear();
+        reverseDictionary.clear();
+        rankOfDictionaryIds = null;
+        currentEstimatedSize = 0;
       }
-      return idx;
     }
 
     private int getTotalKeySize()
@@ -923,93 +1338,152 @@ public class RowBasedGrouperHelper
       return size;
     }
 
-    private List<RowBasedKeySerdeHelper> makeSerdeHelpers()
+    private RowBasedKeySerdeHelper[] makeSerdeHelpers(
+        boolean pushLimitDown,
+        boolean enableRuntimeDictionaryGeneration
+    )
     {
-      List<RowBasedKeySerdeHelper> helpers = new ArrayList<>();
+      final List<RowBasedKeySerdeHelper> helpers = new ArrayList<>();
       int keyBufferPosition = 0;
-      for (ValueType valType : valueTypes) {
-        RowBasedKeySerdeHelper helper;
-        switch (valType) {
-          case STRING:
-            helper = new StringRowBasedKeySerdeHelper(keyBufferPosition);
-            break;
-          case LONG:
-            helper = new LongRowBasedKeySerdeHelper(keyBufferPosition);
-            break;
-          case FLOAT:
-            helper = new FloatRowBasedKeySerdeHelper(keyBufferPosition);
-            break;
-          default:
-            throw new IAE("invalid type: %s", valType);
+
+      for (int i = 0; i < dimCount; i++) {
+        final StringComparator stringComparator;
+        if (limitSpec != null) {
+          final String dimName = dimensions.get(i).getOutputName();
+          stringComparator = DefaultLimitSpec.getComparatorForDimName(limitSpec, dimName);
+        } else {
+          stringComparator = null;
         }
+
+        RowBasedKeySerdeHelper helper = makeSerdeHelper(
+            valueTypes.get(i),
+            keyBufferPosition,
+            pushLimitDown,
+            stringComparator,
+            enableRuntimeDictionaryGeneration
+        );
+
         keyBufferPosition += helper.getKeyBufferValueSize();
         helpers.add(helper);
       }
-      return helpers;
+
+      return helpers.toArray(new RowBasedKeySerdeHelper[helpers.size()]);
     }
 
-    private interface RowBasedKeySerdeHelper
+    private RowBasedKeySerdeHelper makeSerdeHelper(
+        ValueType valueType,
+        int keyBufferPosition,
+        boolean pushLimitDown,
+        @Nullable StringComparator stringComparator,
+        boolean enableRuntimeDictionaryGeneration
+    )
     {
-      /**
-       * @return The size in bytes for a value of the column handled by this SerdeHelper.
-       */
-      int getKeyBufferValueSize();
-
-      /**
-       * Read a value from RowBasedKey at `idx` and put the value at the current position of RowBasedKeySerde's keyBuffer.
-       * advancing the position by the size returned by getKeyBufferValueSize().
-       *
-       * If an internal resource limit has been reached and the value could not be added to the keyBuffer,
-       * (e.g., maximum dictionary size exceeded for Strings), this method returns false.
-       *
-       * @param key RowBasedKey containing the grouping key values for a row.
-       * @param idx Index of the grouping key column within that this SerdeHelper handles
-       *
-       * @return true if the value was added to the key, false otherwise
-       */
-      boolean putToKeyBuffer(RowBasedKey key, int idx);
-
-      /**
-       * Read a value from a ByteBuffer containing a grouping key in the same format as RowBasedKeySerde's keyBuffer and
-       * put the value in `dimValues` at `dimValIdx`.
-       *
-       * The value to be read resides in the buffer at position (`initialOffset` + the SerdeHelper's keyBufferPosition).
-       *
-       * @param buffer        ByteBuffer containing an array of grouping keys for a row
-       * @param initialOffset Offset where non-timestamp grouping key columns start, needed because timestamp is not
-       *                      always included in the buffer.
-       * @param dimValIdx     Index within dimValues to store the value read from the buffer
-       * @param dimValues     Output array containing grouping key values for a row
-       */
-      void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues);
-
-      /**
-       * Compare the values at lhsBuffer[lhsPosition] and rhsBuffer[rhsPosition] using the natural ordering
-       * for this SerdeHelper's value type.
-       *
-       * @param lhsBuffer   ByteBuffer containing an array of grouping keys for a row
-       * @param rhsBuffer   ByteBuffer containing an array of grouping keys for a row
-       * @param lhsPosition Position of value within lhsBuffer
-       * @param rhsPosition Position of value within rhsBuffer
-       *
-       * @return Negative number if lhs < rhs, positive if lhs > rhs, 0 if lhs == rhs
-       */
-      int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition);
+      switch (valueType) {
+        case STRING:
+          if (enableRuntimeDictionaryGeneration) {
+            return new DynamicDictionaryStringRowBasedKeySerdeHelper(
+                keyBufferPosition,
+                pushLimitDown,
+                stringComparator
+            );
+          } else {
+            return new StaticDictionaryStringRowBasedKeySerdeHelper(
+                keyBufferPosition,
+                pushLimitDown,
+                stringComparator
+            );
+          }
+        case LONG:
+        case FLOAT:
+        case DOUBLE:
+          return makeNumericSerdeHelper(valueType, keyBufferPosition, pushLimitDown, stringComparator);
+        default:
+          throw new IAE("invalid type: %s", valueType);
+      }
     }
 
-    private class StringRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
+    private RowBasedKeySerdeHelper makeNumericSerdeHelper(
+        ValueType valueType,
+        int keyBufferPosition,
+        boolean pushLimitDown,
+        @Nullable StringComparator stringComparator
+    )
+    {
+      switch (valueType) {
+        case LONG:
+          return new LongRowBasedKeySerdeHelper(keyBufferPosition, pushLimitDown, stringComparator);
+        case FLOAT:
+          return new FloatRowBasedKeySerdeHelper(keyBufferPosition, pushLimitDown, stringComparator);
+        case DOUBLE:
+          return new DoubleRowBasedKeySerdeHelper(keyBufferPosition, pushLimitDown, stringComparator);
+        default:
+          throw new IAE("invalid type: %s", valueType);
+      }
+    }
+
+    private static boolean isPrimitiveComparable(boolean pushLimitDown, @Nullable StringComparator stringComparator)
+    {
+      return !pushLimitDown || stringComparator == null || stringComparator.equals(StringComparators.NUMERIC);
+    }
+
+    private abstract class AbstractStringRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
     {
       final int keyBufferPosition;
 
-      public StringRowBasedKeySerdeHelper(int keyBufferPosition)
+      final BufferComparator bufferComparator;
+
+      AbstractStringRowBasedKeySerdeHelper(
+          int keyBufferPosition,
+          boolean pushLimitDown,
+          @Nullable StringComparator stringComparator
+      )
       {
         this.keyBufferPosition = keyBufferPosition;
+        if (!pushLimitDown) {
+          bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> Ints.compare(
+              rankOfDictionaryIds[lhsBuffer.getInt(lhsPosition + keyBufferPosition)],
+              rankOfDictionaryIds[rhsBuffer.getInt(rhsPosition + keyBufferPosition)]
+          );
+        } else {
+          final StringComparator realComparator = stringComparator == null ?
+                                                  StringComparators.LEXICOGRAPHIC :
+                                                  stringComparator;
+          bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
+            String lhsStr = dictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition));
+            String rhsStr = dictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition));
+            return realComparator.compare(lhsStr, rhsStr);
+          };
+        }
       }
 
       @Override
       public int getKeyBufferValueSize()
       {
         return Ints.BYTES;
+      }
+
+      @Override
+      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
+      {
+        dimValues[dimValIdx] = dictionary.get(buffer.getInt(initialOffset + keyBufferPosition));
+      }
+
+      @Override
+      public BufferComparator getBufferComparator()
+      {
+        return bufferComparator;
+      }
+    }
+
+    private class DynamicDictionaryStringRowBasedKeySerdeHelper extends AbstractStringRowBasedKeySerdeHelper
+    {
+      DynamicDictionaryStringRowBasedKeySerdeHelper(
+          int keyBufferPosition,
+          boolean pushLimitDown,
+          @Nullable StringComparator stringComparator
+      )
+      {
+        super(keyBufferPosition, pushLimitDown, stringComparator);
       }
 
       @Override
@@ -1023,29 +1497,82 @@ public class RowBasedGrouperHelper
         return true;
       }
 
-      @Override
-      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
+      /**
+       * Adds s to the dictionary. If the dictionary's size limit would be exceeded by adding this key, then
+       * this returns -1.
+       *
+       * @param s a string
+       *
+       * @return id for this string, or -1
+       */
+      private int addToDictionary(final String s)
       {
-        dimValues[dimValIdx] = dictionary.get(buffer.getInt(initialOffset + keyBufferPosition));
+        int idx = reverseDictionary.getInt(s);
+        if (idx == UNKNOWN_DICTIONARY_ID) {
+          final long additionalEstimatedSize = estimateStringKeySize(s);
+          if (currentEstimatedSize + additionalEstimatedSize > maxDictionarySize) {
+            return -1;
+          }
+
+          idx = dictionary.size();
+          reverseDictionary.put(s, idx);
+          dictionary.add(s);
+          currentEstimatedSize += additionalEstimatedSize;
+        }
+        return idx;
+      }
+    }
+
+    private class StaticDictionaryStringRowBasedKeySerdeHelper extends AbstractStringRowBasedKeySerdeHelper
+    {
+      StaticDictionaryStringRowBasedKeySerdeHelper(
+          int keyBufferPosition,
+          boolean pushLimitDown,
+          @Nullable StringComparator stringComparator
+      )
+      {
+        super(keyBufferPosition, pushLimitDown, stringComparator);
       }
 
       @Override
-      public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
+      public boolean putToKeyBuffer(RowBasedKey key, int idx)
       {
-        return Ints.compare(
-            sortableIds[lhsBuffer.getInt(lhsPosition + keyBufferPosition)],
-            sortableIds[rhsBuffer.getInt(rhsPosition + keyBufferPosition)]
-        );
+        final String stringKey = (String) key.getKey()[idx];
+
+        final int dictIndex = reverseDictionary.getInt(stringKey);
+        if (dictIndex == UNKNOWN_DICTIONARY_ID) {
+          throw new ISE("Cannot find key[%s] from dictionary", stringKey);
+        }
+        keyBuffer.putInt(dictIndex);
+        return true;
       }
     }
 
     private class LongRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
     {
       final int keyBufferPosition;
+      final BufferComparator bufferComparator;
 
-      public LongRowBasedKeySerdeHelper(int keyBufferPosition)
+      LongRowBasedKeySerdeHelper(
+          int keyBufferPosition,
+          boolean pushLimitDown,
+          @Nullable StringComparator stringComparator
+      )
       {
         this.keyBufferPosition = keyBufferPosition;
+        if (isPrimitiveComparable(pushLimitDown, stringComparator)) {
+          bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> Longs.compare(
+              lhsBuffer.getLong(lhsPosition + keyBufferPosition),
+              rhsBuffer.getLong(rhsPosition + keyBufferPosition)
+          );
+        } else {
+          bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
+            long lhs = lhsBuffer.getLong(lhsPosition + keyBufferPosition);
+            long rhs = rhsBuffer.getLong(rhsPosition + keyBufferPosition);
+
+            return stringComparator.compare(String.valueOf(lhs), String.valueOf(rhs));
+          };
+        }
       }
 
       @Override
@@ -1068,22 +1595,35 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
+      public BufferComparator getBufferComparator()
       {
-        return Longs.compare(
-            lhsBuffer.getLong(lhsPosition + keyBufferPosition),
-            rhsBuffer.getLong(rhsPosition + keyBufferPosition)
-        );
+        return bufferComparator;
       }
     }
 
     private class FloatRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
     {
       final int keyBufferPosition;
+      final BufferComparator bufferComparator;
 
-      public FloatRowBasedKeySerdeHelper(int keyBufferPosition)
+      FloatRowBasedKeySerdeHelper(
+          int keyBufferPosition,
+          boolean pushLimitDown,
+          @Nullable StringComparator stringComparator)
       {
         this.keyBufferPosition = keyBufferPosition;
+        if (isPrimitiveComparable(pushLimitDown, stringComparator)) {
+          bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> Float.compare(
+              lhsBuffer.getFloat(lhsPosition + keyBufferPosition),
+              rhsBuffer.getFloat(rhsPosition + keyBufferPosition)
+          );
+        } else {
+          bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
+            float lhs = lhsBuffer.getFloat(lhsPosition + keyBufferPosition);
+            float rhs = rhsBuffer.getFloat(rhsPosition + keyBufferPosition);
+            return stringComparator.compare(String.valueOf(lhs), String.valueOf(rhs));
+          };
+        }
       }
 
       @Override
@@ -1106,13 +1646,120 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
+      public BufferComparator getBufferComparator()
       {
-        return Float.compare(
-            lhsBuffer.getFloat(lhsPosition + keyBufferPosition),
-            rhsBuffer.getFloat(rhsPosition + keyBufferPosition)
-        );
+        return bufferComparator;
       }
     }
+
+    private class DoubleRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
+    {
+      final int keyBufferPosition;
+      final BufferComparator bufferComparator;
+
+      DoubleRowBasedKeySerdeHelper(
+          int keyBufferPosition,
+          boolean pushLimitDown,
+          @Nullable StringComparator stringComparator
+      )
+      {
+        this.keyBufferPosition = keyBufferPosition;
+        if (isPrimitiveComparable(pushLimitDown, stringComparator)) {
+          bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> Double.compare(
+              lhsBuffer.getDouble(lhsPosition + keyBufferPosition),
+              rhsBuffer.getDouble(rhsPosition + keyBufferPosition)
+          );
+        } else {
+          bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
+            double lhs = lhsBuffer.getDouble(lhsPosition + keyBufferPosition);
+            double rhs = rhsBuffer.getDouble(rhsPosition + keyBufferPosition);
+            return stringComparator.compare(String.valueOf(lhs), String.valueOf(rhs));
+          };
+        }
+      }
+
+      @Override
+      public int getKeyBufferValueSize()
+      {
+        return Doubles.BYTES;
+      }
+
+      @Override
+      public boolean putToKeyBuffer(RowBasedKey key, int idx)
+      {
+        keyBuffer.putDouble((Double) key.getKey()[idx]);
+        return true;
+      }
+
+      @Override
+      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
+      {
+        dimValues[dimValIdx] = buffer.getDouble(initialOffset + keyBufferPosition);
+      }
+
+      @Override
+      public BufferComparator getBufferComparator()
+      {
+        return bufferComparator;
+      }
+    }
+  }
+
+  private static int compareDimsInBuffersForNullFudgeTimestamp(
+      BufferComparator[] serdeHelperComparators,
+      ByteBuffer lhsBuffer,
+      ByteBuffer rhsBuffer,
+      int lhsPosition,
+      int rhsPosition
+  )
+  {
+    for (BufferComparator comparator : serdeHelperComparators) {
+      final int cmp = comparator.compare(
+          lhsBuffer,
+          rhsBuffer,
+          lhsPosition + Longs.BYTES,
+          rhsPosition + Longs.BYTES
+      );
+      if (cmp != 0) {
+        return cmp;
+      }
+    }
+
+    return 0;
+  }
+
+  private static int compareDimsInBuffersForNullFudgeTimestampForPushDown(
+      BufferComparator[] serdeHelperComparators,
+      List<Boolean> needsReverses,
+      int dimCount,
+      ByteBuffer lhsBuffer,
+      ByteBuffer rhsBuffer,
+      int lhsPosition,
+      int rhsPosition
+  )
+  {
+    for (int i = 0; i < dimCount; i++) {
+      final int cmp;
+      if (needsReverses.get(i)) {
+        cmp = serdeHelperComparators[i].compare(
+            rhsBuffer,
+            lhsBuffer,
+            rhsPosition + Longs.BYTES,
+            lhsPosition + Longs.BYTES
+        );
+      } else {
+        cmp = serdeHelperComparators[i].compare(
+            lhsBuffer,
+            rhsBuffer,
+            lhsPosition + Longs.BYTES,
+            rhsPosition + Longs.BYTES
+        );
+      }
+      if (cmp != 0) {
+        return cmp;
+      }
+    }
+
+    return 0;
   }
 }

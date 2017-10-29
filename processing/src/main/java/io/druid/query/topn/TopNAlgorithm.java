@@ -24,21 +24,24 @@ import io.druid.query.aggregation.Aggregator;
 import io.druid.query.topn.types.TopNColumnSelectorStrategy;
 import io.druid.segment.Cursor;
 
+import javax.annotation.Nullable;
+
 /**
  */
 public interface TopNAlgorithm<DimValSelector, Parameters extends TopNParams>
 {
-  public static final Aggregator[] EMPTY_ARRAY = {};
-  public static final int INIT_POSITION_VALUE = -1;
-  public static final int SKIP_POSITION_VALUE = -2;
+  Aggregator[] EMPTY_ARRAY = {};
+  int INIT_POSITION_VALUE = -1;
+  int SKIP_POSITION_VALUE = -2;
 
-  public TopNParams makeInitParams(ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus, Cursor cursor);
+  TopNParams makeInitParams(ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus, Cursor cursor);
 
-  public void run(
+  void run(
       Parameters params,
       TopNResultBuilder resultBuilder,
-      DimValSelector dimValSelector
+      DimValSelector dimValSelector,
+      @Nullable TopNQueryMetrics queryMetrics
   );
 
-  public void cleanup(Parameters params);
+  void cleanup(Parameters params);
 }

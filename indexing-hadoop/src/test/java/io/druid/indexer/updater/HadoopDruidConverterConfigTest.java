@@ -23,9 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.segment.IndexSpec;
 import io.druid.timeline.DataSegment;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -44,7 +44,7 @@ public class HadoopDruidConverterConfigTest
   {
     final HadoopDruidConverterConfig config = new HadoopDruidConverterConfig(
         "datasource",
-        Interval.parse("2000/2010"),
+        Intervals.of("2000/2010"),
         new IndexSpec(),
         ImmutableList.<DataSegment>of(),
         true,

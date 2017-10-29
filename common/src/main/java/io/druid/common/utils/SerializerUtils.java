@@ -24,7 +24,7 @@ import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-import io.druid.collections.IntList;
+import io.druid.java.util.common.StringUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,13 +32,11 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
-import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.List;
 
 public class SerializerUtils
 {
-  private static final Charset UTF8 = Charset.forName("UTF-8");
 
   /**
    * Writes the given long value into the given OutputStream in big-endian byte order, using the helperBuffer. Faster
@@ -106,7 +104,7 @@ public class SerializerUtils
 
   public <T extends OutputStream> void writeString(T out, String name) throws IOException
   {
-    byte[] nameBytes = name.getBytes(UTF8);
+    byte[] nameBytes = StringUtils.toUtf8(name);
     writeInt(out, nameBytes.length);
     out.write(nameBytes);
   }
@@ -120,7 +118,7 @@ public class SerializerUtils
 
   public void writeString(WritableByteChannel out, String name) throws IOException
   {
-    byte[] nameBytes = name.getBytes(UTF8);
+    byte[] nameBytes = StringUtils.toUtf8(name);
     writeInt(out, nameBytes.length);
     out.write(ByteBuffer.wrap(nameBytes));
   }
@@ -214,15 +212,6 @@ public class SerializerUtils
 
     for (int value : ints) {
       writeInt(out, value);
-    }
-  }
-
-  public void writeInts(OutputStream out, IntList ints) throws IOException
-  {
-    writeInt(out, ints.length());
-
-    for (int i = 0; i < ints.length(); i++) {
-      writeInt(out, ints.get(i));
     }
   }
 
@@ -322,6 +311,6 @@ public class SerializerUtils
 
   public int getSerializedStringByteSize(String str)
   {
-    return Ints.BYTES + str.getBytes(UTF8).length;
+    return Ints.BYTES + StringUtils.toUtf8(str).length;
   }
 }

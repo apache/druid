@@ -9,13 +9,23 @@ The indexing service uses several of the global configs in [Configuration](../co
 
 ### Must be set on Overlord and Middle Manager
 
-#### Node Configs
+#### Overlord Node Configs
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.host`|The host for the current node. This is used to advertise the current processes location as reachable from another node and should generally be specified such that `http://${druid.host}/` could actually talk to this process|InetAddress.getLocalHost().getCanonicalHostName()|
-|`druid.port`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8090|
+|`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8090|
+|`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.html) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8290|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|druid/overlord|
+
+#### MiddleManager Node Configs
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.host`|The host for the current node. This is used to advertise the current processes location as reachable from another node and should generally be specified such that `http://${druid.host}/` could actually talk to this process|InetAddress.getLocalHost().getCanonicalHostName()|
+|`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8091|
+|`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.html) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8291|
+|`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|druid/middlemanager|
 
 #### Task Logging
 
@@ -146,7 +156,7 @@ A sample worker config spec is shown below:
 ```json
 {
   "selectStrategy": {
-    "type": "fillCapacityWithAffinity",
+    "type": "fillCapacity",
     "affinityConfig": {
       "affinity": {
         "datasource1": ["host1:port", "host2:port"],
@@ -183,7 +193,7 @@ Issuing a GET request at the same URL will return the current worker config spec
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`selectStrategy`|How to assign tasks to middle managers. Choices are `fillCapacity`, `fillCapacityWithAffinity`, `equalDistribution`, `equalDistributionWithAffinity` and `javascript`.|fillCapacity|
+|`selectStrategy`|How to assign tasks to middle managers. Choices are `fillCapacity`, `equalDistribution`, and `javascript`.|equalDistribution|
 |`autoScaler`|Only used if autoscaling is enabled. See below.|null|
 
 To view the audit history of worker config issue a GET request to the URL -
@@ -202,48 +212,31 @@ http://<OVERLORD_IP>:<port>/druid/indexer/v1/worker/history?count=<n>
 
 #### Worker Select Strategy
 
-##### Fill Capacity
-
-Workers are assigned tasks until capacity.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`type`|`fillCapacity`.|required; must be `fillCapacity`|
-
-Note that, if `druid.indexer.runner.pendingTasksRunnerNumThreads` is set to n (> 1) then it means to fill n workers upto capacity simultaneously and then moving on.
-
-##### Fill Capacity With Affinity
-
-An affinity config can be provided.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`type`|`fillCapacityWithAffinity`.|required; must be `fillCapacityWithAffinity`|
-|`affinity`|JSON object mapping a datasource String name to a list of indexing service middle manager host:port String values. Druid doesn't perform DNS resolution, so the 'host' value must match what is configured on the middle manager and what the middle manager announces itself as (examine the Overlord logs to see what your middle manager announces itself as).|{}|
-
-Tasks will try to be assigned to preferred workers. Fill capacity strategy is used if no preference for a datasource specified.
-
-Note that, if `druid.indexer.runner.pendingTasksRunnerNumThreads` is set to n (> 1) then it means to fill n preferred workers upto capacity simultaneously and then moving on.
+Worker select strategies control how Druid assigns tasks to middleManagers.
 
 ##### Equal Distribution
 
-The workers with the least amount of tasks is assigned the task.
+Tasks are assigned to the middleManager with the most available capacity at the time the task begins running. This is
+useful if you want work evenly distributed across your middleManagers.
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`type`|`equalDistribution`.|required; must be `equalDistribution`|
+|`affinityConfig`|[Affinity config](#affinity) object|null (no affinity)|
 
-##### Equal Distribution With Affinity
+##### Fill Capacity
 
-An affinity config can be provided.
+Tasks are assigned to the worker with the most currently-running tasks at the time the task begins running. This is
+useful in situations where you are elastically auto-scaling middleManagers, since it will tend to pack some full and
+leave others empty. The empty ones can be safely terminated.
+
+Note that if `druid.indexer.runner.pendingTasksRunnerNumThreads` is set to _N_ > 1, then this strategy will fill _N_
+middleManagers up to capacity simultaneously, rather than a single middleManager.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`type`|`equalDistributionWithAffinity`.|required; must be `equalDistributionWithAffinity`|
-|`affinity`|Exactly same with `fillCapacityWithAffinity` 's affinity.|{}|
-
-Tasks will try to be assigned to preferred workers. Equal Distribution strategy is used if no preference for a datasource specified.
-
+|`type`|`fillCapacity`.|required; must be `fillCapacity`|
+|`affinityConfig`|[Affinity config](#affinity) object|null (no affinity)|
 
 ##### Javascript
 
@@ -252,7 +245,6 @@ The function is passed remoteTaskRunnerConfig, map of workerId to available work
 It can be used for rapid development of missing features where the worker selection logic is to be changed or tuned often.
 If the selection logic is quite complex and cannot be easily tested in javascript environment,
 its better to write a druid extension module with extending current worker selection strategies written in java.
-
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -272,6 +264,16 @@ Example: a function that sends batch_index_task to workers 10.0.0.1 and 10.0.0.2
 JavaScript-based functionality is disabled by default. Please refer to the Druid <a href="../development/javascript.html">JavaScript programming guide</a> for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
 </div>
 
+##### Affinity
+
+Affinity configs can be provided to the _equalDistribution_ and _fillCapacity_ strategies using the "affinityConfig"
+field. If not provided, the default is to not use affinity at all.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`affinity`|JSON object mapping a datasource String name to a list of indexing service middleManager host:port String values. Druid doesn't perform DNS resolution, so the 'host' value must match what is configured on the middleManager and what the middleManager announces itself as (examine the Overlord logs to see what your middleManager announces itself as).|{}|
+|`strong`|With weak affinity (the default), tasks for a dataSource may be assigned to other middleManagers if their affinity-mapped middleManagers are not able to run all pending tasks in the queue for that dataSource. With strong affinity, tasks for a dataSource will only ever be assigned to their affinity-mapped middleManagers, and will wait in the pending queue if necessary.|false|
+
 #### Autoscaler
 
 Amazon's EC2 is currently the only supported autoscaler.
@@ -290,15 +292,16 @@ Middle managers pass their configurations down to their child peons. The middle 
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.indexer.runner.allowedPrefixes`|Whitelist of prefixes for configs that can be passed down to child peons.|"com.metamx", "druid", "io.druid", "user.timezone","file.encoding"|
+|`druid.indexer.runner.allowedPrefixes`|Whitelist of prefixes for configs that can be passed down to child peons.|"com.metamx", "druid", "io.druid", "user.timezone", "file.encoding", "java.io.tmpdir", "hadoop"|
 |`druid.indexer.runner.compressZnodes`|Indicates whether or not the middle managers should compress Znodes.|true|
 |`druid.indexer.runner.classpath`|Java classpath for the peon.|System.getProperty("java.class.path")|
 |`druid.indexer.runner.javaCommand`|Command required to execute java.|java|
 |`druid.indexer.runner.javaOpts`|*DEPRECATED* A string of -X Java options to pass to the peon's JVM. Quotable parameters or parameters with spaces are encouraged to use javaOptsArray|""|
 |`druid.indexer.runner.javaOptsArray`|A json array of strings to be passed in as options to the peon's jvm. This is additive to javaOpts and is recommended for properly handling arguments which contain quotes or spaces like `["-XX:OnOutOfMemoryError=kill -9 %p"]`|`[]`|
 |`druid.indexer.runner.maxZnodeBytes`|The maximum size Znode in bytes that can be created in Zookeeper.|524288|
-|`druid.indexer.runner.startPort`|The port that peons begin running on.|8100|
-|`druid.indexer.runner.separateIngestionEndpoint`|*Deprecated.* Use separate server and consequently separate jetty thread pool for ingesting events|false|
+|`druid.indexer.runner.startPort`|Starting port used for peon processes, should be greater than 1023.|8100|
+|`druid.indexer.runner.tlsStartPort`|Starting TLS port for peon processes, should be greater than 1023.|8300|
+|`druid.indexer.runner.separateIngestionEndpoint`|*Deprecated.* Use separate server and consequently separate jetty thread pool for ingesting events. Not supported with TLS.|false|
 |`druid.worker.ip`|The IP of the worker.|localhost|
 |`druid.worker.version`|Version identifier for the middle manager.|0|
 |`druid.worker.capacity`|Maximum number of tasks the middle manager can accept.|Number of available processors - 1|

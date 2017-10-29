@@ -85,8 +85,7 @@ public class JacksonConfigProvider<T> implements Provider<Supplier<T>>
   {
     if (clazz == null) {
       return DSuppliers.of(configManager.watch(key, typeRef, defaultVal));
-    }
-    else {
+    } else {
       return DSuppliers.of(configManager.watch(key, clazz, defaultVal));
     }
   }

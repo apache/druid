@@ -32,6 +32,30 @@ They each represent an axis of the data that we’ve chosen to slice across.
 Metrics are usually numeric values, and computations include operations such as count, sum, and mean. 
 Also known as measures in standard OLAP terminology.
 
+## Sharding the Data
+
+Druid shards are called `segments` and Druid always first shards data by time. In our compacted data set, we can create two segments, one for each hour of data.
+
+For example:
+
+Segment `sampleData_2011-01-01T01:00:00:00Z_2011-01-01T02:00:00:00Z_v1_0` contains
+
+     2011-01-01T01:00:00Z  ultratrimfast.com  google.com  Male   USA     1800        25     15.70
+     2011-01-01T01:00:00Z  bieberfever.com    google.com  Male   USA     2912        42     29.18
+
+
+Segment `sampleData_2011-01-01T02:00:00:00Z_2011-01-01T03:00:00:00Z_v1_0` contains
+
+     2011-01-01T02:00:00Z  ultratrimfast.com  google.com  Male   UK      1953        17     17.31
+     2011-01-01T02:00:00Z  bieberfever.com    google.com  Male   UK      3194        170    34.01
+
+Segments are self-contained containers for the time interval of data they hold. Segments
+contain data stored in compressed column orientations, along with the indexes for those columns. Druid queries only understand how to
+scan segments.
+
+Segments are uniquely identified by a datasource, interval, version, and an optional partition number.
+Examining our example segments, the segments are named following this convention: `dataSource_interval_version_partitionNumber`
+
 ## Roll-up
 
 The individual events in our example data set are not very interesting because there may be trillions of such events. 
@@ -56,30 +80,15 @@ This storage reduction does come at a cost; as we roll up data, we lose the abil
 the rollup granularity is the minimum granularity you will be able to explore data at and events are floored to this granularity. 
 Hence, Druid ingestion specs define this granularity as the `queryGranularity` of the data. The lowest supported `queryGranularity` is millisecond.
 
-## Sharding the Data
+### Roll-up modes
 
-Druid shards are called `segments` and Druid always first shards data by time. In our compacted data set, we can create two segments, one for each hour of data.
+Druid supports two roll-up modes, i.e., _perfect roll-up_ and _best-effort roll-up_. In the perfect roll-up mode, Druid guarantees that input data are perfectly aggregated at ingestion time. Meanwhile, in the best-effort roll-up, input data might not be perfectly aggregated and thus there can be multiple segments holding the rows which should belong to the same segment with the perfect roll-up since they have the same dimension value and their timestamps fall into the same interval.
 
-For example:
+The perfect roll-up mode encompasses an additional preprocessing step to determine intervals and shardSpecs before actual data ingestion if they are not specified in the ingestionSpec. This preprocessing step usually scans the entire input data which might increase the ingestion time. The [Hadoop indexing task](./ingestion/batch-ingestion.html) always runs with this perfect roll-up mode.
 
-Segment `sampleData_2011-01-01T01:00:00:00Z_2011-01-01T02:00:00:00Z_v1_0` contains
+On the contrary, the best-effort roll-up mode doesn't require any preprocessing step, but the size of ingested data might be larger than that of the perfect roll-up. All types of [streaming indexing (i.e., realtime index task, kafka indexing service, ...)](./ingestion/stream-ingestion.html) run with this mode.
 
-     2011-01-01T01:00:00Z  ultratrimfast.com  google.com  Male   USA     1800        25     15.70
-     2011-01-01T01:00:00Z  bieberfever.com    google.com  Male   USA     2912        42     29.18
-
-
-Segment `sampleData_2011-01-01T02:00:00:00Z_2011-01-01T03:00:00:00Z_v1_0` contains
-
-     2011-01-01T02:00:00Z  ultratrimfast.com  google.com  Male   UK      1953        17     17.31
-     2011-01-01T02:00:00Z  bieberfever.com    google.com  Male   UK      3194        170    34.01
-
-Segments are self-contained containers for the time interval of data they hold. Segments
-contain data stored in compressed column orientations, along with the indexes for those columns. Druid queries only understand how to
-scan segments.
-
-Segments are uniquely identified by a datasource, interval, version, and an optional partition number. 
-Examining our example segments, the segments are named following this convention: `dataSource_interval_version_partitionNumber`
-
+Finally, the [native index task](./ingestion/tasks.html) supports both modes and you can choose either one which fits to your application.
 
 ## Indexing the Data
 

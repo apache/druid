@@ -20,6 +20,7 @@
 package io.druid.query;
 
 import com.google.common.base.Preconditions;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.spec.QuerySegmentSpec;
 
@@ -30,6 +31,7 @@ import java.util.Map;
  * An immutable composite object of {@link Query} + extra stuff needed in {@link QueryRunner}s. This "extra stuff"
  * is only {@link QueryMetrics} yet.
  */
+@PublicApi
 public final class QueryPlus<T>
 {
   /**
@@ -117,18 +119,13 @@ public final class QueryPlus<T>
   /**
    * Returns a QueryPlus object with {@link QueryMetrics} from this QueryPlus object, and the provided {@link Query}.
    */
-  public QueryPlus<T> withQuery(Query<T> replacementQuery)
+  public <U> QueryPlus<U> withQuery(Query<U> replacementQuery)
   {
     return new QueryPlus<>(replacementQuery, queryMetrics);
   }
 
   public Sequence<T> run(QuerySegmentWalker walker, Map<String, Object> context)
   {
-    if (query instanceof BaseQuery) {
-      return ((BaseQuery) query).getQuerySegmentSpec().lookup(query, walker).run(this, context);
-    } else {
-      // fallback
-      return query.run(walker, context);
-    }
+    return query.getRunner(walker, context).run(this, context);
   }
 }

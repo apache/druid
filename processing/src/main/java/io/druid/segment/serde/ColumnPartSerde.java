@@ -36,23 +36,24 @@ import java.nio.channels.WritableByteChannel;
     @JsonSubTypes.Type(name = "complex", value = ComplexColumnPartSerde.class),
     @JsonSubTypes.Type(name = "float", value = FloatGenericColumnPartSerde.class),
     @JsonSubTypes.Type(name = "long", value = LongGenericColumnPartSerde.class),
+    @JsonSubTypes.Type(name = "double", value = DoubleGenericColumnPartSerde.class),
     @JsonSubTypes.Type(name = "stringDictionary", value = DictionaryEncodedColumnPartSerde.class)
 })
 public interface ColumnPartSerde
 {
-  public Serializer getSerializer();
+  Serializer getSerializer();
 
-  public Deserializer getDeserializer();
+  Deserializer getDeserializer();
 
-  public interface Serializer
+  interface Serializer
   {
-    public long numBytes();
+    long numBytes();
 
-    public void write(WritableByteChannel channel, FileSmoosher smoosher) throws IOException;
+    void write(WritableByteChannel channel, FileSmoosher smoosher) throws IOException;
   }
 
-  public interface Deserializer
+  interface Deserializer
   {
-    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig);
+    void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig);
   }
 }

@@ -22,6 +22,7 @@ package io.druid.query.select;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Maps;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import org.joda.time.DateTime;
 
@@ -52,8 +53,10 @@ public class EventHolder
   public DateTime getTimestamp()
   {
     Object retVal = event.get(timestampKey);
-    if (retVal instanceof String) {
-      return new DateTime(retVal);
+    if (retVal instanceof Long) {
+      return DateTimes.utc((Long) retVal);
+    } else if (retVal instanceof String) {
+      return DateTimes.of((String) retVal);
     } else if (retVal instanceof DateTime) {
       return (DateTime) retVal;
     } else {

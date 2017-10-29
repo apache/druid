@@ -22,6 +22,7 @@ package io.druid.audit;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import io.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 
 /**
@@ -50,7 +51,7 @@ public class AuditEntry
     this.key = key;
     this.type = type;
     this.auditInfo = authorInfo;
-    this.auditTime = auditTime == null ? DateTime.now() : auditTime;
+    this.auditTime = auditTime == null ? DateTimes.nowUtc() : auditTime;
     this.payload = payload;
   }
 
@@ -73,7 +74,6 @@ public class AuditEntry
   }
 
   /**
-  * @param None
   * @return returns payload as String
   */
   @JsonProperty
@@ -81,8 +81,8 @@ public class AuditEntry
   {
     return payload;
   }
+
   /**
-  * @param None
   * @return audit time as DateTime
   */
   @JsonProperty
@@ -151,7 +151,7 @@ public class AuditEntry
       this.key = null;
       this.auditInfo = null;
       this.payload = null;
-      this.auditTime = DateTime.now();
+      this.auditTime = DateTimes.nowUtc();
     }
 
     public Builder key(String key)

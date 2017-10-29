@@ -29,6 +29,9 @@ import io.druid.data.input.InputRow;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * An extendable linear shard spec.  {@link #partitionNum} represents an unique id of a partition.
+ */
 public class LinearShardSpec implements ShardSpec
 {
   private int partitionNum;
@@ -43,7 +46,8 @@ public class LinearShardSpec implements ShardSpec
 
   @JsonProperty("partitionNum")
   @Override
-  public int getPartitionNum() {
+  public int getPartitionNum()
+  {
     return partitionNum;
   }
 
@@ -67,12 +71,14 @@ public class LinearShardSpec implements ShardSpec
   }
 
   @Override
-  public <T> PartitionChunk<T> createChunk(T obj) {
+  public <T> PartitionChunk<T> createChunk(T obj)
+  {
     return new LinearPartitionChunk<T>(partitionNum, obj);
   }
 
   @Override
-  public boolean isInChunk(long timestamp, InputRow inputRow) {
+  public boolean isInChunk(long timestamp, InputRow inputRow)
+  {
     return true;
   }
 

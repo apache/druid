@@ -19,12 +19,14 @@
 
 package io.druid.query.groupby.epinephelinae;
 
+import io.druid.java.util.common.StringUtils;
+
 import java.io.IOException;
 
 public class TemporaryStorageFullException extends IOException
 {
   public TemporaryStorageFullException(final long maxBytesUsed)
   {
-    super(String.format("Cannot write to disk, hit limit of %,d bytes.", maxBytesUsed));
+    super(StringUtils.format("Cannot write to disk, hit limit of %,d bytes.", maxBytesUsed));
   }
 }

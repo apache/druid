@@ -34,6 +34,8 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
@@ -133,7 +135,7 @@ public class MetadataTaskStorage implements TaskStorage
     try {
       handler.insert(
           task.getId(),
-          new DateTime(),
+          DateTimes.nowUtc(),
           task.getDataSource(),
           task,
           status.isRunnable(),
@@ -141,7 +143,7 @@ public class MetadataTaskStorage implements TaskStorage
       );
     }
     catch (Exception e) {
-      if(e instanceof EntryExistsException) {
+      if (e instanceof EntryExistsException) {
         throw (EntryExistsException) e;
       } else {
         Throwables.propagate(e);
@@ -162,14 +164,14 @@ public class MetadataTaskStorage implements TaskStorage
         status
     );
     if (!set) {
-      throw new IllegalStateException(String.format("Active task not found: %s", status.getId()));
+      throw new ISE("Active task not found: %s", status.getId());
     }
   }
 
   @Override
   public Optional<Task> getTask(final String taskId)
   {
-      return handler.getEntry(taskId);
+    return handler.getEntry(taskId);
   }
 
   @Override
@@ -212,7 +214,7 @@ public class MetadataTaskStorage implements TaskStorage
   @Override
   public List<TaskStatus> getRecentlyFinishedTaskStatuses()
   {
-    final DateTime start = new DateTime().minus(config.getRecentlyFinishedThreshold());
+    final DateTime start = DateTimes.nowUtc().minus(config.getRecentlyFinishedThreshold());
 
     return ImmutableList.copyOf(
         Iterables.filter(
@@ -246,21 +248,39 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
+  public void replaceLock(String taskid, TaskLock oldLock, TaskLock newLock)
+  {
+    Preconditions.checkNotNull(taskid, "taskid");
+    Preconditions.checkNotNull(oldLock, "oldLock");
+    Preconditions.checkNotNull(newLock, "newLock");
+
+    log.info(
+        "Replacing lock on interval[%s] version[%s] for task: %s",
+        oldLock.getInterval(),
+        oldLock.getVersion(),
+        taskid
+    );
+
+    final Long oldLockId = handler.getLockId(taskid, oldLock);
+    if (oldLockId == null) {
+      throw new ISE("Cannot find lock[%s]", oldLock);
+    }
+
+    handler.replaceLock(taskid, oldLockId, newLock);
+  }
+
+  @Override
   public void removeLock(String taskid, TaskLock taskLockToRemove)
   {
     Preconditions.checkNotNull(taskid, "taskid");
     Preconditions.checkNotNull(taskLockToRemove, "taskLockToRemove");
 
-    final Map<Long, TaskLock> taskLocks = getLocksWithIds(taskid);
-
-    for (final Map.Entry<Long, TaskLock> taskLockWithId : taskLocks.entrySet()) {
-      final long id = taskLockWithId.getKey();
-      final TaskLock taskLock = taskLockWithId.getValue();
-
-      if (taskLock.equals(taskLockToRemove)) {
-        log.info("Deleting TaskLock with id[%d]: %s", id, taskLock);
-        handler.removeLock(id);
-      }
+    final Long lockId = handler.getLockId(taskid, taskLockToRemove);
+    if (lockId == null) {
+      log.warn("Cannot find lock[%s]", taskLockToRemove);
+    } else {
+      log.info("Deleting TaskLock with id[%d]: %s", lockId, taskLockToRemove);
+      handler.removeLock(lockId);
     }
   }
 

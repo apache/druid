@@ -22,6 +22,7 @@ package io.druid.segment.data;
 import com.google.common.base.Supplier;
 import com.google.common.primitives.Floats;
 import io.druid.collections.ResourceHolder;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 
@@ -64,22 +65,22 @@ public class BlockLayoutIndexedFloatSupplier implements Supplier<IndexedFloats>
     final int rem = sizePer - 1;
     final boolean powerOf2 = sizePer == (1 << div);
     if (powerOf2) {
-        return new BlockLayoutIndexedFloats()
+      return new BlockLayoutIndexedFloats()
+      {
+        @Override
+        public float get(int index)
         {
-          @Override
-          public float get(int index)
-          {
-            // optimize division and remainder for powers of 2
-            final int bufferNum = index >> div;
+          // optimize division and remainder for powers of 2
+          final int bufferNum = index >> div;
 
-            if (bufferNum != currIndex) {
-              loadBuffer(bufferNum);
-            }
-
-            final int bufferIndex = index & rem;
-            return floatBuffer.get(floatBuffer.position() + bufferIndex);
+          if (bufferNum != currIndex) {
+            loadBuffer(bufferNum);
           }
-        };
+
+          final int bufferIndex = index & rem;
+          return floatBuffer.get(floatBuffer.position() + bufferIndex);
+        }
+      };
     } else {
       return new BlockLayoutIndexedFloats();
     }
@@ -118,7 +119,7 @@ public class BlockLayoutIndexedFloatSupplier implements Supplier<IndexedFloats>
     {
       if (totalSize - index < toFill.length) {
         throw new IndexOutOfBoundsException(
-            String.format(
+            StringUtils.format(
                 "Cannot fill array of size[%,d] at index[%,d].  Max size[%,d]", toFill.length, index, totalSize
             )
         );

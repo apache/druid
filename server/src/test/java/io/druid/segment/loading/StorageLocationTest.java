@@ -20,8 +20,8 @@
 package io.druid.segment.loading;
 
 import com.google.common.collect.ImmutableMap;
+import io.druid.java.util.common.Intervals;
 import io.druid.timeline.DataSegment;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -77,7 +77,7 @@ public class StorageLocationTest
   {
     return new DataSegment(
         "test",
-        new Interval(intervalString),
+        Intervals.of(intervalString),
         "1",
         ImmutableMap.<String, Object>of(),
         Arrays.asList("d"),

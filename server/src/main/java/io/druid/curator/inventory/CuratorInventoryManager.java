@@ -21,9 +21,9 @@ package io.druid.curator.inventory;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
 import io.druid.curator.cache.PathChildrenCacheFactory;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
@@ -37,6 +37,7 @@ import org.apache.curator.utils.ZKPaths;
 
 import java.io.IOException;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
@@ -79,7 +80,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
     this.config = config;
     this.strategy = strategy;
 
-    this.containers = new MapMaker().makeMap();
+    this.containers = new ConcurrentHashMap<>();
     this.uninitializedInventory = Sets.newConcurrentHashSet();
 
     this.pathChildrenCacheExecutor = exec;
@@ -174,10 +175,12 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
     );
   }
 
-  private byte[] getZkDataForNode(String path) {
+  private byte[] getZkDataForNode(String path)
+  {
     try {
       return curatorFramework.getData().decompressed().forPath(path);
-    } catch(Exception ex) {
+    }
+    catch (Exception ex) {
       log.warn(ex, "Exception while getting data for node %s", path);
       return null;
     }
@@ -228,7 +231,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
             final ChildData child = event.getData();
 
             byte[] data = getZkDataForNode(child.getPath());
-            if(data == null) {
+            if (data == null) {
               log.info("Ignoring event: Type - %s , Path - %s , Version - %s",
                   event.getType(),
                   child.getPath(),
@@ -246,7 +249,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
             if (containers.containsKey(containerKey)) {
               log.error("New node[%s] but there was already one.  That's not good, ignoring new one.", child.getPath());
             } else {
-              final String inventoryPath = String.format("%s/%s", config.getInventoryPath(), containerKey);
+              final String inventoryPath = StringUtils.format("%s/%s", config.getInventoryPath(), containerKey);
               PathChildrenCache inventoryCache = cacheFactory.make(curatorFramework, inventoryPath);
               inventoryCache.getListenable().addListener(new InventoryCacheListener(containerKey, inventoryPath));
 

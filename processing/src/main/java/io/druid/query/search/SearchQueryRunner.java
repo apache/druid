@@ -35,15 +35,11 @@ import io.druid.query.QueryRunner;
 import io.druid.query.Result;
 import io.druid.query.dimension.ColumnSelectorStrategy;
 import io.druid.query.dimension.ColumnSelectorStrategyFactory;
-import io.druid.query.search.search.SearchHit;
-import io.druid.query.search.search.SearchQuery;
-import io.druid.query.search.search.SearchQueryExecutor;
-import io.druid.query.search.search.SearchQuerySpec;
+import io.druid.segment.BaseDoubleColumnValueSelector;
+import io.druid.segment.BaseFloatColumnValueSelector;
+import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
-import io.druid.segment.NullDimensionSelector;
 import io.druid.segment.Segment;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
@@ -86,14 +82,15 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
           return new LongSearchColumnSelectorStrategy();
         case FLOAT:
           return new FloatSearchColumnSelectorStrategy();
+        case DOUBLE:
+          return new DoubleSearchColumnSelectorStrategy();
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", type);
       }
     }
   }
 
-  public interface SearchColumnSelectorStrategy<ValueSelectorType extends ColumnValueSelector>
-      extends ColumnSelectorStrategy
+  public interface SearchColumnSelectorStrategy<ValueSelectorType> extends ColumnSelectorStrategy
   {
     /**
      * Read the current row from dimSelector and update the search result set.
@@ -129,7 +126,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
         final Object2IntRBTreeMap<SearchHit> set
     )
     {
-      if (selector != null && !(selector instanceof NullDimensionSelector)) {
+      if (selector != null && !isNilSelector(selector)) {
         final IndexedInts vals = selector.getRow();
         for (int i = 0; i < vals.size(); ++i) {
           final String dimVal = selector.lookupName(vals.get(i));
@@ -144,19 +141,27 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     }
   }
 
-  public static class LongSearchColumnSelectorStrategy implements SearchColumnSelectorStrategy<LongColumnSelector>
+  private static boolean isNilSelector(final DimensionSelector selector)
+  {
+    return selector.nameLookupPossibleInAdvance()
+           && selector.getValueCardinality() == 1
+           && selector.lookupName(0) == null;
+  }
+
+  public static class LongSearchColumnSelectorStrategy
+      implements SearchColumnSelectorStrategy<BaseLongColumnValueSelector>
   {
     @Override
     public void updateSearchResultSet(
         String outputName,
-        LongColumnSelector selector,
+        BaseLongColumnValueSelector selector,
         SearchQuerySpec searchQuerySpec,
         int limit,
         Object2IntRBTreeMap<SearchHit> set
     )
     {
       if (selector != null) {
-        final String dimVal = String.valueOf(selector.get());
+        final String dimVal = String.valueOf(selector.getLong());
         if (searchQuerySpec.accept(dimVal)) {
           set.addTo(new SearchHit(outputName, dimVal), 1);
         }
@@ -164,26 +169,47 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     }
   }
 
-  public static class FloatSearchColumnSelectorStrategy implements SearchColumnSelectorStrategy<FloatColumnSelector>
+  public static class FloatSearchColumnSelectorStrategy
+      implements SearchColumnSelectorStrategy<BaseFloatColumnValueSelector>
   {
     @Override
     public void updateSearchResultSet(
         String outputName,
-        FloatColumnSelector selector,
+        BaseFloatColumnValueSelector selector,
         SearchQuerySpec searchQuerySpec,
         int limit,
         Object2IntRBTreeMap<SearchHit> set
     )
     {
       if (selector != null) {
-        final String dimVal = String.valueOf(selector.get());
+        final String dimVal = String.valueOf(selector.getFloat());
         if (searchQuerySpec.accept(dimVal)) {
           set.addTo(new SearchHit(outputName, dimVal), 1);
         }
       }
     }
   }
-  
+
+  public static class DoubleSearchColumnSelectorStrategy
+      implements SearchColumnSelectorStrategy<BaseDoubleColumnValueSelector>
+  {
+    @Override
+    public void updateSearchResultSet(
+        String outputName,
+        BaseDoubleColumnValueSelector selector,
+        SearchQuerySpec searchQuerySpec,
+        int limit,
+        Object2IntRBTreeMap<SearchHit> set
+    )
+    {
+      if (selector != null) {
+        final String dimVal = String.valueOf(selector.getDouble());
+        if (searchQuerySpec.accept(dimVal)) {
+          set.addTo(new SearchHit(outputName, dimVal), 1);
+        }
+      }
+    }
+  }
 
   @Override
   public Sequence<Result<SearchResultValue>> run(

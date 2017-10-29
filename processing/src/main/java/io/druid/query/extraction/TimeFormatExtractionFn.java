@@ -22,15 +22,18 @@ package io.druid.query.extraction;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.common.guava.GuavaUtils;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.joda.time.chrono.ISOChronology;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Locale;
 
@@ -123,23 +126,29 @@ public class TimeFormatExtractionFn implements ExtractionFn
   @Override
   public String apply(long value)
   {
-    final long truncated = granularity.bucketStart(new DateTime(value)).getMillis();
+    final long truncated = granularity.bucketStart(DateTimes.utc(value)).getMillis();
     return formatter == null ? String.valueOf(truncated) : formatter.print(truncated);
   }
 
   @Override
-  public String apply(Object value)
+  @Nullable
+  public String apply(@Nullable Object value)
   {
+    if (value == null) {
+      return null;
+    }
+
     if (asMillis && value instanceof String) {
       final Long theLong = GuavaUtils.tryParseLong((String) value);
-      return theLong == null ? apply(new DateTime(value).getMillis()) : apply(theLong.longValue());
+      return theLong == null ? apply(DateTimes.of((String) value).getMillis()) : apply(theLong.longValue());
     } else {
-      return apply(new DateTime(value).getMillis());
+      return apply(new DateTime(value, ISOChronology.getInstanceUTC()).getMillis());
     }
   }
 
   @Override
-  public String apply(String value)
+  @Nullable
+  public String apply(@Nullable String value)
   {
     return apply((Object) value);
   }
@@ -198,6 +207,6 @@ public class TimeFormatExtractionFn implements ExtractionFn
   @Override
   public String toString()
   {
-    return String.format("timeFormat(\"%s\", %s, %s, %s, %s)", format, tz, locale, granularity, asMillis);
+    return StringUtils.format("timeFormat(\"%s\", %s, %s, %s, %s)", format, tz, locale, granularity, asMillis);
   }
 }

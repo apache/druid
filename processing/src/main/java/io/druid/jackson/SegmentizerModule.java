@@ -25,7 +25,8 @@ import io.druid.segment.loading.MMappedQueryableSegmentizerFactory;
 
 public class SegmentizerModule extends SimpleModule
 {
-  public SegmentizerModule() {
+  public SegmentizerModule()
+  {
     super("SegmentizerModule");
     registerSubtypes(new NamedType(MMappedQueryableSegmentizerFactory.class, "mMapSegmentFactory"));
   }

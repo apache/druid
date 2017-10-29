@@ -31,9 +31,7 @@ public class DruidTableScanRule extends RelOptRule
 {
   private final QueryMaker queryMaker;
 
-  public DruidTableScanRule(
-      final QueryMaker queryMaker
-  )
+  public DruidTableScanRule(final QueryMaker queryMaker)
   {
     super(operand(LogicalTableScan.class, any()));
     this.queryMaker = queryMaker;
@@ -47,7 +45,7 @@ public class DruidTableScanRule extends RelOptRule
     final DruidTable druidTable = table.unwrap(DruidTable.class);
     if (druidTable != null) {
       call.transformTo(
-          DruidQueryRel.fullScan(scan.getCluster(), table, druidTable, queryMaker)
+          DruidQueryRel.fullScan(scan, table, druidTable, queryMaker)
       );
     }
   }

@@ -19,10 +19,12 @@
 
 package io.druid.segment.realtime.appenderator;
 
+import io.druid.java.util.common.StringUtils;
+
 public class SegmentNotWritableException extends Exception
 {
   public SegmentNotWritableException(String message, Object... messageArgs)
   {
-    super(String.format(message, messageArgs));
+    super(StringUtils.nonStrictFormat(message, messageArgs));
   }
 }

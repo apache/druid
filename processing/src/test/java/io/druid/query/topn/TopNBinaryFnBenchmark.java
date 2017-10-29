@@ -23,6 +23,7 @@ import com.google.caliper.Param;
 import com.google.caliper.Runner;
 import com.google.caliper.SimpleBenchmark;
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -82,7 +83,7 @@ public class TopNBinaryFnBenchmark extends SimpleBenchmark
           )
       );
     }
-    final DateTime currTime = new DateTime();
+    final DateTime currTime = DateTimes.nowUtc();
     List<Map<String, Object>> list = new ArrayList<>();
     for (int i = 0; i < threshold; i++) {
       Map<String, Object> res = new HashMap<>();
@@ -115,7 +116,6 @@ public class TopNBinaryFnBenchmark extends SimpleBenchmark
         new TopNResultValue(list2)
     );
     fn = new TopNBinaryFn(
-        TopNResultMerger.identity,
         Granularities.ALL,
         new DefaultDimensionSpec("testdim", null),
         new NumericTopNMetricSpec("index"),

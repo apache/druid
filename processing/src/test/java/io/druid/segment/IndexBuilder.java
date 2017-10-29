@@ -25,12 +25,12 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 
 import java.io.File;
 import java.io.IOException;
@@ -47,10 +47,10 @@ public class IndexBuilder
   private static final int ROWS_PER_INDEX_FOR_MERGING = 1;
   private static final int DEFAULT_MAX_ROWS = Integer.MAX_VALUE;
 
-  private IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder().withMetrics(new AggregatorFactory[]{
-      new CountAggregatorFactory("count")
-  }).build();
-  private IndexMerger indexMerger = TestHelper.getTestIndexMerger();
+  private IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
+      .withMetrics(new CountAggregatorFactory("count"))
+      .build();
+  private IndexMerger indexMerger = TestHelper.getTestIndexMergerV9();
   private File tmpDir;
   private IndexSpec indexSpec = new IndexSpec();
   private int maxRows = DEFAULT_MAX_ROWS;
@@ -122,7 +122,7 @@ public class IndexBuilder
       return TestHelper.getTestIndexIO().loadIndex(
           indexMerger.persist(
               incrementalIndex,
-              new File(tmpDir, String.format("testIndex-%s", new Random().nextInt(Integer.MAX_VALUE))),
+              new File(tmpDir, StringUtils.format("testIndex-%s", new Random().nextInt(Integer.MAX_VALUE))),
               indexSpec
           )
       );
@@ -148,7 +148,7 @@ public class IndexBuilder
                         maxRows,
                         rows.subList(i, Math.min(rows.size(), i + ROWS_PER_INDEX_FOR_MERGING))
                     ),
-                    new File(tmpDir, String.format("testIndex-%s", UUID.randomUUID().toString())),
+                    new File(tmpDir, StringUtils.format("testIndex-%s", UUID.randomUUID().toString())),
                     indexSpec
                 )
             )
@@ -182,7 +182,7 @@ public class IndexBuilder
                   ),
                   AggregatorFactory.class
               ),
-              new File(tmpDir, String.format("testIndex-%s", UUID.randomUUID())),
+              new File(tmpDir, StringUtils.format("testIndex-%s", UUID.randomUUID())),
               indexSpec
           )
       );
@@ -203,11 +203,11 @@ public class IndexBuilder
   )
   {
     Preconditions.checkNotNull(schema, "schema");
-    final IncrementalIndex incrementalIndex = new OnheapIncrementalIndex(
-        schema,
-        true,
-        maxRows
-    );
+    final IncrementalIndex incrementalIndex = new IncrementalIndex.Builder()
+        .setIndexSchema(schema)
+        .setMaxRowCount(maxRows)
+        .buildOnheap();
+
     for (InputRow row : rows) {
       try {
         incrementalIndex.add(row);

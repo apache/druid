@@ -33,14 +33,15 @@ import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.io.CharStreams;
 import com.google.common.io.Files;
 import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.common.logger.Logger;
 import org.apache.hadoop.metrics2.sink.timeline.TimelineMetric;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.SortedMap;
@@ -171,7 +172,7 @@ public class WhiteListBasedDruidToTimelineEventConverter implements DruidToTimel
       return null;
     }
     final ImmutableList.Builder<String> metricNameBuilder = new ImmutableList.Builder<>();
-    if(!Strings.isNullOrEmpty(namespacePrefix)) {
+    if (!Strings.isNullOrEmpty(namespacePrefix)) {
       metricNameBuilder.add(namespacePrefix);
     }
     metricNameBuilder.add(AmbariMetricsEmitter.sanitize(serviceMetricEvent.getService()));
@@ -199,11 +200,10 @@ public class WhiteListBasedDruidToTimelineEventConverter implements DruidToTimel
       if (Strings.isNullOrEmpty(mapPath)) {
         actualPath = this.getClass().getClassLoader().getResource("defaultWhiteListMap.json").getFile();
         LOGGER.info("using default whiteList map located at [%s]", actualPath);
-        fileContent = CharStreams.toString(new InputStreamReader(this.getClass()
-                                                                     .getClassLoader()
-                                                                     .getResourceAsStream("defaultWhiteListMap.json")));
+        InputStream byteContent = this.getClass().getClassLoader().getResourceAsStream("defaultWhiteListMap.json");
+        fileContent = CharStreams.toString(new InputStreamReader(byteContent, StandardCharsets.UTF_8));
       } else {
-        fileContent = Files.asCharSource(new File(mapPath), Charset.forName("UTF-8")).read();
+        fileContent = Files.asCharSource(new File(mapPath), StandardCharsets.UTF_8).read();
       }
       return mapper.reader(new TypeReference<ImmutableSortedMap<String, ImmutableList<String>>>()
       {

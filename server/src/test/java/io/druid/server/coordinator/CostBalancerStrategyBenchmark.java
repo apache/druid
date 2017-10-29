@@ -22,6 +22,7 @@ package io.druid.server.coordinator;
 import com.carrotsearch.junitbenchmarks.AbstractBenchmark;
 import com.carrotsearch.junitbenchmarks.BenchmarkOptions;
 import com.google.common.util.concurrent.MoreExecutors;
+import io.druid.java.util.common.Intervals;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.junit.AfterClass;
@@ -86,8 +87,8 @@ public class CostBalancerStrategyBenchmark extends AbstractBenchmark
 
 
   // Benchmark Joda Interval Gap impl vs CostBalancer.gapMillis
-  private final Interval interval1 = new Interval("2015-01-01T01:00:00Z/2015-01-01T02:00:00Z");
-  private final Interval interval2 = new Interval("2015-02-01T01:00:00Z/2015-02-01T02:00:00Z");
+  private final Interval interval1 = Intervals.of("2015-01-01T01:00:00Z/2015-01-01T02:00:00Z");
+  private final Interval interval2 = Intervals.of("2015-02-01T01:00:00Z/2015-02-01T02:00:00Z");
   volatile Long sum;
 
   @BenchmarkOptions(warmupRounds = 1000, benchmarkRounds = 1000000)

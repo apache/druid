@@ -29,10 +29,11 @@ import io.druid.segment.data.Indexed;
  */
 public interface BitmapIndexSelector
 {
-  public Indexed<String> getDimensionValues(String dimension);
-  public int getNumRows();
-  public BitmapFactory getBitmapFactory();
-  public BitmapIndex getBitmapIndex(String dimension);
-  public ImmutableBitmap getBitmapIndex(String dimension, String value);
-  public ImmutableRTree getSpatialIndex(String dimension);
+  Indexed<String> getDimensionValues(String dimension);
+  boolean hasMultipleValues(String dimension);
+  int getNumRows();
+  BitmapFactory getBitmapFactory();
+  BitmapIndex getBitmapIndex(String dimension);
+  ImmutableBitmap getBitmapIndex(String dimension, String value);
+  ImmutableRTree getSpatialIndex(String dimension);
 }

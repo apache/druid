@@ -28,10 +28,8 @@ public class FilteringAccumulator<OutType, T> implements Accumulator<OutType, T>
   private final Predicate<T> pred;
   private final Accumulator<OutType, T> accumulator;
 
-  public FilteringAccumulator(
-      Predicate<T> pred,
-      Accumulator<OutType, T> accumulator
-  ) {
+  public FilteringAccumulator(Predicate<T> pred, Accumulator<OutType, T> accumulator)
+  {
     this.pred = pred;
     this.accumulator = accumulator;
   }

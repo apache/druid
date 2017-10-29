@@ -23,7 +23,7 @@ import io.druid.timeline.DataSegment;
 
 import java.util.concurrent.ConcurrentSkipListSet;
 
-public class LoadQueuePeonTester extends LoadQueuePeon
+public class LoadQueuePeonTester extends CuratorLoadQueuePeon
 {
   private final ConcurrentSkipListSet<DataSegment> segmentsToLoad = new ConcurrentSkipListSet<DataSegment>();
 
@@ -45,5 +45,11 @@ public class LoadQueuePeonTester extends LoadQueuePeon
   public ConcurrentSkipListSet<DataSegment> getSegmentsToLoad()
   {
     return segmentsToLoad;
+  }
+
+  @Override
+  public int getNumberOfSegmentsInQueue()
+  {
+    return segmentsToLoad.size();
   }
 }

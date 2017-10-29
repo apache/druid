@@ -26,6 +26,7 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.annotations.Json;
+import io.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -56,7 +57,7 @@ public class MapLookupExtractionFnSerDeTest
   public void testDeserialization() throws IOException
   {
     final DimExtractionFn fn = mapper.reader(DimExtractionFn.class).readValue(
-        String.format(
+        StringUtils.format(
             "{\"type\":\"lookup\",\"lookup\":{\"type\":\"map\", \"map\":%s}}",
             mapper.writeValueAsString(renames)
         )
@@ -69,7 +70,7 @@ public class MapLookupExtractionFnSerDeTest
 
     Assert.assertEquals(
         crazyString, mapper.reader(DimExtractionFn.class).<DimExtractionFn>readValue(
-            String.format(
+            StringUtils.format(
                 "{\"type\":\"lookup\",\"lookup\":{\"type\":\"map\", \"map\":%s}, \"retainMissingValue\":true}",
                 mapper.writeValueAsString(renames)
             )

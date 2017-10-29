@@ -23,9 +23,11 @@ import com.google.inject.Key;
 import com.google.inject.Provider;
 import com.google.inject.Scope;
 import com.google.inject.Scopes;
+import io.druid.guice.annotations.PublicApi;
 
 /**
  */
+@PublicApi
 public class DruidScopes
 {
   public static final Scope SINGLETON = new Scope()

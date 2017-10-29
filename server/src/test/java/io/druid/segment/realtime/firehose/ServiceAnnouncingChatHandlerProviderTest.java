@@ -21,6 +21,7 @@ package io.druid.segment.realtime.firehose;
 
 import io.druid.curator.discovery.ServiceAnnouncer;
 import io.druid.server.DruidNode;
+import io.druid.server.initialization.ServerConfig;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
@@ -53,7 +54,7 @@ public class ServiceAnnouncingChatHandlerProviderTest extends EasyMockSupport
   @Before
   public void setUp() throws Exception
   {
-    chatHandlerProvider = new ServiceAnnouncingChatHandlerProvider(node, serviceAnnouncer);
+    chatHandlerProvider = new ServiceAnnouncingChatHandlerProvider(node, serviceAnnouncer, new ServerConfig());
   }
 
   @Test
@@ -89,7 +90,10 @@ public class ServiceAnnouncingChatHandlerProviderTest extends EasyMockSupport
     Capture<DruidNode> captured = Capture.newInstance();
 
     EasyMock.expect(node.getHost()).andReturn(TEST_HOST);
-    EasyMock.expect(node.getPort()).andReturn(TEST_PORT);
+    EasyMock.expect(node.getPlaintextPort()).andReturn(TEST_PORT);
+    EasyMock.expect(node.isEnablePlaintextPort()).andReturn(true);
+    EasyMock.expect(node.isEnableTlsPort()).andReturn(false);
+    EasyMock.expect(node.getTlsPort()).andReturn(-1);
     serviceAnnouncer.announce(EasyMock.capture(captured));
     replayAll();
 
@@ -105,14 +109,19 @@ public class ServiceAnnouncingChatHandlerProviderTest extends EasyMockSupport
     DruidNode param = captured.getValues().get(0);
     Assert.assertEquals(TEST_SERVICE_NAME, param.getServiceName());
     Assert.assertEquals(TEST_HOST, param.getHost());
-    Assert.assertEquals(TEST_PORT, param.getPort());
+    Assert.assertEquals(TEST_PORT, param.getPlaintextPort());
+    Assert.assertEquals(-1, param.getTlsPort());
+    Assert.assertEquals(null, param.getHostAndTlsPort());
     Assert.assertTrue("chatHandler did not register", chatHandlerProvider.get(TEST_SERVICE_NAME).isPresent());
     Assert.assertEquals(testChatHandler, chatHandlerProvider.get(TEST_SERVICE_NAME).get());
 
     captured.reset();
     resetAll();
     EasyMock.expect(node.getHost()).andReturn(TEST_HOST);
-    EasyMock.expect(node.getPort()).andReturn(TEST_PORT);
+    EasyMock.expect(node.getPlaintextPort()).andReturn(TEST_PORT);
+    EasyMock.expect(node.isEnablePlaintextPort()).andReturn(true);
+    EasyMock.expect(node.getTlsPort()).andReturn(-1);
+    EasyMock.expect(node.isEnableTlsPort()).andReturn(false);
     serviceAnnouncer.unannounce(EasyMock.capture(captured));
     replayAll();
 
@@ -122,7 +131,9 @@ public class ServiceAnnouncingChatHandlerProviderTest extends EasyMockSupport
     param = captured.getValues().get(0);
     Assert.assertEquals(TEST_SERVICE_NAME, param.getServiceName());
     Assert.assertEquals(TEST_HOST, param.getHost());
-    Assert.assertEquals(TEST_PORT, param.getPort());
+    Assert.assertEquals(TEST_PORT, param.getPlaintextPort());
+    Assert.assertEquals(-1, param.getTlsPort());
+    Assert.assertEquals(null, param.getHostAndTlsPort());
     Assert.assertFalse("chatHandler did not deregister", chatHandlerProvider.get(TEST_SERVICE_NAME).isPresent());
   }
 }

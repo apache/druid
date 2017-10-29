@@ -25,6 +25,7 @@ import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.ImmutableDruidServer;
+import io.druid.java.util.common.Intervals;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
@@ -35,11 +36,12 @@ import org.junit.Test;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 
 public class DiskNormalizedCostBalancerStrategyTest
 {
-  private static final Interval day = new Interval("2015-01-01T00/2015-01-01T01");
+  private static final Interval day = Intervals.of("2015-01-01T00/2015-01-01T01");
 
   /**
    * Create Druid cluster with serverCount servers having maxSegments segments each, and 1 server with 98 segment
@@ -61,7 +63,7 @@ public class DiskNormalizedCostBalancerStrategyTest
       serverHolderList.add(
           new ServerHolder(
               new ImmutableDruidServer(
-                  new DruidServerMetadata("DruidServer_Name_" + i, "localhost", 10000000L, ServerType.HISTORICAL, "hot", 1),
+                  new DruidServerMetadata("DruidServer_Name_" + i, "localhost", null, 10000000L, ServerType.HISTORICAL, "hot", 1),
                   3000L,
                   ImmutableMap.of("DUMMY", EasyMock.createMock(ImmutableDruidDataSource.class)),
                   ImmutableMap.copyOf(segments)
@@ -107,7 +109,7 @@ public class DiskNormalizedCostBalancerStrategyTest
   {
     // Not using EasyMock as it hampers the performance of multithreads.
     DataSegment segment = new DataSegment(
-        dataSource, interval, String.valueOf(index), Maps.<String, Object>newConcurrentMap(),
+        dataSource, interval, String.valueOf(index), new ConcurrentHashMap<>(),
         Lists.<String>newArrayList(), Lists.<String>newArrayList(), null, 0, index * 100L
     );
     return segment;

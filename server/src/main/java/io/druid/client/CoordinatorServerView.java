@@ -24,7 +24,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.DataSource;
 import io.druid.server.coordination.DruidServerMetadata;
@@ -88,9 +88,9 @@ public class CoordinatorServerView implements InventoryView
         }
     );
 
-    baseView.registerServerCallback(
+    baseView.registerServerRemovedCallback(
         exec,
-        new ServerView.ServerCallback()
+        new ServerView.ServerRemovedCallback()
         {
           @Override
           public ServerView.CallbackAction serverRemoved(DruidServer server)

@@ -22,6 +22,7 @@ package io.druid.query.dimension;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -37,7 +38,7 @@ public class LegacyDimensionSpecTest
   {
     final String dimension = "testDimension";
     final List<DimensionSpec> deserializedSpecs = mapper.readValue(
-        String.format("[\"%s\"]", dimension), new TypeReference<List<DimensionSpec>>()
+        StringUtils.format("[\"%s\"]", dimension), new TypeReference<List<DimensionSpec>>()
         {
         }
     );

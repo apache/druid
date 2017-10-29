@@ -19,13 +19,15 @@
 
 package io.druid.tests.indexer;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.metamx.http.client.HttpClient;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.clients.EventReceiverFirehoseTestClient;
@@ -35,7 +37,6 @@ import io.druid.testing.utils.RetryUtil;
 import io.druid.testing.utils.ServerDiscoveryUtil;
 import org.apache.commons.io.IOUtils;
 import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.testng.annotations.Guice;
@@ -45,6 +46,7 @@ import javax.ws.rs.core.MediaType;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
@@ -100,7 +102,7 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
       // the task will run for 3 minutes and then shutdown itself
       String task = setShutOffTime(
           getTaskAsString(REALTIME_TASK_RESOURCE),
-          new DateTime(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(3))
+          DateTimes.utc(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(3))
       );
       LOG.info("indexerSpec: [%s]\n", task);
       taskID = indexer.submitTask(task);
@@ -181,13 +183,15 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
 
   public void postEvents() throws Exception
   {
-    DateTimeZone zone = DateTimeZone.forID("UTC");
     final ServerDiscoverySelector eventReceiverSelector = factory.createSelector(EVENT_RECEIVER_SERVICE_NAME);
     eventReceiverSelector.start();
     BufferedReader reader = null;
     InputStreamReader isr = null;
     try {
-      isr = new InputStreamReader(ITRealtimeIndexTaskTest.class.getResourceAsStream(EVENT_DATA_FILE));
+      isr = new InputStreamReader(
+          ITRealtimeIndexTaskTest.class.getResourceAsStream(EVENT_DATA_FILE),
+          StandardCharsets.UTF_8
+      );
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -207,7 +211,7 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
       );
       // there are 22 lines in the file
       int i = 1;
-      DateTime dt = new DateTime(zone);  // timestamp used for sending each event
+      DateTime dt = DateTimes.nowUtc();  // timestamp used for sending each event
       dtFirst = dt;                      // timestamp of 1st event
       dtLast = dt;                       // timestamp of last event
       String line;
@@ -223,10 +227,8 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
         LOG.info("sending event: [%s]\n", event);
         Collection<Map<String, Object>> events = new ArrayList<Map<String, Object>>();
         events.add(
-            (Map<String, Object>) this.jsonMapper.readValue(
-                event, new TypeReference<Map<String, Object>>()
-                {
-                }
+            this.jsonMapper.readValue(
+                event, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
             )
         );
         int eventsPosted = client.postEvents(events, this.jsonMapper, MediaType.APPLICATION_JSON);
@@ -239,7 +241,7 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
         }
         catch (InterruptedException ex) { /* nothing */ }
         dtLast = dt;
-        dt = new DateTime(zone);
+        dt = DateTimes.nowUtc();
         i++;
       }
     }
@@ -254,7 +256,7 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
 
   private String getRouterURL()
   {
-    return String.format(
+    return StringUtils.format(
         "%s/druid/v2?pretty",
         config.getRouterUrl()
     );

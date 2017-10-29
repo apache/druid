@@ -26,8 +26,9 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import io.druid.segment.incremental.TimeAndDimsHolder;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
@@ -86,31 +87,44 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 
   @Override
   public DimensionSelector makeDimensionSelector(
-      DimensionSpec spec, IncrementalIndexStorageAdapter.EntryHolder currEntry, IncrementalIndex.DimensionDesc desc
+      DimensionSpec spec,
+      TimeAndDimsHolder currEntry,
+      IncrementalIndex.DimensionDesc desc
   )
   {
-    return new LongWrappingDimensionSelector(
-        makeLongColumnSelector(currEntry, desc),
-        spec.getExtractionFn()
-    );
+    return new LongWrappingDimensionSelector(makeColumnValueSelector(currEntry, desc), spec.getExtractionFn());
   }
 
   @Override
-  public LongColumnSelector makeLongColumnSelector(
-      final IncrementalIndexStorageAdapter.EntryHolder currEntry,
-      final IncrementalIndex.DimensionDesc desc
+  public ColumnValueSelector<?> makeColumnValueSelector(
+      TimeAndDimsHolder currEntry,
+      IncrementalIndex.DimensionDesc desc
   )
   {
     final int dimIndex = desc.getIndex();
     class IndexerLongColumnSelector implements LongColumnSelector
     {
       @Override
-      public long get()
+      public long getLong()
       {
         final Object[] dims = currEntry.getKey().getDims();
 
         if (dimIndex >= dims.length) {
           return 0L;
+        }
+
+        return (Long) dims[dimIndex];
+      }
+
+      @SuppressWarnings("deprecation")
+      @Nullable
+      @Override
+      public Long getObject()
+      {
+        final Object[] dims = currEntry.getKey().getDims();
+
+        if (dimIndex >= dims.length) {
+          return null;
         }
 
         return (Long) dims[dimIndex];
@@ -127,85 +141,21 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   }
 
   @Override
-  public FloatColumnSelector makeFloatColumnSelector(
-      final IncrementalIndexStorageAdapter.EntryHolder currEntry,
-      final IncrementalIndex.DimensionDesc desc
-  )
+  public int compareUnsortedEncodedKeyComponents(@Nullable Long lhs, @Nullable Long rhs)
   {
-    final int dimIndex = desc.getIndex();
-    class IndexerFloatColumnSelector implements FloatColumnSelector
-    {
-      @Override
-      public float get()
-      {
-        final Object[] dims = currEntry.getKey().getDims();
-
-        if (dimIndex >= dims.length) {
-          return 0.0f;
-        }
-
-        long longVal = (Long) dims[dimIndex];
-        return (float) longVal;
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        // nothing to inspect
-      }
-    }
-
-    return new IndexerFloatColumnSelector();
+    return DimensionHandlerUtils.nullToZero(lhs).compareTo(DimensionHandlerUtils.nullToZero(rhs));
   }
 
   @Override
-  public ObjectColumnSelector makeObjectColumnSelector(
-      final DimensionSpec spec,
-      final IncrementalIndexStorageAdapter.EntryHolder currEntry,
-      final IncrementalIndex.DimensionDesc desc
-  )
+  public boolean checkUnsortedEncodedKeyComponentsEqual(@Nullable Long lhs, @Nullable Long rhs)
   {
-    final int dimIndex = desc.getIndex();
-    class IndexerObjectColumnSelector implements ObjectColumnSelector
-    {
-      @Override
-      public Class classOfObject()
-      {
-        return Long.class;
-      }
-
-      @Override
-      public Object get()
-      {
-        final Object[] dims = currEntry.getKey().getDims();
-
-        if (dimIndex >= dims.length) {
-          return 0L;
-        }
-
-        return dims[dimIndex];
-      }
-    }
-
-    return new IndexerObjectColumnSelector();
+    return DimensionHandlerUtils.nullToZero(lhs).equals(DimensionHandlerUtils.nullToZero(rhs));
   }
 
   @Override
-  public int compareUnsortedEncodedKeyComponents(Long lhs, Long rhs)
+  public int getUnsortedEncodedKeyComponentHashCode(@Nullable Long key)
   {
-    return lhs.compareTo(rhs);
-  }
-
-  @Override
-  public boolean checkUnsortedEncodedKeyComponentsEqual(Long lhs, Long rhs)
-  {
-    return lhs.equals(rhs);
-  }
-
-  @Override
-  public int getUnsortedEncodedKeyComponentHashCode(Long key)
-  {
-    return key.hashCode();
+    return DimensionHandlerUtils.nullToZero(key).hashCode();
   }
 
   @Override

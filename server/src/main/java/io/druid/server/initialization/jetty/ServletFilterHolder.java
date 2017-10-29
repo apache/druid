@@ -19,6 +19,8 @@
 
 package io.druid.server.initialization.jetty;
 
+import io.druid.guice.annotations.ExtensionPoint;
+
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
 import java.util.EnumSet;
@@ -33,7 +35,9 @@ import java.util.Map;
  * Note that some of the druid nodes (router for example) use async servlets and your filter
  * implementation should be able to handle those requests properly.
  */
-public interface ServletFilterHolder {
+@ExtensionPoint
+public interface ServletFilterHolder
+{
 
   /**
    * Get the Filter object that should be added to the servlet.
@@ -43,7 +47,7 @@ public interface ServletFilterHolder {
    *
    * @return The Filter object to be added to the servlet
    */
-  public Filter getFilter();
+  Filter getFilter();
 
   /**
    * Get the class of the Filter object that should be added to the servlet.
@@ -53,7 +57,7 @@ public interface ServletFilterHolder {
    *
    * @return The class of the Filter object to be added to the servlet
    */
-  public Class<? extends Filter> getFilterClass();
+  Class<? extends Filter> getFilterClass();
 
   /**
    * Get Filter initialization parameters.
@@ -61,19 +65,19 @@ public interface ServletFilterHolder {
    * @return a map containing all the Filter initialization
    * parameters 
    */
-  public Map<String,String> getInitParameters();
+  Map<String, String> getInitParameters();
 
   /**
    * The path that this Filter should apply to
    *
    * @return the path that this Filter should apply to
    */
-  public String getPath();
+  String getPath();
 
   /**
    * The dispatcher type that this Filter should apply to
    *
    * @return the enumeration of DispatcherTypes that this Filter should apply to
    */
-  public EnumSet<DispatcherType> getDispatcherType();
+  EnumSet<DispatcherType> getDispatcherType();
 }

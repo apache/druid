@@ -21,11 +21,14 @@ package io.druid.java.util.common.parsers;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import io.druid.java.util.common.StringUtils;
 
+import java.nio.charset.CharsetEncoder;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -41,8 +44,39 @@ import java.util.Set;
  * we touch java-util.
  */
 @Deprecated
-public class JSONToLowerParser extends JSONParser
+public class JSONToLowerParser implements Parser<String, Object>
 {
+  private static final Function<JsonNode, Object> valueFunction = new Function<JsonNode, Object>()
+  {
+    @Override
+    public Object apply(JsonNode node)
+    {
+      if (node == null || node.isMissingNode() || node.isNull()) {
+        return null;
+      }
+      if (node.isIntegralNumber()) {
+        if (node.canConvertToLong()) {
+          return node.asLong();
+        } else {
+          return node.asDouble();
+        }
+      }
+      if (node.isFloatingPointNumber()) {
+        return node.asDouble();
+      }
+      final String s = node.asText();
+      final CharsetEncoder enc = Charsets.UTF_8.newEncoder();
+      if (s != null && !enc.canEncode(s)) {
+        // Some whacky characters are in this string (e.g. \uD900). These are problematic because they are decodeable
+        // by new String(...) but will not encode into the same character. This dance here will replace these
+        // characters with something more sane.
+        return StringUtils.fromUtf8(StringUtils.toUtf8(s));
+      } else {
+        return s;
+      }
+    }
+  };
+
   private final ObjectMapper objectMapper;
   private final Set<String> exclude;
 
@@ -52,24 +86,26 @@ public class JSONToLowerParser extends JSONParser
       ObjectMapper objectMapper, Iterable<String> fieldNames, Iterable<String> exclude
   )
   {
-    super(objectMapper, fieldNames, exclude);
     this.objectMapper = objectMapper;
     if (fieldNames != null) {
       setFieldNames(fieldNames);
     }
-    this.exclude = exclude != null ? Sets.newHashSet(
-        Iterables.transform(
-            exclude,
-            new Function<String, String>()
-            {
-              @Override
-              public String apply(String input)
-              {
-                return input.toLowerCase();
-              }
-            }
-        )
-    ) : Sets.<String>newHashSet();
+    this.exclude = exclude != null
+                   ? Sets.newHashSet(Iterables.transform(exclude, StringUtils::toLowerCase))
+                   : Sets.newHashSet();
+  }
+
+  @Override
+  public List<String> getFieldNames()
+  {
+    return fieldNames;
+  }
+
+  @Override
+  public void setFieldNames(Iterable<String> fieldNames)
+  {
+    ParserUtils.validateFields(fieldNames);
+    this.fieldNames = Lists.newArrayList(fieldNames);
   }
 
   @Override
@@ -84,7 +120,7 @@ public class JSONToLowerParser extends JSONParser
       while (keysIter.hasNext()) {
         String key = keysIter.next();
 
-        if (exclude.contains(key.toLowerCase())) {
+        if (exclude.contains(StringUtils.toLowerCase(key))) {
           continue;
         }
 
@@ -98,11 +134,11 @@ public class JSONToLowerParser extends JSONParser
               nodeValue.add(subnodeValue);
             }
           }
-          map.put(key.toLowerCase(), nodeValue); // difference from JSONParser parse()
+          map.put(StringUtils.toLowerCase(key), nodeValue); // difference from JSONParser parse()
         } else {
           final Object nodeValue = valueFunction.apply(node);
           if (nodeValue != null) {
-            map.put(key.toLowerCase(), nodeValue); // difference from JSONParser parse()
+            map.put(StringUtils.toLowerCase(key), nodeValue); // difference from JSONParser parse()
           }
         }
       }

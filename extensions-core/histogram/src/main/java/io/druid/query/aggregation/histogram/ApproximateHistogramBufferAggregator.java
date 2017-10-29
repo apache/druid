@@ -21,18 +21,23 @@ package io.druid.query.aggregation.histogram;
 
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.BaseFloatColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
 public class ApproximateHistogramBufferAggregator implements BufferAggregator
 {
-  private final FloatColumnSelector selector;
+  private final BaseFloatColumnValueSelector selector;
   private final int resolution;
   private final float lowerLimit;
   private final float upperLimit;
 
-  public ApproximateHistogramBufferAggregator(FloatColumnSelector selector, int resolution, float lowerLimit, float upperLimit)
+  public ApproximateHistogramBufferAggregator(
+      BaseFloatColumnValueSelector selector,
+      int resolution,
+      float lowerLimit,
+      float upperLimit
+  )
   {
     this.selector = selector;
     this.resolution = resolution;
@@ -68,7 +73,7 @@ public class ApproximateHistogramBufferAggregator implements BufferAggregator
     mutationBuffer.position(position);
 
     ApproximateHistogram h0 = ApproximateHistogram.fromBytesDense(mutationBuffer);
-    h0.offer(selector.get());
+    h0.offer(selector.getFloat());
 
     mutationBuffer.position(position);
     h0.toBytesDense(mutationBuffer);
@@ -93,6 +98,12 @@ public class ApproximateHistogramBufferAggregator implements BufferAggregator
   public long getLong(ByteBuffer buf, int position)
   {
     throw new UnsupportedOperationException("ApproximateHistogramBufferAggregator does not support getLong()");
+  }
+
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("ApproximateHistogramBufferAggregator does not support getDouble()");
   }
 
   @Override

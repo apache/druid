@@ -22,35 +22,69 @@ package io.druid.server.security;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.List;
+
 public class AuthConfig
 {
   /**
-   * Use this String as the attribute name for the request attribute to pass {@link AuthorizationInfo}
-   * from the servlet filter to the jersey resource
-   * */
-  public static final String DRUID_AUTH_TOKEN = "Druid-Auth-Token";
+   * HTTP attribute that holds an AuthenticationResult, with info about a successful authentication check.
+   */
+  public static final String DRUID_AUTHENTICATION_RESULT = "Druid-Authentication-Result";
 
-  public AuthConfig() {
-    this(false);
+  /**
+   * HTTP attribute set when a static method in AuthorizationUtils performs an authorization check on the request.
+   */
+  public static final String DRUID_AUTHORIZATION_CHECKED = "Druid-Authorization-Checked";
+
+  public AuthConfig()
+  {
+    this(null, null, null);
   }
 
   @JsonCreator
   public AuthConfig(
-      @JsonProperty("enabled") boolean enabled
-  ){
-    this.enabled = enabled;
-  }
-  /**
-   * If druid.auth.enabled is set to true then an implementation of AuthorizationInfo
-   * must be provided and it must be set as a request attribute possibly inside the servlet filter
-   * injected in the filter chain using your own extension
-   * */
-  @JsonProperty
-  private final boolean enabled;
-
-  public boolean isEnabled()
+      @JsonProperty("authenticatorChain") List<String> authenticationChain,
+      @JsonProperty("escalatedAuthenticator") String escalatedAuthenticator,
+      @JsonProperty("authorizers") List<String> authorizers
+  )
   {
-    return enabled;
+    this.authenticatorChain = authenticationChain;
+    this.escalatedAuthenticator = escalatedAuthenticator == null ? "allowAll" : escalatedAuthenticator;
+    this.authorizers = authorizers;
+  }
+
+  @JsonProperty
+  private final List<String> authenticatorChain;
+
+  @JsonProperty
+  private final String escalatedAuthenticator;
+
+  @JsonProperty
+  private List<String> authorizers;
+
+  public List<String> getAuthenticatorChain()
+  {
+    return authenticatorChain;
+  }
+
+  public String getEscalatedAuthenticator()
+  {
+    return escalatedAuthenticator;
+  }
+
+  public List<String> getAuthorizers()
+  {
+    return authorizers;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "AuthConfig{" +
+           "authenticatorChain='" + authenticatorChain + '\'' +
+           ", escalatedAuthenticator='" + escalatedAuthenticator + '\'' +
+           ", authorizers='" + authorizers + '\'' +
+           '}';
   }
 
   @Override
@@ -65,21 +99,26 @@ public class AuthConfig
 
     AuthConfig that = (AuthConfig) o;
 
-    return enabled == that.enabled;
+    if (getAuthenticatorChain() != null
+        ? !getAuthenticatorChain().equals(that.getAuthenticatorChain())
+        : that.getAuthenticatorChain() != null) {
+      return false;
+    }
+    if (getEscalatedAuthenticator() != null
+        ? !getEscalatedAuthenticator().equals(that.getEscalatedAuthenticator())
+        : that.getEscalatedAuthenticator() != null) {
+      return false;
+    }
+    return getAuthorizers() != null ? getAuthorizers().equals(that.getAuthorizers()) : that.getAuthorizers() == null;
 
   }
 
   @Override
   public int hashCode()
   {
-    return (enabled ? 1 : 0);
-  }
-
-  @Override
-  public String toString()
-  {
-    return "AuthConfig{" +
-           "enabled=" + enabled +
-           '}';
+    int result = getAuthenticatorChain() != null ? getAuthenticatorChain().hashCode() : 0;
+    result = 31 * result + (getEscalatedAuthenticator() != null ? getEscalatedAuthenticator().hashCode() : 0);
+    result = 31 * result + (getAuthorizers() != null ? getAuthorizers().hashCode() : 0);
+    return result;
   }
 }

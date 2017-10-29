@@ -20,7 +20,6 @@
 package io.druid.indexing.worker.executor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import io.druid.java.util.common.ISE;
 
 import javax.validation.constraints.NotNull;
@@ -43,6 +42,22 @@ public class ExecutorLifecycleConfig
   @JsonProperty
   @Pattern(regexp = "\\{stdin\\}")
   private String parentStreamName = "stdin";
+  @JsonProperty
+  private boolean parentStreamDefined = true;
+
+  /**
+   * Should parent stream be monitored.
+   */
+  public boolean isParentStreamDefined()
+  {
+    return parentStreamDefined;
+  }
+
+  public ExecutorLifecycleConfig setParentStreamDefined(boolean parentStreamDefined)
+  {
+    this.parentStreamDefined = parentStreamDefined;
+    return this;
+  }
 
   public File getTaskFile()
   {
@@ -79,11 +94,10 @@ public class ExecutorLifecycleConfig
 
   public InputStream getParentStream()
   {
-   if ("stdin".equals(parentStreamName)) {
-     return System.in;
-   }
-   else {
-     throw new ISE("Unknown stream name[%s]", parentStreamName);
-   }
+    if ("stdin".equals(parentStreamName)) {
+      return System.in;
+    } else {
+      throw new ISE("Unknown stream name[%s]", parentStreamName);
+    }
   }
 }

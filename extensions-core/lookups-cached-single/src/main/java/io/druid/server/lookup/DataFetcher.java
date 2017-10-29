@@ -47,7 +47,7 @@ public interface DataFetcher<K, V>
    *
    * @return Returns an {@link Iterable} of key-value pairs.
    */
-  Iterable<Map.Entry<K,V>> fetchAll();
+  Iterable<Map.Entry<K, V>> fetchAll();
 
   /**
    * Function to perform a one item lookup.
@@ -66,7 +66,7 @@ public interface DataFetcher<K, V>
    *
    * @return Returns a {@link Iterable} containing the pair of existing key-value.
    */
-  Iterable<Map.Entry<K,V>> fetch(Iterable<K> keys);
+  Iterable<Map.Entry<K, V>> fetch(Iterable<K> keys);
 
   /**
    * Function used to perform reverse lookup

@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
+import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.StringUtils;
@@ -51,6 +52,7 @@ public class SelectorDimFilter implements DimFilter
 
   private DruidLongPredicate longPredicate;
   private DruidFloatPredicate floatPredicate;
+  private DruidDoublePredicate druidDoublePredicate;
 
   @JsonCreator
   public SelectorDimFilter(
@@ -118,6 +120,13 @@ public class SelectorDimFilter implements DimFilter
           initFloatPredicate();
           return floatPredicate;
         }
+
+        @Override
+        public DruidDoublePredicate makeDoublePredicate()
+        {
+          initDoublePredicate();
+          return druidDoublePredicate;
+        }
       };
       return new DimensionPredicateFilter(dimension, predicateFactory, extractionFn);
     }
@@ -145,9 +154,9 @@ public class SelectorDimFilter implements DimFilter
   public String toString()
   {
     if (extractionFn != null) {
-      return String.format("%s(%s) = %s", extractionFn, dimension, value);
+      return StringUtils.format("%s(%s) = %s", extractionFn, dimension, value);
     } else {
-      return String.format("%s = %s", dimension, value);
+      return StringUtils.format("%s = %s", dimension, value);
     }
   }
 
@@ -208,14 +217,7 @@ public class SelectorDimFilter implements DimFilter
       } else {
         // store the primitive, so we don't unbox for every comparison
         final long unboxedLong = valueAsLong.longValue();
-        longPredicate =  new DruidLongPredicate()
-        {
-          @Override
-          public boolean applyLong(long input)
-          {
-            return input == unboxedLong;
-          }
-        };
+        longPredicate = input -> input == unboxedLong;
       }
     }
   }
@@ -235,14 +237,27 @@ public class SelectorDimFilter implements DimFilter
         floatPredicate = DruidFloatPredicate.ALWAYS_FALSE;
       } else {
         final int floatBits = Float.floatToIntBits(valueAsFloat);
-        floatPredicate = new DruidFloatPredicate()
-        {
-          @Override
-          public boolean applyFloat(float input)
-          {
-            return Float.floatToIntBits(input) == floatBits;
-          }
-        };
+        floatPredicate = input -> Float.floatToIntBits(input) == floatBits;
+      }
+    }
+  }
+
+  private void initDoublePredicate()
+  {
+    if (druidDoublePredicate != null) {
+      return;
+    }
+    synchronized (initLock) {
+      if (druidDoublePredicate != null) {
+        return;
+      }
+      final Double aDouble = Doubles.tryParse(value);
+
+      if (aDouble == null) {
+        druidDoublePredicate = DruidDoublePredicate.ALWAYS_FALSE;
+      } else {
+        final long bits = Double.doubleToLongBits(aDouble);
+        druidDoublePredicate = input -> Double.doubleToLongBits(input) == bits;
       }
     }
   }

@@ -20,6 +20,7 @@
 package io.druid.client.indexing;
 
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.DateTimes;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
@@ -32,12 +33,13 @@ import java.util.List;
 public class ClientMergeQueryTest
 {
   private static final String DATA_SOURCE = "data_source";
-  private static final Interval INTERVAL = new Interval(new DateTime(), new DateTime().plus(1));
-  private static final DataSegment DATA_SEGMENT = new DataSegment(DATA_SOURCE, INTERVAL, new DateTime().toString(), null,
+  public static final DateTime START = DateTimes.nowUtc();
+  private static final Interval INTERVAL = new Interval(START, START.plus(1));
+  private static final DataSegment DATA_SEGMENT = new DataSegment(DATA_SOURCE, INTERVAL, START.toString(), null,
       null, null, null, 0, 0);
   private static final List<DataSegment> SEGMENT_LIST = Lists.newArrayList(DATA_SEGMENT);
   private static final List<AggregatorFactory> AGGREGATOR_LIST = Lists.newArrayList();
-  private static final ClientMergeQuery CLIENT_MERGE_QUERY = new ClientMergeQuery(DATA_SOURCE,SEGMENT_LIST,AGGREGATOR_LIST);;
+  private static final ClientMergeQuery CLIENT_MERGE_QUERY = new ClientMergeQuery(DATA_SOURCE, SEGMENT_LIST, AGGREGATOR_LIST);;
 
   @Test
   public void testGetType()

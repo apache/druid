@@ -19,24 +19,23 @@
 
 package io.druid.query.aggregation;
 
-import com.google.common.collect.Lists;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.BaseObjectColumnValueSelector;
 
 import java.nio.ByteBuffer;
 import java.util.List;
 
 public class JavaScriptBufferAggregator implements BufferAggregator
 {
-  private final ObjectColumnSelector[] selectorList;
+  private final BaseObjectColumnValueSelector[] selectorList;
   private final JavaScriptAggregator.ScriptAggregator script;
 
   public JavaScriptBufferAggregator(
-      List<ObjectColumnSelector> selectorList,
+      List<BaseObjectColumnValueSelector> selectorList,
       JavaScriptAggregator.ScriptAggregator script
   )
   {
-    this.selectorList = Lists.newArrayList(selectorList).toArray(new ObjectColumnSelector[]{});
+    this.selectorList = selectorList.toArray(new BaseObjectColumnValueSelector[]{});
     this.script = script;
   }
 
@@ -61,7 +60,7 @@ public class JavaScriptBufferAggregator implements BufferAggregator
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    return (float)buf.getDouble(position);
+    return (float) buf.getDouble(position);
   }
 
 
@@ -72,7 +71,14 @@ public class JavaScriptBufferAggregator implements BufferAggregator
   }
 
   @Override
-  public void close() {
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return buf.getDouble(position);
+  }
+
+  @Override
+  public void close()
+  {
     script.close();
   }
 

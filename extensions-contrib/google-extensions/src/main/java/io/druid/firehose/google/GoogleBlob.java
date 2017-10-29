@@ -22,23 +22,29 @@ package io.druid.firehose.google;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class GoogleBlob {
+import java.util.Objects;
+
+public class GoogleBlob
+{
   private final String bucket;
   private final String path;
 
   @JsonCreator
-  public GoogleBlob(@JsonProperty("bucket") String bucket, @JsonProperty("path") String path) {
+  public GoogleBlob(@JsonProperty("bucket") String bucket, @JsonProperty("path") String path)
+  {
     this.bucket = bucket;
     this.path = path;
   }
 
   @JsonProperty
-  public String getBucket() {
+  public String getBucket()
+  {
     return bucket;
   }
 
   @JsonProperty
-  public String getPath() {
+  public String getPath()
+  {
     return path;
   }
 
@@ -49,6 +55,22 @@ public class GoogleBlob {
         + "bucket=" + bucket
         + ",path=" + path
         + "}";
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    final GoogleBlob that = (GoogleBlob) o;
+    return Objects.equals(bucket, that.bucket) &&
+           Objects.equals(path, that.path);
   }
 }
 

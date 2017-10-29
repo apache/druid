@@ -19,13 +19,22 @@
 
 package io.druid.cli;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.servlet.GuiceFilter;
+import io.druid.guice.annotations.Json;
 import io.druid.guice.http.DruidHttpClientConfig;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.server.AsyncQueryForwardingServlet;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
+import io.druid.server.router.Router;
+import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthenticationUtils;
+import io.druid.server.security.Authenticator;
+import io.druid.server.security.AuthenticatorMapper;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -33,16 +42,20 @@ import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
+import java.util.List;
+
 /**
  */
 public class RouterJettyServerInitializer implements JettyServerInitializer
 {
+  private static Logger log = new Logger(RouterJettyServerInitializer.class);
+
   private final AsyncQueryForwardingServlet asyncQueryForwardingServlet;
   private final DruidHttpClientConfig httpClientConfig;
 
   @Inject
   public RouterJettyServerInitializer(
-      DruidHttpClientConfig httpClientConfig,
+      @Router DruidHttpClientConfig httpClientConfig,
       AsyncQueryForwardingServlet asyncQueryForwardingServlet
   )
   {
@@ -62,10 +75,35 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
     //NOTE: explicit maxThreads to workaround https://tickets.puppetlabs.com/browse/TK-152
     sh.setInitParameter("maxThreads", Integer.toString(httpClientConfig.getNumMaxThreads()));
 
+    //Needs to be set in servlet config or else overridden to default value in AbstractProxyServlet.createHttpClient()
+    sh.setInitParameter("maxConnections", Integer.toString(httpClientConfig.getNumConnections()));
+    sh.setInitParameter("idleTimeout", Long.toString(httpClientConfig.getReadTimeout().getMillis()));
+    sh.setInitParameter("timeout", Long.toString(httpClientConfig.getReadTimeout().getMillis()));
+
     root.addServlet(sh, "/druid/v2/*");
+
+    final AuthConfig authConfig = injector.getInstance(AuthConfig.class);
+    final ObjectMapper jsonMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
+    final AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
+
+    List<Authenticator> authenticators = null;
+    AuthenticationUtils.addSecuritySanityCheckFilter(root, jsonMapper);
+    authenticators = authenticatorMapper.getAuthenticatorChain();
+    AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
+
     JettyServerInitUtils.addExtensionFilters(root, injector);
+
+    // Check that requests were authorized before sending responses
+    AuthenticationUtils.addPreResponseAuthorizationCheckFilter(
+        root,
+        authenticators,
+        jsonMapper
+    );
+
+
     // Can't use '/*' here because of Guice conflicts with AsyncQueryForwardingServlet path
     root.addFilter(GuiceFilter.class, "/status/*", null);
+    root.addFilter(GuiceFilter.class, "/druid/router/*", null);
 
     final HandlerList handlerList = new HandlerList();
     handlerList.setHandlers(

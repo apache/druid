@@ -21,16 +21,20 @@ package io.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicates;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
-
+import com.metamx.http.client.HttpClient;
 import io.airlift.airline.Command;
 import io.druid.audit.AuditManager;
 import io.druid.client.CoordinatorServerView;
+import io.druid.client.coordinator.Coordinator;
 import io.druid.client.indexing.IndexingServiceClient;
+import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.ConditionalMultibind;
 import io.druid.guice.ConfigProvider;
 import io.druid.guice.Jerseys;
@@ -39,6 +43,7 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.CoordinatorIndexingServiceHelper;
+import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataRuleManager;
@@ -58,6 +63,7 @@ import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
 import io.druid.server.coordinator.helper.DruidCoordinatorVersionConverter;
+import io.druid.server.http.ClusterResource;
 import io.druid.server.http.CoordinatorDynamicConfigsResource;
 import io.druid.server.http.CoordinatorRedirectInfo;
 import io.druid.server.http.CoordinatorResource;
@@ -70,8 +76,8 @@ import io.druid.server.http.RedirectInfo;
 import io.druid.server.http.RulesResource;
 import io.druid.server.http.ServersResource;
 import io.druid.server.http.TiersResource;
+import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
-import io.druid.server.listener.announcer.ListenerDiscoverer;
 import io.druid.server.lookup.cache.LookupCoordinatorManager;
 import io.druid.server.lookup.cache.LookupCoordinatorManagerConfig;
 import io.druid.server.router.TieredBrokerConfig;
@@ -127,6 +133,7 @@ public class CliCoordinator extends ServerRunnable
                   .annotatedWith(Names.named("serviceName"))
                   .to(TieredBrokerConfig.DEFAULT_COORDINATOR_SERVICE_NAME);
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8081);
+            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8281);
 
             ConfigProvider.bind(binder, DruidCoordinatorConfig.class);
 
@@ -163,9 +170,6 @@ public class CliCoordinator extends ServerRunnable
             binder.bind(LookupCoordinatorManager.class).in(LazySingleton.class);
             binder.bind(DruidCoordinator.class);
 
-            binder.bind(ListenerDiscoverer.class).in(ManageLifecycle.class);
-
-            LifecycleModule.register(binder, ListenerDiscoverer.class);
             LifecycleModule.register(binder, MetadataStorage.class);
             LifecycleModule.register(binder, DruidCoordinator.class);
 
@@ -181,6 +185,7 @@ public class CliCoordinator extends ServerRunnable
             Jerseys.addResource(binder, MetadataResource.class);
             Jerseys.addResource(binder, IntervalsResource.class);
             Jerseys.addResource(binder, LookupCoordinatorResource.class);
+            Jerseys.addResource(binder, ClusterResource.class);
 
             LifecycleModule.register(binder, Server.class);
             LifecycleModule.register(binder, DatasourcesResource.class);
@@ -203,6 +208,14 @@ public class CliCoordinator extends ServerRunnable
                 Predicates.equalTo("true"),
                 DruidCoordinatorSegmentKiller.class
             );
+
+            binder.bind(DiscoverySideEffectsProvider.Child.class).annotatedWith(Coordinator.class).toProvider(
+                new DiscoverySideEffectsProvider(
+                    DruidNodeDiscoveryProvider.NODE_TYPE_COORDINATOR,
+                    ImmutableList.of()
+                )
+            ).in(LazySingleton.class);
+            LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class, Coordinator.class));
           }
 
           @Provides
@@ -211,12 +224,14 @@ public class CliCoordinator extends ServerRunnable
               CuratorFramework curator,
               ObjectMapper jsonMapper,
               ScheduledExecutorFactory factory,
-              DruidCoordinatorConfig config
+              DruidCoordinatorConfig config,
+              @Global HttpClient httpClient,
+              ZkPathsConfig zkPaths
           )
           {
             return new LoadQueueTaskMaster(
                 curator, jsonMapper, factory.create(1, "Master-PeonExec--%d"),
-                Executors.newSingleThreadExecutor(), config
+                Executors.newSingleThreadExecutor(), config, httpClient, zkPaths
             );
           }
         }

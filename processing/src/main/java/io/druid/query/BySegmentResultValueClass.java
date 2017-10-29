@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.Interval;
 
 import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -62,6 +64,12 @@ public class BySegmentResultValueClass<T> implements BySegmentResultValue<T>
   public Interval getInterval()
   {
     return interval;
+  }
+
+  public <U> BySegmentResultValueClass<U> mapResults(Function<? super T, ? extends U> mapper)
+  {
+    List<U> mappedResults = results.stream().map(mapper).collect(Collectors.toList());
+    return new BySegmentResultValueClass<>(mappedResults, segmentId, interval);
   }
 
   @Override

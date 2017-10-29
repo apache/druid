@@ -24,8 +24,9 @@ import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -42,11 +43,11 @@ public class ArbitraryGranularityTest
     final GranularitySpec spec = new ArbitraryGranularitySpec(
         null,
         Lists.newArrayList(
-            new Interval("2012-01-08T00Z/2012-01-11T00Z"),
-            new Interval("2012-02-01T00Z/2012-03-01T00Z"),
-            new Interval("2012-01-07T00Z/2012-01-08T00Z"),
-            new Interval("2012-01-03T00Z/2012-01-04T00Z"),
-            new Interval("2012-01-01T00Z/2012-01-03T00Z")
+            Intervals.of("2012-01-08T00Z/2012-01-11T00Z"),
+            Intervals.of("2012-02-01T00Z/2012-03-01T00Z"),
+            Intervals.of("2012-01-07T00Z/2012-01-08T00Z"),
+            Intervals.of("2012-01-03T00Z/2012-01-04T00Z"),
+            Intervals.of("2012-01-01T00Z/2012-01-03T00Z")
         ));
     Assert.assertNotNull(spec.getQueryGranularity());
   }
@@ -57,66 +58,66 @@ public class ArbitraryGranularityTest
     final GranularitySpec spec = new ArbitraryGranularitySpec(
         Granularities.NONE,
         Lists.newArrayList(
-        new Interval("2012-01-08T00Z/2012-01-11T00Z"),
-        new Interval("2012-02-01T00Z/2012-03-01T00Z"),
-        new Interval("2012-01-07T00Z/2012-01-08T00Z"),
-        new Interval("2012-01-03T00Z/2012-01-04T00Z"),
-        new Interval("2012-01-01T00Z/2012-01-03T00Z")
+        Intervals.of("2012-01-08T00Z/2012-01-11T00Z"),
+        Intervals.of("2012-02-01T00Z/2012-03-01T00Z"),
+        Intervals.of("2012-01-07T00Z/2012-01-08T00Z"),
+        Intervals.of("2012-01-03T00Z/2012-01-04T00Z"),
+        Intervals.of("2012-01-01T00Z/2012-01-03T00Z")
     ));
 
     Assert.assertTrue(spec.isRollup());
 
     Assert.assertEquals(
         Lists.newArrayList(
-            new Interval("2012-01-01T00Z/2012-01-03T00Z"),
-            new Interval("2012-01-03T00Z/2012-01-04T00Z"),
-            new Interval("2012-01-07T00Z/2012-01-08T00Z"),
-            new Interval("2012-01-08T00Z/2012-01-11T00Z"),
-            new Interval("2012-02-01T00Z/2012-03-01T00Z")
+            Intervals.of("2012-01-01T00Z/2012-01-03T00Z"),
+            Intervals.of("2012-01-03T00Z/2012-01-04T00Z"),
+            Intervals.of("2012-01-07T00Z/2012-01-08T00Z"),
+            Intervals.of("2012-01-08T00Z/2012-01-11T00Z"),
+            Intervals.of("2012-02-01T00Z/2012-03-01T00Z")
         ),
         Lists.newArrayList(spec.bucketIntervals().get())
     );
 
     Assert.assertEquals(
         "2012-01-03T00Z",
-        Optional.of(new Interval("2012-01-03T00Z/2012-01-04T00Z")),
-        spec.bucketInterval(new DateTime("2012-01-03T00Z"))
+        Optional.of(Intervals.of("2012-01-03T00Z/2012-01-04T00Z")),
+        spec.bucketInterval(DateTimes.of("2012-01-03T00Z"))
     );
 
     Assert.assertEquals(
         "2012-01-03T01Z",
-        Optional.of(new Interval("2012-01-03T00Z/2012-01-04T00Z")),
-        spec.bucketInterval(new DateTime("2012-01-03T01Z"))
+        Optional.of(Intervals.of("2012-01-03T00Z/2012-01-04T00Z")),
+        spec.bucketInterval(DateTimes.of("2012-01-03T01Z"))
     );
 
     Assert.assertEquals(
         "2012-01-04T01Z",
         Optional.<Interval>absent(),
-        spec.bucketInterval(new DateTime("2012-01-04T01Z"))
+        spec.bucketInterval(DateTimes.of("2012-01-04T01Z"))
     );
 
     Assert.assertEquals(
         "2012-01-07T23:59:59.999Z",
-        Optional.of(new Interval("2012-01-07T00Z/2012-01-08T00Z")),
-        spec.bucketInterval(new DateTime("2012-01-07T23:59:59.999Z"))
+        Optional.of(Intervals.of("2012-01-07T00Z/2012-01-08T00Z")),
+        spec.bucketInterval(DateTimes.of("2012-01-07T23:59:59.999Z"))
     );
 
     Assert.assertEquals(
         "2012-01-08T01Z",
-        Optional.of(new Interval("2012-01-08T00Z/2012-01-11T00Z")),
-        spec.bucketInterval(new DateTime("2012-01-08T01Z"))
+        Optional.of(Intervals.of("2012-01-08T00Z/2012-01-11T00Z")),
+        spec.bucketInterval(DateTimes.of("2012-01-08T01Z"))
     );
 
     Assert.assertEquals(
         "2012-01-04T00Z",
         Optional.absent(),
-        spec.bucketInterval(new DateTime("2012-01-04T00Z"))
+        spec.bucketInterval(DateTimes.of("2012-01-04T00Z"))
     );
 
     Assert.assertEquals(
         "2012-01-05T00Z",
         Optional.absent(),
-        spec.bucketInterval(new DateTime("2012-01-05T00Z"))
+        spec.bucketInterval(DateTimes.of("2012-01-05T00Z"))
     );
   }
 
@@ -124,15 +125,16 @@ public class ArbitraryGranularityTest
   public void testOverlapViolation()
   {
     List<Interval> intervals = Lists.newArrayList(
-        new Interval("2012-01-02T00Z/2012-01-04T00Z"),
-        new Interval("2012-01-07T00Z/2012-01-08T00Z"),
-        new Interval("2012-01-01T00Z/2012-01-03T00Z")
+        Intervals.of("2012-01-02T00Z/2012-01-04T00Z"),
+        Intervals.of("2012-01-07T00Z/2012-01-08T00Z"),
+        Intervals.of("2012-01-01T00Z/2012-01-03T00Z")
     );
 
     boolean thrown = false;
     try {
       final GranularitySpec spec = new ArbitraryGranularitySpec(Granularities.NONE, intervals);
-    } catch(IllegalArgumentException e) {
+    }
+    catch (IllegalArgumentException e) {
       thrown = true;
     }
 
@@ -143,11 +145,11 @@ public class ArbitraryGranularityTest
   public void testRollupSetting()
   {
     List<Interval> intervals = Lists.newArrayList(
-        new Interval("2012-01-08T00Z/2012-01-11T00Z"),
-        new Interval("2012-02-01T00Z/2012-03-01T00Z"),
-        new Interval("2012-01-07T00Z/2012-01-08T00Z"),
-        new Interval("2012-01-03T00Z/2012-01-04T00Z"),
-        new Interval("2012-01-01T00Z/2012-01-03T00Z")
+        Intervals.of("2012-01-08T00Z/2012-01-11T00Z"),
+        Intervals.of("2012-02-01T00Z/2012-03-01T00Z"),
+        Intervals.of("2012-01-07T00Z/2012-01-08T00Z"),
+        Intervals.of("2012-01-03T00Z/2012-01-04T00Z"),
+        Intervals.of("2012-01-01T00Z/2012-01-03T00Z")
     );
     final GranularitySpec spec = new ArbitraryGranularitySpec(Granularities.NONE, false, intervals);
 
@@ -158,14 +160,15 @@ public class ArbitraryGranularityTest
   public void testOverlapViolationSameStartInstant()
   {
     List<Interval> intervals = Lists.newArrayList(
-        new Interval("2012-01-03T00Z/2012-01-04T00Z"),
-        new Interval("2012-01-03T00Z/2012-01-05T00Z")
+        Intervals.of("2012-01-03T00Z/2012-01-04T00Z"),
+        Intervals.of("2012-01-03T00Z/2012-01-05T00Z")
     );
 
     boolean thrown = false;
     try {
       final GranularitySpec spec = new ArbitraryGranularitySpec(Granularities.NONE, intervals);
-    } catch(IllegalArgumentException e) {
+    }
+    catch (IllegalArgumentException e) {
       thrown = true;
     }
 
@@ -176,17 +179,18 @@ public class ArbitraryGranularityTest
   public void testJson()
   {
     final GranularitySpec spec = new ArbitraryGranularitySpec(Granularities.NONE, Lists.newArrayList(
-        new Interval("2012-01-08T00Z/2012-01-11T00Z"),
-        new Interval("2012-02-01T00Z/2012-03-01T00Z"),
-        new Interval("2012-01-07T00Z/2012-01-08T00Z"),
-        new Interval("2012-01-03T00Z/2012-01-04T00Z"),
-        new Interval("2012-01-01T00Z/2012-01-03T00Z")
+        Intervals.of("2012-01-08T00Z/2012-01-11T00Z"),
+        Intervals.of("2012-02-01T00Z/2012-03-01T00Z"),
+        Intervals.of("2012-01-07T00Z/2012-01-08T00Z"),
+        Intervals.of("2012-01-03T00Z/2012-01-04T00Z"),
+        Intervals.of("2012-01-01T00Z/2012-01-03T00Z")
     ));
 
     try {
       final GranularitySpec rtSpec = jsonMapper.readValue(jsonMapper.writeValueAsString(spec), GranularitySpec.class);
       Assert.assertEquals("Round-trip", spec.bucketIntervals(), rtSpec.bucketIntervals());
-    } catch(Exception e) {
+    }
+    catch (Exception e) {
       throw Throwables.propagate(e);
     }
   }

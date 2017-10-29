@@ -25,12 +25,13 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.metamx.common.logger.Logger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.InputRowParser;
+import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.common.StringUtils;
 import twitter4j.ConnectionLifeCycleListener;
 import twitter4j.GeoLocation;
 import twitter4j.HashtagEntity;
@@ -195,13 +196,13 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory<InputRowP
       @Override
       public void onException(Exception ex)
       {
-        ex.printStackTrace();
+        log.error(ex, "Got exception");
       }
 
       @Override
       public void onStallWarning(StallWarning warning)
       {
-        System.out.println("Got stall warning:" + warning);
+        log.warn("Got stall warning: %s", warning);
       }
     };
 
@@ -306,7 +307,7 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory<InputRowP
         long[] lcontrobutors = status.getContributors();
         List<String> contributors = new ArrayList<>();
         for (long contrib : lcontrobutors) {
-          contributors.add(String.format("%d", contrib));
+          contributors.add(StringUtils.format("%d", contrib));
         }
         theMap.put("contributors", contributors);
 
@@ -346,12 +347,12 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory<InputRowP
         theMap.put("lang", hasUser ? user.getLang() : "");
         theMap.put("utc_offset", hasUser ? user.getUtcOffset() : -1);  // resolution in seconds, -1 if not available?
         theMap.put("statuses_count", hasUser ? user.getStatusesCount() : 0);
-        theMap.put("user_id", hasUser ? String.format("%d", user.getId()) : "");
+        theMap.put("user_id", hasUser ? StringUtils.format("%d", user.getId()) : "");
         theMap.put("screen_name", hasUser ? user.getScreenName() : "");
         theMap.put("location", hasUser ? user.getLocation() : "");
         theMap.put("verified", hasUser ? user.isVerified() : "");
 
-        theMap.put("ts",status.getCreatedAt().getTime());
+        theMap.put("ts", status.getCreatedAt().getTime());
 
         List<String> dimensions = Lists.newArrayList(theMap.keySet());
 

@@ -19,20 +19,50 @@
 
 package io.druid.math.expr;
 
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.math.LongMath;
+import com.google.common.primitives.Ints;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.guava.Comparators;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Objects;
 
 /**
  */
 public interface Expr
 {
+  default boolean isLiteral()
+  {
+    // Overridden by things that are literals.
+    return false;
+  }
+
+  /**
+   * Returns the value of expr if expr is a literal, or throws an exception otherwise.
+   *
+   * @return expr's literal value
+   *
+   * @throws IllegalStateException if expr is not a literal
+   */
+  @Nullable
+  default Object getLiteralValue()
+  {
+    // Overridden by things that are literals.
+    throw new ISE("Not a literal");
+  }
+
+  @Nonnull
   ExprEval eval(ObjectBinding bindings);
 
   interface ObjectBinding
   {
-    Number get(String name);
+    @Nullable
+    Object get(String name);
   }
 
   void visit(Visitor visitor);
@@ -46,6 +76,12 @@ public interface Expr
 abstract class ConstantExpr implements Expr
 {
   @Override
+  public boolean isLiteral()
+  {
+    return true;
+  }
+
+  @Override
   public void visit(Visitor visitor)
   {
     visitor.visit(this);
@@ -58,7 +94,14 @@ class LongExpr extends ConstantExpr
 
   public LongExpr(Long value)
   {
-    this.value = value;
+    this.value = Preconditions.checkNotNull(value, "value");
+  }
+
+  @Nonnull
+  @Override
+  public Object getLiteralValue()
+  {
+    return value;
   }
 
   @Override
@@ -67,6 +110,7 @@ class LongExpr extends ConstantExpr
     return String.valueOf(value);
   }
 
+  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -80,7 +124,14 @@ class StringExpr extends ConstantExpr
 
   public StringExpr(String value)
   {
-    this.value = value;
+    this.value = Strings.emptyToNull(value);
+  }
+
+  @Nullable
+  @Override
+  public Object getLiteralValue()
+  {
+    return value;
   }
 
   @Override
@@ -89,6 +140,7 @@ class StringExpr extends ConstantExpr
     return value;
   }
 
+  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -102,7 +154,14 @@ class DoubleExpr extends ConstantExpr
 
   public DoubleExpr(Double value)
   {
-    this.value = value;
+    this.value = Preconditions.checkNotNull(value, "value");
+  }
+
+  @Nonnull
+  @Override
+  public Object getLiteralValue()
+  {
+    return value;
   }
 
   @Override
@@ -111,6 +170,7 @@ class DoubleExpr extends ConstantExpr
     return String.valueOf(value);
   }
 
+  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -133,6 +193,7 @@ class IdentifierExpr implements Expr
     return value;
   }
 
+  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -148,11 +209,13 @@ class IdentifierExpr implements Expr
 
 class FunctionExpr implements Expr
 {
+  final Function function;
   final String name;
   final List<Expr> args;
 
-  public FunctionExpr(String name, List<Expr> args)
+  public FunctionExpr(Function function, String name, List<Expr> args)
   {
+    this.function = function;
     this.name = name;
     this.args = args;
   }
@@ -163,10 +226,11 @@ class FunctionExpr implements Expr
     return "(" + name + " " + args + ")";
   }
 
+  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
-    return Parser.getFunction(name).apply(args, bindings);
+    return function.apply(args, bindings);
   }
 
   @Override
@@ -203,6 +267,7 @@ class UnaryMinusExpr extends UnaryExpr
     super(expr);
   }
 
+  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -237,6 +302,7 @@ class UnaryNotExpr extends UnaryExpr
     super(expr);
   }
 
+  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -290,24 +356,22 @@ abstract class BinaryEvalOpExprBase extends BinaryOpExprBase
     super(op, left, right);
   }
 
+  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
     ExprEval leftVal = left.eval(bindings);
     ExprEval rightVal = right.eval(bindings);
-    if (leftVal.isNull() || rightVal.isNull()) {
-      return ExprEval.of(null);
-    }
-    if (leftVal.type() == ExprType.STRING || rightVal.type() == ExprType.STRING) {
+    if (leftVal.type() == ExprType.STRING && rightVal.type() == ExprType.STRING) {
       return evalString(leftVal.asString(), rightVal.asString());
-    }
-    if (leftVal.type() == ExprType.LONG && rightVal.type() == ExprType.LONG) {
+    } else if (leftVal.type() == ExprType.LONG && rightVal.type() == ExprType.LONG) {
       return ExprEval.of(evalLong(leftVal.asLong(), rightVal.asLong()));
+    } else {
+      return ExprEval.of(evalDouble(leftVal.asDouble(), rightVal.asDouble()));
     }
-    return ExprEval.of(evalDouble(leftVal.asDouble(), rightVal.asDouble()));
   }
 
-  protected ExprEval evalString(String left, String right)
+  protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
     throw new IllegalArgumentException("unsupported type " + ExprType.STRING);
   }
@@ -347,7 +411,7 @@ class BinPowExpr extends BinaryEvalOpExprBase
   @Override
   protected final long evalLong(long left, long right)
   {
-    return LongMath.pow(left, (int)right);
+    return LongMath.pow(left, Ints.checkedCast(right));
   }
 
   @Override
@@ -425,9 +489,9 @@ class BinPlusExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  protected ExprEval evalString(String left, String right)
+  protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
-    return ExprEval.of(left + right);
+    return ExprEval.of(Strings.nullToEmpty(left) + Strings.nullToEmpty(right));
   }
 
   @Override
@@ -451,9 +515,9 @@ class BinLtExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  protected ExprEval evalString(String left, String right)
+  protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
-    return ExprEval.of(left.compareTo(right) < 0, ExprType.LONG);
+    return ExprEval.of(Comparators.<String>naturalNullsFirst().compare(left, right) < 0, ExprType.LONG);
   }
 
   @Override
@@ -465,7 +529,8 @@ class BinLtExpr extends BinaryEvalOpExprBase
   @Override
   protected final double evalDouble(double left, double right)
   {
-    return Evals.asDouble(left < right);
+    // Use Double.compare for more consistent NaN handling.
+    return Evals.asDouble(Double.compare(left, right) < 0);
   }
 }
 
@@ -477,9 +542,9 @@ class BinLeqExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  protected ExprEval evalString(String left, String right)
+  protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
-    return ExprEval.of(left.compareTo(right) <= 0, ExprType.LONG);
+    return ExprEval.of(Comparators.<String>naturalNullsFirst().compare(left, right) <= 0, ExprType.LONG);
   }
 
   @Override
@@ -491,7 +556,8 @@ class BinLeqExpr extends BinaryEvalOpExprBase
   @Override
   protected final double evalDouble(double left, double right)
   {
-    return Evals.asDouble(left <= right);
+    // Use Double.compare for more consistent NaN handling.
+    return Evals.asDouble(Double.compare(left, right) <= 0);
   }
 }
 
@@ -503,9 +569,9 @@ class BinGtExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  protected ExprEval evalString(String left, String right)
+  protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
-    return ExprEval.of(left.compareTo(right) > 0, ExprType.LONG);
+    return ExprEval.of(Comparators.<String>naturalNullsFirst().compare(left, right) > 0, ExprType.LONG);
   }
 
   @Override
@@ -517,7 +583,8 @@ class BinGtExpr extends BinaryEvalOpExprBase
   @Override
   protected final double evalDouble(double left, double right)
   {
-    return Evals.asDouble(left > right);
+    // Use Double.compare for more consistent NaN handling.
+    return Evals.asDouble(Double.compare(left, right) > 0);
   }
 }
 
@@ -529,9 +596,9 @@ class BinGeqExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  protected ExprEval evalString(String left, String right)
+  protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
-    return ExprEval.of(left.compareTo(right) >= 0, ExprType.LONG);
+    return ExprEval.of(Comparators.<String>naturalNullsFirst().compare(left, right) >= 0, ExprType.LONG);
   }
 
   @Override
@@ -543,7 +610,8 @@ class BinGeqExpr extends BinaryEvalOpExprBase
   @Override
   protected final double evalDouble(double left, double right)
   {
-    return Evals.asDouble(left >= right);
+    // Use Double.compare for more consistent NaN handling.
+    return Evals.asDouble(Double.compare(left, right) >= 0);
   }
 }
 
@@ -555,9 +623,9 @@ class BinEqExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  protected ExprEval evalString(String left, String right)
+  protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
-    return ExprEval.of(left.equals(right), ExprType.LONG);
+    return ExprEval.of(Objects.equals(left, right), ExprType.LONG);
   }
 
   @Override
@@ -581,9 +649,9 @@ class BinNeqExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  protected ExprEval evalString(String left, String right)
+  protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
-    return ExprEval.of(!left.equals(right), ExprType.LONG);
+    return ExprEval.of(!Objects.equals(left, right), ExprType.LONG);
   }
 
   @Override
@@ -606,6 +674,7 @@ class BinAndExpr extends BinaryOpExprBase
     super(op, left, right);
   }
 
+  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
@@ -621,6 +690,7 @@ class BinOrExpr extends BinaryOpExprBase
     super(op, left, right);
   }
 
+  @Nonnull
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {

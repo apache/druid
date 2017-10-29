@@ -84,7 +84,7 @@ public abstract class BaseJettyTest
     setProperties();
     Injector injector = setupInjector();
     final DruidNode node = injector.getInstance(Key.get(DruidNode.class, Self.class));
-    port = node.getPort();
+    port = node.getPlaintextPort();
     lifecycle = injector.getInstance(Lifecycle.class);
     lifecycle.start();
     ClientHolder holder = injector.getInstance(ClientHolder.class);

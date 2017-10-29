@@ -54,7 +54,7 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @throws IOException
    */
-  List<DataSegment> getUsedSegmentsForIntervals(final String dataSource, final List<Interval> intervals)
+  List<DataSegment> getUsedSegmentsForIntervals(String dataSource, List<Interval> intervals)
       throws IOException;
 
   /**

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
+import io.druid.java.util.common.Intervals;
 import io.druid.testing.clients.CoordinatorResourceTestClient;
 import io.druid.testing.clients.OverlordResourceTestClient;
 import io.druid.testing.utils.RetryUtil;
@@ -32,9 +33,9 @@ import org.joda.time.Interval;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.concurrent.Callable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.concurrent.Callable;
 
 public abstract class AbstractIndexerTest
 {
@@ -54,17 +55,17 @@ public abstract class AbstractIndexerTest
 
   protected void unloadAndKillData(final String dataSource) throws Exception
   {
-      ArrayList<String> intervals = coordinator.getSegmentIntervals(dataSource);
+    ArrayList<String> intervals = coordinator.getSegmentIntervals(dataSource);
 
-      // each element in intervals has this form:
-      //   2015-12-01T23:15:00.000Z/2015-12-01T23:16:00.000Z
-      // we'll sort the list (ISO dates have lexicographic order)
-      // then delete segments from the 1st date in the first string
-      // to the 2nd date in the last string
-      Collections.sort (intervals);
-      String first = intervals.get(0).split("/")[0];
-      String last = intervals.get(intervals.size() -1).split("/")[1];
-      unloadAndKillData (dataSource, first, last);
+    // each element in intervals has this form:
+    //   2015-12-01T23:15:00.000Z/2015-12-01T23:16:00.000Z
+    // we'll sort the list (ISO dates have lexicographic order)
+    // then delete segments from the 1st date in the first string
+    // to the 2nd date in the last string
+    Collections.sort (intervals);
+    String first = intervals.get(0).split("/")[0];
+    String last = intervals.get(intervals.size() - 1).split("/")[1];
+    unloadAndKillData (dataSource, first, last);
   }
 
   protected void unloadAndKillData(final String dataSource, String start, String end) throws Exception
@@ -72,7 +73,7 @@ public abstract class AbstractIndexerTest
     // Wait for any existing index tasks to complete before disabling the datasource otherwise
     // realtime tasks can get stuck waiting for handoff. https://github.com/druid-io/druid/issues/1729
     waitForAllTasksToComplete();
-    Interval interval = new Interval(start + "/" + end);
+    Interval interval = Intervals.of(start + "/" + end);
     coordinator.unloadSegmentsForDataSource(dataSource, interval);
     RetryUtil.retryUntilFalse(
         new Callable<Boolean>()
@@ -88,17 +89,16 @@ public abstract class AbstractIndexerTest
     waitForAllTasksToComplete();
   }
 
-  protected void waitForAllTasksToComplete(){
+  protected void waitForAllTasksToComplete()
+  {
     RetryUtil.retryUntilTrue(
-      new Callable<Boolean>()
-      {
-        @Override
-        public Boolean call() throws Exception
-        {
-          return (indexer.getPendingTasks().size() + indexer.getRunningTasks().size() + indexer.getWaitingTasks()
-                                                                                               .size()) == 0;
-        }
-      }, "Waiting for Tasks Completion"
+        () -> {
+          int numTasks = indexer.getPendingTasks().size() +
+                         indexer.getRunningTasks().size() +
+                         indexer.getWaitingTasks().size();
+          return numTasks == 0;
+        },
+        "Waiting for Tasks Completion"
     );
   }
 

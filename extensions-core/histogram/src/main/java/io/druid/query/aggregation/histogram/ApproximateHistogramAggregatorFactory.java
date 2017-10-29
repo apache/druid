@@ -26,15 +26,19 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
-
 import io.druid.java.util.common.StringUtils;
+import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
+import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.aggregation.ObjectAggregateCombiner;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import org.apache.commons.codec.binary.Base64;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
@@ -44,8 +48,6 @@ import java.util.List;
 @JsonTypeName("approxHistogram")
 public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
 {
-  private static final byte CACHE_TYPE_ID = 12;
-
   protected final String name;
   protected final String fieldName;
 
@@ -82,7 +84,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     return new ApproximateHistogramAggregator(
-        metricFactory.makeFloatColumnSelector(fieldName),
+        metricFactory.makeColumnValueSelector(fieldName),
         resolution,
         lowerLimit,
         upperLimit
@@ -93,7 +95,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     return new ApproximateHistogramBufferAggregator(
-        metricFactory.makeFloatColumnSelector(fieldName),
+        metricFactory.makeColumnValueSelector(fieldName),
         resolution,
         lowerLimit,
         upperLimit
@@ -110,6 +112,44 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   public Object combine(Object lhs, Object rhs)
   {
     return ApproximateHistogramAggregator.combineHistograms(lhs, rhs);
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    // ApproximateHistogramAggregatorFactory.combine() delegates to ApproximateHistogramAggregator.combineHistograms()
+    // and it doesn't check for nulls, so this AggregateCombiner neither.
+    return new ObjectAggregateCombiner<ApproximateHistogram>()
+    {
+      private final ApproximateHistogram combined = new ApproximateHistogram();
+
+      @Override
+      public void reset(ColumnValueSelector selector)
+      {
+        ApproximateHistogram first = (ApproximateHistogram) selector.getObject();
+        combined.copy(first);
+      }
+
+      @Override
+      public void fold(ColumnValueSelector selector)
+      {
+        ApproximateHistogram other = (ApproximateHistogram) selector.getObject();
+        combined.foldFast(other);
+      }
+
+      @Override
+      public Class<ApproximateHistogram> classOfObject()
+      {
+        return ApproximateHistogram.class;
+      }
+
+      @Nullable
+      @Override
+      public ApproximateHistogram getObject()
+      {
+        return combined;
+      }
+    };
   }
 
   @Override
@@ -234,7 +274,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   {
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
     return ByteBuffer.allocate(1 + fieldNameBytes.length + Ints.BYTES * 2 + Floats.BYTES * 2)
-                     .put(CACHE_TYPE_ID)
+                     .put(AggregatorUtil.APPROX_HIST_CACHE_TYPE_ID)
                      .put(fieldNameBytes)
                      .putInt(resolution)
                      .putInt(numBuckets)

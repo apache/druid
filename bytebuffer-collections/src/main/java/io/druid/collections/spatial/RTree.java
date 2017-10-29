@@ -128,8 +128,8 @@ public class RTree
   {
     float[] initMinCoords = new float[numDims];
     float[] initMaxCoords = new float[numDims];
-    Arrays.fill(initMinCoords, -Float.MAX_VALUE);
-    Arrays.fill(initMaxCoords, Float.MAX_VALUE);
+    Arrays.fill(initMinCoords, Float.NEGATIVE_INFINITY);
+    Arrays.fill(initMaxCoords, Float.POSITIVE_INFINITY);
 
     return new Node(initMinCoords, initMaxCoords, isLeaf, bitmapFactory);
   }
@@ -178,7 +178,7 @@ public class RTree
       return node;
     }
 
-    double minCost = Double.MAX_VALUE;
+    double minCost = Double.POSITIVE_INFINITY;
     Node optimal = node.getChildren().get(0);
     for (Node child : node.getChildren()) {
       double cost = RTreeUtils.getExpansionCost(child, point);

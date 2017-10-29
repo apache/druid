@@ -81,6 +81,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     this.granularity = granularity;
     this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.<AggregatorFactory>of() : aggregatorSpecs;
     this.postAggregatorSpecs = Queries.prepareAggregations(
+        ImmutableList.of(dimensionSpec.getOutputName()),
         this.aggregatorSpecs,
         postAggregatorSpecs == null
             ? ImmutableList.<PostAggregator>of()

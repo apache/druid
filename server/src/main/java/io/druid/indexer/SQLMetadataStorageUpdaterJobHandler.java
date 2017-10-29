@@ -22,12 +22,12 @@ package io.druid.indexer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.SQLMetadataConnector;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
-import org.joda.time.DateTime;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.PreparedBatch;
@@ -58,7 +58,7 @@ public class SQLMetadataStorageUpdaterJobHandler implements MetadataStorageUpdat
           public Void withHandle(Handle handle) throws Exception
           {
             final PreparedBatch batch = handle.prepareBatch(
-                String.format(
+                StringUtils.format(
                     "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
                     + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
                     tableName, connector.getQuoteString()
@@ -70,7 +70,7 @@ public class SQLMetadataStorageUpdaterJobHandler implements MetadataStorageUpdat
                   new ImmutableMap.Builder<String, Object>()
                       .put("id", segment.getIdentifier())
                       .put("dataSource", segment.getDataSource())
-                      .put("created_date", new DateTime().toString())
+                      .put("created_date", DateTimes.nowUtc().toString())
                       .put("start", segment.getInterval().getStart().toString())
                       .put("end", segment.getInterval().getEnd().toString())
                       .put("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)

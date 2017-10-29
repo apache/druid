@@ -24,6 +24,8 @@ import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
 import io.druid.indexing.common.config.FileTaskLogsConfig;
+import io.druid.java.util.common.IOE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.tasklogs.TaskLogs;
 import org.apache.commons.io.FileUtils;
@@ -55,7 +57,7 @@ public class FileTaskLogs implements TaskLogs
       Files.copy(file, outputFile);
       log.info("Wrote task log to: %s", outputFile);
     } else {
-      throw new IOException(String.format("Unable to create task log dir[%s]", config.getDirectory()));
+      throw new IOE("Unable to create task log dir[%s]", config.getDirectory());
     }
   }
 
@@ -81,7 +83,7 @@ public class FileTaskLogs implements TaskLogs
 
   private File fileForTask(final String taskid)
   {
-    return new File(config.getDirectory(), String.format("%s.log", taskid));
+    return new File(config.getDirectory(), StringUtils.format("%s.log", taskid));
   }
 
   @Override
@@ -98,7 +100,7 @@ public class FileTaskLogs implements TaskLogs
     if (taskLogDir.exists()) {
 
       if (!taskLogDir.isDirectory()) {
-        throw new IOException(String.format("taskLogDir [%s] must be a directory.", taskLogDir));
+        throw new IOE("taskLogDir [%s] must be a directory.", taskLogDir);
       }
 
       File[] files = taskLogDir.listFiles(

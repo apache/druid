@@ -20,6 +20,7 @@
 package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Module;
@@ -28,7 +29,10 @@ import io.airlift.airline.Command;
 import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
 import io.druid.client.ServerView;
+import io.druid.guice.DruidProcessingModule;
 import io.druid.guice.LazySingleton;
+import io.druid.guice.QueryRunnerFactoryModule;
+import io.druid.guice.QueryableModule;
 import io.druid.guice.RealtimeModule;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.LookupModule;
@@ -39,7 +43,9 @@ import io.druid.timeline.DataSegment;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
 
@@ -65,6 +71,9 @@ public class CliRealtimeExample extends ServerRunnable
   protected List<? extends Module> getModules()
   {
     return ImmutableList.of(
+        new DruidProcessingModule(),
+        new QueryableModule(),
+        new QueryRunnerFactoryModule(),
         new RealtimeModule(),
         new Module()
         {
@@ -73,6 +82,7 @@ public class CliRealtimeExample extends ServerRunnable
           {
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/realtime");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8084);
+            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8284);
 
             binder.bind(DataSegmentPusher.class).to(NoopDataSegmentPusher.class).in(LazySingleton.class);
             binder.bind(DataSegmentAnnouncer.class).to(NoopDataSegmentAnnouncer.class).in(LazySingleton.class);
@@ -88,17 +98,13 @@ public class CliRealtimeExample extends ServerRunnable
   private static class NoopServerView implements ServerView
   {
     @Override
-    public void registerServerCallback(
-        Executor exec, ServerCallback callback
-    )
+    public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
     {
       // do nothing
     }
 
     @Override
-    public void registerSegmentCallback(
-        Executor exec, SegmentCallback callback
-    )
+    public void registerSegmentCallback(Executor exec, SegmentCallback callback)
     {
       // do nothing
     }
@@ -151,6 +157,12 @@ public class CliRealtimeExample extends ServerRunnable
     public DataSegment push(File file, DataSegment segment) throws IOException
     {
       return segment;
+    }
+
+    @Override
+    public Map<String, Object> makeLoadSpec(URI uri)
+    {
+      return ImmutableMap.of();
     }
   }
 

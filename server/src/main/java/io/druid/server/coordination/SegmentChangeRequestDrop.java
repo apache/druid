@@ -22,7 +22,10 @@ package io.druid.server.coordination;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
+import io.druid.java.util.common.StringUtils;
 import io.druid.timeline.DataSegment;
+
+import java.util.Objects;
 
 /**
  */
@@ -54,7 +57,26 @@ public class SegmentChangeRequestDrop implements DataSegmentChangeRequest
   @Override
   public String asString()
   {
-    return String.format("DROP: %s", segment.getIdentifier());
+    return StringUtils.format("DROP: %s", segment.getIdentifier());
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    SegmentChangeRequestDrop that = (SegmentChangeRequestDrop) o;
+    return Objects.equals(segment, that.segment);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(segment);
   }
 
   @Override

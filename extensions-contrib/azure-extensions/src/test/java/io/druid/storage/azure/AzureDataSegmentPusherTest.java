@@ -26,12 +26,12 @@ import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.microsoft.azure.storage.StorageException;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.MapUtils;
-import io.druid.segment.loading.DataSegmentPusherUtil;
+import io.druid.java.util.common.StringUtils;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMockSupport;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -55,7 +55,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   private static final String blobPath = "test/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip";
   private static final DataSegment dataSegment = new DataSegment(
       "test",
-      new Interval("2015-04-12/2015-04-13"),
+      Intervals.of("2015-04-12/2015-04-13"),
       "1",
       ImmutableMap.<String, Object>of("containerName", containerName, "blobPath", blobPath),
       null,
@@ -94,7 +94,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
 
     DataSegment segmentToPush = new DataSegment(
         "foo",
-        new Interval("2015/2016"),
+        Intervals.of("2015/2016"),
         "0",
         Maps.<String, Object>newHashMap(),
         Lists.<String>newArrayList(),
@@ -112,14 +112,14 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   @Test
   public void getAzurePathsTest()
   {
-    final String storageDir = DataSegmentPusherUtil.getStorageDir(dataSegment);
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, jsonMapper);
 
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, jsonMapper);
+    final String storageDir = pusher.getStorageDir(dataSegment);
     Map<String, String> paths = pusher.getAzurePaths(dataSegment);
 
-    assertEquals(String.format("%s/%s", storageDir, AzureStorageDruidModule.INDEX_ZIP_FILE_NAME), paths.get("index"));
+    assertEquals(StringUtils.format("%s/%s", storageDir, AzureStorageDruidModule.INDEX_ZIP_FILE_NAME), paths.get("index"));
     assertEquals(
-        String.format("%s/%s", storageDir, AzureStorageDruidModule.DESCRIPTOR_FILE_NAME),
+        StringUtils.format("%s/%s", storageDir, AzureStorageDruidModule.DESCRIPTOR_FILE_NAME),
         paths.get("descriptor")
     );
   }

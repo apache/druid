@@ -19,14 +19,10 @@
 
 package io.druid.sql.calcite.rel;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.query.QueryDataSource;
-import io.druid.query.groupby.GroupByQuery;
-import io.druid.sql.calcite.filtration.Filtration;
 import io.druid.sql.calcite.table.DruidTable;
-import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.interpreter.BindableConvention;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptCluster;
@@ -35,21 +31,30 @@ import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelWriter;
+import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 
+import javax.annotation.Nonnull;
+import java.util.List;
+
+/**
+ * DruidRel that uses a "table" dataSource.
+ */
 public class DruidQueryRel extends DruidRel<DruidQueryRel>
 {
   // Factors used for computing cost (see computeSelfCost). These are intended to encourage pushing down filters
   // and limits through stacks of nested queries when possible.
   private static final double COST_BASE = 1.0;
+  private static final double COST_PER_COLUMN = 0.001;
   private static final double COST_FILTER_MULTIPLIER = 0.1;
   private static final double COST_GROUPING_MULTIPLIER = 0.5;
   private static final double COST_LIMIT_MULTIPLIER = 0.5;
+  private static final double COST_HAVING_MULTIPLIER = 5.0;
 
   private final RelOptTable table;
   private final DruidTable druidTable;
-  private final DruidQueryBuilder queryBuilder;
+  private final PartialDruidQuery partialQuery;
 
   private DruidQueryRel(
       final RelOptCluster cluster,
@@ -57,52 +62,51 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
       final RelOptTable table,
       final DruidTable druidTable,
       final QueryMaker queryMaker,
-      final DruidQueryBuilder queryBuilder
+      final PartialDruidQuery partialQuery
   )
   {
     super(cluster, traitSet, queryMaker);
     this.table = Preconditions.checkNotNull(table, "table");
     this.druidTable = Preconditions.checkNotNull(druidTable, "druidTable");
-    this.queryBuilder = Preconditions.checkNotNull(queryBuilder, "queryBuilder");
+    this.partialQuery = Preconditions.checkNotNull(partialQuery, "partialQuery");
   }
 
   /**
    * Create a DruidQueryRel representing a full scan.
    */
   public static DruidQueryRel fullScan(
-      final RelOptCluster cluster,
+      final LogicalTableScan scanRel,
       final RelOptTable table,
       final DruidTable druidTable,
       final QueryMaker queryMaker
   )
   {
     return new DruidQueryRel(
-        cluster,
-        cluster.traitSetOf(Convention.NONE),
+        scanRel.getCluster(),
+        scanRel.getCluster().traitSetOf(Convention.NONE),
         table,
         druidTable,
         queryMaker,
-        DruidQueryBuilder.fullScan(druidTable.getRowSignature(), cluster.getTypeFactory())
+        PartialDruidQuery.create(scanRel)
     );
   }
 
   @Override
-  public QueryDataSource asDataSource()
+  @Nonnull
+  public DruidQuery toDruidQuery()
   {
-    final GroupByQuery groupByQuery = getQueryBuilder().toGroupByQuery(
+    return partialQuery.build(
         druidTable.getDataSource(),
         druidTable.getRowSignature(),
-        getPlannerContext().getQueryContext()
+        getPlannerContext(),
+        getCluster().getRexBuilder()
     );
+  }
 
-    if (groupByQuery == null) {
-      // QueryDataSources must currently embody groupBy queries. This will thrown an exception if the query
-      // cannot be converted to a groupBy, but that's OK because we really shouldn't get into that situation anyway.
-      // That would be a bug in our planner rules.
-      throw new IllegalStateException("WTF?! Tried to convert query to QueryDataSource but couldn't make a groupBy?");
-    }
-
-    return new QueryDataSource(groupByQuery);
+  @Override
+  public DruidQuery toDruidQueryForExplaining()
+  {
+    return toDruidQuery();
   }
 
   @Override
@@ -114,7 +118,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
         table,
         druidTable,
         getQueryMaker(),
-        queryBuilder
+        partialQuery
     );
   }
 
@@ -127,24 +131,24 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
         table,
         druidTable,
         getQueryMaker(),
-        queryBuilder
+        partialQuery
     );
   }
 
   @Override
-  public RowSignature getSourceRowSignature()
+  public List<String> getDatasourceNames()
   {
-    return druidTable.getRowSignature();
+    return druidTable.getDataSource().getNames();
   }
 
   @Override
-  public DruidQueryBuilder getQueryBuilder()
+  public PartialDruidQuery getPartialDruidQuery()
   {
-    return queryBuilder;
+    return partialQuery;
   }
 
   @Override
-  public DruidQueryRel withQueryBuilder(final DruidQueryBuilder newQueryBuilder)
+  public DruidQueryRel withPartialQuery(final PartialDruidQuery newQueryBuilder)
   {
     return new DruidQueryRel(
         getCluster(),
@@ -165,7 +169,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   @Override
   public Sequence<Object[]> runQuery()
   {
-    return getQueryMaker().runQuery(druidTable.getDataSource(), druidTable.getRowSignature(), queryBuilder);
+    return getQueryMaker().runQuery(toDruidQuery());
   }
 
   @Override
@@ -177,37 +181,24 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   @Override
   protected RelDataType deriveRowType()
   {
-    return queryBuilder.getRowType();
+    return partialQuery.getRowType();
   }
 
   @Override
   public RelWriter explainTerms(final RelWriter pw)
   {
-    pw.item("dataSource", druidTable.getDataSource());
-    if (queryBuilder != null) {
-      final Filtration filtration = Filtration.create(queryBuilder.getFilter()).optimize(getSourceRowSignature());
-      if (!filtration.getIntervals().equals(ImmutableList.of(Filtration.eternity()))) {
-        pw.item("intervals", filtration.getIntervals());
-      }
-      if (filtration.getDimFilter() != null) {
-        pw.item("filter", filtration.getDimFilter());
-      }
-      if (queryBuilder.getSelectProjection() != null) {
-        pw.item("selectDimensions", queryBuilder.getSelectProjection().getDimensions());
-        pw.item("selectMetrics", queryBuilder.getSelectProjection().getMetrics());
-      }
-      if (queryBuilder.getGrouping() != null) {
-        pw.item("dimensions", queryBuilder.getGrouping().getDimensions());
-        pw.item("aggregations", queryBuilder.getGrouping().getAggregations());
-      }
-      if (queryBuilder.getHaving() != null) {
-        pw.item("having", queryBuilder.getHaving());
-      }
-      if (queryBuilder.getLimitSpec() != null) {
-        pw.item("limitSpec", queryBuilder.getLimitSpec());
-      }
+    final String queryString;
+    final DruidQuery druidQuery = toDruidQueryForExplaining();
+
+    try {
+      queryString = getQueryMaker().getJsonMapper().writeValueAsString(druidQuery.getQuery());
     }
-    return pw;
+    catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+
+    return pw.item("query", queryString)
+             .item("signature", druidQuery.getOutputRowSignature());
   }
 
   @Override
@@ -215,16 +206,30 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   {
     double cost = COST_BASE;
 
-    if (queryBuilder.getFilter() != null) {
+    if (partialQuery.getSelectProject() != null) {
+      cost += COST_PER_COLUMN * partialQuery.getSelectProject().getChildExps().size();
+    }
+
+    if (partialQuery.getWhereFilter() != null) {
       cost *= COST_FILTER_MULTIPLIER;
     }
 
-    if (queryBuilder.getGrouping() != null) {
+    if (partialQuery.getAggregate() != null) {
       cost *= COST_GROUPING_MULTIPLIER;
+      cost += COST_PER_COLUMN * partialQuery.getAggregate().getGroupSet().size();
+      cost += COST_PER_COLUMN * partialQuery.getAggregate().getAggCallList().size();
     }
 
-    if (queryBuilder.getLimitSpec() != null) {
+    if (partialQuery.getPostProject() != null) {
+      cost += COST_PER_COLUMN * partialQuery.getPostProject().getChildExps().size();
+    }
+
+    if (partialQuery.getSort() != null && partialQuery.getSort().fetch != null) {
       cost *= COST_LIMIT_MULTIPLIER;
+    }
+
+    if (partialQuery.getHavingFilter() != null) {
+      cost *= COST_HAVING_MULTIPLIER;
     }
 
     return planner.getCostFactory().makeCost(cost, 0, 0);

@@ -30,11 +30,12 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.fasterxml.jackson.datatype.joda.deser.DurationDeserializer;
 import com.fasterxml.jackson.datatype.joda.deser.PeriodDeserializer;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.joda.time.format.ISODateTimeFormat;
 
 import java.io.IOException;
 
@@ -72,7 +73,7 @@ class JodaStuff
     public Interval deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
         throws IOException, JsonProcessingException
     {
-      return new Interval(jsonParser.getText());
+      return Intervals.of(jsonParser.getText());
     }
   }
 
@@ -81,35 +82,34 @@ class JodaStuff
     @Override
     public Object deserializeKey(String key, DeserializationContext ctxt) throws IOException, JsonProcessingException
     {
-      return new DateTime(key);
+      return DateTimes.of(key);
     }
   }
 
   private static class DateTimeDeserializer extends StdDeserializer<DateTime>
   {
-      public DateTimeDeserializer() {
-        super(DateTime.class);
-      }
+    public DateTimeDeserializer()
+    {
+      super(DateTime.class);
+    }
 
-      @Override
-      public DateTime deserialize(JsonParser jp, DeserializationContext ctxt)
-          throws IOException, JsonProcessingException
-      {
-          JsonToken t = jp.getCurrentToken();
-          if (t == JsonToken.VALUE_NUMBER_INT) {
-              return new DateTime(jp.getLongValue());
-          }
-          if (t == JsonToken.VALUE_STRING) {
-              String str = jp.getText().trim();
-              if (str.length() == 0) { // [JACKSON-360]
-                  return null;
-              }
-              // make sure to preserve time zone information when parsing timestamps
-              return ISODateTimeFormat.dateTimeParser()
-                                      .withOffsetParsed()
-                                      .parseDateTime(str);
-          }
-          throw ctxt.mappingException(getValueClass());
+    @Override
+    public DateTime deserialize(JsonParser jp, DeserializationContext ctxt)
+        throws IOException, JsonProcessingException
+    {
+      JsonToken t = jp.getCurrentToken();
+      if (t == JsonToken.VALUE_NUMBER_INT) {
+        return DateTimes.utc(jp.getLongValue());
       }
+      if (t == JsonToken.VALUE_STRING) {
+        String str = jp.getText().trim();
+        if (str.length() == 0) { // [JACKSON-360]
+          return null;
+        }
+        // make sure to preserve time zone information when parsing timestamps
+        return DateTimes.ISO_DATE_OR_TIME_WITH_OFFSET.parse(str);
+      }
+      throw ctxt.mappingException(getValueClass());
+    }
   }
 }

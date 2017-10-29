@@ -23,8 +23,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
@@ -37,7 +39,6 @@ import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.TestIndex;
 import io.druid.segment.column.ValueType;
-import org.joda.time.Interval;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -97,7 +98,7 @@ public class SegmentMetadataUnionQueryTest
   {
     SegmentAnalysis expected = new SegmentAnalysis(
         QueryRunnerTestHelper.segmentId,
-        Lists.newArrayList(new Interval("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")),
+        Lists.newArrayList(Intervals.of("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")),
         ImmutableMap.of(
             "placement",
             new ColumnAnalysis(
@@ -110,7 +111,7 @@ public class SegmentMetadataUnionQueryTest
                 null
             )
         ),
-        mmap ? 495876 : 498656,
+        mmap ? 669972 : 672752,
         4836,
         null,
         null,
@@ -128,7 +129,10 @@ public class SegmentMetadataUnionQueryTest
             SegmentMetadataQuery.AnalysisType.MINMAX
         )
         .build();
-    List result = Sequences.toList(runner.run(query, Maps.newHashMap()), Lists.<SegmentAnalysis>newArrayList());
+    List result = Sequences.toList(
+        runner.run(QueryPlus.wrap(query), Maps.newHashMap()),
+        Lists.<SegmentAnalysis>newArrayList()
+    );
     TestHelper.assertExpectedObjects(ImmutableList.of(expected), result, "failed SegmentMetadata union query");
   }
 

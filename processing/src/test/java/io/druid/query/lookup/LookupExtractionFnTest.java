@@ -80,7 +80,8 @@ public class LookupExtractionFnTest
   }
 
   @Test
-  public void testEqualsAndHash(){
+  public void testEqualsAndHash()
+  {
     if (retainMissing && !Strings.isNullOrEmpty(replaceMissing)) {
       // skip
       return;

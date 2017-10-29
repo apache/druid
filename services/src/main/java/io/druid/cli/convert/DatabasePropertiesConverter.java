@@ -22,6 +22,7 @@ package io.druid.cli.convert;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import io.druid.java.util.common.StringUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -57,8 +58,7 @@ public class DatabasePropertiesConverter implements PropertyConverter
 
       if (tablePrefix == null) {
         tablePrefix = "druid";
-      }
-      else {
+      } else {
         tablePrefix = tablePrefix.split("_")[0];
       }
 
@@ -88,8 +88,8 @@ public class DatabasePropertiesConverter implements PropertyConverter
   {
     final String value = properties.getProperty(property);
     if (value != null) {
-      if (!value.equals(String.format("%s_%s", tablePrefix, tablename))) {
-        retVal.put(String.format("druid.db.tables.%s", tablename), value);
+      if (!value.equals(StringUtils.format("%s_%s", tablePrefix, tablename))) {
+        retVal.put(StringUtils.format("druid.db.tables.%s", tablename), value);
       }
     }
   }

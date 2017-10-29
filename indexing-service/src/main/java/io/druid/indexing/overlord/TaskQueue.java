@@ -305,7 +305,7 @@ public class TaskQueue
    *
    * @return true
    *
-   * @throws io.druid.metadata.EntryExistsException if the task already exists
+   * @throws EntryExistsException if the task already exists
    */
   public boolean add(final Task task) throws EntryExistsException
   {
@@ -329,13 +329,15 @@ public class TaskQueue
   }
 
   // Should always be called after taking giantLock
-  private void addTaskInternal(final Task task){
+  private void addTaskInternal(final Task task)
+  {
     tasks.add(task);
     taskLockbox.add(task);
   }
 
   // Should always be called after taking giantLock
-  private void removeTaskInternal(final Task task){
+  private void removeTaskInternal(final Task task)
+  {
     taskLockbox.remove(task);
     tasks.remove(task);
   }
@@ -520,13 +522,13 @@ public class TaskQueue
 
     try {
       if (active) {
-        final Map<String,Task> newTasks = toTaskIDMap(taskStorage.getActiveTasks());
+        final Map<String, Task> newTasks = toTaskIDMap(taskStorage.getActiveTasks());
         final int tasksSynced = newTasks.size();
-        final Map<String,Task> oldTasks = toTaskIDMap(tasks);
+        final Map<String, Task> oldTasks = toTaskIDMap(tasks);
 
         // Calculate differences on IDs instead of Task Objects.
         Set<String> commonIds = Sets.newHashSet(Sets.intersection(newTasks.keySet(), oldTasks.keySet()));
-        for(String taskID : commonIds){
+        for (String taskID : commonIds) {
           newTasks.remove(taskID);
           oldTasks.remove(taskID);
         }
@@ -534,12 +536,12 @@ public class TaskQueue
         Collection<Task> removedTasks = oldTasks.values();
 
         // Clean up removed Tasks
-        for(Task task : removedTasks){
+        for (Task task : removedTasks) {
           removeTaskInternal(task);
         }
 
         // Add newly Added tasks to the queue
-        for(Task task : addedTasks){
+        for (Task task : addedTasks) {
           addTaskInternal(task);
         }
 
@@ -563,9 +565,10 @@ public class TaskQueue
     }
   }
 
-  private static Map<String,Task> toTaskIDMap(List<Task> taskList){
-    Map<String,Task> rv = Maps.newHashMap();
-    for(Task task : taskList){
+  private static Map<String, Task> toTaskIDMap(List<Task> taskList)
+  {
+    Map<String, Task> rv = Maps.newHashMap();
+    for (Task task : taskList) {
       rv.put(task.getId(), task);
     }
     return rv;

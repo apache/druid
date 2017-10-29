@@ -19,6 +19,8 @@
 
 package io.druid.common.utils;
 
+import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.JodaUtils;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -37,18 +39,18 @@ public class JodaUtilsTest
   public void testUmbrellaIntervalsSimple() throws Exception
   {
     List<Interval> intervals = Arrays.asList(
-        new Interval("2011-03-03/2011-03-04"),
-        new Interval("2011-01-01/2011-01-02"),
-        new Interval("2011-02-01/2011-02-05"),
-        new Interval("2011-02-03/2011-02-08"),
-        new Interval("2011-01-01/2011-01-03"),
-        new Interval("2011-03-01/2011-03-02"),
-        new Interval("2011-03-05/2011-03-06"),
-        new Interval("2011-02-01/2011-02-02")
+        Intervals.of("2011-03-03/2011-03-04"),
+        Intervals.of("2011-01-01/2011-01-02"),
+        Intervals.of("2011-02-01/2011-02-05"),
+        Intervals.of("2011-02-03/2011-02-08"),
+        Intervals.of("2011-01-01/2011-01-03"),
+        Intervals.of("2011-03-01/2011-03-02"),
+        Intervals.of("2011-03-05/2011-03-06"),
+        Intervals.of("2011-02-01/2011-02-02")
     );
 
     Assert.assertEquals(
-        new Interval("2011-01-01/2011-03-06"),
+        Intervals.of("2011-01-01/2011-03-06"),
         JodaUtils.umbrellaInterval(intervals)
     );
   }
@@ -71,23 +73,23 @@ public class JodaUtilsTest
   public void testCondenseIntervalsSimple() throws Exception
   {
     List<Interval> intervals = Arrays.asList(
-        new Interval("2011-01-01/2011-01-02"),
-        new Interval("2011-01-02/2011-01-03"),
-        new Interval("2011-02-01/2011-02-05"),
-        new Interval("2011-02-01/2011-02-02"),
-        new Interval("2011-02-03/2011-02-08"),
-        new Interval("2011-03-01/2011-03-02"),
-        new Interval("2011-03-03/2011-03-04"),
-        new Interval("2011-03-05/2011-03-06")
+        Intervals.of("2011-01-01/2011-01-02"),
+        Intervals.of("2011-01-02/2011-01-03"),
+        Intervals.of("2011-02-01/2011-02-05"),
+        Intervals.of("2011-02-01/2011-02-02"),
+        Intervals.of("2011-02-03/2011-02-08"),
+        Intervals.of("2011-03-01/2011-03-02"),
+        Intervals.of("2011-03-03/2011-03-04"),
+        Intervals.of("2011-03-05/2011-03-06")
     );
 
     Assert.assertEquals(
         Arrays.asList(
-            new Interval("2011-01-01/2011-01-03"),
-            new Interval("2011-02-01/2011-02-08"),
-            new Interval("2011-03-01/2011-03-02"),
-            new Interval("2011-03-03/2011-03-04"),
-            new Interval("2011-03-05/2011-03-06")
+            Intervals.of("2011-01-01/2011-01-03"),
+            Intervals.of("2011-02-01/2011-02-08"),
+            Intervals.of("2011-03-01/2011-03-02"),
+            Intervals.of("2011-03-03/2011-03-04"),
+            Intervals.of("2011-03-05/2011-03-06")
         ),
         JodaUtils.condenseIntervals(intervals)
     );
@@ -97,31 +99,31 @@ public class JodaUtilsTest
   public void testCondenseIntervalsMixedUp() throws Exception
   {
     List<Interval> intervals = Arrays.asList(
-        new Interval("2011-01-01/2011-01-02"),
-        new Interval("2011-01-02/2011-01-03"),
-        new Interval("2011-02-01/2011-02-05"),
-        new Interval("2011-02-01/2011-02-02"),
-        new Interval("2011-02-03/2011-02-08"),
-        new Interval("2011-03-01/2011-03-02"),
-        new Interval("2011-03-03/2011-03-04"),
-        new Interval("2011-03-05/2011-03-06"),
-        new Interval("2011-04-01/2011-04-05"),
-        new Interval("2011-04-02/2011-04-03"),
-        new Interval("2011-05-01/2011-05-05"),
-        new Interval("2011-05-02/2011-05-07")
+        Intervals.of("2011-01-01/2011-01-02"),
+        Intervals.of("2011-01-02/2011-01-03"),
+        Intervals.of("2011-02-01/2011-02-05"),
+        Intervals.of("2011-02-01/2011-02-02"),
+        Intervals.of("2011-02-03/2011-02-08"),
+        Intervals.of("2011-03-01/2011-03-02"),
+        Intervals.of("2011-03-03/2011-03-04"),
+        Intervals.of("2011-03-05/2011-03-06"),
+        Intervals.of("2011-04-01/2011-04-05"),
+        Intervals.of("2011-04-02/2011-04-03"),
+        Intervals.of("2011-05-01/2011-05-05"),
+        Intervals.of("2011-05-02/2011-05-07")
     );
 
     for (int i = 0; i < 20; ++i) {
       Collections.shuffle(intervals);
       Assert.assertEquals(
           Arrays.asList(
-              new Interval("2011-01-01/2011-01-03"),
-              new Interval("2011-02-01/2011-02-08"),
-              new Interval("2011-03-01/2011-03-02"),
-              new Interval("2011-03-03/2011-03-04"),
-              new Interval("2011-03-05/2011-03-06"),
-              new Interval("2011-04-01/2011-04-05"),
-              new Interval("2011-05-01/2011-05-07")
+              Intervals.of("2011-01-01/2011-01-03"),
+              Intervals.of("2011-02-01/2011-02-08"),
+              Intervals.of("2011-03-01/2011-03-02"),
+              Intervals.of("2011-03-03/2011-03-04"),
+              Intervals.of("2011-03-05/2011-03-06"),
+              Intervals.of("2011-04-01/2011-04-05"),
+              Intervals.of("2011-05-01/2011-05-07")
           ),
           JodaUtils.condenseIntervals(intervals)
       );
@@ -131,15 +133,13 @@ public class JodaUtilsTest
   @Test
   public void testMinMaxInterval()
   {
-    final Interval interval = new Interval(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT);
-    Assert.assertEquals(Long.MAX_VALUE, interval.toDuration().getMillis());
+    Assert.assertEquals(Long.MAX_VALUE, Intervals.ETERNITY.toDuration().getMillis());
   }
 
   @Test
   public void testMinMaxDuration()
   {
-    final Interval interval = new Interval(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT);
-    final Duration duration = interval.toDuration();
+    final Duration duration = Intervals.ETERNITY.toDuration();
     Assert.assertEquals(Long.MAX_VALUE, duration.getMillis());
     Assert.assertEquals("PT9223372036854775.807S", duration.toString());
   }
@@ -148,8 +148,7 @@ public class JodaUtilsTest
   @Test(expected = ArithmeticException.class)
   public void testMinMaxPeriod()
   {
-    final Interval interval = new Interval(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT);
-    final Period period = interval.toDuration().toPeriod();
+    final Period period = Intervals.ETERNITY.toDuration().toPeriod();
     Assert.assertEquals(Long.MAX_VALUE, period.getMinutes());
   }
 

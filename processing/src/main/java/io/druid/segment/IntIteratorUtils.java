@@ -20,7 +20,6 @@
 package io.druid.segment;
 
 import io.druid.java.util.common.IAE;
-import it.unimi.dsi.fastutil.ints.AbstractIntIterator;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterators;
@@ -43,7 +42,7 @@ public final class IntIteratorUtils
     }
     int skipped = 0;
     while (skipped < n && it.hasNext()) {
-      it.next();
+      it.nextInt();
       skipped++;
     }
     return skipped;
@@ -84,7 +83,7 @@ public final class IntIteratorUtils
    * level, to avoid heap array shuffling on each iteration with dequeue and than enqueue, when merged iterators tend
    * to stay in the head of the heap for at least several iterations.
    */
-  static final class MergeIntIterator extends AbstractIntIterator
+  static final class MergeIntIterator implements IntIterator
   {
 
     private final IntIterator[] iterators;
@@ -169,7 +168,7 @@ public final class IntIteratorUtils
     return new RoaringBitmapDelegatingIntIterator(iterator);
   }
 
-  private static class RoaringBitmapDelegatingIntIterator extends AbstractIntIterator
+  private static class RoaringBitmapDelegatingIntIterator implements IntIterator
   {
     private final org.roaringbitmap.IntIterator delegate;
 

@@ -22,7 +22,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.spatial.search.Bound;
+import io.druid.query.BitmapResultFactory;
 import io.druid.query.filter.BitmapIndexSelector;
+import io.druid.query.filter.DruidDoublePredicate;
 import io.druid.query.filter.DruidFloatPredicate;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
@@ -49,10 +51,10 @@ public class SpatialFilter implements Filter
   }
 
   @Override
-  public ImmutableBitmap getBitmapIndex(final BitmapIndexSelector selector)
+  public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
   {
     Iterable<ImmutableBitmap> search = selector.getSpatialIndex(dimension).search(bound);
-    return selector.getBitmapFactory().union(search);
+    return bitmapResultFactory.unionDimensionValueBitmaps(search);
   }
 
   @Override
@@ -92,6 +94,13 @@ public class SpatialFilter implements Filter
           {
             // SpatialFilter does not currently support floats
             return DruidFloatPredicate.ALWAYS_FALSE;
+          }
+
+          @Override
+          public DruidDoublePredicate makeDoublePredicate()
+          {
+            // SpatialFilter does not currently support doubles
+            return DruidDoublePredicate.ALWAYS_FALSE;
           }
         }
     );

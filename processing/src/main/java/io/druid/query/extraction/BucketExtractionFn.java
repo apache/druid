@@ -22,6 +22,7 @@ package io.druid.query.extraction;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Doubles;
+import io.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -55,8 +56,13 @@ public class BucketExtractionFn implements ExtractionFn
   }
 
   @Override
-  public String apply(Object value)
+  @Nullable
+  public String apply(@Nullable Object value)
   {
+    if (value == null) {
+      return null;
+    }
+
     if (value instanceof Number) {
       return bucket(((Number) value).doubleValue());
     } else if (value instanceof String) {
@@ -66,8 +72,13 @@ public class BucketExtractionFn implements ExtractionFn
   }
 
   @Override
-  public String apply(String value)
+  @Nullable
+  public String apply(@Nullable String value)
   {
+    if (value == null) {
+      return null;
+    }
+
     try {
       return bucket(Double.parseDouble(value));
     }
@@ -144,6 +155,6 @@ public class BucketExtractionFn implements ExtractionFn
   @Override
   public String toString()
   {
-    return String.format("bucket(%f, %f)", size, offset);
+    return StringUtils.format("bucket(%f, %f)", size, offset);
   }
 }

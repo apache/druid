@@ -19,11 +19,11 @@
 
 package io.druid.common.utils;
 
+import io.druid.java.util.common.ISE;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.Random;
-
-import io.druid.java.util.common.ISE;
 
 /**
  */
@@ -38,7 +38,8 @@ public class SocketUtil
     return findOpenPortFrom(startPort);
   }
 
-  public static int findOpenPortFrom(int startPort) {
+  public static int findOpenPortFrom(int startPort)
+  {
     int currPort = startPort;
 
     while (currPort < 0xffff) {

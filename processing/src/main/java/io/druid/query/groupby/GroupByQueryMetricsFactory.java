@@ -20,7 +20,15 @@
 package io.druid.query.groupby;
 
 /**
- * Implementations of this interface could be injected using {@link GroupByQueryConfig#queryMetricsFactory} option.
+ * Implementations could be injected using
+ *
+ * PolyBind
+ *    .optionBinder(binder, Key.get(GroupByQueryMetricsFactory.class))
+ *    .addBinding("myCustomGroupByQueryMetricsFactory")
+ *    .to(MyCustomGroupByQueryMetricsFactory.class);
+ *
+ * And then setting property:
+ * druid.query.groupBy.queryMetricsFactory=myCustomGroupByQueryMetricsFactory
  */
 public interface GroupByQueryMetricsFactory
 {

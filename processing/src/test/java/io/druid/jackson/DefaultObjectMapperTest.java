@@ -20,6 +20,8 @@
 package io.druid.jackson;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
@@ -33,8 +35,8 @@ public class DefaultObjectMapperTest
   @Test
   public void testDateTime() throws Exception
   {
-    final DateTime time = new DateTime();
+    final DateTime time = DateTimes.nowUtc();
 
-    Assert.assertEquals(String.format("\"%s\"", time), mapper.writeValueAsString(time));
+    Assert.assertEquals(StringUtils.format("\"%s\"", time), mapper.writeValueAsString(time));
   }
 }

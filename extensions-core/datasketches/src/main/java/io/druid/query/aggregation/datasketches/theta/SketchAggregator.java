@@ -24,42 +24,54 @@ import com.yahoo.sketches.theta.SetOperation;
 import com.yahoo.sketches.theta.Union;
 import io.druid.java.util.common.ISE;
 import io.druid.query.aggregation.Aggregator;
-import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.BaseObjectColumnValueSelector;
 
 import java.util.List;
 
 public class SketchAggregator implements Aggregator
 {
-  private final ObjectColumnSelector selector;
-
+  private final BaseObjectColumnValueSelector selector;
+  private final int size;
   private Union union;
 
-  public SketchAggregator(ObjectColumnSelector selector, int size)
+  public SketchAggregator(BaseObjectColumnValueSelector selector, int size)
   {
     this.selector = selector;
-    union = new SynchronizedUnion((Union) SetOperation.builder().build(size, Family.UNION));
+    this.size = size;
+  }
+
+  private void initUnion()
+  {
+    union = new SynchronizedUnion((Union) SetOperation.builder().setNominalEntries(size).build(Family.UNION));
   }
 
   @Override
   public void aggregate()
   {
-    Object update = selector.get();
+    Object update = selector.getObject();
     if (update == null) {
       return;
     }
-
+    if (union == null) {
+      initUnion();
+    }
     updateUnion(union, update);
   }
 
   @Override
   public void reset()
   {
-    union.reset();
+    if (union != null) {
+      union.reset();
+    }
   }
 
   @Override
   public Object get()
   {
+    if (union == null) {
+      return SketchHolder.EMPTY;
+    }
     //in the code below, I am returning SetOp.getResult(true, null)
     //"true" returns an ordered sketch but slower to compute than unordered sketch.
     //however, advantage of ordered sketch is that they are faster to "union" later
@@ -76,6 +88,12 @@ public class SketchAggregator implements Aggregator
 
   @Override
   public long getLong()
+  {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @Override
+  public double getDouble()
   {
     throw new UnsupportedOperationException("Not implemented");
   }

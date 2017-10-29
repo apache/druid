@@ -23,6 +23,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.guice.ExtensionsConfig;
+import io.druid.java.util.common.StringUtils;
 import io.tesla.aether.internal.DefaultTeslaAether;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.artifact.DefaultArtifact;
@@ -138,7 +139,7 @@ public class PullDependenciesTest
       final String version = artifact.getVersion();
       for (int i = 0; i < jarNames.size(); ++i) {
         expectedJars[i] = new File(
-            String.format(
+            StringUtils.format(
                 "%s/%s/%s/%s",
                 rootHadoopDependenciesDir,
                 artifactId,
@@ -149,7 +150,7 @@ public class PullDependenciesTest
       }
     } else {
       for (int i = 0; i < jarNames.size(); ++i) {
-        expectedJars[i] = new File(String.format("%s/%s/%s", rootExtensionsDir, artifactId, jarNames.get(i)));
+        expectedJars[i] = new File(StringUtils.format("%s/%s/%s", rootExtensionsDir, artifactId, jarNames.get(i)));
       }
     }
     return expectedJars;

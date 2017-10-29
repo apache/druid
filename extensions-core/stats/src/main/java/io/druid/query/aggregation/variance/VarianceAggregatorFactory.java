@@ -25,14 +25,18 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
+import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.NoopAggregator;
 import io.druid.query.aggregation.NoopBufferAggregator;
+import io.druid.query.aggregation.ObjectAggregateCombiner;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.NilColumnValueSelector;
 import org.apache.commons.codec.binary.Base64;
 
 import java.nio.ByteBuffer;
@@ -47,8 +51,6 @@ import java.util.Objects;
 @JsonTypeName("variance")
 public class VarianceAggregatorFactory extends AggregatorFactory
 {
-  protected static final byte CACHE_TYPE_ID = 16;
-
   protected final String fieldName;
   protected final String name;
   protected final String estimator;
@@ -94,15 +96,15 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
-    if (selector == null) {
+    ColumnValueSelector<?> selector = metricFactory.makeColumnValueSelector(fieldName);
+    if (selector instanceof NilColumnValueSelector) {
       return NoopAggregator.instance();
     }
 
     if ("float".equalsIgnoreCase(inputType)) {
-      return new VarianceAggregator.FloatVarianceAggregator(metricFactory.makeFloatColumnSelector(fieldName));
+      return new VarianceAggregator.FloatVarianceAggregator(selector);
     } else if ("long".equalsIgnoreCase(inputType)) {
-      return new VarianceAggregator.LongVarianceAggregator(metricFactory.makeLongColumnSelector(fieldName));
+      return new VarianceAggregator.LongVarianceAggregator(selector);
     } else if ("variance".equalsIgnoreCase(inputType)) {
       return new VarianceAggregator.ObjectVarianceAggregator(selector);
     }
@@ -114,26 +116,63 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
-    if (selector == null) {
+    ColumnValueSelector<?> selector = metricFactory.makeColumnValueSelector(fieldName);
+    if (selector instanceof NilColumnValueSelector) {
       return NoopBufferAggregator.instance();
     }
     if ("float".equalsIgnoreCase(inputType)) {
-      return new VarianceBufferAggregator.FloatVarianceAggregator(
-          name,
-          metricFactory.makeFloatColumnSelector(fieldName)
-      );
+      return new VarianceBufferAggregator.FloatVarianceAggregator(name, selector);
     } else if ("long".equalsIgnoreCase(inputType)) {
-      return new VarianceBufferAggregator.LongVarianceAggregator(
-          name,
-          metricFactory.makeLongColumnSelector(fieldName)
-      );
+      return new VarianceBufferAggregator.LongVarianceAggregator(name, selector);
     } else if ("variance".equalsIgnoreCase(inputType)) {
       return new VarianceBufferAggregator.ObjectVarianceAggregator(name, selector);
     }
     throw new IAE(
         "Incompatible type for metric[%s], expected a float, long or variance, got a %s", fieldName, inputType
     );
+  }
+
+  @Override
+  public Object combine(Object lhs, Object rhs)
+  {
+    return VarianceAggregatorCollector.combineValues(lhs, rhs);
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    // VarianceAggregatorFactory.combine() delegates to VarianceAggregatorCollector.combineValues() and it doesn't check
+    // for nulls, so this AggregateCombiner neither.
+    return new ObjectAggregateCombiner<VarianceAggregatorCollector>()
+    {
+      private final VarianceAggregatorCollector combined = new VarianceAggregatorCollector();
+
+      @Override
+      public void reset(ColumnValueSelector selector)
+      {
+        VarianceAggregatorCollector first = (VarianceAggregatorCollector) selector.getObject();
+        combined.copyFrom(first);
+      }
+
+      @Override
+      public void fold(ColumnValueSelector selector)
+      {
+        VarianceAggregatorCollector other = (VarianceAggregatorCollector) selector.getObject();
+        combined.fold(other);
+      }
+
+      @Override
+      public Class<VarianceAggregatorCollector> classOfObject()
+      {
+        return VarianceAggregatorCollector.class;
+      }
+
+      @Override
+      public VarianceAggregatorCollector getObject()
+      {
+        return combined;
+      }
+    };
   }
 
   @Override
@@ -162,12 +201,6 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   public Comparator getComparator()
   {
     return VarianceAggregatorCollector.COMPARATOR;
-  }
-
-  @Override
-  public Object combine(Object lhs, Object rhs)
-  {
-    return VarianceAggregatorCollector.combineValues(lhs, rhs);
   }
 
   @Override
@@ -228,7 +261,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
     byte[] inputTypeBytes = StringUtils.toUtf8(inputType);
     return ByteBuffer.allocate(2 + fieldNameBytes.length + 1 + inputTypeBytes.length)
-                     .put(CACHE_TYPE_ID)
+                     .put(AggregatorUtil.VARIANCE_CACHE_TYPE_ID)
                      .put(isVariancePop ? (byte) 1 : 0)
                      .put(fieldNameBytes)
                      .put((byte) 0xFF)

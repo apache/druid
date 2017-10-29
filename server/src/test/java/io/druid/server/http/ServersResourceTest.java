@@ -24,18 +24,19 @@ import com.google.common.collect.ImmutableList;
 import io.druid.client.CoordinatorServerView;
 import io.druid.client.DruidServer;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import javax.ws.rs.core.Response;
 
-public class ServersResourceTest {
+public class ServersResourceTest
+{
   private DruidServer server;
   private ServersResource serversResource;
   private ObjectMapper objectMapper = new DefaultObjectMapper();
@@ -43,10 +44,10 @@ public class ServersResourceTest {
   @Before
   public void setUp()
   {
-    DruidServer dummyServer = new DruidServer("dummy", "host", 1234L, ServerType.HISTORICAL, "tier", 0);
+    DruidServer dummyServer = new DruidServer("dummy", "host", null, 1234L, ServerType.HISTORICAL, "tier", 0);
     DataSegment segment = DataSegment.builder()
                                      .dataSource("dataSource")
-                                     .interval(new Interval("2016-03-22T14Z/2016-03-22T15Z"))
+                                     .interval(Intervals.of("2016-03-22T14Z/2016-03-22T15Z"))
                                      .version("v0")
                                      .size(1L)
                                      .build();
@@ -115,9 +116,9 @@ public class ServersResourceTest {
   @Test
   public void testDruidServerSerde() throws Exception
   {
-    DruidServer server = new DruidServer("dummy", "dummyHost", 1234, ServerType.HISTORICAL, "dummyTier", 1);
+    DruidServer server = new DruidServer("dummy", "dummyHost", null, 1234, ServerType.HISTORICAL, "dummyTier", 1);
     String serverJson = objectMapper.writeValueAsString(server);
-    String expected = "{\"name\":\"dummy\",\"host\":\"dummyHost\",\"maxSize\":1234,\"type\":\"historical\",\"tier\":\"dummyTier\",\"priority\":1}";
+    String expected = "{\"name\":\"dummy\",\"host\":\"dummyHost\",\"hostAndTlsPort\":null,\"maxSize\":1234,\"type\":\"historical\",\"tier\":\"dummyTier\",\"priority\":1}";
     Assert.assertEquals(expected, serverJson);
     DruidServer deserializedServer = objectMapper.readValue(serverJson, DruidServer.class);
     Assert.assertEquals(server, deserializedServer);
@@ -126,11 +127,52 @@ public class ServersResourceTest {
   @Test
   public void testDruidServerMetadataSerde() throws Exception
   {
-    DruidServerMetadata metadata = new DruidServerMetadata("dummy", "host", 1234, ServerType.HISTORICAL, "tier", 1);
+    DruidServerMetadata metadata = new DruidServerMetadata(
+        "dummy",
+        "host",
+        null,
+        1234,
+        ServerType.HISTORICAL,
+        "tier",
+        1
+    );
     String metadataJson = objectMapper.writeValueAsString(metadata);
-    String expected = "{\"name\":\"dummy\",\"host\":\"host\",\"maxSize\":1234,\"type\":\"historical\",\"tier\":\"tier\",\"priority\":1}";
+    String expected = "{\"name\":\"dummy\",\"host\":\"host\",\"hostAndTlsPort\":null,\"maxSize\":1234,\"type\":\"historical\",\"tier\":\"tier\",\"priority\":1}";
     Assert.assertEquals(expected, metadataJson);
     DruidServerMetadata deserializedMetadata = objectMapper.readValue(metadataJson, DruidServerMetadata.class);
     Assert.assertEquals(metadata, deserializedMetadata);
+
+    metadata = new DruidServerMetadata(
+        "host:123",
+        "host:123",
+        null,
+        0,
+        ServerType.HISTORICAL,
+        "t1",
+        0
+    );
+
+    Assert.assertEquals(metadata, objectMapper.readValue(
+        "{\"name\":\"host:123\",\"maxSize\":0,\"type\":\"HISTORICAL\",\"tier\":\"t1\",\"priority\":0,\"host\":\"host:123\"}",
+        DruidServerMetadata.class
+    ));
+
+    metadata = new DruidServerMetadata(
+        "host:123",
+        "host:123",
+        "host:214",
+        0,
+        ServerType.HISTORICAL,
+        "t1",
+        0
+    );
+    Assert.assertEquals(metadata, objectMapper.readValue(
+        "{\"name\":\"host:123\",\"maxSize\":0,\"type\":\"HISTORICAL\",\"tier\":\"t1\",\"priority\":0,\"host\":\"host:123\",\"hostAndTlsPort\":\"host:214\"}",
+        DruidServerMetadata.class
+    ));
+    Assert.assertEquals(metadata, objectMapper.readValue(
+        objectMapper.writeValueAsString(metadata),
+        DruidServerMetadata.class
+    ));
   }
 }

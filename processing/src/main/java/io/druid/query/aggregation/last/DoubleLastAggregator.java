@@ -21,14 +21,14 @@ package io.druid.query.aggregation.last;
 
 import io.druid.collections.SerializablePair;
 import io.druid.query.aggregation.Aggregator;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
+import io.druid.segment.BaseDoubleColumnValueSelector;
+import io.druid.segment.BaseLongColumnValueSelector;
 
 public class DoubleLastAggregator implements Aggregator
 {
 
-  private final FloatColumnSelector valueSelector;
-  private final LongColumnSelector timeSelector;
+  private final BaseDoubleColumnValueSelector valueSelector;
+  private final BaseLongColumnValueSelector timeSelector;
   private final String name;
 
   protected long lastTime;
@@ -36,8 +36,8 @@ public class DoubleLastAggregator implements Aggregator
 
   public DoubleLastAggregator(
       String name,
-      LongColumnSelector timeSelector,
-      FloatColumnSelector valueSelector
+      BaseLongColumnValueSelector timeSelector,
+      BaseDoubleColumnValueSelector valueSelector
   )
   {
     this.name = name;
@@ -50,10 +50,10 @@ public class DoubleLastAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    long time = timeSelector.get();
+    long time = timeSelector.getLong();
     if (time >= lastTime) {
-      lastTime = timeSelector.get();
-      lastValue = valueSelector.get();
+      lastTime = time;
+      lastValue = valueSelector.getDouble();
     }
   }
 
@@ -77,14 +77,20 @@ public class DoubleLastAggregator implements Aggregator
   }
 
   @Override
-  public void close()
-  {
-
-  }
-
-  @Override
   public long getLong()
   {
     return (long) lastValue;
+  }
+
+  @Override
+  public double getDouble()
+  {
+    return lastValue;
+  }
+
+  @Override
+  public void close()
+  {
+
   }
 }

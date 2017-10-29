@@ -19,6 +19,11 @@
 
 package io.druid.segment.data;
 
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.historical.HistoricalColumnSelector;
+
 import java.io.Closeable;
 
 /**
@@ -26,10 +31,36 @@ import java.io.Closeable;
  */
 public interface IndexedFloats extends Closeable
 {
-  public int size();
-  public float get(int index);
-  public void fill(int index, float[] toFill);
+  int size();
+  float get(int index);
+  void fill(int index, float[] toFill);
 
   @Override
   void close();
+
+  default ColumnValueSelector<Float> makeColumnValueSelector(ReadableOffset offset)
+  {
+    class HistoricalFloatColumnSelector implements FloatColumnSelector, HistoricalColumnSelector<Float>
+    {
+      @Override
+      public float getFloat()
+      {
+        return IndexedFloats.this.get(offset.getOffset());
+      }
+
+      @Override
+      public double getDouble(int offset)
+      {
+        return IndexedFloats.this.get(offset);
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("indexed", IndexedFloats.this);
+        inspector.visit("offset", offset);
+      }
+    }
+    return new HistoricalFloatColumnSelector();
+  }
 }

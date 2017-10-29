@@ -33,6 +33,8 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.RetryUtils;
+import io.druid.java.util.common.jackson.JacksonUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.guice.TestClient;
@@ -56,9 +58,9 @@ public class OverlordResourceTestClient
 
   @Inject
   OverlordResourceTestClient(
-    ObjectMapper jsonMapper,
-    @TestClient HttpClient httpClient,
-    IntegrationTestingConfig config
+      ObjectMapper jsonMapper,
+      @TestClient HttpClient httpClient,
+      IntegrationTestingConfig config
   )
   {
     this.jsonMapper = jsonMapper;
@@ -69,7 +71,7 @@ public class OverlordResourceTestClient
 
   private String getIndexerURL()
   {
-    return String.format(
+    return StringUtils.format(
         "%s/druid/indexer/v1/",
         indexer
     );
@@ -98,7 +100,7 @@ public class OverlordResourceTestClient
                   new Request(HttpMethod.POST, new URL(getIndexerURL() + "task"))
                       .setContent(
                           "application/json",
-                          task.getBytes()
+                          StringUtils.toUtf8(task)
                       ),
                   responseHandler
               ).get();
@@ -110,9 +112,7 @@ public class OverlordResourceTestClient
                 );
               }
               Map<String, String> responseData = jsonMapper.readValue(
-                  response.getContent(), new TypeReference<Map<String, String>>()
-                  {
-                  }
+                  response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_STRING
               );
               String taskID = responseData.get("task");
               LOG.info("Submitted task with TaskID[%s]", taskID);
@@ -133,7 +133,7 @@ public class OverlordResourceTestClient
     try {
       StatusResponseHolder response = makeRequest(
           HttpMethod.GET,
-          String.format(
+          StringUtils.format(
               "%stask/%s/status",
               getIndexerURL(),
               URLEncoder.encode(taskID, "UTF-8")
@@ -142,9 +142,7 @@ public class OverlordResourceTestClient
 
       LOG.info("Index status response" + response.getContent());
       Map<String, Object> responseData = jsonMapper.readValue(
-          response.getContent(), new TypeReference<Map<String, Object>>()
-          {
-          }
+          response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
       );
       //TODO: figure out a better way to parse the response...
       String status = (String) ((Map) responseData.get("status")).get("status");
@@ -175,7 +173,7 @@ public class OverlordResourceTestClient
     try {
       StatusResponseHolder response = makeRequest(
           HttpMethod.GET,
-          String.format("%s%s", getIndexerURL(), identifier)
+          StringUtils.format("%s%s", getIndexerURL(), identifier)
       );
       LOG.info("Tasks %s response %s", identifier, response.getContent());
       return jsonMapper.readValue(
@@ -194,16 +192,14 @@ public class OverlordResourceTestClient
     try {
       StatusResponseHolder response = makeRequest(
           HttpMethod.POST,
-          String.format(
+          StringUtils.format(
               "%stask/%s/shutdown", getIndexerURL(),
               URLEncoder.encode(taskID, "UTF-8")
           )
       );
       LOG.info("Shutdown Task %s response %s", taskID, response.getContent());
       return jsonMapper.readValue(
-          response.getContent(), new TypeReference<Map<String, String>>()
-          {
-          }
+          response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_STRING
       );
     }
     catch (Exception e) {
@@ -245,7 +241,7 @@ public class OverlordResourceTestClient
           new Request(HttpMethod.POST, new URL(getIndexerURL() + "supervisor"))
               .setContent(
                   "application/json",
-                  spec.getBytes()
+                  StringUtils.toUtf8(spec)
               ),
           responseHandler
       ).get();
@@ -257,9 +253,7 @@ public class OverlordResourceTestClient
         );
       }
       Map<String, String> responseData = jsonMapper.readValue(
-          response.getContent(), new TypeReference<Map<String, String>>()
-          {
-          }
+          response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_STRING
       );
       String id = responseData.get("id");
       LOG.info("Submitted supervisor with id[%s]", id);
@@ -275,7 +269,7 @@ public class OverlordResourceTestClient
     try {
       StatusResponseHolder response = httpClient.go(
           new Request(
-              HttpMethod.POST, new URL(String.format("%ssupervisor/%s/shutdown", getIndexerURL(), id))
+              HttpMethod.POST, new URL(StringUtils.format("%ssupervisor/%s/shutdown", getIndexerURL(), id))
           ),
           responseHandler
       ).get();

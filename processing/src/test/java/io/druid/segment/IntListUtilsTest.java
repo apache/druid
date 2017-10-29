@@ -31,7 +31,7 @@ public class IntListUtilsTest
   {
     final IntList list = IntListUtils.fromTo(10, 10);
     assertEquals(0, list.size());
-    list.get(0);
+    list.getInt(0);
   }
 
   @Test(expected = IllegalArgumentException.class)

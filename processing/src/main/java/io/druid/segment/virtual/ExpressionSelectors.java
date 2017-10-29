@@ -19,13 +19,16 @@
 
 package io.druid.segment.virtual;
 
+import com.google.common.base.Strings;
 import io.druid.math.expr.Expr;
+import io.druid.math.expr.ExprEval;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
+
+import javax.annotation.Nullable;
 
 public class ExpressionSelectors
 {
@@ -34,28 +37,47 @@ public class ExpressionSelectors
     // No instantiation.
   }
 
-  public static ExpressionObjectSelector makeObjectColumnSelector(
-      final ColumnSelectorFactory columnSelectorFactory,
-      final Expr expression
-  )
-  {
-    return ExpressionObjectSelector.from(columnSelectorFactory, expression);
-  }
-
-  public static LongColumnSelector makeLongColumnSelector(
-      final ColumnSelectorFactory columnSelectorFactory,
-      final Expr expression,
-      final long nullValue
+  public static ColumnValueSelector makeColumnValueSelector(
+      ColumnSelectorFactory columnSelectorFactory,
+      Expr expression
   )
   {
     final ExpressionObjectSelector baseSelector = ExpressionObjectSelector.from(columnSelectorFactory, expression);
-    class ExpressionLongColumnSelector implements LongColumnSelector
+    return new ColumnValueSelector()
     {
       @Override
-      public long get()
+      public double getDouble()
       {
-        final Number number = baseSelector.get();
-        return number != null ? number.longValue() : nullValue;
+        final ExprEval exprEval = baseSelector.getObject();
+        return exprEval.isNull() ? 0.0 : exprEval.asDouble();
+      }
+
+      @Override
+      public float getFloat()
+      {
+        final ExprEval exprEval = baseSelector.getObject();
+        return exprEval.isNull() ? 0.0f : (float) exprEval.asDouble();
+      }
+
+      @Override
+      public long getLong()
+      {
+        final ExprEval exprEval = baseSelector.getObject();
+        return exprEval.isNull() ? 0L : exprEval.asLong();
+      }
+
+      @Nullable
+      @Override
+      public Object getObject()
+      {
+        final ExprEval exprEval = baseSelector.getObject();
+        return exprEval.value();
+      }
+
+      @Override
+      public Class classOfObject()
+      {
+        return Object.class;
       }
 
       @Override
@@ -63,33 +85,7 @@ public class ExpressionSelectors
       {
         inspector.visit("baseSelector", baseSelector);
       }
-    }
-    return new ExpressionLongColumnSelector();
-  }
-
-  public static FloatColumnSelector makeFloatColumnSelector(
-      final ColumnSelectorFactory columnSelectorFactory,
-      final Expr expression,
-      final float nullValue
-  )
-  {
-    final ExpressionObjectSelector baseSelector = ExpressionObjectSelector.from(columnSelectorFactory, expression);
-    class ExpressionFloatColumnSelector implements FloatColumnSelector
-    {
-      @Override
-      public float get()
-      {
-        final Number number = baseSelector.get();
-        return number != null ? number.floatValue() : nullValue;
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        inspector.visit("baseSelector", baseSelector);
-      }
-    }
-    return new ExpressionFloatColumnSelector();
+    };
   }
 
   public static DimensionSelector makeDimensionSelector(
@@ -106,8 +102,7 @@ public class ExpressionSelectors
         @Override
         protected String getValue()
         {
-          final Number number = baseSelector.get();
-          return number == null ? null : String.valueOf(number);
+          return Strings.emptyToNull(baseSelector.getObject().asString());
         }
 
         @Override
@@ -123,7 +118,7 @@ public class ExpressionSelectors
         @Override
         protected String getValue()
         {
-          return extractionFn.apply(baseSelector.get());
+          return extractionFn.apply(Strings.emptyToNull(baseSelector.getObject().asString()));
         }
 
         @Override

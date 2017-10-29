@@ -70,7 +70,7 @@ public class LoadingLookup extends LookupExtractor
     }
     final String presentVal;
     try {
-      presentVal = loadingCache.get(key, new applyCallable(key));
+      presentVal = loadingCache.get(key, new ApplyCallable(key));
       return Strings.emptyToNull(presentVal);
     }
     catch (ExecutionException e) {
@@ -88,7 +88,7 @@ public class LoadingLookup extends LookupExtractor
     }
     final List<String> retList;
     try {
-      retList = reverseLoadingCache.get(value, new unapplyCallable(value));
+      retList = reverseLoadingCache.get(value, new UnapplyCallable(value));
       return retList;
     }
     catch (ExecutionException e) {
@@ -120,11 +120,14 @@ public class LoadingLookup extends LookupExtractor
     return LookupExtractionModule.getRandomCacheKey();
   }
 
-  private class applyCallable implements Callable<String>
+  private class ApplyCallable implements Callable<String>
   {
     private final String key;
 
-    public applyCallable(String key) {this.key = key;}
+    public ApplyCallable(String key)
+    {
+      this.key = key;
+    }
 
     @Override
     public String call() throws Exception
@@ -134,16 +137,28 @@ public class LoadingLookup extends LookupExtractor
     }
   }
 
-  private class unapplyCallable implements Callable<List<String>>
+  private class UnapplyCallable implements Callable<List<String>>
   {
     private final String value;
 
-    public unapplyCallable(String value) {this.value = value;}
+    public UnapplyCallable(String value)
+    {
+      this.value = value;
+    }
 
     @Override
     public List<String> call() throws Exception
     {
       return dataFetcher.reverseFetchKeys(value);
     }
+  }
+
+  @Override
+  public String toString()
+  {
+    return "LoadingLookup{" +
+           "dataFetcher=" + dataFetcher +
+           ", id='" + id + '\'' +
+           '}';
   }
 }

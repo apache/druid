@@ -19,8 +19,8 @@
 
 package io.druid.segment.data;
 
-import com.google.common.collect.Ordering;
 import com.google.common.primitives.Longs;
+import io.druid.java.util.common.guava.Comparators;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -50,7 +50,7 @@ public class CompressedLongBufferObjectStrategy extends FixedSizeCompressedObjec
           @Override
           public int compare(LongBuffer lhs, LongBuffer rhs)
           {
-            return Ordering.natural().nullsFirst().compare(lhs, rhs);
+            return Comparators.<LongBuffer>naturalNullsFirst().compare(lhs, rhs);
           }
 
           @Override

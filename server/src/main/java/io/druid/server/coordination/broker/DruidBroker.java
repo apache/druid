@@ -22,7 +22,6 @@ package io.druid.server.coordination.broker;
 import com.google.common.base.Predicates;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-
 import io.druid.client.FilteredServerInventoryView;
 import io.druid.client.ServerView;
 import io.druid.curator.discovery.ServiceAnnouncer;
@@ -40,6 +39,7 @@ public class DruidBroker
 {
   private final DruidNode self;
   private final ServiceAnnouncer serviceAnnouncer;
+
   private volatile boolean started = false;
 
   @Inject
@@ -72,7 +72,7 @@ public class DruidBroker
   public void start()
   {
     synchronized (self) {
-      if(started) {
+      if (started) {
         return;
       }
       started = true;

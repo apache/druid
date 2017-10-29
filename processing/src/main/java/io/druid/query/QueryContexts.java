@@ -21,9 +21,11 @@ package io.druid.query;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 
+@PublicApi
 public class QueryContexts
 {
   public static final String PRIORITY_KEY = "priority";
@@ -73,6 +75,16 @@ public class QueryContexts
   public static <T> boolean isFinalize(Query<T> query, boolean defaultValue)
   {
     return parseBoolean(query, "finalize", defaultValue);
+  }
+
+  public static <T> boolean isSerializeDateTimeAsLong(Query<T> query, boolean defaultValue)
+  {
+    return parseBoolean(query, "serializeDateTimeAsLong", defaultValue);
+  }
+
+  public static <T> boolean isSerializeDateTimeAsLongInner(Query<T> query, boolean defaultValue)
+  {
+    return parseBoolean(query, "serializeDateTimeAsLongInner", defaultValue);
   }
 
   public static <T> int getUncoveredIntervalsLimit(Query<T> query)

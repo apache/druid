@@ -21,7 +21,6 @@ package io.druid.sql.calcite.util;
 
 import com.google.common.collect.ImmutableList;
 import io.druid.client.DruidServer;
-import io.druid.client.ServerView;
 import io.druid.client.TimelineServerView;
 import io.druid.client.selector.ServerSelector;
 import io.druid.query.DataSource;
@@ -36,6 +35,15 @@ import java.util.concurrent.Executor;
 
 public class TestServerInventoryView implements TimelineServerView
 {
+  private static final DruidServerMetadata DUMMY_SERVER = new DruidServerMetadata(
+      "dummy",
+      "dummy",
+      null,
+      0,
+      ServerType.HISTORICAL,
+      "dummy",
+      0
+  );
   private final List<DataSegment> segments;
 
   public TestServerInventoryView(List<DataSegment> segments)
@@ -52,31 +60,21 @@ public class TestServerInventoryView implements TimelineServerView
   @Override
   public void registerSegmentCallback(Executor exec, final SegmentCallback callback)
   {
-    final DruidServerMetadata dummyServer = new DruidServerMetadata("dummy", "dummy", 0, ServerType.HISTORICAL, "dummy", 0);
-
     for (final DataSegment segment : segments) {
-      exec.execute(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              callback.segmentAdded(dummyServer, segment);
-            }
-          }
-      );
+      exec.execute(() -> callback.segmentAdded(DUMMY_SERVER, segment));
     }
 
-    exec.execute(
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            callback.segmentViewInitialized();
-          }
-        }
-    );
+    exec.execute(callback::segmentViewInitialized);
+  }
+
+  @Override
+  public void registerTimelineCallback(final Executor exec, final TimelineCallback callback)
+  {
+    for (DataSegment segment : segments) {
+      exec.execute(() -> callback.segmentAdded(DUMMY_SERVER, segment));
+    }
+
+    exec.execute(callback::timelineInitialized);
   }
 
   @Override
@@ -86,10 +84,7 @@ public class TestServerInventoryView implements TimelineServerView
   }
 
   @Override
-  public void registerServerCallback(
-      Executor exec,
-      ServerView.ServerCallback callback
-  )
+  public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
   {
     // Do nothing
   }

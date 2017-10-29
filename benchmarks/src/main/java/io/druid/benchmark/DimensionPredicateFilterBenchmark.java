@@ -29,6 +29,7 @@ import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.collections.bitmap.RoaringBitmapFactory;
 import io.druid.collections.spatial.ImmutableRTree;
 import io.druid.query.filter.BitmapIndexSelector;
+import io.druid.query.filter.DruidDoublePredicate;
 import io.druid.query.filter.DruidFloatPredicate;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
@@ -95,6 +96,12 @@ public class DimensionPredicateFilterBenchmark
         {
           return DruidFloatPredicate.ALWAYS_FALSE;
         }
+
+        @Override
+        public DruidDoublePredicate makeDoublePredicate()
+        {
+          return DruidDoublePredicate.ALWAYS_FALSE;
+        }
       },
       null
   );
@@ -152,6 +159,12 @@ public class DimensionPredicateFilterBenchmark
       public Indexed<String> getDimensionValues(String dimension)
       {
         return dictionary;
+      }
+
+      @Override
+      public boolean hasMultipleValues(final String dimension)
+      {
+        throw new UnsupportedOperationException();
       }
 
       @Override

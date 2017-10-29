@@ -21,6 +21,7 @@ package io.druid.benchmark;
 
 import com.google.common.base.Supplier;
 
+import io.druid.collections.NonBlockingPool;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
 import io.druid.java.util.common.logger.Logger;
@@ -64,7 +65,7 @@ public class StupidPoolConcurrencyBenchmark
   public static class BenchmarkPool
   {
     private final AtomicLong numPools = new AtomicLong(0L);
-    private final StupidPool<Object> pool = new StupidPool<>(
+    private final NonBlockingPool<Object> pool = new StupidPool<>(
         "simpleObject pool",
         new Supplier<Object>()
         {
@@ -83,7 +84,7 @@ public class StupidPoolConcurrencyBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void hammerQueue(BenchmarkPool pool, Blackhole blackhole) throws IOException
   {
-    try(ResourceHolder<Object> holder = pool.pool.take()){
+    try (ResourceHolder<Object> holder = pool.pool.take()) {
       blackhole.consume(holder);
     }
   }

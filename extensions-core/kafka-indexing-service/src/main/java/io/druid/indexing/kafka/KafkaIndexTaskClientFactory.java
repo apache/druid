@@ -22,7 +22,7 @@ package io.druid.indexing.kafka;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.metamx.http.client.HttpClient;
-import io.druid.guice.annotations.Global;
+import io.druid.guice.annotations.EscalatedGlobal;
 import io.druid.guice.annotations.Json;
 import io.druid.indexing.common.TaskInfoProvider;
 import org.joda.time.Duration;
@@ -33,7 +33,10 @@ public class KafkaIndexTaskClientFactory
   private ObjectMapper mapper;
 
   @Inject
-  public KafkaIndexTaskClientFactory(@Global HttpClient httpClient, @Json ObjectMapper mapper)
+  public KafkaIndexTaskClientFactory(
+      @EscalatedGlobal HttpClient httpClient,
+      @Json ObjectMapper mapper
+  )
   {
     this.httpClient = httpClient;
     this.mapper = mapper;

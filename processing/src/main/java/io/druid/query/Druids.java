@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -41,12 +42,12 @@ import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.metadata.metadata.ColumnIncluderator;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.query.search.SearchResultValue;
-import io.druid.query.search.search.ContainsSearchQuerySpec;
-import io.druid.query.search.search.FragmentSearchQuerySpec;
-import io.druid.query.search.search.InsensitiveContainsSearchQuerySpec;
-import io.druid.query.search.search.SearchQuery;
-import io.druid.query.search.search.SearchQuerySpec;
-import io.druid.query.search.search.SearchSortSpec;
+import io.druid.query.search.ContainsSearchQuerySpec;
+import io.druid.query.search.FragmentSearchQuerySpec;
+import io.druid.query.search.InsensitiveContainsSearchQuerySpec;
+import io.druid.query.search.SearchQuery;
+import io.druid.query.search.SearchQuerySpec;
+import io.druid.query.search.SearchSortSpec;
 import io.druid.query.select.PagingSpec;
 import io.druid.query.select.SelectQuery;
 import io.druid.query.spec.LegacySegmentSpec;
@@ -325,7 +326,7 @@ public class Druids
    *                                        .build();
    * </code></pre>
    *
-   * @see io.druid.query.timeseries.TimeseriesQuery
+   * @see TimeseriesQuery
    */
   public static class TimeseriesQueryBuilder
   {
@@ -544,7 +545,7 @@ public class Druids
    *                                  .build();
    * </code></pre>
    *
-   * @see io.druid.query.search.search.SearchQuery
+   * @see SearchQuery
    */
   public static class SearchQueryBuilder
   {
@@ -766,7 +767,7 @@ public class Druids
    *                                  .build();
    * </code></pre>
    *
-   * @see io.druid.query.timeboundary.TimeBoundaryQuery
+   * @see TimeBoundaryQuery
    */
   public static class TimeBoundaryQueryBuilder
   {
@@ -894,7 +895,7 @@ public class Druids
 
     public ResultBuilder()
     {
-      timestamp = new DateTime(0);
+      timestamp = DateTimes.EPOCH;
       value = null;
     }
 
@@ -951,7 +952,7 @@ public class Druids
    *                                  .build();
    * </code></pre>
    *
-   * @see io.druid.query.metadata.metadata.SegmentMetadataQuery
+   * @see SegmentMetadataQuery
    */
   public static class SegmentMetadataQueryBuilder
   {
@@ -1091,7 +1092,7 @@ public class Druids
    *                                  .build();
    * </code></pre>
    *
-   * @see io.druid.query.select.SelectQuery
+   * @see SelectQuery
    */
   public static class SelectQueryBuilder
   {
@@ -1281,7 +1282,7 @@ public class Druids
    *                                  .build();
    * </code></pre>
    *
-   * @see io.druid.query.datasourcemetadata.DataSourceMetadataQuery
+   * @see DataSourceMetadataQuery
    */
   public static class DataSourceMetadataQueryBuilder
   {

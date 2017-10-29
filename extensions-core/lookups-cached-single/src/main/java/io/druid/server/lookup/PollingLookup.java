@@ -25,7 +25,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.LookupExtractor;
@@ -60,7 +60,7 @@ public class PollingLookup extends LookupExtractor
 
   private final ListenableFuture<?> pollFuture;
 
-  private final String id =  Integer.toHexString(System.identityHashCode(this));
+  private final String id = Integer.toHexString(System.identityHashCode(this));
 
   public PollingLookup(
       long pollPeriodMs,
@@ -215,7 +215,10 @@ public class PollingLookup extends LookupExtractor
     private final PollingCache pollingCache;
     private final AtomicLong refCounts = new AtomicLong(0L);
 
-    CacheRefKeeper(PollingCache pollingCache) {this.pollingCache = pollingCache;}
+    CacheRefKeeper(PollingCache pollingCache)
+    {
+      this.pollingCache = pollingCache;
+    }
 
     PollingCache getAndIncrementRef()
     {
@@ -239,4 +242,12 @@ public class PollingLookup extends LookupExtractor
     }
   }
 
+  @Override
+  public String toString()
+  {
+    return "PollingLookup{" +
+           "dataFetcher=" + dataFetcher +
+           ", id='" + id + '\'' +
+           '}';
+  }
 }

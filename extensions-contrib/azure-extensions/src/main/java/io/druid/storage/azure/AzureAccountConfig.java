@@ -70,13 +70,28 @@ public class AzureAccountConfig
     this.container = container;
   }
 
-  public String getProtocol() { return protocol; }
+  public String getProtocol()
+  {
+    return protocol;
+  }
 
-  public int getMaxTries() { return maxTries; }
+  public int getMaxTries()
+  {
+    return maxTries;
+  }
 
-  public String getAccount() { return account; }
+  public String getAccount()
+  {
+    return account;
+  }
 
-  public String getKey() { return key;}
+  public String getKey()
+  {
+    return key;
+  }
 
-  public String getContainer() { return container; }
+  public String getContainer()
+  {
+    return container;
+  }
 }

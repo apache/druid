@@ -38,7 +38,8 @@ public class TableDataSource implements DataSource
   }
 
   @JsonProperty
-  public String getName(){
+  public String getName()
+  {
     return name;
   }
 
@@ -49,7 +50,10 @@ public class TableDataSource implements DataSource
   }
 
   @Override
-  public String toString() { return name; }
+  public String toString()
+  {
+    return name;
+  }
 
   @Override
   public boolean equals(Object o)

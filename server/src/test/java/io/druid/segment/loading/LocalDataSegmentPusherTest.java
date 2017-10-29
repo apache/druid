@@ -24,9 +24,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.StringUtils;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -49,15 +50,15 @@ public class LocalDataSegmentPusherTest
   LocalDataSegmentPusherConfig config;
   File dataSegmentFiles;
   DataSegment dataSegment = new DataSegment(
-    "ds",
-    new Interval(0, 1),
-    "v1",
-    null,
-    null,
-    null,
-    NoneShardSpec.instance(),
-    null,
-    -1
+      "ds",
+      Intervals.utc(0, 1),
+      "v1",
+      null,
+      null,
+      null,
+      NoneShardSpec.instance(),
+      null,
+      -1
   );
 
   @Before
@@ -88,14 +89,14 @@ public class LocalDataSegmentPusherTest
     Assert.assertEquals(dataSegment2, returnSegment2);
 
     Assert.assertNotEquals(
-        DataSegmentPusherUtil.getStorageDir(dataSegment),
-        DataSegmentPusherUtil.getStorageDir(dataSegment2)
+        localDataSegmentPusher.getStorageDir(dataSegment),
+        localDataSegmentPusher.getStorageDir(dataSegment2)
     );
 
     for (DataSegment returnSegment : ImmutableList.of(returnSegment1, returnSegment2)) {
       File outDir = new File(
           config.getStorageDirectory(),
-          DataSegmentPusherUtil.getStorageDir(returnSegment)
+          localDataSegmentPusher.getStorageDir(returnSegment)
       );
       File versionFile = new File(outDir, "index.zip");
       File descriptorJson = new File(outDir, "descriptor.json");
@@ -143,7 +144,7 @@ public class LocalDataSegmentPusherTest
     config.storageDirectory = new File("druid");
 
     Assert.assertEquals(
-        String.format("file:%s/druid", System.getProperty("user.dir")),
+        StringUtils.format("file:%s/druid", System.getProperty("user.dir")),
         new LocalDataSegmentPusher(config, new ObjectMapper()).getPathForHadoop()
     );
   }

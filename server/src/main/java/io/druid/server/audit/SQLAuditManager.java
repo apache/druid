@@ -29,6 +29,8 @@ import io.druid.audit.AuditEntry;
 import io.druid.audit.AuditManager;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Json;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.StringUtils;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.metadata.SQLMetadataConnector;
 
@@ -105,7 +107,7 @@ public class SQLAuditManager implements AuditManager
     );
 
     handle.createStatement(
-        String.format(
+        StringUtils.format(
             "INSERT INTO %s ( audit_key, type, author, comment, created_date, payload) VALUES (:audit_key, :type, :author, :comment, :created_date, :payload)",
             getAuditTable()
         )
@@ -130,7 +132,7 @@ public class SQLAuditManager implements AuditManager
           public List<AuditEntry> withHandle(Handle handle) throws Exception
           {
             return handle.createQuery(
-                String.format(
+                StringUtils.format(
                     "SELECT payload FROM %s WHERE audit_key = :audit_key and type = :type and created_date between :start_date and :end_date ORDER BY created_date",
                     getAuditTable()
                 )
@@ -164,7 +166,7 @@ public class SQLAuditManager implements AuditManager
   {
     final Interval theInterval;
     if (interval == null) {
-      DateTime now = new DateTime();
+      DateTime now = DateTimes.nowUtc();
       theInterval = new Interval(now.minus(config.getAuditHistoryMillis()), now);
     } else {
       theInterval = interval;
@@ -191,7 +193,7 @@ public class SQLAuditManager implements AuditManager
           public List<AuditEntry> withHandle(Handle handle) throws Exception
           {
             return handle.createQuery(
-                String.format(
+                StringUtils.format(
                     "SELECT payload FROM %s WHERE type = :type and created_date between :start_date and :end_date ORDER BY created_date",
                     getAuditTable()
                 )
@@ -239,7 +241,7 @@ public class SQLAuditManager implements AuditManager
       throws IllegalArgumentException
   {
     final int theLimit = getLimit(limit);
-    String queryString = String.format("SELECT payload FROM %s WHERE type = :type", getAuditTable());
+    String queryString = StringUtils.format("SELECT payload FROM %s WHERE type = :type", getAuditTable());
     if (key != null) {
       queryString += " and audit_key = :audit_key";
     }

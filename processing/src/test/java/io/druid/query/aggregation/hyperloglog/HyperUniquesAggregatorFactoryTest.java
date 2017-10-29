@@ -19,10 +19,14 @@
 
 package io.druid.query.aggregation.hyperloglog;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import io.druid.hll.HLLCV0;
 import io.druid.hll.HyperLogLogCollector;
+import io.druid.java.util.common.StringUtils;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -82,8 +86,8 @@ public class HyperUniquesAggregatorFactoryTest
       }
 
       Assert.assertEquals(
-              Double.compare(collector1.estimateCardinality(), collector2.estimateCardinality()),
-              comparator.compare(collector1, collector2)
+          Double.compare(collector1.estimateCardinality(), collector2.estimateCardinality()),
+          comparator.compare(collector1, collector2)
       );
     }
 
@@ -101,8 +105,8 @@ public class HyperUniquesAggregatorFactoryTest
       }
 
       Assert.assertEquals(
-              Double.compare(collector1.estimateCardinality(), collector2.estimateCardinality()),
-              comparator.compare(collector1, collector2)
+          Double.compare(collector1.estimateCardinality(), collector2.estimateCardinality()),
+          comparator.compare(collector1, collector2)
       );
     }
 
@@ -120,14 +124,15 @@ public class HyperUniquesAggregatorFactoryTest
       }
 
       Assert.assertEquals(
-              Double.compare(collector1.estimateCardinality(), collector2.estimateCardinality()),
-              comparator.compare(collector1, collector2)
+          Double.compare(collector1.estimateCardinality(), collector2.estimateCardinality()),
+          comparator.compare(collector1, collector2)
       );
     }
   }
 
   @Test
-  public void testCompareToShouldBehaveConsistentlyWithEstimatedCardinalitiesEvenInToughCases() throws Exception {
+  public void testCompareToShouldBehaveConsistentlyWithEstimatedCardinalitiesEvenInToughCases() throws Exception
+  {
     // given
     Random rand = new Random(0);
     HyperUniquesAggregatorFactory factory = new HyperUniquesAggregatorFactory("foo", "bar");
@@ -148,20 +153,42 @@ public class HyperUniquesAggregatorFactoryTest
       }
 
       // when
-      final int orderedByCardinality = Double.compare(leftCollector.estimateCardinality(),
-              rightCollector.estimateCardinality());
+      final int orderedByCardinality = Double.compare(
+          leftCollector.estimateCardinality(),
+          rightCollector.estimateCardinality()
+      );
       final int orderedByComparator = comparator.compare(leftCollector, rightCollector);
 
       // then, assert hyperloglog comparator behaves consistently with estimated cardinalities
       Assert.assertEquals(
-              String.format("orderedByComparator=%d, orderedByCardinality=%d,\n" +
-                              "Left={cardinality=%f, hll=%s},\n" +
-                              "Right={cardinality=%f, hll=%s},\n", orderedByComparator, orderedByCardinality,
-                      leftCollector.estimateCardinality(), leftCollector,
-                      rightCollector.estimateCardinality(), rightCollector),
-              orderedByCardinality,
-              orderedByComparator
+          StringUtils.format("orderedByComparator=%d, orderedByCardinality=%d,\n" +
+                             "Left={cardinality=%f, hll=%s},\n" +
+                             "Right={cardinality=%f, hll=%s},\n", orderedByComparator, orderedByCardinality,
+                             leftCollector.estimateCardinality(), leftCollector,
+                             rightCollector.estimateCardinality(), rightCollector
+          ),
+          orderedByCardinality,
+          orderedByComparator
       );
     }
+  }
+
+  @Test
+  public void testSerde() throws Exception
+  {
+    final HyperUniquesAggregatorFactory factory = new HyperUniquesAggregatorFactory(
+        "foo",
+        "bar",
+        true,
+        true
+    );
+
+    final ObjectMapper jsonMapper = TestHelper.getJsonMapper();
+    final AggregatorFactory factory2 = jsonMapper.readValue(
+        jsonMapper.writeValueAsString(factory),
+        AggregatorFactory.class
+    );
+
+    Assert.assertEquals(factory, factory2);
   }
 }

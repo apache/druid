@@ -21,7 +21,6 @@ package io.druid.query.search;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import io.druid.query.search.search.SearchHit;
 
 import java.util.Iterator;
 import java.util.List;

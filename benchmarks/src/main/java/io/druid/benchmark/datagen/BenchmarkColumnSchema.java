@@ -240,7 +240,7 @@ public class BenchmarkColumnSchema
     schema.startInt = startInt;
     schema.endInt = endInt;
     return schema;
-  };
+  }
 
   public static BenchmarkColumnSchema makeEnumeratedSequential(
       String name,
@@ -261,7 +261,7 @@ public class BenchmarkColumnSchema
     );
     schema.enumeratedValues = enumeratedValues;
     return schema;
-  };
+  }
 
   public static BenchmarkColumnSchema makeDiscreteUniform(
       String name,
@@ -284,7 +284,7 @@ public class BenchmarkColumnSchema
     schema.startInt = startInt;
     schema.endInt = endInt;
     return schema;
-  };
+  }
 
   public static BenchmarkColumnSchema makeEnumeratedDiscreteUniform(
       String name,
@@ -305,7 +305,7 @@ public class BenchmarkColumnSchema
     );
     schema.enumeratedValues = enumeratedValues;
     return schema;
-  };
+  }
 
   public static BenchmarkColumnSchema makeContinuousUniform(
       String name,
@@ -328,8 +328,7 @@ public class BenchmarkColumnSchema
     schema.startDouble = startDouble;
     schema.endDouble = endDouble;
     return schema;
-  };
-
+  }
 
   public static BenchmarkColumnSchema makeNormal(
       String name,
@@ -353,7 +352,7 @@ public class BenchmarkColumnSchema
     schema.mean = mean;
     schema.standardDeviation = standardDeviation;
     return schema;
-  };
+  }
 
   public static BenchmarkColumnSchema makeZipf(
       String name,
@@ -378,7 +377,7 @@ public class BenchmarkColumnSchema
     schema.endInt = endInt;
     schema.zipfExponent = zipfExponent;
     return schema;
-  };
+  }
 
   public static BenchmarkColumnSchema makeEnumeratedZipf(
       String name,
@@ -401,8 +400,7 @@ public class BenchmarkColumnSchema
     schema.enumeratedValues = enumeratedValues;
     schema.zipfExponent = zipfExponent;
     return schema;
-  };
-
+  }
 
   public static BenchmarkColumnSchema makeEnumerated(
       String name,
@@ -425,5 +423,5 @@ public class BenchmarkColumnSchema
     schema.enumeratedValues = enumeratedValues;
     schema.enumeratedProbabilities = enumeratedProbabilities;
     return schema;
-  };
+  }
 }

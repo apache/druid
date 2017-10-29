@@ -54,9 +54,9 @@ public class Capabilities
       return this;
     }
 
-    public io.druid.segment.Capabilities build()
+    public Capabilities build()
     {
-      return new io.druid.segment.Capabilities(
+      return new Capabilities(
           dimensionValuesSorted
       );
     }

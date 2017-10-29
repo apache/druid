@@ -24,9 +24,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-import io.druid.java.util.common.granularity.Granularity;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.hadoop.FSSpideringIterator;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.hadoop.fs.FileStatus;
@@ -64,7 +66,7 @@ public class GranularUnprocessedPathSpec extends GranularityPathSpec
     // This PathSpec breaks so many abstractions that we might as break some more
     Preconditions.checkState(
         config.getGranularitySpec() instanceof UniformGranularitySpec,
-        String.format(
+        StringUtils.format(
             "Cannot use %s without %s",
             GranularUnprocessedPathSpec.class.getSimpleName(),
             UniformGranularitySpec.class.getSimpleName()
@@ -87,10 +89,10 @@ public class GranularUnprocessedPathSpec extends GranularityPathSpec
 
     Set<Interval> bucketsToRun = Sets.newTreeSet(Comparators.intervals());
     for (Map.Entry<Long, Long> entry : inputModifiedTimes.entrySet()) {
-      DateTime timeBucket = new DateTime(entry.getKey());
+      DateTime timeBucket = DateTimes.utc(entry.getKey());
       long mTime = entry.getValue();
 
-      String bucketOutput = String.format(
+      String bucketOutput = StringUtils.format(
           "%s/%s",
           config.getSchema().getIOConfig().getSegmentOutputPath(),
           segmentGranularity.toPath(timeBucket)

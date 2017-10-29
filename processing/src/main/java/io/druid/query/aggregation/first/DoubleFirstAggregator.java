@@ -21,14 +21,14 @@ package io.druid.query.aggregation.first;
 
 import io.druid.collections.SerializablePair;
 import io.druid.query.aggregation.Aggregator;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
+import io.druid.segment.BaseDoubleColumnValueSelector;
+import io.druid.segment.BaseLongColumnValueSelector;
 
 public class DoubleFirstAggregator implements Aggregator
 {
 
-  private final FloatColumnSelector valueSelector;
-  private final LongColumnSelector timeSelector;
+  private final BaseDoubleColumnValueSelector valueSelector;
+  private final BaseLongColumnValueSelector timeSelector;
   private final String name;
 
   protected long firstTime;
@@ -36,8 +36,8 @@ public class DoubleFirstAggregator implements Aggregator
 
   public DoubleFirstAggregator(
       String name,
-      LongColumnSelector timeSelector,
-      FloatColumnSelector valueSelector
+      BaseLongColumnValueSelector timeSelector,
+      BaseDoubleColumnValueSelector valueSelector
   )
   {
     this.name = name;
@@ -50,10 +50,10 @@ public class DoubleFirstAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    long time = timeSelector.get();
+    long time = timeSelector.getLong();
     if (time < firstTime) {
       firstTime = time;
-      firstValue = valueSelector.get();
+      firstValue = valueSelector.getDouble();
     }
   }
 
@@ -77,15 +77,21 @@ public class DoubleFirstAggregator implements Aggregator
   }
 
   @Override
-  public void close()
+  public double getDouble()
   {
-
+    return firstValue;
   }
 
   @Override
   public long getLong()
   {
     return (long) firstValue;
+  }
+
+  @Override
+  public void close()
+  {
+
   }
 }
 

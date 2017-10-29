@@ -19,6 +19,8 @@
 
 package io.druid.segment;
 
+import javax.annotation.Nullable;
+
 /**
  * "Mixin" for {@link DimensionSelector}.
  */
@@ -27,5 +29,5 @@ public interface IdLookup
   /**
    * Inverse of {@link DimensionSelector#lookupName(int)}.
    */
-  int lookupId(String name);
+  int lookupId(@Nullable String name);
 }

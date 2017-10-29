@@ -21,7 +21,7 @@ package io.druid.query.monomorphicprocessing;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.logger.Logger;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;

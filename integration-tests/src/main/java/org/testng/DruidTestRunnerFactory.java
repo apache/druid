@@ -27,6 +27,7 @@ import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.testing.IntegrationTestingConfig;
@@ -41,16 +42,13 @@ import org.testng.xml.XmlTest;
 
 import java.net.URL;
 import java.util.List;
-import java.util.concurrent.Callable;
 
 public class DruidTestRunnerFactory implements ITestRunnerFactory
 {
   private static final Logger LOG = new Logger(DruidTestRunnerFactory.class);
 
   @Override
-  public TestRunner newTestRunner(
-    ISuite suite, XmlTest test, List<IInvokedMethodListener> listeners
-  )
+  public TestRunner newTestRunner(ISuite suite, XmlTest test, List<IInvokedMethodListener> listeners)
   {
     IConfiguration configuration = TestNG.getDefault().getConfiguration();
     String outputDirectory = suite.getOutputDirectory();
@@ -71,13 +69,13 @@ public class DruidTestRunnerFactory implements ITestRunnerFactory
   {
 
     protected DruidTestRunner(
-      IConfiguration configuration,
-      ISuite suite,
-      XmlTest test,
-      String outputDirectory,
-      IAnnotationFinder finder,
-      boolean skipFailedInvocationCounts,
-      List<IInvokedMethodListener> invokedMethodListeners
+        IConfiguration configuration,
+        ISuite suite,
+        XmlTest test,
+        String outputDirectory,
+        IAnnotationFinder finder,
+        boolean skipFailedInvocationCounts,
+        List<IInvokedMethodListener> invokedMethodListeners
     )
     {
       super(configuration, suite, test, outputDirectory, finder, skipFailedInvocationCounts, invokedMethodListeners);
@@ -103,7 +101,7 @@ public class DruidTestRunnerFactory implements ITestRunnerFactory
         runTests();
       }
       catch (Exception e) {
-        e.printStackTrace();
+        LOG.error(e, "");
         throw Throwables.propagate(e);
       }
       finally {
@@ -121,38 +119,22 @@ public class DruidTestRunnerFactory implements ITestRunnerFactory
     {
       final StatusResponseHandler handler = new StatusResponseHandler(Charsets.UTF_8);
       RetryUtil.retryUntilTrue(
-        new Callable<Boolean>()
-        {
-          @Override
-          public Boolean call() throws Exception
-          {
+          () -> {
             try {
               StatusResponseHolder response = client.go(
-                new Request(
-                  HttpMethod.GET,
-                  new URL(
-                    String.format(
-                      "%s/status",
-                      host
-                    )
-                  )
-                ),
-                handler
+                  new Request(HttpMethod.GET, new URL(StringUtils.format("%s/status", host))),
+                  handler
               ).get();
 
-              System.out.println(response.getStatus() + response.getContent());
-              if (response.getStatus().equals(HttpResponseStatus.OK)) {
-                return true;
-              } else {
-                return false;
-              }
+              LOG.info("%s %s", response.getStatus(), response.getContent());
+              return response.getStatus().equals(HttpResponseStatus.OK);
             }
             catch (Throwable e) {
-              e.printStackTrace();
+              LOG.error(e, "");
               return false;
             }
-          }
-        }, "Waiting for instance to be ready: [" + host + "]"
+          },
+          "Waiting for instance to be ready: [" + host + "]"
       );
     }
   }

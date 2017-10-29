@@ -108,8 +108,7 @@ public class ColumnBuilder
             .setHasBitmapIndexes(bitmapIndex != null)
             .setHasSpatialIndexes(spatialIndex != null)
             .setRunLengthEncoded(runLengthColumn != null)
-            .setHasMultipleValues(hasMultipleValues)
-        ,
+            .setHasMultipleValues(hasMultipleValues),
         dictionaryEncodedColumn,
         runLengthColumn,
         genericColumn,

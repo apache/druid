@@ -50,7 +50,7 @@ public class LookupListeningAnnouncerConfigTest
             public void configure(Binder binder)
             {
               JsonConfigProvider.bindInstance(
-                  binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null)
+                  binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null, null, true, false)
               );
               binder.bind(Key.get(
                   String.class,

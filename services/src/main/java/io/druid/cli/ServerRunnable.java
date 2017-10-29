@@ -20,10 +20,19 @@
 package io.druid.cli;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
-
+import com.google.inject.Provider;
+import io.druid.discovery.DiscoveryDruidNode;
+import io.druid.discovery.DruidNodeAnnouncer;
+import io.druid.discovery.DruidService;
+import io.druid.guice.annotations.Self;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.server.DruidNode;
+
+import java.util.List;
 
 /**
  */
@@ -45,6 +54,71 @@ public abstract class ServerRunnable extends GuiceRunnable
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
+    }
+  }
+
+  /**
+   * This is a helper class used by CliXXX classes to announce DiscoveryDruidNode
+   * as part of lifecycle Stage.LAST .
+   */
+  protected static class DiscoverySideEffectsProvider implements Provider<DiscoverySideEffectsProvider.Child>
+  {
+    public static class Child {}
+
+    @Inject @Self
+    private DruidNode druidNode;
+
+    @Inject
+    private DruidNodeAnnouncer announcer;
+
+    @Inject
+    private Lifecycle lifecycle;
+
+    @Inject
+    private Injector injector;
+
+    private final String nodeType;
+    private final List<Class<? extends DruidService>> serviceClasses;
+
+    public DiscoverySideEffectsProvider(String nodeType, List<Class<? extends DruidService>> serviceClasses)
+    {
+      this.nodeType = nodeType;
+      this.serviceClasses = serviceClasses;
+    }
+
+    @Override
+    public Child get()
+    {
+      ImmutableMap.Builder<String, DruidService> builder = new ImmutableMap.Builder<>();
+      for (Class<? extends DruidService> clazz : serviceClasses) {
+        DruidService service = injector.getInstance(clazz);
+        builder.put(service.getName(), service);
+      }
+
+      DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(druidNode,
+                                                                     nodeType,
+                                                                     builder.build()
+      );
+
+      lifecycle.addHandler(
+          new Lifecycle.Handler()
+          {
+            @Override
+            public void start() throws Exception
+            {
+              announcer.announce(discoveryDruidNode);
+            }
+
+            @Override
+            public void stop()
+            {
+              announcer.unannounce(discoveryDruidNode);
+            }
+          },
+          Lifecycle.Stage.LAST
+      );
+
+      return new Child();
     }
   }
 }

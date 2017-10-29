@@ -22,15 +22,12 @@ package io.druid.indexing.overlord.setup;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
-import io.druid.java.util.common.ISE;
 import io.druid.js.JavaScriptConfig;
 
 import javax.script.Compilable;
@@ -41,13 +38,15 @@ import javax.script.ScriptException;
 
 public class JavaScriptWorkerSelectStrategy implements WorkerSelectStrategy
 {
-  public static interface SelectorFunction
+  public interface SelectorFunction
   {
-    public String apply(WorkerTaskRunnerConfig config, ImmutableMap<String, ImmutableWorkerInfo> zkWorkers, Task task);
+    String apply(WorkerTaskRunnerConfig config, ImmutableMap<String, ImmutableWorkerInfo> zkWorkers, Task task);
   }
 
-  private final SelectorFunction fnSelector;
   private final String function;
+
+  // This variable is lazily initialized to avoid unnecessary JavaScript compilation during JSON serde
+  private SelectorFunction fnSelector;
 
   @JsonCreator
   public JavaScriptWorkerSelectStrategy(
@@ -56,29 +55,31 @@ public class JavaScriptWorkerSelectStrategy implements WorkerSelectStrategy
   )
   {
     Preconditions.checkNotNull(fn, "function must not be null");
+    Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
 
-    if (!config.isEnabled()) {
-      throw new ISE("JavaScript is disabled");
-    }
+    this.function = fn;
+  }
 
+  private SelectorFunction compileSelectorFunction()
+  {
     final ScriptEngine engine = new ScriptEngineManager().getEngineByName("javascript");
     try {
-      ((Compilable) engine).compile("var apply = " + fn).eval();
+      ((Compilable) engine).compile("var apply = " + function).eval();
+      return ((Invocable) engine).getInterface(SelectorFunction.class);
     }
     catch (ScriptException e) {
       throw Throwables.propagate(e);
     }
-    this.function = fn;
-    this.fnSelector = ((Invocable) engine).getInterface(SelectorFunction.class);
   }
 
   @Override
-  public Optional<ImmutableWorkerInfo> findWorkerForTask(
+  public ImmutableWorkerInfo findWorkerForTask(
       WorkerTaskRunnerConfig config, ImmutableMap<String, ImmutableWorkerInfo> zkWorkers, Task task
   )
   {
+    fnSelector = fnSelector == null ? compileSelectorFunction() : fnSelector;
     String worker = fnSelector.apply(config, zkWorkers, task);
-    return Optional.fromNullable(worker == null ? null : zkWorkers.get(worker));
+    return worker == null ? null : zkWorkers.get(worker);
   }
 
   @JsonProperty

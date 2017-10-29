@@ -24,9 +24,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
-
-import io.druid.java.util.common.ISE;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.Query;
 
@@ -38,13 +35,15 @@ import javax.script.ScriptException;
 
 public class JavaScriptTieredBrokerSelectorStrategy implements TieredBrokerSelectorStrategy
 {
-  public static interface SelectorFunction
+  public interface SelectorFunction
   {
-    public String apply(TieredBrokerConfig config, Query query);
+    String apply(TieredBrokerConfig config, Query query);
   }
 
-  private final SelectorFunction fnSelector;
   private final String function;
+
+  // This variable is lazily initialized to avoid unnecessary JavaScript compilation during JSON serde
+  private SelectorFunction fnSelector;
 
   @JsonCreator
   public JavaScriptTieredBrokerSelectorStrategy(
@@ -53,19 +52,21 @@ public class JavaScriptTieredBrokerSelectorStrategy implements TieredBrokerSelec
   )
   {
     Preconditions.checkNotNull(fn, "function must not be null");
+    Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
 
-    if (!config.isEnabled()) {
-      throw new ISE("JavaScript is disabled");
-    }
+    this.function = fn;
+  }
 
+  private SelectorFunction compileSelectorFunction()
+  {
     final ScriptEngine engine = new ScriptEngineManager().getEngineByName("javascript");
     try {
-      ((Compilable)engine).compile("var apply = " + fn).eval();
-    } catch(ScriptException e) {
-      Throwables.propagate(e);
+      ((Compilable) engine).compile("var apply = " + function).eval();
+      return ((Invocable) engine).getInterface(SelectorFunction.class);
     }
-    this.function = fn;
-    this.fnSelector = ((Invocable)engine).getInterface(SelectorFunction.class);
+    catch (ScriptException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @Override
@@ -73,6 +74,7 @@ public class JavaScriptTieredBrokerSelectorStrategy implements TieredBrokerSelec
       TieredBrokerConfig config, Query query
   )
   {
+    fnSelector = fnSelector == null ? compileSelectorFunction() : fnSelector;
     return Optional.fromNullable(fnSelector.apply(config, query));
   }
 

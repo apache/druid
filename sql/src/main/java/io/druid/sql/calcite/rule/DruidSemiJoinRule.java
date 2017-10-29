@@ -20,7 +20,7 @@
 package io.druid.sql.calcite.rule;
 
 import com.google.common.base.Predicate;
-import io.druid.query.dimension.DimensionSpec;
+import com.google.common.base.Predicates;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.rel.DruidRel;
 import io.druid.sql.calcite.rel.DruidSemiJoin;
@@ -31,11 +31,11 @@ import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinInfo;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rex.RexInputRef;
+import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.ImmutableBitSet;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Planner rule adapted from Calcite 1.11.0's SemiJoinRule.
@@ -52,25 +52,13 @@ import java.util.List;
 public class DruidSemiJoinRule extends RelOptRule
 {
   private static final Predicate<Join> IS_LEFT_OR_INNER =
-      new Predicate<Join>()
-      {
-        @Override
-        public boolean apply(Join join)
-        {
-          final JoinRelType joinType = join.getJoinType();
-          return joinType == JoinRelType.LEFT || joinType == JoinRelType.INNER;
-        }
+      join -> {
+        final JoinRelType joinType = join.getJoinType();
+        return joinType == JoinRelType.LEFT || joinType == JoinRelType.INNER;
       };
 
-  private static final Predicate<DruidRel> IS_GROUP_BY =
-      new Predicate<DruidRel>()
-      {
-        @Override
-        public boolean apply(DruidRel druidRel)
-        {
-          return druidRel.getQueryBuilder().getGrouping() != null;
-        }
-      };
+  private static final Predicate<DruidRel> IS_GROUP_BY = druidRel ->
+      druidRel.getPartialDruidQuery().getAggregate() != null;
 
   private static final DruidSemiJoinRule INSTANCE = new DruidSemiJoinRule();
 
@@ -84,7 +72,7 @@ public class DruidSemiJoinRule extends RelOptRule
                 null,
                 IS_LEFT_OR_INNER,
                 some(
-                    operand(DruidRel.class, any()),
+                    operand(DruidRel.class, null, Predicates.not(IS_GROUP_BY), any()),
                     operand(DruidRel.class, null, IS_GROUP_BY, any())
                 )
             )
@@ -118,38 +106,54 @@ public class DruidSemiJoinRule extends RelOptRule
     }
 
     final JoinInfo joinInfo = join.analyzeCondition();
-    final List<Integer> rightDimsOut = new ArrayList<>();
-    for (DimensionSpec dimensionSpec : right.getQueryBuilder().getGrouping().getDimensions()) {
-      rightDimsOut.add(right.getOutputRowSignature().getRowOrder().indexOf(dimensionSpec.getOutputName()));
-    }
 
-    if (!joinInfo.isEqui() || !joinInfo.rightSet().equals(ImmutableBitSet.of(rightDimsOut))) {
-      // Rule requires that aggregate key to be the same as the join key.
-      // By the way, neither a super-set nor a sub-set would work.
+    // Rule requires that aggregate key to be the same as the join key.
+    // By the way, neither a super-set nor a sub-set would work.
+
+    if (!joinInfo.isEqui() ||
+        joinInfo.rightSet().cardinality() != right.getPartialDruidQuery().getAggregate().getGroupCount()) {
       return;
     }
 
+    final Project rightPostProject = right.getPartialDruidQuery().getPostProject();
+    int i = 0;
+    for (int joinRef : joinInfo.rightSet()) {
+      final int aggregateRef;
+
+      if (rightPostProject == null) {
+        aggregateRef = joinRef;
+      } else {
+        final RexNode projectExp = rightPostProject.getChildExps().get(joinRef);
+        if (projectExp.isA(SqlKind.INPUT_REF)) {
+          aggregateRef = ((RexInputRef) projectExp).getIndex();
+        } else {
+          // Project expression is not part of the grouping key.
+          return;
+        }
+      }
+
+      if (aggregateRef != i++) {
+        return;
+      }
+    }
+
     final RelBuilder relBuilder = call.builder();
-    final PlannerConfig plannerConfig = left.getPlannerContext().getPlannerConfig();
 
     if (join.getJoinType() == JoinRelType.LEFT) {
       // Join can be eliminated since the right-hand side cannot have any effect (nothing is being selected,
       // and LEFT means even if there is no match, a left-hand row will still be included).
       relBuilder.push(left);
     } else {
-      final DruidSemiJoin druidSemiJoin = DruidSemiJoin.from(
+      final DruidSemiJoin druidSemiJoin = DruidSemiJoin.create(
           left,
           right,
           joinInfo.leftKeys,
           joinInfo.rightKeys,
-          plannerConfig
+          left.getPlannerContext()
       );
 
-      if (druidSemiJoin == null) {
-        return;
-      }
-
       // Check maxQueryCount.
+      final PlannerConfig plannerConfig = left.getPlannerContext().getPlannerConfig();
       if (plannerConfig.getMaxQueryCount() > 0 && druidSemiJoin.getQueryCount() > plannerConfig.getMaxQueryCount()) {
         return;
       }

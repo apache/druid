@@ -48,7 +48,7 @@ public class Log4jShutterDownerModule implements Module
 
     try {
       ClassLoader loader = Thread.currentThread().getContextClassLoader();
-      if(loader == null) {
+      if (loader == null) {
         loader = getClass().getClassLoader();
       }
       // Reflection to try and allow non Log4j2 stuff to run. This acts as a gateway to stop errors in the next few lines

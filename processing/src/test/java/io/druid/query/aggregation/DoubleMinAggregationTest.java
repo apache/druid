@@ -20,8 +20,8 @@
 package io.druid.query.aggregation;
 
 import com.google.common.primitives.Doubles;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.TestHelper;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -35,22 +35,22 @@ public class DoubleMinAggregationTest
 {
   private DoubleMinAggregatorFactory doubleMinAggFactory;
   private ColumnSelectorFactory colSelectorFactory;
-  private TestFloatColumnSelector selector;
+  private TestDoubleColumnSelectorImpl selector;
 
-  private float[] values = {3.5f, 2.7f, 1.1f, 1.3f};
+  private double[] values = {3.5d, 2.7d, 1.1d, 1.3d};
 
   public DoubleMinAggregationTest() throws Exception
   {
     String aggSpecJson = "{\"type\": \"doubleMin\", \"name\": \"billy\", \"fieldName\": \"nilly\"}";
-    doubleMinAggFactory = new DefaultObjectMapper().readValue(aggSpecJson , DoubleMinAggregatorFactory.class);
+    doubleMinAggFactory = TestHelper.getJsonMapper().readValue(aggSpecJson, DoubleMinAggregatorFactory.class);
   }
 
   @Before
   public void setup()
   {
-    selector = new TestFloatColumnSelector(values);
+    selector = new TestDoubleColumnSelectorImpl(values);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
-    EasyMock.expect(colSelectorFactory.makeFloatColumnSelector("nilly")).andReturn(selector);
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(selector);
     EasyMock.replay(colSelectorFactory);
   }
 
@@ -65,7 +65,7 @@ public class DoubleMinAggregationTest
     aggregate(selector, agg);
 
     Assert.assertEquals(values[2], ((Double) agg.get()).doubleValue(), 0.0001);
-    Assert.assertEquals((long)values[2], agg.getLong());
+    Assert.assertEquals((long) values[2], agg.getLong());
     Assert.assertEquals(values[2], agg.getFloat(), 0.0001);
 
     agg.reset();
@@ -109,13 +109,13 @@ public class DoubleMinAggregationTest
     Assert.assertFalse(one.equals(two));
   }
 
-  private void aggregate(TestFloatColumnSelector selector, DoubleMinAggregator agg)
+  private void aggregate(TestDoubleColumnSelectorImpl selector, DoubleMinAggregator agg)
   {
     agg.aggregate();
     selector.increment();
   }
 
-  private void aggregate(TestFloatColumnSelector selector, DoubleMinBufferAggregator agg, ByteBuffer buff, int position)
+  private void aggregate(TestDoubleColumnSelectorImpl selector, DoubleMinBufferAggregator agg, ByteBuffer buff, int position)
   {
     agg.aggregate(buff, position);
     selector.increment();

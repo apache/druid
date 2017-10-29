@@ -71,7 +71,7 @@ public class InputRowSerdeTest
   {
     // Prepare the mocks & set close() call count expectation to 1
     final Aggregator mockedAggregator = EasyMock.createMock(DoubleSumAggregator.class);
-    EasyMock.expect(mockedAggregator.getFloat()).andReturn(0f).times(1);
+    EasyMock.expect(mockedAggregator.getDouble()).andReturn(0d).times(1);
     mockedAggregator.aggregate();
     EasyMock.expectLastCall().times(1);
     mockedAggregator.close();
@@ -108,11 +108,11 @@ public class InputRowSerdeTest
     Assert.assertEquals(ImmutableList.of("d1v"), out.getDimension("d1"));
     Assert.assertEquals(ImmutableList.of("d2v1", "d2v2"), out.getDimension("d2"));
 
-    Assert.assertEquals(0.0f, out.getFloatMetric("agg_non_existing"), 0.00001);
-    Assert.assertEquals(5.0f, out.getFloatMetric("m1out"), 0.00001);
-    Assert.assertEquals(100L, out.getLongMetric("m2out"));
+    Assert.assertEquals(0.0f, out.getMetric("agg_non_existing").floatValue(), 0.00001);
+    Assert.assertEquals(5.0f, out.getMetric("m1out").floatValue(), 0.00001);
+    Assert.assertEquals(100L, out.getMetric("m2out"));
     Assert.assertEquals(1, ((HyperLogLogCollector) out.getRaw("m3out")).estimateCardinality(), 0.001);
-    Assert.assertEquals(0L, out.getLongMetric("unparseable"));
+    Assert.assertEquals(0L, out.getMetric("unparseable"));
 
     EasyMock.verify(mockedAggregator);
   }

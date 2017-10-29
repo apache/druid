@@ -20,7 +20,6 @@
 package io.druid.sql.calcite.expression;
 
 import com.google.common.collect.ImmutableMap;
-import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.joda.time.DateTimeZone;
@@ -41,17 +40,6 @@ public class TimeUnits
       .put(TimeUnitRange.YEAR, Period.years(1))
       .build();
 
-  // Note that QUARTER is not supported here.
-  private static final Map<TimeUnitRange, String> EXTRACT_FORMAT_MAP = ImmutableMap.<TimeUnitRange, String>builder()
-      .put(TimeUnitRange.SECOND, "s")
-      .put(TimeUnitRange.MINUTE, "m")
-      .put(TimeUnitRange.HOUR, "H")
-      .put(TimeUnitRange.DAY, "d")
-      .put(TimeUnitRange.WEEK, "w")
-      .put(TimeUnitRange.MONTH, "M")
-      .put(TimeUnitRange.YEAR, "Y")
-      .build();
-
   /**
    * Returns the Druid QueryGranularity corresponding to a Calcite TimeUnitRange, or null if there is none.
    *
@@ -60,7 +48,7 @@ public class TimeUnits
    *
    * @return queryGranularity, or null
    */
-  public static Granularity toQueryGranularity(final TimeUnitRange timeUnitRange, final DateTimeZone timeZone)
+  public static PeriodGranularity toQueryGranularity(final TimeUnitRange timeUnitRange, final DateTimeZone timeZone)
   {
     final Period period = PERIOD_MAP.get(timeUnitRange);
     if (period == null) {
@@ -68,17 +56,5 @@ public class TimeUnits
     }
 
     return new PeriodGranularity(period, null, timeZone);
-  }
-
-  /**
-   * Returns the Joda format string corresponding to extracting on a Calcite TimeUnitRange, or null if there is none.
-   *
-   * @param timeUnitRange time unit
-   *
-   * @return queryGranularity, or null
-   */
-  public static String toDateTimeFormat(final TimeUnitRange timeUnitRange)
-  {
-    return EXTRACT_FORMAT_MAP.get(timeUnitRange);
   }
 }

@@ -101,6 +101,8 @@ public class ResponseHeaderFilterHolder implements ServletFilterHolder
     }
 
     @Override
-    public void destroy() { }
+    public void destroy()
+    {
+    }
   }
 }

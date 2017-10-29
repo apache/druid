@@ -20,6 +20,7 @@
 package io.druid.segment.serde;
 
 import com.google.common.base.Function;
+import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.IOPeon;
@@ -29,6 +30,7 @@ import java.nio.ByteBuffer;
 
 /**
  */
+@ExtensionPoint
 public abstract class ComplexMetricSerde
 {
   public abstract String getTypeName();

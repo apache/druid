@@ -24,10 +24,11 @@ import io.druid.audit.AuditEntry;
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.StringUtils;
 import io.druid.metadata.TestDerbyConnector;
 import io.druid.server.metrics.NoopServiceEmitter;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -75,7 +76,7 @@ public class SQLAuditManagerTest
             "127.0.0.1"
         ),
         "testPayload",
-        new DateTime("2013-01-01T00:00:00Z")
+        DateTimes.of("2013-01-01T00:00:00Z")
     );
     ObjectMapper mapper = new DefaultObjectMapper();
     AuditEntry serde = mapper.readValue(mapper.writeValueAsString(entry), AuditEntry.class);
@@ -94,7 +95,7 @@ public class SQLAuditManagerTest
             "127.0.0.1"
         ),
         "testPayload",
-        new DateTime("2013-01-01T00:00:00Z")
+        DateTimes.of("2013-01-01T00:00:00Z")
     );
     auditManager.doAudit(entry);
     byte[] payload = connector.lookup(
@@ -120,16 +121,14 @@ public class SQLAuditManagerTest
             "127.0.0.1"
         ),
         "testPayload",
-        new DateTime("2013-01-01T00:00:00Z")
+        DateTimes.of("2013-01-01T00:00:00Z")
     );
     auditManager.doAudit(entry);
     auditManager.doAudit(entry);
     List<AuditEntry> auditEntries = auditManager.fetchAuditHistory(
         "testKey",
         "testType",
-        new Interval(
-            "2012-01-01T00:00:00Z/2013-01-03T00:00:00Z"
-        )
+        Intervals.of("2012-01-01T00:00:00Z/2013-01-03T00:00:00Z")
     );
     Assert.assertEquals(2, auditEntries.size());
     Assert.assertEquals(entry, auditEntries.get(0));
@@ -148,7 +147,7 @@ public class SQLAuditManagerTest
             "127.0.0.1"
         ),
         "testPayload",
-        new DateTime("2013-01-01T00:00:00Z")
+        DateTimes.of("2013-01-01T00:00:00Z")
     );
     AuditEntry entry2 = new AuditEntry(
         "testKey2",
@@ -159,7 +158,7 @@ public class SQLAuditManagerTest
             "127.0.0.1"
         ),
         "testPayload",
-        new DateTime("2013-01-02T00:00:00Z")
+        DateTimes.of("2013-01-02T00:00:00Z")
     );
     auditManager.doAudit(entry1);
     auditManager.doAudit(entry2);
@@ -184,7 +183,7 @@ public class SQLAuditManagerTest
             "127.0.0.1"
         ),
         "testPayload",
-        new DateTime("2013-01-01T00:00:00Z")
+        DateTimes.of("2013-01-01T00:00:00Z")
     );
     AuditEntry entry2 = new AuditEntry(
         "testKey",
@@ -195,7 +194,7 @@ public class SQLAuditManagerTest
             "127.0.0.1"
         ),
         "testPayload",
-        new DateTime("2013-01-02T00:00:00Z")
+        DateTimes.of("2013-01-02T00:00:00Z")
     );
     AuditEntry entry3 = new AuditEntry(
         "testKey",
@@ -206,7 +205,7 @@ public class SQLAuditManagerTest
             "127.0.0.1"
         ),
         "testPayload",
-        new DateTime("2013-01-03T00:00:00Z")
+        DateTimes.of("2013-01-03T00:00:00Z")
     );
     auditManager.doAudit(entry1);
     auditManager.doAudit(entry2);
@@ -220,13 +219,13 @@ public class SQLAuditManagerTest
     Assert.assertEquals(entry2, auditEntries.get(1));
   }
 
-  @Test(expected=IllegalArgumentException.class, timeout = 10_000L)
+  @Test(expected = IllegalArgumentException.class, timeout = 10_000L)
   public void testFetchAuditHistoryLimitBelowZero() throws IOException
   {
     auditManager.fetchAuditHistory("testType", -1);
   }
 
-  @Test(expected=IllegalArgumentException.class, timeout = 10_000L)
+  @Test(expected = IllegalArgumentException.class, timeout = 10_000L)
   public void testFetchAuditHistoryLimitZero() throws IOException
   {
     auditManager.fetchAuditHistory("testType", 0);
@@ -246,7 +245,7 @@ public class SQLAuditManagerTest
           @Override
           public Void withHandle(Handle handle) throws Exception
           {
-            handle.createStatement(String.format("DROP TABLE %s", tableName))
+            handle.createStatement(StringUtils.format("DROP TABLE %s", tableName))
                   .execute();
             return null;
           }

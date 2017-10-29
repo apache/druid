@@ -67,12 +67,13 @@ public class KafkaSupervisorSpec implements SupervisorSpec
       @JacksonInject @Json ObjectMapper mapper,
       @JacksonInject ServiceEmitter emitter,
       @JacksonInject DruidMonitorSchedulerConfig monitorSchedulerConfig
-      )
+  )
   {
     this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
     this.tuningConfig = tuningConfig != null
                         ? tuningConfig
                         : new KafkaSupervisorTuningConfig(
+                            null,
                             null,
                             null,
                             null,

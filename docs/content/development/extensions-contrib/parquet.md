@@ -18,6 +18,8 @@ This is for batch ingestion using the HadoopDruidIndexer. The inputFormat of `in
 | parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be a timeAndDims parseSpec. | yes |
 | binaryAsString | Boolean | Specifies if the bytes parquet column should be converted to strings. | no(default == false) |
 
+When the time dimension is a [DateType column](https://github.com/Parquet/parquet-format/blob/master/LogicalTypes.md), a format should not be supplied. When the format is UTF8 (String), either `auto` or a explicitly defined [format](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html) is required.
+
 ### Example json for overlord
 
 When posting the index job to the overlord, setting the correct `inputFormat` is required to switch to parquet ingestion. Make sure to set `jobProperties` to make hdfs path timezone unrelated:

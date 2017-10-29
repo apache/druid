@@ -22,7 +22,6 @@ package io.druid.client.cache;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import com.metamx.emitter.service.ServiceEmitter;
-
 import io.druid.java.util.common.StringUtils;
 
 import java.nio.ByteBuffer;
@@ -61,14 +60,16 @@ public interface Cache
     final public String namespace;
     final public byte[] key;
 
-    public NamedKey(String namespace, byte[] key) {
+    public NamedKey(String namespace, byte[] key)
+    {
       Preconditions.checkArgument(namespace != null, "namespace must not be null");
       Preconditions.checkArgument(key != null, "key must not be null");
       this.namespace = namespace;
       this.key = key;
     }
 
-    public byte[] toByteArray() {
+    public byte[] toByteArray()
+    {
       final byte[] nsBytes = StringUtils.toUtf8(this.namespace);
       return ByteBuffer.allocate(Ints.BYTES + nsBytes.length + this.key.length)
           .putInt(nsBytes.length)

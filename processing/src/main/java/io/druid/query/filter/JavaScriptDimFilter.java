@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.RangeSet;
-import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.extraction.ExtractionFn;
@@ -43,7 +42,8 @@ public class JavaScriptDimFilter implements DimFilter
   private final ExtractionFn extractionFn;
   private final JavaScriptConfig config;
 
-  private final JavaScriptPredicateFactory predicateFactory;
+  // This variable is lazily initialized to avoid unnecessary JavaScript compilation during JSON serde
+  private JavaScriptPredicateFactory predicateFactory;
 
   @JsonCreator
   public JavaScriptDimFilter(
@@ -59,12 +59,6 @@ public class JavaScriptDimFilter implements DimFilter
     this.function = function;
     this.extractionFn = extractionFn;
     this.config = config;
-
-    if (config.isEnabled()) {
-      this.predicateFactory = new JavaScriptPredicateFactory(function, extractionFn);
-    } else {
-      this.predicateFactory = null;
-    }
   }
 
   @JsonProperty
@@ -111,11 +105,27 @@ public class JavaScriptDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    if (!config.isEnabled()) {
-      throw new ISE("JavaScript is disabled");
-    }
-
+    checkAndCreatePredicateFactory();
     return new JavaScriptFilter(dimension, predicateFactory);
+  }
+
+  /**
+   * This class can be used by multiple threads, so this function should be thread-safe to avoid extra
+   * script compilation.
+   */
+  private void checkAndCreatePredicateFactory()
+  {
+    if (predicateFactory == null) {
+      // JavaScript configuration should be checked when it's actually used because someone might still want Druid
+      // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
+      Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
+
+      synchronized (config) {
+        if (predicateFactory == null) {
+          predicateFactory = new JavaScriptPredicateFactory(function, extractionFn);
+        }
+      }
+    }
   }
 
   @Override
@@ -193,42 +203,28 @@ public class JavaScriptDimFilter implements DimFilter
     @Override
     public Predicate<String> makeStringPredicate()
     {
-      return new Predicate<String>()
-      {
-        @Override
-        public boolean apply(String input)
-        {
-          return applyObject(input);
-        }
-      };
+      return input -> applyObject(input);
     }
 
     @Override
     public DruidLongPredicate makeLongPredicate()
     {
-      return new DruidLongPredicate()
-      {
-        @Override
-        public boolean applyLong(long input)
-        {
-          // Can't avoid boxing here because the Mozilla JS Function.call() only accepts Object[]
-          return applyObject(input);
-        }
-      };
+      // Can't avoid boxing here because the Mozilla JS Function.call() only accepts Object[]
+      return input -> applyObject(input);
     }
 
     @Override
     public DruidFloatPredicate makeFloatPredicate()
     {
-      return new DruidFloatPredicate()
-      {
-        @Override
-        public boolean applyFloat(float input)
-        {
-          // Can't avoid boxing here because the Mozilla JS Function.call() only accepts Object[]
-          return applyObject(input);
-        }
-      };
+      // Can't avoid boxing here because the Mozilla JS Function.call() only accepts Object[]
+      return input -> applyObject(input);
+    }
+
+    @Override
+    public DruidDoublePredicate makeDoublePredicate()
+    {
+      // Can't avoid boxing here because the Mozilla JS Function.call() only accepts Object[]
+      return input -> applyObject(input);
     }
 
     public boolean applyObject(final Object input)

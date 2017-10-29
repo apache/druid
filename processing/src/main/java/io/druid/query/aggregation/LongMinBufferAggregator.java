@@ -19,7 +19,7 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.LongColumnSelector;
+import io.druid.segment.BaseLongColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
@@ -28,7 +28,7 @@ import java.nio.ByteBuffer;
 public class LongMinBufferAggregator extends LongBufferAggregator
 {
 
-  LongMinBufferAggregator(LongColumnSelector selector)
+  LongMinBufferAggregator(BaseLongColumnValueSelector selector)
   {
     super(selector);
   }
@@ -42,6 +42,6 @@ public class LongMinBufferAggregator extends LongBufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    buf.putLong(position, Math.min(buf.getLong(position), selector.get()));
+    buf.putLong(position, Math.min(buf.getLong(position), selector.getLong()));
   }
 }

@@ -22,6 +22,7 @@ package io.druid.query.timeboundary;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.BaseSequence;
@@ -36,8 +37,8 @@ import io.druid.query.QueryRunnerHelper;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
+import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.Cursor;
-import io.druid.segment.LongColumnSelector;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.VirtualColumns;
@@ -102,8 +103,9 @@ public class TimeBoundaryQueryRunnerFactory
           if (cursor.isDone()) {
             return null;
           }
-          final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
-          final DateTime timestamp = new DateTime(timestampColumnSelector.get());
+          final BaseLongColumnValueSelector timestampColumnSelector =
+              cursor.getColumnSelectorFactory().makeColumnValueSelector(Column.TIME_COLUMN_NAME);
+          final DateTime timestamp = DateTimes.utc(timestampColumnSelector.getLong());
           return new Result<>(adapter.getInterval().getStart(), timestamp);
         }
       };

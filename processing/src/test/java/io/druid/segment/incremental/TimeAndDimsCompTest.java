@@ -22,8 +22,6 @@ package io.druid.segment.incremental;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.java.util.common.granularity.Granularities;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import org.junit.Assert;
 import org.junit.Test;
@@ -41,9 +39,10 @@ public class TimeAndDimsCompTest
   @Test
   public void testBasic() throws IndexSizeExceededException
   {
-    IncrementalIndex index = new OnheapIncrementalIndex(
-        0, Granularities.NONE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}, 1000
-    );
+    IncrementalIndex index = new IncrementalIndex.Builder()
+        .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
+        .setMaxRowCount(1000)
+        .buildOnheap();
 
     long time = System.currentTimeMillis();
     TimeAndDims td1 = index.toTimeAndDims(toMapRow(time, "billy", "A", "joe", "B"));

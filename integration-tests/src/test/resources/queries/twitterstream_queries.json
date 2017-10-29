@@ -415,7 +415,7 @@
                 "timestamp": "2013-01-01T00:00:00.000Z",
                 "event": {
                     "has_links": "Yes",
-                    "tweet_length": 3.143742E7,
+                    "tweet_length": 3.1437419E7,
                     "num_tweets": 376237.0
                 }
             },
@@ -424,7 +424,7 @@
                 "timestamp": "2013-01-02T00:00:00.000Z",
                 "event": {
                     "has_links": "No",
-                    "tweet_length": 2.10402688E8,
+                    "tweet_length": 2.10402683E8,
                     "num_tweets": 3375243.0
                 }
             },
@@ -433,7 +433,7 @@
                 "timestamp": "2013-01-02T00:00:00.000Z",
                 "event": {
                     "has_links": "Yes",
-                    "tweet_length": 3.599512E7,
+                    "tweet_length": 3.5995118E7,
                     "num_tweets": 424223.0
                 }
             },
@@ -442,7 +442,7 @@
                 "timestamp": "2013-01-03T00:00:00.000Z",
                 "event": {
                     "has_links": "No",
-                    "tweet_length": 1.96451456E8,
+                    "tweet_length": 1.9645145E8,
                     "num_tweets": 3144985.0
                 }
             },
@@ -451,7 +451,7 @@
                 "timestamp": "2013-01-03T00:00:00.000Z",
                 "event": {
                     "has_links": "Yes",
-                    "tweet_length": 3.4913568E7,
+                    "tweet_length": 3.4913569E7,
                     "num_tweets": 407434.0
                 }
             }
@@ -528,7 +528,7 @@
                 "timestamp": "2013-01-01T00:00:00.000Z",
                 "event": {
                     "has_links": "No",
-                    "tweet_length": 7.4820448E7,
+                    "tweet_length": 7.4820449E7,
                     "num_tweets": 1170229.0
                 }
             },
@@ -546,7 +546,7 @@
                 "timestamp": "2013-01-02T00:00:00.000Z",
                 "event": {
                     "has_links": "No",
-                    "tweet_length": 2.10402688E8,
+                    "tweet_length": 2.10402683E8,
                     "num_tweets": 3375243.0
                 }
             },
@@ -555,7 +555,7 @@
                 "timestamp": "2013-01-02T00:00:00.000Z",
                 "event": {
                     "has_links": "Yes",
-                    "tweet_length": 3.599512E7,
+                    "tweet_length": 3.5995118E7,
                     "num_tweets": 424223.0
                 }
             },
@@ -564,7 +564,7 @@
                 "timestamp": "2013-01-03T00:00:00.000Z",
                 "event": {
                     "has_links": "No",
-                    "tweet_length": 1.59141088E8,
+                    "tweet_length": 1.59141096E8,
                     "num_tweets": 2567986.0
                 }
             },

@@ -19,9 +19,11 @@
 
 package io.druid.indexing.kafka.supervisor;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 public class TaskReportData
@@ -36,15 +38,17 @@ public class TaskReportData
   private final DateTime startTime;
   private final Long remainingSeconds;
   private final TaskType type;
-  private Map<Integer, Long> currentOffsets;
+  private final Map<Integer, Long> currentOffsets;
+  private final Map<Integer, Long> lag;
 
   public TaskReportData(
       String id,
-      Map<Integer, Long> startingOffsets,
-      Map<Integer, Long> currentOffsets,
+      @Nullable Map<Integer, Long> startingOffsets,
+      @Nullable Map<Integer, Long> currentOffsets,
       DateTime startTime,
       Long remainingSeconds,
-      TaskType type
+      TaskType type,
+      @Nullable Map<Integer, Long> lag
   )
   {
     this.id = id;
@@ -53,6 +57,7 @@ public class TaskReportData
     this.startTime = startTime;
     this.remainingSeconds = remainingSeconds;
     this.type = type;
+    this.lag = lag;
   }
 
   @JsonProperty
@@ -62,20 +67,17 @@ public class TaskReportData
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public Map<Integer, Long> getStartingOffsets()
   {
     return startingOffsets;
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public Map<Integer, Long> getCurrentOffsets()
   {
     return currentOffsets;
-  }
-
-  public void setCurrentOffsets(Map<Integer, Long> currentOffsets)
-  {
-    this.currentOffsets = currentOffsets;
   }
 
   @JsonProperty
@@ -96,6 +98,13 @@ public class TaskReportData
     return type;
   }
 
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Map<Integer, Long> getLag()
+  {
+    return lag;
+  }
+
   @Override
   public String toString()
   {
@@ -105,6 +114,7 @@ public class TaskReportData
            (currentOffsets != null ? ", currentOffsets=" + currentOffsets : "") +
            ", startTime=" + startTime +
            ", remainingSeconds=" + remainingSeconds +
+           (lag != null ? ", lag=" + lag : "") +
            '}';
   }
 }

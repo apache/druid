@@ -191,17 +191,35 @@ public class ApproximateHistogram
     );
   }
 
-  public long count() { return count; }
+  public long count()
+  {
+    return count;
+  }
 
-  public float min() { return min; }
+  public float min()
+  {
+    return min;
+  }
 
-  public float max() { return max; }
+  public float max()
+  {
+    return max;
+  }
 
-  public int binCount() { return binCount; }
+  public int binCount()
+  {
+    return binCount;
+  }
 
-  public int capacity() { return size; }
+  public int capacity()
+  {
+    return size;
+  }
 
-  public float[] positions() { return Arrays.copyOfRange(positions, 0, binCount); }
+  public float[] positions()
+  {
+    return Arrays.copyOfRange(positions, 0, binCount);
+  }
 
   public long[] bins()
   {
@@ -239,9 +257,15 @@ public class ApproximateHistogram
     return exactCount;
   }
 
-  public float getMin() { return this.min;}
+  public float getMin()
+  {
+    return this.min;
+  }
 
-  public float getMax() { return this.max;}
+  public float getMax()
+  {
+    return this.max;
+  }
 
   private static long sumBins(long[] bins, int binCount)
   {
@@ -335,11 +359,11 @@ public class ApproximateHistogram
     // or merge existing bins before inserting the new one
 
     int minPos = minDeltaIndex();
-    float minDelta = minPos >= 0 ? positions[minPos + 1] - positions[minPos] : Float.MAX_VALUE;
+    float minDelta = minPos >= 0 ? positions[minPos + 1] - positions[minPos] : Float.POSITIVE_INFINITY;
 
     // determine the distance of new value to the nearest bins
-    final float deltaRight = insertAt < binCount ? positions[insertAt] - value : Float.MAX_VALUE;
-    final float deltaLeft = insertAt > 0 ? value - positions[insertAt - 1] : Float.MAX_VALUE;
+    final float deltaRight = insertAt < binCount ? positions[insertAt] - value : Float.POSITIVE_INFINITY;
+    final float deltaLeft = insertAt > 0 ? value - positions[insertAt - 1] : Float.POSITIVE_INFINITY;
 
     boolean mergeValue = false;
     if (deltaRight < minDelta) {
@@ -368,7 +392,7 @@ public class ApproximateHistogram
   protected int minDeltaIndex()
   {
     // determine minimum distance between existing bins
-    float minDelta = Float.MAX_VALUE;
+    float minDelta = Float.POSITIVE_INFINITY;
     int minPos = -1;
     for (int i = 0; i < binCount - 1; ++i) {
       float delta = (positions[i + 1] - positions[i]);
@@ -510,9 +534,11 @@ public class ApproximateHistogram
    */
   public ApproximateHistogram copy(ApproximateHistogram h)
   {
-    this.size = h.size;
-    this.positions = new float[size];
-    this.bins = new long[size];
+    if (h.size > this.size) {
+      this.size = h.size;
+      this.positions = new float[size];
+      this.bins = new long[size];
+    }
 
     System.arraycopy(h.positions, 0, this.positions, 0, h.binCount);
     System.arraycopy(h.bins, 0, this.bins, 0, h.binCount);
@@ -831,7 +857,7 @@ public class ApproximateHistogram
    *   ApproximateHistogram merged = new ApproximateHistogram(mergedBinCount, mergedPositions, mergedBins);
    *
    *   int targetSize = merged.binCount() - numMerge;
-   *   while(merged.binCount() > targetSize) {
+   *   while (merged.binCount() > targetSize) {
    *     merged.merge(merged.minDeltaIndex());
    *   }
    * </pre>
@@ -886,9 +912,6 @@ public class ApproximateHistogram
       while (i < numMerge) {
         // find the smallest delta within the range used for bins
 
-        // pick minimum delta by scanning array
-        //int currentIndex = minIndex(deltas, lastValidIndex);
-
         // pick minimum delta index using min-heap
         int currentIndex = heap[0];
 
@@ -908,17 +931,13 @@ public class ApproximateHistogram
         final float mm0 = (m0 - m1) * w + m1;
 
         mergedPositions[currentIndex] = mm0;
-        //mergedPositions[nextIndex] = Float.MAX_VALUE; // for debugging
 
         mergedBins[currentIndex] = sum | APPROX_FLAG_BIT;
-        //mergedBins[nextIndex] = -1; // for debugging
 
         // update deltas and min-heap
         if (nextIndex == lastValidIndex) {
           // merged bin is the last => remove the current bin delta from the heap
           heapSize = heapDelete(heap, reverseIndex, heapSize, reverseIndex[currentIndex], deltas);
-
-          //deltas[currentIndex] = Float.MAX_VALUE; // for debugging
         } else {
           // merged bin is not the last => remove the merged bin delta from the heap
           heapSize = heapDelete(heap, reverseIndex, heapSize, reverseIndex[nextIndex], deltas);
@@ -937,9 +956,6 @@ public class ApproximateHistogram
           // updated previous bin delta is necessarily larger than its existing value => push down the heap
           siftDown(heap, reverseIndex, reverseIndex[prevIndex], heapSize - 1, deltas);
         }
-
-        // mark the merged bin as invalid
-        // deltas[nextIndex] = Float.MAX_VALUE; // for debugging
 
         // update last valid index if we merged the last bin
         if (nextIndex == lastValidIndex) {
@@ -1037,7 +1053,7 @@ public class ApproximateHistogram
   private static int minIndex(float[] deltas, int lastValidIndex)
   {
     int minIndex = -1;
-    float min = Float.MAX_VALUE;
+    float min = Float.POSITIVE_INFINITY;
     for (int k = 0; k < lastValidIndex; ++k) {
       float value = deltas[k];
       if (value < min) {
@@ -1167,11 +1183,7 @@ public class ApproximateHistogram
   public boolean canStoreCompact()
   {
     final long exactCount = getExactCount();
-    return (
-        size <= Short.MAX_VALUE
-        && exactCount <= Byte.MAX_VALUE
-        && (count - exactCount) <= Byte.MAX_VALUE
-    );
+    return (size <= Short.MAX_VALUE && exactCount <= Byte.MAX_VALUE && (count - exactCount) <= Byte.MAX_VALUE);
   }
 
   /**
@@ -1501,10 +1513,8 @@ public class ApproximateHistogram
     // add full bin count if left bin count is exact
     if (exact0) {
       return (s + m0);
-    }
-
-    // otherwise add only the left half of the bin
-    else {
+    } else {
+      // otherwise add only the left half of the bin
       return (s + 0.5 * m0);
     }
   }
@@ -1523,7 +1533,7 @@ public class ApproximateHistogram
   public float[] getQuantiles(float[] probabilities)
   {
     for (float p : probabilities) {
-      Preconditions.checkArgument(0 < p & p < 1, "quantile probabilities must be strictly between 0 and 1");
+      Preconditions.checkArgument(0 < p && p < 1, "quantile probabilities must be strictly between 0 and 1");
     }
 
     float[] quantiles = new float[probabilities.length];
@@ -1536,6 +1546,20 @@ public class ApproximateHistogram
     final long[] bins = this.bins();
 
     for (int j = 0; j < probabilities.length; ++j) {
+      // Adapted from Ben-Haiv/Tom-Tov (Algorithm 4: Uniform Procedure)
+      // Our histogram has a set of bins {(p1, m1), (p2, m2), ... (pB, mB)}
+      // and properties of min and max saved during construction, such
+      // that min <= p1 and pB <= max.
+      //
+      // When min < p1 or pB < max, these are special cases of using the
+      // dummy bins (p0, 0) or (pB+1, 0) respectively, where p0 == min
+      // and pB+1 == max.
+      //
+      // This histogram gives an ordered set of numbers {pi, pi+1, ..., pn},
+      // such that min <= pi < pn <= max, and n is the sum({m1, ..., mB}).
+      // We use s to determine which pairs of (pi, mi), (pi+1, mi+1) to
+      // calculate our quantile from by computing sum([pi,mi]) < s < sum
+      // ([pi+1, mi+1])
       final double s = probabilities[j] * this.count();
 
       int i = 0;
@@ -1554,6 +1578,7 @@ public class ApproximateHistogram
       }
 
       if (i == 0) {
+        // At the first bin, there are no points to the left of p (min)
         quantiles[j] = this.min();
       } else {
         final double d = s - sum;
@@ -1567,7 +1592,11 @@ public class ApproximateHistogram
           z = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
         }
         final double uj = this.positions[i - 1] + (this.positions[i] - this.positions[i - 1]) * z;
-        quantiles[j] = (float) uj;
+        // A given bin (p, m) has m/2 points to the left and right of p, and
+        // uj could be one of those points. However, uj is still subject to:
+        // [min] (p0, 0) < uj < (p, m) or
+        //                      (p, m) < uj < (pB+1, 0) [max]
+        quantiles[j] = ((float) uj < this.max()) ? (float) uj : this.max();
       }
     }
 

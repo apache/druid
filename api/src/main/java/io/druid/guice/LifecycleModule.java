@@ -27,7 +27,6 @@ import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
-
 import io.druid.java.util.common.lifecycle.Lifecycle;
 
 import java.lang.annotation.Annotation;
@@ -49,8 +48,8 @@ public class LifecycleModule implements Module
    * scope.  That is, they are generally eagerly loaded because the loading operation will produce some beneficial
    * side-effect even if nothing actually directly depends on the instance.
    *
-   * This mechanism exists to allow the {@link io.druid.java.util.common.lifecycle.Lifecycle} to be the primary entry point from the injector, not to
-   * auto-register things with the {@link io.druid.java.util.common.lifecycle.Lifecycle}.  It is also possible to just bind things eagerly with Guice,
+   * This mechanism exists to allow the {@link Lifecycle} to be the primary entry point from the injector, not to
+   * auto-register things with the {@link Lifecycle}.  It is also possible to just bind things eagerly with Guice,
    * it is not clear which is actually the best approach.  This is more explicit, but eager bindings inside of modules
    * is less error-prone.
    *
@@ -70,8 +69,8 @@ public class LifecycleModule implements Module
    * scope.  That is, they are generally eagerly loaded because the loading operation will produce some beneficial
    * side-effect even if nothing actually directly depends on the instance.
    *
-   * This mechanism exists to allow the {@link io.druid.java.util.common.lifecycle.Lifecycle} to be the primary entry point from the injector, not to
-   * auto-register things with the {@link io.druid.java.util.common.lifecycle.Lifecycle}.  It is also possible to just bind things eagerly with Guice,
+   * This mechanism exists to allow the {@link Lifecycle} to be the primary entry point from the injector, not to
+   * auto-register things with the {@link Lifecycle}.  It is also possible to just bind things eagerly with Guice,
    * it is not clear which is actually the best approach.  This is more explicit, but eager bindings inside of modules
    * is less error-prone.
    *
@@ -92,8 +91,8 @@ public class LifecycleModule implements Module
    * scope.  That is, they are generally eagerly loaded because the loading operation will produce some beneficial
    * side-effect even if nothing actually directly depends on the instance.
    *
-   * This mechanism exists to allow the {@link io.druid.java.util.common.lifecycle.Lifecycle} to be the primary entry point from the injector, not to
-   * auto-register things with the {@link io.druid.java.util.common.lifecycle.Lifecycle}.  It is also possible to just bind things eagerly with Guice,
+   * This mechanism exists to allow the {@link Lifecycle} to be the primary entry point from the injector, not to
+   * auto-register things with the {@link Lifecycle}.  It is also possible to just bind things eagerly with Guice,
    * it is not clear which is actually the best approach.  This is more explicit, but eager bindings inside of modules
    * is less error-prone.
    *
@@ -107,15 +106,15 @@ public class LifecycleModule implements Module
   }
 
   /**
-   * Registers a key to instantiate eagerly.  {@link com.google.inject.Key}s mentioned here will be pulled out of
+   * Registers a key to instantiate eagerly.  {@link Key}s mentioned here will be pulled out of
    * the injector with an injector.getInstance() call when the lifecycle is created.
    *
    * Eagerly loaded classes will *not* be automatically added to the Lifecycle unless they are bound to the proper
    * scope.  That is, they are generally eagerly loaded because the loading operation will produce some beneficial
    * side-effect even if nothing actually directly depends on the instance.
    *
-   * This mechanism exists to allow the {@link io.druid.java.util.common.lifecycle.Lifecycle} to be the primary entry point
-   * from the injector, not to auto-register things with the {@link io.druid.java.util.common.lifecycle.Lifecycle}.  It is
+   * This mechanism exists to allow the {@link Lifecycle} to be the primary entry point
+   * from the injector, not to auto-register things with the {@link Lifecycle}.  It is
    * also possible to just bind things eagerly with Guice, it is not clear which is actually the best approach.
    * This is more explicit, but eager bindings inside of modules is less error-prone.
    *
@@ -146,7 +145,8 @@ public class LifecycleModule implements Module
     final Key<Set<KeyHolder>> keyHolderKey = Key.get(new TypeLiteral<Set<KeyHolder>>(){}, Names.named("lifecycle"));
     final Set<KeyHolder> eagerClasses = injector.getInstance(keyHolderKey);
 
-    Lifecycle lifecycle = new Lifecycle(){
+    Lifecycle lifecycle = new Lifecycle()
+    {
       @Override
       public void start() throws Exception
       {

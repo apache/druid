@@ -31,6 +31,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.announcement.Announcer;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import io.druid.server.coordination.BatchDataSegmentAnnouncer;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.SegmentChangeRequestHistory;
@@ -43,7 +44,6 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingCluster;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -106,6 +106,7 @@ public class BatchDataSegmentAnnouncerTest
         new DruidServerMetadata(
             "id",
             "host",
+            null,
             Long.MAX_VALUE,
             ServerType.HISTORICAL,
             "tier",
@@ -316,8 +317,8 @@ public class BatchDataSegmentAnnouncerTest
           new SegmentChangeRequestHistory.Counter(-1, -1)
       ).get();
       Assert.assertEquals(testSegments.size(), snapshot.getRequests().size());
-    Assert.assertEquals(testSegments.size(), snapshot.getCounter().getCounter());
-  }
+      Assert.assertEquals(testSegments.size(), snapshot.getCounter().getCounter());
+    }
 
     segmentAnnouncer.unannounceSegments(testSegments);
 
@@ -352,11 +353,11 @@ public class BatchDataSegmentAnnouncerTest
                       .dataSource("foo")
                       .interval(
                           new Interval(
-                              new DateTime("2013-01-01").plusDays(offset),
-                              new DateTime("2013-01-02").plusDays(offset)
+                              DateTimes.of("2013-01-01").plusDays(offset),
+                              DateTimes.of("2013-01-02").plusDays(offset)
                           )
                       )
-                      .version(new DateTime().toString())
+                      .version(DateTimes.nowUtc().toString())
                       .dimensions(ImmutableList.<String>of("dim1", "dim2"))
                       .metrics(ImmutableList.<String>of("met1", "met2"))
                       .loadSpec(ImmutableMap.<String, Object>of("type", "local"))

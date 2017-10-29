@@ -20,6 +20,7 @@
 package io.druid.query.aggregation;
 
 import io.druid.hll.HyperLogLogCollector;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.segment.TestLongColumnSelector;
 import org.junit.Assert;
@@ -45,7 +46,7 @@ public class MetricManipulatorFnsTest
         new TestLongColumnSelector()
         {
           @Override
-          public long get()
+          public long getLong()
           {
             return longVal;
           }
@@ -84,7 +85,7 @@ public class MetricManipulatorFnsTest
         new TestLongColumnSelector()
         {
           @Override
-          public long get()
+          public long getLong()
           {
             return longVal;
           }
@@ -104,7 +105,7 @@ public class MetricManipulatorFnsTest
 
     for (Object[] argList : constructorArrays) {
       Assert.assertEquals(
-          String.format(
+          StringUtils.format(
               "Arglist %s is too short. Expected 6 found %d",
               Arrays.toString(argList),
               argList.length

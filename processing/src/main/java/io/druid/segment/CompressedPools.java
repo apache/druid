@@ -21,6 +21,7 @@ package io.druid.segment;
 
 import com.google.common.base.Supplier;
 import com.ning.compress.BufferRecycler;
+import io.druid.collections.NonBlockingPool;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
 import io.druid.java.util.common.logger.Logger;
@@ -36,7 +37,7 @@ public class CompressedPools
   private static final Logger log = new Logger(CompressedPools.class);
 
   public static final int BUFFER_SIZE = 0x10000;
-  private static final StupidPool<BufferRecycler> bufferRecyclerPool = new StupidPool<BufferRecycler>(
+  private static final NonBlockingPool<BufferRecycler> bufferRecyclerPool = new StupidPool<>(
       "bufferRecyclerPool",
       new Supplier<BufferRecycler>()
       {
@@ -56,7 +57,7 @@ public class CompressedPools
     return bufferRecyclerPool.take();
   }
 
-  private static final StupidPool<byte[]> outputBytesPool = new StupidPool<byte[]>(
+  private static final NonBlockingPool<byte[]> outputBytesPool = new StupidPool<byte[]>(
       "outputBytesPool",
       new Supplier<byte[]>()
       {
@@ -76,7 +77,7 @@ public class CompressedPools
     return outputBytesPool.take();
   }
 
-  private static final StupidPool<ByteBuffer> bigEndByteBufPool = new StupidPool<ByteBuffer>(
+  private static final NonBlockingPool<ByteBuffer> bigEndByteBufPool = new StupidPool<ByteBuffer>(
       "bigEndByteBufPool",
       new Supplier<ByteBuffer>()
       {
@@ -91,7 +92,7 @@ public class CompressedPools
       }
   );
 
-  private static final StupidPool<ByteBuffer> littleEndByteBufPool = new StupidPool<ByteBuffer>(
+  private static final NonBlockingPool<ByteBuffer> littleEndByteBufPool = new StupidPool<ByteBuffer>(
       "littleEndByteBufPool",
       new Supplier<ByteBuffer>()
       {

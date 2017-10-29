@@ -22,30 +22,33 @@ package io.druid.server.coordinator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.MinMaxPriorityQueue;
-import com.google.common.collect.Ordering;
 import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.ImmutableDruidServer;
+import io.druid.java.util.common.Intervals;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class DruidClusterTest
 {
   private static final List<DataSegment> segments = ImmutableList.of(
       new DataSegment(
           "test",
-          new Interval("2015-04-12/2015-04-13"),
+          Intervals.of("2015-04-12/2015-04-13"),
           "1",
           ImmutableMap.of("containerName", "container1", "blobPath", "blobPath1"),
           null,
@@ -56,7 +59,7 @@ public class DruidClusterTest
       ),
       new DataSegment(
           "test",
-          new Interval("2015-04-12/2015-04-13"),
+          Intervals.of("2015-04-12/2015-04-13"),
           "1",
           ImmutableMap.of("containerName", "container2", "blobPath", "blobPath2"),
           null,
@@ -86,7 +89,7 @@ public class DruidClusterTest
 
   private static final ServerHolder newRealtime = new ServerHolder(
       new ImmutableDruidServer(
-          new DruidServerMetadata("name1", "host2", 100L, ServerType.REALTIME, "tier1", 0),
+          new DruidServerMetadata("name1", "host2", null, 100L, ServerType.REALTIME, "tier1", 0),
           0L,
           ImmutableMap.of(
               "src1",
@@ -102,7 +105,7 @@ public class DruidClusterTest
 
   private static final ServerHolder newHistorical = new ServerHolder(
       new ImmutableDruidServer(
-          new DruidServerMetadata("name1", "host2", 100L, ServerType.HISTORICAL, "tier1", 0),
+          new DruidServerMetadata("name1", "host2", null, 100L, ServerType.HISTORICAL, "tier1", 0),
           0L,
           ImmutableMap.of(
               "src1",
@@ -125,7 +128,7 @@ public class DruidClusterTest
         ImmutableSet.of(
             new ServerHolder(
                 new ImmutableDruidServer(
-                    new DruidServerMetadata("name1", "host1", 100L, ServerType.REALTIME, "tier1", 0),
+                    new DruidServerMetadata("name1", "host1", null, 100L, ServerType.REALTIME, "tier1", 0),
                     0L,
                     ImmutableMap.of(
                         "src1",
@@ -141,25 +144,23 @@ public class DruidClusterTest
         ),
         ImmutableMap.of(
             "tier1",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                ImmutableList.of(
-                    new ServerHolder(
-                        new ImmutableDruidServer(
-                            new DruidServerMetadata("name1", "host1", 100L, ServerType.HISTORICAL, "tier1", 0),
-                            0L,
-                            ImmutableMap.of(
-                                "src1",
-                                dataSources.get("src1")
-                            ),
-                            ImmutableMap.of(
-                                "segment1",
-                                segments.get(0)
-                            )
+            Stream.of(
+                new ServerHolder(
+                    new ImmutableDruidServer(
+                        new DruidServerMetadata("name1", "host1", null, 100L, ServerType.HISTORICAL, "tier1", 0),
+                        0L,
+                        ImmutableMap.of(
+                            "src1",
+                            dataSources.get("src1")
                         ),
-                        new LoadQueuePeonTester()
-                    )
+                        ImmutableMap.of(
+                            "segment1",
+                            segments.get(0)
+                        )
+                    ),
+                    new LoadQueuePeonTester()
                 )
-            )
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
         )
     );
   }
@@ -184,6 +185,9 @@ public class DruidClusterTest
   {
     cluster.add(newRealtime);
     cluster.add(newHistorical);
+    final Set<ServerHolder> expectedRealtimes = cluster.getRealtimes();
+    final Map<String, NavigableSet<ServerHolder>> expectedHistoricals = cluster.getHistoricals();
+
     final Collection<ServerHolder> allServers = cluster.getAllServers();
     Assert.assertEquals(4, allServers.size());
     Assert.assertTrue(allServers.containsAll(cluster.getRealtimes()));
@@ -192,6 +196,9 @@ public class DruidClusterTest
             cluster.getHistoricals().values().stream().flatMap(Collection::stream).collect(Collectors.toList())
         )
     );
+
+    Assert.assertEquals(expectedHistoricals, cluster.getHistoricals());
+    Assert.assertEquals(expectedRealtimes, cluster.getRealtimes());
   }
 
   @Test

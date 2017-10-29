@@ -23,9 +23,11 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.java.util.common.Pair;
+import io.druid.query.BitmapResultFactory;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BoundDimFilter;
+import io.druid.query.filter.DruidDoublePredicate;
 import io.druid.query.filter.DruidFloatPredicate;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
@@ -48,6 +50,7 @@ public class BoundFilter implements Filter
 
   private final Supplier<DruidLongPredicate> longPredicateSupplier;
   private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
+  private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
 
   public BoundFilter(final BoundDimFilter boundDimFilter)
   {
@@ -56,23 +59,29 @@ public class BoundFilter implements Filter
     this.extractionFn = boundDimFilter.getExtractionFn();
     this.longPredicateSupplier = boundDimFilter.getLongPredicateSupplier();
     this.floatPredicateSupplier = boundDimFilter.getFloatPredicateSupplier();
+    this.doublePredicateSupplier = boundDimFilter.getDoublePredicateSupplier();
   }
 
   @Override
-  public ImmutableBitmap getBitmapIndex(final BitmapIndexSelector selector)
+  public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
   {
     if (supportShortCircuit()) {
       final BitmapIndex bitmapIndex = selector.getBitmapIndex(boundDimFilter.getDimension());
 
       if (bitmapIndex == null || bitmapIndex.getCardinality() == 0) {
-        return doesMatch(null) ? Filters.allTrue(selector) : Filters.allFalse(selector);
+        if (doesMatch(null)) {
+          return bitmapResultFactory.wrapAllTrue(Filters.allTrue(selector));
+        } else {
+          return bitmapResultFactory.wrapAllFalse(Filters.allFalse(selector));
+        }
       }
 
-      return selector.getBitmapFactory().union(getBitmapIterator(boundDimFilter, bitmapIndex));
+      return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapIterator(boundDimFilter, bitmapIndex));
     } else {
       return Filters.matchPredicate(
           boundDimFilter.getDimension(),
           selector,
+          bitmapResultFactory,
           getPredicateFactory().makeStringPredicate()
       );
     }
@@ -192,76 +201,46 @@ public class BoundFilter implements Filter
       public Predicate<String> makeStringPredicate()
       {
         if (extractionFn != null) {
-          return new Predicate<String>()
-          {
-            @Override
-            public boolean apply(String input)
-            {
-              return doesMatch(extractionFn.apply(input));
-            }
-          };
-        } else {
-          return new Predicate<String>()
-          {
-            @Override
-            public boolean apply(String input)
-            {
-              return doesMatch(input);
-            }
-          };
+          return input -> doesMatch(extractionFn.apply(input));
         }
+        return input -> doesMatch(input);
+
       }
 
       @Override
       public DruidLongPredicate makeLongPredicate()
       {
         if (extractionFn != null) {
-          return new DruidLongPredicate()
-          {
-            @Override
-            public boolean applyLong(long input)
-            {
-              return doesMatch(extractionFn.apply(input));
-            }
-          };
-        } else if (boundDimFilter.getOrdering().equals(StringComparators.NUMERIC)) {
-          return longPredicateSupplier.get();
-        } else {
-          return new DruidLongPredicate()
-          {
-            @Override
-            public boolean applyLong(long input)
-            {
-              return doesMatch(String.valueOf(input));
-            }
-          };
+          return input -> doesMatch(extractionFn.apply(input));
         }
+        if (boundDimFilter.getOrdering().equals(StringComparators.NUMERIC)) {
+          return longPredicateSupplier.get();
+        }
+        return input -> doesMatch(String.valueOf(input));
       }
 
       @Override
       public DruidFloatPredicate makeFloatPredicate()
       {
         if (extractionFn != null) {
-          return new DruidFloatPredicate()
-          {
-            @Override
-            public boolean applyFloat(float input)
-            {
-              return doesMatch(extractionFn.apply(input));
-            }
-          };
-        } else if (boundDimFilter.getOrdering().equals(StringComparators.NUMERIC)) {
-          return floatPredicateSupplier.get();
-        } else {
-          return new DruidFloatPredicate()
-          {
-            @Override
-            public boolean applyFloat(float input)
-            {
-              return doesMatch(String.valueOf(input));
-            }
-          };
+          return input -> doesMatch(extractionFn.apply(input));
         }
+        if (boundDimFilter.getOrdering().equals(StringComparators.NUMERIC)) {
+          return floatPredicateSupplier.get();
+        }
+        return input -> doesMatch(String.valueOf(input));
+      }
+
+      @Override
+      public DruidDoublePredicate makeDoublePredicate()
+      {
+        if (extractionFn != null) {
+          return input -> doesMatch(extractionFn.apply(input));
+        }
+        if (boundDimFilter.getOrdering().equals(StringComparators.NUMERIC)) {
+          return doublePredicateSupplier.get();
+        }
+        return input -> doesMatch(String.valueOf(input));
       }
     };
   }
@@ -273,8 +252,7 @@ public class BoundFilter implements Filter
               || (boundDimFilter.getLower().isEmpty() && !boundDimFilter.isLowerStrict())) // lower bound allows null
              && (!boundDimFilter.hasUpperBound()
                  || !boundDimFilter.getUpper().isEmpty()
-                 || !boundDimFilter.isUpperStrict()) // upper bound allows null
-          ;
+                 || !boundDimFilter.isUpperStrict()); // upper bound allows null
     }
     int lowerComparing = 1;
     int upperComparing = 1;

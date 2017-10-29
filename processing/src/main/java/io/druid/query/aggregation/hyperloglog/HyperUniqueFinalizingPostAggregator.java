@@ -48,6 +48,7 @@ public class HyperUniqueFinalizingPostAggregator implements PostAggregator
 
   private final String name;
   private final String fieldName;
+  private final AggregatorFactory aggregatorFactory;
 
   @JsonCreator
   public HyperUniqueFinalizingPostAggregator(
@@ -55,11 +56,20 @@ public class HyperUniqueFinalizingPostAggregator implements PostAggregator
       @JsonProperty("fieldName") String fieldName
   )
   {
+    this(name, fieldName, null);
+  }
+
+  private HyperUniqueFinalizingPostAggregator(
+      String name,
+      String fieldName,
+      AggregatorFactory aggregatorFactory
+  )
+  {
     this.fieldName = Preconditions.checkNotNull(fieldName, "fieldName is null");
     //Note that, in general, name shouldn't be null, we are defaulting
     //to fieldName here just to be backward compatible with 0.7.x
     this.name = name == null ? fieldName : name;
-
+    this.aggregatorFactory = aggregatorFactory;
   }
 
   @Override
@@ -77,7 +87,16 @@ public class HyperUniqueFinalizingPostAggregator implements PostAggregator
   @Override
   public Object compute(Map<String, Object> combinedAggregators)
   {
-    return HyperUniquesAggregatorFactory.estimateCardinality(combinedAggregators.get(fieldName));
+    final Object collector = combinedAggregators.get(fieldName);
+
+    if (aggregatorFactory == null) {
+      // This didn't come directly from an aggregator. Maybe it came through a FieldAccessPostAggregator or
+      // something like that. Hope it's a HyperLogLogCollector, and estimate it without rounding.
+      return HyperUniquesAggregatorFactory.estimateCardinality(collector, false);
+    } else {
+      // Delegate to the aggregator factory to get the user-specified rounding behavior.
+      return aggregatorFactory.finalizeComputation(collector);
+    }
   }
 
   @Override
@@ -90,7 +109,8 @@ public class HyperUniqueFinalizingPostAggregator implements PostAggregator
   @Override
   public HyperUniqueFinalizingPostAggregator decorate(Map<String, AggregatorFactory> aggregators)
   {
-    return this;
+    final AggregatorFactory theAggregatorFactory = aggregators != null ? aggregators.get(fieldName) : null;
+    return new HyperUniqueFinalizingPostAggregator(name, fieldName, theAggregatorFactory);
   }
 
   @JsonProperty("fieldName")

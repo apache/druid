@@ -71,7 +71,7 @@ public class MergeIntIteratorTest
   }
 
   /**
-   * Check for some possible corner cases, because {@link io.druid.segment.IntIteratorUtils.MergeIntIterator} is
+   * Check for some possible corner cases, because {@link IntIteratorUtils.MergeIntIterator} is
    * implemented using packing ints within longs, that is prone to some overflow or sign bit extension bugs
    */
   @Test

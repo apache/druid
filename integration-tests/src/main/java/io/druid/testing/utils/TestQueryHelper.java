@@ -21,10 +21,16 @@ package io.druid.testing.utils;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
-
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.query.Druids;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.LongSumAggregatorFactory;
+import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.clients.QueryResourceTestClient;
 
@@ -116,6 +122,30 @@ public class TestQueryHelper
 
   private String getBrokerURL()
   {
-    return String.format("%s/druid/v2?pretty", broker);
+    return StringUtils.format("%s/druid/v2?pretty", broker);
+  }
+
+  @SuppressWarnings("unchecked")
+  public int countRows(String dataSource, String interval)
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(dataSource)
+                                  .aggregators(
+                                      ImmutableList.<AggregatorFactory>of(
+                                          new LongSumAggregatorFactory("rows", "count")
+                                      )
+                                  )
+                                  .granularity(Granularities.ALL)
+                                  .intervals(interval)
+                                  .build();
+
+    List<Map<String, Object>> results = queryClient.query(getBrokerURL(), query);
+    if (results.isEmpty()) {
+      return 0;
+    } else {
+      Map<String, Object> map = (Map<String, Object>) results.get(0).get("result");
+
+      return (Integer) map.get("rows");
+    }
   }
 }

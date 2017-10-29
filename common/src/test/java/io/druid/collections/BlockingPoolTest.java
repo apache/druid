@@ -42,8 +42,8 @@ public class BlockingPoolTest
 {
   private static final ExecutorService SERVICE = Executors.newFixedThreadPool(2);
 
-  private static final BlockingPool<Integer> POOL = new BlockingPool<>(Suppliers.ofInstance(1), 10);
-  private static final BlockingPool<Integer> EMPTY_POOL = new BlockingPool<>(Suppliers.ofInstance(1), 0);
+  private static final DefaultBlockingPool<Integer> POOL = new DefaultBlockingPool<>(Suppliers.ofInstance(1), 10);
+  private static final BlockingPool<Integer> EMPTY_POOL = new DefaultBlockingPool<>(Suppliers.ofInstance(1), 0);
 
   @AfterClass
   public static void teardown()

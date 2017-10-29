@@ -151,9 +151,9 @@ public class Node
   {
     boolean retVal = false;
     float[] minCoords = new float[getNumDims()];
-    Arrays.fill(minCoords, Float.MAX_VALUE);
+    Arrays.fill(minCoords, Float.POSITIVE_INFINITY);
     float[] maxCoords = new float[getNumDims()];
-    Arrays.fill(maxCoords, -Float.MAX_VALUE);
+    Arrays.fill(maxCoords, Float.NEGATIVE_INFINITY);
 
     for (Node child : getChildren()) {
       for (int i = 0; i < getNumDims(); i++) {

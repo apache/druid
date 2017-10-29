@@ -31,21 +31,8 @@ public class TopNQueryConfig
   @Min(1)
   private int minTopNThreshold = 1000;
 
-  @JsonProperty
-  private Class<? extends TopNQueryMetricsFactory> queryMetricsFactory;
-
   public int getMinTopNThreshold()
   {
     return minTopNThreshold;
-  }
-
-  public Class<? extends TopNQueryMetricsFactory> getQueryMetricsFactory()
-  {
-    return queryMetricsFactory != null ? queryMetricsFactory : DefaultTopNQueryMetricsFactory.class;
-  }
-
-  public void setQueryMetricsFactory(Class<? extends TopNQueryMetricsFactory> queryMetricsFactory)
-  {
-    this.queryMetricsFactory = queryMetricsFactory;
   }
 }

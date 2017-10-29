@@ -29,7 +29,7 @@ import io.druid.query.extraction.ExtractionFn;
 import java.nio.ByteBuffer;
 
 /**
- * This class is deprecated, use SelectorDimFilter instead: {@link io.druid.query.filter.SelectorDimFilter}
+ * This class is deprecated, use SelectorDimFilter instead: {@link SelectorDimFilter}
  */
 @Deprecated
 public class ExtractionDimFilter implements DimFilter
@@ -113,6 +113,6 @@ public class ExtractionDimFilter implements DimFilter
   @Override
   public String toString()
   {
-    return String.format("%s(%s) = %s", extractionFn, dimension, value);
+    return StringUtils.format("%s(%s) = %s", extractionFn, dimension, value);
   }
 }

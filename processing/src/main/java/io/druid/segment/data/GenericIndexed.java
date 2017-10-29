@@ -19,13 +19,13 @@
 
 package io.druid.segment.data;
 
-import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.io.ZeroCopyByteArrayOutputStream;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
@@ -63,8 +63,8 @@ import java.util.Iterator;
  * bytes 11-14 =>; columnNameLength
  * bytes 15-columnNameLength =>; columnName
  * <p>
- * Header file name is identified as:  String.format("%s_header", columnName)
- * value files are identified as: String.format("%s_value_%d", columnName, fileNumber)
+ * Header file name is identified as: StringUtils.format("%s_header", columnName)
+ * value files are identified as: StringUtils.format("%s_value_%d", columnName, fileNumber)
  * number of value files == numElements/numberOfElementsPerValueFile
  */
 public class GenericIndexed<T> implements Indexed<T>
@@ -73,7 +73,6 @@ public class GenericIndexed<T> implements Indexed<T>
   static final byte VERSION_TWO = 0x2;
   static final byte REVERSE_LOOKUP_ALLOWED = 0x1;
   static final byte REVERSE_LOOKUP_DISALLOWED = 0x0;
-  private final static Ordering<String> NATURAL_STRING_ORDERING = Ordering.natural().nullsFirst();
   private static final SerializerUtils SERIALIZER_UTILS = new SerializerUtils();
 
   public static final ObjectStrategy<String> STRING_STRATEGY = new CacheableObjectStrategy<String>()
@@ -102,7 +101,7 @@ public class GenericIndexed<T> implements Indexed<T>
     @Override
     public int compare(String o1, String o2)
     {
-      return NATURAL_STRING_ORDERING.compare(o1, o2);
+      return Comparators.<String>naturalNullsFirst().compare(o1, o2);
     }
   };
 
@@ -237,7 +236,7 @@ public class GenericIndexed<T> implements Indexed<T>
       throw new IAE("Index[%s] < 0", index);
     }
     if (index >= size) {
-      throw new IAE(String.format("Index[%s] >= size[%s]", index, size));
+      throw new IAE("Index[%d] >= size[%d]", index, size);
     }
   }
 

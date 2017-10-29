@@ -28,12 +28,14 @@ import com.metamx.common.StringUtils;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilterUtils;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.virtual.VirtualColumnCacheHelper;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
@@ -64,30 +66,34 @@ public class MapVirtualColumn implements VirtualColumn
   }
 
   @Override
-  public ObjectColumnSelector makeObjectColumnSelector(String dimension, ColumnSelectorFactory factory)
+  public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec, ColumnSelectorFactory factory)
+  {
+    // Could probably do something useful here if the column name is dot-style. But for now just return nothing.
+    return dimensionSpec.decorate(DimensionSelectorUtils.constantSelector(null, dimensionSpec.getExtractionFn()));
+  }
+
+  @Override
+  public ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelectorFactory factory)
   {
     final DimensionSelector keySelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(keyDimension));
     final DimensionSelector valueSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(valueDimension));
 
-    final String subColumnName = VirtualColumns.splitColumnName(dimension).rhs;
+    final String subColumnName = VirtualColumns.splitColumnName(columnName).rhs;
 
     if (subColumnName == null) {
-      return new ObjectColumnSelector<Map>()
+      return new MapVirtualColumnValueSelector<Map>(keySelector, valueSelector)
       {
         @Override
-        public Class classOfObject()
+        public Class<Map> classOfObject()
         {
           return Map.class;
         }
 
         @Override
-        public Map get()
+        public Map getObject()
         {
           final IndexedInts keyIndices = keySelector.getRow();
           final IndexedInts valueIndices = valueSelector.getRow();
-          if (keyIndices == null || valueIndices == null) {
-            return null;
-          }
           final int limit = Math.min(keyIndices.size(), valueIndices.size());
           final Map<String, String> map = Maps.newHashMapWithExpectedSize(limit);
           for (int i = 0; i < limit; i++) {
@@ -105,24 +111,22 @@ public class MapVirtualColumn implements VirtualColumn
     if (keyIdLookup != null) {
       final int keyId = keyIdLookup.lookupId(subColumnName);
       if (keyId < 0) {
-        return NullStringObjectColumnSelector.instance();
+        return NilColumnValueSelector.instance();
       }
-      return new ObjectColumnSelector<String>()
+      return new MapVirtualColumnValueSelector<String>(keySelector, valueSelector)
       {
         @Override
-        public Class classOfObject()
+        public Class<String> classOfObject()
         {
           return String.class;
         }
 
+        @Nullable
         @Override
-        public String get()
+        public String getObject()
         {
           final IndexedInts keyIndices = keySelector.getRow();
           final IndexedInts valueIndices = valueSelector.getRow();
-          if (keyIndices == null || valueIndices == null) {
-            return null;
-          }
           final int limit = Math.min(keyIndices.size(), valueIndices.size());
           for (int i = 0; i < limit; i++) {
             if (keyIndices.get(i) == keyId) {
@@ -133,22 +137,20 @@ public class MapVirtualColumn implements VirtualColumn
         }
       };
     } else {
-      return new ObjectColumnSelector<String>()
+      return new MapVirtualColumnValueSelector<String>(keySelector, valueSelector)
       {
         @Override
-        public Class classOfObject()
+        public Class<String> classOfObject()
         {
           return String.class;
         }
 
+        @Nullable
         @Override
-        public String get()
+        public String getObject()
         {
           final IndexedInts keyIndices = keySelector.getRow();
           final IndexedInts valueIndices = valueSelector.getRow();
-          if (keyIndices == null || valueIndices == null) {
-            return null;
-          }
           final int limit = Math.min(keyIndices.size(), valueIndices.size());
           for (int i = 0; i < limit; i++) {
             if (Objects.equals(keySelector.lookupName(keyIndices.get(i)), subColumnName)) {
@@ -161,23 +163,41 @@ public class MapVirtualColumn implements VirtualColumn
     }
   }
 
-  @Override
-  public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec, ColumnSelectorFactory factory)
+  private static abstract class MapVirtualColumnValueSelector<T> implements ColumnValueSelector<T>
   {
-    // Could probably do something useful here if the column name is dot-style. But for now just return nothing.
-    return null;
-  }
+    final DimensionSelector keySelector;
+    final DimensionSelector valueSelector;
 
-  @Override
-  public FloatColumnSelector makeFloatColumnSelector(String columnName, ColumnSelectorFactory factory)
-  {
-    return null;
-  }
+    private MapVirtualColumnValueSelector(DimensionSelector keySelector, DimensionSelector valueSelector)
+    {
+      this.keySelector = keySelector;
+      this.valueSelector = valueSelector;
+    }
 
-  @Override
-  public LongColumnSelector makeLongColumnSelector(String columnName, ColumnSelectorFactory factory)
-  {
-    return null;
+    @Override
+    public double getDouble()
+    {
+      return 0.0;
+    }
+
+    @Override
+    public float getFloat()
+    {
+      return 0.0f;
+    }
+
+    @Override
+    public long getLong()
+    {
+      return 0L;
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+      inspector.visit("keySelector", keySelector);
+      inspector.visit("valueSelector", valueSelector);
+    }
   }
 
   @Override

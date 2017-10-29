@@ -22,8 +22,7 @@ package io.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import io.druid.java.util.common.ISE;
+import com.google.common.base.Preconditions;
 import io.druid.java.util.common.parsers.JavaScriptParser;
 import io.druid.java.util.common.parsers.Parser;
 import io.druid.js.JavaScriptConfig;
@@ -36,6 +35,9 @@ public class JavaScriptParseSpec extends ParseSpec
 {
   private final String function;
   private final JavaScriptConfig config;
+
+  // This variable is lazily initialized to avoid unnecessary JavaScript compilation during JSON serde
+  private JavaScriptParser parser;
 
   @JsonCreator
   public JavaScriptParseSpec(
@@ -65,11 +67,11 @@ public class JavaScriptParseSpec extends ParseSpec
   @Override
   public Parser<String, Object> makeParser()
   {
-    if (!config.isEnabled()) {
-      throw new ISE("JavaScript is disabled");
-    }
-
-    return new JavaScriptParser(function);
+    // JavaScript configuration should be checked when it's actually used because someone might still want Druid
+    // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
+    Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
+    parser = parser == null ? new JavaScriptParser(function) : parser;
+    return parser;
   }
 
   @Override

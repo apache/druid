@@ -73,7 +73,7 @@ public class TaskLogAutoCleanerConfigTest
 
     Assert.assertFalse(config.isEnabled());
     Assert.assertTrue(config.getInitialDelay() >= 60000 && config.getInitialDelay() <= 300000);
-    Assert.assertEquals(6*60*60*1000, config.getDelay());
+    Assert.assertEquals(6 * 60 * 60 * 1000, config.getDelay());
     Assert.assertEquals(Long.MAX_VALUE, config.getDurationToRetain());
   }
 }

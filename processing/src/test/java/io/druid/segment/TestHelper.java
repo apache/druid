@@ -19,34 +19,40 @@
 
 package io.druid.segment;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.Result;
+import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.timeseries.TimeseriesResultValue;
+import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.column.ColumnConfig;
 import org.junit.Assert;
 
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  */
 public class TestHelper
 {
-  private static final IndexMerger INDEX_MERGER;
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
-  public static final ObjectMapper JSON_MAPPER;
 
   static {
-    JSON_MAPPER = new DefaultObjectMapper();
+    final ObjectMapper jsonMapper = getJsonMapper();
     INDEX_IO = new IndexIO(
-        JSON_MAPPER,
+        jsonMapper,
         new ColumnConfig()
         {
           @Override
@@ -56,19 +62,7 @@ public class TestHelper
           }
         }
     );
-    INDEX_MERGER = new IndexMerger(JSON_MAPPER, INDEX_IO);
-    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO);
-  }
-
-  public static ObjectMapper getTestObjectMapper()
-  {
-    return JSON_MAPPER;
-  }
-
-
-  public static IndexMerger getTestIndexMerger()
-  {
-    return INDEX_MERGER;
+    INDEX_MERGER_V9 = new IndexMergerV9(jsonMapper, INDEX_IO);
   }
 
   public static IndexMergerV9 getTestIndexMergerV9()
@@ -81,11 +75,30 @@ public class TestHelper
     return INDEX_IO;
   }
 
-  public static ObjectMapper getObjectMapper() {
-    return JSON_MAPPER;
+  public static ObjectMapper getJsonMapper()
+  {
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
+            .addValue(ObjectMapper.class.getName(), mapper)
+    );
+    return mapper;
   }
 
-  public static <T> Iterable<T> revert(Iterable<T> input) {
+  public static ObjectMapper getSmileMapper()
+  {
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
+            .addValue(ObjectMapper.class.getName(), mapper)
+    );
+    return mapper;
+  }
+
+  public static <T> Iterable<T> revert(Iterable<T> input)
+  {
     return Lists.reverse(Lists.newArrayList(input));
   }
 
@@ -143,15 +156,24 @@ public class TestHelper
         // in result comparison
         assertTimeseriesResultValue(failMsg, (Result) expectedNext, (Result) next);
         assertTimeseriesResultValue(
-            String.format("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg),
+            StringUtils.format("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg),
             (Result) expectedNext,
             (Result) next2
         );
 
+      } else if (expectedNext instanceof Result
+                 && (((Result) expectedNext).getValue()) instanceof TopNResultValue) {
+        // Special to allow a floating point delta to be used in result comparison due to legacy expected results
+        assertTopNResultValue(failMsg, (Result) expectedNext, (Result) next);
+        assertTopNResultValue(
+            StringUtils.format("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg),
+            (Result) expectedNext,
+            (Result) next2
+        );
       } else {
         assertResult(failMsg, (Result) expectedNext, (Result) next);
         assertResult(
-            String.format("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg),
+            StringUtils.format("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg),
             (Result) expectedNext,
             (Result) next2
         );
@@ -160,19 +182,19 @@ public class TestHelper
 
     if (resultsIter.hasNext()) {
       Assert.fail(
-          String.format("%s: Expected resultsIter to be exhausted, next element was %s", failMsg, resultsIter.next())
+          StringUtils.format("%s: Expected resultsIter to be exhausted, next element was %s", failMsg, resultsIter.next())
       );
     }
 
     if (resultsIter2.hasNext()) {
       Assert.fail(
-          String.format("%s: Expected resultsIter2 to be exhausted, next element was %s", failMsg, resultsIter.next())
+          StringUtils.format("%s: Expected resultsIter2 to be exhausted, next element was %s", failMsg, resultsIter.next())
       );
     }
 
     if (expectedResultsIter.hasNext()) {
       Assert.fail(
-          String.format(
+          StringUtils.format(
               "%s: Expected expectedResultsIter to be exhausted, next element was %s",
               failMsg,
               expectedResultsIter.next()
@@ -194,7 +216,7 @@ public class TestHelper
       final Object next2 = resultsIter2.next();
 
       String failMsg = msg + "-" + index++;
-      String failMsg2 = String.format("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg);
+      String failMsg2 = StringUtils.format("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg);
 
       if (expectedNext instanceof Row) {
         // HACK! Special casing for groupBy
@@ -208,19 +230,19 @@ public class TestHelper
 
     if (resultsIter.hasNext()) {
       Assert.fail(
-          String.format("%s: Expected resultsIter to be exhausted, next element was %s", msg, resultsIter.next())
+          StringUtils.format("%s: Expected resultsIter to be exhausted, next element was %s", msg, resultsIter.next())
       );
     }
 
     if (resultsIter2.hasNext()) {
       Assert.fail(
-          String.format("%s: Expected resultsIter2 to be exhausted, next element was %s", msg, resultsIter.next())
+          StringUtils.format("%s: Expected resultsIter2 to be exhausted, next element was %s", msg, resultsIter.next())
       );
     }
 
     if (expectedResultsIter.hasNext()) {
       Assert.fail(
-          String.format(
+          StringUtils.format(
               "%s: Expected expectedResultsIter to be exhausted, next element was %s",
               msg,
               expectedResultsIter.next()
@@ -238,7 +260,7 @@ public class TestHelper
   {
     // Custom equals check to get fuzzy comparison of numerics, useful because different groupBy strategies don't
     // always generate exactly the same results (different merge ordering / float vs double)
-    Assert.assertEquals(String.format("%s: timestamp", msg), expected.getTimestamp(), actual.getTimestamp());
+    Assert.assertEquals(StringUtils.format("%s: timestamp", msg), expected.getTimestamp(), actual.getTimestamp());
 
     TimeseriesResultValue expectedVal = (TimeseriesResultValue) expected.getValue();
     TimeseriesResultValue actualVal = (TimeseriesResultValue) actual.getValue();
@@ -246,52 +268,66 @@ public class TestHelper
     final Map<String, Object> expectedMap = (Map<String, Object>) expectedVal.getBaseObject();
     final Map<String, Object> actualMap = (Map<String, Object>) actualVal.getBaseObject();
 
-    Assert.assertEquals(String.format("%s: map keys", msg), expectedMap.keySet(), actualMap.keySet());
-    for (final String key : expectedMap.keySet()) {
-      final Object expectedValue = expectedMap.get(key);
-      final Object actualValue = actualMap.get(key);
+    assertRow(msg, new MapBasedRow(expected.getTimestamp(), expectedMap), new MapBasedRow(actual.getTimestamp(), actualMap));
+  }
 
-      if (expectedValue instanceof Float || expectedValue instanceof Double) {
-        Assert.assertEquals(
-            String.format("%s: key[%s]", msg, key),
-            ((Number) expectedValue).doubleValue(),
-            ((Number) actualValue).doubleValue(),
-            ((Number) expectedValue).doubleValue() * 1e-6
-        );
-      } else {
-        Assert.assertEquals(
-            String.format("%s: key[%s]", msg, key),
-            expectedValue,
-            actualValue
-        );
-      }
-    }
+  private static void assertTopNResultValue(String msg, Result expected, Result actual)
+  {
+    TopNResultValue expectedVal = (TopNResultValue) expected.getValue();
+    TopNResultValue actualVal = (TopNResultValue) actual.getValue();
+
+    List<Row> listExpectedRows = expectedVal.getValue()
+                                            .stream()
+                                            .map(dimensionAndMetricValueExtractor -> new MapBasedRow(
+                                                expected.getTimestamp(),
+                                                dimensionAndMetricValueExtractor.getBaseObject()
+                                            ))
+                                            .collect(Collectors.toList());
+
+    List<Row> listActualRows = actualVal.getValue()
+                                        .stream()
+                                        .map(dimensionAndMetricValueExtractor -> new MapBasedRow(
+                                            actual.getTimestamp(),
+                                            dimensionAndMetricValueExtractor.getBaseObject()
+                                        ))
+                                        .collect(Collectors.toList());
+    Assert.assertEquals("Size of list must match", listExpectedRows.size(), listActualRows.size());
+
+    IntStream.range(0, listExpectedRows.size()).forEach(value -> assertRow(
+        StringUtils.format("%s, on value number [%s]", msg, value),
+        listExpectedRows.get(value),
+        listActualRows.get(value)
+    ));
   }
 
   private static void assertRow(String msg, Row expected, Row actual)
   {
     // Custom equals check to get fuzzy comparison of numerics, useful because different groupBy strategies don't
     // always generate exactly the same results (different merge ordering / float vs double)
-    Assert.assertEquals(String.format("%s: timestamp", msg), expected.getTimestamp().getMillis(), actual.getTimestamp().getMillis());
+    Assert.assertEquals(
+        StringUtils.format("%s: timestamp", msg),
+        expected.getTimestamp().getMillis(),
+        actual.getTimestamp().getMillis()
+    );
 
     final Map<String, Object> expectedMap = ((MapBasedRow) expected).getEvent();
     final Map<String, Object> actualMap = ((MapBasedRow) actual).getEvent();
 
-    Assert.assertEquals(String.format("%s: map keys", msg), expectedMap.keySet(), actualMap.keySet());
+    Assert.assertEquals(StringUtils.format("%s: map keys", msg), expectedMap.keySet(), actualMap.keySet());
     for (final String key : expectedMap.keySet()) {
       final Object expectedValue = expectedMap.get(key);
       final Object actualValue = actualMap.get(key);
 
       if (expectedValue instanceof Float || expectedValue instanceof Double) {
         Assert.assertEquals(
-            String.format("%s: key[%s]", msg, key),
+            StringUtils.format("%s: key[%s]", msg, key),
             ((Number) expectedValue).doubleValue(),
             ((Number) actualValue).doubleValue(),
-            ((Number) expectedValue).doubleValue() * 1e-6
+            Math.abs(((Number) expectedValue).doubleValue() * 1e-6)
         );
       } else {
         Assert.assertEquals(
-            String.format("%s: key[%s]", msg, key),
+            StringUtils.format("%s: key[%s]", msg, key),
             expectedValue,
             actualValue
         );

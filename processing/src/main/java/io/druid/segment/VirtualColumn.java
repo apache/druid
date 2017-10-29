@@ -26,7 +26,6 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
 
-import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -51,17 +50,6 @@ public interface VirtualColumn extends Cacheable
 
   /**
    * Build a selector corresponding to this virtual column. Also provides the name that the
-   * virtual column was referenced with, which is useful if this column uses dot notation.
-   *
-   * @param columnName the name this virtual column was referenced with
-   * @param factory    column selector factory
-   *
-   * @return the selector, must not be null
-   */
-  ObjectColumnSelector makeObjectColumnSelector(String columnName, ColumnSelectorFactory factory);
-
-  /**
-   * Build a selector corresponding to this virtual column. Also provides the name that the
    * virtual column was referenced with (through {@link DimensionSpec#getDimension()}, which
    * is useful if this column uses dot notation. The virtual column is expected to apply any
    * necessary decoration from the dimensionSpec.
@@ -69,9 +57,8 @@ public interface VirtualColumn extends Cacheable
    * @param dimensionSpec the dimensionSpec this column was referenced with
    * @param factory       column selector factory
    *
-   * @return the selector, or null if we can't make a selector
+   * @return the selector, must not be null
    */
-  @Nullable
   DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec, ColumnSelectorFactory factory);
 
   /**
@@ -81,27 +68,16 @@ public interface VirtualColumn extends Cacheable
    * @param columnName the name this virtual column was referenced with
    * @param factory    column selector factory
    *
-   * @return the selector, or null if we can't make a selector
+   * @return the selector, must not be null
    */
-  @Nullable
-  FloatColumnSelector makeFloatColumnSelector(String columnName, ColumnSelectorFactory factory);
+  ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelectorFactory factory);
+
 
   /**
-   * Build a selector corresponding to this virtual column. Also provides the name that the
-   * virtual column was referenced with, which is useful if this column uses dot notation.
-   *
-   * @param columnName the name this virtual column was referenced with
-   * @param factory    column selector factory
-   *
-   * @return the selector, or null if we can't make a selector
-   */
-  @Nullable
-  LongColumnSelector makeLongColumnSelector(String columnName, ColumnSelectorFactory factory);
-
-  /**
-   * Returns the capabilities of this virtual column, which includes a type that should match
-   * the type returned by "makeObjectColumnSelector" and should correspond to the best
-   * performing selector. May vary based on columnName if this column uses dot notation.
+   * Returns the capabilities of this virtual column, which includes a type that corresponds to the best
+   * performing base selector supertype (e. g. {@link BaseLongColumnValueSelector}) of the object, returned from
+   * {@link #makeColumnValueSelector(String, ColumnSelectorFactory)}. May vary based on columnName if this column uses
+   * dot notation.
    *
    * @param columnName the name this virtual column was referenced with
    *

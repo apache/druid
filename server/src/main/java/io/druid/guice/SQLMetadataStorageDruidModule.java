@@ -37,7 +37,6 @@ import io.druid.metadata.MetadataStorageActionHandlerFactory;
 import io.druid.metadata.MetadataStorageConnector;
 import io.druid.metadata.MetadataStorageProvider;
 import io.druid.metadata.MetadataSupervisorManager;
-import io.druid.metadata.NoopMetadataStorageProvider;
 import io.druid.metadata.SQLMetadataConnector;
 import io.druid.metadata.SQLMetadataRuleManager;
 import io.druid.metadata.SQLMetadataRuleManagerProvider;
@@ -65,106 +64,28 @@ public class SQLMetadataStorageDruidModule implements Module
   /**
    * This function only needs to be called by the default SQL metadata storage module
    * Other modules should default to calling super.configure(...) alone
+   *
+   * @param defaultValue default property value
    */
-  public void createBindingChoices(Binder binder, String defaultPropertyValue)
+  public void createBindingChoices(Binder binder, String defaultValue)
   {
-    PolyBind.createChoiceWithDefault(
-        binder, PROPERTY, Key.get(MetadataStorageConnector.class), null, defaultPropertyValue
-    );
-    PolyBind.createChoiceWithDefault(
-        binder,
-        PROPERTY,
-        Key.get(MetadataStorageProvider.class),
-        Key.get(NoopMetadataStorageProvider.class),
-        defaultPropertyValue
-    );
-    PolyBind.createChoiceWithDefault(
-        binder, PROPERTY, Key.get(SQLMetadataConnector.class), null, defaultPropertyValue
-    );
-    PolyBind.createChoiceWithDefault(
-        binder,
-        PROPERTY,
-        Key.get(MetadataSegmentManager.class),
-        Key.get(SQLMetadataSegmentManager.class),
-        defaultPropertyValue
-    );
-    PolyBind.createChoiceWithDefault(
-        binder,
-        PROPERTY,
-        Key.get(MetadataSegmentManagerProvider.class),
-        Key.get(SQLMetadataSegmentManagerProvider.class),
-        defaultPropertyValue
-    );
-    PolyBind.createChoiceWithDefault(
-        binder,
-        PROPERTY,
-        Key.get(MetadataRuleManager.class),
-        Key.get(SQLMetadataRuleManager.class),
-        defaultPropertyValue
-    );
-    PolyBind.createChoiceWithDefault(
-        binder,
-        PROPERTY,
-        Key.get(MetadataRuleManagerProvider.class),
-        Key.get(SQLMetadataRuleManagerProvider.class),
-        defaultPropertyValue
-    );
-    PolyBind.createChoiceWithDefault(
-        binder,
-        PROPERTY,
-        Key.get(MetadataSegmentPublisher.class),
-        Key.get(SQLMetadataSegmentPublisher.class),
-        defaultPropertyValue
-    );
-    PolyBind.createChoiceWithDefault(
-        binder,
-        PROPERTY,
-        Key.get(MetadataSegmentPublisherProvider.class),
-        Key.get(SQLMetadataSegmentPublisherProvider.class),
-        defaultPropertyValue
-    );
-    PolyBind.createChoiceWithDefault(
-        binder,
-        PROPERTY,
-        Key.get(IndexerMetadataStorageCoordinator.class),
-        Key.get(IndexerSQLMetadataStorageCoordinator.class),
-        defaultPropertyValue
-    );
-    PolyBind.createChoiceWithDefault(
-        binder,
-        PROPERTY,
-        Key.get(MetadataStorageActionHandlerFactory.class),
-        Key.get(SQLMetadataStorageActionHandlerFactory.class),
-        defaultPropertyValue
-    );
-    PolyBind.createChoiceWithDefault(
-        binder,
-        PROPERTY,
-        Key.get(MetadataStorageUpdaterJobHandler.class),
-        Key.get(SQLMetadataStorageUpdaterJobHandler.class),
-        defaultPropertyValue
-    );
-    PolyBind.createChoiceWithDefault(
-        binder,
-        PROPERTY,
-        Key.get(AuditManager.class),
-        Key.get(SQLAuditManager.class),
-        defaultPropertyValue
-    );
-    PolyBind.createChoiceWithDefault(
-        binder,
-        PROPERTY,
-        Key.get(AuditManagerProvider.class),
-        Key.get(SQLAuditManagerProvider.class),
-        defaultPropertyValue
-    );
-    PolyBind.createChoiceWithDefault(
-        binder,
-        PROPERTY,
-        Key.get(MetadataSupervisorManager.class),
-        Key.get(SQLMetadataSupervisorManager.class),
-        defaultPropertyValue
-    );
+    String prop = PROPERTY;
+    PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataStorageConnector.class), defaultValue);
+    PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataStorageProvider.class), defaultValue);
+    PolyBind.createChoiceWithDefault(binder, prop, Key.get(SQLMetadataConnector.class), defaultValue);
+
+    PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataSegmentManager.class), defaultValue);
+    PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataSegmentManagerProvider.class), defaultValue);
+    PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataRuleManager.class), defaultValue);
+    PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataRuleManagerProvider.class), defaultValue);
+    PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataSegmentPublisher.class), defaultValue);
+    PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataSegmentPublisherProvider.class), defaultValue);
+    PolyBind.createChoiceWithDefault(binder, prop, Key.get(IndexerMetadataStorageCoordinator.class), defaultValue);
+    PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataStorageActionHandlerFactory.class), defaultValue);
+    PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataStorageUpdaterJobHandler.class), defaultValue);
+    PolyBind.createChoiceWithDefault(binder, prop, Key.get(AuditManager.class), defaultValue);
+    PolyBind.createChoiceWithDefault(binder, prop, Key.get(AuditManagerProvider.class), defaultValue);
+    PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataSupervisorManager.class), defaultValue);
   }
 
   @Override

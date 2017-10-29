@@ -23,14 +23,14 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Longs;
 import io.druid.java.util.common.Cacheable;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.format.DateTimeFormatter;
 
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -53,7 +53,7 @@ public abstract class Granularity implements Cacheable
   @JsonCreator
   public static Granularity fromString(String str)
   {
-    return GranularityType.valueOf(str.toUpperCase()).getDefaultGranularity();
+    return GranularityType.valueOf(StringUtils.toUpperCase(str)).getDefaultGranularity();
   }
 
   /**
@@ -78,7 +78,6 @@ public abstract class Granularity implements Cacheable
 
   public static List<Granularity> granularitiesFinerThan(final Granularity gran0)
   {
-    final DateTime epoch = new DateTime(0);
     final List<Granularity> retVal = Lists.newArrayList();
     final DateTime origin = (gran0 instanceof PeriodGranularity) ? ((PeriodGranularity) gran0).getOrigin() : null;
     final DateTimeZone tz = (gran0 instanceof PeriodGranularity) ? ((PeriodGranularity) gran0).getTimeZone() : null;
@@ -92,21 +91,17 @@ public abstract class Granularity implements Cacheable
         continue;
       }
       final Granularity segmentGranularity = gran.create(origin, tz);
-      if (segmentGranularity.bucket(epoch).toDurationMillis() <= gran0.bucket(epoch).toDurationMillis()) {
+      final long segmentGranularityDurationMillis = segmentGranularity.bucket(DateTimes.EPOCH).toDurationMillis();
+      final long gran0DurationMillis = gran0.bucket(DateTimes.EPOCH).toDurationMillis();
+      if (segmentGranularityDurationMillis <= gran0DurationMillis) {
         retVal.add(segmentGranularity);
       }
     }
-    Collections.sort(
-        retVal,
-        new Comparator<Granularity>()
-        {
-          @Override
-          public int compare(Granularity g1, Granularity g2)
-          {
-            return Longs.compare(g2.bucket(epoch).toDurationMillis(), g1.bucket(epoch).toDurationMillis());
-          }
-        }
-    );
+    retVal.sort((g1, g2) -> {
+      long duration1 = g2.bucket(DateTimes.EPOCH).toDurationMillis();
+      long duration2 = g1.bucket(DateTimes.EPOCH).toDurationMillis();
+      return Longs.compare(duration1, duration2);
+    });
     return retVal;
   }
 
@@ -120,13 +115,14 @@ public abstract class Granularity implements Cacheable
 
   public abstract DateTime toDate(String filePath, Formatter formatter);
 
-  public DateTime bucketEnd(DateTime time) {
+  public DateTime bucketEnd(DateTime time)
+  {
     return increment(bucketStart(time));
   }
 
   public DateTime toDateTime(long offset)
   {
-    return new DateTime(offset, DateTimeZone.UTC);
+    return DateTimes.utc(offset);
   }
 
   public DateTime toDate(String filePath)

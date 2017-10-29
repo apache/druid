@@ -62,13 +62,13 @@ public class HistogramVisual
     this.breaks = new double[breaks.length];
     this.counts = new double[counts.length];
     this.quantiles = new double[quantiles.length];
-    for(int i = 0; i < breaks.length; ++i) {
+    for (int i = 0; i < breaks.length; ++i) {
       this.breaks[i] = breaks[i];
     }
-    for(int i = 0; i < counts.length; ++i) {
+    for (int i = 0; i < counts.length; ++i) {
       this.counts[i] = counts[i];
     }
-    for(int i = 0; i < quantiles.length; ++i) {
+    for (int i = 0; i < quantiles.length; ++i) {
       this.quantiles[i] = quantiles[i];
     }
   }

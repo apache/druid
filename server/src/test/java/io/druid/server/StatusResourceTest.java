@@ -38,7 +38,7 @@ public class StatusResourceTest
   public void testLoadedModules()
   {
 
-    Collection<DruidModule> modules = ImmutableList.of((DruidModule)new InitializationTest.TestDruidModule());
+    Collection<DruidModule> modules = ImmutableList.of((DruidModule) new InitializationTest.TestDruidModule());
     List<ModuleVersion> statusResourceModuleList = new StatusResource.Status(modules).getModules();
 
     Assert.assertEquals("Status should have all modules loaded!", modules.size(), statusResourceModuleList.size());

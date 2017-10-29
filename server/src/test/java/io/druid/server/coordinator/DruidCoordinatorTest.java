@@ -24,19 +24,18 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
-import com.google.common.collect.Maps;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.client.SingleServerInventoryView;
-import io.druid.collections.CountingMap;
 import io.druid.common.config.JacksonConfigManager;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.curator.CuratorTestBase;
 import io.druid.curator.discovery.NoopServiceAnnouncer;
+import io.druid.discovery.DruidLeaderSelector;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.metadata.MetadataSegmentManager;
@@ -49,11 +48,13 @@ import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.lookup.cache.LookupCoordinatorManager;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.utils.ZKPaths;
+import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -64,8 +65,10 @@ import org.junit.Test;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -131,18 +134,24 @@ public class DruidCoordinatorTest extends CuratorTestBase
         false,
         new Duration("PT0s")
     );
-    pathChildrenCache = new PathChildrenCache(curator, LOADPATH, true, true, Execs.singleThreaded("coordinator_test_path_children_cache-%d"));
-    loadQueuePeon = new LoadQueuePeon(
-      curator,
-      LOADPATH,
-      objectMapper,
-      Execs.scheduledSingleThreaded("coordinator_test_load_queue_peon_scheduled-%d"),
-      Execs.singleThreaded("coordinator_test_load_queue_peon-%d"),
-      druidCoordinatorConfig
+    pathChildrenCache = new PathChildrenCache(
+        curator,
+        LOADPATH,
+        true,
+        true,
+        Execs.singleThreaded("coordinator_test_path_children_cache-%d")
+    );
+    loadQueuePeon = new CuratorLoadQueuePeon(
+        curator,
+        LOADPATH,
+        objectMapper,
+        Execs.scheduledSingleThreaded("coordinator_test_load_queue_peon_scheduled-%d"),
+        Execs.singleThreaded("coordinator_test_load_queue_peon-%d"),
+        druidCoordinatorConfig
     );
     loadQueuePeon.start();
-    druidNode = new DruidNode("hey", "what", 1234);
-    loadManagementPeons = new MapMaker().makeMap();
+    druidNode = new DruidNode("hey", "what", 1234, null, true, false);
+    loadManagementPeons = new ConcurrentHashMap<>();
     scheduledExecutorFactory = new ScheduledExecutorFactory()
     {
       @Override
@@ -173,7 +182,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         scheduledExecutorFactory,
         null,
         null,
-        new NoopServiceAnnouncer(){
+        new NoopServiceAnnouncer()
+        {
           @Override
           public void announce(DruidNode node)
           {
@@ -191,7 +201,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         loadManagementPeons,
         null,
         new CostBalancerStrategyFactory(),
-        EasyMock.createNiceMock(LookupCoordinatorManager.class)
+        EasyMock.createNiceMock(LookupCoordinatorManager.class),
+        new TestDruidLeaderSelector()
     );
   }
 
@@ -206,17 +217,37 @@ public class DruidCoordinatorTest extends CuratorTestBase
   @Test
   public void testMoveSegment() throws Exception
   {
+    segment = EasyMock.createNiceMock(DataSegment.class);
+    EasyMock.expect(segment.getIdentifier()).andReturn("dummySegment");
+    EasyMock.expect(segment.getDataSource()).andReturn("dummyDataSource");
+    EasyMock.replay(segment);
+
     loadQueuePeon = EasyMock.createNiceMock(LoadQueuePeon.class);
     EasyMock.expect(loadQueuePeon.getLoadQueueSize()).andReturn(new Long(1));
+    loadQueuePeon.markSegmentToDrop(segment);
+    EasyMock.expectLastCall().once();
+    Capture<LoadPeonCallback> loadCallbackCapture = Capture.newInstance();
+    Capture<LoadPeonCallback> dropCallbackCapture = Capture.newInstance();
+    loadQueuePeon.loadSegment(EasyMock.anyObject(DataSegment.class), EasyMock.capture(loadCallbackCapture));
+    EasyMock.expectLastCall().once();
+    loadQueuePeon.dropSegment(EasyMock.anyObject(DataSegment.class), EasyMock.capture(dropCallbackCapture));
+    EasyMock.expectLastCall().once();
+    loadQueuePeon.unmarkSegmentToDrop(segment);
+    EasyMock.expectLastCall().once();
+    EasyMock.expect(loadQueuePeon.getSegmentsToDrop()).andReturn(new HashSet<>()).once();
     EasyMock.replay(loadQueuePeon);
-    segment = EasyMock.createNiceMock(DataSegment.class);
-    EasyMock.replay(segment);
+
+    DruidDataSource druidDataSource = EasyMock.createNiceMock(DruidDataSource.class);
+    EasyMock.expect(druidDataSource.getSegment(EasyMock.anyString())).andReturn(segment);
+    EasyMock.replay(druidDataSource);
+    EasyMock.expect(databaseSegmentManager.getInventoryValue(EasyMock.anyString())).andReturn(druidDataSource);
+    EasyMock.replay(databaseSegmentManager);
     scheduledExecutorFactory = EasyMock.createNiceMock(ScheduledExecutorFactory.class);
     EasyMock.replay(scheduledExecutorFactory);
     EasyMock.replay(metadataRuleManager);
     EasyMock.expect(druidServer.toImmutableDruidServer()).andReturn(
         new ImmutableDruidServer(
-            new DruidServerMetadata("from", null, 5L, ServerType.HISTORICAL, null, 0),
+            new DruidServerMetadata("from", null, null, 5L, ServerType.HISTORICAL, null, 0),
             1L,
             null,
             ImmutableMap.of("dummySegment", segment)
@@ -227,7 +258,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     druidServer2 = EasyMock.createMock(DruidServer.class);
     EasyMock.expect(druidServer2.toImmutableDruidServer()).andReturn(
         new ImmutableDruidServer(
-            new DruidServerMetadata("to", null, 5L, ServerType.HISTORICAL, null, 0),
+            new DruidServerMetadata("to", null, null, 5L, ServerType.HISTORICAL, null, 0),
             1L,
             null,
             ImmutableMap.of("dummySegment2", segment)
@@ -238,13 +269,21 @@ public class DruidCoordinatorTest extends CuratorTestBase
     loadManagementPeons.put("from", loadQueuePeon);
     loadManagementPeons.put("to", loadQueuePeon);
 
+    EasyMock.expect(serverInventoryView.isSegmentLoadedByServer("to", segment)).andReturn(true).once();
     EasyMock.replay(serverInventoryView);
 
     coordinator.moveSegment(
         druidServer.toImmutableDruidServer(),
         druidServer2.toImmutableDruidServer(),
-        "dummySegment", null
+        segment, null
     );
+
+    LoadPeonCallback loadCallback = loadCallbackCapture.getValue();
+    loadCallback.execute();
+
+    LoadPeonCallback dropCallback = dropCallbackCapture.getValue();
+    dropCallback.execute();
+
     EasyMock.verify(druidServer);
     EasyMock.verify(druidServer2);
     EasyMock.verify(loadQueuePeon);
@@ -253,9 +292,10 @@ public class DruidCoordinatorTest extends CuratorTestBase
   }
 
   @Test(timeout = 60_000L)
-  public void testCoordinatorRun() throws Exception{
+  public void testCoordinatorRun() throws Exception
+  {
     String dataSource = "dataSource1";
-    String tier= "hot";
+    String tier = "hot";
 
     // Setup MetadataRuleManager
     Rule foreverLoadRule = new ForeverLoadRule(ImmutableMap.of(tier, 2));
@@ -271,7 +311,17 @@ public class DruidCoordinatorTest extends CuratorTestBase
     DruidDataSource[] druidDataSources = {
         new DruidDataSource(dataSource, Collections.<String, String>emptyMap())
     };
-    final DataSegment dataSegment = new DataSegment(dataSource, new Interval("2010-01-01/P1D"), "v1", null, null, null, null, 0x9, 0);
+    final DataSegment dataSegment = new DataSegment(
+        dataSource,
+        Intervals.of("2010-01-01/P1D"),
+        "v1",
+        null,
+        null,
+        null,
+        null,
+        0x9,
+        0
+    );
     druidDataSources[0].addSegment("0", dataSegment);
 
     EasyMock.expect(databaseSegmentManager.isStarted()).andReturn(true).anyTimes();
@@ -285,7 +335,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.replay(immutableDruidDataSource);
 
     // Setup ServerInventoryView
-    druidServer = new DruidServer("server1", "localhost", 5L, ServerType.HISTORICAL, tier, 0);
+    druidServer = new DruidServer("server1", "localhost", null, 5L, ServerType.HISTORICAL, tier, 0);
     loadManagementPeons.put("server1", loadQueuePeon);
     EasyMock.expect(serverInventoryView.getInventory()).andReturn(
         ImmutableList.of(druidServer)
@@ -303,25 +353,25 @@ public class DruidCoordinatorTest extends CuratorTestBase
 
     final CountDownLatch assignSegmentLatch = new CountDownLatch(1);
     pathChildrenCache.getListenable().addListener(
-      new PathChildrenCacheListener()
-      {
-        @Override
-        public void childEvent(
-            CuratorFramework curatorFramework, PathChildrenCacheEvent pathChildrenCacheEvent
-        ) throws Exception
+        new PathChildrenCacheListener()
         {
-          if(pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)){
-            if (assignSegmentLatch.getCount() > 0) {
-              //Coordinator should try to assign segment to druidServer historical
-              //Simulate historical loading segment
-              druidServer.addDataSegment(dataSegment.getIdentifier(), dataSegment);
-              assignSegmentLatch.countDown();
-            } else {
-              Assert.fail("The same segment is assigned to the same server multiple times");
+          @Override
+          public void childEvent(
+              CuratorFramework curatorFramework, PathChildrenCacheEvent pathChildrenCacheEvent
+          ) throws Exception
+          {
+            if (pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)) {
+              if (assignSegmentLatch.getCount() > 0) {
+                //Coordinator should try to assign segment to druidServer historical
+                //Simulate historical loading segment
+                druidServer.addDataSegment(dataSegment.getIdentifier(), dataSegment);
+                assignSegmentLatch.countDown();
+              } else {
+                Assert.fail("The same segment is assigned to the same server multiple times");
+              }
             }
           }
         }
-      }
     );
     pathChildrenCache.start();
 
@@ -330,14 +380,14 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Assert.assertEquals(ImmutableMap.of(dataSource, 100.0), coordinator.getLoadStatus());
     curator.delete().guaranteed().forPath(ZKPaths.makePath(LOADPATH, dataSegment.getIdentifier()));
     // Wait for coordinator thread to run so that replication status is updated
-    while (coordinator.getSegmentAvailability().snapshot().get(dataSource) != 0) {
+    while (coordinator.getSegmentAvailability().getLong(dataSource) != 0) {
       Thread.sleep(50);
     }
-    Map segmentAvailability = coordinator.getSegmentAvailability().snapshot();
+    Map segmentAvailability = coordinator.getSegmentAvailability();
     Assert.assertEquals(1, segmentAvailability.size());
     Assert.assertEquals(0L, segmentAvailability.get(dataSource));
 
-    while (coordinator.getLoadPendingDatasources().get(dataSource).get() > 0) {
+    while (coordinator.hasLoadPending(dataSource)) {
       Thread.sleep(50);
     }
 
@@ -348,17 +398,17 @@ public class DruidCoordinatorTest extends CuratorTestBase
       Thread.sleep(100);
     }
 
-    Map<String, CountingMap<String>> replicationStatus = coordinator.getReplicationStatus();
+    Map<String, ? extends Object2LongMap<String>> replicationStatus = coordinator.getReplicationStatus();
     Assert.assertNotNull(replicationStatus);
     Assert.assertEquals(1, replicationStatus.entrySet().size());
 
-    CountingMap<String> dataSourceMap = replicationStatus.get(tier);
+    Object2LongMap<String> dataSourceMap = replicationStatus.get(tier);
     Assert.assertNotNull(dataSourceMap);
     Assert.assertEquals(1, dataSourceMap.size());
     Assert.assertNotNull(dataSourceMap.get(dataSource));
     // Simulated the adding of segment to druidServer during SegmentChangeRequestLoad event
     // The load rules asks for 2 replicas, therefore 1 replica should still be pending
-    Assert.assertEquals(1L, dataSourceMap.get(dataSource).get());
+    Assert.assertEquals(1L, dataSourceMap.getLong(dataSource));
 
     coordinator.stop();
     leaderUnannouncerLatch.await();
@@ -375,10 +425,10 @@ public class DruidCoordinatorTest extends CuratorTestBase
   {
     DruidDataSource dataSource = new DruidDataSource("test", new HashMap());
     DataSegment[] segments = new DataSegment[]{
-        getSegment("test", new Interval("2016-01-10T03:00:00Z/2016-01-10T04:00:00Z")),
-        getSegment("test", new Interval("2016-01-11T01:00:00Z/2016-01-11T02:00:00Z")),
-        getSegment("test", new Interval("2016-01-09T10:00:00Z/2016-01-09T11:00:00Z")),
-        getSegment("test", new Interval("2016-01-09T10:00:00Z/2016-01-09T12:00:00Z"))
+        getSegment("test", Intervals.of("2016-01-10T03:00:00Z/2016-01-10T04:00:00Z")),
+        getSegment("test", Intervals.of("2016-01-11T01:00:00Z/2016-01-11T02:00:00Z")),
+        getSegment("test", Intervals.of("2016-01-09T10:00:00Z/2016-01-09T11:00:00Z")),
+        getSegment("test", Intervals.of("2016-01-09T10:00:00Z/2016-01-09T12:00:00Z"))
     };
     for (DataSegment segment : segments) {
       dataSource.addSegment(segment.getIdentifier(), segment);
@@ -390,10 +440,10 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.replay(databaseSegmentManager);
     Set<DataSegment> availableSegments = coordinator.getOrderedAvailableDataSegments();
     DataSegment[] expected = new DataSegment[]{
-        getSegment("test", new Interval("2016-01-11T01:00:00Z/2016-01-11T02:00:00Z")),
-        getSegment("test", new Interval("2016-01-10T03:00:00Z/2016-01-10T04:00:00Z")),
-        getSegment("test", new Interval("2016-01-09T10:00:00Z/2016-01-09T12:00:00Z")),
-        getSegment("test", new Interval("2016-01-09T10:00:00Z/2016-01-09T11:00:00Z"))
+        getSegment("test", Intervals.of("2016-01-11T01:00:00Z/2016-01-11T02:00:00Z")),
+        getSegment("test", Intervals.of("2016-01-10T03:00:00Z/2016-01-10T04:00:00Z")),
+        getSegment("test", Intervals.of("2016-01-09T10:00:00Z/2016-01-09T12:00:00Z")),
+        getSegment("test", Intervals.of("2016-01-09T10:00:00Z/2016-01-09T11:00:00Z"))
     };
     Assert.assertEquals(expected.length, availableSegments.size());
     Assert.assertEquals(expected, availableSegments.toArray());
@@ -405,9 +455,48 @@ public class DruidCoordinatorTest extends CuratorTestBase
   {
     // Not using EasyMock as it hampers the performance of multithreads.
     DataSegment segment = new DataSegment(
-        dataSource, interval, "dummy_version", Maps.<String, Object>newConcurrentMap(),
+        dataSource, interval, "dummy_version", new ConcurrentHashMap<>(),
         Lists.<String>newArrayList(), Lists.<String>newArrayList(), null, 0, 0L
     );
     return segment;
+  }
+
+  private static class TestDruidLeaderSelector implements DruidLeaderSelector
+  {
+    private volatile Listener listener;
+    private volatile String leader;
+
+    @Override
+    public String getCurrentLeader()
+    {
+      return leader;
+    }
+
+    @Override
+    public boolean isLeader()
+    {
+      return leader != null;
+    }
+
+    @Override
+    public int localTerm()
+    {
+      return 0;
+    }
+
+    @Override
+    public void registerListener(Listener listener)
+    {
+      this.listener = listener;
+      leader = "what:1234";
+      listener.becomeLeader();
+    }
+
+    @Override
+    public void unregisterListener()
+    {
+      leader = null;
+      listener.stopBeingLeader();
+    }
   }
 }

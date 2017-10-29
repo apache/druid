@@ -22,6 +22,7 @@ package io.druid.query;
 import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.guice.annotations.Processing;
+import io.druid.guice.annotations.PublicApi;
 
 import java.util.concurrent.ExecutorService;
 
@@ -40,9 +41,10 @@ public class IntervalChunkingQueryRunnerDecorator
     this.emitter = emitter;
   }
 
+  @PublicApi
   public <T> QueryRunner<T> decorate(QueryRunner<T> delegate, QueryToolChest<T, ? extends Query<T>> toolChest)
   {
-    return new IntervalChunkingQueryRunner<T>(delegate, (QueryToolChest<T, Query<T>>)toolChest,
+    return new IntervalChunkingQueryRunner<T>(delegate, (QueryToolChest<T, Query<T>>) toolChest,
         executor, queryWatcher, emitter);
   }
 }

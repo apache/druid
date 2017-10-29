@@ -20,6 +20,7 @@
 package io.druid.benchmark;
 
 import com.google.common.io.Files;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.data.VSizeLongSerde;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -34,13 +35,12 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
@@ -51,6 +51,7 @@ import java.util.concurrent.TimeUnit;
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 public class VSizeSerdeBenchmark
 {
+  private static final Logger log = new Logger(VSizeSerdeBenchmark.class);
   @Param({"500000"})
   private int values;
 
@@ -77,7 +78,7 @@ public class VSizeSerdeBenchmark
     // to construct a heapByteBuffer since they have different performance
     File base = new File(this.getClass().getClassLoader().getResource("").toURI());
     dummy = new File(base, "dummy");
-    try (Writer writer = new BufferedWriter(new FileWriter(dummy))) {
+    try (Writer writer = java.nio.file.Files.newBufferedWriter(dummy.toPath(), StandardCharsets.UTF_8)) {
       String EMPTY_STRING = "        ";
       for (int i = 0; i < values + 10; i++) {
         writer.write(EMPTY_STRING);
@@ -103,7 +104,7 @@ public class VSizeSerdeBenchmark
   public void tearDown()
   {
     dummy.delete();
-    System.out.println(sum);
+    log.info("%d", sum);
   }
 
   @Benchmark

@@ -31,7 +31,7 @@ public class DictionaryMergeIteratorTest
 {
 
   @Test
-  public void basicTest()
+  public void basicTest() throws Exception
   {
     // a b c d e f
     String[] s1 = {"a", "c", "d", "e"};   // 0 2 3 4

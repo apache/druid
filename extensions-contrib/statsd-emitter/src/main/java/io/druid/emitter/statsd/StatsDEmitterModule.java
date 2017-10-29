@@ -55,6 +55,6 @@ public class StatsDEmitterModule implements DruidModule
   @Named(EMITTER_TYPE)
   public Emitter getEmitter(StatsDEmitterConfig config, ObjectMapper mapper)
   {
-    return new StatsDEmitter(config, mapper);
+    return StatsDEmitter.of(config, mapper);
   }
 }

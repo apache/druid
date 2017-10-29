@@ -23,6 +23,7 @@ import com.google.common.primitives.Floats;
 import io.druid.query.aggregation.Histogram;
 
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.Random;
 
 public class ApproximateHistogramErrorBenchmark
@@ -104,10 +105,21 @@ public class ApproximateHistogramErrorBenchmark
       errs2[i] = tmp[1];
     }
 
-    System.out
-          .format("Number of histograms for folding                           : %s \n", Arrays.toString(numHistsArray));
-    System.out.format("Errors for approximate histogram                           : %s \n", Arrays.toString(errs1));
-    System.out.format("Errors for approximate histogram, ruleFold                 : %s \n", Arrays.toString(errs2));
+    System.out.printf(
+        Locale.ENGLISH,
+        "Number of histograms for folding                           : %s %n",
+        Arrays.toString(numHistsArray)
+    );
+    System.out.printf(
+        Locale.ENGLISH,
+        "Errors for approximate histogram                           : %s %n",
+        Arrays.toString(errs1)
+    );
+    System.out.printf(
+        Locale.ENGLISH,
+        "Errors for approximate histogram, ruleFold                 : %s %n",
+        Arrays.toString(errs2)
+    );
   }
 
   private float[] getErrors()
@@ -152,26 +164,26 @@ public class ApproximateHistogramErrorBenchmark
     float err1 = 0;
     float err2 = 0;
     for (int j = 0; j < hcounts.length; j++) {
-      err1 += (float)Math.abs((hcounts[j] - ahcounts1[j]) / numValues);
-      err2 += (float)Math.abs((hcounts[j] - ahcounts2[j]) / numValues);
+      err1 += (float) Math.abs((hcounts[j] - ahcounts1[j]) / numValues);
+      err2 += (float) Math.abs((hcounts[j] - ahcounts2[j]) / numValues);
     }
 
     if (debug) {
       float sum = 0;
       for (double v : hcounts) {
-        sum += (float)v;
+        sum += (float) v;
       }
       System.out.println("Exact Histogram Sum:");
       System.out.println(sum);
       sum = 0;
       for (double v : ahcounts1) {
-        sum += (float)v;
+        sum += (float) v;
       }
       System.out.println("Approximate Histogram Sum:");
       System.out.println(sum);
       sum = 0;
       for (double v : ahcounts2) {
-        sum += (float)v;
+        sum += (float) v;
       }
       System.out.println("Approximate Histogram Rule Fold Sum:");
       System.out.println(sum);
@@ -181,9 +193,9 @@ public class ApproximateHistogramErrorBenchmark
       System.out.println(ah1.toHistogram(breaks));
       System.out.println("Approximate Histogram Rule Fold:");
       System.out.println(ah2.toHistogram(breaks));
-      System.out.format("Error for approximate histogram: %s \n", err1);
-      System.out.format("Error for approximate histogram, ruleFold: %s \n", err2);
-      System.out.format("Error ratio for AHRF: %s \n", err2 / err1);
+      System.out.printf(Locale.ENGLISH, "Error for approximate histogram: %f %n", err1);
+      System.out.printf(Locale.ENGLISH, "Error for approximate histogram, ruleFold: %f %n", err2);
+      System.out.printf(Locale.ENGLISH, "Error ratio for AHRF: %f %n", err2 / err1);
     }
     return new float[]{err1, err2, err2 / err1};
   }

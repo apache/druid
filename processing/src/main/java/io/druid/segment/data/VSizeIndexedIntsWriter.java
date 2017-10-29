@@ -22,6 +22,7 @@ package io.druid.segment.data;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.CountingOutputStream;
 import com.google.common.primitives.Ints;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 
 import java.io.IOException;
@@ -51,7 +52,7 @@ public class VSizeIndexedIntsWriter extends SingleValueIndexedIntsWriter
   )
   {
     this.ioPeon = ioPeon;
-    this.valueFileName = String.format("%s.values", filenameBase);
+    this.valueFileName = StringUtils.format("%s.values", filenameBase);
     this.numBytes = VSizeIndexedInts.getNumBytesForMax(maxValue);
   }
 

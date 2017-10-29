@@ -21,6 +21,7 @@ package io.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
 
@@ -33,6 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  */
+@PublicApi
 public class Metadata
 {
   // container is used for arbitrary key-value pairs in segment metadata e.g.
@@ -173,7 +175,7 @@ public class Metadata
       }
     }
 
-    if(!foundSomeMetadata) {
+    if (!foundSomeMetadata) {
       return null;
     }
 

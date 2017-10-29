@@ -19,6 +19,8 @@
 
 package io.druid.segment.data;
 
+import io.druid.java.util.common.guava.Comparators;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
@@ -53,7 +55,7 @@ public class VSizeCompressedObjectStrategy extends CompressedObjectStrategy<Byte
       @Override
       public int compare(ByteBuffer lhs, ByteBuffer rhs)
       {
-        return CompressedByteBufferObjectStrategy.ORDERING.compare(lhs, rhs);
+        return Comparators.<ByteBuffer>naturalNullsFirst().compare(lhs, rhs);
       }
 
       @Override

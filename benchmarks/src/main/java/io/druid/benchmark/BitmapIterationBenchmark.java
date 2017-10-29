@@ -77,7 +77,8 @@ public class BitmapIterationBenchmark
   @Param({"1000000"})
   public int size;
 
-  private BitmapFactory makeFactory() {
+  private BitmapFactory makeFactory()
+  {
     switch (bitmapAlgo) {
       case "bitset":
         return new BitSetBitmapFactory();

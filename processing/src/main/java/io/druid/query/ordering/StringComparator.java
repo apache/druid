@@ -21,6 +21,7 @@ package io.druid.query.ordering;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.StringUtils;
 
 import java.util.Comparator;
 
@@ -29,7 +30,7 @@ public abstract class StringComparator implements Comparator<String>
   @JsonCreator
   public static StringComparator fromString(String type)
   {
-    switch (type.toLowerCase()) {
+    switch (StringUtils.toLowerCase(type)) {
       case StringComparators.LEXICOGRAPHIC_NAME:
         return StringComparators.LEXICOGRAPHIC;
       case StringComparators.ALPHANUMERIC_NAME:

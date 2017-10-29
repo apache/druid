@@ -63,7 +63,7 @@ public class AzureDataSegmentPuller implements DataSegmentPuller
           byteSource,
           outDir,
           AzureUtils.AZURE_RETRY,
-          true
+          false
       );
 
       log.info("Loaded %d bytes from [%s] to [%s]", result.size(), blobPath, outDir.getAbsolutePath());

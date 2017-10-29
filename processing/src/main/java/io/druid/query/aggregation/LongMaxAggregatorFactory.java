@@ -19,14 +19,17 @@
 
 package io.druid.query.aggregation;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
-import io.druid.common.utils.StringUtils;
+import io.druid.java.util.common.StringUtils;
+import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
+import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.LongColumnSelector;
+import io.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -39,17 +42,17 @@ import java.util.Objects;
  */
 public class LongMaxAggregatorFactory extends AggregatorFactory
 {
-  private static final byte CACHE_TYPE_ID = 0xA;
-
   private final String name;
   private final String fieldName;
   private final String expression;
+  private final ExprMacroTable macroTable;
 
   @JsonCreator
   public LongMaxAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") final String fieldName,
-      @JsonProperty("expression") String expression
+      @JsonProperty("expression") String expression,
+      @JacksonInject ExprMacroTable macroTable
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
@@ -61,11 +64,12 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
     this.name = name;
     this.fieldName = fieldName;
     this.expression = expression;
+    this.macroTable = macroTable;
   }
 
   public LongMaxAggregatorFactory(String name, String fieldName)
   {
-    this(name, fieldName, null);
+    this(name, fieldName, null, ExprMacroTable.nil());
   }
 
   @Override
@@ -80,9 +84,15 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
     return new LongMaxBufferAggregator(getLongColumnSelector(metricFactory));
   }
 
-  private LongColumnSelector getLongColumnSelector(ColumnSelectorFactory metricFactory)
+  private BaseLongColumnValueSelector getLongColumnSelector(ColumnSelectorFactory metricFactory)
   {
-    return AggregatorUtil.getLongColumnSelector(metricFactory, fieldName, expression, Long.MIN_VALUE);
+    return AggregatorUtil.makeColumnValueSelectorWithLongDefault(
+        metricFactory,
+        macroTable,
+        fieldName,
+        expression,
+        Long.MIN_VALUE
+    );
   }
 
   @Override
@@ -98,9 +108,36 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    return new LongAggregateCombiner()
+    {
+      private long max;
+
+      @Override
+      public void reset(ColumnValueSelector selector)
+      {
+        max = selector.getLong();
+      }
+
+      @Override
+      public void fold(ColumnValueSelector selector)
+      {
+        max = Math.max(max, selector.getLong());
+      }
+
+      @Override
+      public long getLong()
+      {
+        return max;
+      }
+    };
+  }
+
+  @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new LongMaxAggregatorFactory(name, name, null);
+    return new LongMaxAggregatorFactory(name, name, null, macroTable);
   }
 
   @Override
@@ -116,7 +153,7 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.<AggregatorFactory>asList(new LongMaxAggregatorFactory(fieldName, fieldName, expression));
+    return Arrays.<AggregatorFactory>asList(new LongMaxAggregatorFactory(fieldName, fieldName, expression, macroTable));
   }
 
   @Override
@@ -153,7 +190,9 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
   @Override
   public List<String> requiredFields()
   {
-    return fieldName != null ? Collections.singletonList(fieldName) : Parser.findRequiredBindings(expression);
+    return fieldName != null
+           ? Collections.singletonList(fieldName)
+           : Parser.findRequiredBindings(Parser.parse(expression, macroTable));
   }
 
   @Override
@@ -163,7 +202,7 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
     byte[] expressionBytes = StringUtils.toUtf8WithNullToEmpty(expression);
 
     return ByteBuffer.allocate(2 + fieldNameBytes.length + expressionBytes.length)
-                     .put(CACHE_TYPE_ID)
+                     .put(AggregatorUtil.LONG_MAX_CACHE_TYPE_ID)
                      .put(fieldNameBytes)
                      .put(AggregatorUtil.STRING_SEPARATOR)
                      .put(expressionBytes)

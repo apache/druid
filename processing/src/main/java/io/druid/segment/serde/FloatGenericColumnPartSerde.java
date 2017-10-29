@@ -86,63 +86,21 @@ public class FloatGenericColumnPartSerde implements ColumnPartSerde
     public FloatGenericColumnPartSerde build()
     {
       return new FloatGenericColumnPartSerde(
-          byteOrder, new Serializer()
-      {
-        @Override
-        public long numBytes()
-        {
-          return delegate.getSerializedSize();
-        }
+          byteOrder,
+          new Serializer()
+          {
+            @Override
+            public long numBytes()
+            {
+              return delegate.getSerializedSize();
+            }
 
-        @Override
-        public void write(WritableByteChannel channel, FileSmoosher fileSmoosher) throws IOException
-        {
-          delegate.writeToChannel(channel, fileSmoosher);
-        }
-      }
-      );
-    }
-  }
-
-  public static LegacySerializerBuilder legacySerializerBuilder()
-  {
-    return new LegacySerializerBuilder();
-  }
-
-  public static class LegacySerializerBuilder
-  {
-    private ByteOrder byteOrder = null;
-    private CompressedFloatsIndexedSupplier delegate = null;
-
-    public LegacySerializerBuilder withByteOrder(final ByteOrder byteOrder)
-    {
-      this.byteOrder = byteOrder;
-      return this;
-    }
-
-    public LegacySerializerBuilder withDelegate(final CompressedFloatsIndexedSupplier delegate)
-    {
-      this.delegate = delegate;
-      return this;
-    }
-
-    public FloatGenericColumnPartSerde build()
-    {
-      return new FloatGenericColumnPartSerde(
-          byteOrder, new Serializer()
-      {
-        @Override
-        public long numBytes()
-        {
-          return delegate.getSerializedSize();
-        }
-
-        @Override
-        public void write(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
-        {
-          delegate.writeToChannel(channel);
-        }
-      }
+            @Override
+            public void write(WritableByteChannel channel, FileSmoosher fileSmoosher) throws IOException
+            {
+              delegate.writeToChannel(channel, fileSmoosher);
+            }
+          }
       );
     }
   }

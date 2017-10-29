@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.initialization.DruidModule;
 import io.druid.initialization.Initialization;
+import io.druid.java.util.common.StringUtils;
 import io.druid.server.http.security.StateResourceFilter;
 
 import javax.ws.rs.GET;
@@ -44,7 +45,7 @@ public class StatusResource
   @Produces(MediaType.APPLICATION_JSON)
   public Status doGet()
   {
-    return new Status(Initialization.getLoadedModules(DruidModule.class));
+    return new Status(Initialization.getLoadedImplementations(DruidModule.class));
   }
 
   public static class Status
@@ -88,7 +89,7 @@ public class StatusResource
     {
       final String NL = System.getProperty("line.separator");
       StringBuilder output = new StringBuilder();
-      output.append(String.format("Druid version - %s", version)).append(NL).append(NL);
+      output.append(StringUtils.format("Druid version - %s", version)).append(NL).append(NL);
 
       if (modules.size() > 0) {
         output.append("Registered Druid Modules").append(NL);
@@ -156,9 +157,9 @@ public class StatusResource
     public String toString()
     {
       if (artifact == null || artifact.isEmpty()) {
-        return String.format("  - %s ", name);
+        return StringUtils.format("  - %s ", name);
       } else {
-        return String.format("  - %s (%s-%s)", name, artifact, version);
+        return StringUtils.format("  - %s (%s-%s)", name, artifact, version);
       }
     }
   }

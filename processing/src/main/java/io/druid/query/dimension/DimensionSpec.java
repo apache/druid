@@ -27,14 +27,15 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.column.ValueType;
 
 /**
+ * Provides information about a dimension for a grouping query, like topN or groupBy. Note that this is not annotated
+ * with {@code PublicApi}, since it is not meant to be stable for usage by non-built-in queries.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = LegacyDimensionSpec.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "default", value = DefaultDimensionSpec.class),
     @JsonSubTypes.Type(name = "extraction", value = ExtractionDimensionSpec.class),
     @JsonSubTypes.Type(name = "regexFiltered", value = RegexFilteredDimensionSpec.class),
-    @JsonSubTypes.Type(name = "listFiltered", value = ListFilteredDimensionSpec.class),
-    @JsonSubTypes.Type(name = "lookup", value = LookupDimensionSpec.class)
+    @JsonSubTypes.Type(name = "listFiltered", value = ListFilteredDimensionSpec.class)
 })
 public interface DimensionSpec extends Cacheable
 {

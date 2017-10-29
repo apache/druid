@@ -21,8 +21,12 @@ package io.druid.query.groupby;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import io.druid.jackson.DefaultObjectMapper;
+import com.google.common.collect.Ordering;
+import io.druid.data.input.MapBasedRow;
+import io.druid.data.input.Row;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.Query;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -34,6 +38,8 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
 import io.druid.query.ordering.StringComparators;
+import io.druid.segment.TestHelper;
+import io.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -42,7 +48,7 @@ import java.util.Arrays;
 
 public class GroupByQueryTest
 {
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final ObjectMapper jsonMapper = TestHelper.getJsonMapper();
 
   @Test
   public void testQuerySerialization() throws IOException
@@ -62,7 +68,11 @@ public class GroupByQueryTest
         .setPostAggregatorSpecs(ImmutableList.<PostAggregator>of(new FieldAccessPostAggregator("x", "idx")))
         .setLimitSpec(
             new DefaultLimitSpec(
-                ImmutableList.of(new OrderByColumnSpec("alias", OrderByColumnSpec.Direction.ASCENDING, StringComparators.LEXICOGRAPHIC)),
+                ImmutableList.of(new OrderByColumnSpec(
+                    "alias",
+                    OrderByColumnSpec.Direction.ASCENDING,
+                    StringComparators.LEXICOGRAPHIC
+                )),
                 100
             )
         )
@@ -70,8 +80,27 @@ public class GroupByQueryTest
 
     String json = jsonMapper.writeValueAsString(query);
     Query serdeQuery = jsonMapper.readValue(json, Query.class);
-    
+
     Assert.assertEquals(query, serdeQuery);
   }
 
+  @Test
+  public void testRowOrderingMixTypes()
+  {
+    final GroupByQuery query = GroupByQuery.builder()
+                                           .setDataSource("dummy")
+                                           .setGranularity(Granularities.ALL)
+                                           .setInterval("2000/2001")
+                                           .addDimension(new DefaultDimensionSpec("foo", "foo", ValueType.LONG))
+                                           .addDimension(new DefaultDimensionSpec("bar", "bar", ValueType.FLOAT))
+                                           .addDimension(new DefaultDimensionSpec("baz", "baz", ValueType.STRING))
+                                           .build();
+
+    final Ordering<Row> rowOrdering = query.getRowOrdering(false);
+    final int compare = rowOrdering.compare(
+        new MapBasedRow(0L, ImmutableMap.of("foo", 1, "bar", 1f, "baz", "a")),
+        new MapBasedRow(0L, ImmutableMap.of("foo", 1L, "bar", 1d, "baz", "b"))
+    );
+    Assert.assertEquals(-1, compare);
+  }
 }

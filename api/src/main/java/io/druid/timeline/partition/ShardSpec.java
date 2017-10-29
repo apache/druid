@@ -28,7 +28,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A Marker interface that exists to combine ShardSpec objects together for Jackson
+ * A Marker interface that exists to combine ShardSpec objects together for Jackson. Note that this is not an
+ * extension API. Extensions are not expected to create new kinds of ShardSpecs.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
@@ -36,18 +37,18 @@ import java.util.Map;
               })
 public interface ShardSpec
 {
-  public <T> PartitionChunk<T> createChunk(T obj);
+  <T> PartitionChunk<T> createChunk(T obj);
 
-  public boolean isInChunk(long timestamp, InputRow inputRow);
+  boolean isInChunk(long timestamp, InputRow inputRow);
 
-  public int getPartitionNum();
+  int getPartitionNum();
 
-  public ShardSpecLookup getLookup(List<ShardSpec> shardSpecs);
+  ShardSpecLookup getLookup(List<ShardSpec> shardSpecs);
 
   /**
    * Get the possible range of each dimension for the rows this shard contains.
    *
    * @return map of dimensions to its possible range. Dimensions with unknown possible range are not mapped
    */
-  public Map<String, Range<String>> getDomain();
+  Map<String, Range<String>> getDomain();
 }

@@ -22,7 +22,7 @@ package io.druid.query.aggregation.hyperloglog;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.BaseObjectColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
@@ -31,11 +31,9 @@ import java.nio.ByteBuffer;
 public class HyperUniquesBufferAggregator implements BufferAggregator
 {
   private static final byte[] EMPTY_BYTES = HyperLogLogCollector.makeEmptyVersionedByteArray();
-  private final ObjectColumnSelector selector;
+  private final BaseObjectColumnValueSelector selector;
 
-  public HyperUniquesBufferAggregator(
-      ObjectColumnSelector selector
-  )
+  public HyperUniquesBufferAggregator(BaseObjectColumnValueSelector selector)
   {
     this.selector = selector;
   }
@@ -51,7 +49,7 @@ public class HyperUniquesBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    HyperLogLogCollector collector = (HyperLogLogCollector) selector.get();
+    HyperLogLogCollector collector = (HyperLogLogCollector) selector.getObject();
 
     if (collector == null) {
       return;
@@ -96,6 +94,12 @@ public class HyperUniquesBufferAggregator implements BufferAggregator
   public long getLong(ByteBuffer buf, int position)
   {
     throw new UnsupportedOperationException("HyperUniquesBufferAggregator does not support getLong()");
+  }
+
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("HyperUniquesBufferAggregator does not support getDouble()");
   }
 
   @Override

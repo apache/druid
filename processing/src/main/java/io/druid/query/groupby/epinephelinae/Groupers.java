@@ -19,10 +19,7 @@
 
 package io.druid.query.groupby.epinephelinae;
 
-import com.google.common.collect.Iterators;
-
-import java.util.Comparator;
-import java.util.Iterator;
+import java.nio.ByteBuffer;
 
 public class Groupers
 {
@@ -30,6 +27,17 @@ public class Groupers
   {
     // No instantiation
   }
+
+  static final AggregateResult DICTIONARY_FULL = AggregateResult.failure(
+      "Not enough dictionary space to execute this query. Try increasing "
+      + "druid.query.groupBy.maxMergingDictionarySize or enable disk spilling by setting "
+      + "druid.query.groupBy.maxOnDiskStorage to a positive number."
+  );
+  static final AggregateResult HASH_TABLE_FULL = AggregateResult.failure(
+      "Not enough aggregation buffer space to execute this query. Try increasing "
+      + "druid.processing.buffer.sizeBytes or enable disk spilling by setting "
+      + "druid.query.groupBy.maxOnDiskStorage to a positive number."
+  );
 
   private static final int C1 = 0xcc9e2d51;
   private static final int C2 = 0x1b873593;
@@ -42,7 +50,8 @@ public class Groupers
    * MurmurHash3 was written by Austin Appleby, and is placed in the public domain. The author
    * hereby disclaims copyright to this source code.
    */
-  static int smear(int hashCode) {
+  static int smear(int hashCode)
+  {
     return C2 * Integer.rotateLeft(hashCode * C1, 15);
   }
 
@@ -55,25 +64,16 @@ public class Groupers
 
   }
 
-  public static <KeyType> Iterator<Grouper.Entry<KeyType>> mergeIterators(
-      final Iterable<Iterator<Grouper.Entry<KeyType>>> iterators,
-      final Comparator<KeyType> keyTypeComparator
-  )
+  static int getUsedFlag(int keyHash)
   {
-    if (keyTypeComparator != null) {
-      return Iterators.mergeSorted(
-          iterators,
-          new Comparator<Grouper.Entry<KeyType>>()
-          {
-            @Override
-            public int compare(Grouper.Entry<KeyType> lhs, Grouper.Entry<KeyType> rhs)
-            {
-              return keyTypeComparator.compare(lhs.getKey(), rhs.getKey());
-            }
-          }
-      );
-    } else {
-      return Iterators.concat(iterators.iterator());
-    }
+    return keyHash | 0x80000000;
+  }
+
+  public static ByteBuffer getSlice(ByteBuffer buffer, int sliceSize, int i)
+  {
+    final ByteBuffer slice = buffer.duplicate();
+    slice.position(sliceSize * i);
+    slice.limit(slice.position() + sliceSize);
+    return slice.slice();
   }
 }

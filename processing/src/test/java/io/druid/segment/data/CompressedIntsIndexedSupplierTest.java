@@ -21,8 +21,10 @@ package io.druid.segment.data;
 
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.segment.CompressedPools;
+import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -34,9 +36,9 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.nio.channels.Channels;
-import java.util.Collections;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -161,48 +163,12 @@ public class CompressedIntsIndexedSupplierTest extends CompressionStrategyTest
   }
 
   @Test
-  public void testBulkFill() throws Exception
-  {
-    setupSimple(5);
-
-    tryFill(0, 15);
-    tryFill(3, 6);
-    tryFill(7, 7);
-    tryFill(7, 9);
-  }
-
-  @Test(expected = IndexOutOfBoundsException.class)
-  public void testBulkFillTooMuch() throws Exception
-  {
-    setupSimple(5);
-    tryFill(7, 10);
-  }
-
-  @Test
   public void testSanityWithSerde() throws Exception
   {
     setupSimpleWithSerde(5);
 
     Assert.assertEquals(4, supplier.getBaseIntBuffers().size());
     assertIndexMatchesVals();
-  }
-
-  @Test
-  public void testBulkFillWithSerde() throws Exception
-  {
-    setupSimpleWithSerde(5);
-
-    tryFill(0, 15);
-    tryFill(3, 6);
-    tryFill(7, 7);
-    tryFill(7, 9);
-  }
-
-  @Test(expected = IndexOutOfBoundsException.class)
-  public void testBulkFillTooMuchWithSerde() throws Exception
-  {
-    setupSimpleWithSerde(5);
-    tryFill(7, 10);
   }
 
   // This test attempts to cause a race condition with the DirectByteBuffers, it's non-deterministic in causing it,
@@ -240,7 +206,7 @@ public class CompressedIntsIndexedSupplierTest extends CompressionStrategyTest
               final long indexedVal = indexed.get(j);
               if (Longs.compare(val, indexedVal) != 0) {
                 failureHappened.set(true);
-                reason.set(String.format("Thread1[%d]: %d != %d", j, val, indexedVal));
+                reason.set(StringUtils.format("Thread1[%d]: %d != %d", j, val, indexedVal));
                 stopLatch.countDown();
                 return;
               }
@@ -279,7 +245,7 @@ public class CompressedIntsIndexedSupplierTest extends CompressionStrategyTest
                 final long indexedVal = indexed2.get(j);
                 if (Longs.compare(val, indexedVal) != 0) {
                   failureHappened.set(true);
-                  reason.set(String.format("Thread2[%d]: %d != %d", j, val, indexedVal));
+                  reason.set(StringUtils.format("Thread2[%d]: %d != %d", j, val, indexedVal));
                   stopLatch.countDown();
                   return;
                 }
@@ -309,16 +275,6 @@ public class CompressedIntsIndexedSupplierTest extends CompressionStrategyTest
     }
   }
 
-  private void tryFill(final int startIndex, final int size)
-  {
-    int[] filled = new int[size];
-    indexed.fill(startIndex, filled);
-
-    for (int i = startIndex; i < filled.length; i++) {
-      Assert.assertEquals(vals[i + startIndex], filled[i]);
-    }
-  }
-
   private void assertIndexMatchesVals()
   {
     Assert.assertEquals(vals.length, indexed.size());
@@ -330,9 +286,10 @@ public class CompressedIntsIndexedSupplierTest extends CompressionStrategyTest
       indices[i] = i;
     }
 
-    Collections.shuffle(Ints.asList(indices));
-    // random access
-    for (int i = 0; i < indexed.size(); ++i) {
+    // random access, limited to 1000 elements for large lists (every element would take too long)
+    IntArrays.shuffle(indices, ThreadLocalRandom.current());
+    final int limit = Math.min(indexed.size(), 1000);
+    for (int i = 0; i < limit; ++i) {
       int k = indices[i];
       Assert.assertEquals(vals[k], indexed.get(k), 0.0);
     }

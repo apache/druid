@@ -21,7 +21,6 @@ package io.druid.indexer.updater;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -34,9 +33,11 @@ import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Self;
 import io.druid.initialization.Initialization;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
+import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.server.DruidNode;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -53,6 +54,7 @@ public class HadoopDruidConverterConfig
   public static final ObjectMapper jsonMapper;
   public static final IndexIO INDEX_IO;
   public static final IndexMerger INDEX_MERGER;
+  public static final DataSegmentPusher DATA_SEGMENT_PUSHER;
 
   private static final Injector injector = Initialization.makeInjectorWithModules(
       GuiceInjectors.makeStartupInjector(),
@@ -63,7 +65,7 @@ public class HadoopDruidConverterConfig
             public void configure(Binder binder)
             {
               JsonConfigProvider.bindInstance(
-                  binder, Key.get(DruidNode.class, Self.class), new DruidNode("hadoop-converter", null, null)
+                  binder, Key.get(DruidNode.class, Self.class), new DruidNode("hadoop-converter", null, null, null, true, false)
               );
             }
           }
@@ -75,20 +77,17 @@ public class HadoopDruidConverterConfig
     jsonMapper.registerSubtypes(HadoopDruidConverterConfig.class);
     INDEX_IO = injector.getInstance(IndexIO.class);
     INDEX_MERGER = injector.getInstance(IndexMerger.class);
+    DATA_SEGMENT_PUSHER = injector.getInstance(DataSegmentPusher.class);
   }
-
-  private static final TypeReference<Map<String, Object>> mapTypeReference = new TypeReference<Map<String, Object>>()
-  {
-  };
 
   public static HadoopDruidConverterConfig fromString(final String string) throws IOException
   {
-    return fromMap(jsonMapper.<Map<String, Object>>readValue(string, mapTypeReference));
+    return fromMap(jsonMapper.readValue(string, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT));
   }
 
   public static HadoopDruidConverterConfig fromFile(final File file) throws IOException
   {
-    return fromMap(jsonMapper.<Map<String, Object>>readValue(file, mapTypeReference));
+    return fromMap(jsonMapper.readValue(file, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT));
   }
 
   public static HadoopDruidConverterConfig fromMap(final Map<String, Object> map)

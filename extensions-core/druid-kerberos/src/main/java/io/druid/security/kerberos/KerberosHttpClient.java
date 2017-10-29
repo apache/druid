@@ -28,7 +28,7 @@ import com.metamx.http.client.AbstractHttpClient;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.HttpResponseHandler;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.logger.Logger;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -47,20 +47,24 @@ public class KerberosHttpClient extends AbstractHttpClient
   private static final Logger log = new Logger(KerberosHttpClient.class);
 
   private final HttpClient delegate;
-  private final AuthenticationKerberosConfig config;
   private final CookieManager cookieManager;
   private final Executor exec = Execs.singleThreaded("test-%s");
+  private final String internalClientPrincipal;
+  private final String internalClientKeytab;
 
-  public KerberosHttpClient(HttpClient delegate, AuthenticationKerberosConfig config)
+  public KerberosHttpClient(HttpClient delegate, String internalClientPrincipal, String internalClientKeytab)
   {
     this.delegate = delegate;
-    this.config = config;
     this.cookieManager = new CookieManager();
+    this.internalClientPrincipal = internalClientPrincipal;
+    this.internalClientKeytab = internalClientKeytab;
   }
 
   @Override
   public <Intermediate, Final> ListenableFuture<Final> go(
-    Request request, HttpResponseHandler<Intermediate, Final> httpResponseHandler, Duration duration
+      Request request,
+      HttpResponseHandler<Intermediate, Final> httpResponseHandler,
+      Duration duration
   )
   {
     final SettableFuture<Final> retVal = SettableFuture.create();
@@ -70,10 +74,10 @@ public class KerberosHttpClient extends AbstractHttpClient
 
 
   private <Intermediate, Final> void inner_go(
-    final Request request,
-    final HttpResponseHandler<Intermediate, Final> httpResponseHandler,
-    final Duration duration,
-    final SettableFuture<Final> future
+      final Request request,
+      final HttpResponseHandler<Intermediate, Final> httpResponseHandler,
+      final Duration duration,
+      final SettableFuture<Final> future
   )
   {
     try {
@@ -90,11 +94,11 @@ public class KerberosHttpClient extends AbstractHttpClient
       if (DruidKerberosUtil.needToSendCredentials(cookieManager.getCookieStore(), uri)) {
         // No Cookies for requested URI, authenticate user and add authentication header
         log.debug(
-          "No Auth Cookie found for URI[%s]. Existing Cookies[%s] Authenticating... ",
-          uri,
-          cookieManager.getCookieStore().getCookies()
+            "No Auth Cookie found for URI[%s]. Existing Cookies[%s] Authenticating... ",
+            uri,
+            cookieManager.getCookieStore().getCookies()
         );
-        DruidKerberosUtil.authenticateIfRequired(config);
+        DruidKerberosUtil.authenticateIfRequired(internalClientPrincipal, internalClientKeytab);
         UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
         String challenge = currentUser.doAs(new PrivilegedExceptionAction<String>()
         {
@@ -112,13 +116,11 @@ public class KerberosHttpClient extends AbstractHttpClient
       }
 
       ListenableFuture<RetryResponseHolder<Final>> internalFuture = delegate.go(
-        request,
-        new RetryIfUnauthorizedResponseHandler<Intermediate, Final>(new ResponseCookieHandler(
-          request.getUrl().toURI(),
-          cookieManager,
-          httpResponseHandler
-        )),
-        duration
+          request,
+          new RetryIfUnauthorizedResponseHandler<Intermediate, Final>(
+              new ResponseCookieHandler(request.getUrl().toURI(), cookieManager, httpResponseHandler)
+          ),
+          duration
       );
 
       Futures.addCallback(internalFuture, new FutureCallback<RetryResponseHolder<Final>>()

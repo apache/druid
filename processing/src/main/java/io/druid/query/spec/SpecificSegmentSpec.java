@@ -34,9 +34,8 @@ public class SpecificSegmentSpec implements QuerySegmentSpec
 {
   private final SegmentDescriptor descriptor;
 
-  public SpecificSegmentSpec(
-      SegmentDescriptor descriptor
-  ) {
+  public SpecificSegmentSpec(SegmentDescriptor descriptor)
+  {
     this.descriptor = descriptor;
   }
 
@@ -52,7 +51,10 @@ public class SpecificSegmentSpec implements QuerySegmentSpec
     return walker.getQueryRunnerForSegments(query, Collections.singletonList(descriptor));
   }
 
-  public SegmentDescriptor getDescriptor() { return descriptor; }
+  public SegmentDescriptor getDescriptor()
+  {
+    return descriptor;
+  }
 
   @Override
   public boolean equals(Object o)

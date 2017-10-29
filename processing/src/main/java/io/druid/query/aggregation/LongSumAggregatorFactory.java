@@ -19,14 +19,16 @@
 
 package io.druid.query.aggregation;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
-import io.druid.common.utils.StringUtils;
+import io.druid.java.util.common.StringUtils;
+import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
+import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.LongColumnSelector;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -39,17 +41,17 @@ import java.util.Objects;
  */
 public class LongSumAggregatorFactory extends AggregatorFactory
 {
-  private static final byte CACHE_TYPE_ID = 0x1;
-
   private final String name;
   private final String fieldName;
   private final String expression;
+  private final ExprMacroTable macroTable;
 
   @JsonCreator
   public LongSumAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") String fieldName,
-      @JsonProperty("expression") String expression
+      @JsonProperty("expression") String expression,
+      @JacksonInject ExprMacroTable macroTable
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
@@ -61,11 +63,12 @@ public class LongSumAggregatorFactory extends AggregatorFactory
     this.name = name;
     this.fieldName = fieldName;
     this.expression = expression;
+    this.macroTable = macroTable;
   }
 
   public LongSumAggregatorFactory(String name, String fieldName)
   {
-    this(name, fieldName, null);
+    this(name, fieldName, null, ExprMacroTable.nil());
   }
 
   @Override
@@ -80,9 +83,15 @@ public class LongSumAggregatorFactory extends AggregatorFactory
     return new LongSumBufferAggregator(getLongColumnSelector(metricFactory));
   }
 
-  private LongColumnSelector getLongColumnSelector(ColumnSelectorFactory metricFactory)
+  private BaseLongColumnValueSelector getLongColumnSelector(ColumnSelectorFactory metricFactory)
   {
-    return AggregatorUtil.getLongColumnSelector(metricFactory, fieldName, expression, 0L);
+    return AggregatorUtil.makeColumnValueSelectorWithLongDefault(
+        metricFactory,
+        macroTable,
+        fieldName,
+        expression,
+        0L
+    );
   }
 
   @Override
@@ -98,9 +107,15 @@ public class LongSumAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    return new LongSumAggregateCombiner();
+  }
+
+  @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new LongSumAggregatorFactory(name, name, null);
+    return new LongSumAggregatorFactory(name, name, null, macroTable);
   }
 
   @Override
@@ -116,7 +131,7 @@ public class LongSumAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.<AggregatorFactory>asList(new LongSumAggregatorFactory(fieldName, fieldName, expression));
+    return Arrays.<AggregatorFactory>asList(new LongSumAggregatorFactory(fieldName, fieldName, expression, macroTable));
   }
 
   @Override
@@ -153,7 +168,9 @@ public class LongSumAggregatorFactory extends AggregatorFactory
   @Override
   public List<String> requiredFields()
   {
-    return fieldName != null ? Collections.singletonList(fieldName) : Parser.findRequiredBindings(expression);
+    return fieldName != null
+           ? Collections.singletonList(fieldName)
+           : Parser.findRequiredBindings(Parser.parse(expression, macroTable));
   }
 
   @Override
@@ -163,7 +180,7 @@ public class LongSumAggregatorFactory extends AggregatorFactory
     byte[] expressionBytes = StringUtils.toUtf8WithNullToEmpty(expression);
 
     return ByteBuffer.allocate(2 + fieldNameBytes.length + expressionBytes.length)
-                     .put(CACHE_TYPE_ID)
+                     .put(AggregatorUtil.LONG_SUM_CACHE_TYPE_ID)
                      .put(fieldNameBytes)
                      .put(AggregatorUtil.STRING_SEPARATOR)
                      .put(expressionBytes)

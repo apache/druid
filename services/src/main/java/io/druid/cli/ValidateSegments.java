@@ -27,6 +27,9 @@ import com.google.inject.Module;
 import com.google.inject.name.Names;
 import io.airlift.airline.Arguments;
 import io.airlift.airline.Command;
+import io.druid.guice.DruidProcessingModule;
+import io.druid.guice.QueryRunnerFactoryModule;
+import io.druid.guice.QueryableModule;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.DruidProcessingConfig;
@@ -44,7 +47,10 @@ public class ValidateSegments extends GuiceRunnable
 {
   private static final Logger log = new Logger(ValidateSegments.class);
 
-  public ValidateSegments() { super(log); }
+  public ValidateSegments()
+  {
+    super(log);
+  }
 
   @Arguments(
       description = "Two directories where each directory contains segment files to validate.",
@@ -52,7 +58,8 @@ public class ValidateSegments extends GuiceRunnable
   public List<String> directories;
 
   @Override
-  public void run() {
+  public void run()
+  {
     if (directories.size() != 2) {
       throw new IAE("Please provide two segment directories to compare");
     }
@@ -63,7 +70,8 @@ public class ValidateSegments extends GuiceRunnable
       String dir2 = directories.get(1);
       indexIO.validateTwoSegments(new File(dir1), new File(dir2));
       log.info("Segments [%s] and [%s] are identical", dir1, dir2);
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       throw Throwables.propagate(e);
     }
   }
@@ -72,6 +80,12 @@ public class ValidateSegments extends GuiceRunnable
   protected List<? extends Module> getModules()
   {
     return ImmutableList.of(
+        // It's unknown if those modules are required in ValidateSegments.
+        // Maybe some of those modules could be removed.
+        // See https://github.com/druid-io/druid/pull/4429#discussion_r123603498
+        new DruidProcessingModule(),
+        new QueryableModule(),
+        new QueryRunnerFactoryModule(),
         new Module()
         {
           @Override
@@ -79,6 +93,7 @@ public class ValidateSegments extends GuiceRunnable
           {
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/tool");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(9999);
+            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
             binder.bind(DruidProcessingConfig.class).toInstance(
                 new DruidProcessingConfig()
                 {

@@ -33,10 +33,8 @@ public class FloatGenericColumnSupplier implements Supplier<GenericColumn>
   private final CompressedFloatsIndexedSupplier column;
   private final ByteOrder byteOrder;
 
-  public FloatGenericColumnSupplier(
-      CompressedFloatsIndexedSupplier column,
-      ByteOrder byteOrder
-  ) {
+  public FloatGenericColumnSupplier(CompressedFloatsIndexedSupplier column, ByteOrder byteOrder)
+  {
     this.column = column;
     this.byteOrder = byteOrder;
   }

@@ -42,12 +42,16 @@ import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.common.guava.ThreadRenamingCallable;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.RetryUtils;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.io.Closer;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -69,10 +73,10 @@ import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
 import org.apache.commons.io.FileUtils;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -80,11 +84,13 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -107,13 +113,16 @@ public class AppenderatorImpl implements Appenderator
   private final IndexIO indexIO;
   private final IndexMerger indexMerger;
   private final Cache cache;
-  private final Map<SegmentIdentifier, Sink> sinks = Maps.newConcurrentMap();
+  private final Map<SegmentIdentifier, Sink> sinks = new ConcurrentHashMap<>();
   private final Set<SegmentIdentifier> droppingSinks = Sets.newConcurrentHashSet();
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline = new VersionedIntervalTimeline<>(
       String.CASE_INSENSITIVE_ORDER
   );
-  private final AtomicInteger rowsCurrentlyInMemory = new AtomicInteger();
+
   private final QuerySegmentWalker texasRanger;
+  // This variable updated in add(), persist(), and drop()
+  private final AtomicInteger rowsCurrentlyInMemory = new AtomicInteger();
+  private final AtomicInteger totalRows = new AtomicInteger();
 
   private volatile ListeningExecutorService persistExecutor = null;
   private volatile ListeningExecutorService pushExecutor = null;
@@ -212,7 +221,9 @@ public class AppenderatorImpl implements Appenderator
       throw new SegmentNotWritableException("Attempt to add row to swapped-out sink for segment[%s].", identifier);
     }
 
-    rowsCurrentlyInMemory.addAndGet(sinkRowsInMemoryAfterAdd - sinkRowsInMemoryBeforeAdd);
+    final int numAddedRows = sinkRowsInMemoryAfterAdd - sinkRowsInMemoryBeforeAdd;
+    rowsCurrentlyInMemory.addAndGet(numAddedRows);
+    totalRows.addAndGet(numAddedRows);
 
     if (!sink.canAppendRow()
         || System.currentTimeMillis() > nextFlush
@@ -240,6 +251,12 @@ public class AppenderatorImpl implements Appenderator
     } else {
       return sink.getNumRows();
     }
+  }
+
+  @Override
+  public int getTotalRowCount()
+  {
+    return totalRows.get();
   }
 
   @VisibleForTesting
@@ -346,17 +363,19 @@ public class AppenderatorImpl implements Appenderator
   }
 
   @Override
-  public ListenableFuture<Object> persistAll(final Committer committer)
+  public ListenableFuture<Object> persist(Collection<SegmentIdentifier> identifiers, Committer committer)
   {
-    // Submit persistAll task to the persistExecutor
-
     final Map<SegmentIdentifier, Integer> commitHydrants = Maps.newHashMap();
     final List<Pair<FireHydrant, SegmentIdentifier>> indexesToPersist = Lists.newArrayList();
-    final Set<SegmentIdentifier> identifiers = sinks.keySet();
+    int numPersistedRows = 0;
     for (SegmentIdentifier identifier : identifiers) {
       final Sink sink = sinks.get(identifier);
+      if (sink == null) {
+        throw new ISE("No sink for identifier: %s", identifier);
+      }
       final List<FireHydrant> hydrants = Lists.newArrayList(sink);
       commitHydrants.put(identifier, hydrants.size());
+      numPersistedRows += sink.getNumRowsInMemory();
 
       final int limit = sink.isWritable() ? hydrants.size() - 1 : hydrants.size();
 
@@ -374,7 +393,7 @@ public class AppenderatorImpl implements Appenderator
 
     log.info("Submitting persist runnable for dataSource[%s]", schema.getDataSource());
 
-    final String threadName = String.format("%s-incremental-persist", schema.getDataSource());
+    final String threadName = StringUtils.format("%s-incremental-persist", schema.getDataSource());
     final Object commitMetadata = committer.getMetadata();
     final Stopwatch runExecStopwatch = Stopwatch.createStarted();
     final Stopwatch persistStopwatch = Stopwatch.createStarted();
@@ -398,7 +417,7 @@ public class AppenderatorImpl implements Appenderator
                             @Override
                             public String apply(Map.Entry<SegmentIdentifier, Integer> entry)
                             {
-                              return String.format("%s:%d", entry.getKey().getIdentifierAsString(), entry.getValue());
+                              return StringUtils.format("%s:%d", entry.getKey().getIdentifierAsString(), entry.getValue());
                             }
                           }
                       )
@@ -432,14 +451,21 @@ public class AppenderatorImpl implements Appenderator
     resetNextFlush();
 
     // NB: The rows are still in memory until they're done persisting, but we only count rows in active indexes.
-    rowsCurrentlyInMemory.set(0);
+    rowsCurrentlyInMemory.addAndGet(-numPersistedRows);
 
     return future;
   }
 
   @Override
+  public ListenableFuture<Object> persistAll(final Committer committer)
+  {
+    // Submit persistAll task to the persistExecutor
+    return persist(sinks.keySet(), committer);
+  }
+
+  @Override
   public ListenableFuture<SegmentsAndMetadata> push(
-      final List<SegmentIdentifier> identifiers,
+      final Collection<SegmentIdentifier> identifiers,
       final Committer committer
   )
   {
@@ -447,14 +473,14 @@ public class AppenderatorImpl implements Appenderator
     for (final SegmentIdentifier identifier : identifiers) {
       final Sink sink = sinks.get(identifier);
       if (sink == null) {
-        throw new NullPointerException("No sink for identifier: " + identifier);
+        throw new ISE("No sink for identifier: %s", identifier);
       }
       theSinks.put(identifier, sink);
       sink.finishWriting();
     }
 
     return Futures.transform(
-        persistAll(committer),
+        persist(identifiers, committer),
         new Function<Object, SegmentsAndMetadata>()
         {
           @Override
@@ -553,28 +579,41 @@ public class AppenderatorImpl implements Appenderator
         throw new ISE("Merged target[%s] exists after removing?!", mergedTarget);
       }
 
+      final File mergedFile;
       List<QueryableIndex> indexes = Lists.newArrayList();
-      for (FireHydrant fireHydrant : sink) {
-        Segment segment = fireHydrant.getSegment();
-        final QueryableIndex queryableIndex = segment.asQueryableIndex();
-        log.info("Adding hydrant[%s]", fireHydrant);
-        indexes.add(queryableIndex);
+      Closer closer = Closer.create();
+      try {
+        for (FireHydrant fireHydrant : sink) {
+          Pair<Segment, Closeable> segmentAndCloseable = fireHydrant.getAndIncrementSegment();
+          final QueryableIndex queryableIndex = segmentAndCloseable.lhs.asQueryableIndex();
+          log.info("Adding hydrant[%s]", fireHydrant);
+          indexes.add(queryableIndex);
+          closer.register(segmentAndCloseable.rhs);
+        }
+
+        mergedFile = indexMerger.mergeQueryableIndex(
+            indexes,
+            schema.getGranularitySpec().isRollup(),
+            schema.getAggregators(),
+            mergedTarget,
+            tuningConfig.getIndexSpec()
+        );
+      }
+      catch (Throwable t) {
+        throw closer.rethrow(t);
+      }
+      finally {
+        closer.close();
       }
 
-      final File mergedFile;
-      mergedFile = indexMerger.mergeQueryableIndex(
-          indexes,
-          schema.getGranularitySpec().isRollup(),
-          schema.getAggregators(),
-          mergedTarget,
-          tuningConfig.getIndexSpec()
-      );
-
-      QueryableIndex index = indexIO.loadIndex(mergedFile);
-
-      DataSegment segment = dataSegmentPusher.push(
-          mergedFile,
-          sink.getSegment().withDimensions(Lists.newArrayList(index.getAvailableDimensions()))
+      // Retry pushing segments because uploading to deep storage might fail especially for cloud storage types
+      final DataSegment segment = RetryUtils.retry(
+          () -> dataSegmentPusher.push(
+              mergedFile,
+              sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes))
+          ),
+          exception -> exception instanceof Exception,
+          5
       );
 
       objectMapper.writeValue(descriptorFile, segment);
@@ -690,7 +729,7 @@ public class AppenderatorImpl implements Appenderator
 
   private void resetNextFlush()
   {
-    nextFlush = new DateTime().plus(tuningConfig.getIntermediatePersistPeriod()).getMillis();
+    nextFlush = DateTimes.nowUtc().plus(tuningConfig.getIntermediatePersistPeriod()).getMillis();
   }
 
   /**
@@ -863,6 +902,7 @@ public class AppenderatorImpl implements Appenderator
 
     // Decrement this sink's rows from rowsCurrentlyInMemory (we only count active sinks).
     rowsCurrentlyInMemory.addAndGet(-sink.getNumRowsInMemory());
+    totalRows.addAndGet(-sink.getNumRows());
 
     // Wait for any outstanding pushes to finish, then abandon the segment inside the persist thread.
     return Futures.transform(
@@ -920,6 +960,7 @@ public class AppenderatorImpl implements Appenderator
               if (cache != null) {
                 cache.close(SinkQuerySegmentWalker.makeHydrantCacheIdentifier(hydrant));
               }
+              hydrant.swapSegment(null);
             }
 
             if (removeOnDiskData) {
@@ -1005,7 +1046,7 @@ public class AppenderatorImpl implements Appenderator
 
         indexToPersist.swapSegment(
             new QueryableIndexSegment(
-                indexToPersist.getSegment().getIdentifier(),
+                indexToPersist.getSegmentIdentifier(),
                 indexIO.loadIndex(persistedFile)
             )
         );

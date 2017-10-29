@@ -60,7 +60,8 @@ public class RegexDimFilterTest
   }
 
   @Test
-  public void testHashcode() {
+  public void testHashcode()
+  {
     RegexDimFilter regexDimFilter = new RegexDimFilter("dim", "reg", null);
     RegexDimFilter regexDimFilter2 = new RegexDimFilter("di", "mreg", null);
     RegexDimFilter regexDimFilter3 = new RegexDimFilter("di", "mreg", null);

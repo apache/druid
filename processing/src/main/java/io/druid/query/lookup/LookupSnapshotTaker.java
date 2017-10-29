@@ -51,7 +51,7 @@ public class LookupSnapshotTaker
   {
     this.objectMapper = jsonMapper;
     Preconditions.checkArgument(!Strings.isNullOrEmpty(persistDirectory), "can not work without specifying persistDirectory");
-    this.persistDirectory =  new File(persistDirectory);
+    this.persistDirectory = new File(persistDirectory);
     if (!this.persistDirectory.exists()) {
       Preconditions.checkArgument(this.persistDirectory.mkdirs(), "Oups was not able to create persist directory");
     }
@@ -68,7 +68,7 @@ public class LookupSnapshotTaker
       if (!persistFile.isFile()) {
         LOGGER.warn("could not find any snapshot file under working directory [%s]", persistDirectory);
         return Collections.emptyList();
-      } else if( persistFile.length() == 0){
+      } else if (persistFile.length() == 0) {
         LOGGER.warn("found empty file no lookups to load from [%s]", persistFile.getAbsolutePath());
         return Collections.emptyList();
       }
@@ -83,7 +83,7 @@ public class LookupSnapshotTaker
   public synchronized void takeSnapshot(List<LookupBean> lookups)
   {
     try {
-       objectMapper.writeValue(persistFile, lookups);
+      objectMapper.writeValue(persistFile, lookups);
     }
     catch (IOException e) {
       throw new ISE(e, "Exception during serialization of lookups using file [%s]", persistFile.getAbsolutePath());

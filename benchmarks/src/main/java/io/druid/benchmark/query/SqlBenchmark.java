@@ -19,51 +19,37 @@
 
 package io.druid.benchmark.query;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
-import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
-import io.druid.common.utils.JodaUtils;
-import io.druid.data.input.InputRow;
+import io.druid.benchmark.datagen.SegmentGenerator;
 import io.druid.data.input.Row;
-import io.druid.hll.HyperLogLogHash;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunnerFactoryConglomerate;
-import io.druid.query.TableDataSource;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
-import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
-import io.druid.segment.IndexBuilder;
 import io.druid.segment.QueryableIndex;
-import io.druid.segment.TestHelper;
-import io.druid.segment.column.ValueType;
-import io.druid.segment.serde.ComplexMetrics;
-import io.druid.server.initialization.ServerConfig;
-import io.druid.sql.calcite.planner.Calcites;
+import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.planner.DruidPlanner;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.planner.PlannerFactory;
 import io.druid.sql.calcite.planner.PlannerResult;
-import io.druid.sql.calcite.table.DruidTable;
-import io.druid.sql.calcite.table.RowSignature;
 import io.druid.sql.calcite.util.CalciteTests;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
-import org.apache.calcite.schema.Schema;
-import org.apache.calcite.schema.Table;
-import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.commons.io.FileUtils;
-import org.joda.time.Interval;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -82,26 +68,25 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
  * Benchmark that compares the same groupBy query through the native query layer and through the SQL layer.
  */
 @State(Scope.Benchmark)
-@Fork(jvmArgsPrepend = "-server", value = 1)
+@Fork(value = 1)
 @Warmup(iterations = 15)
 @Measurement(iterations = 30)
 public class SqlBenchmark
 {
-  @Param({"10000", "100000", "200000"})
+  @Param({"200000", "1000000"})
   private int rowsPerSegment;
 
   private static final Logger log = new Logger(SqlBenchmark.class);
   private static final int RNG_SEED = 9999;
 
   private File tmpDir;
+  private SegmentGenerator segmentGenerator;
   private SpecificSegmentsQuerySegmentWalker walker;
   private PlannerFactory plannerFactory;
   private GroupByQuery groupByQuery;
@@ -113,78 +98,37 @@ public class SqlBenchmark
     tmpDir = Files.createTempDir();
     log.info("Starting benchmark setup using tmpDir[%s], rows[%,d].", tmpDir, rowsPerSegment);
 
-    if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
-      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
-    }
-
     final BenchmarkSchemaInfo schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get("basic");
-    final BenchmarkDataGenerator dataGenerator = new BenchmarkDataGenerator(
-        schemaInfo.getColumnSchemas(),
-        RNG_SEED + 1,
-        schemaInfo.getDataInterval(),
-        rowsPerSegment
-    );
 
-    final List<InputRow> rows = Lists.newArrayList();
-    for (int i = 0; i < rowsPerSegment; i++) {
-      final InputRow row = dataGenerator.nextRow();
-      if (i % 20000 == 0) {
-        log.info("%,d/%,d rows generated.", i, rowsPerSegment);
-      }
-      rows.add(row);
-    }
+    final DataSegment dataSegment = DataSegment.builder()
+                                               .dataSource("foo")
+                                               .interval(schemaInfo.getDataInterval())
+                                               .version("1")
+                                               .shardSpec(new LinearShardSpec(0))
+                                               .build();
 
-    log.info("%,d/%,d rows generated.", rows.size(), rowsPerSegment);
+    this.segmentGenerator = new SegmentGenerator();
 
-    final PlannerConfig plannerConfig = new PlannerConfig();
+    final QueryableIndex index = segmentGenerator.generate(dataSegment, schemaInfo, rowsPerSegment);
     final QueryRunnerFactoryConglomerate conglomerate = CalciteTests.queryRunnerFactoryConglomerate();
-    final QueryableIndex index = IndexBuilder.create()
-                                             .tmpDir(new File(tmpDir, "1"))
-                                             .indexMerger(TestHelper.getTestIndexMergerV9())
-                                             .rows(rows)
-                                             .buildMMappedIndex();
+    final PlannerConfig plannerConfig = new PlannerConfig();
 
-    this.walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
-        DataSegment.builder()
-                   .dataSource("foo")
-                   .interval(index.getDataInterval())
-                   .version("1")
-                   .shardSpec(new LinearShardSpec(0))
-                   .build(),
-        index
-    );
-
-    final Map<String, Table> tableMap = ImmutableMap.<String, Table>of(
-        "foo",
-        new DruidTable(
-            new TableDataSource("foo"),
-            RowSignature.builder()
-                        .add("__time", ValueType.LONG)
-                        .add("dimSequential", ValueType.STRING)
-                        .add("dimZipf", ValueType.STRING)
-                        .add("dimUniform", ValueType.STRING)
-                        .build()
-        )
-    );
-    final Schema druidSchema = new AbstractSchema()
-    {
-      @Override
-      protected Map<String, Table> getTableMap()
-      {
-        return tableMap;
-      }
-    };
+    this.walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(dataSegment, index);
     plannerFactory = new PlannerFactory(
-        Calcites.createRootSchema(druidSchema),
-        walker,
+        CalciteTests.createMockSchema(walker, plannerConfig),
+        CalciteTests.createMockQueryLifecycleFactory(walker),
         CalciteTests.createOperatorTable(),
+        CalciteTests.createExprMacroTable(),
         plannerConfig,
-        new ServerConfig()
+        new AuthConfig(),
+        AuthTestUtils.TEST_AUTHENTICATOR_MAPPER,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        CalciteTests.getJsonMapper()
     );
     groupByQuery = GroupByQuery
         .builder()
         .setDataSource("foo")
-        .setInterval(new Interval(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT))
+        .setInterval(Intervals.ETERNITY)
         .setDimensions(
             Arrays.<DimensionSpec>asList(
                 new DefaultDimensionSpec("dimZipf", "d0"),
@@ -211,6 +155,11 @@ public class SqlBenchmark
       walker = null;
     }
 
+    if (segmentGenerator != null) {
+      segmentGenerator.close();
+      segmentGenerator = null;
+    }
+
     if (tmpDir != null) {
       FileUtils.deleteDirectory(tmpDir);
     }
@@ -221,7 +170,7 @@ public class SqlBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void queryNative(Blackhole blackhole) throws Exception
   {
-    final Sequence<Row> resultSequence = groupByQuery.run(walker, Maps.<String, Object>newHashMap());
+    final Sequence<Row> resultSequence = QueryPlus.wrap(groupByQuery).run(walker, Maps.newHashMap());
     final ArrayList<Row> resultList = Sequences.toList(resultSequence, Lists.<Row>newArrayList());
 
     for (Row row : resultList) {

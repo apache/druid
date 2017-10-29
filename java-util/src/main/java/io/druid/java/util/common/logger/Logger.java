@@ -41,42 +41,42 @@ public class Logger
   public void trace(String message, Object... formatArgs)
   {
     if (log.isTraceEnabled()) {
-      log.trace(StringUtils.safeFormat(message, formatArgs));
+      log.trace(StringUtils.nonStrictFormat(message, formatArgs));
     }
   }
 
   public void trace(Throwable t, String message, Object... formatArgs)
   {
     if (log.isTraceEnabled()) {
-      log.trace(StringUtils.safeFormat(message, formatArgs), t);
+      log.trace(StringUtils.nonStrictFormat(message, formatArgs), t);
     }
   }
 
   public void debug(String message, Object... formatArgs)
   {
     if (log.isDebugEnabled()) {
-      log.debug(StringUtils.safeFormat(message, formatArgs));
+      log.debug(StringUtils.nonStrictFormat(message, formatArgs));
     }
   }
 
   public void debug(Throwable t, String message, Object... formatArgs)
   {
     if (log.isDebugEnabled()) {
-      log.debug(StringUtils.safeFormat(message, formatArgs), t);
+      log.debug(StringUtils.nonStrictFormat(message, formatArgs), t);
     }
   }
 
   public void info(String message, Object... formatArgs)
   {
     if (log.isInfoEnabled()) {
-      log.info(StringUtils.safeFormat(message, formatArgs));
+      log.info(StringUtils.nonStrictFormat(message, formatArgs));
     }
   }
 
   public void info(Throwable t, String message, Object... formatArgs)
   {
     if (log.isInfoEnabled()) {
-      log.info(StringUtils.safeFormat(message, formatArgs), t);
+      log.info(StringUtils.nonStrictFormat(message, formatArgs), t);
     }
   }
 
@@ -94,17 +94,17 @@ public class Logger
 
   public void warn(String message, Object... formatArgs)
   {
-    log.warn(StringUtils.safeFormat(message, formatArgs));
+    log.warn(StringUtils.nonStrictFormat(message, formatArgs));
   }
 
   public void warn(Throwable t, String message, Object... formatArgs)
   {
-    log.warn(StringUtils.safeFormat(message, formatArgs), t);
+    log.warn(StringUtils.nonStrictFormat(message, formatArgs), t);
   }
 
   public void error(String message, Object... formatArgs)
   {
-    log.error(StringUtils.safeFormat(message, formatArgs));
+    log.error(StringUtils.nonStrictFormat(message, formatArgs));
   }
 
   /**
@@ -121,17 +121,17 @@ public class Logger
 
   public void error(Throwable t, String message, Object... formatArgs)
   {
-    log.error(StringUtils.safeFormat(message, formatArgs), t);
+    log.error(StringUtils.nonStrictFormat(message, formatArgs), t);
   }
 
   public void wtf(String message, Object... formatArgs)
   {
-    log.error(StringUtils.safeFormat("WTF?!: " + message, formatArgs), new Exception());
+    log.error(StringUtils.nonStrictFormat("WTF?!: " + message, formatArgs), new Exception());
   }
 
   public void wtf(Throwable t, String message, Object... formatArgs)
   {
-    log.error(StringUtils.safeFormat("WTF?!: " + message, formatArgs), t);
+    log.error(StringUtils.nonStrictFormat("WTF?!: " + message, formatArgs), t);
   }
 
   public boolean isTraceEnabled()

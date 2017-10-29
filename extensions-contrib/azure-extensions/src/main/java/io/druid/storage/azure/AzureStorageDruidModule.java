@@ -33,6 +33,7 @@ import io.druid.guice.Binders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.initialization.DruidModule;
+import io.druid.java.util.common.StringUtils;
 
 import java.net.URISyntaxException;
 import java.security.InvalidKeyException;
@@ -103,7 +104,7 @@ public class AzureStorageDruidModule implements DruidModule
       throws URISyntaxException, InvalidKeyException
   {
     CloudStorageAccount account = CloudStorageAccount.parse(
-        String.format(
+        StringUtils.format(
             STORAGE_CONNECTION_STRING,
             config.getProtocol(),
             config.getAccount(),

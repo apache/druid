@@ -22,6 +22,7 @@ package io.druid.query.groupby.epinephelinae;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import org.apache.commons.io.FileUtils;
 
@@ -81,7 +82,7 @@ public class LimitedTemporaryStorage implements Closeable
 
       FileUtils.forceMkdir(storageDirectory);
 
-      final File theFile = new File(storageDirectory, String.format("%08d.tmp", files.size()));
+      final File theFile = new File(storageDirectory, StringUtils.format("%08d.tmp", files.size()));
       final EnumSet<StandardOpenOption> openOptions = EnumSet.of(
           StandardOpenOption.CREATE_NEW,
           StandardOpenOption.WRITE

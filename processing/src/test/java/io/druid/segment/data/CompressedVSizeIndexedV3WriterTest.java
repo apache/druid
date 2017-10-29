@@ -25,6 +25,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.Smoosh;
@@ -235,7 +236,7 @@ public class CompressedVSizeIndexedV3WriterTest
 
   private void checkV2SerializedSizeAndData(int offsetChunkFactor, int valueChunkFactor) throws Exception
   {
-    File tmpDirectory = Files.createTempDirectory(String.format(
+    File tmpDirectory = Files.createTempDirectory(StringUtils.format(
         "CompressedVSizeIndexedV3WriterTest_%d_%d",
         offsetChunkFactor,
         offsetChunkFactor

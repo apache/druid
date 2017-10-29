@@ -19,14 +19,23 @@
 
 package io.druid.cli;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.servlet.GuiceFilter;
+import io.druid.guice.annotations.Json;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.server.coordinator.DruidCoordinatorConfig;
 import io.druid.server.http.OverlordProxyServlet;
 import io.druid.server.http.RedirectFilter;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
+import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthenticationUtils;
+import io.druid.server.security.Authenticator;
+import io.druid.server.security.AuthenticatorMapper;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -37,12 +46,27 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.resource.Resource;
 import org.eclipse.jetty.util.resource.ResourceCollection;
 
+import java.util.List;
 import java.util.Properties;
 
 /**
  */
 class CoordinatorJettyServerInitializer implements JettyServerInitializer
 {
+  private static List<String> UNSECURED_PATHS = Lists.newArrayList(
+      "/favicon.ico",
+      "/css/*",
+      "/druid.js",
+      "/druid.css",
+      "/pages/*",
+      "/fonts/*",
+      "/old-console/*",
+      "/coordinator/false",
+      "/overlord/false"
+  );
+
+  private static Logger log = new Logger(CoordinatorJettyServerInitializer.class);
+
   private final DruidCoordinatorConfig config;
   private final boolean beOverlord;
 
@@ -62,7 +86,7 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     ServletHolder holderPwd = new ServletHolder("default", DefaultServlet.class);
 
     root.addServlet(holderPwd, "/");
-    if(config.getConsoleStatic() == null) {
+    if (config.getConsoleStatic() == null) {
       ResourceCollection staticResources;
       if (beOverlord) {
         staticResources = new ResourceCollection(
@@ -81,7 +105,27 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
       // used for console development
       root.setResourceBase(config.getConsoleStatic());
     }
+
+    final AuthConfig authConfig = injector.getInstance(AuthConfig.class);
+    final ObjectMapper jsonMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
+    final AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
+
+    List<Authenticator> authenticators = null;
+    AuthenticationUtils.addSecuritySanityCheckFilter(root, jsonMapper);
+    authenticators = authenticatorMapper.getAuthenticatorChain();
+    AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
+
     JettyServerInitUtils.addExtensionFilters(root, injector);
+
+    // perform no-op authorization for these static resources
+    AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
+
+    // Check that requests were authorized before sending responses
+    AuthenticationUtils.addPreResponseAuthorizationCheckFilter(
+        root,
+        authenticators,
+        jsonMapper
+    );
 
     // /status should not redirect, so add first
     root.addFilter(GuiceFilter.class, "/status/*", null);

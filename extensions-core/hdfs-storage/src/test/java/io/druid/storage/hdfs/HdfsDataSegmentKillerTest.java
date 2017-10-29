@@ -21,13 +21,14 @@ package io.druid.storage.hdfs;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.StringUtils;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -173,8 +174,8 @@ public class HdfsDataSegmentKillerTest
     Assert.assertTrue(fs.mkdirs(path));
     try (FSDataOutputStream os = fs.create(new Path(
         path,
-        String.format("%s_index.zip", partitionNumber)
-    )); FSDataOutputStream oos = fs.create(new Path(path, String.format("%s_descriptor.json", partitionNumber)))) {
+        StringUtils.format("%s_index.zip", partitionNumber)
+    )); FSDataOutputStream oos = fs.create(new Path(path, StringUtils.format("%s_descriptor.json", partitionNumber)))) {
     }
   }
 
@@ -182,7 +183,7 @@ public class HdfsDataSegmentKillerTest
   {
     return new DataSegment(
         "dataSource",
-        Interval.parse("2000/3000"),
+        Intervals.of("2000/3000"),
         "ver",
         ImmutableMap.<String, Object>of(
             "type", "hdfs",

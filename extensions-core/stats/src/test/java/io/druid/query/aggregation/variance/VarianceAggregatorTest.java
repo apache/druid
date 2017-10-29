@@ -21,7 +21,6 @@ package io.druid.query.aggregation.variance;
 
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.TestFloatColumnSelector;
-import io.druid.query.aggregation.TestObjectColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -66,8 +65,7 @@ public class VarianceAggregatorTest
   {
     selector = new TestFloatColumnSelector(values);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
-    EasyMock.expect(colSelectorFactory.makeObjectColumnSelector("nilly")).andReturn(new TestObjectColumnSelector(0.0f));
-    EasyMock.expect(colSelectorFactory.makeFloatColumnSelector("nilly")).andReturn(selector);
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(selector);
     EasyMock.replay(colSelectorFactory);
   }
 

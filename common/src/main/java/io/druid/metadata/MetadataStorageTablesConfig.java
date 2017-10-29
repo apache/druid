@@ -22,6 +22,7 @@ package io.druid.metadata;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Maps;
+import io.druid.java.util.common.StringUtils;
 
 import java.util.Map;
 
@@ -113,7 +114,7 @@ public class MetadataStorageTablesConfig
       if (base == null) {
         return null;
       }
-      return String.format("%s_%s", base, defaultSuffix);
+      return StringUtils.format("%s_%s", base, defaultSuffix);
     }
 
     return explicitTableName;

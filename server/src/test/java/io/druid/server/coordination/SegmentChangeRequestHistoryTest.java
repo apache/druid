@@ -93,7 +93,8 @@ public class SegmentChangeRequestHistoryTest
     try {
       history.getRequestsSince(new SegmentChangeRequestHistory.Counter(0, 1234)).get();
       Assert.fail();
-    } catch (ExecutionException ex) {
+    }
+    catch (ExecutionException ex) {
       Assert.assertTrue(ex.getCause() instanceof IllegalArgumentException);
     }
 
@@ -106,7 +107,8 @@ public class SegmentChangeRequestHistoryTest
     try {
       history.getRequestsSince(new SegmentChangeRequestHistory.Counter(0, 1234)).get();
       Assert.fail();
-    } catch (ExecutionException ex) {
+    }
+    catch (ExecutionException ex) {
       Assert.assertTrue(ex.getCause() instanceof IllegalArgumentException);
     }
 
@@ -117,7 +119,8 @@ public class SegmentChangeRequestHistoryTest
     try {
       history.getRequestsSince(new SegmentChangeRequestHistory.Counter(1, 1234)).get();
       Assert.fail();
-    } catch (ExecutionException ex) {
+    }
+    catch (ExecutionException ex) {
       Assert.assertTrue(ex.getCause() instanceof IllegalArgumentException);
     }
 
@@ -134,7 +137,8 @@ public class SegmentChangeRequestHistoryTest
     try {
       history.getRequestsSince(new SegmentChangeRequestHistory.Counter(2, 1234)).get();
       Assert.fail();
-    } catch (ExecutionException ex) {
+    }
+    catch (ExecutionException ex) {
       Assert.assertTrue(ex.getCause() instanceof IllegalArgumentException);
     }
   }
@@ -204,43 +208,43 @@ public class SegmentChangeRequestHistoryTest
     circularBuffer.add(2);
     Assert.assertEquals(2, circularBuffer.size());
     for (int i = 0; i < circularBuffer.size(); i++) {
-      Assert.assertEquals(i+1, (int) circularBuffer.get(i));
+      Assert.assertEquals(i + 1, (int) circularBuffer.get(i));
     }
 
     circularBuffer.add(3);
     Assert.assertEquals(3, circularBuffer.size());
     for (int i = 0; i < circularBuffer.size(); i++) {
-      Assert.assertEquals(i+1, (int) circularBuffer.get(i));
+      Assert.assertEquals(i + 1, (int) circularBuffer.get(i));
     }
 
     circularBuffer.add(4);
     Assert.assertEquals(3, circularBuffer.size());
     for (int i = 0; i < circularBuffer.size(); i++) {
-      Assert.assertEquals(i+2, (int) circularBuffer.get(i));
+      Assert.assertEquals(i + 2, (int) circularBuffer.get(i));
     }
 
     circularBuffer.add(5);
     Assert.assertEquals(3, circularBuffer.size());
     for (int i = 0; i < circularBuffer.size(); i++) {
-      Assert.assertEquals(i+3, (int) circularBuffer.get(i));
+      Assert.assertEquals(i + 3, (int) circularBuffer.get(i));
     }
 
     circularBuffer.add(6);
     Assert.assertEquals(3, circularBuffer.size());
     for (int i = 0; i < circularBuffer.size(); i++) {
-      Assert.assertEquals(i+4, (int) circularBuffer.get(i));
+      Assert.assertEquals(i + 4, (int) circularBuffer.get(i));
     }
 
     circularBuffer.add(7);
     Assert.assertEquals(3, circularBuffer.size());
     for (int i = 0; i < circularBuffer.size(); i++) {
-      Assert.assertEquals(i+5, (int) circularBuffer.get(i));
+      Assert.assertEquals(i + 5, (int) circularBuffer.get(i));
     }
 
     circularBuffer.add(8);
     Assert.assertEquals(3, circularBuffer.size());
     for (int i = 0; i < circularBuffer.size(); i++) {
-      Assert.assertEquals(i+6, (int) circularBuffer.get(i));
+      Assert.assertEquals(i + 6, (int) circularBuffer.get(i));
     }
   }
 }

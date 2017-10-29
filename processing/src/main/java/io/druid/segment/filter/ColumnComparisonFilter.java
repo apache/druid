@@ -20,7 +20,7 @@
 package io.druid.segment.filter;
 
 import com.google.common.base.Preconditions;
-import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.query.BitmapResultFactory;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.BitmapIndexSelector;
@@ -34,7 +34,9 @@ import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionHandlerUtils;
 
+import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Objects;
 
 /**
  */
@@ -50,7 +52,7 @@ public class ColumnComparisonFilter implements Filter
   }
 
   @Override
-  public ImmutableBitmap getBitmapIndex(final BitmapIndexSelector selector)
+  public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
   {
     throw new UnsupportedOperationException();
   }
@@ -74,7 +76,8 @@ public class ColumnComparisonFilter implements Filter
     return makeValueMatcher(valueGetters);
   }
 
-  public static ValueMatcher makeValueMatcher(final ValueGetter[] valueGetters) {
+  public static ValueMatcher makeValueMatcher(final ValueGetter[] valueGetters)
+  {
     if (valueGetters.length == 0) {
       return BooleanValueMatcher.of(true);
     }
@@ -107,24 +110,23 @@ public class ColumnComparisonFilter implements Filter
     };
   }
 
-  // overlap returns true when: a and b have one or more elements in common,
-  // a and b are both null, or a and b are both empty.
-  public static boolean overlap(String[] a, String[] b) {
-    if (a == null || b == null) {
+  /**
+   * overlap returns true when: as and bs have one or more elements in common,
+   * as and bs are both null, or as and bs are both empty.
+   */
+  public static boolean overlap(@Nullable String[] as, @Nullable String[] bs)
+  {
+    if (as == null || bs == null) {
       // They only have overlap if both are null.
-      return a == b;
+      return as == null && bs == null;
     }
-    if (a.length == 0 && b.length == 0) {
+    if (as.length == 0 && bs.length == 0) {
       return true;
     }
 
-    for (int i = 0; i < a.length; i++) {
-      for (int j = 0; j < b.length; j++) {
-        if (a[i] == null || b[j] == null) {
-          if (a[i] == b[j]) {
-            return true;
-          }
-        } else if (a[i].equals(b[j])) {
+    for (String a : as) {
+      for (String b : bs) {
+        if (Objects.equals(a, b)) {
           return true;
         }
       }

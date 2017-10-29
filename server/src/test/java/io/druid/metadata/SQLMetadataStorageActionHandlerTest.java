@@ -25,11 +25,10 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
-
-import org.joda.time.DateTime;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -90,9 +89,7 @@ public class SQLMetadataStorageActionHandlerTest
           @Override
           public TypeReference<Map<String, String>> getLogType()
           {
-            return new TypeReference<Map<String, String>>()
-            {
-            };
+            return JacksonUtils.TYPE_REFERENCE_MAP_STRING_STRING;
           }
 
           @Override
@@ -119,7 +116,7 @@ public class SQLMetadataStorageActionHandlerTest
 
     final String entryId = "1234";
 
-    handler.insert(entryId, new DateTime("2014-01-02T00:00:00.123"), "testDataSource", entry, true, null);
+    handler.insert(entryId, DateTimes.of("2014-01-02T00:00:00.123"), "testDataSource", entry, true, null);
 
     Assert.assertEquals(
         Optional.of(entry),
@@ -148,7 +145,7 @@ public class SQLMetadataStorageActionHandlerTest
 
     Assert.assertEquals(
         ImmutableList.of(),
-        handler.getInactiveStatusesSince(new DateTime("2014-01-01"))
+        handler.getInactiveStatusesSince(DateTimes.of("2014-01-01"))
     );
 
     Assert.assertTrue(handler.setStatus(entryId, false, status1));
@@ -173,12 +170,12 @@ public class SQLMetadataStorageActionHandlerTest
 
     Assert.assertEquals(
         ImmutableList.of(),
-        handler.getInactiveStatusesSince(new DateTime("2014-01-03"))
+        handler.getInactiveStatusesSince(DateTimes.of("2014-01-03"))
     );
 
     Assert.assertEquals(
         ImmutableList.of(status1),
-        handler.getInactiveStatusesSince(new DateTime("2014-01-01"))
+        handler.getInactiveStatusesSince(DateTimes.of("2014-01-01"))
     );
   }
 
@@ -189,10 +186,10 @@ public class SQLMetadataStorageActionHandlerTest
     Map<String, Integer> entry = ImmutableMap.of("a", 1);
     Map<String, Integer> status = ImmutableMap.of("count", 42);
 
-    handler.insert(entryId, new DateTime("2014-01-01"), "test", entry, true, status);
+    handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status);
 
     thrown.expect(EntryExistsException.class);
-    handler.insert(entryId, new DateTime("2014-01-01"), "test", entry, true, status);
+    handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status);
   }
 
   @Test
@@ -202,7 +199,7 @@ public class SQLMetadataStorageActionHandlerTest
     Map<String, Integer> entry = ImmutableMap.of("a", 1);
     Map<String, Integer> status = ImmutableMap.of("count", 42);
 
-    handler.insert(entryId, new DateTime("2014-01-01"), "test", entry, true, status);
+    handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status);
 
     Assert.assertEquals(
         ImmutableList.of(),
@@ -234,7 +231,7 @@ public class SQLMetadataStorageActionHandlerTest
     Map<String, Integer> entry = ImmutableMap.of("a", 1);
     Map<String, Integer> status = ImmutableMap.of("count", 42);
 
-    handler.insert(entryId, new DateTime("2014-01-01"), "test", entry, true, status);
+    handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status);
 
     Assert.assertEquals(
         ImmutableMap.<Long, Map<String, Integer>>of(),
@@ -270,5 +267,63 @@ public class SQLMetadataStorageActionHandlerTest
         new HashSet<>(updated.values())
     );
     Assert.assertEquals(updated.keySet(), locks.keySet());
+  }
+
+  @Test
+  public void testReplaceLock() throws EntryExistsException
+  {
+    final String entryId = "ABC123";
+    Map<String, Integer> entry = ImmutableMap.of("a", 1);
+    Map<String, Integer> status = ImmutableMap.of("count", 42);
+
+    handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status);
+
+    Assert.assertEquals(
+        ImmutableMap.<Long, Map<String, Integer>>of(),
+        handler.getLocks("non_exist_entry")
+    );
+
+    Assert.assertEquals(
+        ImmutableMap.<Long, Map<String, Integer>>of(),
+        handler.getLocks(entryId)
+    );
+
+    final ImmutableMap<String, Integer> lock1 = ImmutableMap.of("lock", 1);
+    final ImmutableMap<String, Integer> lock2 = ImmutableMap.of("lock", 2);
+
+    Assert.assertTrue(handler.addLock(entryId, lock1));
+
+    final Long lockId1 = handler.getLockId(entryId, lock1);
+    Assert.assertNotNull(lockId1);
+
+    Assert.assertTrue(handler.replaceLock(entryId, lockId1, lock2));
+  }
+
+  @Test
+  public void testGetLockId() throws EntryExistsException
+  {
+    final String entryId = "ABC123";
+    Map<String, Integer> entry = ImmutableMap.of("a", 1);
+    Map<String, Integer> status = ImmutableMap.of("count", 42);
+
+    handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status);
+
+    Assert.assertEquals(
+        ImmutableMap.<Long, Map<String, Integer>>of(),
+        handler.getLocks("non_exist_entry")
+    );
+
+    Assert.assertEquals(
+        ImmutableMap.<Long, Map<String, Integer>>of(),
+        handler.getLocks(entryId)
+    );
+
+    final ImmutableMap<String, Integer> lock1 = ImmutableMap.of("lock", 1);
+    final ImmutableMap<String, Integer> lock2 = ImmutableMap.of("lock", 2);
+
+    Assert.assertTrue(handler.addLock(entryId, lock1));
+
+    Assert.assertNotNull(handler.getLockId(entryId, lock1));
+    Assert.assertNull(handler.getLockId(entryId, lock2));
   }
 }

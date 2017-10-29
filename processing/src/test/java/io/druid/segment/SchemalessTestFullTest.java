@@ -22,12 +22,17 @@ package io.druid.segment;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
+import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -41,8 +46,8 @@ import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.search.SearchResultValue;
-import io.druid.query.search.search.SearchHit;
-import io.druid.query.search.search.SearchQuery;
+import io.druid.query.search.SearchHit;
+import io.druid.query.search.SearchQuery;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
@@ -52,13 +57,11 @@ import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNQueryBuilder;
 import io.druid.query.topn.TopNResultValue;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -91,7 +94,7 @@ public class SchemalessTestFullTest
   final List<AggregatorFactory> commonAggregators = Arrays.asList(rowsCount, indexDoubleSum, uniques);
 
   final QuerySegmentSpec fullOnInterval = new MultipleIntervalSegmentSpec(
-      Arrays.asList(new Interval("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z"))
+      Arrays.asList(Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z"))
   );
 
   @Test
@@ -99,7 +102,7 @@ public class SchemalessTestFullTest
   {
     List<Result<TimeseriesResultValue>> expectedTimeSeriesResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 2L)
@@ -115,7 +118,7 @@ public class SchemalessTestFullTest
 
     List<Result<TimeseriesResultValue>> expectedFilteredTimeSeriesResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 1L)
@@ -131,7 +134,7 @@ public class SchemalessTestFullTest
 
     List<Result<TopNResultValue>> expectedTopNResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -159,7 +162,7 @@ public class SchemalessTestFullTest
 
     List<Result<TopNResultValue>> expectedFilteredTopNResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -178,7 +181,7 @@ public class SchemalessTestFullTest
 
     List<Result<SearchResultValue>> expectedSearchResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
                 Arrays.<SearchHit>asList(
                     new SearchHit(placementishDimension, "a"),
@@ -192,7 +195,7 @@ public class SchemalessTestFullTest
 
     List<Result<SearchResultValue>> expectedFilteredSearchResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
                 Arrays.<SearchHit>asList(
                     new SearchHit(placementishDimension, "a"),
@@ -204,13 +207,13 @@ public class SchemalessTestFullTest
 
     List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
                 ImmutableMap.of(
                     TimeBoundaryQuery.MIN_TIME,
-                    new DateTime("2011-01-12T00:00:00.000Z"),
+                    DateTimes.of("2011-01-12T00:00:00.000Z"),
                     TimeBoundaryQuery.MAX_TIME,
-                    new DateTime("2011-01-13T00:00:00.000Z")
+                    DateTimes.of("2011-01-13T00:00:00.000Z")
                 )
             )
         )
@@ -234,7 +237,7 @@ public class SchemalessTestFullTest
   {
     List<Result<TimeseriesResultValue>> expectedTimeSeriesResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 2L)
@@ -250,7 +253,7 @@ public class SchemalessTestFullTest
 
     List<Result<TimeseriesResultValue>> expectedFilteredTimeSeriesResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 1L)
@@ -266,7 +269,7 @@ public class SchemalessTestFullTest
 
     List<Result<TopNResultValue>> expectedTopNResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -294,7 +297,7 @@ public class SchemalessTestFullTest
 
     List<Result<TopNResultValue>> expectedFilteredTopNResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -322,7 +325,7 @@ public class SchemalessTestFullTest
 
     List<Result<SearchResultValue>> expectedSearchResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
                 Arrays.<SearchHit>asList(
                 )
@@ -332,7 +335,7 @@ public class SchemalessTestFullTest
 
     List<Result<SearchResultValue>> expectedFilteredSearchResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
                 Arrays.<SearchHit>asList(
                 )
@@ -342,13 +345,13 @@ public class SchemalessTestFullTest
 
     List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
                 ImmutableMap.of(
                     TimeBoundaryQuery.MIN_TIME,
-                    new DateTime("2011-01-12T00:00:00.000Z"),
+                    DateTimes.of("2011-01-12T00:00:00.000Z"),
                     TimeBoundaryQuery.MAX_TIME,
-                    new DateTime("2011-01-12T00:00:00.000Z")
+                    DateTimes.of("2011-01-12T00:00:00.000Z")
                 )
             )
         )
@@ -373,7 +376,7 @@ public class SchemalessTestFullTest
   {
     List<Result<TimeseriesResultValue>> expectedTimeseriesResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 2L)
@@ -389,7 +392,7 @@ public class SchemalessTestFullTest
 
     List<Result<TimeseriesResultValue>> expectedFilteredTimeSeriesResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 1L)
@@ -405,7 +408,7 @@ public class SchemalessTestFullTest
 
     List<Result<TopNResultValue>> expectedTopNResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -417,16 +420,15 @@ public class SchemalessTestFullTest
                                 .put("maxIndex", 100.0)
                                 .put("minIndex", 100.0)
                                 .build(),
-                    new HashMap<String, Object>()
-                    {{
-                        put("market", null);
-                        put("rows", 1L);
-                        put("index", 0.0D);
-                        put("addRowsIndexConstant", 2.0D);
-                        put("uniques", 0.0D);
-                        put("maxIndex", 0.0);
-                        put("minIndex", 0.0);
-                      }}
+                    QueryRunnerTestHelper.orderedMap(
+                        "market", null,
+                        "rows", 1L,
+                        "index", 0.0D,
+                        "addRowsIndexConstant", 2.0D,
+                        "uniques", 0.0D,
+                        "maxIndex", 0.0,
+                        "minIndex", 0.0
+                    )
                 )
             )
         )
@@ -434,7 +436,7 @@ public class SchemalessTestFullTest
 
     List<Result<TopNResultValue>> expectedFilteredTopNResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -453,7 +455,7 @@ public class SchemalessTestFullTest
 
     List<Result<SearchResultValue>> expectedSearchResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
                 Arrays.<SearchHit>asList(
                     new SearchHit(placementishDimension, "a"),
@@ -465,7 +467,7 @@ public class SchemalessTestFullTest
 
     List<Result<SearchResultValue>> expectedFilteredSearchResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
                 Arrays.<SearchHit>asList(
                     new SearchHit(qualityDimension, "automotive")
@@ -476,13 +478,13 @@ public class SchemalessTestFullTest
 
     List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
                 ImmutableMap.of(
                     TimeBoundaryQuery.MIN_TIME,
-                    new DateTime("2011-01-12T00:00:00.000Z"),
+                    DateTimes.of("2011-01-12T00:00:00.000Z"),
                     TimeBoundaryQuery.MAX_TIME,
-                    new DateTime("2011-01-12T00:00:00.000Z")
+                    DateTimes.of("2011-01-12T00:00:00.000Z")
                 )
             )
         )
@@ -506,7 +508,7 @@ public class SchemalessTestFullTest
   {
     List<Result<TimeseriesResultValue>> expectedTimeseriesResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 2L)
@@ -522,7 +524,7 @@ public class SchemalessTestFullTest
 
     List<Result<TimeseriesResultValue>> expectedFilteredTimeSeriesResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 1L)
@@ -538,7 +540,7 @@ public class SchemalessTestFullTest
 
     List<Result<TopNResultValue>> expectedTopNResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -566,7 +568,7 @@ public class SchemalessTestFullTest
 
     List<Result<TopNResultValue>> expectedFilteredTopNResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -585,7 +587,7 @@ public class SchemalessTestFullTest
 
     List<Result<SearchResultValue>> expectedSearchResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
                 Arrays.<SearchHit>asList(
                     new SearchHit(qualityDimension, "automotive"),
@@ -597,7 +599,7 @@ public class SchemalessTestFullTest
 
     List<Result<SearchResultValue>> expectedFilteredSearchResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
                 Arrays.<SearchHit>asList(
                     new SearchHit(qualityDimension, "automotive")
@@ -608,13 +610,13 @@ public class SchemalessTestFullTest
 
     List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
                 ImmutableMap.of(
                     TimeBoundaryQuery.MIN_TIME,
-                    new DateTime("2011-01-12T00:00:00.000Z"),
+                    DateTimes.of("2011-01-12T00:00:00.000Z"),
                     TimeBoundaryQuery.MAX_TIME,
-                    new DateTime("2011-01-13T00:00:00.000Z")
+                    DateTimes.of("2011-01-13T00:00:00.000Z")
                 )
             )
         )
@@ -638,7 +640,7 @@ public class SchemalessTestFullTest
   {
     List<Result<TimeseriesResultValue>> expectedTimeseriesResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 2L)
@@ -656,7 +658,7 @@ public class SchemalessTestFullTest
 
     List<Result<TopNResultValue>> expectedTopNResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -677,7 +679,7 @@ public class SchemalessTestFullTest
 
     List<Result<SearchResultValue>> expectedSearchResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
                 Arrays.<SearchHit>asList(
                     new SearchHit(placementishDimension, "a"),
@@ -691,13 +693,13 @@ public class SchemalessTestFullTest
 
     List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
                 ImmutableMap.of(
                     TimeBoundaryQuery.MIN_TIME,
-                    new DateTime("2011-01-12T00:00:00.000Z"),
+                    DateTimes.of("2011-01-12T00:00:00.000Z"),
                     TimeBoundaryQuery.MAX_TIME,
-                    new DateTime("2011-01-12T00:00:00.000Z")
+                    DateTimes.of("2011-01-12T00:00:00.000Z")
                 )
             )
         )
@@ -721,7 +723,7 @@ public class SchemalessTestFullTest
   {
     List<Result<TimeseriesResultValue>> expectedTimeseriesResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 2L)
@@ -737,7 +739,7 @@ public class SchemalessTestFullTest
 
     List<Result<TimeseriesResultValue>> expectedFilteredTimeSeriesResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 1L)
@@ -753,7 +755,7 @@ public class SchemalessTestFullTest
 
     List<Result<TopNResultValue>> expectedTopNResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -765,16 +767,15 @@ public class SchemalessTestFullTest
                                 .put("maxIndex", 100.0)
                                 .put("minIndex", 100.0)
                                 .build(),
-                    new HashMap<String, Object>()
-                    {{
-                        put("market", null);
-                        put("rows", 1L);
-                        put("index", 0.0D);
-                        put("addRowsIndexConstant", 2.0D);
-                        put("uniques", 0.0D);
-                        put("maxIndex", 0.0);
-                        put("minIndex", 0.0);
-                      }}
+                    QueryRunnerTestHelper.orderedMap(
+                        "market", null,
+                        "rows", 1L,
+                        "index", 0.0D,
+                        "addRowsIndexConstant", 2.0D,
+                        "uniques", 0.0D,
+                        "maxIndex", 0.0,
+                        "minIndex", 0.0
+                    )
                 )
             )
         )
@@ -782,7 +783,7 @@ public class SchemalessTestFullTest
 
     List<Result<TopNResultValue>> expectedFilteredTopNResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -801,7 +802,7 @@ public class SchemalessTestFullTest
 
     List<Result<SearchResultValue>> expectedSearchResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
                 Arrays.<SearchHit>asList(
                     new SearchHit(placementishDimension, "a"),
@@ -815,13 +816,13 @@ public class SchemalessTestFullTest
 
     List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
                 ImmutableMap.of(
                     TimeBoundaryQuery.MIN_TIME,
-                    new DateTime("2011-01-12T00:00:00.000Z"),
+                    DateTimes.of("2011-01-12T00:00:00.000Z"),
                     TimeBoundaryQuery.MAX_TIME,
-                    new DateTime("2011-01-12T00:00:00.000Z")
+                    DateTimes.of("2011-01-12T00:00:00.000Z")
                 )
             )
         )
@@ -845,7 +846,7 @@ public class SchemalessTestFullTest
   {
     List<Result<TimeseriesResultValue>> expectedTimeseriesResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 1L)
@@ -861,7 +862,7 @@ public class SchemalessTestFullTest
 
     List<Result<TimeseriesResultValue>> expectedFilteredTimeSeriesResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 0L)
@@ -877,37 +878,36 @@ public class SchemalessTestFullTest
 
     List<Result<TopNResultValue>> expectedTopNResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
-                    new LinkedHashMap<String, Object>(){{
-                      put("market", null);
-                      put("rows", 1L);
-                      put("index", 0.0D);
-                      put("addRowsIndexConstant", 2.0D);
-                      put("uniques", 0.0D);
-                      put("maxIndex", 0.0);
-                      put("minIndex", 0.0);
-
-                    }}
+                Collections.singletonList(
+                    QueryRunnerTestHelper.orderedMap(
+                        "market", null,
+                        "rows", 1L,
+                        "index", 0.0D,
+                        "addRowsIndexConstant", 2.0D,
+                        "uniques", 0.0D,
+                        "maxIndex", 0.0,
+                        "minIndex", 0.0
+                    )
                 )
             )
         )
     );
     List<Result<TopNResultValue>> expectedFilteredTopNResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.<SearchHit>asList()
+                Collections.<SearchHit>emptyList()
             )
         )
     );
 
     List<Result<SearchResultValue>> expectedSearchResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
-                Arrays.<SearchHit>asList()
+                Collections.<SearchHit>emptyList()
             )
         )
     );
@@ -915,13 +915,13 @@ public class SchemalessTestFullTest
 
     List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
                 ImmutableMap.of(
                     TimeBoundaryQuery.MIN_TIME,
-                    new DateTime("2011-01-12T00:00:00.000Z"),
+                    DateTimes.of("2011-01-12T00:00:00.000Z"),
                     TimeBoundaryQuery.MAX_TIME,
-                    new DateTime("2011-01-12T00:00:00.000Z")
+                    DateTimes.of("2011-01-12T00:00:00.000Z")
                 )
             )
         )
@@ -947,7 +947,7 @@ public class SchemalessTestFullTest
   {
     List<Result<TimeseriesResultValue>> expectedTimeseriesResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 1L)
@@ -965,7 +965,7 @@ public class SchemalessTestFullTest
 
     List<Result<TopNResultValue>> expectedTopNResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -986,7 +986,7 @@ public class SchemalessTestFullTest
 
     List<Result<SearchResultValue>> expectedSearchResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
                 Arrays.<SearchHit>asList(
                     new SearchHit(placementishDimension, "a"),
@@ -1000,13 +1000,13 @@ public class SchemalessTestFullTest
 
     List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
                 ImmutableMap.of(
                     TimeBoundaryQuery.MIN_TIME,
-                    new DateTime("2011-01-12T00:00:00.000Z"),
+                    DateTimes.of("2011-01-12T00:00:00.000Z"),
                     TimeBoundaryQuery.MAX_TIME,
-                    new DateTime("2011-01-12T00:00:00.000Z")
+                    DateTimes.of("2011-01-12T00:00:00.000Z")
                 )
             )
         )
@@ -1032,7 +1032,7 @@ public class SchemalessTestFullTest
   {
     List<Result<TimeseriesResultValue>> expectedTimeseriesResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 3L)
@@ -1048,7 +1048,7 @@ public class SchemalessTestFullTest
 
     List<Result<TimeseriesResultValue>> expectedFilteredTimeSeriesResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 1L)
@@ -1064,19 +1064,18 @@ public class SchemalessTestFullTest
 
     List<Result<TopNResultValue>> expectedTopNResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
-                    new HashMap<String, Object>()
-                    {{
-                        put("market", null);
-                        put("rows", 2L);
-                        put("index", 200.0D);
-                        put("addRowsIndexConstant", 203.0D);
-                        put("uniques", 0.0D);
-                        put("maxIndex", 100.0);
-                        put("minIndex", 100.0);
-                      }},
+                    QueryRunnerTestHelper.orderedMap(
+                        "market", null,
+                        "rows", 2L,
+                        "index", 200.0D,
+                        "addRowsIndexConstant", 203.0D,
+                        "uniques", 0.0D,
+                        "maxIndex", 100.0,
+                        "minIndex", 100.0
+                    ),
                     ImmutableMap.<String, Object>builder()
                                 .put("market", "spot")
                                 .put("rows", 1L)
@@ -1093,7 +1092,7 @@ public class SchemalessTestFullTest
 
     List<Result<TopNResultValue>> expectedFilteredTopNResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -1113,7 +1112,7 @@ public class SchemalessTestFullTest
 
     List<Result<SearchResultValue>> expectedSearchResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
                 Arrays.<SearchHit>asList(
                     new SearchHit(placementDimension, "mezzanine")
@@ -1124,7 +1123,7 @@ public class SchemalessTestFullTest
 
     List<Result<SearchResultValue>> expectedFilteredSearchResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
                 Arrays.<SearchHit>asList()
             )
@@ -1133,23 +1132,20 @@ public class SchemalessTestFullTest
 
     List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
                 ImmutableMap.of(
                     TimeBoundaryQuery.MIN_TIME,
-                    new DateTime("2011-01-12T00:00:00.000Z"),
+                    DateTimes.of("2011-01-12T00:00:00.000Z"),
                     TimeBoundaryQuery.MAX_TIME,
-                    new DateTime("2011-01-12T00:00:00.000Z")
+                    DateTimes.of("2011-01-12T00:00:00.000Z")
                 )
             )
         )
     );
 
     runTests(
-        new QueryableIndexSegment(
-            null, SchemalessIndexTest.getMergedIncrementalIndex(new int[]{6, 7, 8})
-        )
-        ,
+        new QueryableIndexSegment(null, SchemalessIndexTest.getMergedIncrementalIndex(new int[]{6, 7, 8})),
         expectedTimeseriesResults,
         expectedFilteredTimeSeriesResults,
         expectedTopNResults,
@@ -1166,7 +1162,7 @@ public class SchemalessTestFullTest
   {
     List<Result<TimeseriesResultValue>> expectedTimeseriesResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 11L)
@@ -1182,7 +1178,7 @@ public class SchemalessTestFullTest
 
     List<Result<TimeseriesResultValue>> expectedFilteredTimeSeriesResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 4L)
@@ -1199,7 +1195,7 @@ public class SchemalessTestFullTest
     /* Uncomment when Druid support for nulls/empty strings is actually consistent
     List<Result<TopNResultValue>> expectedTopNResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -1236,7 +1232,7 @@ public class SchemalessTestFullTest
     */
     List<Result<TopNResultValue>> expectedTopNResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -1273,7 +1269,7 @@ public class SchemalessTestFullTest
 
     List<Result<TopNResultValue>> expectedFilteredTopNResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -1301,7 +1297,7 @@ public class SchemalessTestFullTest
 
     List<Result<SearchResultValue>> expectedSearchResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
                 Arrays.<SearchHit>asList(
                     new SearchHit(placementishDimension, "a"),
@@ -1315,7 +1311,7 @@ public class SchemalessTestFullTest
 
     List<Result<SearchResultValue>> expectedFilteredSearchResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
                 Arrays.<SearchHit>asList(
                     new SearchHit(placementishDimension, "a"),
@@ -1327,13 +1323,13 @@ public class SchemalessTestFullTest
 
     List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
                 ImmutableMap.of(
                     TimeBoundaryQuery.MIN_TIME,
-                    new DateTime("2011-01-12T00:00:00.000Z"),
+                    DateTimes.of("2011-01-12T00:00:00.000Z"),
                     TimeBoundaryQuery.MAX_TIME,
-                    new DateTime("2011-01-13T00:00:00.000Z")
+                    DateTimes.of("2011-01-13T00:00:00.000Z")
                 )
             )
         )
@@ -1358,19 +1354,19 @@ public class SchemalessTestFullTest
     return Arrays.asList(
         new Pair<>(
             SchemalessIndexTest.getIncrementalIndex(index1, index2),
-            String.format("Failed: II[%,d, %,d]", index1, index2)
+            StringUtils.format("Failed: II[%,d, %,d]", index1, index2)
         ),
         new Pair<>(
             SchemalessIndexTest.getIncrementalIndex(index2, index1),
-            String.format("Failed: II[%,d, %,d]", index2, index1)
+            StringUtils.format("Failed: II[%,d, %,d]", index2, index1)
         ),
         new Pair<>(
             SchemalessIndexTest.getMergedIncrementalIndex(index1, index2),
-            String.format("Failed: MII[%,d, %,d]", index1, index2)
+            StringUtils.format("Failed: MII[%,d, %,d]", index1, index2)
         ),
         new Pair<>(
             SchemalessIndexTest.getMergedIncrementalIndex(index2, index1),
-            String.format("Failed: MII[%,d, %,d]", index2, index1)
+            StringUtils.format("Failed: MII[%,d, %,d]", index2, index1)
         )
     );
   }
@@ -1457,7 +1453,7 @@ public class SchemalessTestFullTest
     failMsg += " timeseries ";
     HashMap<String, Object> context = new HashMap<>();
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
@@ -1491,7 +1487,7 @@ public class SchemalessTestFullTest
     failMsg += " filtered timeseries ";
     HashMap<String, Object> context = new HashMap<>();
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
@@ -1524,7 +1520,7 @@ public class SchemalessTestFullTest
     failMsg += " topN ";
     HashMap<String, Object> context = new HashMap<>();
     Iterable<Result<TopNResultValue>> actualResults = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<TopNResultValue>>newArrayList()
     );
 
@@ -1558,7 +1554,7 @@ public class SchemalessTestFullTest
     failMsg += " filtered topN ";
     HashMap<String, Object> context = new HashMap<>();
     Iterable<Result<TopNResultValue>> actualResults = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<TopNResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
@@ -1576,7 +1572,7 @@ public class SchemalessTestFullTest
     failMsg += " search ";
     HashMap<String, Object> context = new HashMap<>();
     Iterable<Result<SearchResultValue>> actualResults = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<SearchResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
@@ -1595,7 +1591,7 @@ public class SchemalessTestFullTest
     failMsg += " filtered search ";
     HashMap<String, Object> context = new HashMap<>();
     Iterable<Result<SearchResultValue>> actualResults = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<SearchResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
@@ -1614,7 +1610,7 @@ public class SchemalessTestFullTest
     failMsg += " timeBoundary ";
     HashMap<String, Object> context = new HashMap<>();
     Iterable<Result<TimeBoundaryResultValue>> actualResults = Sequences.toList(
-        runner.run(query, context),
+        runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<TimeBoundaryResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);

@@ -32,11 +32,11 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.QueryableIndex;
+import io.druid.segment.ReferenceCountingSegment;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.realtime.FireHydrant;
 import io.druid.timeline.DataSegment;
@@ -112,7 +112,13 @@ public class Sink implements Iterable<FireHydrant>
         throw new ISE("hydrant[%s] not the right count[%s]", hydrant, i);
       }
       maxCount = hydrant.getCount();
-      numRowsExcludingCurrIndex.addAndGet(hydrant.getSegment().asQueryableIndex().getNumRows());
+      ReferenceCountingSegment segment = hydrant.getIncrementedSegment();
+      try {
+        numRowsExcludingCurrIndex.addAndGet(segment.asQueryableIndex().getNumRows());
+      }
+      finally {
+        segment.decrement();
+      }
     }
     this.hydrants.addAll(hydrants);
 
@@ -228,7 +234,7 @@ public class Sink implements Iterable<FireHydrant>
   public int getNumRows()
   {
     synchronized (hydrantLock) {
-      return numRowsExcludingCurrIndex.get() + currHydrant.getIndex().size();
+      return numRowsExcludingCurrIndex.get() + getNumRowsInMemory();
     }
   }
 
@@ -254,7 +260,11 @@ public class Sink implements Iterable<FireHydrant>
         .withMetrics(schema.getAggregators())
         .withRollup(schema.getGranularitySpec().isRollup())
         .build();
-    final IncrementalIndex newIndex = new OnheapIncrementalIndex(indexSchema, reportParseExceptions, maxRowsInMemory);
+    final IncrementalIndex newIndex = new IncrementalIndex.Builder()
+        .setIndexSchema(indexSchema)
+        .setReportParseExceptions(reportParseExceptions)
+        .setMaxRowCount(maxRowsInMemory)
+        .buildOnheap();
 
     final FireHydrant old;
     synchronized (hydrantLock) {
@@ -269,10 +279,16 @@ public class Sink implements Iterable<FireHydrant>
             Map<String, ColumnCapabilitiesImpl> oldCapabilities;
             if (lastHydrant.hasSwapped()) {
               oldCapabilities = Maps.newHashMap();
-              QueryableIndex oldIndex = lastHydrant.getSegment().asQueryableIndex();
-              for (String dim : oldIndex.getAvailableDimensions()) {
-                dimOrder.add(dim);
-                oldCapabilities.put(dim, (ColumnCapabilitiesImpl) oldIndex.getColumn(dim).getCapabilities());
+              ReferenceCountingSegment segment = lastHydrant.getIncrementedSegment();
+              try {
+                QueryableIndex oldIndex = segment.asQueryableIndex();
+                for (String dim : oldIndex.getAvailableDimensions()) {
+                  dimOrder.add(dim);
+                  oldCapabilities.put(dim, (ColumnCapabilitiesImpl) oldIndex.getColumn(dim).getCapabilities());
+                }
+              }
+              finally {
+                segment.decrement();
               }
             } else {
               IncrementalIndex oldIndex = lastHydrant.getIndex();

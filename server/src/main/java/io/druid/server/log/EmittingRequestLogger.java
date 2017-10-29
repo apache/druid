@@ -50,7 +50,16 @@ public class EmittingRequestLogger implements RequestLogger
     emitter.emit(new RequestLogEventBuilder(feed, requestLogLine));
   }
 
-  private static class RequestLogEvent implements Event
+  @Override
+  public String toString()
+  {
+    return "EmittingRequestLogger{" +
+           "emitter=" + emitter +
+           ", feed='" + feed + '\'' +
+           '}';
+  }
+
+  public static class RequestLogEvent implements Event
   {
     final ImmutableMap<String, String> serviceDimensions;
     final String feed;
@@ -66,7 +75,7 @@ public class EmittingRequestLogger implements RequestLogger
     @Override
     // override JsonValue serialization, instead use annotations
     // to include type information for polymorphic Query objects
-    @JsonValue(value=false)
+    @JsonValue(value = false)
     public Map<String, Object> toMap()
     {
       return ImmutableMap.of();

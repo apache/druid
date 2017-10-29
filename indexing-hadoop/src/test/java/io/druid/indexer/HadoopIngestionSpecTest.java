@@ -30,12 +30,12 @@ import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import io.druid.indexer.updater.MetadataStorageUpdaterJobSpec;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.joda.time.DateTimeZone;
-import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
@@ -78,7 +78,7 @@ public class HadoopIngestionSpecTest
 
     Assert.assertEquals(
         "getIntervals",
-        Lists.newArrayList(new Interval("2012-01-01/P1D")),
+        Lists.newArrayList(Intervals.of("2012-01-01/P1D")),
         granularitySpec.getIntervals().get()
     );
 

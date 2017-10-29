@@ -20,6 +20,7 @@
 package io.druid.common.utils;
 
 import com.google.common.collect.ImmutableMap;
+import io.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.util.Map;
@@ -46,6 +47,6 @@ public class ServletResourceUtils
    */
   public static Map<String, String> jsonize(String msgFormat, Object... args)
   {
-    return ImmutableMap.of("error", StringUtils.safeFormat(msgFormat, args));
+    return ImmutableMap.of("error", StringUtils.nonStrictFormat(msgFormat, args));
   }
 }

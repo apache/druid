@@ -37,7 +37,7 @@ public class SegmentChangeRequestsSnapshot
   private final String resetCause;
 
   //segments requests delta since counter, if resetCounter if false
-  private final SegmentChangeRequestHistory.Counter  counter;
+  private final SegmentChangeRequestHistory.Counter counter;
   private final List<DataSegmentChangeRequest> requests;
 
   @JsonCreator

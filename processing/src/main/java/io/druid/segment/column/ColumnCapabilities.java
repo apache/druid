@@ -23,13 +23,13 @@ package io.druid.segment.column;
  */
 public interface ColumnCapabilities
 {
-  public ValueType getType();
+  ValueType getType();
 
-  public boolean isDictionaryEncoded();
-  public boolean isRunLengthEncoded();
-  public boolean hasBitmapIndexes();
-  public boolean hasSpatialIndexes();
-  public boolean hasMultipleValues();
+  boolean isDictionaryEncoded();
+  boolean isRunLengthEncoded();
+  boolean hasBitmapIndexes();
+  boolean hasSpatialIndexes();
+  boolean hasMultipleValues();
 
-  public ColumnCapabilitiesImpl merge(ColumnCapabilities other);
+  ColumnCapabilitiesImpl merge(ColumnCapabilities other);
 }

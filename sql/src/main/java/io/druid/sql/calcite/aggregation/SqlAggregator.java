@@ -19,12 +19,11 @@
 
 package io.druid.sql.calcite.aggregation;
 
-import io.druid.query.filter.DimFilter;
-import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.sql.SqlAggFunction;
 
 import javax.annotation.Nullable;
@@ -43,29 +42,28 @@ public interface SqlAggregator
   SqlAggFunction calciteFunction();
 
   /**
-   * Returns Druid Aggregation corresponding to a SQL {@link AggregateCall}.
+   * Returns a Druid Aggregation corresponding to a SQL {@link AggregateCall}. This method should ignore filters;
+   * they will be applied to your aggregator in a later step.
    *
-   * @param name                 desired output name of the aggregation
-   * @param rowSignature         signature of the rows being aggregated
-   * @param operatorTable        Operator table that can be used to convert sub-expressions
    * @param plannerContext       SQL planner context
+   * @param rowSignature         signature of the rows being aggregated
+   * @param rexBuilder           a rexBuilder, in case you need one
+   * @param name                 desired output name of the aggregation
+   * @param aggregateCall        aggregate call object
+   * @param project              project that should be applied before aggregation; may be null
    * @param existingAggregations existing aggregations for this query; useful for re-using aggregations. May be safely
    *                             ignored if you do not want to re-use existing aggregations.
-   * @param project              SQL projection to apply before the aggregate call, may be null
-   * @param aggregateCall        SQL aggregate call
-   * @param filter               filter that should be applied to the aggregation, may be null
    *
    * @return aggregation, or null if the call cannot be translated
    */
   @Nullable
   Aggregation toDruidAggregation(
-      final String name,
-      final RowSignature rowSignature,
-      final DruidOperatorTable operatorTable,
-      final PlannerContext plannerContext,
-      final List<Aggregation> existingAggregations,
-      final Project project,
-      final AggregateCall aggregateCall,
-      final DimFilter filter
+      PlannerContext plannerContext,
+      RowSignature rowSignature,
+      RexBuilder rexBuilder,
+      String name,
+      AggregateCall aggregateCall,
+      Project project,
+      List<Aggregation> existingAggregations
   );
 }

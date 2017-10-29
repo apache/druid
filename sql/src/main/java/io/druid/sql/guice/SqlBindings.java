@@ -22,7 +22,7 @@ package io.druid.sql.guice;
 import com.google.inject.Binder;
 import com.google.inject.multibindings.Multibinder;
 import io.druid.sql.calcite.aggregation.SqlAggregator;
-import io.druid.sql.calcite.expression.SqlExtractionOperator;
+import io.druid.sql.calcite.expression.SqlOperatorConversion;
 
 public class SqlBindings
 {
@@ -31,16 +31,14 @@ public class SqlBindings
       final Class<? extends SqlAggregator> aggregatorClass
   )
   {
-    final Multibinder<SqlAggregator> setBinder = Multibinder.newSetBinder(binder, SqlAggregator.class);
-    setBinder.addBinding().to(aggregatorClass);
+    Multibinder.newSetBinder(binder, SqlAggregator.class).addBinding().to(aggregatorClass);
   }
 
-  public static void addExtractionOperator(
+  public static void addOperatorConversion(
       final Binder binder,
-      final Class<? extends SqlExtractionOperator> clazz
+      final Class<? extends SqlOperatorConversion> clazz
   )
   {
-    final Multibinder<SqlExtractionOperator> setBinder = Multibinder.newSetBinder(binder, SqlExtractionOperator.class);
-    setBinder.addBinding().to(clazz);
+    Multibinder.newSetBinder(binder, SqlOperatorConversion.class).addBinding().to(clazz);
   }
 }

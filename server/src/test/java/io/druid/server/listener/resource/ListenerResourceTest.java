@@ -29,8 +29,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteSource;
 
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.StringUtils;
 
+import io.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;

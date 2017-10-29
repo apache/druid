@@ -83,7 +83,7 @@ public class SketchEstimatePostAggregator implements PostAggregator
   @Override
   public Object compute(Map<String, Object> combinedAggregators)
   {
-    SketchHolder holder = (SketchHolder)field.compute(combinedAggregators);
+    SketchHolder holder = (SketchHolder) field.compute(combinedAggregators);
     if (errorBoundsStdDev != null) {
       return holder.getEstimateWithErrorBounds(errorBoundsStdDev);
     } else {

@@ -27,6 +27,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
 
@@ -62,13 +65,13 @@ public class OrderByColumnSpec
     @Override
     public String toString()
     {
-      return this.name().toLowerCase();
+      return StringUtils.toLowerCase(this.name());
     }
 
     @JsonCreator
     public static Direction fromString(String name)
     {
-      final String upperName = name.toUpperCase();
+      final String upperName = StringUtils.toUpperCase(name);
       Direction direction = stupidEnumMap.get(upperName);
 
       if (direction == null) {
@@ -150,10 +153,53 @@ public class OrderByColumnSpec
     );
   }
 
-  public OrderByColumnSpec(
-      String dimension,
-      Direction direction
-  )
+  public static OrderByColumnSpec getOrderByForDimName(List<OrderByColumnSpec> orderBys, String dimName)
+  {
+    for (OrderByColumnSpec orderBy : orderBys) {
+      if (orderBy.dimension.equals(dimName)) {
+        return orderBy;
+      }
+    }
+    return null;
+  }
+
+  public static int getDimIndexForOrderBy(OrderByColumnSpec orderSpec, List<DimensionSpec> dimensions)
+  {
+    int i = 0;
+    for (DimensionSpec dimSpec : dimensions) {
+      if (orderSpec.getDimension().equals((dimSpec.getOutputName()))) {
+        return i;
+      }
+      i++;
+    }
+    return -1;
+  }
+
+  public static int getAggIndexForOrderBy(OrderByColumnSpec orderSpec, List<AggregatorFactory> aggregatorFactories)
+  {
+    int i = 0;
+    for (AggregatorFactory agg : aggregatorFactories) {
+      if (orderSpec.getDimension().equals((agg.getName()))) {
+        return i;
+      }
+      i++;
+    }
+    return -1;
+  }
+
+  public static int getPostAggIndexForOrderBy(OrderByColumnSpec orderSpec, List<PostAggregator> postAggs)
+  {
+    int i = 0;
+    for (PostAggregator postAgg : postAggs) {
+      if (orderSpec.getDimension().equals((postAgg.getName()))) {
+        return i;
+      }
+      i++;
+    }
+    return -1;
+  }
+
+  public OrderByColumnSpec(String dimension, Direction direction)
   {
     this(dimension, direction, null);
   }

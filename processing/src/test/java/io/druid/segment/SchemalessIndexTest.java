@@ -26,12 +26,14 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -39,8 +41,8 @@ import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
@@ -49,6 +51,7 @@ import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.ShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -86,7 +89,7 @@ public class SchemalessIndexTest
   private static final Map<Integer, Map<Integer, QueryableIndex>> mergedIndexes = Maps.newHashMap();
   private static final List<QueryableIndex> rowPersistedIndexes = Lists.newArrayList();
 
-  private static final IndexMerger INDEX_MERGER = TestHelper.getTestIndexMerger();
+  private static final IndexMerger INDEX_MERGER = TestHelper.getTestIndexMergerV9();
   private static final IndexIO INDEX_IO = TestHelper.getTestIndexIO();
 
   private static IncrementalIndex index = null;
@@ -138,10 +141,19 @@ public class SchemalessIndexTest
           continue;
         }
 
-        final long timestamp = new DateTime(event.get(TIMESTAMP)).getMillis();
+        final long timestamp = new DateTime(event.get(TIMESTAMP), ISOChronology.getInstanceUTC()).getMillis();
 
         if (theIndex == null) {
-          theIndex = new OnheapIncrementalIndex(timestamp, Granularities.MINUTE, METRIC_AGGS, 1000);
+          theIndex = new IncrementalIndex.Builder()
+              .setIndexSchema(
+                  new IncrementalIndexSchema.Builder()
+                      .withMinTimestamp(timestamp)
+                      .withQueryGranularity(Granularities.MINUTE)
+                      .withMetrics(METRIC_AGGS)
+                      .build()
+              )
+              .setMaxRowCount(1000)
+              .buildOnheap();
         }
 
         final List<String> dims = Lists.newArrayList();
@@ -277,15 +289,13 @@ public class SchemalessIndexTest
         mergedFile.deleteOnExit();
 
         List<QueryableIndex> indexesToMerge = Lists.newArrayList();
-        for (int i = 0; i < indexes.length; i++) {
-          indexesToMerge.add(rowPersistedIndexes.get(indexes[i]));
+        for (int index : indexes) {
+          indexesToMerge.add(rowPersistedIndexes.get(index));
         }
 
-        QueryableIndex index = INDEX_IO.loadIndex(
+        return INDEX_IO.loadIndex(
             INDEX_MERGER.mergeQueryableIndex(indexesToMerge, true, METRIC_AGGS, mergedFile, indexSpec)
         );
-
-        return index;
       }
       catch (IOException e) {
         throw Throwables.propagate(e);
@@ -342,7 +352,7 @@ public class SchemalessIndexTest
 
         for (final Map<String, Object> event : events) {
 
-          final long timestamp = new DateTime(event.get(TIMESTAMP)).getMillis();
+          final long timestamp = new DateTime(event.get(TIMESTAMP), ISOChronology.getInstanceUTC()).getMillis();
           final List<String> dims = Lists.newArrayList();
           for (Map.Entry<String, Object> entry : event.entrySet()) {
             if (!entry.getKey().equalsIgnoreCase(TIMESTAMP) && !METRICS.contains(entry.getKey())) {
@@ -350,9 +360,16 @@ public class SchemalessIndexTest
             }
           }
 
-          final IncrementalIndex rowIndex = new OnheapIncrementalIndex(
-              timestamp, Granularities.MINUTE, METRIC_AGGS, 1000
-          );
+          final IncrementalIndex rowIndex = new IncrementalIndex.Builder()
+              .setIndexSchema(
+                  new IncrementalIndexSchema.Builder()
+                      .withMinTimestamp(timestamp)
+                      .withQueryGranularity(Granularities.MINUTE)
+                      .withMetrics(METRIC_AGGS)
+                      .build()
+              )
+              .setMaxRowCount(1000)
+              .buildOnheap();
 
           rowIndex.add(
               new MapBasedInputRow(timestamp, dims, event)
@@ -373,16 +390,23 @@ public class SchemalessIndexTest
     }
   }
 
-  private static IncrementalIndex makeIncrementalIndex(final String resourceFilename, AggregatorFactory[] aggs)
+  public static IncrementalIndex makeIncrementalIndex(final String resourceFilename, AggregatorFactory[] aggs)
   {
     URL resource = TestIndex.class.getClassLoader().getResource(resourceFilename);
     log.info("Realtime loading resource[%s]", resource);
     String filename = resource.getFile();
     log.info("Realtime loading index file[%s]", filename);
 
-    final IncrementalIndex retVal = new OnheapIncrementalIndex(
-        new DateTime("2011-01-12T00:00:00.000Z").getMillis(), Granularities.MINUTE, aggs, 1000
-    );
+    final IncrementalIndex retVal = new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withMinTimestamp(DateTimes.of("2011-01-12T00:00:00.000Z").getMillis())
+                .withQueryGranularity(Granularities.MINUTE)
+                .withMetrics(aggs)
+                .build()
+        )
+        .setMaxRowCount(1000)
+        .buildOnheap();
 
     try {
       final List<Object> events = jsonMapper.readValue(new File(filename), List.class);
@@ -398,7 +422,7 @@ public class SchemalessIndexTest
 
         retVal.add(
             new MapBasedInputRow(
-                new DateTime(event.get(TIMESTAMP)).getMillis(),
+                new DateTime(event.get(TIMESTAMP), ISOChronology.getInstanceUTC()).getMillis(),
                 dims,
                 event
             )
@@ -444,7 +468,7 @@ public class SchemalessIndexTest
       List<File> filesToMap = makeFilesToMap(tmpFile, files);
 
       VersionedIntervalTimeline<Integer, File> timeline = new VersionedIntervalTimeline<Integer, File>(
-          Ordering.natural().nullsFirst()
+          Comparators.naturalNullsFirst()
       );
 
       ShardSpec noneShardSpec = NoneShardSpec.instance();
@@ -457,7 +481,7 @@ public class SchemalessIndexTest
           Iterables.concat(
               // TimelineObjectHolder is actually an iterable of iterable of indexable adapters
               Iterables.transform(
-                  timeline.lookup(new Interval("1000-01-01/3000-01-01")),
+                  timeline.lookup(Intervals.of("1000-01-01/3000-01-01")),
                   new Function<TimelineObjectHolder<Integer, File>, Iterable<IndexableAdapter>>()
                   {
                     @Override

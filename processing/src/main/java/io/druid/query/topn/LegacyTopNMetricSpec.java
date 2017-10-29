@@ -28,7 +28,7 @@ import java.util.Map;
  */
 public class LegacyTopNMetricSpec extends NumericTopNMetricSpec
 {
-  private static final String convertValue(Object metric)
+  private static String convertValue(Object metric)
   {
     final String retVal;
 

@@ -98,6 +98,12 @@ public class CardinalityBufferAggregator implements BufferAggregator
   }
 
   @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("CardinalityBufferAggregators does not support getDouble()");
+  }
+
+  @Override
   public void close()
   {
     // no resources to cleanup

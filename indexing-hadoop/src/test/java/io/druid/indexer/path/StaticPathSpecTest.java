@@ -70,7 +70,7 @@ public class StaticPathSpecTest
     sb.append("{\"paths\" : \"");
     sb.append(path);
     sb.append("\",");
-    if(inputFormat != null) {
+    if (inputFormat != null) {
       sb.append("\"inputFormat\" : \"");
       sb.append(inputFormat.getName());
       sb.append("\",");

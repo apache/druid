@@ -20,7 +20,6 @@
 package io.druid.data.input.impl;
 
 import com.google.common.collect.Lists;
-
 import io.druid.java.util.common.parsers.Parser;
 import junit.framework.Assert;
 import org.junit.Test;

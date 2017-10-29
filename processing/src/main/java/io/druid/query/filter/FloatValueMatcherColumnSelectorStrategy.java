@@ -20,14 +20,15 @@
 package io.druid.query.filter;
 
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.BaseFloatColumnValueSelector;
 import io.druid.segment.DimensionHandlerUtils;
-import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.filter.BooleanValueMatcher;
 
-public class FloatValueMatcherColumnSelectorStrategy implements ValueMatcherColumnSelectorStrategy<FloatColumnSelector>
+public class FloatValueMatcherColumnSelectorStrategy
+    implements ValueMatcherColumnSelectorStrategy<BaseFloatColumnValueSelector>
 {
   @Override
-  public ValueMatcher makeValueMatcher(final FloatColumnSelector selector, final String value)
+  public ValueMatcher makeValueMatcher(final BaseFloatColumnValueSelector selector, final String value)
   {
     final Float matchVal = DimensionHandlerUtils.convertObjectToFloat(value);
     if (matchVal == null) {
@@ -40,7 +41,7 @@ public class FloatValueMatcherColumnSelectorStrategy implements ValueMatcherColu
       @Override
       public boolean matches()
       {
-        return Float.floatToIntBits(selector.get()) == matchValIntBits;
+        return Float.floatToIntBits(selector.getFloat()) == matchValIntBits;
       }
 
       @Override
@@ -53,7 +54,8 @@ public class FloatValueMatcherColumnSelectorStrategy implements ValueMatcherColu
 
   @Override
   public ValueMatcher makeValueMatcher(
-      final FloatColumnSelector selector, DruidPredicateFactory predicateFactory
+      final BaseFloatColumnValueSelector selector,
+      DruidPredicateFactory predicateFactory
   )
   {
     final DruidFloatPredicate predicate = predicateFactory.makeFloatPredicate();
@@ -62,7 +64,7 @@ public class FloatValueMatcherColumnSelectorStrategy implements ValueMatcherColu
       @Override
       public boolean matches()
       {
-        return predicate.applyFloat(selector.get());
+        return predicate.applyFloat(selector.getFloat());
       }
 
       @Override
@@ -75,14 +77,14 @@ public class FloatValueMatcherColumnSelectorStrategy implements ValueMatcherColu
   }
 
   @Override
-  public ValueGetter makeValueGetter(final FloatColumnSelector selector)
+  public ValueGetter makeValueGetter(final BaseFloatColumnValueSelector selector)
   {
     return new ValueGetter()
     {
       @Override
       public String[] get()
       {
-        return new String[]{ Float.toString(selector.get()) };
+        return new String[]{Float.toString(selector.getFloat())};
       }
     };
   }

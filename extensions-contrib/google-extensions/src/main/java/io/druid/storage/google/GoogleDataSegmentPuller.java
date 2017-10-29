@@ -62,7 +62,7 @@ public class GoogleDataSegmentPuller implements DataSegmentPuller, URIDataPuller
   public FileUtils.FileCopyResult getSegmentFiles(final String bucket, final String path, File outDir)
       throws SegmentLoadingException
   {
-    LOG.info("Pulling index at path[%s] to outDir[%s]", bucket, path, outDir.getAbsolutePath());
+    LOG.info("Pulling index at bucket[%s] path[%s] to outDir[%s]", bucket, path, outDir.getAbsolutePath());
 
     try {
       prepareOutDir(outDir);
@@ -72,7 +72,7 @@ public class GoogleDataSegmentPuller implements DataSegmentPuller, URIDataPuller
           byteSource,
           outDir,
           GoogleUtils.GOOGLE_RETRY,
-          true
+          false
       );
       LOG.info("Loaded %d bytes from [%s] to [%s]", result.size(), path, outDir.getAbsolutePath());
       return result;

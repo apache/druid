@@ -19,6 +19,7 @@
 
 package io.druid.common.utils;
 
+import io.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 

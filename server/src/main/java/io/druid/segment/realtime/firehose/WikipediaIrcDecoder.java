@@ -102,38 +102,43 @@ class WikipediaIrcDecoder implements IrcDecoder
     }
   }
 
-  private DatabaseReader openDefaultGeoIpDb() {
+  private DatabaseReader openDefaultGeoIpDb()
+  {
     File geoDb = new File(System.getProperty("java.io.tmpdir"),
                           this.getClass().getCanonicalName() + ".GeoLite2-City.mmdb");
     try {
       return openDefaultGeoIpDb(geoDb);
     }
     catch (RuntimeException e) {
-      log.warn(e.getMessage()+" Attempting to re-download.", e);
+      log.warn(e.getMessage() + " Attempting to re-download.", e);
       if (geoDb.exists() && !geoDb.delete()) {
-        throw new RuntimeException("Could not delete geo db file ["+ geoDb.getAbsolutePath() +"].");
+        throw new RuntimeException("Could not delete geo db file [" + geoDb.getAbsolutePath() + "].");
       }
       // local download may be corrupt, will retry once.
       return openDefaultGeoIpDb(geoDb);
     }
   }
 
-  private DatabaseReader openDefaultGeoIpDb(File geoDb) {
+  private DatabaseReader openDefaultGeoIpDb(File geoDb)
+  {
     downloadGeoLiteDbToFile(geoDb);
     return openGeoIpDb(geoDb);
   }
 
-  private DatabaseReader openGeoIpDb(File geoDb) {
+  private DatabaseReader openGeoIpDb(File geoDb)
+  {
     try {
       DatabaseReader reader = new DatabaseReader(geoDb);
       log.info("Using geo ip database at [%s].", geoDb);
       return reader;
-    } catch (IOException e) {
-      throw new RuntimeException("Could not open geo db at ["+ geoDb.getAbsolutePath() +"].", e);
+    }
+    catch (IOException e) {
+      throw new RuntimeException("Could not open geo db at [" + geoDb.getAbsolutePath() + "].", e);
     }
   }
 
-  private void downloadGeoLiteDbToFile(File geoDb) {
+  private void downloadGeoLiteDbToFile(File geoDb)
+  {
     if (geoDb.exists()) {
       return;
     }
@@ -144,14 +149,14 @@ class WikipediaIrcDecoder implements IrcDecoder
       File tmpFile = File.createTempFile("druid", "geo");
 
       FileUtils.copyInputStreamToFile(
-        new GZIPInputStream(
-          new URL("http://geolite.maxmind.com/download/geoip/database/GeoLite2-City.mmdb.gz").openStream()
-        ),
-        tmpFile
+          new GZIPInputStream(
+              new URL("http://geolite.maxmind.com/download/geoip/database/GeoLite2-City.mmdb.gz").openStream()
+          ),
+          tmpFile
       );
 
       if (!tmpFile.renameTo(geoDb)) {
-        throw new RuntimeException("Unable to move geo file to ["+geoDb.getAbsolutePath()+"]!");
+        throw new RuntimeException("Unable to move geo file to [" + geoDb.getAbsolutePath() + "]!");
       }
     }
     catch (IOException e) {
@@ -278,17 +283,10 @@ class WikipediaIrcDecoder implements IrcDecoder
         return dimensions.get(dimension);
       }
 
-
       @Override
-      public float getFloatMetric(String metric)
+      public Number getMetric(String metric)
       {
         return metrics.get(metric);
-      }
-
-      @Override
-      public long getLongMetric(String metric)
-      {
-        return new Float(metrics.get(metric)).longValue();
       }
 
       @Override

@@ -19,13 +19,11 @@
 
 package io.druid.query.aggregation.datasketches.theta;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Longs;
 import com.yahoo.memory.Memory;
-import com.yahoo.memory.NativeMemory;
 import com.yahoo.sketches.Family;
 import com.yahoo.sketches.theta.AnotB;
 import com.yahoo.sketches.theta.Intersection;
@@ -35,6 +33,7 @@ import com.yahoo.sketches.theta.Sketches;
 import com.yahoo.sketches.theta.Union;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import org.apache.commons.codec.binary.Base64;
 
 import java.util.Comparator;
@@ -171,7 +170,7 @@ public class SketchHolder
     return result;
   }
 
-  public static Object combine(Object o1, Object o2, int nomEntries)
+  public static SketchHolder combine(Object o1, Object o2, int nomEntries)
   {
     SketchHolder holder1 = (SketchHolder) o1;
     SketchHolder holder2 = (SketchHolder) o2;
@@ -187,14 +186,14 @@ public class SketchHolder
       holder2.invalidateCache();
       return holder2;
     } else {
-      Union union = (Union) SetOperation.builder().build(nomEntries, Family.UNION);
+      Union union = (Union) SetOperation.builder().setNominalEntries(nomEntries).build(Family.UNION);
       holder1.updateUnion(union);
       holder2.updateUnion(union);
       return SketchHolder.of(union);
     }
   }
 
-  private void invalidateCache()
+  void invalidateCache()
   {
     cachedEstimate = null;
     cachedSketch = null;
@@ -222,16 +221,12 @@ public class SketchHolder
 
   private static Sketch deserializeFromBase64EncodedString(String str)
   {
-    return deserializeFromByteArray(
-        Base64.decodeBase64(
-            str.getBytes(Charsets.UTF_8)
-        )
-    );
+    return deserializeFromByteArray(Base64.decodeBase64(StringUtils.toUtf8(str)));
   }
 
   private static Sketch deserializeFromByteArray(byte[] data)
   {
-    return deserializeFromMemory(new NativeMemory(data));
+    return deserializeFromMemory(Memory.wrap(data));
   }
 
   private static Sketch deserializeFromMemory(Memory mem)
@@ -243,7 +238,7 @@ public class SketchHolder
     }
   }
 
-  public static enum Func
+  public enum Func
   {
     UNION,
     INTERSECT,
@@ -259,13 +254,13 @@ public class SketchHolder
     //the final stages of query processing, ordered sketch would be of no use.
     switch (func) {
       case UNION:
-        Union union = (Union) SetOperation.builder().build(sketchSize, Family.UNION);
+        Union union = (Union) SetOperation.builder().setNominalEntries(sketchSize).build(Family.UNION);
         for (Object o : holders) {
           ((SketchHolder) o).updateUnion(union);
         }
         return SketchHolder.of(union);
       case INTERSECT:
-        Intersection intersection = (Intersection) SetOperation.builder().build(sketchSize, Family.INTERSECTION);
+        Intersection intersection = (Intersection) SetOperation.builder().setNominalEntries(sketchSize).build(Family.INTERSECTION);
         for (Object o : holders) {
           intersection.update(((SketchHolder) o).getSketch());
         }
@@ -281,7 +276,7 @@ public class SketchHolder
 
         Sketch result = ((SketchHolder) holders[0]).getSketch();
         for (int i = 1; i < holders.length; i++) {
-          AnotB anotb = (AnotB) SetOperation.builder().build(sketchSize, Family.A_NOT_B);
+          AnotB anotb = (AnotB) SetOperation.builder().setNominalEntries(sketchSize).build(Family.A_NOT_B);
           anotb.update(result, ((SketchHolder) holders[i]).getSketch());
           result = anotb.getResult(false, null);
         }

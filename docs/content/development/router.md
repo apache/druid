@@ -49,7 +49,6 @@ druid.host=#{IP_ADDR}:8080
 druid.port=8080
 druid.service=druid/router
 
-druid.processing.numThreads=1
 druid.router.defaultBrokerServiceName=druid:broker-cold
 druid.router.coordinatorServiceName=druid:coordinator
 druid.router.tierToBrokerMap={"hot":"druid:broker-hot","_default_tier":"druid:broker-cold"}

@@ -21,11 +21,15 @@ package io.druid.query.extraction;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.guice.annotations.ExtensionPoint;
+import io.druid.java.util.common.Cacheable;
 import io.druid.query.lookup.LookupExtractionFn;
-import io.druid.query.lookup.RegisteredLookupExtractionFn;
+
+import javax.annotation.Nullable;
 
 /**
  */
+@ExtensionPoint
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "time", value = TimeDimExtractionFn.class),
@@ -36,7 +40,6 @@ import io.druid.query.lookup.RegisteredLookupExtractionFn;
     @JsonSubTypes.Type(name = "timeFormat", value = TimeFormatExtractionFn.class),
     @JsonSubTypes.Type(name = "identity", value = IdentityExtractionFn.class),
     @JsonSubTypes.Type(name = "lookup", value = LookupExtractionFn.class),
-    @JsonSubTypes.Type(name = "registeredLookup", value = RegisteredLookupExtractionFn.class),
     @JsonSubTypes.Type(name = "substring", value = SubstringDimExtractionFn.class),
     @JsonSubTypes.Type(name = "cascade", value = CascadeExtractionFn.class),
     @JsonSubTypes.Type(name = "stringFormat", value = StringFormatExtractionFn.class),
@@ -53,16 +56,8 @@ import io.druid.query.lookup.RegisteredLookupExtractionFn;
  * regular expression with a capture group.  When the regular expression matches the value of a dimension,
  * the value captured by the group is used for grouping operations instead of the dimension value.
  */
-public interface ExtractionFn
+public interface ExtractionFn extends Cacheable
 {
-  /**
-   * Returns a byte[] unique to all concrete implementations of DimExtractionFn.  This byte[] is used to
-   * generate a cache key for the specific query.
-   *
-   * @return a byte[] unit to all concrete implements of DimExtractionFn
-   */
-  public byte[] getCacheKey();
-
   /**
    * The "extraction" function.  This should map an Object into some String value.
    * <p>
@@ -75,7 +70,8 @@ public interface ExtractionFn
    *
    * @return a value that should be used instead of the original
    */
-  public String apply(Object value);
+  @Nullable
+  String apply(@Nullable Object value);
 
   /**
    * The "extraction" function.  This should map a String value into some other String value.
@@ -87,7 +83,8 @@ public interface ExtractionFn
    *
    * @return a value that should be used instead of the original
    */
-  public String apply(String value);
+  @Nullable
+  String apply(@Nullable String value);
 
   /**
    * The "extraction" function.  This should map a long value into some String value.
@@ -99,7 +96,7 @@ public interface ExtractionFn
    *
    * @return a value that should be used instead of the original
    */
-  public String apply(long value);
+  String apply(long value);
 
   /**
    * Offers information on whether the extraction will preserve the original ordering of the values.
@@ -109,19 +106,18 @@ public interface ExtractionFn
    *
    * @return true if ordering is preserved, false otherwise
    */
-  public boolean preservesOrdering();
+  boolean preservesOrdering();
 
   /**
    * A dim extraction can be of one of two types, renaming or rebucketing. In the `ONE_TO_ONE` case, a unique values is
    * modified into another unique value. In the `MANY_TO_ONE` case, there is no longer a 1:1 relation between old dimension
    * value and new dimension value
    *
-   * @return {@link io.druid.query.extraction.ExtractionFn.ExtractionType} declaring what kind of manipulation this
-   * function does
+   * @return {@link ExtractionFn.ExtractionType} declaring what kind of manipulation this function does
    */
-  public ExtractionType getExtractionType();
+  ExtractionType getExtractionType();
 
-  public static enum ExtractionType
+  enum ExtractionType
   {
     MANY_TO_ONE, ONE_TO_ONE
   }

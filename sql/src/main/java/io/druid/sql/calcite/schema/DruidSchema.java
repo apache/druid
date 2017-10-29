@@ -20,100 +20,157 @@
 package io.druid.sql.calcite.schema;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.client.DirectDruidClient;
-import io.druid.client.DruidDataSource;
-import io.druid.client.DruidServer;
 import io.druid.client.ServerView;
 import io.druid.client.TimelineServerView;
-import io.druid.common.utils.JodaUtils;
 import io.druid.guice.ManageLifecycle;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.guava.Yielder;
+import io.druid.java.util.common.guava.Yielders;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
-import io.druid.query.QueryPlus;
-import io.druid.query.QuerySegmentWalker;
 import io.druid.query.TableDataSource;
+import io.druid.query.metadata.metadata.AllColumnIncluderator;
 import io.druid.query.metadata.metadata.ColumnAnalysis;
 import io.druid.query.metadata.metadata.SegmentAnalysis;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
+import io.druid.query.spec.MultipleSpecificSegmentSpec;
 import io.druid.segment.column.ValueType;
+import io.druid.server.QueryLifecycleFactory;
 import io.druid.server.coordination.DruidServerMetadata;
-import io.druid.server.initialization.ServerConfig;
+import io.druid.server.security.AuthenticationResult;
+import io.druid.server.security.Authenticator;
+import io.druid.server.security.AuthenticatorMapper;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.table.DruidTable;
 import io.druid.sql.calcite.table.RowSignature;
 import io.druid.sql.calcite.view.DruidViewMacro;
 import io.druid.sql.calcite.view.ViewManager;
 import io.druid.timeline.DataSegment;
-import org.apache.calcite.schema.Function;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
-import org.joda.time.DateTime;
 
+import java.io.IOException;
+import java.util.Comparator;
 import java.util.EnumSet;
-import java.util.List;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 @ManageLifecycle
 public class DruidSchema extends AbstractSchema
 {
+  // Newest segments first, so they override older ones.
+  private static final Comparator<DataSegment> SEGMENT_ORDER = Comparator
+      .comparing((DataSegment segment) -> segment.getInterval().getStart()).reversed()
+      .thenComparing(Function.identity());
+
   public static final String NAME = "druid";
 
   private static final EmittingLogger log = new EmittingLogger(DruidSchema.class);
+  private static final int MAX_SEGMENTS_PER_QUERY = 15000;
 
-  private final QuerySegmentWalker walker;
+  private final QueryLifecycleFactory queryLifecycleFactory;
   private final TimelineServerView serverView;
   private final PlannerConfig config;
   private final ViewManager viewManager;
   private final ExecutorService cacheExec;
-  private final ConcurrentMap<String, Table> tables;
-  private final ServerConfig serverConfig;
+  private final ConcurrentMap<String, DruidTable> tables;
 
   // For awaitInitialization.
   private final CountDownLatch initializationLatch = new CountDownLatch(1);
 
-  // Protects access to dataSourcesNeedingRefresh, lastRefresh, isServerViewInitialized
+  // Protects access to segmentSignatures, mutableSegments, segmentsNeedingRefresh, lastRefresh, isServerViewInitialized
   private final Object lock = new Object();
 
-  // List of dataSources that need metadata refreshes.
-  private final Set<String> dataSourcesNeedingRefresh = Sets.newHashSet();
+  // DataSource -> Segment -> RowSignature for that segment.
+  // Use TreeMap for segments so they are merged in deterministic order, from older to newer.
+  private final Map<String, TreeMap<DataSegment, RowSignature>> segmentSignatures = new HashMap<>();
+
+  // All mutable segments.
+  private final Set<DataSegment> mutableSegments = new TreeSet<>(SEGMENT_ORDER);
+
+  // All dataSources that need tables regenerated.
+  private final Set<String> dataSourcesNeedingRebuild = new HashSet<>();
+
+  // All segments that need to be refreshed.
+  private final TreeSet<DataSegment> segmentsNeedingRefresh = new TreeSet<>(SEGMENT_ORDER);
+
+  // Escalating authenticator, so we can attach an authentication result to queries we generate.
+  private final Authenticator escalatingAuthenticator;
+
   private boolean refreshImmediately = false;
   private long lastRefresh = 0L;
   private boolean isServerViewInitialized = false;
 
   @Inject
   public DruidSchema(
-      final QuerySegmentWalker walker,
+      final QueryLifecycleFactory queryLifecycleFactory,
       final TimelineServerView serverView,
       final PlannerConfig config,
       final ViewManager viewManager,
-      final ServerConfig serverConfig
+      final AuthenticatorMapper authenticatorMapper
   )
   {
-    this.walker = Preconditions.checkNotNull(walker, "walker");
+    this.queryLifecycleFactory = Preconditions.checkNotNull(queryLifecycleFactory, "queryLifecycleFactory");
     this.serverView = Preconditions.checkNotNull(serverView, "serverView");
     this.config = Preconditions.checkNotNull(config, "config");
     this.viewManager = Preconditions.checkNotNull(viewManager, "viewManager");
     this.cacheExec = ScheduledExecutors.fixed(1, "DruidSchema-Cache-%d");
-    this.tables = Maps.newConcurrentMap();
-    this.serverConfig = serverConfig;
+    this.tables = new ConcurrentHashMap<>();
+    this.escalatingAuthenticator = authenticatorMapper.getEscalatingAuthenticator();
+
+    serverView.registerTimelineCallback(
+        MoreExecutors.sameThreadExecutor(),
+        new TimelineServerView.TimelineCallback()
+        {
+          @Override
+          public ServerView.CallbackAction timelineInitialized()
+          {
+            synchronized (lock) {
+              isServerViewInitialized = true;
+              lock.notifyAll();
+            }
+
+            return ServerView.CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public ServerView.CallbackAction segmentAdded(final DruidServerMetadata server, final DataSegment segment)
+          {
+            addSegment(server, segment);
+            return ServerView.CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public ServerView.CallbackAction segmentRemoved(final DataSegment segment)
+          {
+            removeSegment(segment);
+            return ServerView.CallbackAction.CONTINUE;
+          }
+        }
+    );
   }
 
   @LifecycleStart
@@ -127,43 +184,65 @@ public class DruidSchema extends AbstractSchema
           {
             try {
               while (!Thread.currentThread().isInterrupted()) {
-                final Set<String> dataSources = Sets.newHashSet();
+                final Set<DataSegment> segmentsToRefresh = new TreeSet<>();
+                final Set<String> dataSourcesToRebuild = new TreeSet<>();
 
                 try {
                   synchronized (lock) {
-                    final long nextRefresh = new DateTime(lastRefresh).plus(config.getMetadataRefreshPeriod())
-                                                                      .getMillis();
+                    final long nextRefreshNoFuzz = DateTimes
+                        .utc(lastRefresh)
+                        .plus(config.getMetadataRefreshPeriod())
+                        .getMillis();
 
-                    while (!(
-                        isServerViewInitialized
-                        && !dataSourcesNeedingRefresh.isEmpty()
-                        && (refreshImmediately || nextRefresh < System.currentTimeMillis())
-                    )) {
+                    // Fuzz a bit to spread load out when we have multiple brokers.
+                    final long nextRefresh = nextRefreshNoFuzz + (long) ((nextRefreshNoFuzz - lastRefresh) * 0.10);
+
+                    while (true) {
+                      if (isServerViewInitialized &&
+                          (!segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty()) &&
+                          (refreshImmediately || nextRefresh < System.currentTimeMillis())) {
+                        break;
+                      }
                       lock.wait(Math.max(1, nextRefresh - System.currentTimeMillis()));
                     }
 
-                    dataSources.addAll(dataSourcesNeedingRefresh);
-                    dataSourcesNeedingRefresh.clear();
+                    segmentsToRefresh.addAll(segmentsNeedingRefresh);
+                    segmentsNeedingRefresh.clear();
+
+                    // Mutable segments need a refresh every period, since new columns could be added dynamically.
+                    segmentsNeedingRefresh.addAll(mutableSegments);
+
                     lastRefresh = System.currentTimeMillis();
                     refreshImmediately = false;
                   }
 
-                  // Refresh dataSources.
-                  for (final String dataSource : dataSources) {
-                    log.debug("Refreshing metadata for dataSource[%s].", dataSource);
-                    final long startTime = System.currentTimeMillis();
-                    final DruidTable druidTable = computeTable(dataSource);
-                    if (druidTable == null) {
-                      if (tables.remove(dataSource) != null) {
-                        log.info("Removed dataSource[%s] from the list of active dataSources.", dataSource);
-                      }
-                    } else {
-                      tables.put(dataSource, druidTable);
-                      log.info(
-                          "Refreshed metadata for dataSource[%s] in %,dms.",
+                  // Refresh the segments.
+                  final Set<DataSegment> refreshed = refreshSegments(segmentsToRefresh);
+
+                  synchronized (lock) {
+                    // Add missing segments back to the refresh list.
+                    segmentsNeedingRefresh.addAll(Sets.difference(segmentsToRefresh, refreshed));
+
+                    // Compute the list of dataSources to rebuild tables for.
+                    dataSourcesToRebuild.addAll(dataSourcesNeedingRebuild);
+                    refreshed.forEach(segment -> dataSourcesToRebuild.add(segment.getDataSource()));
+                    dataSourcesNeedingRebuild.clear();
+
+                    lock.notifyAll();
+                  }
+
+                  // Rebuild the dataSources.
+                  for (String dataSource : dataSourcesToRebuild) {
+                    final DruidTable druidTable = buildDruidTable(dataSource);
+                    final DruidTable oldTable = tables.put(dataSource, druidTable);
+                    if (oldTable == null || !oldTable.getRowSignature().equals(druidTable.getRowSignature())) {
+                      log.debug(
+                          "Table for dataSource[%s] has new signature[%s].",
                           dataSource,
-                          System.currentTimeMillis() - startTime
+                          druidTable.getRowSignature()
                       );
+                    } else {
+                      log.debug("Table for dataSource[%s] signature is unchanged.", dataSource);
                     }
                   }
 
@@ -174,15 +253,12 @@ public class DruidSchema extends AbstractSchema
                   throw e;
                 }
                 catch (Exception e) {
-                  log.warn(
-                      e,
-                      "Metadata refresh failed for dataSources[%s], trying again soon.",
-                      Joiner.on(", ").join(dataSources)
-                  );
+                  log.warn(e, "Metadata refresh failed, trying again soon.");
 
                   synchronized (lock) {
-                    // Add dataSources back to the refresh list.
-                    dataSourcesNeedingRefresh.addAll(dataSources);
+                    // Add our segments and dataSources back to their refresh and rebuild lists.
+                    segmentsNeedingRefresh.addAll(segmentsToRefresh);
+                    dataSourcesNeedingRebuild.addAll(dataSourcesToRebuild);
                     lock.notifyAll();
                   }
                 }
@@ -200,71 +276,6 @@ public class DruidSchema extends AbstractSchema
             finally {
               log.info("Metadata refresh stopped.");
             }
-          }
-        }
-    );
-
-    serverView.registerSegmentCallback(
-        MoreExecutors.sameThreadExecutor(),
-        new ServerView.SegmentCallback()
-        {
-          @Override
-          public ServerView.CallbackAction segmentViewInitialized()
-          {
-            synchronized (lock) {
-              isServerViewInitialized = true;
-              lock.notifyAll();
-            }
-
-            return ServerView.CallbackAction.CONTINUE;
-          }
-
-          @Override
-          public ServerView.CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment)
-          {
-            synchronized (lock) {
-              dataSourcesNeedingRefresh.add(segment.getDataSource());
-              if (!tables.containsKey(segment.getDataSource())) {
-                refreshImmediately = true;
-              }
-
-              lock.notifyAll();
-            }
-
-            return ServerView.CallbackAction.CONTINUE;
-          }
-
-          @Override
-          public ServerView.CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment)
-          {
-            synchronized (lock) {
-              dataSourcesNeedingRefresh.add(segment.getDataSource());
-              lock.notifyAll();
-            }
-
-            return ServerView.CallbackAction.CONTINUE;
-          }
-        }
-    );
-
-    serverView.registerServerCallback(
-        MoreExecutors.sameThreadExecutor(),
-        new ServerView.ServerCallback()
-        {
-          @Override
-          public ServerView.CallbackAction serverRemoved(DruidServer server)
-          {
-            final List<String> dataSourceNames = Lists.newArrayList();
-            for (DruidDataSource druidDataSource : server.getDataSources()) {
-              dataSourceNames.add(druidDataSource.getName());
-            }
-
-            synchronized (lock) {
-              dataSourcesNeedingRefresh.addAll(dataSourceNames);
-              lock.notifyAll();
-            }
-
-            return ServerView.CallbackAction.CONTINUE;
           }
         }
     );
@@ -289,92 +300,238 @@ public class DruidSchema extends AbstractSchema
   }
 
   @Override
-  protected Multimap<String, Function> getFunctionMultimap()
+  protected Multimap<String, org.apache.calcite.schema.Function> getFunctionMultimap()
   {
-    final ImmutableMultimap.Builder<String, Function> builder = ImmutableMultimap.builder();
+    final ImmutableMultimap.Builder<String, org.apache.calcite.schema.Function> builder = ImmutableMultimap.builder();
     for (Map.Entry<String, DruidViewMacro> entry : viewManager.getViews().entrySet()) {
       builder.put(entry);
     }
     return builder.build();
   }
 
-  private DruidTable computeTable(final String dataSource)
+  private void addSegment(final DruidServerMetadata server, final DataSegment segment)
   {
-    SegmentMetadataQuery segmentMetadataQuery = new SegmentMetadataQuery(
+    synchronized (lock) {
+      final Map<DataSegment, RowSignature> knownSegments = segmentSignatures.get(segment.getDataSource());
+      if (knownSegments == null || !knownSegments.containsKey(segment)) {
+        // Unknown segment.
+        setSegmentSignature(segment, null);
+        segmentsNeedingRefresh.add(segment);
+
+        if (!server.segmentReplicatable()) {
+          log.debug("Added new mutable segment[%s].", segment.getIdentifier());
+          mutableSegments.add(segment);
+        } else {
+          log.debug("Added new immutable segment[%s].", segment.getIdentifier());
+        }
+      } else if (server.segmentReplicatable()) {
+        // If a segment shows up on a replicatable (historical) server at any point, then it must be immutable,
+        // even if it's also available on non-replicatable (realtime) servers.
+        mutableSegments.remove(segment);
+        log.debug("Segment[%s] has become immutable.", segment.getIdentifier());
+      }
+
+      if (!tables.containsKey(segment.getDataSource())) {
+        refreshImmediately = true;
+      }
+
+      lock.notifyAll();
+    }
+  }
+
+  private void removeSegment(final DataSegment segment)
+  {
+    synchronized (lock) {
+      log.debug("Segment[%s] is gone.", segment.getIdentifier());
+
+      dataSourcesNeedingRebuild.add(segment.getDataSource());
+      segmentsNeedingRefresh.remove(segment);
+      mutableSegments.remove(segment);
+
+      final Map<DataSegment, RowSignature> dataSourceSegments = segmentSignatures.get(segment.getDataSource());
+      dataSourceSegments.remove(segment);
+
+      if (dataSourceSegments.isEmpty()) {
+        segmentSignatures.remove(segment.getDataSource());
+        tables.remove(segment.getDataSource());
+        log.info("Removed all metadata for dataSource[%s].", segment.getDataSource());
+      }
+
+      lock.notifyAll();
+    }
+  }
+
+  /**
+   * Attempt to refresh "segmentSignatures" for a set of segments. Returns the set of segments actually refreshed,
+   * which may be a subset of the asked-for set.
+   */
+  private Set<DataSegment> refreshSegments(final Set<DataSegment> segments) throws IOException
+  {
+    final Set<DataSegment> retVal = new HashSet<>();
+
+    // Organize segments by dataSource.
+    final Map<String, TreeSet<DataSegment>> segmentMap = new TreeMap<>();
+
+    for (DataSegment segment : segments) {
+      segmentMap.computeIfAbsent(segment.getDataSource(), x -> new TreeSet<>(SEGMENT_ORDER))
+                .add(segment);
+    }
+
+    for (Map.Entry<String, TreeSet<DataSegment>> entry : segmentMap.entrySet()) {
+      final String dataSource = entry.getKey();
+      retVal.addAll(refreshSegmentsForDataSource(dataSource, entry.getValue()));
+    }
+
+    return retVal;
+  }
+
+  /**
+   * Attempt to refresh "segmentSignatures" for a set of segments for a particular dataSource. Returns the set of
+   * segments actually refreshed, which may be a subset of the asked-for set.
+   */
+  private Set<DataSegment> refreshSegmentsForDataSource(
+      final String dataSource,
+      final Set<DataSegment> segments
+  ) throws IOException
+  {
+    log.debug("Refreshing metadata for dataSource[%s].", dataSource);
+
+    final long startTime = System.currentTimeMillis();
+
+    // Segment identifier -> segment object.
+    final Map<String, DataSegment> segmentMap = segments.stream().collect(
+        Collectors.toMap(
+            DataSegment::getIdentifier,
+            Function.identity()
+        )
+    );
+
+    final Set<DataSegment> retVal = new HashSet<>();
+    final Sequence<SegmentAnalysis> sequence = runSegmentMetadataQuery(
+        queryLifecycleFactory,
+        Iterables.limit(segments, MAX_SEGMENTS_PER_QUERY),
+        escalatingAuthenticator.createEscalatedAuthenticationResult()
+    );
+
+    Yielder<SegmentAnalysis> yielder = Yielders.each(sequence);
+
+    try {
+      while (!yielder.isDone()) {
+        final SegmentAnalysis analysis = yielder.get();
+        final DataSegment segment = segmentMap.get(analysis.getId());
+
+        if (segment == null) {
+          log.warn("Got analysis for segment[%s] we didn't ask for, ignoring.", analysis.getId());
+        } else {
+          final RowSignature rowSignature = analysisToRowSignature(analysis);
+          log.debug("Segment[%s] has signature[%s].", segment.getIdentifier(), rowSignature);
+          setSegmentSignature(segment, rowSignature);
+          retVal.add(segment);
+        }
+
+        yielder = yielder.next(null);
+      }
+    }
+    finally {
+      yielder.close();
+    }
+
+    log.info(
+        "Refreshed metadata for dataSource[%s] in %,d ms (%d segments queried, %d segments left).",
+        dataSource,
+        System.currentTimeMillis() - startTime,
+        retVal.size(),
+        segments.size() - retVal.size()
+    );
+
+    return retVal;
+  }
+
+  private void setSegmentSignature(final DataSegment segment, final RowSignature rowSignature)
+  {
+    synchronized (lock) {
+      segmentSignatures.computeIfAbsent(segment.getDataSource(), x -> new TreeMap<>(SEGMENT_ORDER))
+                       .put(segment, rowSignature);
+    }
+  }
+
+  private DruidTable buildDruidTable(final String dataSource)
+  {
+    synchronized (lock) {
+      final TreeMap<DataSegment, RowSignature> segmentMap = segmentSignatures.get(dataSource);
+      final Map<String, ValueType> columnTypes = new TreeMap<>();
+
+      if (segmentMap != null) {
+        for (RowSignature rowSignature : segmentMap.values()) {
+          if (rowSignature != null) {
+            for (String column : rowSignature.getRowOrder()) {
+              // Newer column types should override older ones.
+              columnTypes.putIfAbsent(column, rowSignature.getColumnType(column));
+            }
+          }
+        }
+      }
+
+      final RowSignature.Builder builder = RowSignature.builder();
+      columnTypes.forEach(builder::add);
+      return new DruidTable(new TableDataSource(dataSource), builder.build());
+    }
+  }
+
+  private static Sequence<SegmentAnalysis> runSegmentMetadataQuery(
+      final QueryLifecycleFactory queryLifecycleFactory,
+      final Iterable<DataSegment> segments,
+      final AuthenticationResult authenticationResult
+  )
+  {
+    // Sanity check: getOnlyElement of a set, to ensure all segments have the same dataSource.
+    final String dataSource = Iterables.getOnlyElement(
+        StreamSupport.stream(segments.spliterator(), false)
+                     .map(DataSegment::getDataSource).collect(Collectors.toSet())
+    );
+
+    final MultipleSpecificSegmentSpec querySegmentSpec = new MultipleSpecificSegmentSpec(
+        StreamSupport.stream(segments.spliterator(), false)
+                     .map(DataSegment::toDescriptor).collect(Collectors.toList())
+    );
+
+    final SegmentMetadataQuery segmentMetadataQuery = new SegmentMetadataQuery(
         new TableDataSource(dataSource),
-        null,
-        null,
+        querySegmentSpec,
+        new AllColumnIncluderator(),
         false,
-        ImmutableMap.<String, Object>of("useCache", false, "populateCache", false),
-        EnumSet.of(SegmentMetadataQuery.AnalysisType.INTERVAL),
-        null,
-        true
+        ImmutableMap.of(),
+        EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
+        false,
+        false
     );
 
-    segmentMetadataQuery = DirectDruidClient.withDefaultTimeoutAndMaxScatterGatherBytes(
-        segmentMetadataQuery,
-        serverConfig
-    );
+    return queryLifecycleFactory.factorize().runSimple(segmentMetadataQuery, authenticationResult, null);
+  }
 
-    final Sequence<SegmentAnalysis> sequence = QueryPlus.wrap(segmentMetadataQuery)
-                                                        .run(
-                                                            walker,
-                                                            DirectDruidClient.makeResponseContextForQuery(
-                                                                segmentMetadataQuery,
-                                                                System.currentTimeMillis()
-                                                            )
-                                                        );
-    final List<SegmentAnalysis> results = Sequences.toList(sequence, Lists.<SegmentAnalysis>newArrayList());
-    if (results.isEmpty()) {
-      return null;
-    }
+  private static RowSignature analysisToRowSignature(final SegmentAnalysis analysis)
+  {
+    final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
 
-    final Map<String, ValueType> columnTypes = Maps.newLinkedHashMap();
-
-    // Resolve conflicts by taking the latest metadata. This aids in gradual schema evolution.
-    long maxTimestamp = JodaUtils.MIN_INSTANT;
-
-    for (SegmentAnalysis analysis : results) {
-      final long timestamp;
-
-      if (analysis.getIntervals() != null && analysis.getIntervals().size() > 0) {
-        timestamp = analysis.getIntervals().get(analysis.getIntervals().size() - 1).getEndMillis();
-      } else {
-        timestamp = JodaUtils.MIN_INSTANT;
+    for (Map.Entry<String, ColumnAnalysis> entry : analysis.getColumns().entrySet()) {
+      if (entry.getValue().isError()) {
+        // Skip columns with analysis errors.
+        continue;
       }
 
-      for (Map.Entry<String, ColumnAnalysis> entry : analysis.getColumns().entrySet()) {
-        if (entry.getValue().isError()) {
-          // Skip columns with analysis errors.
-          continue;
-        }
-
-        if (!columnTypes.containsKey(entry.getKey()) || timestamp >= maxTimestamp) {
-          ValueType valueType;
-          try {
-            valueType = ValueType.valueOf(entry.getValue().getType().toUpperCase());
-          }
-          catch (IllegalArgumentException e) {
-            // Assume unrecognized types are some flavor of COMPLEX. This throws away information about exactly
-            // what kind of complex column it is, which we may want to preserve some day.
-            valueType = ValueType.COMPLEX;
-          }
-
-          columnTypes.put(entry.getKey(), valueType);
-
-          maxTimestamp = timestamp;
-        }
+      ValueType valueType;
+      try {
+        valueType = ValueType.valueOf(StringUtils.toUpperCase(entry.getValue().getType()));
       }
+      catch (IllegalArgumentException e) {
+        // Assume unrecognized types are some flavor of COMPLEX. This throws away information about exactly
+        // what kind of complex column it is, which we may want to preserve some day.
+        valueType = ValueType.COMPLEX;
+      }
+
+      rowSignatureBuilder.add(entry.getKey(), valueType);
     }
 
-    final RowSignature.Builder rowSignature = RowSignature.builder();
-    for (Map.Entry<String, ValueType> entry : columnTypes.entrySet()) {
-      rowSignature.add(entry.getKey(), entry.getValue());
-    }
-
-    return new DruidTable(
-        new TableDataSource(dataSource),
-        rowSignature.build()
-    );
+    return rowSignatureBuilder.build();
   }
 }

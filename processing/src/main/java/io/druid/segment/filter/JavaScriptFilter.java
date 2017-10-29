@@ -20,7 +20,7 @@
 package io.druid.segment.filter;
 
 import com.google.common.base.Predicate;
-import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.query.BitmapResultFactory;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.JavaScriptDimFilter;
@@ -44,11 +44,11 @@ public class JavaScriptFilter implements Filter
   }
 
   @Override
-  public ImmutableBitmap getBitmapIndex(final BitmapIndexSelector selector)
+  public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
   {
     final Context cx = Context.enter();
     try {
-      return Filters.matchPredicate(dimension, selector, makeStringPredicate(cx));
+      return Filters.matchPredicate(dimension, selector, bitmapResultFactory, makeStringPredicate(cx));
     }
     finally {
       Context.exit();

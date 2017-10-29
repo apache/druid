@@ -27,6 +27,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import io.druid.common.utils.ServletResourceUtils;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
@@ -82,9 +83,7 @@ public abstract class AbstractListenerHandler<ObjType> implements ListenerHandle
     try {
       // This actually fails to properly convert due to type erasure. We'll try again in a second
       // This effectively just parses
-      final Map<String, Object> tempMap = mapper.readValue(inputStream, new TypeReference<Map<String, Object>>()
-      {
-      });
+      final Map<String, Object> tempMap = mapper.readValue(inputStream, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
       // Now do the ACTUAL conversion
       inObjMap = ImmutableMap.copyOf(Maps.transformValues(
           tempMap,

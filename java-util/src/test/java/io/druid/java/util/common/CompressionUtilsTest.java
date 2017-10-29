@@ -40,11 +40,14 @@ import java.io.FilterInputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
@@ -60,7 +63,9 @@ public class CompressionUtilsTest
   static {
     final StringBuilder builder = new StringBuilder();
     try (InputStream stream = CompressionUtilsTest.class.getClassLoader().getResourceAsStream("loremipsum.txt")) {
-      final Iterator<String> it = new java.util.Scanner(stream).useDelimiter(Pattern.quote("|"));
+      final Iterator<String> it = new Scanner(
+          new InputStreamReader(stream, StandardCharsets.UTF_8)
+      ).useDelimiter(Pattern.quote("|"));
       while (it.hasNext()) {
         builder.append(it.next());
       }
@@ -229,7 +234,7 @@ public class CompressionUtilsTest
       assertGoodDataStream(inputStream);
     }
     if (!testFile.delete()) {
-      throw new IOException(String.format("Unable to delete file [%s]", testFile.getAbsolutePath()));
+      throw new IOE("Unable to delete file [%s]", testFile.getAbsolutePath());
     }
     Assert.assertFalse(testFile.exists());
     CompressionUtils.gunzip(Files.asByteSource(gzFile), testFile);
@@ -251,7 +256,7 @@ public class CompressionUtilsTest
       assertGoodDataStream(inputStream);
     }
     if (!testFile.delete()) {
-      throw new IOException(String.format("Unable to delete file [%s]", testFile.getAbsolutePath()));
+      throw new IOE("Unable to delete file [%s]", testFile.getAbsolutePath());
     }
     Assert.assertFalse(testFile.exists());
     CompressionUtils.gunzip(new FileInputStream(gzFile), testFile);
@@ -294,7 +299,7 @@ public class CompressionUtilsTest
         final byte[] bytes = new byte[gzBytes.length];
         Assert.assertEquals(bytes.length, inputStream.read(bytes));
         Assert.assertArrayEquals(
-            String.format("Failed on range %d", i),
+            StringUtils.format("Failed on range %d", i),
             gzBytes,
             bytes
         );
@@ -303,7 +308,7 @@ public class CompressionUtilsTest
   }
 
   // If this ever passes, er... fails to fail... then the bug is fixed
-  @Test(expected = java.lang.AssertionError.class)
+  @Test(expected = AssertionError.class)
   // http://bugs.java.com/bugdatabase/view_bug.do?bug_id=7036144
   public void testGunzipBug() throws IOException
   {
@@ -489,7 +494,7 @@ public class CompressionUtilsTest
       assertGoodDataStream(inputStream);
     }
     if (!testFile.delete()) {
-      throw new IOException(String.format("Unable to delete file [%s]", testFile.getAbsolutePath()));
+      throw new IOE("Unable to delete file [%s]", testFile.getAbsolutePath());
     }
     Assert.assertFalse(testFile.exists());
     CompressionUtils.gunzip(Files.asByteSource(gzFile), testFile);
@@ -535,7 +540,7 @@ public class CompressionUtilsTest
       assertGoodDataStream(inputStream);
     }
     if (testFile.exists() && !testFile.delete()) {
-      throw new RuntimeException(String.format("Unable to delete file [%s]", testFile.getAbsolutePath()));
+      throw new RE("Unable to delete file [%s]", testFile.getAbsolutePath());
     }
     Assert.assertFalse(testFile.exists());
     final AtomicLong flushes = new AtomicLong(0L);

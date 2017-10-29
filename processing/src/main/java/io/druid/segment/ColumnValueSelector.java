@@ -19,9 +19,21 @@
 
 package io.druid.segment;
 
+import io.druid.guice.annotations.PublicApi;
+
 /**
  * Base type for interfaces that manage column value selection, e.g. DimensionSelector, LongColumnSelector
+ *
+ * This interface has methods to get the value in all primitive types, that have corresponding basic aggregators in
+ * Druid: Sum, Min, Max, etc: {@link #getFloat()}, {@link #getDouble()} and {@link #getLong()} to support "polymorphic"
+ * rollup aggregation during index merging.
+ *
+ * "Absent" column, i. e. that always returns zero from {@link #getLong()}, {@link #getFloat()} and {@link #getDouble()}
+ * methods and null from {@link #getObject()}, should always be an instance of {@link NilColumnValueSelector}.
+ * `selector instanceof NilColumnValueSelector` is the recommended way to check for this condition.
  */
-public interface ColumnValueSelector
+@PublicApi
+public interface ColumnValueSelector<T> extends BaseLongColumnValueSelector, BaseDoubleColumnValueSelector,
+    BaseFloatColumnValueSelector, BaseObjectColumnValueSelector<T>
 {
 }

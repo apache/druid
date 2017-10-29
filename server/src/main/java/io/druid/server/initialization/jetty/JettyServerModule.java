@@ -22,14 +22,14 @@ package io.druid.server.initialization.jetty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.fasterxml.jackson.jaxrs.smile.JacksonSmileProvider;
-import com.google.common.collect.Iterables;
+import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import com.google.inject.Binder;
-import com.google.inject.ConfigurationException;
+import com.google.inject.Binding;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.Provides;
-import com.google.inject.ProvisionException;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
@@ -49,27 +49,39 @@ import io.druid.guice.annotations.JSR311Resource;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Self;
 import io.druid.guice.annotations.Smile;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.RE;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.DruidNode;
 import io.druid.server.StatusResource;
 import io.druid.server.initialization.ServerConfig;
+import io.druid.server.initialization.TLSServerConfig;
 import io.druid.server.metrics.DataSourceTaskIdHolder;
 import io.druid.server.metrics.MetricsModule;
 import io.druid.server.metrics.MonitorsConfig;
+import org.apache.http.HttpVersion;
 import org.eclipse.jetty.server.ConnectionFactory;
-import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.HttpConfiguration;
+import org.eclipse.jetty.server.HttpConnectionFactory;
+import org.eclipse.jetty.server.SecureRequestCustomizer;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.SslConnectionFactory;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler;
 
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLEngine;
 import javax.servlet.ServletException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -86,10 +98,12 @@ public class JettyServerModule extends JerseyServletModule
     Binder binder = binder();
 
     JsonConfigProvider.bind(binder, "druid.server.http", ServerConfig.class);
+    JsonConfigProvider.bind(binder, "druid.server.https", TLSServerConfig.class);
 
     binder.bind(GuiceContainer.class).to(DruidGuiceContainer.class);
     binder.bind(DruidGuiceContainer.class).in(Scopes.SINGLETON);
     binder.bind(CustomExceptionMapper.class).in(Singleton.class);
+    binder.bind(ForbiddenExceptionMapper.class).in(Singleton.class);
 
     serve("/*").with(DruidGuiceContainer.class);
 
@@ -130,12 +144,21 @@ public class JettyServerModule extends JerseyServletModule
   @Provides
   @LazySingleton
   public Server getServer(
-      final Injector injector, final Lifecycle lifecycle, @Self final DruidNode node, final ServerConfig config
+      final Injector injector,
+      final Lifecycle lifecycle,
+      @Self final DruidNode node,
+      final ServerConfig config,
+      final TLSServerConfig TLSServerConfig
   )
   {
-    final Server server = makeJettyServer(node, config);
-    initializeServer(injector, lifecycle, server);
-    return server;
+    return makeAndInitializeServer(
+        injector,
+        lifecycle,
+        node,
+        config,
+        TLSServerConfig,
+        injector.getExistingBinding(Key.get(SslContextFactory.class))
+    );
   }
 
   @Provides
@@ -156,11 +179,33 @@ public class JettyServerModule extends JerseyServletModule
     return provider;
   }
 
-  static Server makeJettyServer(DruidNode node, ServerConfig config)
+  static Server makeAndInitializeServer(
+      Injector injector,
+      Lifecycle lifecycle,
+      DruidNode node,
+      ServerConfig config,
+      TLSServerConfig tlsServerConfig,
+      Binding<SslContextFactory> sslContextFactoryBinding
+  )
   {
-    final QueuedThreadPool threadPool = new QueuedThreadPool();
-    threadPool.setMinThreads(config.getNumThreads());
-    threadPool.setMaxThreads(config.getNumThreads());
+    // adjusting to make config.getNumThreads() mean, "number of threads
+    // that concurrently handle the requests".
+    int numServerThreads = config.getNumThreads() + getMaxJettyAcceptorsSelectorsNum(node);
+
+    final QueuedThreadPool threadPool;
+    if (config.getQueueSize() == Integer.MAX_VALUE) {
+      threadPool = new QueuedThreadPool();
+      threadPool.setMinThreads(numServerThreads);
+      threadPool.setMaxThreads(numServerThreads);
+    } else {
+      threadPool = new QueuedThreadPool(
+          numServerThreads,
+          numServerThreads,
+          60000, // same default is used in other case when threadPool = new QueuedThreadPool()
+          new LinkedBlockingQueue<>(config.getQueueSize())
+      );
+    }
+
     threadPool.setDaemon(true);
 
     final Server server = new Server(threadPool);
@@ -169,32 +214,92 @@ public class JettyServerModule extends JerseyServletModule
     // to fire on main exit. Related bug: https://github.com/druid-io/druid/pull/1627
     server.addBean(new ScheduledExecutorScheduler("JettyScheduler", true), true);
 
-    ServerConnector connector = new ServerConnector(server);
-    connector.setPort(node.getPort());
-    connector.setIdleTimeout(Ints.checkedCast(config.getMaxIdleTime().toStandardDuration().getMillis()));
-    // workaround suggested in -
-    // https://bugs.eclipse.org/bugs/show_bug.cgi?id=435322#c66 for jetty half open connection issues during failovers
-    connector.setAcceptorPriorityDelta(-1);
+    final List<ServerConnector> serverConnectors = new ArrayList<>();
 
-    List<ConnectionFactory> monitoredConnFactories = new ArrayList<>();
-    for (ConnectionFactory cf : connector.getConnectionFactories()) {
-      monitoredConnFactories.add(new JettyMonitoringConnectionFactory(cf, activeConnections));
+    if (node.isEnablePlaintextPort()) {
+      log.info("Creating http connector with port [%d]", node.getPlaintextPort());
+      final ServerConnector connector = new ServerConnector(server);
+      connector.setPort(node.getPlaintextPort());
+      serverConnectors.add(connector);
     }
-    connector.setConnectionFactories(monitoredConnFactories);
 
-    server.setConnectors(new Connector[]{connector});
+    final SslContextFactory sslContextFactory;
+    if (node.isEnableTlsPort()) {
+      log.info("Creating https connector with port [%d]", node.getTlsPort());
+      if (sslContextFactoryBinding == null) {
+        // Never trust all certificates by default
+        sslContextFactory = new SslContextFactory(false);
+        sslContextFactory.setKeyStorePath(tlsServerConfig.getKeyStorePath());
+        sslContextFactory.setKeyStoreType(tlsServerConfig.getKeyStoreType());
+        sslContextFactory.setKeyStorePassword(tlsServerConfig.getKeyStorePasswordProvider().getPassword());
+        sslContextFactory.setCertAlias(tlsServerConfig.getCertAlias());
+        sslContextFactory.setKeyManagerFactoryAlgorithm(tlsServerConfig.getKeyManagerFactoryAlgorithm() == null
+                                                        ? KeyManagerFactory.getDefaultAlgorithm()
+                                                        : tlsServerConfig.getKeyManagerFactoryAlgorithm());
+        sslContextFactory.setKeyManagerPassword(tlsServerConfig.getKeyManagerPasswordProvider() == null ?
+                                                null : tlsServerConfig.getKeyManagerPasswordProvider().getPassword());
+        if (tlsServerConfig.getIncludeCipherSuites() != null) {
+          sslContextFactory.setIncludeCipherSuites(
+              tlsServerConfig.getIncludeCipherSuites()
+                             .toArray(new String[tlsServerConfig.getIncludeCipherSuites().size()]));
+        }
+        if (tlsServerConfig.getExcludeCipherSuites() != null) {
+          sslContextFactory.setExcludeCipherSuites(
+              tlsServerConfig.getExcludeCipherSuites()
+                             .toArray(new String[tlsServerConfig.getExcludeCipherSuites().size()]));
+        }
+        if (tlsServerConfig.getIncludeProtocols() != null) {
+          sslContextFactory.setIncludeProtocols(
+              tlsServerConfig.getIncludeProtocols().toArray(new String[tlsServerConfig.getIncludeProtocols().size()]));
+        }
+        if (tlsServerConfig.getExcludeProtocols() != null) {
+          sslContextFactory.setExcludeProtocols(
+              tlsServerConfig.getExcludeProtocols().toArray(new String[tlsServerConfig.getExcludeProtocols().size()]));
+        }
+      } else {
+        sslContextFactory = sslContextFactoryBinding.getProvider().get();
+      }
 
-    return server;
-  }
+      final HttpConfiguration httpsConfiguration = new HttpConfiguration();
+      httpsConfiguration.setSecureScheme("https");
+      httpsConfiguration.setSecurePort(node.getTlsPort());
+      httpsConfiguration.addCustomizer(new SecureRequestCustomizer());
+      final ServerConnector connector = new ServerConnector(
+          server,
+          new SslConnectionFactory(sslContextFactory, HttpVersion.HTTP_1_1.toString()),
+          new HttpConnectionFactory(httpsConfiguration)
+      );
+      connector.setPort(node.getTlsPort());
+      serverConnectors.add(connector);
+    } else {
+      sslContextFactory = null;
+    }
 
-  static void initializeServer(Injector injector, Lifecycle lifecycle, final Server server)
-  {
+    final ServerConnector[] connectors = new ServerConnector[serverConnectors.size()];
+    int index = 0;
+    for (ServerConnector connector : serverConnectors) {
+      connectors[index++] = connector;
+      connector.setIdleTimeout(Ints.checkedCast(config.getMaxIdleTime().toStandardDuration().getMillis()));
+      // workaround suggested in -
+      // https://bugs.eclipse.org/bugs/show_bug.cgi?id=435322#c66 for jetty half open connection issues during failovers
+      connector.setAcceptorPriorityDelta(-1);
+
+      List<ConnectionFactory> monitoredConnFactories = new ArrayList<>();
+      for (ConnectionFactory cf : connector.getConnectionFactories()) {
+        monitoredConnFactories.add(new JettyMonitoringConnectionFactory(cf, activeConnections));
+      }
+      connector.setConnectionFactories(monitoredConnFactories);
+    }
+
+    server.setConnectors(connectors);
+
+    // initialize server
     JettyServerInitializer initializer = injector.getInstance(JettyServerInitializer.class);
     try {
       initializer.initialize(server, injector);
     }
-    catch (ConfigurationException e) {
-      throw new ProvisionException(Iterables.getFirst(e.getErrorMessages(), null).getMessage());
+    catch (Exception e) {
+      throw new RE(e, "server initialization exception");
     }
 
     lifecycle.addHandler(
@@ -203,13 +308,36 @@ public class JettyServerModule extends JerseyServletModule
           @Override
           public void start() throws Exception
           {
+            log.info("Starting Jetty Server...");
             server.start();
+            if (node.isEnableTlsPort()) {
+              // Perform validation
+              Preconditions.checkNotNull(sslContextFactory);
+              final SSLEngine sslEngine = sslContextFactory.newSSLEngine();
+              if (sslEngine.getEnabledCipherSuites() == null || sslEngine.getEnabledCipherSuites().length == 0) {
+                throw new ISE(
+                    "No supported cipher suites found, supported suites [%s], configured suites include list: [%s] exclude list: [%s]",
+                    Arrays.toString(sslEngine.getSupportedCipherSuites()),
+                    tlsServerConfig.getIncludeCipherSuites(),
+                    tlsServerConfig.getExcludeCipherSuites()
+                );
+              }
+              if (sslEngine.getEnabledProtocols() == null || sslEngine.getEnabledProtocols().length == 0) {
+                throw new ISE(
+                    "No supported protocols found, supported protocols [%s], configured protocols include list: [%s] exclude list: [%s]",
+                    Arrays.toString(sslEngine.getSupportedProtocols()),
+                    tlsServerConfig.getIncludeProtocols(),
+                    tlsServerConfig.getExcludeProtocols()
+                );
+              }
+            }
           }
 
           @Override
           public void stop()
           {
             try {
+              log.info("Stopping Jetty Server...");
               server.stop();
             }
             catch (Exception e) {
@@ -218,6 +346,16 @@ public class JettyServerModule extends JerseyServletModule
           }
         }
     );
+
+    return server;
+  }
+
+  private static int getMaxJettyAcceptorsSelectorsNum(DruidNode druidNode)
+  {
+    // This computation is based on Jetty v9.3.19 which uses upto 8(4 acceptors and 4 selectors) threads per
+    // ServerConnector
+    int numServerConnector = (druidNode.isEnablePlaintextPort() ? 1 : 0) + (druidNode.isEnableTlsPort() ? 1 : 0);
+    return numServerConnector * 8;
   }
 
   @Provides

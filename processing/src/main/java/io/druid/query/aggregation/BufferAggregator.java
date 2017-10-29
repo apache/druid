@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation;
 
+import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import io.druid.query.monomorphicprocessing.HotLoopCallee;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -33,6 +34,7 @@ import java.nio.ByteBuffer;
  * Thus, an Aggregator can be thought of as a closure over some other thing that is stateful and changes between calls
  * to aggregate(...).
  */
+@ExtensionPoint
 public interface BufferAggregator extends HotLoopCallee
 {
   /**
@@ -111,6 +113,30 @@ public interface BufferAggregator extends HotLoopCallee
    * @return the long representation of the aggregate
    */
   long getLong(ByteBuffer buf, int position);
+
+  /**
+   * Returns the double representation of the given aggregate byte array
+   *
+   * Converts the given byte buffer representation into the intermediate aggregate value.
+   *
+   * <b>Implementations must not change the position, limit or mark of the given buffer</b>
+   *
+   * Implementations are only required to support this method if they are aggregations which
+   * have an {@link AggregatorFactory#getTypeName()} of "double".
+   * If unimplemented, throwing an {@link UnsupportedOperationException} is common and recommended.
+   *
+   * The default implementation casts {@link BufferAggregator#getFloat(ByteBuffer, int)} to double.
+   * This default method is added to enable smooth backward compatibility, please re-implement it if your aggregators
+   * work with numeric double columns.
+   *
+   * @param buf byte buffer storing the byte array representation of the aggregate
+   * @param position offset within the byte buffer at which the aggregate value is stored
+   * @return the double representation of the aggregate
+   */
+  default double getDouble(ByteBuffer buf, int position)
+  {
+    return (double) getFloat(buf, position);
+  }
 
   /**
    * Release any resources used by the aggregator

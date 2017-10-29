@@ -98,6 +98,12 @@ public class ExtractionDimFilterTest
     }
 
     @Override
+    public boolean hasMultipleValues(final String dimension)
+    {
+      return true;
+    }
+
+    @Override
     public int getNumRows()
     {
       return 1;

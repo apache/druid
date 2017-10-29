@@ -53,6 +53,8 @@ public class DataSchema
 
   private final ObjectMapper jsonMapper;
 
+  private InputRowParser cachedParser;
+
   @JsonCreator
   public DataSchema(
       @JsonProperty("dataSource") String dataSource,
@@ -85,7 +87,7 @@ public class DataSchema
       log.warn("No metricsSpec has been specified. Are you sure this is what you want?");
     }
 
-    this.aggregators = aggregators;
+    this.aggregators = aggregators == null ? new AggregatorFactory[]{} : aggregators;
   }
 
   @JsonProperty
@@ -103,9 +105,13 @@ public class DataSchema
   @JsonIgnore
   public InputRowParser getParser()
   {
-    if(parser == null) {
+    if (parser == null) {
       log.warn("No parser has been specified");
       return null;
+    }
+
+    if (cachedParser != null) {
+      return cachedParser;
     }
 
     final InputRowParser inputRowParser = jsonMapper.convertValue(this.parser, InputRowParser.class);
@@ -141,7 +147,7 @@ public class DataSchema
           );
         }
 
-        return inputRowParser.withParseSpec(
+        cachedParser = inputRowParser.withParseSpec(
             inputRowParser.getParseSpec()
                   .withDimensionsSpec(
                       dimensionsSpec
@@ -151,12 +157,14 @@ public class DataSchema
                   )
         );
       } else {
-        return inputRowParser;
+        cachedParser = inputRowParser;
       }
     } else {
       log.warn("No parseSpec in parser has been specified.");
-      return inputRowParser;
+      cachedParser = inputRowParser;
     }
+
+    return cachedParser;
   }
 
   @JsonProperty("metricsSpec")

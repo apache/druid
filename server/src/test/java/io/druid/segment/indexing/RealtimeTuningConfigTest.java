@@ -53,7 +53,7 @@ public class RealtimeTuningConfigTest
   {
     String jsonStr = "{\"type\":\"realtime\"}";
 
-    ObjectMapper mapper = TestHelper.getObjectMapper();
+    ObjectMapper mapper = TestHelper.getJsonMapper();
     RealtimeTuningConfig config = (RealtimeTuningConfig) mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
@@ -65,7 +65,6 @@ public class RealtimeTuningConfigTest
     );
 
     Assert.assertNotNull(config.getBasePersistDirectory());
-    Assert.assertEquals(true, config.getBuildV9Directly());
     Assert.assertEquals(0, config.getHandoffConditionTimeout());
     Assert.assertEquals(0, config.getAlertTimeout());
     Assert.assertEquals(new IndexSpec(), config.getIndexSpec());
@@ -89,7 +88,6 @@ public class RealtimeTuningConfigTest
                      + "  \"windowPeriod\": \"PT1H\",\n"
                      + "  \"basePersistDirectory\": \"/tmp/xxx\",\n"
                      + "  \"maxPendingPersists\": 100,\n"
-                     + "  \"buildV9Directly\": false,\n"
                      + "  \"persistThreadPriority\": 100,\n"
                      + "  \"mergeThreadPriority\": 100,\n"
                      + "  \"reportParseExceptions\": true,\n"
@@ -97,7 +95,7 @@ public class RealtimeTuningConfigTest
                      + "  \"alertTimeout\": 70\n"
                      + "}";
 
-    ObjectMapper mapper = TestHelper.getObjectMapper();
+    ObjectMapper mapper = TestHelper.getJsonMapper();
     RealtimeTuningConfig config = (RealtimeTuningConfig) mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
@@ -109,7 +107,6 @@ public class RealtimeTuningConfigTest
     );
 
     Assert.assertEquals("/tmp/xxx", config.getBasePersistDirectory().toString());
-    Assert.assertEquals(false, config.getBuildV9Directly());
     Assert.assertEquals(100, config.getHandoffConditionTimeout());
     Assert.assertEquals(70, config.getAlertTimeout());
     Assert.assertEquals(new IndexSpec(), config.getIndexSpec());

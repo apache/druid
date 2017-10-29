@@ -23,7 +23,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -33,7 +32,6 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.parsers.ParseException;
 import org.joda.time.DateTime;
 
 import java.util.Collections;
@@ -132,25 +130,9 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
       }
 
       @Override
-      public long getLongMetric(String metric)
+      public Number getMetric(String metric)
       {
-        try {
-          return row.getLongMetric(metric);
-        }
-        catch (ParseException e) {
-          throw Throwables.propagate(e);
-        }
-      }
-
-      @Override
-      public float getFloatMetric(String metric)
-      {
-        try {
-          return row.getFloatMetric(metric);
-        }
-        catch (ParseException e) {
-          throw Throwables.propagate(e);
-        }
+        return row.getMetric(metric);
       }
 
       @Override

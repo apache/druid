@@ -23,8 +23,8 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.hash.Hashing;
 import io.druid.indexing.common.TaskToolbox;
+import io.druid.java.util.common.Intervals;
 import io.druid.timeline.DataSegment;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -39,9 +39,9 @@ public class MergeTaskBaseTest
                                                                 .version("V1");
 
   final List<DataSegment> segments = ImmutableList.<DataSegment>builder()
-          .add(segmentBuilder.interval(new Interval("2012-01-04/2012-01-06")).build())
-          .add(segmentBuilder.interval(new Interval("2012-01-05/2012-01-07")).build())
-          .add(segmentBuilder.interval(new Interval("2012-01-03/2012-01-05")).build())
+          .add(segmentBuilder.interval(Intervals.of("2012-01-04/2012-01-06")).build())
+          .add(segmentBuilder.interval(Intervals.of("2012-01-05/2012-01-07")).build())
+          .add(segmentBuilder.interval(Intervals.of("2012-01-03/2012-01-05")).build())
           .build();
 
   final MergeTaskBase testMergeTaskBase = new MergeTaskBase(null, "foo", segments, null)
@@ -68,18 +68,21 @@ public class MergeTaskBaseTest
   @Test
   public void testInterval()
   {
-    Assert.assertEquals(new Interval("2012-01-03/2012-01-07"), testMergeTaskBase.getInterval());
+    Assert.assertEquals(Intervals.of("2012-01-03/2012-01-07"), testMergeTaskBase.getInterval());
   }
 
   @Test
   public void testID()
   {
-    final String desiredPrefix = "merge_foo_" + Hashing.sha1().hashString(
-        "2012-01-03T00:00:00.000Z_2012-01-05T00:00:00.000Z_V1_0"
-        + "_2012-01-04T00:00:00.000Z_2012-01-06T00:00:00.000Z_V1_0"
-        + "_2012-01-05T00:00:00.000Z_2012-01-07T00:00:00.000Z_V1_0"
-        , Charsets.UTF_8
-    ).toString() + "_";
+    final String desiredPrefix =
+        "merge_foo_" +
+        Hashing.sha1().hashString(
+            "2012-01-03T00:00:00.000Z_2012-01-05T00:00:00.000Z_V1_0" +
+            "_2012-01-04T00:00:00.000Z_2012-01-06T00:00:00.000Z_V1_0" +
+            "_2012-01-05T00:00:00.000Z_2012-01-07T00:00:00.000Z_V1_0",
+            Charsets.UTF_8
+        ).toString() +
+        "_";
     Assert.assertEquals(
         desiredPrefix,
         testMergeTaskBase.getId().substring(0, desiredPrefix.length())

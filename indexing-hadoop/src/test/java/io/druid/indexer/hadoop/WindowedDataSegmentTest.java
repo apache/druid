@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
@@ -36,7 +37,7 @@ public class WindowedDataSegmentTest
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
   private static final DataSegment SEGMENT = new DataSegment(
       "test1",
-      Interval.parse("2000/3000"),
+      Intervals.of("2000/3000"),
       "ver",
       ImmutableMap.<String, Object>of(
           "type", "local",
@@ -65,7 +66,7 @@ public class WindowedDataSegmentTest
   @Test
   public void testSerdePartialWindow() throws IOException
   {
-    final Interval partialInterval = new Interval("2500/3000");
+    final Interval partialInterval = Intervals.of("2500/3000");
     final WindowedDataSegment windowedDataSegment = new WindowedDataSegment(SEGMENT, partialInterval);
     final WindowedDataSegment roundTrip = MAPPER.readValue(
         MAPPER.writeValueAsBytes(windowedDataSegment),

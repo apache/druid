@@ -20,6 +20,7 @@
 package io.druid.cli.convert;
 
 import com.google.common.collect.ImmutableMap;
+import io.druid.java.util.common.StringUtils;
 
 import java.util.Map;
 import java.util.Properties;
@@ -44,7 +45,7 @@ public class IndexCacheConverter implements PropertyConverter
 
     return ImmutableMap.of(
         "druid.segmentCache.locations",
-        String.format(
+        StringUtils.format(
             "[{\"path\": \"%s\", \"maxSize\": %s}]", value, properties.getProperty("druid.server.maxSize")
         )
     );

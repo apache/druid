@@ -19,16 +19,21 @@
 package io.druid.data.input;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Function;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.data.input.avro.AvroExtensionsModule;
+import io.druid.data.input.avro.AvroParseSpec;
 import io.druid.data.input.avro.SchemaRepoBasedAvroBytesDecoder;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.data.input.impl.TimeAndDimsParseSpec;
+import io.druid.java.util.common.parsers.JSONPathFieldSpec;
+import io.druid.java.util.common.parsers.JSONPathFieldType;
+import io.druid.java.util.common.parsers.JSONPathSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.data.input.schemarepo.Avro1124RESTRepositoryClientWrapper;
 import io.druid.data.input.schemarepo.Avro1124SubjectAndIdConverter;
@@ -38,6 +43,7 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.EncoderFactory;
 import org.joda.time.DateTime;
+import org.joda.time.chrono.ISOChronology;
 import org.junit.Before;
 import org.junit.Test;
 import org.schemarepo.InMemoryRepository;
@@ -74,11 +80,40 @@ public class AvroStreamInputRowParserTest
   public static final float SOME_FLOAT_VALUE = 0.23555f;
   public static final int SOME_INT_VALUE = 1;
   public static final long SOME_LONG_VALUE = 679865987569912369L;
-  public static final DateTime DATE_TIME = new DateTime(2015, 10, 25, 19, 30);
+  public static final DateTime DATE_TIME = new DateTime(2015, 10, 25, 19, 30, ISOChronology.getInstanceUTC());
   public static final List<String> DIMENSIONS = Arrays.asList(EVENT_TYPE, ID, SOME_OTHER_ID, IS_VALID);
-  public static final TimeAndDimsParseSpec PARSE_SPEC = new TimeAndDimsParseSpec(
-      new TimestampSpec("timestamp", "millis", null),
-      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(DIMENSIONS), Collections.<String>emptyList(), null)
+  public static final List<String> DIMENSIONS_SCHEMALESS = Arrays.asList(
+      "nested",
+      SOME_OTHER_ID,
+      "someStringArray",
+      "someIntArray",
+      "someFloat",
+      EVENT_TYPE,
+      ID,
+      "someBytes",
+      "someLong",
+      "someInt",
+      "timestamp"
+  );
+  public static final AvroParseSpec PARSE_SPEC = new AvroParseSpec(
+      new TimestampSpec("nested", "millis", null),
+      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(DIMENSIONS), Collections.<String>emptyList(), null),
+      new JSONPathSpec(
+          true,
+          ImmutableList.of(
+              new JSONPathFieldSpec(JSONPathFieldType.PATH, "nested", "someRecord.subLong")
+          )
+      )
+  );
+  public static final AvroParseSpec PARSE_SPEC_SCHEMALESS = new AvroParseSpec(
+      new TimestampSpec("nested", "millis", null),
+      new DimensionsSpec(null, null, null),
+      new JSONPathSpec(
+          true,
+          ImmutableList.of(
+              new JSONPathFieldSpec(JSONPathFieldType.PATH, "nested", "someRecord.subLong")
+          )
+      )
   );
   public static final MyFixed SOME_FIXED_VALUE = new MyFixed(ByteBuffer.allocate(16).array());
   private static final long SUB_LONG_VALUE = 1543698L;
@@ -94,7 +129,10 @@ public class AvroStreamInputRowParserTest
       {
         @Nullable
         @Override
-        public Integer apply(@Nullable CharSequence input) { return Integer.parseInt(input.toString()); }
+        public Integer apply(@Nullable CharSequence input)
+        {
+          return Integer.parseInt(input.toString());
+        }
       }
   );
   public static final Map<CharSequence, CharSequence> SOME_STRING_VALUE_MAP_VALUE = Maps.asMap(
@@ -102,16 +140,14 @@ public class AvroStreamInputRowParserTest
       {
         @Nullable
         @Override
-        public CharSequence apply(@Nullable CharSequence input) { return input.toString(); }
+        public CharSequence apply(@Nullable CharSequence input)
+        {
+          return input.toString();
+        }
       }
   );
   public static final String SOME_UNION_VALUE = "string as union";
   public static final ByteBuffer SOME_BYTES_VALUE = ByteBuffer.allocate(8);
-  private static final Function<Object, String> TO_STRING_INCLUDING_NULL = new Function<Object, String>()
-  {
-    @Override
-    public String apply(Object o) { return String.valueOf(o); }
-  };
 
   private final ObjectMapper jsonMapper = new ObjectMapper();
 
@@ -121,7 +157,7 @@ public class AvroStreamInputRowParserTest
   {
     jsonMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
     jsonMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    for (com.fasterxml.jackson.databind.Module jacksonModule : new AvroExtensionsModule().getJacksonModules()) {
+    for (Module jacksonModule : new AvroExtensionsModule().getJacksonModules()) {
       jsonMapper.registerModule(jacksonModule);
     }
   }
@@ -180,13 +216,54 @@ public class AvroStreamInputRowParserTest
 
     InputRow inputRow = parser2.parse(ByteBuffer.wrap(out.toByteArray()));
 
-    assertInputRowCorrect(inputRow);
+    assertInputRowCorrect(inputRow, DIMENSIONS);
   }
 
-  public static void assertInputRowCorrect(InputRow inputRow)
+  @Test
+  public void testParseSchemaless() throws SchemaValidationException, IOException
   {
-    assertEquals(DIMENSIONS, inputRow.getDimensions());
-    assertEquals(DATE_TIME.getMillis(), inputRow.getTimestampFromEpoch());
+    // serde test
+    Repository repository = new InMemoryRepository(null);
+    AvroStreamInputRowParser parser = new AvroStreamInputRowParser(
+        PARSE_SPEC_SCHEMALESS,
+        new SchemaRepoBasedAvroBytesDecoder<String, Integer>(new Avro1124SubjectAndIdConverter(TOPIC), repository)
+    );
+    ByteBufferInputRowParser parser2 = jsonMapper.readValue(
+        jsonMapper.writeValueAsString(parser),
+        ByteBufferInputRowParser.class
+    );
+    repository = ((SchemaRepoBasedAvroBytesDecoder) ((AvroStreamInputRowParser) parser2).getAvroBytesDecoder()).getSchemaRepository();
+
+    // prepare data
+    GenericRecord someAvroDatum = buildSomeAvroDatum();
+
+    // encode schema id
+    Avro1124SubjectAndIdConverter converter = new Avro1124SubjectAndIdConverter(TOPIC);
+    TypedSchemaRepository<Integer, Schema, String> repositoryClient = new TypedSchemaRepository<Integer, Schema, String>(
+        repository,
+        new IntegerConverter(),
+        new AvroSchemaConverter(),
+        new IdentityConverter()
+    );
+    Integer id = repositoryClient.registerSchema(TOPIC, SomeAvroDatum.getClassSchema());
+    ByteBuffer byteBuffer = ByteBuffer.allocate(4);
+    converter.putSubjectAndId(TOPIC, id, byteBuffer);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    out.write(byteBuffer.array());
+    // encode data
+    DatumWriter<GenericRecord> writer = new GenericDatumWriter<GenericRecord>(someAvroDatum.getSchema());
+    // write avro datum to bytes
+    writer.write(someAvroDatum, EncoderFactory.get().directBinaryEncoder(out, null));
+
+    InputRow inputRow = parser2.parse(ByteBuffer.wrap(out.toByteArray()));
+
+    assertInputRowCorrect(inputRow, DIMENSIONS_SCHEMALESS);
+  }
+
+  public static void assertInputRowCorrect(InputRow inputRow, List<String> expectedDimensions)
+  {
+    assertEquals(expectedDimensions, inputRow.getDimensions());
+    assertEquals(1543698L, inputRow.getTimestampFromEpoch());
 
     // test dimensions
     assertEquals(Collections.singletonList(String.valueOf(EVENT_TYPE_VALUE)), inputRow.getDimension(EVENT_TYPE));
@@ -194,11 +271,11 @@ public class AvroStreamInputRowParserTest
     assertEquals(Collections.singletonList(String.valueOf(SOME_OTHER_ID_VALUE)), inputRow.getDimension(SOME_OTHER_ID));
     assertEquals(Collections.singletonList(String.valueOf(true)), inputRow.getDimension(IS_VALID));
     assertEquals(
-        Lists.transform(SOME_INT_ARRAY_VALUE, TO_STRING_INCLUDING_NULL),
+        Lists.transform(SOME_INT_ARRAY_VALUE, String::valueOf),
         inputRow.getDimension("someIntArray")
     );
     assertEquals(
-        Lists.transform(SOME_STRING_ARRAY_VALUE, TO_STRING_INCLUDING_NULL),
+        Lists.transform(SOME_STRING_ARRAY_VALUE, String::valueOf),
         inputRow.getDimension("someStringArray")
     );
     // towards Map avro field as druid dimension, need to convert its toString() back to HashMap to check equality
@@ -239,9 +316,9 @@ public class AvroStreamInputRowParserTest
     assertEquals(Collections.singletonList(String.valueOf(SOME_RECORD_VALUE)), inputRow.getDimension("someRecord"));
 
     // test metrics
-    assertEquals(SOME_FLOAT_VALUE, inputRow.getFloatMetric("someFloat"), 0);
-    assertEquals(SOME_LONG_VALUE, inputRow.getLongMetric("someLong"));
-    assertEquals(SOME_INT_VALUE, inputRow.getLongMetric("someInt"));
+    assertEquals(SOME_FLOAT_VALUE, inputRow.getMetric("someFloat").floatValue(), 0);
+    assertEquals(SOME_LONG_VALUE, inputRow.getMetric("someLong"));
+    assertEquals(SOME_INT_VALUE, inputRow.getMetric("someInt"));
   }
 
   public static GenericRecord buildSomeAvroDatum() throws IOException

@@ -17,13 +17,15 @@
  * under the License.
  */
 
-package io.druid.segment;import io.druid.segment.column.Column;
+package io.druid.segment;
+
+import io.druid.segment.column.Column;
 import io.druid.segment.data.Indexed;
 
 /**
  */
 public interface ColumnSelector
 {
-  public Indexed<String> getColumnNames();
-  public Column getColumn(String columnName);
+  Indexed<String> getColumnNames();
+  Column getColumn(String columnName);
 }

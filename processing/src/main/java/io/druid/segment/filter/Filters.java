@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.java.util.common.guava.FunctionalIterable;
+import io.druid.query.BitmapResultFactory;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.Query;
 import io.druid.query.dimension.DefaultDimensionSpec;
@@ -39,17 +40,16 @@ import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherColumnSelectorStrategy;
 import io.druid.query.filter.ValueMatcherColumnSelectorStrategyFactory;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.IntIteratorUtils;
-import io.druid.segment.LongColumnSelector;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
-import it.unimi.dsi.fastutil.ints.AbstractIntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterable;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntList;
@@ -66,7 +66,8 @@ public class Filters
   public static final List<ValueType> FILTERABLE_TYPES = ImmutableList.of(
       ValueType.STRING,
       ValueType.LONG,
-      ValueType.FLOAT
+      ValueType.FLOAT,
+      ValueType.DOUBLE
   );
   private static final String CTX_KEY_USE_FILTER_CNF = "useFilterCNF";
 
@@ -160,7 +161,7 @@ public class Filters
     // This should be folded into the ValueMatcherColumnSelectorStrategy once that can handle LONG typed columns.
     if (capabilities != null && capabilities.getType() == ValueType.LONG) {
       return getLongPredicateMatcher(
-          columnSelectorFactory.makeLongColumnSelector(columnName),
+          columnSelectorFactory.makeColumnValueSelector(columnName),
           predicateFactory.makeLongPredicate()
       );
     }
@@ -233,25 +234,26 @@ public class Filters
    *
    * @param dimension dimension to look at
    * @param selector  bitmap selector
+   * @param bitmapResultFactory
    * @param predicate predicate to use
-   *
    * @return bitmap of matching rows
    *
    * @see #estimateSelectivity(String, BitmapIndexSelector, Predicate)
    */
-  public static ImmutableBitmap matchPredicate(
+  public static <T> T matchPredicate(
       final String dimension,
       final BitmapIndexSelector selector,
+      BitmapResultFactory<T> bitmapResultFactory,
       final Predicate<String> predicate
   )
   {
-    return selector.getBitmapFactory().union(matchPredicateNoUnion(dimension, selector, predicate));
+    return bitmapResultFactory.unionDimensionValueBitmaps(matchPredicateNoUnion(dimension, selector, predicate));
   }
 
   /**
    * Return an iterable of bitmaps for all values matching a particular predicate. Unioning these bitmaps
-   * yields the same result that {@link #matchPredicate(String, BitmapIndexSelector, Predicate)} would have
-   * returned.
+   * yields the same result that {@link #matchPredicate(String, BitmapIndexSelector, BitmapResultFactory, Predicate)}
+   * would have returned.
    *
    * @param dimension dimension to look at
    * @param selector  bitmap selector
@@ -289,7 +291,7 @@ public class Filters
    *
    * @return estimated selectivity
    *
-   * @see #matchPredicate(String, BitmapIndexSelector, Predicate)
+   * @see #matchPredicate(String, BitmapIndexSelector, BitmapResultFactory, Predicate)
    */
   public static double estimateSelectivity(
       final String dimension,
@@ -333,7 +335,7 @@ public class Filters
   {
     long numMatchedRows = 0;
     for (int i = 0; i < bitmaps.size(); i++) {
-      final ImmutableBitmap bitmap = bitmapIndex.getBitmap(bitmaps.get(i));
+      final ImmutableBitmap bitmap = bitmapIndex.getBitmap(bitmaps.getInt(i));
       numMatchedRows += bitmap.size();
     }
 
@@ -382,7 +384,7 @@ public class Filters
       @Override
       public IntIterator iterator()
       {
-        return new AbstractIntIterator()
+        return new IntIterator()
         {
           private final int bitmapIndexCardinality = bitmapIndex.getCardinality();
           private int nextIndex = 0;
@@ -443,7 +445,7 @@ public class Filters
   }
 
   public static ValueMatcher getLongPredicateMatcher(
-      final LongColumnSelector longSelector,
+      final BaseLongColumnValueSelector longSelector,
       final DruidLongPredicate predicate
   )
   {
@@ -452,7 +454,7 @@ public class Filters
       @Override
       public boolean matches()
       {
-        return predicate.applyLong(longSelector.get());
+        return predicate.applyLong(longSelector.getLong());
       }
 
       @Override

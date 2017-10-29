@@ -35,6 +35,7 @@ import org.joda.time.Interval;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class CostBalancerStrategy implements BalancerStrategy
 {
@@ -144,6 +145,7 @@ public class CostBalancerStrategy implements BalancerStrategy
         beta = x1 - y0;
         gamma = y1 - y0;
       }
+      //noinspection SuspiciousNameCombination
       return intervalCost(y0, y0, y1) + // cost(A, Y)
              intervalCost(beta, beta, gamma) + // cost(B, C)
              2 * (beta + FastMath.exp(-beta) - 1); // cost(B, B)
@@ -309,8 +311,11 @@ public class CostBalancerStrategy implements BalancerStrategy
         )
     );
 
-    //  plus the costs of segments that will be loaded
+    // plus the costs of segments that will be loaded
     cost += computeJointSegmentsCost(proposalSegment, server.getPeon().getSegmentsToLoad());
+
+    // minus the costs of segments that are marked to be dropped
+    cost -= computeJointSegmentsCost(proposalSegment, server.getPeon().getSegmentsMarkedToDrop());
 
     return cost;
   }
@@ -363,7 +368,7 @@ public class CostBalancerStrategy implements BalancerStrategy
       }
 
       // Randomly choose a server from the best servers
-      bestServer = bestServers.get((int) Math.random() * bestServers.size());
+      bestServer = bestServers.get(ThreadLocalRandom.current().nextInt(bestServers.size()));
     }
     catch (Exception e) {
       log.makeAlert(e, "Cost Balancer Multithread strategy wasn't able to complete cost computation.").emit();

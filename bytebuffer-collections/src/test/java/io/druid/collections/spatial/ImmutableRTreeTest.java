@@ -36,6 +36,7 @@ import org.junit.Test;
 import org.roaringbitmap.IntIterator;
 
 import java.nio.ByteBuffer;
+import java.util.Locale;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -563,13 +564,13 @@ public class ImmutableRTreeTest
           tree.insert(new float[]{(float) (rand.nextDouble() * 100), (float) (rand.nextDouble() * 100)}, i);
         }
         long stop = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-        System.out.printf("[%,d]: insert = %,d ms%n", numPoints, stop);
+        System.out.printf(Locale.ENGLISH, "[%,d]: insert = %,d ms%n", numPoints, stop);
 
         stopwatch.reset().start();
         ImmutableRTree searchTree = ImmutableRTree.newImmutableFromMutable(tree);
         stop = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-        System.out.printf("[%,d]: size = %,d bytes%n", numPoints, searchTree.toBytes().length);
-        System.out.printf("[%,d]: buildImmutable = %,d ms%n", numPoints, stop);
+        System.out.printf(Locale.ENGLISH, "[%,d]: size = %,d bytes%n", numPoints, searchTree.toBytes().length);
+        System.out.printf(Locale.ENGLISH, "[%,d]: buildImmutable = %,d ms%n", numPoints, stop);
 
         stopwatch.reset().start();
 
@@ -578,14 +579,14 @@ public class ImmutableRTreeTest
         Iterables.size(points);
         stop = stopwatch.elapsed(TimeUnit.MILLISECONDS);
 
-        System.out.printf("[%,d]: search = %,dms%n", numPoints, stop);
+        System.out.printf(Locale.ENGLISH, "[%,d]: search = %,dms%n", numPoints, stop);
 
         stopwatch.reset().start();
 
         ImmutableBitmap finalSet = bf.union(points);
 
         stop = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-        System.out.printf("[%,d]: union of %,d points in %,d ms%n", numPoints, finalSet.size(), stop);
+        System.out.printf(Locale.ENGLISH, "[%,d]: union of %,d points in %,d ms%n", numPoints, finalSet.size(), stop);
       }
       catch (Exception e) {
         throw Throwables.propagate(e);
@@ -613,13 +614,13 @@ public class ImmutableRTreeTest
           tree.insert(new float[]{(float) (rand.nextDouble() * 100), (float) (rand.nextDouble() * 100)}, i);
         }
         long stop = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-        System.out.printf("[%,d]: insert = %,d ms%n", numPoints, stop);
+        System.out.printf(Locale.ENGLISH, "[%,d]: insert = %,d ms%n", numPoints, stop);
 
         stopwatch.reset().start();
         ImmutableRTree searchTree = ImmutableRTree.newImmutableFromMutable(tree);
         stop = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-        System.out.printf("[%,d]: size = %,d bytes%n", numPoints, searchTree.toBytes().length);
-        System.out.printf("[%,d]: buildImmutable = %,d ms%n", numPoints, stop);
+        System.out.printf(Locale.ENGLISH, "[%,d]: size = %,d bytes%n", numPoints, searchTree.toBytes().length);
+        System.out.printf(Locale.ENGLISH, "[%,d]: buildImmutable = %,d ms%n", numPoints, stop);
 
         stopwatch.reset().start();
 
@@ -634,14 +635,14 @@ public class ImmutableRTreeTest
         Iterables.size(points);
         stop = stopwatch.elapsed(TimeUnit.MILLISECONDS);
 
-        System.out.printf("[%,d]: search = %,dms%n", numPoints, stop);
+        System.out.printf(Locale.ENGLISH, "[%,d]: search = %,dms%n", numPoints, stop);
 
         stopwatch.reset().start();
 
         ImmutableBitmap finalSet = bf.union(points);
 
         stop = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-        System.out.printf("[%,d]: union of %,d points in %,d ms%n", numPoints, finalSet.size(), stop);
+        System.out.printf(Locale.ENGLISH, "[%,d]: union of %,d points in %,d ms%n", numPoints, finalSet.size(), stop);
       }
       catch (Exception e) {
         throw Throwables.propagate(e);

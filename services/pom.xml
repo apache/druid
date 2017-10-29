@@ -25,7 +25,7 @@
     <parent>
         <groupId>io.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.10.1-SNAPSHOT</version>
+        <version>0.11.1-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -71,6 +71,27 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>de.thetaphi</groupId>
+                <artifactId>forbiddenapis</artifactId>
+                <executions>
+                    <execution>
+                        <id>validate</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>check</goal>
+                            <goal>testCheck</goal>
+                        </goals>
+                        <configuration>
+                            <bundledSignatures>
+                                <!-- Do NOT check jdk-system-out for druid-services,
+                                     because it uses System.out on purpose. -->
+                                <bundledSignature>jdk-unsafe</bundledSignature>
+                            </bundledSignatures>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>

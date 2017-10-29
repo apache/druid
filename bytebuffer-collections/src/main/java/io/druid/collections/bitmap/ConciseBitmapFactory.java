@@ -21,6 +21,7 @@ package io.druid.collections.bitmap;
 
 import com.google.common.collect.Iterables;
 import io.druid.extendedset.intset.ImmutableConciseSet;
+import io.druid.java.util.common.ISE;
 
 import java.nio.ByteBuffer;
 import java.util.Collection;
@@ -92,7 +93,7 @@ public class ConciseBitmapFactory implements BitmapFactory
   public ImmutableBitmap makeImmutableBitmap(MutableBitmap mutableBitmap)
   {
     if (!(mutableBitmap instanceof WrappedConciseBitmap)) {
-      throw new IllegalStateException(String.format("Cannot convert [%s]", mutableBitmap.getClass()));
+      throw new ISE("Cannot convert [%s]", mutableBitmap.getClass());
     }
     return new WrappedImmutableConciseBitmap(
         ImmutableConciseSet.newImmutableFromMutable(

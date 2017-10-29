@@ -29,6 +29,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
+import io.druid.java.util.common.DateTimes;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
@@ -51,8 +52,9 @@ public class ZkWorker implements Closeable
   private final Function<ChildData, TaskAnnouncement> cacheConverter;
 
   private AtomicReference<Worker> worker;
-  private AtomicReference<DateTime> lastCompletedTaskTime = new AtomicReference<DateTime>(new DateTime());
-  private AtomicInteger countinouslyFailedTasksCount = new AtomicInteger(0);
+  private AtomicReference<DateTime> lastCompletedTaskTime = new AtomicReference<>(DateTimes.nowUtc());
+  private AtomicReference<DateTime> blacklistedUntil = new AtomicReference<>();
+  private AtomicInteger continuouslyFailedTasksCount = new AtomicInteger(0);
 
   public ZkWorker(Worker worker, PathChildrenCache statusCache, final ObjectMapper jsonMapper)
   {
@@ -134,6 +136,12 @@ public class ZkWorker implements Closeable
     return lastCompletedTaskTime.get();
   }
 
+  @JsonProperty
+  public DateTime getBlacklistedUntil()
+  {
+    return blacklistedUntil.get();
+  }
+
   public boolean isRunningTask(String taskId)
   {
     return getRunningTasks().containsKey(taskId);
@@ -158,10 +166,22 @@ public class ZkWorker implements Closeable
     lastCompletedTaskTime.set(completedTaskTime);
   }
 
+  public void setBlacklistedUntil(DateTime blacklistedUntil)
+  {
+    this.blacklistedUntil.set(blacklistedUntil);
+  }
+
   public ImmutableWorkerInfo toImmutable()
   {
 
-    return new ImmutableWorkerInfo(worker.get(), getCurrCapacityUsed(), getAvailabilityGroups(), getRunningTaskIds(), lastCompletedTaskTime.get());
+    return new ImmutableWorkerInfo(
+        worker.get(),
+        getCurrCapacityUsed(),
+        getAvailabilityGroups(),
+        getRunningTaskIds(),
+        lastCompletedTaskTime.get(),
+        blacklistedUntil.get()
+    );
   }
 
   @Override
@@ -170,16 +190,19 @@ public class ZkWorker implements Closeable
     statusCache.close();
   }
 
-  public int getCountinouslyFailedTasksCount() {
-    return countinouslyFailedTasksCount.get();
+  public int getContinuouslyFailedTasksCount()
+  {
+    return continuouslyFailedTasksCount.get();
   }
 
-  public void resetCountinouslyFailedTasksCount() {
-    this.countinouslyFailedTasksCount.set(0);
+  public void resetContinuouslyFailedTasksCount()
+  {
+    this.continuouslyFailedTasksCount.set(0);
   }
 
-  public void incrementCountinouslyFailedTasksCount() {
-    this.countinouslyFailedTasksCount.incrementAndGet();
+  public void incrementContinuouslyFailedTasksCount()
+  {
+    this.continuouslyFailedTasksCount.incrementAndGet();
   }
 
   @Override
@@ -188,6 +211,7 @@ public class ZkWorker implements Closeable
     return "ZkWorker{" +
            "worker=" + worker +
            ", lastCompletedTaskTime=" + lastCompletedTaskTime +
+           ", blacklistedUntil=" + blacklistedUntil +
            '}';
   }
 }

@@ -34,7 +34,8 @@ import io.druid.java.util.common.StringUtils;
  * Caution! changing of implementation may cause improper cardinality estimation between data hashed with different
  * versions.
  */
-public class HyperLogLogHash {
+public class HyperLogLogHash
+{
   private static final HyperLogLogHash DEFAULT = new HyperLogLogHash(Hashing.murmur3_128());
 
   public static HyperLogLogHash getDefault()
@@ -44,7 +45,8 @@ public class HyperLogLogHash {
 
   private final HashFunction hashFunction;
 
-  public HyperLogLogHash(HashFunction hashFunction) {
+  public HyperLogLogHash(HashFunction hashFunction)
+  {
     this.hashFunction = hashFunction;
   }
 

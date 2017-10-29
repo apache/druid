@@ -23,5 +23,5 @@ package io.druid.client.selector;
  */
 public interface DiscoverySelector<T>
 {
-  public T pick();
+  T pick();
 }

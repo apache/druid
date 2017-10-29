@@ -162,6 +162,12 @@ public class LikeFilterBenchmark
       }
 
       @Override
+      public boolean hasMultipleValues(final String dimension)
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
       public int getNumRows()
       {
         throw new UnsupportedOperationException();

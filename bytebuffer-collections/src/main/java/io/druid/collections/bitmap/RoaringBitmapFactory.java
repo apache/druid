@@ -21,6 +21,7 @@ package io.druid.collections.bitmap;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
+import io.druid.java.util.common.ISE;
 import org.roaringbitmap.RoaringBitmap;
 import org.roaringbitmap.buffer.BufferFastAggregation;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
@@ -125,7 +126,7 @@ public class RoaringBitmapFactory implements BitmapFactory
   public ImmutableBitmap makeImmutableBitmap(MutableBitmap mutableBitmap)
   {
     if (!(mutableBitmap instanceof WrappedRoaringBitmap)) {
-      throw new IllegalStateException(String.format("Cannot convert [%s]", mutableBitmap.getClass()));
+      throw new ISE("Cannot convert [%s]", mutableBitmap.getClass());
     }
     try {
       return ((WrappedRoaringBitmap) mutableBitmap).toImmutableBitmap();

@@ -21,11 +21,12 @@ package io.druid.emitter.ambari.metrics;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
 import com.metamx.emitter.core.Emitter;
 import com.metamx.emitter.core.Event;
 import com.metamx.emitter.service.AlertEvent;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.logger.Logger;
 import org.apache.hadoop.metrics2.sink.timeline.AbstractTimelineMetricsSink;
 import org.apache.hadoop.metrics2.sink.timeline.TimelineMetric;
 import org.apache.hadoop.metrics2.sink.timeline.TimelineMetrics;
@@ -55,27 +56,27 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
   private final AmbariMetricsEmitterConfig config;
   private final String collectorURI;
   private static final long DEFAULT_FLUSH_TIMEOUT_MILLIS = 60000; // default flush wait 1 min
-  private final ScheduledExecutorService exec = Executors.newScheduledThreadPool(2, new ThreadFactoryBuilder()
-    .setDaemon(true)
-    .setNameFormat("AmbariMetricsEmitter-%s")
-    .build()); // Thread pool of two in order to schedule flush runnable
+  private final ScheduledExecutorService exec = Executors.newScheduledThreadPool(
+      2, // Thread pool of two in order to schedule flush runnable
+      new ThreadFactoryBuilder().setDaemon(true).setNameFormat("AmbariMetricsEmitter-%s").build()
+  );
   private final AtomicLong countLostEvents = new AtomicLong(0);
 
   public AmbariMetricsEmitter(
-    AmbariMetricsEmitterConfig config,
-    List<Emitter> emitterList
+      AmbariMetricsEmitterConfig config,
+      List<Emitter> emitterList
   )
   {
     this.config = config;
     this.emitterList = emitterList;
     this.timelineMetricConverter = config.getDruidToTimelineEventConverter();
     this.eventsQueue = new LinkedBlockingQueue<>(config.getMaxQueueSize());
-    this.collectorURI = String.format(
-      "%s://%s:%s%s",
-      config.getProtocol(),
-      config.getHostname(),
-      config.getPort(),
-      WS_V1_TIMELINE_METRICS
+    this.collectorURI = StringUtils.format(
+        "%s://%s:%s%s",
+        config.getProtocol(),
+        config.getHostname(),
+        config.getPort(),
+        WS_V1_TIMELINE_METRICS
     );
   }
 
@@ -89,10 +90,10 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
           loadTruststore(config.getTrustStorePath(), config.getTrustStoreType(), config.getTrustStorePassword());
         }
         exec.scheduleAtFixedRate(
-          new ConsumerRunnable(),
-          config.getFlushPeriod(),
-          config.getFlushPeriod(),
-          TimeUnit.MILLISECONDS
+            new ConsumerRunnable(),
+            config.getFlushPeriod(),
+            config.getFlushPeriod(),
+            TimeUnit.MILLISECONDS
         );
         started.set(true);
       }
@@ -113,15 +114,15 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
       }
       try {
         final boolean isSuccessful = eventsQueue.offer(
-          timelineEvent,
-          config.getEmitWaitTime(),
-          TimeUnit.MILLISECONDS
+            timelineEvent,
+            config.getEmitWaitTime(),
+            TimeUnit.MILLISECONDS
         );
         if (!isSuccessful) {
           if (countLostEvents.getAndIncrement() % 1000 == 0) {
             log.error(
-              "Lost total of [%s] events because of emitter queue is full. Please increase the capacity or/and the consumer frequency",
-              countLostEvents.get()
+                "Lost total of [%s] events because of emitter queue is full. Please increase the capacity or/and the consumer frequency",
+                countLostEvents.get()
             );
           }
         }
@@ -162,16 +163,16 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
         while (eventsQueue.size() > 0 && !exec.isShutdown()) {
           try {
             final TimelineMetric metricEvent = eventsQueue.poll(
-              config.getWaitForEventTime(),
-              TimeUnit.MILLISECONDS
+                config.getWaitForEventTime(),
+                TimeUnit.MILLISECONDS
             );
             if (metricEvent != null) {
               metrics.addOrMergeTimelineMetric(metricEvent);
               if (metrics.getMetrics().size() == batchSize) {
                 emitMetrics(metrics);
                 log.debug(
-                  "sent [%d] events",
-                  metrics.getMetrics().size()
+                    "sent [%d] events",
+                    metrics.getMetrics().size()
                 );
                 metrics = new TimelineMetrics();
               }
@@ -185,8 +186,8 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
         if (metrics.getMetrics().size() > 0) {
           emitMetrics(metrics);
           log.debug(
-            "sent [%d] events",
-            metrics.getMetrics().size()
+              "sent [%d] events",
+              metrics.getMetrics().size()
           );
         }
       }

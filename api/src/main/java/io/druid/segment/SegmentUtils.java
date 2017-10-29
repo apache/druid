@@ -21,6 +21,8 @@ package io.druid.segment;
 
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
+import io.druid.guice.annotations.PublicApi;
+import io.druid.java.util.common.IOE;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -28,7 +30,9 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
+ * Utility methods useful for implementing deep storage extensions.
  */
+@PublicApi
 public class SegmentUtils
 {
   public static int getVersionFromDir(File inDir) throws IOException
@@ -47,11 +51,6 @@ public class SegmentUtils
       return version;
     }
 
-    throw new IOException(
-        String.format(
-            "Invalid segment dir [%s]. Can't find either of version.bin or index.drd.",
-            inDir
-        )
-    );
+    throw new IOE("Invalid segment dir [%s]. Can't find either of version.bin or index.drd.", inDir);
   }
 }

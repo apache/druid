@@ -21,17 +21,29 @@ package io.druid.client.selector;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.druid.client.DirectDruidClient;
+import io.druid.client.DruidServer;
+import io.druid.java.util.common.Intervals;
+import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
-import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
  */
 public class ServerSelectorTest
 {
+  TierSelectorStrategy tierSelectorStrategy;
+
+  @Before
+  public void setUp() throws Exception
+  {
+    tierSelectorStrategy = EasyMock.createMock(TierSelectorStrategy.class);
+    EasyMock.expect(tierSelectorStrategy.getComparator()).andReturn(Integer::compare).anyTimes();
+  }
 
   @Test
   public void testSegmentUpdate() throws Exception
@@ -39,7 +51,7 @@ public class ServerSelectorTest
     final ServerSelector selector = new ServerSelector(
         DataSegment.builder()
                    .dataSource("test_broker_server_view")
-                   .interval(new Interval("2012/2013"))
+                   .interval(Intervals.of("2012/2013"))
                    .loadSpec(
                        ImmutableMap.<String, Object>of(
                            "type",
@@ -59,12 +71,14 @@ public class ServerSelectorTest
     );
 
     selector.addServerAndUpdateSegment(
-        EasyMock.createMock(QueryableDruidServer.class),
+        new QueryableDruidServer(
+            new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 1),
+            EasyMock.createMock(DirectDruidClient.class)
+        ),
         DataSegment.builder()
                    .dataSource(
                        "test_broker_server_view")
-                   .interval(new Interval(
-                       "2012/2013"))
+                   .interval(Intervals.of("2012/2013"))
                    .loadSpec(
                        ImmutableMap.<String, Object>of(
                            "type",

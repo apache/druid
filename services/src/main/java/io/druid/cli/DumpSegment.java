@@ -41,9 +41,13 @@ import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ConciseBitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.bitmap.RoaringBitmapFactory;
+import io.druid.guice.DruidProcessingModule;
+import io.druid.guice.QueryRunnerFactoryModule;
+import io.druid.guice.QueryableModule;
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
@@ -57,17 +61,16 @@ import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.SegmentDescriptor;
 import io.druid.query.TableDataSource;
-import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.metadata.metadata.ListColumnIncluderator;
 import io.druid.query.metadata.metadata.SegmentAnalysis;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.query.spec.SpecificSegmentSpec;
-import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.BaseObjectColumnValueSelector;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.Cursor;
-import io.druid.segment.DimensionSelector;
 import io.druid.segment.IndexIO;
-import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.QueryableIndexStorageAdapter;
@@ -77,7 +80,6 @@ import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
-import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
@@ -85,10 +87,12 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.chrono.ISOChronology;
 import org.roaringbitmap.IntIterator;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -169,7 +173,7 @@ public class DumpSegment extends GuiceRunnable
     final DumpType dumpType;
 
     try {
-      dumpType = DumpType.valueOf(dumpTypeString.toUpperCase());
+      dumpType = DumpType.valueOf(StringUtils.toUpperCase(dumpTypeString));
     }
     catch (Exception e) {
       throw new IAE("Not a valid dump type: %s", dumpTypeString);
@@ -254,7 +258,8 @@ public class DumpSegment extends GuiceRunnable
         index.getDataInterval().withChronology(ISOChronology.getInstanceUTC()),
         VirtualColumns.EMPTY,
         Granularities.ALL,
-        false
+        false,
+        null
     );
 
     withOutputStream(
@@ -270,10 +275,12 @@ public class DumpSegment extends GuiceRunnable
                   @Override
                   public Object apply(Cursor cursor)
                   {
-                    final List<ObjectColumnSelector> selectors = Lists.newArrayList();
+                    final List<BaseObjectColumnValueSelector> selectors = Lists.newArrayList();
 
                     for (String columnName : columnNames) {
-                      selectors.add(makeSelector(columnName, index.getColumn(columnName), cursor));
+                      ColumnValueSelector selector =
+                          cursor.getColumnSelectorFactory().makeColumnValueSelector(columnName);
+                      selectors.add(new ListObjectSelector(selector));
                     }
 
                     while (!cursor.isDone()) {
@@ -281,7 +288,7 @@ public class DumpSegment extends GuiceRunnable
 
                       for (int i = 0; i < columnNames.size(); i++) {
                         final String columnName = columnNames.get(i);
-                        final Object value = selectors.get(i).get();
+                        final Object value = selectors.get(i).getObject();
 
                         if (timeISO8601 && columnNames.get(i).equals(Column.TIME_COLUMN_NAME)) {
                           row.put(columnName, new DateTime(value, DateTimeZone.UTC).toString());
@@ -424,6 +431,9 @@ public class DumpSegment extends GuiceRunnable
   protected List<? extends Module> getModules()
   {
     return ImmutableList.of(
+        new DruidProcessingModule(),
+        new QueryableModule(),
+        new QueryRunnerFactoryModule(),
         new Module()
         {
           @Override
@@ -431,6 +441,7 @@ public class DumpSegment extends GuiceRunnable
           {
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/tool");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(9999);
+            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
             binder.bind(DruidProcessingConfig.class).toInstance(
                 new DruidProcessingConfig()
                 {
@@ -491,84 +502,55 @@ public class DumpSegment extends GuiceRunnable
     );
   }
 
-  private static ObjectColumnSelector makeSelector(
-      final String columnName,
-      final Column column,
-      final ColumnSelectorFactory columnSelectorFactory
-  )
+  private static class ListObjectSelector implements ColumnValueSelector
   {
-    final ObjectColumnSelector selector;
+    private final ColumnValueSelector delegate;
 
-    if (column.getDictionaryEncoding() != null) {
-      // Special case for dimensions -> always wrap multi-value in arrays
-      final DimensionSelector dimensionSelector = columnSelectorFactory.makeDimensionSelector(
-          new DefaultDimensionSpec(columnName, columnName)
-      );
-      if (column.getDictionaryEncoding().hasMultipleValues()) {
-        return new ObjectColumnSelector<List>()
-        {
-          @Override
-          public Class<List> classOfObject()
-          {
-            return List.class;
-          }
+    private ListObjectSelector(ColumnValueSelector delegate)
+    {
+      this.delegate = delegate;
+    }
 
-          @Override
-          public List<String> get()
-          {
-            final IndexedInts row = dimensionSelector.getRow();
-            if (row.size() == 0) {
-              return null;
-            } else {
-              final List<String> retVal = Lists.newArrayList();
-              for (int i = 0; i < row.size(); i++) {
-                retVal.add(dimensionSelector.lookupName(row.get(i)));
-              }
-              return retVal;
-            }
-          }
-        };
+    @Override
+    public double getDouble()
+    {
+      return delegate.getDouble();
+    }
+
+    @Override
+    public float getFloat()
+    {
+      return delegate.getFloat();
+    }
+
+    @Override
+    public long getLong()
+    {
+      return delegate.getLong();
+    }
+
+    @Nullable
+    @Override
+    public Object getObject()
+    {
+      Object object = delegate.getObject();
+      if (object instanceof String[]) {
+        return Arrays.asList((String[]) object);
       } else {
-        return new ObjectColumnSelector<String>()
-        {
-          @Override
-          public Class<String> classOfObject()
-          {
-            return String.class;
-          }
-
-          @Override
-          public String get()
-          {
-            final IndexedInts row = dimensionSelector.getRow();
-            return row.size() == 0 ? null : dimensionSelector.lookupName(row.get(0));
-          }
-        };
-      }
-    } else {
-      final ObjectColumnSelector maybeSelector = columnSelectorFactory.makeObjectColumnSelector(columnName);
-      if (maybeSelector != null) {
-        selector = maybeSelector;
-      } else {
-        // Selector failed to create (unrecognized column type?)
-        log.warn("Could not create selector for column[%s], returning null.", columnName);
-        selector = new ObjectColumnSelector()
-        {
-          @Override
-          public Class classOfObject()
-          {
-            return Object.class;
-          }
-
-          @Override
-          public Object get()
-          {
-            return null;
-          }
-        };
+        return object;
       }
     }
 
-    return selector;
+    @Override
+    public Class classOfObject()
+    {
+      return Object.class;
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+      inspector.visit("delegate", delegate);
+    }
   }
 }

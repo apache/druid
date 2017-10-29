@@ -23,7 +23,7 @@ import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.ordering.StringComparator;
-import io.druid.sql.calcite.expression.RowExtraction;
+import io.druid.sql.calcite.expression.SimpleExtraction;
 import io.druid.sql.calcite.table.RowSignature;
 
 public class ConvertBoundsToSelectors extends BottomUpTransform
@@ -46,7 +46,7 @@ public class ConvertBoundsToSelectors extends BottomUpTransform
     if (filter instanceof BoundDimFilter) {
       final BoundDimFilter bound = (BoundDimFilter) filter;
       final StringComparator naturalStringComparator = sourceRowSignature.naturalStringComparator(
-          RowExtraction.of(bound.getDimension(), bound.getExtractionFn())
+          SimpleExtraction.of(bound.getDimension(), bound.getExtractionFn())
       );
 
       if (bound.hasUpperBound()

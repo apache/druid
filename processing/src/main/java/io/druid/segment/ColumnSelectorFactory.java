@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import io.druid.guice.annotations.PublicApi;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.column.ColumnCapabilities;
 
@@ -27,14 +28,16 @@ import javax.annotation.Nullable;
 /**
  * Factory class for MetricSelectors
  */
+@PublicApi
 public interface ColumnSelectorFactory
 {
   DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec);
-  FloatColumnSelector makeFloatColumnSelector(String columnName);
-  LongColumnSelector makeLongColumnSelector(String columnName);
 
-  @Nullable
-  ObjectColumnSelector makeObjectColumnSelector(String columnName);
+  /**
+   * Returns ColumnValueSelector corresponding to the given column name, or {@link NilColumnValueSelector} if the
+   * column with such name is absent.
+   */
+  ColumnValueSelector makeColumnValueSelector(String columnName);
 
   /**
    * Returns capabilities of a particular column, if known. May be null if the column doesn't exist, or if

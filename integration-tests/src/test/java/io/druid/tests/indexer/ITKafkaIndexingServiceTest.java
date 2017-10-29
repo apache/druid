@@ -22,15 +22,18 @@ package io.druid.tests.indexer;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.guice.DruidTestModuleFactory;
 import io.druid.testing.utils.RetryUtil;
 import io.druid.testing.utils.TestQueryHelper;
 import kafka.admin.AdminUtils;
-import kafka.common.TopicExistsException;
+import kafka.admin.RackAwareMode;
 import kafka.utils.ZKStringSerializer$;
+import kafka.utils.ZkUtils;
 import org.I0Itec.zkclient.ZkClient;
+import org.I0Itec.zkclient.ZkConnection;
 import org.apache.commons.io.IOUtils;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -84,7 +87,8 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
 
   private String supervisorId;
   private ZkClient zkClient;
-  private Boolean segmentsExist;   // to tell if we should remove segments during teardown
+  private ZkUtils zkUtils;
+  private boolean segmentsExist;   // to tell if we should remove segments during teardown
 
   // format for the querying interval
   private final DateTimeFormatter INTERVAL_FMT = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:'00Z'");
@@ -112,13 +116,11 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
           zkHosts, sessionTimeoutMs, connectionTimeoutMs,
           ZKStringSerializer$.MODULE$
       );
+      zkUtils = new ZkUtils(zkClient, new ZkConnection(zkHosts, sessionTimeoutMs), false);
       int numPartitions = 4;
       int replicationFactor = 1;
       Properties topicConfig = new Properties();
-      AdminUtils.createTopic(zkClient, TOPIC_NAME, numPartitions, replicationFactor, topicConfig);
-    }
-    catch (TopicExistsException e) {
-      // it's ok if the topic already exists
+      AdminUtils.createTopic(zkUtils, TOPIC_NAME, numPartitions, replicationFactor, topicConfig, RackAwareMode.Disabled$.MODULE$);
     }
     catch (Exception e) {
       throw new ISE(e, "could not create kafka topic");
@@ -172,7 +174,7 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
       num_events++;
       added += num_events;
       // construct the event to send
-      String event = String.format(event_template, event_fmt.print(dt), num_events, 0, num_events);
+      String event = StringUtils.format(event_template, event_fmt.print(dt), num_events, 0, num_events);
       LOG.info("sending event: [%s]", event);
       try {
         producer.send(new ProducerRecord<String, String>(TOPIC_NAME, event)).get();
@@ -285,7 +287,7 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
     LOG.info("teardown");
 
     // delete kafka topic
-    AdminUtils.deleteTopic(zkClient, TOPIC_NAME);
+    AdminUtils.deleteTopic(zkUtils, TOPIC_NAME);
 
     // remove segments
     if (segmentsExist) {

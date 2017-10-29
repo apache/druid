@@ -20,7 +20,7 @@
 package io.druid.query.aggregation;
 
 import com.google.common.primitives.Longs;
-import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.BaseFloatColumnValueSelector;
 
 import java.util.Comparator;
 
@@ -35,16 +35,16 @@ public class HistogramAggregator implements Aggregator
     }
   };
 
-  static Object combineHistograms(Object lhs, Object rhs)
+  static Histogram combineHistograms(Object lhs, Object rhs)
   {
     return ((Histogram) lhs).fold((Histogram) rhs);
   }
 
-  private final FloatColumnSelector selector;
+  private final BaseFloatColumnValueSelector selector;
 
   private Histogram histogram;
 
-  public HistogramAggregator(FloatColumnSelector selector, float[] breaks)
+  public HistogramAggregator(BaseFloatColumnValueSelector selector, float[] breaks)
   {
     this.selector = selector;
     this.histogram = new Histogram(breaks);
@@ -53,7 +53,7 @@ public class HistogramAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    histogram.offer(selector.get());
+    histogram.offer(selector.getFloat());
   }
 
   @Override
@@ -78,6 +78,12 @@ public class HistogramAggregator implements Aggregator
   public long getLong()
   {
     throw new UnsupportedOperationException("HistogramAggregator does not support getLong()");
+  }
+
+  @Override
+  public double getDouble()
+  {
+    throw new UnsupportedOperationException("HistogramAggregator does not support getDouble()");
   }
 
   @Override

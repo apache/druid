@@ -23,22 +23,24 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
-import com.google.common.primitives.Doubles;
-import io.druid.common.guava.GuavaUtils;
 import io.druid.math.expr.Expr;
+import io.druid.math.expr.ExprEval;
 import io.druid.math.expr.Parser;
+import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.BaseObjectColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
+import io.druid.segment.DimensionSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
+import io.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Map;
 
-public class ExpressionObjectSelector implements ObjectColumnSelector<Number>
+public class ExpressionObjectSelector implements ObjectColumnSelector<ExprEval>
 {
   private final Expr expression;
   private final Expr.ObjectBinding bindings;
@@ -56,21 +58,27 @@ public class ExpressionObjectSelector implements ObjectColumnSelector<Number>
 
   private static Expr.ObjectBinding createBindings(ColumnSelectorFactory columnSelectorFactory, Expr expression)
   {
-    final Map<String, Supplier<Number>> suppliers = Maps.newHashMap();
+    final Map<String, Supplier<Object>> suppliers = Maps.newHashMap();
     for (String columnName : Parser.findRequiredBindings(expression)) {
       final ColumnCapabilities columnCapabilities = columnSelectorFactory.getColumnCapabilities(columnName);
       final ValueType nativeType = columnCapabilities != null ? columnCapabilities.getType() : null;
-      final Supplier<Number> supplier;
+      final Supplier<Object> supplier;
 
       if (nativeType == ValueType.FLOAT) {
-        supplier = supplierFromFloatSelector(columnSelectorFactory.makeFloatColumnSelector(columnName));
+        supplier = columnSelectorFactory.makeColumnValueSelector(columnName)::getFloat;
       } else if (nativeType == ValueType.LONG) {
-        supplier = supplierFromLongSelector(columnSelectorFactory.makeLongColumnSelector(columnName));
+        supplier = columnSelectorFactory.makeColumnValueSelector(columnName)::getLong;
+      } else if (nativeType == ValueType.DOUBLE) {
+        supplier = columnSelectorFactory.makeColumnValueSelector(columnName)::getDouble;
+      } else if (nativeType == ValueType.STRING) {
+        supplier = supplierFromDimensionSelector(
+            columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName))
+        );
       } else if (nativeType == null) {
         // Unknown ValueType. Try making an Object selector and see if that gives us anything useful.
-        supplier = supplierFromObjectSelector(columnSelectorFactory.makeObjectColumnSelector(columnName));
+        supplier = supplierFromObjectSelector(columnSelectorFactory.makeColumnValueSelector(columnName));
       } else {
-        // Unhandleable ValueType (possibly STRING or COMPLEX).
+        // Unhandleable ValueType (COMPLEX).
         supplier = null;
       }
 
@@ -84,91 +92,68 @@ public class ExpressionObjectSelector implements ObjectColumnSelector<Number>
 
   @VisibleForTesting
   @Nonnull
-  static Supplier<Number> supplierFromFloatSelector(final FloatColumnSelector selector)
+  static Supplier<Object> supplierFromDimensionSelector(final DimensionSelector selector)
   {
     Preconditions.checkNotNull(selector, "selector");
-    return new Supplier<Number>()
-    {
-      @Override
-      public Number get()
-      {
-        return selector.get();
-      }
-    };
-  }
-
-  @VisibleForTesting
-  @Nonnull
-  static Supplier<Number> supplierFromLongSelector(final LongColumnSelector selector)
-  {
-    Preconditions.checkNotNull(selector, "selector");
-    return new Supplier<Number>()
-    {
-      @Override
-      public Number get()
-      {
-        return selector.get();
+    return () -> {
+      final IndexedInts row = selector.getRow();
+      if (row.size() == 0) {
+        // Treat empty multi-value rows as nulls.
+        return null;
+      } else if (row.size() == 1) {
+        return selector.lookupName(row.get(0));
+      } else {
+        // Can't handle multi-value rows in expressions.
+        // Treat them as nulls until we think of something better to do.
+        return null;
       }
     };
   }
 
   @VisibleForTesting
   @Nullable
-  static Supplier<Number> supplierFromObjectSelector(final ObjectColumnSelector selector)
+  static Supplier<Object> supplierFromObjectSelector(final BaseObjectColumnValueSelector<?> selector)
   {
-    final Class<?> clazz = selector == null ? null : selector.classOfObject();
-    if (selector != null && (clazz.isAssignableFrom(Number.class)
-                             || clazz.isAssignableFrom(String.class)
-                             || Number.class.isAssignableFrom(clazz))) {
-      // There may be numbers here.
-      return new Supplier<Number>()
-      {
-        @Override
-        public Number get()
-        {
-          return tryParse(selector.get());
+    if (selector == null) {
+      return null;
+    }
+
+    final Class<?> clazz = selector.classOfObject();
+    if (Number.class.isAssignableFrom(clazz) || String.class.isAssignableFrom(clazz)) {
+      // Number, String supported as-is.
+      return selector::getObject;
+    } else if (clazz.isAssignableFrom(Number.class) || clazz.isAssignableFrom(String.class)) {
+      // Might be Numbers and Strings. Use a selector that double-checks.
+      return () -> {
+        final Object val = selector.getObject();
+        if (val instanceof Number || val instanceof String) {
+          return val;
+        } else {
+          return null;
         }
       };
     } else {
-      // We know there are no numbers here. Use a null supplier.
+      // No numbers or strings.
       return null;
     }
   }
 
-  @Nullable
-  private static Number tryParse(final Object value)
+  @Override
+  public Class<ExprEval> classOfObject()
   {
-    if (value == null) {
-      return null;
-    }
-
-    if (value instanceof Number) {
-      return (Number) value;
-    }
-
-    final String stringValue = String.valueOf(value);
-    final Long longValue = GuavaUtils.tryParseLong(stringValue);
-    if (longValue != null) {
-      return longValue;
-    }
-
-    final Double doubleValue = Doubles.tryParse(stringValue);
-    if (doubleValue != null) {
-      return doubleValue;
-    }
-
-    return null;
+    return ExprEval.class;
   }
 
   @Override
-  public Class<Number> classOfObject()
+  public ExprEval getObject()
   {
-    return Number.class;
+    return expression.eval(bindings);
   }
 
   @Override
-  public Number get()
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
-    return expression.eval(bindings).numericValue();
+    inspector.visit("expression", expression);
+    inspector.visit("bindings", bindings);
   }
 }

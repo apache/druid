@@ -19,16 +19,63 @@
 
 package io.druid.segment;
 
-import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
-import io.druid.query.monomorphicprocessing.HotLoopCallee;
-
 /**
- * An object that gets a metric value.  Metric values are always floats and there is an assumption that the
- * FloatColumnSelector has a handle onto some other stateful object (e.g. an Offset) which is changing between calls
- * to get() (though, that doesn't have to be the case if you always want the same value...).
+ * This interface is convenient for implementation of "float-sourcing" {@link ColumnValueSelector}s, it provides default
+ * implementations for all {@link ColumnValueSelector}'s methods except {@link #getFloat()}.
+ *
+ * This interface should appear ONLY in "implements" clause or anonymous class creation, but NOT in "user" code, where
+ * {@link BaseFloatColumnValueSelector} must be used instead.
  */
-public interface FloatColumnSelector extends ColumnValueSelector, HotLoopCallee
+public interface FloatColumnSelector extends ColumnValueSelector<Float>
 {
-  @CalledFromHotLoop
-  public float get();
+  @Override
+  float getFloat();
+
+  /**
+   * @deprecated This method is marked as deprecated in FloatColumnSelector to minimize the probability of accidential
+   * calling. "Polymorphism" of FloatColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
+  @Deprecated
+  @Override
+  default double getDouble()
+  {
+    return getFloat();
+  }
+
+  /**
+   * @deprecated This method is marked as deprecated in FloatColumnSelector to minimize the probability of accidential
+   * calling. "Polymorphism" of FloatColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
+  @Deprecated
+  @Override
+  default long getLong()
+  {
+    return (long) getFloat();
+  }
+
+  /**
+   * @deprecated This method is marked as deprecated in FloatColumnSelector to minimize the probability of accidential
+   * calling. "Polymorphism" of FloatColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
+  @Deprecated
+  @Override
+  default Float getObject()
+  {
+    return getFloat();
+  }
+
+  /**
+   * @deprecated This method is marked as deprecated in FloatColumnSelector to minimize the probability of accidential
+   * calling. "Polymorphism" of FloatColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
+  @Deprecated
+  @Override
+  default Class<Float> classOfObject()
+  {
+    return Float.class;
+  }
 }

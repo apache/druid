@@ -25,6 +25,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
@@ -43,11 +45,10 @@ import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesResultBuilder;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.SegmentMissingException;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -59,7 +60,7 @@ public class SpecificSegmentQueryRunnerTest
   {
     final ObjectMapper mapper = new DefaultObjectMapper();
     SegmentDescriptor descriptor = new SegmentDescriptor(
-        new Interval("2012-01-01T00:00:00Z/P1D"),
+        Intervals.of("2012-01-01T00:00:00Z/P1D"),
         "version",
         0
     );
@@ -99,20 +100,20 @@ public class SpecificSegmentQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("foo")
                                   .granularity(Granularities.ALL)
-                                  .intervals(ImmutableList.of(new Interval("2012-01-01T00:00:00Z/P1D")))
+                                  .intervals(ImmutableList.of(Intervals.of("2012-01-01T00:00:00Z/P1D")))
                                   .aggregators(
                                       ImmutableList.<AggregatorFactory>of(
                                           new CountAggregatorFactory("rows")
                                       )
                                   )
                                   .build();
-    Sequence results = queryRunner.run(query, responseContext);
+    Sequence results = queryRunner.run(QueryPlus.wrap(query), responseContext);
     Sequences.toList(results, Lists.newArrayList());
     validate(mapper, descriptor, responseContext);
 
     // from toYielder
     responseContext = Maps.newHashMap();
-    results = queryRunner.run(query, responseContext);
+    results = queryRunner.run(QueryPlus.wrap(query), responseContext);
     results.toYielder(
         null, new YieldingAccumulator()
         {
@@ -134,13 +135,13 @@ public class SpecificSegmentQueryRunnerTest
   {
     final ObjectMapper mapper = new DefaultObjectMapper();
     SegmentDescriptor descriptor = new SegmentDescriptor(
-        new Interval("2012-01-01T00:00:00Z/P1D"),
+        Intervals.of("2012-01-01T00:00:00Z/P1D"),
         "version",
         0
     );
 
     TimeseriesResultBuilder builder = new TimeseriesResultBuilder(
-        new DateTime("2012-01-01T00:00:00Z")
+        DateTimes.of("2012-01-01T00:00:00Z")
     );
     CountAggregator rows = new CountAggregator();
     rows.aggregate();
@@ -176,17 +177,14 @@ public class SpecificSegmentQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("foo")
                                   .granularity(Granularities.ALL)
-                                  .intervals(ImmutableList.of(new Interval("2012-01-01T00:00:00Z/P1D")))
+                                  .intervals(ImmutableList.of(Intervals.of("2012-01-01T00:00:00Z/P1D")))
                                   .aggregators(
                                       ImmutableList.<AggregatorFactory>of(
                                           new CountAggregatorFactory("rows")
                                       )
                                   )
                                   .build();
-    Sequence results = queryRunner.run(
-        query,
-        responseContext
-    );
+    Sequence results = queryRunner.run(QueryPlus.wrap(query), responseContext);
     List<Result<TimeseriesResultValue>> res = Sequences.toList(
         results,
         Lists.<Result<TimeseriesResultValue>>newArrayList()
@@ -202,7 +200,7 @@ public class SpecificSegmentQueryRunnerTest
   }
 
   private void validate(ObjectMapper mapper, SegmentDescriptor descriptor, Map<String, Object> responseContext)
-      throws java.io.IOException
+      throws IOException
   {
     Object missingSegments = responseContext.get(Result.MISSING_SEGMENTS_KEY);
 

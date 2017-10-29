@@ -19,7 +19,8 @@
 
 package io.druid.segment.filter;
 
-import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.java.util.common.StringUtils;
+import io.druid.query.BitmapResultFactory;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
@@ -43,9 +44,9 @@ public class SelectorFilter implements Filter
   }
 
   @Override
-  public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
+  public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
   {
-    return selector.getBitmapIndex(dimension, value);
+    return bitmapResultFactory.wrapDimensionValue(selector.getBitmapIndex(dimension, value));
   }
 
   @Override
@@ -77,6 +78,6 @@ public class SelectorFilter implements Filter
   @Override
   public String toString()
   {
-    return String.format("%s = %s", dimension, value);
+    return StringUtils.format("%s = %s", dimension, value);
   }
 }

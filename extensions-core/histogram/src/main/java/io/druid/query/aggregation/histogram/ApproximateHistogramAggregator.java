@@ -21,7 +21,7 @@ package io.druid.query.aggregation.histogram;
 
 import com.google.common.primitives.Longs;
 import io.druid.query.aggregation.Aggregator;
-import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.BaseFloatColumnValueSelector;
 
 import java.util.Comparator;
 
@@ -36,12 +36,12 @@ public class ApproximateHistogramAggregator implements Aggregator
     }
   };
 
-  static Object combineHistograms(Object lhs, Object rhs)
+  static ApproximateHistogram combineHistograms(Object lhs, Object rhs)
   {
     return ((ApproximateHistogram) lhs).foldFast((ApproximateHistogram) rhs);
   }
 
-  private final FloatColumnSelector selector;
+  private final BaseFloatColumnValueSelector selector;
   private final int resolution;
   private final float lowerLimit;
   private final float upperLimit;
@@ -49,7 +49,7 @@ public class ApproximateHistogramAggregator implements Aggregator
   private ApproximateHistogram histogram;
 
   public ApproximateHistogramAggregator(
-      FloatColumnSelector selector,
+      BaseFloatColumnValueSelector selector,
       int resolution,
       float lowerLimit,
       float upperLimit
@@ -65,7 +65,7 @@ public class ApproximateHistogramAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    histogram.offer(selector.get());
+    histogram.offer(selector.getFloat());
   }
 
   @Override
@@ -90,6 +90,12 @@ public class ApproximateHistogramAggregator implements Aggregator
   public long getLong()
   {
     throw new UnsupportedOperationException("ApproximateHistogramAggregator does not support getLong()");
+  }
+
+  @Override
+  public double getDouble()
+  {
+    throw new UnsupportedOperationException("ApproximateHistogramAggregator does not support getDouble()");
   }
 
   @Override

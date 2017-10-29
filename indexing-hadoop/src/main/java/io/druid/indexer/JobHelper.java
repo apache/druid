@@ -23,19 +23,21 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;
 import io.druid.indexer.updater.HadoopDruidConverterConfig;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.FileUtils;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.RetryUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.ProgressIndicator;
 import io.druid.segment.SegmentUtils;
-import io.druid.segment.loading.DataSegmentPusherUtil;
+import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.timeline.DataSegment;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -45,11 +47,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
-import org.joda.time.DateTime;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -225,13 +227,7 @@ public class JobHelper
         log.info("Renaming jar to path[%s]", hdfsPath);
         fs.rename(intermediateHdfsPath, hdfsPath);
         if (!fs.exists(hdfsPath)) {
-          throw new IOException(
-              String.format(
-                  "File does not exist even after moving from[%s] to [%s]",
-                  intermediateHdfsPath,
-                  hdfsPath
-              )
-          );
+          throw new IOE("File does not exist even after moving from[%s] to [%s]", intermediateHdfsPath, hdfsPath);
         }
       }
       catch (IOException e) {
@@ -310,6 +306,29 @@ public class JobHelper
     injectSystemProperties(job.getConfiguration());
   }
 
+  public static void injectDruidProperties(Configuration configuration, List<String> listOfAllowedPrefix)
+  {
+    String mapJavaOpts = Strings.nullToEmpty(configuration.get(MRJobConfig.MAP_JAVA_OPTS));
+    String reduceJavaOpts = Strings.nullToEmpty(configuration.get(MRJobConfig.REDUCE_JAVA_OPTS));
+
+    for (String propName : System.getProperties().stringPropertyNames()) {
+      for (String prefix : listOfAllowedPrefix) {
+        if (propName.equals(prefix) || propName.startsWith(prefix + ".")) {
+          mapJavaOpts = StringUtils.format("%s -D%s=%s", mapJavaOpts, propName, System.getProperty(propName));
+          reduceJavaOpts = StringUtils.format("%s -D%s=%s", reduceJavaOpts, propName, System.getProperty(propName));
+          break;
+        }
+      }
+
+    }
+    if (!Strings.isNullOrEmpty(mapJavaOpts)) {
+      configuration.set(MRJobConfig.MAP_JAVA_OPTS, mapJavaOpts);
+    }
+    if (!Strings.isNullOrEmpty(reduceJavaOpts)) {
+      configuration.set(MRJobConfig.REDUCE_JAVA_OPTS, reduceJavaOpts);
+    }
+  }
+
   public static Configuration injectSystemProperties(Configuration conf)
   {
     for (String propName : System.getProperties().stringPropertyNames()) {
@@ -327,7 +346,7 @@ public class JobHelper
     try {
       Job job = Job.getInstance(
           new Configuration(),
-          String.format("%s-determine_partitions-%s", config.getDataSource(), config.getIntervals())
+          StringUtils.format("%s-determine_partitions-%s", config.getDataSource(), config.getIntervals())
       );
 
       job.getConfiguration().set("io.sort.record.percent", "0.19");
@@ -347,7 +366,7 @@ public class JobHelper
     for (Jobby job : jobs) {
       if (failedMessage == null) {
         if (!job.run()) {
-          failedMessage = String.format("Job[%s] failed!", job.getClass());
+          failedMessage = StringUtils.format("Job[%s] failed!", job.getClass());
         }
       }
     }
@@ -357,7 +376,9 @@ public class JobHelper
         Path workingPath = config.makeIntermediatePath();
         log.info("Deleting path[%s]", workingPath);
         try {
-          workingPath.getFileSystem(injectSystemProperties(new Configuration())).delete(workingPath, true);
+          Configuration conf = injectSystemProperties(new Configuration());
+          config.addJobProperties(conf);
+          workingPath.getFileSystem(conf).delete(workingPath, true);
         }
         catch (IOException e) {
           log.error(e, "Failed to cleanup path[%s]", workingPath);
@@ -379,7 +400,8 @@ public class JobHelper
       final File mergedBase,
       final Path finalIndexZipFilePath,
       final Path finalDescriptorPath,
-      final Path tmpPath
+      final Path tmpPath,
+      DataSegmentPusher dataSegmentPusher
   )
       throws IOException
   {
@@ -412,53 +434,16 @@ public class JobHelper
     log.info("Zipped %,d bytes to [%s]", size.get(), tmpPath.toUri());
 
     final URI indexOutURI = finalIndexZipFilePath.toUri();
-    final ImmutableMap<String, Object> loadSpec;
-    // TODO: Make this a part of Pushers or Pullers
-    switch (outputFS.getScheme()) {
-      case "hdfs":
-      case "viewfs":
-      case "maprfs":
-        loadSpec = ImmutableMap.<String, Object>of(
-            "type", "hdfs",
-            "path", indexOutURI.toString()
-        );
-        break;
-      case "gs":
-        loadSpec = ImmutableMap.<String, Object>of(
-            "type", "google",
-            "bucket", indexOutURI.getHost(),
-            "path", indexOutURI.getPath().substring(1) // remove the leading "/"
-        );
-        break;
-      case "s3":
-      case "s3n":
-        loadSpec = ImmutableMap.<String, Object>of(
-            "type", "s3_zip",
-            "bucket", indexOutURI.getHost(),
-            "key", indexOutURI.getPath().substring(1) // remove the leading "/"
-        );
-        break;
-      case "file":
-        loadSpec = ImmutableMap.<String, Object>of(
-            "type", "local",
-            "path", indexOutURI.getPath()
-        );
-        break;
-      default:
-        throw new IAE("Unknown file system scheme [%s]", outputFS.getScheme());
-    }
     final DataSegment finalSegment = segmentTemplate
-        .withLoadSpec(loadSpec)
+        .withLoadSpec(dataSegmentPusher.makeLoadSpec(indexOutURI))
         .withSize(size.get())
         .withBinaryVersion(SegmentUtils.getVersionFromDir(mergedBase));
 
     if (!renameIndexFiles(outputFS, tmpPath, finalIndexZipFilePath)) {
-      throw new IOException(
-          String.format(
-              "Unable to rename [%s] to [%s]",
-              tmpPath.toUri().toString(),
-              finalIndexZipFilePath.toUri().toString()
-          )
+      throw new IOE(
+          "Unable to rename [%s] to [%s]",
+          tmpPath.toUri().toString(),
+          finalIndexZipFilePath.toUri().toString()
       );
     }
 
@@ -489,7 +474,7 @@ public class JobHelper
               progressable.progress();
               if (outputFS.exists(descriptorPath)) {
                 if (!outputFS.delete(descriptorPath, false)) {
-                  throw new IOException(String.format("Failed to delete descriptor at [%s]", descriptorPath));
+                  throw new IOE("Failed to delete descriptor at [%s]", descriptorPath);
                 }
               }
               try (final OutputStream descriptorOut = outputFS.create(
@@ -575,77 +560,33 @@ public class JobHelper
     out.putNextEntry(new ZipEntry(file.getName()));
   }
 
-  public static boolean isHdfs(FileSystem fs)
-  {
-    return "hdfs".equals(fs.getScheme()) || "viewfs".equals(fs.getScheme()) || "maprfs".equals(fs.getScheme());
-  }
-
   public static Path makeFileNamePath(
       final Path basePath,
       final FileSystem fs,
       final DataSegment segmentTemplate,
-      final String baseFileName
+      final String baseFileName,
+      DataSegmentPusher dataSegmentPusher
   )
   {
-    final Path finalIndexZipPath;
-    final String segmentDir;
-    if (isHdfs(fs)) {
-      segmentDir = DataSegmentPusherUtil.getHdfsStorageDir(segmentTemplate);
-      finalIndexZipPath = new Path(
-          prependFSIfNullScheme(fs, basePath),
-          String.format(
-              "./%s/%d_%s",
-              segmentDir,
-              segmentTemplate.getShardSpec().getPartitionNum(),
-              baseFileName
-          )
-      );
-    } else {
-      segmentDir = DataSegmentPusherUtil.getStorageDir(segmentTemplate);
-      finalIndexZipPath = new Path(
-          prependFSIfNullScheme(fs, basePath),
-          String.format(
-              "./%s/%s",
-              segmentDir,
-              baseFileName
-          )
-      );
-    }
-    return finalIndexZipPath;
+    return new Path(prependFSIfNullScheme(fs, basePath),
+                    dataSegmentPusher.makeIndexPathName(segmentTemplate, baseFileName));
   }
 
   public static Path makeTmpPath(
       final Path basePath,
       final FileSystem fs,
       final DataSegment segmentTemplate,
-      final TaskAttemptID taskAttemptID
+      final TaskAttemptID taskAttemptID,
+      DataSegmentPusher dataSegmentPusher
   )
   {
-    final String segmentDir;
-
-    if (isHdfs(fs)) {
-      segmentDir = DataSegmentPusherUtil.getHdfsStorageDir(segmentTemplate);
-      return new Path(
-          prependFSIfNullScheme(fs, basePath),
-          String.format(
-              "./%s/%d_index.zip.%d",
-              segmentDir,
-              segmentTemplate.getShardSpec().getPartitionNum(),
-              taskAttemptID.getId()
-          )
-      );
-    } else {
-      segmentDir = DataSegmentPusherUtil.getStorageDir(segmentTemplate);
-      return new Path(
-          prependFSIfNullScheme(fs, basePath),
-          String.format(
-              "./%s/%d_index.zip.%d",
-              segmentDir,
-              segmentTemplate.getShardSpec().getPartitionNum(),
-              taskAttemptID.getId()
-          )
-      );
-    }
+    return new Path(
+        prependFSIfNullScheme(fs, basePath),
+        StringUtils.format("./%s.%d",
+                           dataSegmentPusher.makeIndexPathName(segmentTemplate, JobHelper.INDEX_ZIP),
+                           taskAttemptID.getId()
+        )
+    );
   }
 
   /**
@@ -683,10 +624,10 @@ public class JobHelper
                   log.info(
                       "File[%s / %s / %sB] existed, but wasn't the same as [%s / %s / %sB]",
                       finalIndexZipFile.getPath(),
-                      new DateTime(finalIndexZipFile.getModificationTime()),
+                      DateTimes.utc(finalIndexZipFile.getModificationTime()),
                       finalIndexZipFile.getLen(),
                       zipFile.getPath(),
-                      new DateTime(zipFile.getModificationTime()),
+                      DateTimes.utc(zipFile.getModificationTime()),
                       zipFile.getLen()
                   );
                   outputFS.delete(finalIndexZipFilePath, false);
@@ -695,7 +636,7 @@ public class JobHelper
                   log.info(
                       "File[%s / %s / %sB] existed and will be kept",
                       finalIndexZipFile.getPath(),
-                      new DateTime(finalIndexZipFile.getModificationTime()),
+                      DateTimes.utc(finalIndexZipFile.getModificationTime()),
                       finalIndexZipFile.getLen()
                   );
                   needRename = false;
@@ -793,7 +734,12 @@ public class JobHelper
     final String type = loadSpec.get("type").toString();
     final URI segmentLocURI;
     if ("s3_zip".equals(type)) {
-      segmentLocURI = URI.create(String.format("s3n://%s/%s", loadSpec.get("bucket"), loadSpec.get("key")));
+      if ("s3a".equals(loadSpec.get("S3Schema"))) {
+        segmentLocURI = URI.create(StringUtils.format("s3a://%s/%s", loadSpec.get("bucket"), loadSpec.get("key")));
+
+      } else {
+        segmentLocURI = URI.create(StringUtils.format("s3n://%s/%s", loadSpec.get("bucket"), loadSpec.get("key")));
+      }
     } else if ("hdfs".equals(type)) {
       segmentLocURI = URI.create(loadSpec.get("path").toString());
     } else if ("google".equals(type)) {
@@ -805,7 +751,7 @@ public class JobHelper
       // getHdfsStorageDir. But that wouldn't fix this issue for people who already have segments with ":".
       // Because of this we just URL encode the : making everything work as it should.
       segmentLocURI = URI.create(
-          String.format("gs://%s/%s", loadSpec.get("bucket"), loadSpec.get("path").toString().replace(":", "%3A"))
+          StringUtils.format("gs://%s/%s", loadSpec.get("bucket"), loadSpec.get("path").toString().replace(":", "%3A"))
       );
     } else if ("local".equals(type)) {
       try {
@@ -859,7 +805,7 @@ public class JobHelper
       public void startSection(String section)
       {
         context.progress();
-        context.setStatus(String.format("STARTED [%s]", section));
+        context.setStatus(StringUtils.format("STARTED [%s]", section));
       }
 
       @Override
@@ -867,14 +813,14 @@ public class JobHelper
       {
         log.info("Progress message for section [%s] : [%s]", section, message);
         context.progress();
-        context.setStatus(String.format("PROGRESS [%s]", section));
+        context.setStatus(StringUtils.format("PROGRESS [%s]", section));
       }
 
       @Override
       public void stopSection(String section)
       {
         context.progress();
-        context.setStatus(String.format("STOPPED [%s]", section));
+        context.setStatus(StringUtils.format("STOPPED [%s]", section));
       }
     };
   }

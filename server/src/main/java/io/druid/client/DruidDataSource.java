@@ -171,4 +171,9 @@ public class DruidDataSource
     result = 31 * result + (segmentsHolder != null ? segmentsHolder.hashCode() : 0);
     return result;
   }
+
+  public DataSegment getSegment(String identifier)
+  {
+    return partitionNames.get(identifier);
+  }
 }

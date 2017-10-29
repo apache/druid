@@ -27,6 +27,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.BySegmentSkippingQueryRunner;
@@ -41,7 +42,6 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.timeline.LogicalSegment;
-import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -197,7 +197,7 @@ public class TimeBoundaryQueryQueryToolChest
             List<Object> result = (List<Object>) input;
 
             return new Result<>(
-                new DateTime(((Number)result.get(0)).longValue()),
+                DateTimes.utc(((Number) result.get(0)).longValue()),
                 new TimeBoundaryResultValue(result.get(1))
             );
           }

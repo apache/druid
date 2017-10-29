@@ -21,6 +21,7 @@ package io.druid.testing.utils;
 
 import io.druid.client.selector.Server;
 import io.druid.curator.discovery.ServerDiscoverySelector;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 
 import java.util.concurrent.Callable;
@@ -57,7 +58,7 @@ public class ServerDiscoveryUtil
             return isInstanceReady(serviceProvider);
           }
         },
-        String.format("Instance %s to get ready", instanceType)
+        StringUtils.format("Instance %s to get ready", instanceType)
     );
   }
 

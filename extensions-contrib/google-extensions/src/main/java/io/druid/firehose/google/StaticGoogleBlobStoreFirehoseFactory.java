@@ -22,7 +22,7 @@ package io.druid.firehose.google;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.data.input.impl.PrefetchableTextFilesFirehoseFactory;
+import io.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.storage.google.GoogleByteSource;
 import io.druid.storage.google.GoogleStorage;
@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 
 public class StaticGoogleBlobStoreFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<GoogleBlob>
 {
@@ -54,7 +55,8 @@ public class StaticGoogleBlobStoreFirehoseFactory extends PrefetchableTextFilesF
   }
 
   @JsonProperty
-  public List<GoogleBlob> getBlobs() {
+  public List<GoogleBlob> getBlobs()
+  {
     return blobs;
   }
 
@@ -79,6 +81,39 @@ public class StaticGoogleBlobStoreFirehoseFactory extends PrefetchableTextFilesF
   protected InputStream wrapObjectStream(GoogleBlob object, InputStream stream) throws IOException
   {
     return object.getPath().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    final StaticGoogleBlobStoreFirehoseFactory that = (StaticGoogleBlobStoreFirehoseFactory) o;
+
+    return Objects.equals(blobs, that.blobs) &&
+           getMaxCacheCapacityBytes() == that.getMaxCacheCapacityBytes() &&
+           getMaxFetchCapacityBytes() == that.getMaxFetchCapacityBytes() &&
+           getPrefetchTriggerBytes() == that.getPrefetchTriggerBytes() &&
+           getFetchTimeout() == that.getFetchTimeout() &&
+           getMaxFetchRetry() == that.getMaxFetchRetry();
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        blobs,
+        getMaxCacheCapacityBytes(),
+        getMaxFetchCapacityBytes(),
+        getPrefetchTriggerBytes(),
+        getFetchTimeout(),
+        getMaxFetchRetry()
+    );
   }
 }
 

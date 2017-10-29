@@ -19,12 +19,11 @@
 
 package io.druid.collections.bitmap;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.Random;
-
+import com.carrotsearch.junitbenchmarks.BenchmarkOptions;
+import com.carrotsearch.junitbenchmarks.BenchmarkRule;
+import com.carrotsearch.junitbenchmarks.Clock;
+import com.google.common.collect.Lists;
+import io.druid.extendedset.intset.ImmutableConciseSet;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -33,12 +32,12 @@ import org.roaringbitmap.buffer.BufferFastAggregation;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 
-import com.carrotsearch.junitbenchmarks.BenchmarkOptions;
-import com.carrotsearch.junitbenchmarks.BenchmarkRule;
-import com.carrotsearch.junitbenchmarks.Clock;
-import com.google.common.collect.Lists;
-
-import io.druid.extendedset.intset.ImmutableConciseSet;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Locale;
+import java.util.Random;
 
 
 @BenchmarkOptions(clock = Clock.NANO_TIME, benchmarkRounds = 50)
@@ -102,11 +101,12 @@ public class BitmapBenchmark
     System.out.println("");
     System.out.println("## " + name);
     System.out.println("");
-    System.out.printf(" d = %06.5f | Concise | Roaring" + System.lineSeparator(), density);
+    System.out.printf(Locale.ENGLISH, " d = %06.5f | Concise | Roaring%n", density);
     System.out.println("-------------|---------|---------");
-    System.out.printf("Count        |   %5d |   %5d " + System.lineSeparator(), conciseCount, roaringCount);
+    System.out.printf(Locale.ENGLISH, "Count        |   %5d |   %5d %n", conciseCount, roaringCount);
     System.out.printf(
-        "Average size |   %5d |   %5d " + System.lineSeparator(),
+        Locale.ENGLISH,
+        "Average size |   %5d |   %5d %n",
         totalConciseBytes / conciseCount,
         totalRoaringBytes / roaringCount
     );

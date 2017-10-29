@@ -32,7 +32,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.emitter.EmittingLogger;
@@ -45,6 +44,9 @@ import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.InputRowParser;
+import io.druid.discovery.DataNodeService;
+import io.druid.discovery.DruidNodeAnnouncer;
+import io.druid.discovery.LookupNodeService;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
@@ -60,6 +62,9 @@ import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.AbstractFixedIntervalTask;
 import io.druid.indexing.common.task.IndexTask;
+import io.druid.indexing.common.task.IndexTask.IndexIOConfig;
+import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
+import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import io.druid.indexing.common.task.KillTask;
 import io.druid.indexing.common.task.RealtimeIndexTask;
 import io.druid.indexing.common.task.Task;
@@ -68,8 +73,12 @@ import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.indexing.overlord.supervisor.SupervisorManager;
 import io.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.RE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.metadata.SQLMetadataStorageActionHandlerFactory;
@@ -80,7 +89,6 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.DataSchema;
@@ -103,6 +111,7 @@ import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.server.coordination.DataSegmentServerAnnouncer;
+import io.druid.server.coordination.ServerType;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -122,12 +131,14 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 
@@ -135,7 +146,6 @@ import java.util.concurrent.Executor;
 public class TaskLifecycleTest
 {
   private static final ObjectMapper MAPPER;
-  private static final IndexMerger INDEX_MERGER;
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
   private static final TestUtils TEST_UTILS;
@@ -143,7 +153,6 @@ public class TaskLifecycleTest
   static {
     TEST_UTILS = new TestUtils();
     MAPPER = TEST_UTILS.getTestObjectMapper();
-    INDEX_MERGER = TEST_UTILS.getTestIndexMerger();
     INDEX_MERGER_V9 = TEST_UTILS.getTestIndexMergerV9();
     INDEX_IO = TEST_UTILS.getTestIndexIO();
   }
@@ -162,9 +171,8 @@ public class TaskLifecycleTest
     this.taskStorageType = taskStorageType;
   }
 
-  public final
   @Rule
-  TemporaryFolder temporaryFolder = new TemporaryFolder();
+  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   private static final Ordering<DataSegment> byIntervalOrdering = new Ordering<DataSegment>()
   {
@@ -174,7 +182,7 @@ public class TaskLifecycleTest
       return Comparators.intervalsByStartThenEnd().compare(dataSegment.getInterval(), dataSegment2.getInterval());
     }
   };
-  private static DateTime now = new DateTime();
+  private static DateTime now = DateTimes.nowUtc();
 
   private static final Iterable<InputRow> realtimeIdxTaskInputRows = ImmutableList.of(
       IR(now.toString("YYYY-MM-dd'T'HH:mm:ss"), "test_dim1", "test_dim2", 1.0f),
@@ -226,7 +234,7 @@ public class TaskLifecycleTest
   private static InputRow IR(String dt, String dim1, String dim2, float met)
   {
     return new MapBasedInputRow(
-        new DateTime(dt).getMillis(),
+        DateTimes.of(dt).getMillis(),
         ImmutableList.of("dim1", "dim2"),
         ImmutableMap.<String, Object>of(
             "dim1", dim1,
@@ -345,7 +353,7 @@ public class TaskLifecycleTest
     emitter = newMockEmitter();
     EmittingLogger.registerEmitter(emitter);
     mapper = TEST_UTILS.getTestObjectMapper();
-    handOffCallbacks = Maps.newConcurrentMap();
+    handOffCallbacks = new ConcurrentHashMap<>();
 
     // Set up things, the order does matter as if it is messed up then the setUp
     // should fail because of the Precondition checks in the respective setUp methods
@@ -404,7 +412,7 @@ public class TaskLifecycleTest
       }
 
       default: {
-        throw new RuntimeException(String.format("Unknown task storage type [%s]", taskStorageType));
+        throw new RE("Unknown task storage type [%s]", taskStorageType);
       }
     }
     tsqa = new TaskStorageQueryAdapter(taskStorage);
@@ -477,6 +485,12 @@ public class TaskLifecycleTest
         pushedSegments++;
         return segment;
       }
+
+      @Override
+      public Map<String, Object> makeLoadSpec(URI uri)
+      {
+        throw new UnsupportedOperationException();
+      }
     };
   }
 
@@ -513,6 +527,14 @@ public class TaskLifecycleTest
     File tmpDir = temporaryFolder.newFolder();
     taskConfig = new TaskConfig(tmpDir.toString(), null, null, 50000, null, false, null, null);
 
+    SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
+    {
+      @Override
+      public List<StorageLocationConfig> getLocations()
+      {
+        return Lists.newArrayList();
+      }
+    };
     return new TaskToolboxFactory(
         taskConfig,
         tac,
@@ -570,28 +592,21 @@ public class TaskLifecycleTest
         }, // segment announcer
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         handoffNotifierFactory,
-        queryRunnerFactoryConglomerate, // query runner factory conglomerate corporation unionized collective
+        () -> queryRunnerFactoryConglomerate, // query runner factory conglomerate corporation unionized collective
         MoreExecutors.sameThreadExecutor(), // query executor service
         monitorScheduler, // monitor scheduler
         new SegmentLoaderFactory(
-            new SegmentLoaderLocalCacheManager(
-                null,
-                new SegmentLoaderConfig()
-                {
-                  @Override
-                  public List<StorageLocationConfig> getLocations()
-                  {
-                    return Lists.newArrayList();
-                  }
-                }, new DefaultObjectMapper()
-            )
+            new SegmentLoaderLocalCacheManager(null, segmentLoaderConfig, new DefaultObjectMapper())
         ),
         MAPPER,
-        INDEX_MERGER,
         INDEX_IO,
         MapCache.create(0),
         FireDepartmentTest.NO_CACHE_CONFIG,
-        INDEX_MERGER_V9
+        INDEX_MERGER_V9,
+        EasyMock.createNiceMock(DruidNodeAnnouncer.class),
+        EasyMock.createNiceMock(DruidNode.class),
+        new LookupNodeService("tier"),
+        new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0)
     );
   }
 
@@ -604,7 +619,7 @@ public class TaskLifecycleTest
         tb,
         taskConfig,
         emitter,
-        new DruidNode("dummy", "dummy", 10000)
+        new DruidNode("dummy", "dummy", 10000, null, true, false)
     );
   }
 
@@ -636,7 +651,7 @@ public class TaskLifecycleTest
     final Task indexTask = new IndexTask(
         null,
         null,
-        new IndexTask.IndexIngestionSpec(
+        new IndexIngestionSpec(
             new DataSchema(
                 "foo",
                 null,
@@ -644,15 +659,14 @@ public class TaskLifecycleTest
                 new UniformGranularitySpec(
                     Granularities.DAY,
                     null,
-                    ImmutableList.of(new Interval("2010-01-01/P2D"))
+                    ImmutableList.of(Intervals.of("2010-01-01/P2D"))
                 ),
                 mapper
             ),
-            new IndexTask.IndexIOConfig(new MockFirehoseFactory(false), false),
-            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, 3, true, true, true)
+            new IndexIOConfig(new MockFirehoseFactory(false), false),
+            new IndexTuningConfig(10000, 10, null, null, null, indexSpec, 3, true, true, false, null, null)
         ),
-        null,
-        MAPPER
+        null
     );
 
     final Optional<TaskStatus> preRunTaskStatus = tsqa.getStatus(indexTask.getId());
@@ -670,7 +684,7 @@ public class TaskLifecycleTest
     Assert.assertEquals("num segments nuked", 0, mdc.getNuked().size());
 
     Assert.assertEquals("segment1 datasource", "foo", publishedSegments.get(0).getDataSource());
-    Assert.assertEquals("segment1 interval", new Interval("2010-01-01/P1D"), publishedSegments.get(0).getInterval());
+    Assert.assertEquals("segment1 interval", Intervals.of("2010-01-01/P1D"), publishedSegments.get(0).getInterval());
     Assert.assertEquals(
         "segment1 dimensions",
         ImmutableList.of("dim1", "dim2"),
@@ -679,7 +693,7 @@ public class TaskLifecycleTest
     Assert.assertEquals("segment1 metrics", ImmutableList.of("met"), publishedSegments.get(0).getMetrics());
 
     Assert.assertEquals("segment2 datasource", "foo", publishedSegments.get(1).getDataSource());
-    Assert.assertEquals("segment2 interval", new Interval("2010-01-02/P1D"), publishedSegments.get(1).getInterval());
+    Assert.assertEquals("segment2 interval", Intervals.of("2010-01-02/P1D"), publishedSegments.get(1).getInterval());
     Assert.assertEquals(
         "segment2 dimensions",
         ImmutableList.of("dim1", "dim2"),
@@ -694,7 +708,7 @@ public class TaskLifecycleTest
     final Task indexTask = new IndexTask(
         null,
         null,
-        new IndexTask.IndexIngestionSpec(
+        new IndexIngestionSpec(
             new DataSchema(
                 "foo",
                 null,
@@ -702,15 +716,14 @@ public class TaskLifecycleTest
                 new UniformGranularitySpec(
                     Granularities.DAY,
                     null,
-                    ImmutableList.of(new Interval("2010-01-01/P1D"))
+                    ImmutableList.of(Intervals.of("2010-01-01/P1D"))
                 ),
                 mapper
             ),
-            new IndexTask.IndexIOConfig(new MockExceptionalFirehoseFactory(), false),
-            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, 3, true, true, true)
+            new IndexIOConfig(new MockExceptionalFirehoseFactory(), false),
+            new IndexTuningConfig(10000, 10, null, null, null, indexSpec, 3, true, true, false, null, null)
         ),
-        null,
-        MAPPER
+        null
     );
 
     final TaskStatus status = runTask(indexTask);
@@ -735,7 +748,7 @@ public class TaskLifecycleTest
           @Override
           public DataSegment apply(String input)
           {
-            final Interval interval = new Interval(input);
+            final Interval interval = Intervals.of(input);
             try {
               return DataSegment.builder()
                                 .dataSource("test_kill_task")
@@ -774,13 +787,13 @@ public class TaskLifecycleTest
 
     // manually create local segments files
     List<File> segmentFiles = Lists.newArrayList();
-    for (DataSegment segment : mdc.getUnusedSegmentsForInterval("test_kill_task", new Interval("2011-04-01/P4D"))) {
+    for (DataSegment segment : mdc.getUnusedSegmentsForInterval("test_kill_task", Intervals.of("2011-04-01/P4D"))) {
       File file = new File((String) segment.getLoadSpec().get("path"));
       file.mkdirs();
       segmentFiles.add(file);
     }
 
-    final Task killTask = new KillTask(null, "test_kill_task", new Interval("2011-04-01/P4D"), null);
+    final Task killTask = new KillTask(null, "test_kill_task", Intervals.of("2011-04-01/P4D"), null);
 
     final TaskStatus status = runTask(killTask);
     Assert.assertEquals("merged statusCode", TaskStatus.Status.SUCCESS, status.getStatusCode());
@@ -845,7 +858,7 @@ public class TaskLifecycleTest
         "id1",
         new TaskResource("id1", 1),
         "ds",
-        new Interval("2012-01-01/P1D"),
+        Intervals.of("2012-01-01/P1D"),
         null
     )
     {
@@ -865,7 +878,7 @@ public class TaskLifecycleTest
 
         final DataSegment segment = DataSegment.builder()
                                                .dataSource("ds")
-                                               .interval(new Interval("2012-01-01/P1D"))
+                                               .interval(Intervals.of("2012-01-01/P1D"))
                                                .version(myLock.getVersion())
                                                .build();
 
@@ -884,7 +897,7 @@ public class TaskLifecycleTest
   @Test
   public void testBadInterval() throws Exception
   {
-    final Task task = new AbstractFixedIntervalTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"), null)
+    final Task task = new AbstractFixedIntervalTask("id1", "id1", "ds", Intervals.of("2012-01-01/P1D"), null)
     {
       @Override
       public String getType()
@@ -899,7 +912,7 @@ public class TaskLifecycleTest
 
         final DataSegment segment = DataSegment.builder()
                                                .dataSource("ds")
-                                               .interval(new Interval("2012-01-01/P2D"))
+                                               .interval(Intervals.of("2012-01-01/P2D"))
                                                .version(myLock.getVersion())
                                                .build();
 
@@ -918,7 +931,7 @@ public class TaskLifecycleTest
   @Test
   public void testBadVersion() throws Exception
   {
-    final Task task = new AbstractFixedIntervalTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"), null)
+    final Task task = new AbstractFixedIntervalTask("id1", "id1", "ds", Intervals.of("2012-01-01/P1D"), null)
     {
       @Override
       public String getType()
@@ -933,7 +946,7 @@ public class TaskLifecycleTest
 
         final DataSegment segment = DataSegment.builder()
                                                .dataSource("ds")
-                                               .interval(new Interval("2012-01-01/P1D"))
+                                               .interval(Intervals.of("2012-01-01/P1D"))
                                                .version(myLock.getVersion() + "1!!!1!!")
                                                .build();
 
@@ -987,7 +1000,7 @@ public class TaskLifecycleTest
     Assert.assertEquals("test_ds", segment.getDataSource());
     Assert.assertEquals(ImmutableList.of("dim1", "dim2"), segment.getDimensions());
     Assert.assertEquals(
-        new Interval(now.toString("YYYY-MM-dd") + "/" + now.plusDays(1).toString("YYYY-MM-dd")),
+        Intervals.of(now.toString("YYYY-MM-dd") + "/" + now.plusDays(1).toString("YYYY-MM-dd")),
         segment.getInterval()
     );
     Assert.assertEquals(ImmutableList.of("count"), segment.getMetrics());
@@ -1016,6 +1029,12 @@ public class TaskLifecycleTest
       public DataSegment push(File file, DataSegment dataSegment) throws IOException
       {
         throw new RuntimeException("FAILURE");
+      }
+
+      @Override
+      public Map<String, Object> makeLoadSpec(URI uri)
+      {
+        throw new UnsupportedOperationException();
       }
     };
 
@@ -1053,7 +1072,7 @@ public class TaskLifecycleTest
     final Task indexTask = new IndexTask(
         null,
         null,
-        new IndexTask.IndexIngestionSpec(
+        new IndexIngestionSpec(
             new DataSchema(
                 "foo",
                 null,
@@ -1061,15 +1080,14 @@ public class TaskLifecycleTest
                 new UniformGranularitySpec(
                     Granularities.DAY,
                     null,
-                    ImmutableList.of(new Interval("2010-01-01/P2D"))
+                    ImmutableList.of(Intervals.of("2010-01-01/P2D"))
                 ),
                 mapper
             ),
-            new IndexTask.IndexIOConfig(new MockFirehoseFactory(false), false),
-            new IndexTask.IndexTuningConfig(10000, 10, null, null, indexSpec, null, false, null, null)
+            new IndexIOConfig(new MockFirehoseFactory(false), false),
+            new IndexTuningConfig(10000, 10, null, null, null, indexSpec, null, false, null, null, null, null)
         ),
-        null,
-        MAPPER
+        null
     );
 
     final long startTime = System.currentTimeMillis();
@@ -1096,7 +1114,7 @@ public class TaskLifecycleTest
     Assert.assertEquals("num segments nuked", 0, mdc.getNuked().size());
 
     Assert.assertEquals("segment1 datasource", "foo", publishedSegments.get(0).getDataSource());
-    Assert.assertEquals("segment1 interval", new Interval("2010-01-01/P1D"), publishedSegments.get(0).getInterval());
+    Assert.assertEquals("segment1 interval", Intervals.of("2010-01-01/P1D"), publishedSegments.get(0).getInterval());
     Assert.assertEquals(
         "segment1 dimensions",
         ImmutableList.of("dim1", "dim2"),
@@ -1105,7 +1123,7 @@ public class TaskLifecycleTest
     Assert.assertEquals("segment1 metrics", ImmutableList.of("met"), publishedSegments.get(0).getMetrics());
 
     Assert.assertEquals("segment2 datasource", "foo", publishedSegments.get(1).getDataSource());
-    Assert.assertEquals("segment2 interval", new Interval("2010-01-02/P1D"), publishedSegments.get(1).getInterval());
+    Assert.assertEquals("segment2 interval", Intervals.of("2010-01-02/P1D"), publishedSegments.get(1).getInterval());
     Assert.assertEquals(
         "segment2 dimensions",
         ImmutableList.of("dim1", "dim2"),
@@ -1159,7 +1177,7 @@ public class TaskLifecycleTest
 
   private RealtimeIndexTask newRealtimeIndexTask()
   {
-    String taskId = String.format("rt_task_%s", System.currentTimeMillis());
+    String taskId = StringUtils.format("rt_task_%s", System.currentTimeMillis());
     DataSchema dataSchema = new DataSchema(
         "test_ds",
         null,

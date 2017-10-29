@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import io.druid.java.util.common.StringUtils;
 
 import java.util.Map;
 import java.util.Objects;
@@ -45,7 +46,7 @@ public class KafkaPartitions
     for (Map.Entry<Integer, Long> entry : partitionOffsetMap.entrySet()) {
       Preconditions.checkArgument(
           entry.getValue() >= 0,
-          String.format(
+          StringUtils.format(
               "partition[%d] offset[%d] invalid",
               entry.getKey(),
               entry.getValue()

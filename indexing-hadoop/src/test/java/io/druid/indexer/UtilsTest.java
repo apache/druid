@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteStreams;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -40,7 +41,6 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -128,7 +128,7 @@ public class UtilsTest
     FileUtils.writeStringToFile(tmpFile, DUMMY_STRING);
     InputStream inStream = Utils.openInputStream(mockJobContext, tmpPath);
     Assert.assertNotNull(inStream);
-    String expected = new String(ByteStreams.toByteArray(inStream), StandardCharsets.UTF_8.toString());
+    String expected = StringUtils.fromUtf8(ByteStreams.toByteArray(inStream));
     Assert.assertEquals(expected, DUMMY_STRING);
   }
 }

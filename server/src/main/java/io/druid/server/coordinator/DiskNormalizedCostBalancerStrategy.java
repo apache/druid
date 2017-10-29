@@ -40,20 +40,19 @@ public class DiskNormalizedCostBalancerStrategy extends CostBalancerStrategy
   {
     double cost = super.computeCost(proposalSegment, server, includeCurrentServer);
 
-    if(cost == Double.POSITIVE_INFINITY){
+    if (cost == Double.POSITIVE_INFINITY) {
       return cost;
     }
 
     int nSegments = 1;
-    if(server.getServer().getSegments().size() > 0)
-    {
+    if (server.getServer().getSegments().size() > 0) {
       nSegments = server.getServer().getSegments().size();
     }
 
-    double normalizedCost = cost/nSegments;
+    double normalizedCost = cost / nSegments;
     double usageRatio = (double) server.getSizeUsed() / (double) server.getServer().getMaxSize();
 
-    return normalizedCost*usageRatio;
+    return normalizedCost * usageRatio;
   }
 }
 

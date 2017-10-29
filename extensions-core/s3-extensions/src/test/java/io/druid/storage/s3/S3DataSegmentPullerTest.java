@@ -20,6 +20,7 @@
 package io.druid.storage.s3;
 
 import io.druid.java.util.common.FileUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.segment.loading.SegmentLoadingException;
 import java.io.File;
 import java.io.FileInputStream;
@@ -68,11 +69,11 @@ public class S3DataSegmentPullerTest
 
     EasyMock.replay(s3Client);
 
-    String version = puller.getVersion(URI.create(String.format("s3://%s/%s", bucket, object0.getKey())));
+    String version = puller.getVersion(URI.create(StringUtils.format("s3://%s/%s", bucket, object0.getKey())));
 
     EasyMock.verify(s3Client);
 
-    Assert.assertEquals(String.format("%d", new Date(0).getTime()), version);
+    Assert.assertEquals(StringUtils.format("%d", new Date(0).getTime()), version);
   }
 
   @Test

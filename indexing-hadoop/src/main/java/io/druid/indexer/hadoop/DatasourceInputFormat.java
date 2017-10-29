@@ -23,16 +23,12 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 
-import io.druid.collections.CountingMap;
 import io.druid.data.input.InputRow;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.JobHelper;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.logger.Logger;
 
 import org.apache.hadoop.conf.Configuration;
@@ -56,8 +52,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
 {
@@ -72,7 +68,10 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
   {
     Configuration conf = context.getConfiguration();
 
-    String segmentsStr = Preconditions.checkNotNull(conf.get(CONF_INPUT_SEGMENTS), "No segments found to read");
+    String segmentsStr = Preconditions.checkNotNull(
+        conf.get(CONF_INPUT_SEGMENTS),
+        "No segments found to read"
+    );
     List<WindowedDataSegment> segments = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
         segmentsStr,
         new TypeReference<List<WindowedDataSegment>>()
@@ -91,7 +90,7 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
       for (WindowedDataSegment segment : segments) {
         totalSize += segment.getSegment().getSize();
       }
-      int mapTask = ((JobConf)conf).getNumMapTasks();
+      int mapTask = ((JobConf) conf).getNumMapTasks();
       if (mapTask > 0) {
         maxSize = totalSize / mapTask;
       }
@@ -159,7 +158,8 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
         //and not consider the splitting.
         //also without this, isSplitable(..) fails with NPE because compressionCodecs is not properly setup.
         @Override
-        protected boolean isSplitable(FileSystem fs, Path file) {
+        protected boolean isSplitable(FileSystem fs, Path file)
+        {
           return false;
         }
 
@@ -191,64 +191,63 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
       JobConf conf
   )
   {
-    String[] locations = null;
-    try {
-      locations = getFrequentLocations(segments, fio, conf);
-    }
-    catch (Exception e) {
-      logger.error(e, "Exception thrown finding location of splits");
-    }
+    String[] locations = getFrequentLocations(getLocations(segments, fio, conf));
+
     return new DatasourceInputSplit(segments, locations);
   }
 
-  private String[] getFrequentLocations(
-      List<WindowedDataSegment> segments,
-      org.apache.hadoop.mapred.InputFormat fio,
-      JobConf conf
-  ) throws IOException
+  @VisibleForTesting
+  static Stream<String> getLocations(
+      final List<WindowedDataSegment> segments,
+      final org.apache.hadoop.mapred.InputFormat fio,
+      final JobConf conf
+  )
   {
-    Iterable<String> locations = Collections.emptyList();
-    for (WindowedDataSegment segment : segments) {
-      FileInputFormat.setInputPaths(conf, new Path(JobHelper.getURIFromSegment(segment.getSegment())));
-      for (org.apache.hadoop.mapred.InputSplit split : fio.getSplits(conf, 1)) {
-        locations = Iterables.concat(locations, Arrays.asList(split.getLocations()));
-      }
-    }
-    return getFrequentLocations(locations);
-  }
-
-  private static String[] getFrequentLocations(Iterable<String> hosts)
-  {
-
-    final CountingMap<String> counter = new CountingMap<>();
-    for (String location : hosts) {
-      counter.add(location, 1);
-    }
-
-    final TreeSet<Pair<Long, String>> sorted = Sets.<Pair<Long, String>>newTreeSet(
-        new Comparator<Pair<Long, String>>()
-        {
-          @Override
-          public int compare(Pair<Long, String> o1, Pair<Long, String> o2)
-          {
-            int compare = o2.lhs.compareTo(o1.lhs); // descending
-            if (compare == 0) {
-              compare = o1.rhs.compareTo(o2.rhs);   // ascending
-            }
-            return compare;
+    return segments.stream().sequential().flatMap(
+        (final WindowedDataSegment segment) -> {
+          FileInputFormat.setInputPaths(
+              conf,
+              new Path(JobHelper.getURIFromSegment(segment.getSegment()))
+          );
+          try {
+            return Arrays.stream(fio.getSplits(conf, 1)).flatMap(
+                (final org.apache.hadoop.mapred.InputSplit split) -> {
+                  try {
+                    return Arrays.stream(split.getLocations());
+                  }
+                  catch (final IOException e) {
+                    logger.error(e, "Exception getting locations");
+                    return Stream.empty();
+                  }
+                }
+            );
+          }
+          catch (final IOException e) {
+            logger.error(e, "Exception getting splits");
+            return Stream.empty();
           }
         }
     );
+  }
 
-    for (Map.Entry<String, AtomicLong> entry : counter.entrySet()) {
-      sorted.add(Pair.of(entry.getValue().get(), entry.getKey()));
-    }
+  @VisibleForTesting
+  static String[] getFrequentLocations(final Stream<String> locations)
+  {
+    final Map<String, Long> locationCountMap = locations.collect(
+        Collectors.groupingBy(location -> location, Collectors.counting())
+    );
 
-    // use default replication factor, if possible
-    final List<String> locations = Lists.newArrayListWithCapacity(3);
-    for (Pair<Long, String> frequent : Iterables.limit(sorted, 3)) {
-      locations.add(frequent.rhs);
-    }
-    return locations.toArray(new String[locations.size()]);
+    final Comparator<Map.Entry<String, Long>> valueComparator =
+        Map.Entry.comparingByValue(Comparator.reverseOrder());
+
+    final Comparator<Map.Entry<String, Long>> keyComparator =
+        Map.Entry.comparingByKey();
+
+    return locationCountMap
+        .entrySet().stream()
+        .sorted(valueComparator.thenComparing(keyComparator))
+        .limit(3)
+        .map(Map.Entry::getKey)
+        .toArray(String[]::new);
   }
 }

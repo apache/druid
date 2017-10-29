@@ -19,11 +19,14 @@
 
 package io.druid.client.selector;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import io.druid.timeline.DataSegment;
 
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Set;
 
 public class ConnectionCountServerSelectorStrategy implements ServerSelectorStrategy
@@ -41,5 +44,16 @@ public class ConnectionCountServerSelectorStrategy implements ServerSelectorStra
   public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
   {
     return Collections.min(servers, comparator);
+  }
+
+  @Override
+  public List<QueryableDruidServer> pick(
+      Set<QueryableDruidServer> servers, DataSegment segment, int numServersToPick
+  )
+  {
+    if (servers.size() <= numServersToPick) {
+      return ImmutableList.copyOf(servers);
+    }
+    return Ordering.from(comparator).leastOf(servers, numServersToPick);
   }
 }

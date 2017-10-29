@@ -22,10 +22,8 @@ package io.druid.segment.virtual;
 import com.google.common.base.Preconditions;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
-import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.ColumnCapabilities;
 
@@ -56,33 +54,12 @@ public class VirtualizedColumnSelectorFactory implements ColumnSelectorFactory
   }
 
   @Override
-  public FloatColumnSelector makeFloatColumnSelector(String columnName)
+  public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
   {
     if (virtualColumns.exists(columnName)) {
-      return virtualColumns.makeFloatColumnSelector(columnName, baseFactory);
+      return virtualColumns.makeColumnValueSelector(columnName, baseFactory);
     } else {
-      return baseFactory.makeFloatColumnSelector(columnName);
-    }
-  }
-
-  @Override
-  public LongColumnSelector makeLongColumnSelector(String columnName)
-  {
-    if (virtualColumns.exists(columnName)) {
-      return virtualColumns.makeLongColumnSelector(columnName, baseFactory);
-    } else {
-      return baseFactory.makeLongColumnSelector(columnName);
-    }
-  }
-
-  @Nullable
-  @Override
-  public ObjectColumnSelector makeObjectColumnSelector(String columnName)
-  {
-    if (virtualColumns.exists(columnName)) {
-      return virtualColumns.makeObjectColumnSelector(columnName, baseFactory);
-    } else {
-      return baseFactory.makeObjectColumnSelector(columnName);
+      return baseFactory.makeColumnValueSelector(columnName);
     }
   }
 

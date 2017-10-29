@@ -20,7 +20,7 @@
 package io.druid.segment;
 
 import com.google.common.base.Throwables;
-import org.joda.time.DateTime;
+import io.druid.java.util.common.DateTimes;
 import org.joda.time.Days;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -54,7 +54,7 @@ public class ReferenceCountingSegmentTest
           @Override
           public Interval getDataInterval()
           {
-            return new Interval(DateTime.now().minus(Days.days(1)), DateTime.now());
+            return new Interval(DateTimes.nowUtc().minus(Days.days(1)), DateTimes.nowUtc());
           }
 
           @Override
@@ -83,56 +83,47 @@ public class ReferenceCountingSegmentTest
   public void testMultipleClose() throws Exception
   {
     Assert.assertFalse(segment.isClosed());
-    final Closeable closeable = segment.increment();
-    Assert.assertTrue(segment.getNumReferences() == 1);
+    Assert.assertTrue(segment.increment());
+    Assert.assertEquals(1, segment.getNumReferences());
 
+    Closeable closeable = segment.decrementOnceCloseable();
     closeable.close();
     closeable.close();
     exec.submit(
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            try {
-              closeable.close();
-            }
-            catch (Exception e) {
-              throw Throwables.propagate(e);
-            }
+        () -> {
+          try {
+            closeable.close();
+          }
+          catch (Exception e) {
+            throw Throwables.propagate(e);
           }
         }
-    );
-    Assert.assertTrue(segment.getNumReferences() == 0);
+    ).get();
+    Assert.assertEquals(0, segment.getNumReferences());
     Assert.assertFalse(segment.isClosed());
 
     segment.close();
     segment.close();
     exec.submit(
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            try {
-              segment.close();
-            }
-            catch (Exception e) {
-              throw Throwables.propagate(e);
-            }
+        () -> {
+          try {
+            segment.close();
+          }
+          catch (Exception e) {
+            throw Throwables.propagate(e);
           }
         }
-    );
+    ).get();
 
-    Assert.assertTrue(segment.getNumReferences() == 0);
+    Assert.assertEquals(0, segment.getNumReferences());
     Assert.assertTrue(segment.isClosed());
 
     segment.increment();
     segment.increment();
     segment.increment();
-    Assert.assertTrue(segment.getNumReferences() == 0);
+    Assert.assertEquals(0, segment.getNumReferences());
 
     segment.close();
-    Assert.assertTrue(segment.getNumReferences() == 0);
+    Assert.assertEquals(0, segment.getNumReferences());
   }
 }

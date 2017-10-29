@@ -22,8 +22,11 @@ package io.druid.server.http;
 import com.google.common.collect.ImmutableList;
 import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
+import io.druid.java.util.common.Intervals;
 import io.druid.server.coordination.ServerType;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthTestUtils;
+import io.druid.server.security.AuthenticationResult;
 import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -57,7 +60,7 @@ public class IntervalsResourceTest
     dataSegmentList.add(
         new DataSegment(
             "datasource1",
-            new Interval("2010-01-01T00:00:00.000Z/P1D"),
+            Intervals.of("2010-01-01T00:00:00.000Z/P1D"),
             null,
             null,
             null,
@@ -70,7 +73,7 @@ public class IntervalsResourceTest
     dataSegmentList.add(
         new DataSegment(
             "datasource1",
-            new Interval("2010-01-22T00:00:00.000Z/P1D"),
+            Intervals.of("2010-01-22T00:00:00.000Z/P1D"),
             null,
             null,
             null,
@@ -83,7 +86,7 @@ public class IntervalsResourceTest
     dataSegmentList.add(
         new DataSegment(
             "datasource2",
-            new Interval("2010-01-01T00:00:00.000Z/P1D"),
+            Intervals.of("2010-01-01T00:00:00.000Z/P1D"),
             null,
             null,
             null,
@@ -93,7 +96,7 @@ public class IntervalsResourceTest
             5
         )
     );
-    server = new DruidServer("who", "host", 1234, ServerType.HISTORICAL, "tier1", 0);
+    server = new DruidServer("who", "host", null, 1234, ServerType.HISTORICAL, "tier1", 0);
     server.addDataSegment(dataSegmentList.get(0).getIdentifier(), dataSegmentList.get(0));
     server.addDataSegment(dataSegmentList.get(1).getIdentifier(), dataSegmentList.get(1));
     server.addDataSegment(dataSegmentList.get(2).getIdentifier(), dataSegmentList.get(2));
@@ -105,12 +108,22 @@ public class IntervalsResourceTest
     EasyMock.expect(inventoryView.getInventory()).andReturn(
         ImmutableList.of(server)
     ).atLeastOnce();
-    EasyMock.replay(inventoryView);
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
+        new AuthenticationResult("druid", "druid", null)
+    ).once();
+    request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    EasyMock.expectLastCall().times(1);
+    EasyMock.replay(inventoryView, request);
 
     List<Interval> expectedIntervals = new ArrayList<>();
-    expectedIntervals.add(new Interval("2010-01-01T00:00:00.000Z/2010-01-02T00:00:00.000Z"));
-    expectedIntervals.add(new Interval("2010-01-22T00:00:00.000Z/2010-01-23T00:00:00.000Z"));
-    IntervalsResource intervalsResource = new IntervalsResource(inventoryView, new AuthConfig());
+    expectedIntervals.add(Intervals.of("2010-01-01T00:00:00.000Z/2010-01-02T00:00:00.000Z"));
+    expectedIntervals.add(Intervals.of("2010-01-22T00:00:00.000Z/2010-01-23T00:00:00.000Z"));
+    IntervalsResource intervalsResource = new IntervalsResource(
+        inventoryView,
+        new AuthConfig(),
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER
+    );
 
     Response response = intervalsResource.getIntervals(request);
     TreeMap<Interval, Map<String, Map<String, Object>>> actualIntervals = (TreeMap) response.getEntity();
@@ -132,11 +145,21 @@ public class IntervalsResourceTest
     EasyMock.expect(inventoryView.getInventory()).andReturn(
         ImmutableList.of(server)
     ).atLeastOnce();
-    EasyMock.replay(inventoryView);
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
+        new AuthenticationResult("druid", "druid", null)
+    ).once();
+    request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    EasyMock.expectLastCall().times(1);
+    EasyMock.replay(inventoryView, request);
 
     List<Interval> expectedIntervals = new ArrayList<>();
-    expectedIntervals.add(new Interval("2010-01-01T00:00:00.000Z/2010-01-02T00:00:00.000Z"));
-    IntervalsResource intervalsResource = new IntervalsResource(inventoryView, new AuthConfig());
+    expectedIntervals.add(Intervals.of("2010-01-01T00:00:00.000Z/2010-01-02T00:00:00.000Z"));
+    IntervalsResource intervalsResource = new IntervalsResource(
+        inventoryView,
+        new AuthConfig(),
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER
+    );
 
     Response response = intervalsResource.getSpecificIntervals("2010-01-01T00:00:00.000Z/P1D", "simple", null, request);
     Map<Interval, Map<String, Object>> actualIntervals = (Map) response.getEntity();
@@ -153,11 +176,21 @@ public class IntervalsResourceTest
     EasyMock.expect(inventoryView.getInventory()).andReturn(
         ImmutableList.of(server)
     ).atLeastOnce();
-    EasyMock.replay(inventoryView);
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
+        new AuthenticationResult("druid", "druid", null)
+    ).once();
+    request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    EasyMock.expectLastCall().times(1);
+    EasyMock.replay(inventoryView, request);
 
     List<Interval> expectedIntervals = new ArrayList<>();
-    expectedIntervals.add(new Interval("2010-01-01T00:00:00.000Z/2010-01-02T00:00:00.000Z"));
-    IntervalsResource intervalsResource = new IntervalsResource(inventoryView, new AuthConfig());
+    expectedIntervals.add(Intervals.of("2010-01-01T00:00:00.000Z/2010-01-02T00:00:00.000Z"));
+    IntervalsResource intervalsResource = new IntervalsResource(
+        inventoryView,
+        new AuthConfig(),
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER
+    );
 
     Response response = intervalsResource.getSpecificIntervals("2010-01-01T00:00:00.000Z/P1D", null, "full", request);
     TreeMap<Interval, Map<String, Map<String, Object>>> actualIntervals = (TreeMap) response.getEntity();
@@ -176,20 +209,30 @@ public class IntervalsResourceTest
     EasyMock.expect(inventoryView.getInventory()).andReturn(
         ImmutableList.of(server)
     ).atLeastOnce();
-    EasyMock.replay(inventoryView);
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
+        new AuthenticationResult("druid", "druid", null)
+    ).once();
+    request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    EasyMock.expectLastCall().times(1);
+    EasyMock.replay(inventoryView, request);
 
-    IntervalsResource intervalsResource = new IntervalsResource(inventoryView, new AuthConfig());
+    IntervalsResource intervalsResource = new IntervalsResource(
+        inventoryView,
+        new AuthConfig(),
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER
+    );
 
     Response response = intervalsResource.getSpecificIntervals("2010-01-01T00:00:00.000Z/P1D", null, null, request);
     Map<String, Object> actualIntervals = (Map) response.getEntity();
     Assert.assertEquals(2, actualIntervals.size());
     Assert.assertEquals(25L, actualIntervals.get("size"));
     Assert.assertEquals(2, actualIntervals.get("count"));
-
   }
 
   @After
-  public void tearDown() {
+  public void tearDown()
+  {
     EasyMock.verify(inventoryView);
   }
 

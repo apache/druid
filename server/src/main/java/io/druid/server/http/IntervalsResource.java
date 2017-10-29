@@ -21,13 +21,13 @@ package io.druid.server.http;
 
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-
 import io.druid.client.DruidDataSource;
 import io.druid.client.InventoryView;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.MapUtils;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationInfo;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -51,15 +51,18 @@ public class IntervalsResource
 {
   private final InventoryView serverInventoryView;
   private final AuthConfig authConfig;
+  private final AuthorizerMapper authorizerMapper;
 
   @Inject
   public IntervalsResource(
       InventoryView serverInventoryView,
-      AuthConfig authConfig
+      AuthConfig authConfig,
+      AuthorizerMapper authorizerMapper
   )
   {
     this.serverInventoryView = serverInventoryView;
     this.authConfig = authConfig;
+    this.authorizerMapper = authorizerMapper;
   }
 
   @GET
@@ -67,12 +70,11 @@ public class IntervalsResource
   public Response getIntervals(@Context final HttpServletRequest req)
   {
     final Comparator<Interval> comparator = Comparators.inverse(Comparators.intervalsByStartThenEnd());
-    final Set<DruidDataSource> datasources = authConfig.isEnabled() ?
-                                             InventoryViewUtils.getSecuredDataSources(
-                                                 serverInventoryView,
-                                                 (AuthorizationInfo) req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)
-                                             ) :
-                                             InventoryViewUtils.getDataSources(serverInventoryView);
+    final Set<DruidDataSource> datasources = InventoryViewUtils.getSecuredDataSources(
+        req,
+        serverInventoryView,
+        authorizerMapper
+    );
 
     final Map<Interval, Map<String, Map<String, Object>>> retVal = Maps.newTreeMap(comparator);
     for (DruidDataSource dataSource : datasources) {
@@ -99,13 +101,12 @@ public class IntervalsResource
       @Context final HttpServletRequest req
   )
   {
-    final Interval theInterval = new Interval(interval.replace("_", "/"));
-    final Set<DruidDataSource> datasources = authConfig.isEnabled() ?
-                                             InventoryViewUtils.getSecuredDataSources(
-                                                 serverInventoryView,
-                                                 (AuthorizationInfo) req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)
-                                             ) :
-                                             InventoryViewUtils.getDataSources(serverInventoryView);
+    final Interval theInterval = Intervals.of(interval.replace("_", "/"));
+    final Set<DruidDataSource> datasources = InventoryViewUtils.getSecuredDataSources(
+        req,
+        serverInventoryView,
+        authorizerMapper
+    );
 
     final Comparator<Interval> comparator = Comparators.inverse(Comparators.intervalsByStartThenEnd());
 
@@ -165,7 +166,9 @@ public class IntervalsResource
 
   private void setProperties(
       final Map<Interval, Map<String, Map<String, Object>>> retVal,
-      DruidDataSource dataSource, DataSegment dataSegment) {
+      DruidDataSource dataSource, DataSegment dataSegment
+  )
+  {
     Map<String, Object> properties = retVal.get(dataSegment.getInterval()).get(dataSource.getName());
     if (properties == null) {
       properties = Maps.newHashMap();

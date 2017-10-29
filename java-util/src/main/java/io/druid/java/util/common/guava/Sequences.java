@@ -75,14 +75,14 @@ public class Sequences
     return concat(Sequences.simple(sequences));
   }
 
-  public static <T> Sequence<T> concat(Sequence<Sequence<T>> sequences)
+  public static <T> Sequence<T> concat(Sequence<? extends Sequence<T>> sequences)
   {
     return new ConcatSequence<>(sequences);
   }
 
-  public static <From, To> Sequence<To> map(Sequence<From> sequence, Function<From, To> fn)
+  public static <From, To> Sequence<To> map(Sequence<From> sequence, Function<? super From, ? extends To> fn)
   {
-    return new MappedSequence<>(sequence, fn);
+    return new MappedSequence<>(sequence, fn::apply);
   }
 
   public static <T> Sequence<T> filter(Sequence<T> sequence, Predicate<T> pred)

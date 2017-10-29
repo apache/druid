@@ -24,6 +24,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.apache.commons.io.IOUtils;
@@ -32,7 +33,6 @@ import org.easymock.EasyMock;
 import org.easymock.IAnswer;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.S3Object;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -44,14 +44,17 @@ import java.io.File;
  */
 public class S3DataSegmentPusherTest
 {
-  private static class ValueContainer<T> {
+  private static class ValueContainer<T>
+  {
     private T value;
 
-    public T getValue() {
+    public T getValue()
+    {
       return value;
     }
 
-    public void setValue(T value) {
+    public void setValue(T value)
+    {
       this.value = value;
     }
   }
@@ -68,9 +71,11 @@ public class S3DataSegmentPusherTest
     ValueContainer<String> capturedS3SegmentJson = new ValueContainer<>();
     EasyMock.expect(s3Client.putObject(EasyMock.anyString(), EasyMock.capture(capturedS3Object)))
             .andAnswer(
-                new IAnswer<S3Object>() {
+                new IAnswer<S3Object>()
+                {
                   @Override
-                  public S3Object answer() throws Throwable {
+                  public S3Object answer() throws Throwable
+                  {
                     capturedS3SegmentJson.setValue(
                         IOUtils.toString(capturedS3Object.getValue().getDataInputStream(), "utf-8")
                     );
@@ -98,7 +103,7 @@ public class S3DataSegmentPusherTest
 
     DataSegment segmentToPush = new DataSegment(
         "foo",
-        new Interval("2015/2016"),
+        Intervals.of("2015/2016"),
         "0",
         Maps.<String, Object>newHashMap(),
         Lists.<String>newArrayList(),

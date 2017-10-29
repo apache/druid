@@ -26,14 +26,15 @@ import java.util.Objects;
 
 public class TaskLocation
 {
-  private static final TaskLocation UNKNOWN = new TaskLocation(null, -1);
+  private static final TaskLocation UNKNOWN = new TaskLocation(null, -1, -1);
 
   private final String host;
   private final int port;
+  private final int tlsPort;
 
-  public static TaskLocation create(String host, int port)
+  public static TaskLocation create(String host, int port, int tlsPort)
   {
-    return new TaskLocation(host, port);
+    return new TaskLocation(host, port, tlsPort);
   }
 
   public static TaskLocation unknown()
@@ -44,11 +45,13 @@ public class TaskLocation
   @JsonCreator
   public TaskLocation(
       @JsonProperty("host") String host,
-      @JsonProperty("port") int port
+      @JsonProperty("port") int port,
+      @JsonProperty("tlsPort") int tlsPort
   )
   {
     this.host = host;
     this.port = port;
+    this.tlsPort = tlsPort;
   }
 
   @JsonProperty
@@ -63,6 +66,12 @@ public class TaskLocation
     return port;
   }
 
+  @JsonProperty
+  public int getTlsPort()
+  {
+    return tlsPort;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -72,15 +81,20 @@ public class TaskLocation
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
+
     TaskLocation that = (TaskLocation) o;
-    return port == that.port &&
+
+    return port == that.port && tlsPort == that.tlsPort &&
            Objects.equals(host, that.host);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(host, port);
+    int result = host.hashCode();
+    result = 31 * result + port;
+    result = 31 * result + tlsPort;
+    return result;
   }
 
   @Override
@@ -89,6 +103,7 @@ public class TaskLocation
     return "TaskLocation{" +
            "host='" + host + '\'' +
            ", port=" + port +
+           ", tlsPort=" + tlsPort +
            '}';
   }
 }

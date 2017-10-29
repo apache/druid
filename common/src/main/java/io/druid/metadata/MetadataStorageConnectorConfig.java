@@ -20,6 +20,7 @@
 package io.druid.metadata;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.java.util.common.StringUtils;
 
 /**
  */
@@ -61,7 +62,7 @@ public class MetadataStorageConnectorConfig
   public String getConnectURI()
   {
     if (connectURI == null) {
-      return String.format("jdbc:derby://%s:%s/druid;create=true", host, port);
+      return StringUtils.format("jdbc:derby://%s:%s/druid;create=true", host, port);
     }
     return connectURI;
   }

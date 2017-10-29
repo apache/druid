@@ -26,15 +26,16 @@ import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
+import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.PolyBind;
 import io.druid.initialization.DruidModule;
 import io.druid.query.lookup.NamespaceLookupExtractorFactory;
-import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
+import io.druid.query.lookup.namespace.CacheGenerator;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
-import io.druid.query.lookup.namespace.JDBCExtractionNamespace;
+import io.druid.query.lookup.namespace.JdbcExtractionNamespace;
 import io.druid.query.lookup.namespace.StaticMapExtractionNamespace;
-import io.druid.query.lookup.namespace.URIExtractionNamespace;
+import io.druid.query.lookup.namespace.UriExtractionNamespace;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import io.druid.server.lookup.namespace.cache.OffHeapNamespaceExtractionCacheManager;
 import io.druid.server.lookup.namespace.cache.OnHeapNamespaceExtractionCacheManager;
@@ -59,7 +60,7 @@ public class NamespaceExtractionModule implements DruidModule
     );
   }
 
-  public static MapBinder<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>> getNamespaceFactoryMapBinder(
+  public static MapBinder<Class<? extends ExtractionNamespace>, CacheGenerator<?>> getNamespaceFactoryMapBinder(
       final Binder binder
   )
   {
@@ -68,7 +69,7 @@ public class NamespaceExtractionModule implements DruidModule
         new TypeLiteral<Class<? extends ExtractionNamespace>>()
         {
         },
-        new TypeLiteral<ExtractionNamespaceCacheFactory<?>>()
+        new TypeLiteral<CacheGenerator<?>>()
         {
         }
     );
@@ -77,13 +78,17 @@ public class NamespaceExtractionModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    PolyBind.createChoiceWithDefault(
-        binder,
-        TYPE_PREFIX,
-        Key.get(NamespaceExtractionCacheManager.class),
-        Key.get(OnHeapNamespaceExtractionCacheManager.class),
-        "onHeap"
-    ).in(LazySingleton.class);
+    JsonConfigProvider.bind(binder, "druid.lookup.namespace", NamespaceExtractionConfig.class);
+
+    PolyBind
+        .createChoiceWithDefault(binder, TYPE_PREFIX, Key.get(NamespaceExtractionCacheManager.class), "onHeap")
+        .in(LazySingleton.class);
+
+    PolyBind
+        .optionBinder(binder, Key.get(NamespaceExtractionCacheManager.class))
+        .addBinding("onHeap")
+        .to(OnHeapNamespaceExtractionCacheManager.class)
+        .in(LazySingleton.class);
 
     PolyBind
         .optionBinder(binder, Key.get(NamespaceExtractionCacheManager.class))
@@ -92,16 +97,16 @@ public class NamespaceExtractionModule implements DruidModule
         .in(LazySingleton.class);
 
     getNamespaceFactoryMapBinder(binder)
-        .addBinding(JDBCExtractionNamespace.class)
-        .to(JDBCExtractionNamespaceCacheFactory.class)
+        .addBinding(JdbcExtractionNamespace.class)
+        .to(JdbcCacheGenerator.class)
         .in(LazySingleton.class);
     getNamespaceFactoryMapBinder(binder)
-        .addBinding(URIExtractionNamespace.class)
-        .to(URIExtractionNamespaceCacheFactory.class)
+        .addBinding(UriExtractionNamespace.class)
+        .to(UriCacheGenerator.class)
         .in(LazySingleton.class);
     getNamespaceFactoryMapBinder(binder)
         .addBinding(StaticMapExtractionNamespace.class)
-        .to(StaticMapExtractionNamespaceCacheFactory.class)
+        .to(StaticMapCacheGenerator.class)
         .in(LazySingleton.class);
   }
 }

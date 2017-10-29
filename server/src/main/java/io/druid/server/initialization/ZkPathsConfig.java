@@ -25,29 +25,22 @@ import org.apache.curator.utils.ZKPaths;
 public class ZkPathsConfig
 {
   @JsonProperty
-  private
-  String base = "druid";
+  private String base = "druid";
   @JsonProperty
-  private
-  String propertiesPath;
+  private String propertiesPath;
   @JsonProperty
-  private
-  String announcementsPath;
-  @JsonProperty @Deprecated
-  private
-  String servedSegmentsPath;
+  private String announcementsPath;
   @JsonProperty
-  private
-  String liveSegmentsPath;
+  @Deprecated
+  private String servedSegmentsPath;
   @JsonProperty
-  private
-  String coordinatorPath;
+  private String liveSegmentsPath;
   @JsonProperty
-  private
-  String loadQueuePath;
+  private String coordinatorPath;
   @JsonProperty
-  private
-  String connectorPath;
+  private String loadQueuePath;
+  @JsonProperty
+  private String connectorPath;
 
   public String getBase()
   {
@@ -67,7 +60,7 @@ public class ZkPathsConfig
   @Deprecated
   public String getServedSegmentsPath()
   {
-    return (null == servedSegmentsPath) ?  defaultPath("servedSegments") : servedSegmentsPath;
+    return (null == servedSegmentsPath) ? defaultPath("servedSegments") : servedSegmentsPath;
   }
 
   public String getLiveSegmentsPath()
@@ -77,17 +70,27 @@ public class ZkPathsConfig
 
   public String getCoordinatorPath()
   {
-    return (null == coordinatorPath) ?  defaultPath("coordinator") : coordinatorPath;
+    return (null == coordinatorPath) ? defaultPath("coordinator") : coordinatorPath;
+  }
+
+  public String getOverlordPath()
+  {
+    return defaultPath("overlord");
   }
 
   public String getLoadQueuePath()
   {
-    return (null == loadQueuePath) ?  defaultPath("loadQueue") : loadQueuePath;
+    return (null == loadQueuePath) ? defaultPath("loadQueue") : loadQueuePath;
   }
 
   public String getConnectorPath()
   {
-    return (null == connectorPath) ?  defaultPath("connector") : connectorPath;
+    return (null == connectorPath) ? defaultPath("connector") : connectorPath;
+  }
+
+  public String getInternalDiscoveryPath()
+  {
+    return defaultPath("internal-discovery");
   }
 
   public String defaultPath(final String subPath)
@@ -96,27 +99,26 @@ public class ZkPathsConfig
   }
 
   @Override
-  public boolean equals(Object other){
-    if(null == other){
+  public boolean equals(Object other)
+  {
+    if (null == other) {
       return false;
     }
-    if(this == other){
+    if (this == other) {
       return true;
     }
-    if(!(other instanceof ZkPathsConfig)){
+    if (!(other instanceof ZkPathsConfig)) {
       return false;
     }
     ZkPathsConfig otherConfig = (ZkPathsConfig) other;
-    if(
-        this.getBase().equals(otherConfig.getBase()) &&
+    if (this.getBase().equals(otherConfig.getBase()) &&
         this.getAnnouncementsPath().equals(otherConfig.getAnnouncementsPath()) &&
         this.getConnectorPath().equals(otherConfig.getConnectorPath()) &&
         this.getLiveSegmentsPath().equals(otherConfig.getLiveSegmentsPath()) &&
         this.getCoordinatorPath().equals(otherConfig.getCoordinatorPath()) &&
         this.getLoadQueuePath().equals(otherConfig.getLoadQueuePath()) &&
         this.getPropertiesPath().equals(otherConfig.getPropertiesPath()) &&
-        this.getServedSegmentsPath().equals(otherConfig.getServedSegmentsPath())
-        ){
+        this.getServedSegmentsPath().equals(otherConfig.getServedSegmentsPath())) {
       return true;
     }
     return false;

@@ -21,6 +21,7 @@ package io.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -29,7 +30,7 @@ import org.junit.Test;
 public class SegmentIdentifierTest
 {
   private static final String DATA_SOURCE = "foo";
-  private static final Interval INTERVAL = new Interval("2000/PT1H");
+  private static final Interval INTERVAL = Intervals.of("2000/PT1H");
   private static final String VERSION = "v1";
   private static final NumberedShardSpec SHARD_SPEC_0 = new NumberedShardSpec(0, 2);
   private static final NumberedShardSpec SHARD_SPEC_1 = new NumberedShardSpec(1, 2);

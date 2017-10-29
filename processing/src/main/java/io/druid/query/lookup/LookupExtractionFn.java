@@ -81,11 +81,17 @@ public class LookupExtractionFn extends FunctionalExtraction
 
   @Override
   @JsonProperty
-  public boolean isRetainMissingValue() {return super.isRetainMissingValue();}
+  public boolean isRetainMissingValue()
+  {
+    return super.isRetainMissingValue();
+  }
 
   @Override
   @JsonProperty
-  public String getReplaceMissingValueWith() {return super.getReplaceMissingValueWith();}
+  public String getReplaceMissingValueWith()
+  {
+    return super.getReplaceMissingValueWith();
+  }
 
   @Override
   @JsonProperty
@@ -161,5 +167,17 @@ public class LookupExtractionFn extends FunctionalExtraction
     result = 31 * result + (getReplaceMissingValueWith() != null ? getReplaceMissingValueWith().hashCode() : 0);
     result = 31 * result + (isInjective() ? 1 : 0);
     return result;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "LookupExtractionFn{" +
+           "lookup=" + lookup +
+           ", optimize=" + optimize +
+           ", retainMissingValue=" + retainMissingValue +
+           ", replaceMissingValueWith='" + replaceMissingValueWith + '\'' +
+           ", injective=" + injective +
+           '}';
   }
 }

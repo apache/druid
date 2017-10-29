@@ -28,6 +28,8 @@ import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.extraction.ExtractionFn;
@@ -44,13 +46,11 @@ import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.query.ordering.StringComparators;
-import io.druid.query.search.search.ContainsSearchQuerySpec;
+import io.druid.query.search.ContainsSearchQuerySpec;
 import io.druid.segment.IndexBuilder;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.Column;
-import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.joda.time.Interval;
 import org.junit.AfterClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -70,7 +70,7 @@ public class TimeFilteringTest extends BaseFilterTest
 
   private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "millis", new DateTime("2000")),
+          new TimestampSpec(TIMESTAMP_COLUMN, "millis", DateTimes.of("2000")),
           new DimensionsSpec(
               DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim0", "dim1", "dim2", "dim3")),
               null,
@@ -134,7 +134,7 @@ public class TimeFilteringTest extends BaseFilterTest
     // cross the hashing threshold to test hashset implementation, filter on even values
     List<String> infilterValues = new ArrayList<>(InDimFilter.NUMERIC_HASHING_THRESHOLD * 2);
     for (int i = 0; i < InDimFilter.NUMERIC_HASHING_THRESHOLD * 2; i++) {
-      infilterValues.add(String.valueOf(i*2));
+      infilterValues.add(String.valueOf(i * 2));
     }
     assertFilterMatches(
         new InDimFilter(Column.TIME_COLUMN_NAME, infilterValues, null),
@@ -238,7 +238,7 @@ public class TimeFilteringTest extends BaseFilterTest
     assertFilterMatches(
         new IntervalDimFilter(
             Column.TIME_COLUMN_NAME,
-            Arrays.asList(Interval.parse("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.005Z")),
+            Arrays.asList(Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.005Z")),
             null
         ),
         ImmutableList.<String>of("1", "2", "3", "4")
@@ -248,8 +248,8 @@ public class TimeFilteringTest extends BaseFilterTest
         new IntervalDimFilter(
             Column.TIME_COLUMN_NAME,
             Arrays.asList(
-                Interval.parse("1970-01-01T00:00:00.000Z/1970-01-01T00:00:00.003Z"),
-                Interval.parse("1970-01-01T00:00:00.004Z/1970-01-01T00:00:00.006Z")
+                Intervals.of("1970-01-01T00:00:00.000Z/1970-01-01T00:00:00.003Z"),
+                Intervals.of("1970-01-01T00:00:00.004Z/1970-01-01T00:00:00.006Z")
             ),
             null
         ),
@@ -260,9 +260,9 @@ public class TimeFilteringTest extends BaseFilterTest
         new IntervalDimFilter(
             Column.TIME_COLUMN_NAME,
             Arrays.asList(
-                Interval.parse("1970-01-01T00:00:00.000Z/1970-01-01T00:00:00.001Z"),
-                Interval.parse("1970-01-01T00:00:00.003Z/1970-01-01T00:00:00.006Z"),
-                Interval.parse("1970-01-01T00:00:00.002Z/1970-01-01T00:00:00.005Z")
+                Intervals.of("1970-01-01T00:00:00.000Z/1970-01-01T00:00:00.001Z"),
+                Intervals.of("1970-01-01T00:00:00.003Z/1970-01-01T00:00:00.006Z"),
+                Intervals.of("1970-01-01T00:00:00.002Z/1970-01-01T00:00:00.005Z")
             ),
             null
         ),
@@ -275,7 +275,7 @@ public class TimeFilteringTest extends BaseFilterTest
     assertFilterMatches(
         new IntervalDimFilter(
             Column.TIME_COLUMN_NAME,
-            Arrays.asList(Interval.parse("1970-01-01T02:00:00.001Z/1970-01-01T02:00:00.005Z")),
+            Arrays.asList(Intervals.of("1970-01-01T02:00:00.001Z/1970-01-01T02:00:00.005Z")),
             exFn
         ),
         ImmutableList.<String>of("1", "2", "3", "4")
@@ -288,7 +288,7 @@ public class TimeFilteringTest extends BaseFilterTest
     assertFilterMatches(
         new IntervalDimFilter(
             "dim0",
-            Arrays.asList(Interval.parse("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.005Z")),
+            Arrays.asList(Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.005Z")),
             null
         ),
         ImmutableList.<String>of("1", "2", "3", "4")
@@ -298,8 +298,8 @@ public class TimeFilteringTest extends BaseFilterTest
         new IntervalDimFilter(
             "dim0",
             Arrays.asList(
-                Interval.parse("1970-01-01T00:00:00.000Z/1970-01-01T00:00:00.003Z"),
-                Interval.parse("1970-01-01T00:00:00.004Z/1970-01-01T00:00:00.006Z")
+                Intervals.of("1970-01-01T00:00:00.000Z/1970-01-01T00:00:00.003Z"),
+                Intervals.of("1970-01-01T00:00:00.004Z/1970-01-01T00:00:00.006Z")
             ),
             null
         ),
@@ -310,9 +310,9 @@ public class TimeFilteringTest extends BaseFilterTest
         new IntervalDimFilter(
             "dim0",
             Arrays.asList(
-                Interval.parse("1970-01-01T00:00:00.000Z/1970-01-01T00:00:00.001Z"),
-                Interval.parse("1970-01-01T00:00:00.003Z/1970-01-01T00:00:00.006Z"),
-                Interval.parse("1970-01-01T00:00:00.002Z/1970-01-01T00:00:00.005Z")
+                Intervals.of("1970-01-01T00:00:00.000Z/1970-01-01T00:00:00.001Z"),
+                Intervals.of("1970-01-01T00:00:00.003Z/1970-01-01T00:00:00.006Z"),
+                Intervals.of("1970-01-01T00:00:00.002Z/1970-01-01T00:00:00.005Z")
             ),
             null
         ),
@@ -322,7 +322,7 @@ public class TimeFilteringTest extends BaseFilterTest
     assertFilterMatches(
         new IntervalDimFilter(
             "dim1",
-            Arrays.asList(Interval.parse("1970-01-01T00:00:00.002Z/1970-01-01T00:00:00.011Z")),
+            Arrays.asList(Intervals.of("1970-01-01T00:00:00.002Z/1970-01-01T00:00:00.011Z")),
             null
         ),
         ImmutableList.<String>of("1", "2")
@@ -334,7 +334,7 @@ public class TimeFilteringTest extends BaseFilterTest
     assertFilterMatches(
         new IntervalDimFilter(
             "dim0",
-            Arrays.asList(Interval.parse("1970-01-01T02:00:00.001Z/1970-01-01T02:00:00.005Z")),
+            Arrays.asList(Intervals.of("1970-01-01T02:00:00.001Z/1970-01-01T02:00:00.005Z")),
             exFn
         ),
         ImmutableList.<String>of("1", "2", "3", "4")

@@ -19,8 +19,8 @@
 
 package io.druid.query.groupby.resource;
 
-import com.metamx.common.logger.Logger;
 import io.druid.collections.ResourceHolder;
+import io.druid.java.util.common.logger.Logger;
 
 import java.io.Closeable;
 import java.nio.ByteBuffer;

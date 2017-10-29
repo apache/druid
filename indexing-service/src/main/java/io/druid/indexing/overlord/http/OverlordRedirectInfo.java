@@ -23,9 +23,9 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import io.druid.indexing.overlord.TaskMaster;
+import io.druid.java.util.common.StringUtils;
 import io.druid.server.http.RedirectInfo;
 
-import java.net.URI;
 import java.net.URL;
 import java.util.Set;
 
@@ -53,15 +53,21 @@ public class OverlordRedirectInfo implements RedirectInfo
   }
 
   @Override
-  public URL getRedirectURL(String queryString, String requestURI)
+  public URL getRedirectURL(String scheme, String queryString, String requestURI)
   {
     try {
       final String leader = taskMaster.getCurrentLeader();
       if (leader == null || leader.isEmpty()) {
         return null;
-      } else {
-        return new URI("http", leader, requestURI, queryString, null).toURL();
       }
+
+      String location = StringUtils.format("%s://%s%s", scheme, leader, requestURI);
+
+      if (queryString != null) {
+        location = StringUtils.format("%s?%s", location, queryString);
+      }
+
+      return new URL(location);
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

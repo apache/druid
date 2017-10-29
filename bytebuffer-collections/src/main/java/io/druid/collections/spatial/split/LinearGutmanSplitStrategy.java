@@ -58,10 +58,10 @@ public class LinearGutmanSplitStrategy extends GutmanSplitStrategy
 
     double bestNormalized = 0.0;
     for (int i = 0; i < numDims; i++) {
-      float minCoord = Float.MAX_VALUE;
-      float maxCoord = -Float.MAX_VALUE;
-      float highestLowSide = -Float.MAX_VALUE;
-      float lowestHighside = Float.MAX_VALUE;
+      float minCoord = Float.POSITIVE_INFINITY;
+      float maxCoord = Float.NEGATIVE_INFINITY;
+      float lowestHighside = Float.POSITIVE_INFINITY;
+      float highestLowSide = Float.NEGATIVE_INFINITY;
       int highestLowSideIndex = 0;
       int lowestHighSideIndex = 0;
 

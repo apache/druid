@@ -33,6 +33,6 @@ public class Version implements Runnable
   @Override
   public void run()
   {
-    System.out.println(new StatusResource.Status(Initialization.getLoadedModules(DruidModule.class)));
+    System.out.println(new StatusResource.Status(Initialization.getLoadedImplementations(DruidModule.class)));
   }
 }

@@ -61,7 +61,7 @@ import java.util.Map;
  *                                  .build();
  * </code></pre>
  *
- * @see io.druid.query.topn.TopNQuery
+ * @see TopNQuery
  */
 public class TopNQueryBuilder
 {
@@ -95,17 +95,17 @@ public class TopNQueryBuilder
 
   public TopNQueryBuilder(final TopNQuery query)
   {
-      this.dataSource = query.getDataSource();
-      this.virtualColumns = query.getVirtualColumns();
-      this.dimensionSpec = query.getDimensionSpec();
-      this.topNMetricSpec = query.getTopNMetricSpec();
-      this.threshold = query.getThreshold();
-      this.querySegmentSpec = query.getQuerySegmentSpec();
-      this.dimFilter = query.getDimensionsFilter();
-      this.granularity = query.getGranularity();
-      this.aggregatorSpecs = query.getAggregatorSpecs();
-      this.postAggregatorSpecs = query.getPostAggregatorSpecs();
-      this.context = query.getContext();
+    this.dataSource = query.getDataSource();
+    this.virtualColumns = query.getVirtualColumns();
+    this.dimensionSpec = query.getDimensionSpec();
+    this.topNMetricSpec = query.getTopNMetricSpec();
+    this.threshold = query.getThreshold();
+    this.querySegmentSpec = query.getQuerySegmentSpec();
+    this.dimFilter = query.getDimensionsFilter();
+    this.granularity = query.getGranularity();
+    this.aggregatorSpecs = query.getAggregatorSpecs();
+    this.postAggregatorSpecs = query.getPostAggregatorSpecs();
+    this.context = query.getContext();
   }
 
   public DataSource getDataSource()

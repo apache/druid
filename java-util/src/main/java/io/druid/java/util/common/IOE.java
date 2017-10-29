@@ -27,11 +27,11 @@ public class IOE extends IOException
 {
   public IOE(String formatText, Object... arguments)
   {
-    super(StringUtils.safeFormat(formatText, arguments));
+    super(StringUtils.nonStrictFormat(formatText, arguments));
   }
 
   public IOE(Throwable cause, String formatText, Object... arguments)
   {
-    super(StringUtils.safeFormat(formatText, arguments), cause);
+    super(StringUtils.nonStrictFormat(formatText, arguments), cause);
   }
 }

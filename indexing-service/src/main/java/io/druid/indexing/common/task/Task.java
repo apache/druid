@@ -27,6 +27,7 @@ import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 /**
@@ -68,7 +69,7 @@ public interface Task
    *
    * @return task ID
    */
-  public String getId();
+  String getId();
 
   /**
    * Returns group ID of this task. Tasks with the same group ID can share locks. If tasks do not need to share locks,
@@ -76,22 +77,35 @@ public interface Task
    *
    * @return task group ID
    */
-  public String getGroupId();
+  String getGroupId();
 
   /**
-   * Returns a {@link io.druid.indexing.common.task.TaskResource} for this task. Task resources define specific
-   * worker requirements a task may require.
+   * Returns task priority. The task priority is currently used only for prioritized locking, but, in the future, it can
+   * be used for task scheduling, cluster resource management, etc.
    *
-   * @return {@link io.druid.indexing.common.task.TaskResource} for this task
+   * @return task priority
+   *
+   * @see Tasks for default task priorities
    */
-  public TaskResource getTaskResource();
+  default int getPriority()
+  {
+    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_TASK_PRIORITY);
+  }
+
+  /**
+   * Returns a {@link TaskResource} for this task. Task resources define specific worker requirements a task may
+   * require.
+   *
+   * @return {@link TaskResource} for this task
+   */
+  TaskResource getTaskResource();
 
   /**
    * Returns a descriptive label for this task type. Used for metrics emission and logging.
    *
    * @return task type label
    */
-  public String getType();
+  String getType();
 
   /**
    * Get the nodeType for if/when this task publishes on zookeeper.
@@ -99,12 +113,12 @@ public interface Task
    * @return the nodeType to use when publishing the server to zookeeper. null if the task doesn't expect to
    * publish to zookeeper.
    */
-  public String getNodeType();
+  String getNodeType();
 
   /**
    * Returns the datasource this task operates on. Each task can operate on only one datasource.
    */
-  public String getDataSource();
+  String getDataSource();
 
   /**
    * Returns query runners for this task. If this task is not meant to answer queries over its datasource, this method
@@ -114,13 +128,13 @@ public interface Task
    *
    * @return query runners for this task
    */
-  public <T> QueryRunner<T> getQueryRunner(Query<T> query);
+  <T> QueryRunner<T> getQueryRunner(Query<T> query);
 
   /**
    * Returns an extra classpath that should be prepended to the default classpath when running this task. If no
    * extra classpath should be prepended, this should return null or the empty string.
    */
-  public String getClasspathPrefix();
+  String getClasspathPrefix();
 
   /**
    * Execute preflight actions for a task. This can be used to acquire locks, check preconditions, and so on. The
@@ -135,21 +149,21 @@ public interface Task
    *
    * @throws Exception if the task should be considered a failure
    */
-  public boolean isReady(TaskActionClient taskActionClient) throws Exception;
+  boolean isReady(TaskActionClient taskActionClient) throws Exception;
 
   /**
    * Returns whether or not this task can restore its progress from its on-disk working directory. Restorable tasks
    * may be started with a non-empty working directory. Tasks that exit uncleanly may still have a chance to attempt
    * restores, meaning that restorable tasks should be able to deal with potentially partially written on-disk state.
    */
-  public boolean canRestore();
+  boolean canRestore();
 
   /**
    * Asks a task to arrange for its "run" method to exit promptly. This method will only be called if
    * {@link #canRestore()} returns true. Tasks that take too long to stop gracefully will be terminated with
    * extreme prejudice.
    */
-  public void stopGracefully();
+  void stopGracefully();
 
   /**
    * Execute a task. This typically runs on a worker as determined by a TaskRunner, and will be run while
@@ -162,10 +176,19 @@ public interface Task
    *
    * @throws Exception if this task failed
    */
-  public TaskStatus run(TaskToolbox toolbox) throws Exception;
+  TaskStatus run(TaskToolbox toolbox) throws Exception;
 
-  public Map<String, Object> getContext();
+  Map<String, Object> getContext();
 
-  public Object getContextValue(String key);
+  @Nullable
+  default <ContextValueType> ContextValueType getContextValue(String key)
+  {
+    return getContext() == null ? null : (ContextValueType) getContext().get(key);
+  }
 
+  default <ContextValueType> ContextValueType getContextValue(String key, ContextValueType defaultValue)
+  {
+    final ContextValueType value = getContextValue(key);
+    return value == null ? defaultValue : value;
+  }
 }

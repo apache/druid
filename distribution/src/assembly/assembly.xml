@@ -114,6 +114,13 @@
             </includes>
             <outputDirectory>conf-quickstart/tranquility</outputDirectory>
         </fileSet>
+        <fileSet>
+            <directory>../examples/quickstart/protobuf</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>quickstart/protobuf</outputDirectory>
+        </fileSet>
 
         <fileSet>
             <directory>../examples/conf</directory>
@@ -184,6 +191,7 @@
             <directory>../</directory>
             <includes>
                 <include>LICENSE</include>
+                <include>NOTICE</include>
             </includes>
         </fileSet>
     </fileSets>

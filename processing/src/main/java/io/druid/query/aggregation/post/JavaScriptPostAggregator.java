@@ -49,9 +49,9 @@ public class JavaScriptPostAggregator implements PostAggregator
     }
   };
 
-  private static interface Function
+  private interface Function
   {
-    public double apply(final Object[] args);
+    double apply(Object[] args);
   }
 
   private static Function compile(String function)
@@ -85,8 +85,10 @@ public class JavaScriptPostAggregator implements PostAggregator
   private final String name;
   private final List<String> fieldNames;
   private final String function;
+  private final JavaScriptConfig config;
 
-  private final Function fn;
+  // This variable is lazily initialized to avoid unnecessary JavaScript compilation during JSON serde
+  private Function fn;
 
   @JsonCreator
   public JavaScriptPostAggregator(
@@ -99,12 +101,11 @@ public class JavaScriptPostAggregator implements PostAggregator
     Preconditions.checkNotNull(name, "Must have a valid, non-null post-aggregator name");
     Preconditions.checkNotNull(fieldNames, "Must have a valid, non-null fieldNames");
     Preconditions.checkNotNull(function, "Must have a valid, non-null function");
-    Preconditions.checkState(config.isEnabled(), "JavaScript is disabled.");
 
     this.name = name;
     this.fieldNames = fieldNames;
     this.function = function;
-    this.fn = compile(function);
+    this.config = config;
   }
 
   @Override
@@ -122,12 +123,35 @@ public class JavaScriptPostAggregator implements PostAggregator
   @Override
   public Object compute(Map<String, Object> combinedAggregators)
   {
+    checkAndCompileScript();
     final Object[] args = new Object[fieldNames.size()];
     int i = 0;
     for (String field : fieldNames) {
       args[i++] = combinedAggregators.get(field);
     }
     return fn.apply(args);
+  }
+
+  /**
+   * {@link #compute} can be called by multiple threads, so this function should be thread-safe to avoid extra
+   * script compilation.
+   */
+  private void checkAndCompileScript()
+  {
+    if (fn == null) {
+      // JavaScript configuration should be checked when it's actually used because someone might still want Druid
+      // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
+      Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
+
+      // Synchronizing here can degrade the performance significantly because this method is called per input row.
+      // However, early compilation of JavaScript functions can occur some memory issues due to unnecessary compilation
+      // involving Java class generation each time, and thus this will be better.
+      synchronized (config) {
+        if (fn == null) {
+          fn = compile(function);
+        }
+      }
+    }
   }
 
   @Override
@@ -179,9 +203,6 @@ public class JavaScriptPostAggregator implements PostAggregator
     if (!fieldNames.equals(that.fieldNames)) {
       return false;
     }
-    if (!fn.equals(that.fn)) {
-      return false;
-    }
     if (!function.equals(that.function)) {
       return false;
     }
@@ -198,7 +219,6 @@ public class JavaScriptPostAggregator implements PostAggregator
     int result = name.hashCode();
     result = 31 * result + fieldNames.hashCode();
     result = 31 * result + function.hashCode();
-    result = 31 * result + fn.hashCode();
     return result;
   }
 }

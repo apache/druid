@@ -28,9 +28,10 @@ import io.druid.segment.Cursor;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.column.ValueType;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
-public class TopNMapFn implements Function<Cursor, Result<TopNResultValue>>
+public class TopNMapFn
 {
   public static Function<Object, Object> getValueTransformer(ValueType outputType)
   {
@@ -41,38 +42,27 @@ public class TopNMapFn implements Function<Cursor, Result<TopNResultValue>>
         return LONG_TRANSFORMER;
       case FLOAT:
         return FLOAT_TRANSFORMER;
+      case DOUBLE:
+        return DOUBLE_TRANSFORMER;
       default:
         throw new IAE("invalid type: %s", outputType);
     }
   }
 
-  private static Function<Object, Object> STRING_TRANSFORMER = new Function<Object, Object>()
-  {
-    @Override
-    public Object apply(Object input)
-    {
-      return Objects.toString(input, null);
-    }
+  private static Function<Object, Object> STRING_TRANSFORMER = input -> Objects.toString(input, null);
+
+  private static Function<Object, Object> LONG_TRANSFORMER = input -> {
+    final Long longVal = DimensionHandlerUtils.convertObjectToLong(input);
+    return longVal == null ? DimensionHandlerUtils.ZERO_LONG : longVal;
   };
 
-  private static Function<Object, Object> LONG_TRANSFORMER = new Function<Object, Object>()
-  {
-    @Override
-    public Object apply(Object input)
-    {
-      final Long longVal = DimensionHandlerUtils.convertObjectToLong(input);
-      return longVal == null ? 0L : longVal;
-    }
+  private static Function<Object, Object> FLOAT_TRANSFORMER = input -> {
+    final Float floatVal = DimensionHandlerUtils.convertObjectToFloat(input);
+    return floatVal == null ? DimensionHandlerUtils.ZERO_FLOAT : floatVal;
   };
-
-  private static Function<Object, Object> FLOAT_TRANSFORMER = new Function<Object, Object>()
-  {
-    @Override
-    public Object apply(Object input)
-    {
-      final Float floatVal = DimensionHandlerUtils.convertObjectToFloat(input);
-      return floatVal == null ? 0.0f : floatVal;
-    }
+  private static Function<Object, Object> DOUBLE_TRANSFORMER = input -> {
+    final Double doubleValue = DimensionHandlerUtils.convertObjectToDouble(input);
+    return doubleValue == null ? DimensionHandlerUtils.ZERO_DOUBLE : doubleValue;
   };
 
   private static final TopNColumnSelectorStrategyFactory STRATEGY_FACTORY = new TopNColumnSelectorStrategyFactory();
@@ -89,14 +79,13 @@ public class TopNMapFn implements Function<Cursor, Result<TopNResultValue>>
     this.topNAlgorithm = topNAlgorithm;
   }
 
-  @Override
   @SuppressWarnings("unchecked")
-  public Result<TopNResultValue> apply(Cursor cursor)
+  public Result<TopNResultValue> apply(final Cursor cursor, final @Nullable TopNQueryMetrics queryMetrics)
   {
     final ColumnSelectorPlus selectorPlus = DimensionHandlerUtils.createColumnSelectorPlus(
         STRATEGY_FACTORY,
         query.getDimensionSpec(),
-        cursor
+        cursor.getColumnSelectorFactory()
     );
 
     if (selectorPlus.getSelector() == null) {
@@ -106,10 +95,14 @@ public class TopNMapFn implements Function<Cursor, Result<TopNResultValue>>
     TopNParams params = null;
     try {
       params = topNAlgorithm.makeInitParams(selectorPlus, cursor);
+      if (queryMetrics != null) {
+        queryMetrics.columnValueSelector(selectorPlus.getSelector());
+        queryMetrics.numValuesPerPass(params);
+      }
 
       TopNResultBuilder resultBuilder = BaseTopNAlgorithm.makeResultBuilder(params, query);
 
-      topNAlgorithm.run(params, resultBuilder, null);
+      topNAlgorithm.run(params, resultBuilder, null, queryMetrics);
 
       return resultBuilder.build();
     }

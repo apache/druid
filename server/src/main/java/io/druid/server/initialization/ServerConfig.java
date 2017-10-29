@@ -24,6 +24,7 @@ import org.joda.time.Period;
 
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import java.util.Objects;
 
 /**
  */
@@ -32,6 +33,13 @@ public class ServerConfig
   @JsonProperty
   @Min(1)
   private int numThreads = Math.max(10, (Runtime.getRuntime().availableProcessors() * 17) / 16 + 2) + 30;
+
+  @JsonProperty
+  @Min(1)
+  private int queueSize = Integer.MAX_VALUE;
+
+  @JsonProperty
+  private boolean enableRequestLimit = false;
 
   @JsonProperty
   @NotNull
@@ -50,6 +58,16 @@ public class ServerConfig
     return numThreads;
   }
 
+  public int getQueueSize()
+  {
+    return queueSize;
+  }
+
+  public boolean isEnableRequestLimit()
+  {
+    return enableRequestLimit;
+  }
+
   public Period getMaxIdleTime()
   {
     return maxIdleTime;
@@ -66,13 +84,33 @@ public class ServerConfig
   }
 
   @Override
-  public String toString()
+  public boolean equals(Object o)
   {
-    return "ServerConfig{" +
-           "numThreads=" + numThreads +
-           ", maxIdleTime=" + maxIdleTime +
-           ", defaultQueryTimeout=" + defaultQueryTimeout +
-           ", maxScatterGatherBytes=" + maxScatterGatherBytes +
-           '}';
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ServerConfig that = (ServerConfig) o;
+    return numThreads == that.numThreads &&
+           queueSize == that.queueSize &&
+           enableRequestLimit == that.enableRequestLimit &&
+           defaultQueryTimeout == that.defaultQueryTimeout &&
+           maxScatterGatherBytes == that.maxScatterGatherBytes &&
+           Objects.equals(maxIdleTime, that.maxIdleTime);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        numThreads,
+        queueSize,
+        enableRequestLimit,
+        maxIdleTime,
+        defaultQueryTimeout,
+        maxScatterGatherBytes
+    );
   }
 }

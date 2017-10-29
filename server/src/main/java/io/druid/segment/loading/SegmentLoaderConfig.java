@@ -21,6 +21,7 @@ package io.druid.segment.loading;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.ISE;
 import org.hibernate.validator.constraints.NotEmpty;
 
 import java.io.File;
@@ -44,13 +45,16 @@ public class SegmentLoaderConfig
   private int announceIntervalMillis = 0; // do not background announce
 
   @JsonProperty("numLoadingThreads")
-  private int numLoadingThreads = 1;
+  private int numLoadingThreads = 10;
 
   @JsonProperty("numBootstrapThreads")
   private Integer numBootstrapThreads = null;
 
   @JsonProperty
   private File infoDir = null;
+
+  @JsonProperty
+  private int statusQueueMaxSize = 100;
 
   public List<StorageLocationConfig> getLocations()
   {
@@ -77,17 +81,27 @@ public class SegmentLoaderConfig
     return numLoadingThreads;
   }
 
-  public int getNumBootstrapThreads() {
+  public int getNumBootstrapThreads()
+  {
     return numBootstrapThreads == null ? numLoadingThreads : numBootstrapThreads;
   }
 
   public File getInfoDir()
   {
     if (infoDir == null) {
+
+      if (locations == null || locations.size() == 0) {
+        throw new ISE("You have no segment cache locations defined. Please configure druid.segmentCache.locations to use one or more locations.");
+      }
       infoDir = new File(locations.get(0).getPath(), "info_dir");
     }
 
     return infoDir;
+  }
+
+  public int getStatusQueueMaxSize()
+  {
+    return statusQueueMaxSize;
   }
 
   public SegmentLoaderConfig withLocations(List<StorageLocationConfig> locations)

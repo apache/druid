@@ -29,7 +29,6 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.servlet.GuiceFilter;
-
 import io.druid.common.utils.SocketUtil;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.Jerseys;
@@ -51,6 +50,11 @@ import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.router.QueryHostFinder;
+import io.druid.server.security.AllowAllAuthorizer;
+import io.druid.server.security.AuthTestUtils;
+import io.druid.server.security.Authorizer;
+import io.druid.server.security.AuthorizerMapper;
+import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -85,7 +89,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     setProperties();
     Injector injector = setupInjector();
     final DruidNode node = injector.getInstance(Key.get(DruidNode.class, Self.class));
-    port = node.getPort();
+    port = node.getPlaintextPort();
     port1 = SocketUtil.findOpenPortFrom(port + 1);
     port2 = SocketUtil.findOpenPortFrom(port1 + 1);
 
@@ -106,9 +110,21 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
               public void configure(Binder binder)
               {
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test", "localhost", null)
+                    binder,
+                    Key.get(DruidNode.class, Self.class),
+                    new DruidNode("test", "localhost", null, null, true, false)
                 );
                 binder.bind(JettyServerInitializer.class).to(ProxyJettyServerInit.class).in(LazySingleton.class);
+                binder.bind(AuthorizerMapper.class).toInstance(
+                    new AuthorizerMapper(null) {
+
+                      @Override
+                      public Authorizer getAuthorizer(String name)
+                      {
+                        return new AllowAllAuthorizer();
+                      }
+                    }
+                );
                 Jerseys.addResource(binder, SlowResource.class);
                 Jerseys.addResource(binder, ExceptionResource.class);
                 Jerseys.addResource(binder, DefaultResource.class);
@@ -195,24 +211,24 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       final QueryHostFinder hostFinder = new QueryHostFinder(null)
       {
         @Override
-        public String getHost(Query query)
+        public io.druid.client.selector.Server getServer(Query query)
         {
-          return "localhost:" + node.getPort();
+          return new TestServer("http", "localhost", node.getPlaintextPort());
         }
 
         @Override
-        public String getDefaultHost()
+        public io.druid.client.selector.Server getDefaultServer()
         {
-          return "localhost:" + node.getPort();
+          return new TestServer("http", "localhost", node.getPlaintextPort());
         }
 
         @Override
-        public Collection<String> getAllHosts()
+        public Collection<io.druid.client.selector.Server> getAllServers()
         {
           return ImmutableList.of(
-              "localhost:" + node.getPort(),
-              "localhost:" + port1,
-              "localhost:" + port2
+              new TestServer("http", "localhost", node.getPlaintextPort()),
+              new TestServer("http", "localhost", port1),
+              new TestServer("http", "localhost", port2)
           );
         }
       };
@@ -224,7 +240,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
               jsonMapper,
               injector.getInstance(Key.get(ObjectMapper.class, Smile.class)),
               hostFinder,
-              injector.getProvider(org.eclipse.jetty.client.HttpClient.class),
+              injector.getProvider(HttpClient.class),
               injector.getInstance(DruidHttpClientConfig.class),
               new NoopServiceEmitter(),
               new RequestLogger()
@@ -235,13 +251,14 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                   // noop
                 }
               },
-              new DefaultGenericQueryMetricsFactory(jsonMapper)
+              new DefaultGenericQueryMetricsFactory(jsonMapper),
+              AuthTestUtils.TEST_AUTHENTICATOR_MAPPER
           )
           {
             @Override
-            protected URI rewriteURI(HttpServletRequest request, String host)
+            protected URI rewriteURI(HttpServletRequest request, String scheme, String host)
             {
-              String uri = super.rewriteURI(request, host).toString();
+              String uri = super.rewriteURI(request, scheme, host).toString();
               if (uri.contains("/druid/v2")) {
                 return URI.create(uri.replace("/druid/v2", "/default"));
               }
@@ -270,7 +287,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     // test params
     Assert.assertEquals(
         new URI("http://localhost:1234/some/path?param=1"),
-        AsyncQueryForwardingServlet.makeURI("localhost:1234", "/some/path", "param=1")
+        AsyncQueryForwardingServlet.makeURI("http", "localhost:1234", "/some/path", "param=1")
     );
 
     // HttpServletRequest.getQueryString returns encoded form
@@ -278,6 +295,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     Assert.assertEquals(
         "http://[2a00:1450:4007:805::1007]:1234/some/path?param=1&param2=%E2%82%AC",
         AsyncQueryForwardingServlet.makeURI(
+            "http",
             HostAndPort.fromParts("2a00:1450:4007:805::1007", 1234).toString(),
             "/some/path",
             "param=1&param2=%E2%82%AC"
@@ -287,7 +305,46 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     // test null query
     Assert.assertEquals(
         new URI("http://localhost/"),
-        AsyncQueryForwardingServlet.makeURI("localhost", "/", null)
+        AsyncQueryForwardingServlet.makeURI("http", "localhost", "/", null)
     );
+  }
+
+  private static class TestServer implements io.druid.client.selector.Server
+  {
+
+    private final String scheme;
+    private final String address;
+    private final int port;
+
+    public TestServer(String scheme, String address, int port)
+    {
+      this.scheme = scheme;
+      this.address = address;
+      this.port = port;
+    }
+
+    @Override
+    public String getScheme()
+    {
+      return scheme;
+    }
+
+    @Override
+    public String getHost()
+    {
+      return address + ":" + port;
+    }
+
+    @Override
+    public String getAddress()
+    {
+      return address;
+    }
+
+    @Override
+    public int getPort()
+    {
+      return port;
+    }
   }
 }

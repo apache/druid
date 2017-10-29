@@ -19,25 +19,25 @@
 
 package io.druid.query.aggregation.histogram.sql;
 
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.histogram.ApproximateHistogram;
 import io.druid.query.aggregation.histogram.ApproximateHistogramAggregatorFactory;
 import io.druid.query.aggregation.histogram.ApproximateHistogramFoldingAggregatorFactory;
 import io.druid.query.aggregation.histogram.QuantilePostAggregator;
-import io.druid.query.filter.DimFilter;
+import io.druid.segment.VirtualColumn;
 import io.druid.segment.column.ValueType;
+import io.druid.segment.virtual.ExpressionVirtualColumn;
 import io.druid.sql.calcite.aggregation.Aggregation;
-import io.druid.sql.calcite.aggregation.Aggregations;
 import io.druid.sql.calcite.aggregation.SqlAggregator;
+import io.druid.sql.calcite.expression.DruidExpression;
 import io.druid.sql.calcite.expression.Expressions;
-import io.druid.sql.calcite.expression.RowExtraction;
-import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
@@ -48,6 +48,7 @@ import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class QuantileSqlAggregator implements SqlAggregator
@@ -63,32 +64,30 @@ public class QuantileSqlAggregator implements SqlAggregator
 
   @Override
   public Aggregation toDruidAggregation(
-      final String name,
-      final RowSignature rowSignature,
-      final DruidOperatorTable operatorTable,
       final PlannerContext plannerContext,
-      final List<Aggregation> existingAggregations,
-      final Project project,
+      final RowSignature rowSignature,
+      final RexBuilder rexBuilder,
+      final String name,
       final AggregateCall aggregateCall,
-      final DimFilter filter
+      final Project project,
+      final List<Aggregation> existingAggregations
   )
   {
-    final RowExtraction rex = Expressions.toRowExtraction(
-        operatorTable,
+    final DruidExpression input = Expressions.toDruidExpression(
         plannerContext,
-        rowSignature.getRowOrder(),
+        rowSignature,
         Expressions.fromFieldAccess(
             rowSignature,
             project,
             aggregateCall.getArgList().get(0)
         )
     );
-    if (rex == null) {
+    if (input == null) {
       return null;
     }
 
     final AggregatorFactory aggregatorFactory;
-    final String histogramName = String.format("%s:agg", name);
+    final String histogramName = StringUtils.format("%s:agg", name);
     final RexNode probabilityArg = Expressions.fromFieldAccess(
         rowSignature,
         project,
@@ -115,47 +114,79 @@ public class QuantileSqlAggregator implements SqlAggregator
     // Look for existing matching aggregatorFactory.
     for (final Aggregation existing : existingAggregations) {
       for (AggregatorFactory factory : existing.getAggregatorFactories()) {
-        final boolean matches = Aggregations.aggregatorMatches(
-            factory,
-            filter,
-            ApproximateHistogramAggregatorFactory.class,
-            new Predicate<ApproximateHistogramAggregatorFactory>()
-            {
-              @Override
-              public boolean apply(final ApproximateHistogramAggregatorFactory theFactory)
-              {
-                return theFactory.getFieldName().equals(rex.getColumn())
-                       && theFactory.getResolution() == resolution
-                       && theFactory.getNumBuckets() == numBuckets
-                       && theFactory.getLowerLimit() == lowerLimit
-                       && theFactory.getUpperLimit() == upperLimit;
-              }
-            }
-        );
+        if (factory instanceof ApproximateHistogramAggregatorFactory) {
+          final ApproximateHistogramAggregatorFactory theFactory = (ApproximateHistogramAggregatorFactory) factory;
 
-        if (matches) {
-          // Found existing one. Use this.
-          return Aggregation.create(
-              ImmutableList.<AggregatorFactory>of(),
-              new QuantilePostAggregator(name, factory.getName(), probability)
-          );
+          // Check input for equivalence.
+          final boolean inputMatches;
+          final VirtualColumn virtualInput = existing.getVirtualColumns()
+                                                     .stream()
+                                                     .filter(
+                                                         virtualColumn ->
+                                                             virtualColumn.getOutputName()
+                                                                          .equals(theFactory.getFieldName())
+                                                     )
+                                                     .findFirst()
+                                                     .orElse(null);
+
+          if (virtualInput == null) {
+            inputMatches = input.isDirectColumnAccess()
+                           && input.getDirectColumn().equals(theFactory.getFieldName());
+          } else {
+            inputMatches = ((ExpressionVirtualColumn) virtualInput).getExpression()
+                                                                   .equals(input.getExpression());
+          }
+
+          final boolean matches = inputMatches
+                                  && theFactory.getResolution() == resolution
+                                  && theFactory.getNumBuckets() == numBuckets
+                                  && theFactory.getLowerLimit() == lowerLimit
+                                  && theFactory.getUpperLimit() == upperLimit;
+
+          if (matches) {
+            // Found existing one. Use this.
+            return Aggregation.create(
+                ImmutableList.of(),
+                new QuantilePostAggregator(name, factory.getName(), probability)
+            );
+          }
         }
       }
     }
 
-    if (rowSignature.getColumnType(rex.getColumn()) == ValueType.COMPLEX) {
-      aggregatorFactory = new ApproximateHistogramFoldingAggregatorFactory(
-          histogramName,
-          rex.getColumn(),
-          resolution,
-          numBuckets,
-          lowerLimit,
-          upperLimit
-      );
+    // No existing match found. Create a new one.
+    final List<VirtualColumn> virtualColumns = new ArrayList<>();
+
+    if (input.isDirectColumnAccess()) {
+      if (rowSignature.getColumnType(input.getDirectColumn()) == ValueType.COMPLEX) {
+        aggregatorFactory = new ApproximateHistogramFoldingAggregatorFactory(
+            histogramName,
+            input.getDirectColumn(),
+            resolution,
+            numBuckets,
+            lowerLimit,
+            upperLimit
+        );
+      } else {
+        aggregatorFactory = new ApproximateHistogramAggregatorFactory(
+            histogramName,
+            input.getDirectColumn(),
+            resolution,
+            numBuckets,
+            lowerLimit,
+            upperLimit
+        );
+      }
     } else {
+      final ExpressionVirtualColumn virtualColumn = input.toVirtualColumn(
+          StringUtils.format("%s:v", name),
+          ValueType.FLOAT,
+          plannerContext.getExprMacroTable()
+      );
+      virtualColumns.add(virtualColumn);
       aggregatorFactory = new ApproximateHistogramAggregatorFactory(
           histogramName,
-          rex.getColumn(),
+          virtualColumn.getOutputName(),
           resolution,
           numBuckets,
           lowerLimit,
@@ -164,9 +195,10 @@ public class QuantileSqlAggregator implements SqlAggregator
     }
 
     return Aggregation.create(
+        virtualColumns,
         ImmutableList.of(aggregatorFactory),
         new QuantilePostAggregator(name, histogramName, probability)
-    ).filter(filter);
+    );
   }
 
   private static class QuantileSqlAggFunction extends SqlAggFunction

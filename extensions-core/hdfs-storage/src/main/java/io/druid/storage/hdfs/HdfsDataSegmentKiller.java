@@ -82,7 +82,10 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
                 segmentPath.toString()
             );
           }
-          Path descriptorPath = new Path(segmentPath.getParent(), String.format("%s_descriptor.json", zipParts[0]));
+          Path descriptorPath = new Path(
+              segmentPath.getParent(),
+              io.druid.java.util.common.StringUtils.format("%s_descriptor.json", zipParts[0])
+          );
           //delete partitionNumber_descriptor.json
           if (!fs.delete(descriptorPath, false)) {
             throw new SegmentLoadingException(
