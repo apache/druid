@@ -68,7 +68,7 @@ public class DoublesSketchAggregatorTest
   {
     final List<Object[]> constructors = Lists.newArrayList();
     for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
-      constructors.add(new Object[] { config });
+      constructors.add(new Object[] {config});
     }
     return constructors;
   }
