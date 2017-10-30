@@ -227,6 +227,7 @@ public class DeterminePartitionsJobTest
                             new TimestampSpec("timestamp", "yyyyMMddHH", null),
                             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host", "country")), null, null),
                             null,
+                            null,
                             ImmutableList.of("timestamp", "host", "country", "visited_num"),
                             false,
                             0

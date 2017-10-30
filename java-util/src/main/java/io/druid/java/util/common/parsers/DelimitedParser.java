@@ -26,20 +26,21 @@ import com.google.common.base.Splitter;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 public class DelimitedParser extends AbstractFlatTextFormatParser
 {
   private final String delimiter;
   private final Splitter splitter;
-
   public DelimitedParser(
       @Nullable final String delimiter,
       @Nullable final String listDelimiter,
+      @Nullable final Map<String, String> multiValueDelimiter,
       final boolean hasHeaderRow,
       final int maxSkipHeaderRows
   )
   {
-    super(listDelimiter, hasHeaderRow, maxSkipHeaderRows);
+    super(listDelimiter, multiValueDelimiter, hasHeaderRow, maxSkipHeaderRows);
     this.delimiter = delimiter != null ? delimiter : FlatTextFormat.DELIMITED.getDefaultDelimiter();
 
     Preconditions.checkState(
@@ -54,20 +55,26 @@ public class DelimitedParser extends AbstractFlatTextFormatParser
   public DelimitedParser(
       @Nullable final String delimiter,
       @Nullable final String listDelimiter,
+      @Nullable final Map<String, String> multiValueDelimiter,
       final Iterable<String> fieldNames,
       final boolean hasHeaderRow,
       final int maxSkipHeaderRows
   )
   {
-    this(delimiter, listDelimiter, hasHeaderRow, maxSkipHeaderRows);
+    this(delimiter, listDelimiter, multiValueDelimiter, hasHeaderRow, maxSkipHeaderRows);
 
     setFieldNames(fieldNames);
   }
 
   @VisibleForTesting
-  DelimitedParser(@Nullable final String delimiter, @Nullable final String listDelimiter, final String header)
+  DelimitedParser(
+      @Nullable final String delimiter,
+      @Nullable final String listDelimiter,
+      @Nullable final Map<String, String> multiValueDelimiter,
+      final String header
+  )
   {
-    this(delimiter, listDelimiter, false, 0);
+    this(delimiter, listDelimiter, multiValueDelimiter, false, 0);
 
     setFieldNames(header);
   }

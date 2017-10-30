@@ -4,7 +4,21 @@ layout: doc_page
 # Multi-value dimensions
 
 Druid supports "multi-value" string dimensions. These are generated when an input field contains an array of values
-instead of a single value (e.e. JSON arrays, or a TSV field containing one or more `listDelimiter` characters).
+instead of a single value (e.e. JSON arrays, or a TSV field containing one or more `listDelimiter`/`multiValueDelimiter` characters).
+The `multiValueDelimiter` is a map of field->value pairs, it can specify the delimiter of each dimensions.
+
+```
+dimensions: col1,col2,col3
+multiValueDelimiter: 
+{
+  "col1": "\u0001",
+  "col2": "\u0002"
+}
+
+That means col1's delimiter is "\u0001", col2's delimiter is "\u0002" and col3 has no delimiter(do not split).
+If the multiValueDelimiter is null, the listDelimiter goes into effect.
+If the multiValueDelimiter is empty, that means disable the listDelimiter.
+```
 
 This document describes the behavior of groupBy (topN has similar behavior) queries on multi-value dimensions when they
 are used as a dimension being grouped by. See the section on multi-value columns in

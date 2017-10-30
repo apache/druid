@@ -45,6 +45,7 @@ public class ParseSpecTest
         ),
         ",",
         " ",
+        null,
         Arrays.asList("a", "b"),
         false,
         0
@@ -68,6 +69,7 @@ public class ParseSpecTest
         ),
         ",",
         null,
+        null,
         Arrays.asList("a", "B"),
         false,
         0
@@ -90,6 +92,7 @@ public class ParseSpecTest
             Lists.<SpatialDimensionSchema>newArrayList()
         ),
         ",",
+        null,
         null,
         Arrays.asList("a", "B"),
         false,

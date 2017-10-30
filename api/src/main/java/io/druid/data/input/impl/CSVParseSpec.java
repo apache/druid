@@ -26,12 +26,14 @@ import io.druid.java.util.common.parsers.CSVParser;
 import io.druid.java.util.common.parsers.Parser;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  */
 public class CSVParseSpec extends ParseSpec
 {
   private final String listDelimiter;
+  private final Map<String, String> multiValueDelimiter;
   private final List<String> columns;
   private final boolean hasHeaderRow;
   private final int skipHeaderRows;
@@ -41,6 +43,7 @@ public class CSVParseSpec extends ParseSpec
       @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
       @JsonProperty("dimensionsSpec") DimensionsSpec dimensionsSpec,
       @JsonProperty("listDelimiter") String listDelimiter,
+      @JsonProperty("multiValueDelimiter") Map<String, String> multiValueDelimiter,
       @JsonProperty("columns") List<String> columns,
       @JsonProperty("hasHeaderRow") boolean hasHeaderRow,
       @JsonProperty("skipHeaderRows") int skipHeaderRows
@@ -49,6 +52,7 @@ public class CSVParseSpec extends ParseSpec
     super(timestampSpec, dimensionsSpec);
 
     this.listDelimiter = listDelimiter;
+    this.multiValueDelimiter = multiValueDelimiter;
     this.columns = columns;
     this.hasHeaderRow = hasHeaderRow;
     this.skipHeaderRows = skipHeaderRows;
@@ -72,10 +76,11 @@ public class CSVParseSpec extends ParseSpec
       TimestampSpec timestampSpec,
       DimensionsSpec dimensionsSpec,
       String listDelimiter,
+      Map<String, String> multiValueDelimiter,
       List<String> columns
   )
   {
-    this(timestampSpec, dimensionsSpec, listDelimiter, columns, false, 0);
+    this(timestampSpec, dimensionsSpec, listDelimiter, multiValueDelimiter, columns, false, 0);
   }
 
   @JsonProperty
@@ -113,19 +118,18 @@ public class CSVParseSpec extends ParseSpec
   @Override
   public Parser<String, Object> makeParser()
   {
-    return new CSVParser(listDelimiter, columns, hasHeaderRow, skipHeaderRows);
+    return new CSVParser(listDelimiter, multiValueDelimiter, columns, hasHeaderRow, skipHeaderRows);
   }
 
   @Override
   public ParseSpec withTimestampSpec(TimestampSpec spec)
   {
-    return new CSVParseSpec(spec, getDimensionsSpec(), listDelimiter, columns, hasHeaderRow, skipHeaderRows);
+    return new CSVParseSpec(spec, getDimensionsSpec(), listDelimiter, multiValueDelimiter, columns, hasHeaderRow, skipHeaderRows);
   }
 
   @Override
   public ParseSpec withDimensionsSpec(DimensionsSpec spec)
   {
-    return new CSVParseSpec(getTimestampSpec(), spec, listDelimiter, columns, hasHeaderRow, skipHeaderRows);
+    return new CSVParseSpec(getTimestampSpec(), spec, listDelimiter, multiValueDelimiter, columns, hasHeaderRow, skipHeaderRows);
   }
-
 }

@@ -75,6 +75,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
               Lists.newArrayList()
           ),
           ",",
+          null,
           Arrays.asList("timestamp", "a", "b"),
           false,
           0

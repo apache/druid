@@ -122,7 +122,9 @@ public class UriExtractionNamespaceTest
     UriExtractionNamespace.TSVFlatDataParser parser = new UriExtractionNamespace.TSVFlatDataParser(
         ImmutableList.of("col1", "col2", "col3"),
         "|",
-        null, "col2",
+        null,
+        null,
+        "col2",
         "col3"
     );
     Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parseToMap("A|B|C"));
@@ -134,7 +136,9 @@ public class UriExtractionNamespaceTest
     UriExtractionNamespace.TSVFlatDataParser parser = new UriExtractionNamespace.TSVFlatDataParser(
         ImmutableList.of("col1", "col2", "col3"),
         "\\u0001",
-        "\\u0002", "col2",
+        "\\u0002",
+        null,
+        "col2",
         "col3"
     );
     Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parseToMap("A\\u0001B\\u0001C"));
@@ -146,7 +150,9 @@ public class UriExtractionNamespaceTest
     UriExtractionNamespace.TSVFlatDataParser parser = new UriExtractionNamespace.TSVFlatDataParser(
         ImmutableList.of("col1", "col2", "col3fdsfds"),
         ",",
-        null, "col2",
+        null,
+        null,
+        "col2",
         "col3"
     );
     Map<String, String> map = parser.getParser().parseToMap("A,B,C");
@@ -160,7 +166,9 @@ public class UriExtractionNamespaceTest
     UriExtractionNamespace.TSVFlatDataParser parser = new UriExtractionNamespace.TSVFlatDataParser(
         ImmutableList.of("col1", "col2", "col3"),
         ",",
-        null, "col2",
+        null,
+        null,
+        "col2",
         "col3"
     );
     Map<String, String> map = parser.getParser().parseToMap("A");
@@ -306,7 +314,7 @@ public class UriExtractionNamespaceTest
         ),
         new UriExtractionNamespace.ObjectMapperFlatDataParser(mapper),
         new UriExtractionNamespace.JSONFlatDataParser(mapper, "keyField", "valueField"),
-        new UriExtractionNamespace.TSVFlatDataParser(ImmutableList.of("A", "B"), ",", null, "A", "B")
+        new UriExtractionNamespace.TSVFlatDataParser(ImmutableList.of("A", "B"), ",", null, null, "A", "B")
     )) {
       final String str = mapper.writeValueAsString(parser);
       final UriExtractionNamespace.FlatDataParser parser2 = mapper.readValue(
@@ -331,7 +339,7 @@ public class UriExtractionNamespaceTest
         ),
         new UriExtractionNamespace.ObjectMapperFlatDataParser(mapper),
         new UriExtractionNamespace.JSONFlatDataParser(mapper, "keyField", "valueField"),
-        new UriExtractionNamespace.TSVFlatDataParser(ImmutableList.of("A", "B"), ",", null, "A", "B")
+        new UriExtractionNamespace.TSVFlatDataParser(ImmutableList.of("A", "B"), ",", null, null, "A", "B")
     )) {
       Assert.assertFalse(parser.toString().contains("@"));
     }

@@ -298,7 +298,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
       );
 
       this.parser = new DelegateParser(
-          new CSVParser(null, columns, hasHeaderRow, skipHeaderRows),
+          new CSVParser(null, null, columns, hasHeaderRow, skipHeaderRows),
           this.keyColumn,
           this.valueColumn
       );
@@ -377,6 +377,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
     private final List<String> columns;
     private final String delimiter;
     private final String listDelimiter;
+    private final Map<String, String> multiValueDelimiter;
     private final String keyColumn;
     private final String valueColumn;
 
@@ -385,6 +386,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
         @JsonProperty("columns") List<String> columns,
         @JsonProperty("delimiter") String delimiter,
         @JsonProperty("listDelimiter") String listDelimiter,
+        @JsonProperty("multiValueDelimiter") Map<String, String> multiValueDelimiter,
         @JsonProperty("keyColumn") final String keyColumn,
         @JsonProperty("valueColumn") final String valueColumn,
         @JsonProperty("hasHeaderRow") boolean hasHeaderRow,
@@ -398,6 +400,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
       final DelimitedParser delegate = new DelimitedParser(
           Strings.emptyToNull(delimiter),
           Strings.emptyToNull(listDelimiter),
+          multiValueDelimiter,
           hasHeaderRow,
           skipHeaderRows
       );
@@ -409,6 +412,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
       this.columns = columns;
       this.delimiter = delimiter;
       this.listDelimiter = listDelimiter;
+      this.multiValueDelimiter = multiValueDelimiter;
       this.keyColumn = Strings.isNullOrEmpty(keyColumn) ? columns.get(0) : keyColumn;
       this.valueColumn = Strings.isNullOrEmpty(valueColumn) ? columns.get(1) : valueColumn;
       Preconditions.checkArgument(
@@ -432,11 +436,12 @@ public class UriExtractionNamespace implements ExtractionNamespace
         List<String> columns,
         String delimiter,
         String listDelimiter,
+        Map<String, String> multiValueDelimiter,
         String keyColumn,
         String valueColumn
     )
     {
-      this(columns, delimiter, listDelimiter, keyColumn, valueColumn, false, 0);
+      this(columns, delimiter, listDelimiter, multiValueDelimiter, keyColumn, valueColumn, false, 0);
     }
 
     @JsonProperty
@@ -461,6 +466,12 @@ public class UriExtractionNamespace implements ExtractionNamespace
     public String getListDelimiter()
     {
       return listDelimiter;
+    }
+
+    @JsonProperty
+    public Map<String, String> getMultiValueDelimiter()
+    {
+      return multiValueDelimiter;
     }
 
     @JsonProperty
@@ -502,12 +513,13 @@ public class UriExtractionNamespace implements ExtractionNamespace
     public String toString()
     {
       return "TSVFlatDataParser{" +
-             "columns=" + columns +
-             ", delimiter='" + delimiter + '\'' +
-             ", listDelimiter='" + listDelimiter + '\'' +
-             ", keyColumn='" + keyColumn + '\'' +
-             ", valueColumn='" + valueColumn + '\'' +
-             '}';
+              "columns=" + columns +
+              ", delimiter='" + delimiter + '\'' +
+              ", listDelimiter='" + listDelimiter + '\'' +
+              ", multiValueDelimiter=" + multiValueDelimiter +
+              ", keyColumn='" + keyColumn + '\'' +
+              ", valueColumn='" + valueColumn + '\'' +
+              '}';
     }
   }
 

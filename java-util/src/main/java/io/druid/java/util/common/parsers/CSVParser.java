@@ -25,6 +25,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 public class CSVParser extends AbstractFlatTextFormatParser
 {
@@ -32,21 +33,23 @@ public class CSVParser extends AbstractFlatTextFormatParser
 
   public CSVParser(
       @Nullable final String listDelimiter,
+      @Nullable final Map<String, String> multiValueDelimiter,
       final boolean hasHeaderRow,
       final int maxSkipHeaderRows
   )
   {
-    super(listDelimiter, hasHeaderRow, maxSkipHeaderRows);
+    super(listDelimiter, multiValueDelimiter, hasHeaderRow, maxSkipHeaderRows);
   }
 
   public CSVParser(
       @Nullable final String listDelimiter,
+      @Nullable final Map<String, String> multiValueDelimiter,
       final Iterable<String> fieldNames,
       final boolean hasHeaderRow,
       final int maxSkipHeaderRows
   )
   {
-    this(listDelimiter, hasHeaderRow, maxSkipHeaderRows);
+    this(listDelimiter, multiValueDelimiter, hasHeaderRow, maxSkipHeaderRows);
 
     setFieldNames(fieldNames);
   }
@@ -58,9 +61,13 @@ public class CSVParser extends AbstractFlatTextFormatParser
   }
 
   @VisibleForTesting
-  CSVParser(@Nullable final String listDelimiter, final String header)
+  CSVParser(
+      @Nullable final String listDelimiter,
+      @Nullable final Map<String, String> multiValueDelimiter,
+      final String header
+  )
   {
-    this(listDelimiter, false, 0);
+    this(listDelimiter, multiValueDelimiter, false, 0);
 
     setFieldNames(header);
   }

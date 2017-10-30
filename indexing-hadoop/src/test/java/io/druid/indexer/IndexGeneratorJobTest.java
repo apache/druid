@@ -144,6 +144,7 @@ public class IndexGeneratorJobTest
                         new TimestampSpec("timestamp", "yyyyMMddHH", null),
                         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
                         null,
+                        null,
                         ImmutableList.of("timestamp", "host", "visited_num"),
                         false,
                         0
@@ -192,6 +193,7 @@ public class IndexGeneratorJobTest
                         new TimestampSpec("timestamp", "yyyyMMddHH", null),
                         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
                         null,
+                        null,
                         ImmutableList.of("timestamp", "host", "visited_num"),
                         false,
                         0
@@ -238,6 +240,7 @@ public class IndexGeneratorJobTest
                     new CSVParseSpec(
                         new TimestampSpec("timestamp", "yyyyMMddHH", null),
                         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
+                        null,
                         null,
                         ImmutableList.of("timestamp", "host", "visited_num"),
                         false,
@@ -296,6 +299,7 @@ public class IndexGeneratorJobTest
                     new CSVParseSpec(
                         new TimestampSpec("timestamp", "yyyyMMddHH", null),
                         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
+                        null,
                         null,
                         ImmutableList.of("timestamp", "host", "visited_num"),
                         false,

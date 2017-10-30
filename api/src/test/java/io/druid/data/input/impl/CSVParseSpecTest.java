@@ -43,6 +43,7 @@ public class CSVParseSpecTest
             Lists.<SpatialDimensionSchema>newArrayList()
         ),
         ",",
+        null,
         Collections.singletonList("a"),
         false,
         0
@@ -65,6 +66,7 @@ public class CSVParseSpecTest
             Lists.<SpatialDimensionSchema>newArrayList()
         ),
         ",",
+        null,
         Collections.singletonList("a"),
         false,
         0

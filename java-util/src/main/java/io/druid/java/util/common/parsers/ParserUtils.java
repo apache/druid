@@ -19,9 +19,6 @@
 
 package io.druid.java.util.common.parsers;
 
-import com.google.common.base.Function;
-import com.google.common.base.Splitter;
-import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
 import io.druid.java.util.common.StringUtils;
 import org.joda.time.DateTimeZone;
@@ -30,10 +27,8 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.TimeZone;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
+import java.util.Set;
 
 public class ParserUtils
 {
@@ -50,22 +45,6 @@ public class ParserUtils
         // Ignore certain date time zone ids like SystemV/AST4. More here https://confluence.atlassian.com/confkb/the-datetime-zone-id-is-not-recognised-167183146.html
       }
     }
-  }
-
-  public static Function<String, Object> getMultiValueFunction(
-      final String listDelimiter,
-      final Splitter listSplitter
-  )
-  {
-    return (input) -> {
-      if (input != null && input.contains(listDelimiter)) {
-        return StreamSupport.stream(listSplitter.split(input).spliterator(), false)
-                            .map(Strings::emptyToNull)
-                            .collect(Collectors.toList());
-      } else {
-        return Strings.emptyToNull(input);
-      }
-    };
   }
 
   public static ArrayList<String> generateFieldNames(int length)

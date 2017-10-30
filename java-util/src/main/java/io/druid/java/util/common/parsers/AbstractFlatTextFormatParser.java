@@ -19,11 +19,10 @@
 
 package io.druid.java.util.common.parsers;
 
-import com.google.common.base.Function;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import io.druid.java.util.common.collect.Utils;
 
 import javax.annotation.Nullable;
@@ -31,6 +30,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 public abstract class AbstractFlatTextFormatParser implements Parser<String, Object>
 {
@@ -53,8 +54,8 @@ public abstract class AbstractFlatTextFormatParser implements Parser<String, Obj
   }
 
   private final String listDelimiter;
-  private final Splitter listSplitter;
-  private final Function<String, Object> valueFunction;
+  private final Map<String, String> multiValueDelimiter;
+  private final Maps.EntryTransformer<String, String, Object> multiValueTransformer;
   private final boolean hasHeaderRow;
   private final int maxSkipHeaderRows;
 
@@ -65,13 +66,35 @@ public abstract class AbstractFlatTextFormatParser implements Parser<String, Obj
 
   public AbstractFlatTextFormatParser(
       @Nullable final String listDelimiter,
+      @Nullable final Map<String, String> multiValueDelimiter,
       final boolean hasHeaderRow,
       final int maxSkipHeaderRows
   )
   {
     this.listDelimiter = listDelimiter != null ? listDelimiter : Parsers.DEFAULT_LIST_DELIMITER;
-    this.listSplitter = Splitter.on(this.listDelimiter);
-    this.valueFunction = ParserUtils.getMultiValueFunction(this.listDelimiter, this.listSplitter);
+    this.multiValueDelimiter = multiValueDelimiter;
+    this.multiValueTransformer = new Maps.EntryTransformer<String, String, Object>()
+    {
+      @Override
+      public Object transformEntry(String key, String value)
+      {
+        String deli = null;
+        if (AbstractFlatTextFormatParser.this.multiValueDelimiter == null) {
+          deli = AbstractFlatTextFormatParser.this.listDelimiter;
+        } else if (AbstractFlatTextFormatParser.this.multiValueDelimiter.get(key) != null) {
+          deli = AbstractFlatTextFormatParser.this.multiValueDelimiter.get(key);
+        }
+
+        if (deli != null && value.contains(deli)) {
+          Splitter multiSplitter = Splitter.on(deli);
+          return StreamSupport.stream(multiSplitter.split(value).spliterator(), false)
+                  .map(Strings::emptyToNull)
+                  .collect(Collectors.toList());
+        } else {
+          return Strings.emptyToNull(value);
+        }
+      }
+    };
 
     this.hasHeaderRow = hasHeaderRow;
     this.maxSkipHeaderRows = maxSkipHeaderRows;
@@ -154,7 +177,8 @@ public abstract class AbstractFlatTextFormatParser implements Parser<String, Obj
         setFieldNames(ParserUtils.generateFieldNames(values.size()));
       }
 
-      return Utils.zipMapPartial(fieldNames, Iterables.transform(values, valueFunction));
+      Map<String, String> fieldValueMap = Utils.zipMapPartial(fieldNames, values);
+      return Maps.transformEntries(fieldValueMap, multiValueTransformer);
     }
     catch (Exception e) {
       throw new ParseException(e, "Unable to parse row [%s]", input);

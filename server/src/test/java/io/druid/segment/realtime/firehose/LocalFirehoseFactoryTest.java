@@ -85,6 +85,7 @@ public class LocalFirehoseFactoryTest
                 Lists.newArrayList()
             ),
             ",",
+            null,
             Arrays.asList("timestamp", "a"),
             false,
             0

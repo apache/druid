@@ -90,6 +90,7 @@ public class MapVirtualColumnTest
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("dim", "keys", "values")), null, null),
             "\t",
             ",",
+            null,
             Arrays.asList("ts", "dim", "keys", "values"),
             false,
             0

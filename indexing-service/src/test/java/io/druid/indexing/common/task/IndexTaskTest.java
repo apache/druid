@@ -109,6 +109,7 @@ public class IndexTaskTest
           Lists.newArrayList()
       ),
       null,
+      null,
       Arrays.asList("ts", "dim", "val"),
       false,
       0
@@ -484,6 +485,7 @@ public class IndexTaskTest
                 ),
                 null,
                 null,
+                null,
                 true,
                 0
             ),
@@ -531,6 +533,7 @@ public class IndexTaskTest
                     Lists.<String>newArrayList(),
                     Lists.<SpatialDimensionSchema>newArrayList()
                 ),
+                null,
                 null,
                 Arrays.asList("time", "dim", "val"),
                 true,
@@ -729,6 +732,7 @@ public class IndexTaskTest
                 Lists.<SpatialDimensionSchema>newArrayList()
             ),
             null,
+            null,
             Arrays.asList("time", "dim", "val"),
             true,
             0
@@ -781,6 +785,7 @@ public class IndexTaskTest
                 Lists.<String>newArrayList(),
                 Lists.<SpatialDimensionSchema>newArrayList()
             ),
+            null,
             null,
             Arrays.asList("time", "dim", "val"),
             true,
@@ -840,6 +845,7 @@ public class IndexTaskTest
                 null,
                 null
             ),
+            null,
             null,
             null,
             true,
@@ -910,6 +916,7 @@ public class IndexTaskTest
                 Lists.<String>newArrayList(),
                 Lists.<SpatialDimensionSchema>newArrayList()
             ),
+            null,
             null,
             Arrays.asList("time", "", ""),
             true,

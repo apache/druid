@@ -160,6 +160,7 @@ public class DetermineHashedPartitionsJobTest
                         ),
                         "\t",
                         null,
+                        null,
                         Arrays.asList(
                             "ts",
                             "market",

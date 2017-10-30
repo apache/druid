@@ -209,6 +209,7 @@ public class IngestSegmentFirehoseTest
             DIMENSIONS_SPEC,
             "\t",
             null,
+            null,
             ImmutableList.of("timestamp", "host", "visited", "x", "y", "spatial"),
             false,
             0

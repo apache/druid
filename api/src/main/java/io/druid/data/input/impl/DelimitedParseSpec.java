@@ -26,6 +26,7 @@ import io.druid.java.util.common.parsers.DelimitedParser;
 import io.druid.java.util.common.parsers.Parser;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  */
@@ -33,6 +34,7 @@ public class DelimitedParseSpec extends ParseSpec
 {
   private final String delimiter;
   private final String listDelimiter;
+  private final Map<String, String> multiValueDelimiter;
   private final List<String> columns;
   private final boolean hasHeaderRow;
   private final int skipHeaderRows;
@@ -43,6 +45,7 @@ public class DelimitedParseSpec extends ParseSpec
       @JsonProperty("dimensionsSpec") DimensionsSpec dimensionsSpec,
       @JsonProperty("delimiter") String delimiter,
       @JsonProperty("listDelimiter") String listDelimiter,
+      @JsonProperty("multiValueDelimiter") Map<String, String> multiValueDelimiter,
       @JsonProperty("columns") List<String> columns,
       @JsonProperty("hasHeaderRow") boolean hasHeaderRow,
       @JsonProperty("skipHeaderRows") int skipHeaderRows
@@ -52,6 +55,7 @@ public class DelimitedParseSpec extends ParseSpec
 
     this.delimiter = delimiter;
     this.listDelimiter = listDelimiter;
+    this.multiValueDelimiter = multiValueDelimiter;
     this.columns = columns;
     this.hasHeaderRow = hasHeaderRow;
     this.skipHeaderRows = skipHeaderRows;
@@ -76,10 +80,11 @@ public class DelimitedParseSpec extends ParseSpec
       DimensionsSpec dimensionsSpec,
       String delimiter,
       String listDelimiter,
+      Map<String, String> multiValueDelimiter,
       List<String> columns
   )
   {
-    this(timestampSpec, dimensionsSpec, delimiter, listDelimiter, columns, false, 0);
+    this(timestampSpec, dimensionsSpec, delimiter, listDelimiter, multiValueDelimiter, columns, false, 0);
   }
 
   @JsonProperty("delimiter")
@@ -92,6 +97,12 @@ public class DelimitedParseSpec extends ParseSpec
   public String getListDelimiter()
   {
     return listDelimiter;
+  }
+
+  @JsonProperty("multiValueDelimiter")
+  public Map<String, String> getMultiValueDelimiter()
+  {
+    return multiValueDelimiter;
   }
 
   @JsonProperty("columns")
@@ -126,6 +137,7 @@ public class DelimitedParseSpec extends ParseSpec
     return new DelimitedParser(
         delimiter,
         listDelimiter,
+        multiValueDelimiter,
         columns,
         hasHeaderRow,
         skipHeaderRows
@@ -140,6 +152,7 @@ public class DelimitedParseSpec extends ParseSpec
         getDimensionsSpec(),
         delimiter,
         listDelimiter,
+        multiValueDelimiter,
         columns,
         hasHeaderRow,
         skipHeaderRows
@@ -154,6 +167,7 @@ public class DelimitedParseSpec extends ParseSpec
         spec,
         delimiter,
         listDelimiter,
+        multiValueDelimiter,
         columns,
         hasHeaderRow,
         skipHeaderRows

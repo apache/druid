@@ -237,6 +237,7 @@ truck,something3,buck
 |`valueColumn`|The name of the column containing the value|no|The second column|
 |`delimiter`|The delimiter in the file|no|tab (`\t`)|
 |`listDelimiter`|The list delimiter in the file|no| (`\u0001`)|
+|`multiValueDelimiter`|The list delimiter in the file|no| `null`|
 |`hasHeaderRow`|A flag to indicate that column information can be extracted from the input files' header row|no|false|
 |`skipHeaderRows`|Number of header rows to be skipped|no|0|
 

@@ -309,6 +309,7 @@ public class TestIndex
             new DimensionsSpec(DIMENSION_SCHEMAS, null, null),
             "\t",
             "\u0001",
+            null,
             Arrays.asList(COLUMNS),
             false,
             0

@@ -226,9 +226,9 @@ public class FlatTextFormatParserTest
     {
       switch (format) {
         case CSV:
-          return new CSVParser(null, hasHeaderRow, maxSkipHeaderRows);
+          return new CSVParser(null, null, hasHeaderRow, maxSkipHeaderRows);
         case DELIMITED:
-          return new DelimitedParser("\t", null, hasHeaderRow, maxSkipHeaderRows);
+          return new DelimitedParser("\t", null, null, hasHeaderRow, maxSkipHeaderRows);
         default:
           throw new IAE("Unknown format[%s]", format);
       }
@@ -238,9 +238,9 @@ public class FlatTextFormatParserTest
     {
       switch (format) {
         case CSV:
-          return new CSVParser(null, header);
+          return new CSVParser(null, null, header);
         case DELIMITED:
-          return new DelimitedParser("\t", null, header);
+          return new DelimitedParser("\t", null, null, header);
         default:
           throw new IAE("Unknown format[%s]", format);
       }

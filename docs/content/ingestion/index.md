@@ -153,6 +153,7 @@ Use this with the String Parser to load CSV. Strings are parsed using the net.sf
 | timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
 | dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
 | listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default == ctrl+A) |
+| multiValueDelimiter | Map | A custom delimiter for multi-value dimensions. | no (default == null) |
 | columns | JSON array | Specifies the columns of the data. | yes |
 
 #### TSV / Delimited ParseSpec
@@ -167,6 +168,7 @@ the delimiter is a tab, so this will load TSV.
 | dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
 | delimiter | String | A custom delimiter for data values. | no (default == \t) |
 | listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default == ctrl+A) |
+| multiValueDelimiter | Map | A custom delimiter for multi-value dimensions. | no (default == null) |
 | columns | JSON String array | Specifies the columns of the data. | yes |
 
 #### TimeAndDims ParseSpec
