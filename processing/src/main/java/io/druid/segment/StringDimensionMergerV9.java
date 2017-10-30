@@ -51,7 +51,6 @@ import io.druid.segment.data.IndexedRTree;
 import io.druid.segment.data.VSizeIndexedIntsWriter;
 import io.druid.segment.data.VSizeIndexedWriter;
 import io.druid.segment.serde.DictionaryEncodedColumnPartSerde;
-import it.unimi.dsi.fastutil.ints.AbstractIntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterable;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
@@ -528,7 +527,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     public IntIterator iterator()
     {
       final IntIterator baseIterator = baseValues.iterator();
-      return new AbstractIntIterator()
+      return new IntIterator()
       {
         @Override
         public boolean hasNext()
