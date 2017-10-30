@@ -34,9 +34,13 @@ public class Pair<T1, T2>
   }
 
   public final T1 lhs;
+
   public final T2 rhs;
 
-  public Pair(T1 lhs, T2 rhs)
+  public Pair(
+      T1 lhs,
+      T2 rhs
+  )
   {
     this.lhs = lhs;
     this.rhs = rhs;

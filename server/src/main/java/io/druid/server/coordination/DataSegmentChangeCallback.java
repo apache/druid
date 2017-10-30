@@ -24,4 +24,6 @@ package io.druid.server.coordination;
 public interface DataSegmentChangeCallback
 {
   void execute();
+
+  DataSegmentChangeCallback NOOP = () -> {};
 }

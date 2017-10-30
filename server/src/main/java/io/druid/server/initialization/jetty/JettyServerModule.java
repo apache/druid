@@ -308,6 +308,7 @@ public class JettyServerModule extends JerseyServletModule
           @Override
           public void start() throws Exception
           {
+            log.info("Starting Jetty Server...");
             server.start();
             if (node.isEnableTlsPort()) {
               // Perform validation
@@ -336,6 +337,7 @@ public class JettyServerModule extends JerseyServletModule
           public void stop()
           {
             try {
+              log.info("Stopping Jetty Server...");
               server.stop();
             }
             catch (Exception e) {

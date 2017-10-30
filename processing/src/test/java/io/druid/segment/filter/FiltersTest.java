@@ -68,6 +68,12 @@ public class FiltersTest
       }
 
       @Override
+      public boolean hasNulls()
+      {
+        return false;
+      }
+
+      @Override
       public BitmapFactory getBitmapFactory()
       {
         return new ConciseBitmapFactory();

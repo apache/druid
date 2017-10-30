@@ -499,6 +499,21 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
                   fireDepartmentMetrics.incrementProcessed();
                 } else {
+                  if (log.isDebugEnabled()) {
+                    if (beforeMinimumMessageTime) {
+                      log.debug(
+                          "CurrentTimeStamp[%s] is before MinimumMessageTime[%s]",
+                          row.getTimestamp(),
+                          ioConfig.getMinimumMessageTime().get()
+                      );
+                    } else if (afterMaximumMessageTime) {
+                      log.debug(
+                          "CurrentTimeStamp[%s] is after MaximumMessageTime[%s]",
+                          row.getTimestamp(),
+                          ioConfig.getMaximumMessageTime().get()
+                      );
+                    }
+                  }
                   fireDepartmentMetrics.incrementThrownAway();
                 }
               }

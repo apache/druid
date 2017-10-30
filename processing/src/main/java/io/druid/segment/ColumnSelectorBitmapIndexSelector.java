@@ -163,6 +163,12 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
         }
 
         @Override
+        public boolean hasNulls()
+        {
+          return true;
+        }
+
+        @Override
         public BitmapFactory getBitmapFactory()
         {
           return bitmapFactory;
