@@ -216,7 +216,6 @@ The Druid servers [emit various metrics](../operations/metrics.html) and alerts 
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.emitter.http.readTimeout`|The timeout for data reads.|PT5M|
 |`druid.emitter.http.flushMillis`|How often the internal message buffer is flushed (data is sent).|60000|
 |`druid.emitter.http.flushCount`|How many messages the internal message buffer can hold before flushing (sending).|500|
 |`druid.emitter.http.basicAuthentication`|Login and password for authentification in "login:password" form, e. g. `druid.emitter.http.basicAuthentication=admin:adminpassword`|not specified = no authentification|
@@ -228,14 +227,13 @@ The Druid servers [emit various metrics](../operations/metrics.html) and alerts 
 #### Parametrized Http Emitter Module
 
 `druid.emitter.parametrized.httpEmitting.*` configs correspond to the configs of Http Emitter Modules, see above.
-Except `readTimeout` and `recipientBaseUrl`. E. g. `druid.emitter.parametrized.httpEmitting.flushMillis`,
+Except `recipientBaseUrl`. E. g. `druid.emitter.parametrized.httpEmitting.flushMillis`,
 `druid.emitter.parametrized.httpEmitting.flushCount`, etc.
 
 The additional configs are:
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.emitter.parametrized.readTimeout`|The timeout for data reads.|PT5M|
 |`druid.emitter.parametrized.recipientBaseUrlPattern`|The URL pattern to send an event to, based on the event's feed. E. g. `http://foo.bar/{feed}`, that will send event to `http://foo.bar/metrics` if the event's feed is "metrics".|none, required config|
 
 #### Composing Emitter Module
