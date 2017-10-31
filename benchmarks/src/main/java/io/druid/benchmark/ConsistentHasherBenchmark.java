@@ -20,7 +20,7 @@
 package io.druid.benchmark;
 
 import com.google.common.collect.Sets;
-import com.google.common.hash.Hashing;;
+;
 import io.druid.java.util.common.StringUtils;
 import io.druid.server.router.ConsistentHasher;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -59,14 +59,19 @@ public class ConsistentHasherBenchmark
   @Setup
   public void setup() throws IOException
   {
-    hasher = new ConsistentHasher(Hashing.murmur3_128(9999));
+    hasher = new ConsistentHasher(null);
     uuids = new ArrayList<>();
     servers = Sets.newHashSet(
         "localhost:1",
         "localhost:2",
         "localhost:3",
         "localhost:4",
-        "localhost:5"
+        "localhost:5",
+        "localhost:6",
+        "localhost:7",
+        "localhost:8",
+        "localhost:9",
+        "localhost:10"
     );
 
     for (int i = 0; i < numIds; i++) {
@@ -83,7 +88,7 @@ public class ConsistentHasherBenchmark
   public void hash(Blackhole blackhole) throws Exception
   {
     for (String uuid : uuids) {
-      String server = hasher.hash(StringUtils.toUtf8(uuid));
+      String server = hasher.findKey(StringUtils.toUtf8(uuid));
       blackhole.consume(server);
     }
   }

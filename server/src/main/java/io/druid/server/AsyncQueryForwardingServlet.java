@@ -399,7 +399,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       throw new IAE("Received an Avatica request with a non-String connectionId.");
     }
 
-    return (String) requestMap.get("connectionId");
+    return (String) connectionIdObj;
   }
 
   private class MetricsEmittingProxyResponseListener extends ProxyResponseListener

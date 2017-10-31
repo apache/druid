@@ -38,7 +38,8 @@ public interface AvaticaConnectionBalancer
   /**
    * @param servers Servers to balance across
    * @param connectionId Connection ID to be balanced
-   * @return Server that connectionId should be assigned to
+   * @return Server that connectionId should be assigned to. The process for choosing a server must be deterministic and
+   *         sticky (with a fixed set of servers, the same connectionId should always be assigned to the same server)
    */
-  Server balance(Collection<Server> servers, String connectionId);
+  Server pickServer(Collection<Server> servers, String connectionId);
 }

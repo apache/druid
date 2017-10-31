@@ -31,7 +31,7 @@ public class ConsistentHashAvaticaConnectionBalancer implements AvaticaConnectio
   private final ConsistentHasher hasher = new ConsistentHasher(null);
 
   @Override
-  public Server balance(Collection<Server> servers, String connectionId)
+  public Server pickServer(Collection<Server> servers, String connectionId)
   {
     synchronized (hasher) {
       if (servers.isEmpty()) {
@@ -43,7 +43,7 @@ public class ConsistentHashAvaticaConnectionBalancer implements AvaticaConnectio
       }
 
       hasher.updateKeys(serverMap.keySet());
-      String chosenServer = hasher.hash(StringUtils.toUtf8(connectionId));
+      String chosenServer = hasher.findKey(StringUtils.toUtf8(connectionId));
       return serverMap.get(chosenServer);
     }
   }

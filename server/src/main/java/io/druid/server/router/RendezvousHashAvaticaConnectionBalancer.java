@@ -31,7 +31,7 @@ public class RendezvousHashAvaticaConnectionBalancer implements AvaticaConnectio
   private final RendezvousHasher hasher = new RendezvousHasher();
 
   @Override
-  public Server balance(Collection<Server> servers, String connectionId)
+  public Server pickServer(Collection<Server> servers, String connectionId)
   {
     if (servers.isEmpty()) {
       return null;

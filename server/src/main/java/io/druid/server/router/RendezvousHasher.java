@@ -24,7 +24,6 @@ import com.google.common.collect.Lists;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import it.unimi.dsi.fastutil.longs.Long2ObjectRBTreeMap;
 
 import java.util.List;
 import java.util.Set;
@@ -43,17 +42,23 @@ public class RendezvousHasher
       return null;
     }
 
-    Long2ObjectRBTreeMap<String> weights = new Long2ObjectRBTreeMap<>();
-    weights.defaultReturnValue(null);
+    final HashCode keyHash = HASH_FN.hashBytes(key);
+    long maxHash = Long.MIN_VALUE;
+    String maxNode = null;
 
     for (String nodeId : nodeIds) {
-      HashCode keyHash = HASH_FN.hashBytes(key);
       HashCode nodeHash = HASH_FN.hashString(nodeId, Charsets.UTF_8);
       List<HashCode> hashes = Lists.newArrayList(nodeHash, keyHash);
-      HashCode combinedHash = Hashing.combineOrdered(hashes);
-      weights.put(combinedHash.asLong(), nodeId);
+      long combinedHash = Hashing.combineOrdered(hashes).asLong();
+      if (maxNode == null) {
+        maxHash = combinedHash;
+        maxNode = nodeId;
+      } else if (combinedHash > maxHash) {
+        maxHash = combinedHash;
+        maxNode = nodeId;
+      }
     }
 
-    return weights.get(weights.lastLongKey());
+    return maxNode;
   }
 }

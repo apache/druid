@@ -73,7 +73,7 @@ public class QueryHostFinder
 
   public Server findServerAvatica(String connectionId)
   {
-    Server chosenServer = avaticaConnectionBalancer.balance(getAllServers(), connectionId);
+    Server chosenServer = avaticaConnectionBalancer.pickServer(getAllServers(), connectionId);
     if (chosenServer == null) {
       log.makeAlert(
           "Catastrophic failure! No servers found at all! Failing request!"

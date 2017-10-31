@@ -76,7 +76,7 @@ public class ConsistentHasher
     previousKeys = new HashSet<>(currentKeys);
   }
 
-  public String hash(byte[] obj)
+  public String findKey(byte[] obj)
   {
     if (nodeKeySlots.size() == 0) {
       return null;
