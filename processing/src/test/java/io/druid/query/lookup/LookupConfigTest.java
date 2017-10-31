@@ -51,8 +51,8 @@ public class LookupConfigTest
     String json = "{\n"
                   + "  \"enableLookupSyncOnStartup\": false,\n"
                   + "  \"snapshotWorkingDir\": \"/tmp\",\n"
-                  + "  \"numLookupLoadingThreads\": 4 \n"
-                  + "  \"coordinatorFetchRetries\": 4 \n"
+                  + "  \"numLookupLoadingThreads\": 4,\n"
+                  + "  \"coordinatorFetchRetries\": 4,\n"
                   + "  \"lookupStartRetries\": 4 \n"
                   + "}\n";
     LookupConfig config = mapper.readValue(
