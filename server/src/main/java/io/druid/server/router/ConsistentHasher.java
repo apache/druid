@@ -38,6 +38,7 @@ import java.util.Set;
  */
 public class ConsistentHasher
 {
+  // Determined through tests to provide reasonably equal balancing on a test set of 5-10 brokers
   private static final int REPLICATION_FACTOR = 128;
   private static final HashFunction DEFAULT_HASH_FN = Hashing.murmur3_128();
 
