@@ -247,8 +247,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         {
           checkQueryTimeout();
 
-          final long bytes = response.getContent().readableBytes();
-          checkTotalBytesLimit(bytes);
+          final long totalBytes = response.getContent().readableBytes();
+          checkTotalBytesLimit(totalBytes);
 
           log.debug("Initial response from url[%s] for queryId[%s]", url, query.getId());
           responseStartTimeNs = System.nanoTime();
@@ -265,8 +265,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               );
             }
 
-            checkBufferCapacity(bytes, queryBufferingTimeout);
-            queue.put(new BufferedStream(new ChannelBufferInputStream(response.getContent()), bytes));
+            checkBufferCapacity(totalBytes, queryBufferingTimeout);
+            queue.put(new BufferedStream(new ChannelBufferInputStream(response.getContent()), totalBytes));
           }
           catch (final IOException e) {
             log.error(e, "Error parsing response context from url [%s]", url);
@@ -286,7 +286,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             Thread.currentThread().interrupt();
             throw Throwables.propagate(e);
           }
-          byteCount.addAndGet(bytes);
+          byteCount.addAndGet(totalBytes);
           return ClientResponse.<InputStream>finished(
               new SequenceInputStream(
                   new Enumeration<InputStream>()
@@ -461,26 +461,21 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           return maxBufferSizeBytes - totalBufferedBytes.get();
         }
 
-        private void checkBufferCapacity(long bytes, long timeoutMs)
+        private void checkBufferCapacity(long requestedBytes, long timeoutMs)
         {
           final long startTimeMs = System.currentTimeMillis();
-          boolean isTimeout = false;
-          while (maxBufferSizeBytes < Long.MAX_VALUE && getBufferCapacity() < bytes && !isTimeout) {
+          while (maxBufferSizeBytes < Long.MAX_VALUE && getBufferCapacity() < requestedBytes) {
             if (System.currentTimeMillis() - startTimeMs > timeoutMs) {
-              isTimeout = true;
+              String msg = StringUtils.format(
+                      "Query[%s] url[%s] max buffer limit reached: waiting for free buffer timeout",
+                      query.getId(),
+                      url
+              );
+              setupResponseReadFailure(msg, null);
+              throw new RE(msg);
             }
           }
-          if (isTimeout) {
-            String msg = StringUtils.format(
-                    "Query[%s] url[%s] max buffer limit reached: waiting for free buffer timeout",
-                    query.getId(),
-                    url
-            );
-            setupResponseReadFailure(msg, null);
-            throw new RE(msg);
-          } else {
-            totalBufferedBytes.addAndGet(bytes);
-          }
+          totalBufferedBytes.addAndGet(requestedBytes);
         }
       };
 

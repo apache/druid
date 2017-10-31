@@ -114,16 +114,16 @@ public class QueryContexts
     return query.getContextValue(CHUNK_PERIOD_KEY, "P0D");
   }
 
-  private static <T> Query<T> withCustomizedArgument(Query<T> query, String key, long value)
+  private static <T> Query<T> withCustomizedLimit(Query<T> query, String key, long maxLimit)
   {
     Object obj = query.getContextValue(key);
     if (obj == null) {
-      return query.withOverriddenContext(ImmutableMap.of(key, value));
+      return query.withOverriddenContext(ImmutableMap.of(key, maxLimit));
     } else {
       long curr = ((Number) obj).longValue();
-      if (curr > value) {
+      if (curr > maxLimit) {
         String err = "configured [%s = %s] is more than enforced limit of [%s].";
-        throw new IAE(err, key, curr, value);
+        throw new IAE(err, key, curr, maxLimit);
       } else {
         return query;
       }
@@ -132,7 +132,7 @@ public class QueryContexts
 
   public static <T> Query<T> withMaxScatterGatherBytes(Query<T> query, long maxScatterGatherBytesLimit)
   {
-    return withCustomizedArgument(query, MAX_SCATTER_GATHER_BYTES_KEY, maxScatterGatherBytesLimit);
+    return withCustomizedLimit(query, MAX_SCATTER_GATHER_BYTES_KEY, maxScatterGatherBytesLimit);
   }
 
   public static <T> long getMaxScatterGatherBytes(Query<T> query)
@@ -142,7 +142,7 @@ public class QueryContexts
 
   public static <T> Query<T> withMaxBufferSizeBytes(Query<T> query, long maxBufferSizeBytes)
   {
-    return withCustomizedArgument(query, MAX_BUFFER_SIZE_BYTES, maxBufferSizeBytes);
+    return withCustomizedLimit(query, MAX_BUFFER_SIZE_BYTES, maxBufferSizeBytes);
   }
 
   public static <T> long getMaxBufferSizeBytes(Query<T> query)
