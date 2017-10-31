@@ -21,12 +21,13 @@ package io.druid.security.basic.authorization;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import io.druid.java.util.common.IAE;
-import io.druid.security.basic.BasicAuthConfig;
-import io.druid.security.basic.db.BasicSecurityStorageConnector;
+import io.druid.security.basic.db.BasicAuthDBConfig;
+import io.druid.security.basic.db.BasicAuthorizerStorageConnector;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthenticationResult;
@@ -42,19 +43,42 @@ import java.util.regex.Pattern;
 @JsonTypeName("basic")
 public class BasicRoleBasedAuthorizer implements Authorizer
 {
-  private final BasicSecurityStorageConnector dbConnector;
+  private static final int DEFAULT_PERMISSION_CACHE_SIZE = 5000;
+  private final BasicAuthorizerStorageConnector dbConnector;
   private final LoadingCache<String, Pattern> permissionPatternCache;
+  private final int permissionCacheSize;
+  private final BasicAuthDBConfig dbConfig;
 
   @JsonCreator
   public BasicRoleBasedAuthorizer(
-      @JacksonInject BasicSecurityStorageConnector dbConnector,
-      @JacksonInject BasicAuthConfig authConfig
+      @JacksonInject BasicAuthorizerStorageConnector dbConnector,
+      @JsonProperty("dbPrefix") String dbPrefix,
+      @JsonProperty("permissionCacheSize") Integer permissionCacheSize
+  )
+  {
+    this.dbConfig = new BasicAuthDBConfig(dbPrefix, null, null);
+    this.dbConnector = dbConnector;
+    this.permissionCacheSize = permissionCacheSize == null ? DEFAULT_PERMISSION_CACHE_SIZE : permissionCacheSize;
+    this.permissionPatternCache = Caffeine.newBuilder()
+                                          .maximumSize(this.permissionCacheSize)
+                                          .build(regexStr -> Pattern.compile(regexStr));
+  }
+
+  /**
+   * constructor for unit tests
+   */
+  public BasicRoleBasedAuthorizer(
+      BasicAuthorizerStorageConnector dbConnector,
+      String dbPrefix,
+      int permissionCacheSize
   )
   {
     this.dbConnector = dbConnector;
+    this.permissionCacheSize = permissionCacheSize;
     this.permissionPatternCache = Caffeine.newBuilder()
-                                          .maximumSize(authConfig.getPermissionCacheSize())
+                                          .maximumSize(this.permissionCacheSize)
                                           .build(regexStr -> Pattern.compile(regexStr));
+    this.dbConfig = new BasicAuthDBConfig(dbPrefix, null, null);
   }
 
   @Override
@@ -66,7 +90,7 @@ public class BasicRoleBasedAuthorizer implements Authorizer
       throw new IAE("WTF? authenticationResult should never be null.");
     }
 
-    List<Map<String, Object>> permissions = dbConnector.getPermissionsForUser(authenticationResult.getIdentity());
+    List<Map<String, Object>> permissions = dbConnector.getPermissionsForUser(dbConfig.getDbPrefix(), authenticationResult.getIdentity());
 
     for (Map<String, Object> permission : permissions) {
       if (permissionCheck(resource, action, permission)) {
@@ -75,6 +99,16 @@ public class BasicRoleBasedAuthorizer implements Authorizer
     }
 
     return new Access(false);
+  }
+
+  public BasicAuthorizerStorageConnector getDbConnector()
+  {
+    return dbConnector;
+  }
+
+  public String getDBPrefix()
+  {
+    return dbConfig.getDbPrefix();
   }
 
   private boolean permissionCheck(Resource resource, Action action, Map<String, Object> permission)
@@ -94,5 +128,15 @@ public class BasicRoleBasedAuthorizer implements Authorizer
     Pattern resourceNamePattern = permissionPatternCache.get(permissionResourceName);
     Matcher resourceNameMatcher = resourceNamePattern.matcher(resource.getName());
     return resourceNameMatcher.matches();
+  }
+
+  public int getPermissionCacheSize()
+  {
+    return permissionCacheSize;
+  }
+
+  public BasicAuthDBConfig getDbConfig()
+  {
+    return dbConfig;
   }
 }

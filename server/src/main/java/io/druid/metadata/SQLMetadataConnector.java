@@ -21,10 +21,8 @@ package io.druid.metadata;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.RetryUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import org.apache.commons.dbcp2.BasicDataSource;
@@ -39,7 +37,6 @@ import org.skife.jdbi.v2.util.IntegerMapper;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.concurrent.Callable;
 
 public abstract class SQLMetadataConnector extends BaseSQLMetadataConnector implements MetadataStorageConnector
 {
@@ -107,24 +104,6 @@ public abstract class SQLMetadataConnector extends BaseSQLMetadataConnector impl
   public String getValidationQuery()
   {
     return "SELECT 1";
-  }
-
-  public <T> T retryTransaction(final TransactionCallback<T> callback, final int quietTries, final int maxTries)
-  {
-    final Callable<T> call = new Callable<T>()
-    {
-      @Override
-      public T call() throws Exception
-      {
-        return getDBI().inTransaction(callback);
-      }
-    };
-    try {
-      return RetryUtils.retry(call, shouldRetry, quietTries, maxTries);
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
   }
 
   public void createPendingSegmentsTable(final String tableName)

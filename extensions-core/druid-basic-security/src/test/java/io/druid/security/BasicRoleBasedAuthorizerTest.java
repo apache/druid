@@ -20,10 +20,8 @@
 package io.druid.security;
 
 import io.druid.java.util.common.StringUtils;
-import io.druid.security.basic.BasicAuthConfig;
 import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
-import io.druid.security.basic.db.SQLBasicSecurityStorageConnector;
-import io.druid.security.db.TestDerbySecurityConnector;
+import io.druid.security.db.TestDerbyAuthorizerStorageConnector;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthenticationResult;
@@ -40,42 +38,35 @@ import org.skife.jdbi.v2.tweak.HandleCallback;
 
 public class BasicRoleBasedAuthorizerTest
 {
+  private static final String TEST_DB_PREFIX = "test";
+
   @Rule
-  public final TestDerbySecurityConnector.DerbyConnectorRule derbyConnectorRule =
-      new TestDerbySecurityConnector.DerbyConnectorRule();
+  public final TestDerbyAuthorizerStorageConnector.DerbyConnectorRule derbyConnectorRule =
+      new TestDerbyAuthorizerStorageConnector.DerbyConnectorRule(TEST_DB_PREFIX);
 
   private BasicRoleBasedAuthorizer authorizer;
-  private TestDerbySecurityConnector connector;
-  private BasicAuthConfig authConfig;
+  private TestDerbyAuthorizerStorageConnector connector;
 
   @Before
   public void setUp() throws Exception
   {
     connector = derbyConnectorRule.getConnector();
     createAllTables();
-    authConfig = new BasicAuthConfig() {
-
-      @Override
-      public int getPermissionCacheSize()
-      {
-        return 500;
-      }
-    };
-    authorizer = new BasicRoleBasedAuthorizer(connector, authConfig);
+    authorizer = new BasicRoleBasedAuthorizer(connector, TEST_DB_PREFIX, 5000);
   }
 
   @Test
   public void testAuth()
   {
-    connector.createUser("druid");
-    connector.createRole("druidRole");
-    connector.assignRole("druid", "druidRole");
+    connector.createUser(TEST_DB_PREFIX, "druid");
+    connector.createRole(TEST_DB_PREFIX, "druidRole");
+    connector.assignRole(TEST_DB_PREFIX, "druid", "druidRole");
 
     ResourceAction permission = new ResourceAction(
         new Resource("testResource", ResourceType.DATASOURCE),
         Action.WRITE
     );
-    connector.addPermission("druidRole", permission);
+    connector.addPermission(TEST_DB_PREFIX, "druidRole", permission);
 
     AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null);
 
@@ -94,20 +85,19 @@ public class BasicRoleBasedAuthorizerTest
     Assert.assertFalse(access.isAllowed());
   }
 
-
   @Test
   public void testMorePermissionsThanCacheSize()
   {
-    connector.createUser("druid");
-    connector.createRole("druidRole");
-    connector.assignRole("druid", "druidRole");
+    connector.createUser(TEST_DB_PREFIX, "druid");
+    connector.createRole(TEST_DB_PREFIX, "druidRole");
+    connector.assignRole(TEST_DB_PREFIX, "druid", "druidRole");
 
-    for (int i = 0; i < authConfig.getPermissionCacheSize() + 50; i++) {
+    for (int i = 0; i < authorizer.getPermissionCacheSize() + 50; i++) {
       ResourceAction permission = new ResourceAction(
           new Resource("testResource-" + i, ResourceType.DATASOURCE),
           Action.WRITE
       );
-      connector.addPermission("druidRole", permission);
+      connector.addPermission(TEST_DB_PREFIX, "druidRole", permission);
     }
 
     AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null);
@@ -135,16 +125,15 @@ public class BasicRoleBasedAuthorizerTest
 
   private void createAllTables()
   {
-    connector.createUserTable();
-    connector.createRoleTable();
-    connector.createPermissionTable();
-    connector.createUserRoleTable();
-    connector.createUserCredentialsTable();
+    connector.createUserTable(TEST_DB_PREFIX);
+    connector.createRoleTable(TEST_DB_PREFIX);
+    connector.createPermissionTable(TEST_DB_PREFIX);
+    connector.createUserRoleTable(TEST_DB_PREFIX);
   }
 
   private void dropAllTables()
   {
-    for (String table : SQLBasicSecurityStorageConnector.TABLE_NAMES) {
+    for (String table : connector.getTableNames(TEST_DB_PREFIX)) {
       dropTable(table);
     }
   }

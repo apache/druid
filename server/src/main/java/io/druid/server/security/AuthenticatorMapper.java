@@ -55,4 +55,9 @@ public class AuthenticatorMapper
   {
     return Lists.newArrayList(authenticatorMap.values());
   }
+
+  public Map<String, Authenticator> getAuthenticatorMap()
+  {
+    return authenticatorMap;
+  }
 }

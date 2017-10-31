@@ -19,34 +19,32 @@
 
 package io.druid.security.basic.db.postgres;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import com.google.inject.Injector;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnectorConfig;
-import io.druid.security.basic.BasicAuthConfig;
-import io.druid.security.basic.db.SQLBasicSecurityStorageConnector;
+import io.druid.security.basic.db.SQLBasicAuthenticatorStorageConnector;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.util.StringMapper;
 
-public class PostgresBasicSecurityStorageConnector extends SQLBasicSecurityStorageConnector
+public class PostgreSQLBasicAuthenticatorStorageConnector extends SQLBasicAuthenticatorStorageConnector
 {
-  private static final Logger log = new Logger(PostgresBasicSecurityStorageConnector.class);
+  private static final Logger log = new Logger(PostgreSQLBasicAuthenticatorStorageConnector.class);
 
   private final DBI dbi;
 
   @Inject
-  public PostgresBasicSecurityStorageConnector(
+  public PostgreSQLBasicAuthenticatorStorageConnector(
       Supplier<MetadataStorageConnectorConfig> config,
-      Supplier<BasicAuthConfig> basicAuthConfigSupplier,
-      ObjectMapper jsonMapper
+      Injector injector
   )
   {
-    super(config, basicAuthConfigSupplier, jsonMapper);
+    super(config, injector);
 
     final BasicDataSource datasource = getDatasource();
     // PostgreSQL driver is classloader isolated as part of the extension
@@ -58,7 +56,6 @@ public class PostgresBasicSecurityStorageConnector extends SQLBasicSecurityStora
 
     log.info("Configured PostgreSQL as security storage");
   }
-
 
   @Override
   public boolean tableExists(final Handle handle, final String tableName)
@@ -79,30 +76,13 @@ public class PostgresBasicSecurityStorageConnector extends SQLBasicSecurityStora
   }
 
   @Override
-  public void createPermissionTable()
+  public void createUserCredentialsTable(String dbPrefix)
   {
-    createTable(
-        PERMISSIONS,
-        ImmutableList.of(
-            StringUtils.format(
-                "CREATE TABLE %1$s (\n"
-                + "  id SERIAL NOT NULL,\n"
-                + "  resource_json BYTEA NOT NULL,\n"
-                + "  role_name VARCHAR(255) NOT NULL, \n"
-                + "  PRIMARY KEY (id),\n"
-                + "  FOREIGN KEY (role_name) REFERENCES roles(name) ON DELETE CASCADE\n"
-                + ")",
-                PERMISSIONS
-            )
-        )
-    );
-  }
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+    final String credentialsTableName = getPrefixedTableName(dbPrefix, USER_CREDENTIALS);
 
-  @Override
-  public void createUserCredentialsTable()
-  {
     createTable(
-        USER_CREDENTIALS,
+        credentialsTableName,
         ImmutableList.of(
             StringUtils.format(
                 "CREATE TABLE %1$s (\n"
@@ -111,9 +91,10 @@ public class PostgresBasicSecurityStorageConnector extends SQLBasicSecurityStora
                 + "  hash BYTEA NOT NULL, \n"
                 + "  iterations INTEGER NOT NULL, \n"
                 + "  PRIMARY KEY (user_name),\n"
-                + "  FOREIGN KEY (user_name) REFERENCES users(name) ON DELETE CASCADE\n"
+                + "  FOREIGN KEY (user_name) REFERENCES %2$s(name) ON DELETE CASCADE\n"
                 + ")",
-                USER_CREDENTIALS
+                credentialsTableName,
+                userTableName
             )
         )
     );

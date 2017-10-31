@@ -25,17 +25,21 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Key;
 import io.druid.guice.Jerseys;
-import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.PolyBind;
 import io.druid.initialization.DruidModule;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
-import io.druid.security.basic.db.BasicSecurityStorageConnector;
-import io.druid.security.basic.db.SQLBasicSecurityStorageConnector;
-import io.druid.security.basic.db.derby.DerbySQLBasicSecurityStorageConnector;
-import io.druid.security.basic.db.mysql.MySQLBasicSecurityStorageConnector;
-import io.druid.security.basic.db.postgres.PostgresBasicSecurityStorageConnector;
+import io.druid.security.basic.db.BasicAuthenticatorStorageConnector;
+import io.druid.security.basic.db.BasicAuthorizerStorageConnector;
+import io.druid.security.basic.db.SQLBasicAuthenticatorStorageConnector;
+import io.druid.security.basic.db.SQLBasicAuthorizerStorageConnector;
+import io.druid.security.basic.db.derby.DerbySQLBasicAuthenticatorStorageConnector;
+import io.druid.security.basic.db.derby.DerbySQLBasicAuthorizerStorageConnector;
+import io.druid.security.basic.db.mysql.MySQLBasicAuthenticatorStorageConnector;
+import io.druid.security.basic.db.mysql.MySQLBasicAuthorizerStorageConnector;
+import io.druid.security.basic.db.postgres.PostgreSQLBasicAuthenticatorStorageConnector;
+import io.druid.security.basic.db.postgres.PostgreSQLBasicAuthorizerStorageConnector;
 
 import java.util.List;
 
@@ -46,46 +50,86 @@ public class BasicSecurityDruidModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    JsonConfigProvider.bind(binder, "druid.auth.basic", BasicAuthConfig.class);
-
+    // authentication
     PolyBind.createChoiceWithDefault(
-        binder, STORAGE_CONNECTOR_TYPE_PROPERTY, Key.get(BasicSecurityStorageConnector.class), null, "derby"
+        binder, STORAGE_CONNECTOR_TYPE_PROPERTY, Key.get(BasicAuthenticatorStorageConnector.class), null, "derby"
     );
     PolyBind.createChoiceWithDefault(
-        binder, STORAGE_CONNECTOR_TYPE_PROPERTY, Key.get(SQLBasicSecurityStorageConnector.class), null, "derby"
+        binder, STORAGE_CONNECTOR_TYPE_PROPERTY, Key.get(SQLBasicAuthenticatorStorageConnector.class), null, "derby"
     );
 
-    PolyBind.optionBinder(binder, Key.get(BasicSecurityStorageConnector.class))
+    PolyBind.optionBinder(binder, Key.get(BasicAuthenticatorStorageConnector.class))
             .addBinding("derby")
-            .to(DerbySQLBasicSecurityStorageConnector.class)
+            .to(DerbySQLBasicAuthenticatorStorageConnector.class)
             .in(ManageLifecycle.class);
 
-    PolyBind.optionBinder(binder, Key.get(SQLBasicSecurityStorageConnector.class))
+    PolyBind.optionBinder(binder, Key.get(SQLBasicAuthenticatorStorageConnector.class))
             .addBinding("derby")
-            .to(DerbySQLBasicSecurityStorageConnector.class)
+            .to(DerbySQLBasicAuthenticatorStorageConnector.class)
             .in(ManageLifecycle.class);
 
-    PolyBind.optionBinder(binder, Key.get(BasicSecurityStorageConnector.class))
+    PolyBind.optionBinder(binder, Key.get(BasicAuthenticatorStorageConnector.class))
             .addBinding("mysql")
-            .to(MySQLBasicSecurityStorageConnector.class)
+            .to(MySQLBasicAuthenticatorStorageConnector.class)
             .in(ManageLifecycle.class);
 
-    PolyBind.optionBinder(binder, Key.get(SQLBasicSecurityStorageConnector.class))
+    PolyBind.optionBinder(binder, Key.get(SQLBasicAuthenticatorStorageConnector.class))
             .addBinding("mysql")
-            .to(MySQLBasicSecurityStorageConnector.class)
+            .to(MySQLBasicAuthenticatorStorageConnector.class)
             .in(ManageLifecycle.class);
 
-    PolyBind.optionBinder(binder, Key.get(BasicSecurityStorageConnector.class))
+    PolyBind.optionBinder(binder, Key.get(BasicAuthenticatorStorageConnector.class))
             .addBinding("postgresql")
-            .to(PostgresBasicSecurityStorageConnector.class)
+            .to(PostgreSQLBasicAuthenticatorStorageConnector.class)
             .in(ManageLifecycle.class);
 
-    PolyBind.optionBinder(binder, Key.get(SQLBasicSecurityStorageConnector.class))
+    PolyBind.optionBinder(binder, Key.get(SQLBasicAuthenticatorStorageConnector.class))
             .addBinding("postgresql")
-            .to(PostgresBasicSecurityStorageConnector.class)
+            .to(PostgreSQLBasicAuthenticatorStorageConnector.class)
             .in(ManageLifecycle.class);
 
-    Jerseys.addResource(binder, BasicSecurityResource.class);
+    Jerseys.addResource(binder, BasicAuthenticatorResource.class);
+
+
+    // authorization
+    PolyBind.createChoiceWithDefault(
+        binder, STORAGE_CONNECTOR_TYPE_PROPERTY, Key.get(BasicAuthorizerStorageConnector.class), null, "derby"
+    );
+    PolyBind.createChoiceWithDefault(
+        binder, STORAGE_CONNECTOR_TYPE_PROPERTY, Key.get(SQLBasicAuthorizerStorageConnector.class), null, "derby"
+    );
+
+    PolyBind.optionBinder(binder, Key.get(BasicAuthorizerStorageConnector.class))
+            .addBinding("derby")
+            .to(DerbySQLBasicAuthorizerStorageConnector.class)
+            .in(ManageLifecycle.class);
+
+    PolyBind.optionBinder(binder, Key.get(SQLBasicAuthorizerStorageConnector.class))
+            .addBinding("derby")
+            .to(DerbySQLBasicAuthorizerStorageConnector.class)
+            .in(ManageLifecycle.class);
+
+    PolyBind.optionBinder(binder, Key.get(BasicAuthorizerStorageConnector.class))
+            .addBinding("mysql")
+            .to(MySQLBasicAuthorizerStorageConnector.class)
+            .in(ManageLifecycle.class);
+
+    PolyBind.optionBinder(binder, Key.get(SQLBasicAuthorizerStorageConnector.class))
+            .addBinding("mysql")
+            .to(MySQLBasicAuthorizerStorageConnector.class)
+            .in(ManageLifecycle.class);
+
+    PolyBind.optionBinder(binder, Key.get(BasicAuthorizerStorageConnector.class))
+            .addBinding("postgresql")
+            .to(PostgreSQLBasicAuthorizerStorageConnector.class)
+            .in(ManageLifecycle.class);
+
+    PolyBind.optionBinder(binder, Key.get(SQLBasicAuthorizerStorageConnector.class))
+            .addBinding("postgresql")
+            .to(PostgreSQLBasicAuthorizerStorageConnector.class)
+            .in(ManageLifecycle.class);
+
+    Jerseys.addResource(binder, BasicAuthorizerResource.class);
   }
 
   @Override

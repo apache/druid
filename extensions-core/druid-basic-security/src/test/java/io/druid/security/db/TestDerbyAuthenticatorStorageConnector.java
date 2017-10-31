@@ -19,14 +19,13 @@
 
 package io.druid.security.db;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import io.druid.java.util.common.StringUtils;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.metadata.NoopMetadataStorageProvider;
-import io.druid.security.basic.BasicAuthConfig;
-import io.druid.security.basic.db.derby.DerbySQLBasicSecurityStorageConnector;
+import io.druid.security.basic.db.BasicAuthDBConfig;
+import io.druid.security.basic.db.derby.DerbySQLBasicAuthenticatorStorageConnector;
 import org.junit.Assert;
 import org.junit.rules.ExternalResource;
 import org.skife.jdbi.v2.DBI;
@@ -35,29 +34,28 @@ import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
 import java.sql.SQLException;
 import java.util.UUID;
 
-public class TestDerbySecurityConnector extends DerbySQLBasicSecurityStorageConnector
+public class TestDerbyAuthenticatorStorageConnector extends DerbySQLBasicAuthenticatorStorageConnector
 {
   private final String jdbcUri;
 
-  public TestDerbySecurityConnector(
+  public TestDerbyAuthenticatorStorageConnector(
       Supplier<MetadataStorageConnectorConfig> config,
-      Supplier<BasicAuthConfig> basicAuthConfig
+      Supplier<BasicAuthDBConfig> dbConfigSupplier
   )
   {
-    this(config, basicAuthConfig, "jdbc:derby:memory:druidTest" + dbSafeUUID());
+    this(config, dbConfigSupplier, "jdbc:derby:memory:druidTest" + dbSafeUUID());
   }
 
-  protected TestDerbySecurityConnector(
+  protected TestDerbyAuthenticatorStorageConnector(
       Supplier<MetadataStorageConnectorConfig> config,
-      Supplier<BasicAuthConfig> basicAuthConfig,
+      Supplier<BasicAuthDBConfig> dbConfigSupplier,
       String jdbcUri
   )
   {
     super(
         new NoopMetadataStorageProvider().get(),
         config,
-        basicAuthConfig,
-        new ObjectMapper(),
+        null,
         new DBI(jdbcUri + ";create=true")
     );
     this.jdbcUri = jdbcUri;
@@ -87,20 +85,20 @@ public class TestDerbySecurityConnector extends DerbySQLBasicSecurityStorageConn
 
   public static class DerbyConnectorRule extends ExternalResource
   {
-    private TestDerbySecurityConnector connector;
-    private final Supplier<BasicAuthConfig> basicAuthConfigSupplier;
+    private TestDerbyAuthenticatorStorageConnector connector;
+    private final Supplier<BasicAuthDBConfig> dbConfigSupplier;
     private final MetadataStorageConnectorConfig connectorConfig;
 
-    public DerbyConnectorRule()
+    public DerbyConnectorRule(String dbPrefix)
     {
-      this(Suppliers.ofInstance(new BasicAuthConfig()));
+      this(Suppliers.ofInstance(new BasicAuthDBConfig(dbPrefix, "druid", "druid")));
     }
 
     public DerbyConnectorRule(
-        Supplier<BasicAuthConfig> basicAuthConfigSupplier
+        Supplier<BasicAuthDBConfig> dbConfigSupplier
     )
     {
-      this.basicAuthConfigSupplier = basicAuthConfigSupplier;
+      this.dbConfigSupplier = dbConfigSupplier;
       this.connectorConfig = new MetadataStorageConnectorConfig()
       {
         @Override
@@ -114,7 +112,7 @@ public class TestDerbySecurityConnector extends DerbySQLBasicSecurityStorageConn
     @Override
     protected void before() throws Throwable
     {
-      connector = new TestDerbySecurityConnector(Suppliers.ofInstance(connectorConfig), basicAuthConfigSupplier);
+      connector = new TestDerbyAuthenticatorStorageConnector(Suppliers.ofInstance(connectorConfig), dbConfigSupplier);
       connector.getDBI().open().close(); // create db
     }
 
@@ -124,19 +122,9 @@ public class TestDerbySecurityConnector extends DerbySQLBasicSecurityStorageConn
       connector.tearDown();
     }
 
-    public TestDerbySecurityConnector getConnector()
+    public TestDerbyAuthenticatorStorageConnector getConnector()
     {
       return connector;
-    }
-
-    public MetadataStorageConnectorConfig getMetadataConnectorConfig()
-    {
-      return connectorConfig;
-    }
-
-    public Supplier<BasicAuthConfig> basicAuthConfigSupplier()
-    {
-      return basicAuthConfigSupplier;
     }
   }
 }

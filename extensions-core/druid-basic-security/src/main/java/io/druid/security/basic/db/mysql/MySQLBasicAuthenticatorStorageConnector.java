@@ -19,35 +19,33 @@
 
 package io.druid.security.basic.db.mysql;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import com.google.inject.Injector;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnectorConfig;
-import io.druid.security.basic.BasicAuthConfig;
-import io.druid.security.basic.db.SQLBasicSecurityStorageConnector;
+import io.druid.security.basic.db.SQLBasicAuthenticatorStorageConnector;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.util.BooleanMapper;
 
-public class MySQLBasicSecurityStorageConnector extends SQLBasicSecurityStorageConnector
+public class MySQLBasicAuthenticatorStorageConnector extends SQLBasicAuthenticatorStorageConnector
 {
-  private static final Logger log = new Logger(MySQLBasicSecurityStorageConnector.class);
+  private static final Logger log = new Logger(MySQLBasicAuthenticatorStorageConnector.class);
 
   private final DBI dbi;
 
   @Inject
-  public MySQLBasicSecurityStorageConnector(
+  public MySQLBasicAuthenticatorStorageConnector(
       Supplier<MetadataStorageConnectorConfig> config,
-      Supplier<BasicAuthConfig> basicAuthConfigSupplier,
-      ObjectMapper jsonMapper
+      Injector injector
   )
   {
-    super(config, basicAuthConfigSupplier, jsonMapper);
+    super(config, injector);
 
     final BasicDataSource datasource = getDatasource();
     datasource.setDriverClassLoader(getClass().getClassLoader());
@@ -61,10 +59,12 @@ public class MySQLBasicSecurityStorageConnector extends SQLBasicSecurityStorageC
   }
 
   @Override
-  public void createRoleTable()
+  public void createUserTable(String dbPrefix)
   {
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+
     createTable(
-        ROLES,
+        userTableName,
         ImmutableList.of(
             StringUtils.format(
                 "CREATE TABLE %1$s (\n"
@@ -72,55 +72,20 @@ public class MySQLBasicSecurityStorageConnector extends SQLBasicSecurityStorageC
                 + "  PRIMARY KEY (name),\n"
                 + "  UNIQUE (name)\n"
                 + ")",
-                ROLES
+                userTableName
             )
         )
     );
   }
 
   @Override
-  public void createUserTable()
+  public void createUserCredentialsTable(String dbPrefix)
   {
-    createTable(
-        USERS,
-        ImmutableList.of(
-            StringUtils.format(
-                "CREATE TABLE %1$s (\n"
-                + "  name VARCHAR(255) NOT NULL,\n"
-                + "  PRIMARY KEY (name),\n"
-                + "  UNIQUE (name)\n"
-                + ")",
-                USERS
-            )
-        )
-    );
-  }
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+    final String credentialsTableName = getPrefixedTableName(dbPrefix, USER_CREDENTIALS);
 
-  @Override
-  public void createPermissionTable()
-  {
     createTable(
-        PERMISSIONS,
-        ImmutableList.of(
-            StringUtils.format(
-                "CREATE TABLE %1$s (\n"
-                + "  id INTEGER NOT NULL AUTO_INCREMENT,\n"
-                + "  resource_json BLOB(1024) NOT NULL,\n"
-                + "  role_name VARCHAR(255) NOT NULL, \n"
-                + "  PRIMARY KEY (id),\n"
-                + "  FOREIGN KEY (role_name) REFERENCES roles(name) ON DELETE CASCADE\n"
-                + ")",
-                PERMISSIONS
-            )
-        )
-    );
-  }
-
-  @Override
-  public void createUserCredentialsTable()
-  {
-    createTable(
-        USER_CREDENTIALS,
+        credentialsTableName,
         ImmutableList.of(
             StringUtils.format(
                 "CREATE TABLE %1$s (\n"
@@ -129,9 +94,10 @@ public class MySQLBasicSecurityStorageConnector extends SQLBasicSecurityStorageC
                 + "  hash BLOB(64) NOT NULL, \n"
                 + "  iterations INTEGER NOT NULL, \n"
                 + "  PRIMARY KEY (user_name), \n"
-                + "  FOREIGN KEY (user_name) REFERENCES users(name) ON DELETE CASCADE\n"
+                + "  FOREIGN KEY (user_name) REFERENCES %2$s(name) ON DELETE CASCADE\n"
                 + ")",
-                USER_CREDENTIALS
+                credentialsTableName,
+                userTableName
             )
         )
     );

@@ -17,16 +17,37 @@
  * under the License.
  */
 
-package io.druid.security.basic.cli;
+package io.druid.security.basic.db;
 
-import io.airlift.airline.Cli;
-import io.druid.cli.CliCommandCreator;
-
-public class BasicSecurityCliCommandCreator implements CliCommandCreator
+public class BasicAuthDBConfig
 {
-  @Override
-  public void addCommands(Cli.CliBuilder builder)
+  private final String dbPrefix;
+  private final String initialAdminPassword;
+  private final String initialInternalClientPassword;
+
+  public BasicAuthDBConfig(
+      final String dbPrefix,
+      final String initialAdminPassword,
+      final String initialInternalClientPassword
+  )
   {
-    builder.withGroup("tools").withCommands(CreateAuthorizationTables.class);
+    this.dbPrefix = dbPrefix;
+    this.initialAdminPassword = initialAdminPassword;
+    this.initialInternalClientPassword = initialInternalClientPassword;
+  }
+
+  public String getDbPrefix()
+  {
+    return dbPrefix;
+  }
+
+  public String getInitialAdminPassword()
+  {
+    return initialAdminPassword;
+  }
+
+  public String getInitialInternalClientPassword()
+  {
+    return initialInternalClientPassword;
   }
 }

@@ -25,8 +25,8 @@ import com.sun.jersey.spi.container.ContainerRequest;
 import io.druid.java.util.common.StringUtils;
 import io.druid.server.http.security.AbstractResourceFilter;
 import io.druid.server.security.Access;
-import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.Resource;
 import io.druid.server.security.ResourceAction;
 import io.druid.server.security.ResourceType;
@@ -38,7 +38,7 @@ import java.util.List;
 public class BasicSecurityResourceFilter extends AbstractResourceFilter
 {
   private static final List<String> applicablePaths = ImmutableList.of(
-      "druid/coordinator/v1/security/"
+      "druid/coordinator/v1/security/*"
   );
 
   @Inject

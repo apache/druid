@@ -27,15 +27,17 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import com.google.inject.Injector;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.metadata.BaseSQLMetadataConnector;
 import io.druid.metadata.MetadataStorageConnectorConfig;
-import io.druid.security.basic.BasicAuthConfig;
-import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.BasicSecurityDBResourceException;
+import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
 import io.druid.server.security.Action;
+import io.druid.server.security.Authorizer;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.Resource;
 import io.druid.server.security.ResourceAction;
 import io.druid.server.security.ResourceType;
@@ -50,32 +52,19 @@ import org.skife.jdbi.v2.util.IntegerMapper;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-/**
- * Base class for BasicSecurityStorageConnector implementations that interface with a database using SQL.
- */
-public abstract class SQLBasicSecurityStorageConnector
+public abstract class SQLBasicAuthorizerStorageConnector
     extends BaseSQLMetadataConnector
-    implements BasicSecurityStorageConnector
+    implements BasicAuthorizerStorageConnector
 {
   public static final String USERS = "users";
-  public static final String USER_CREDENTIALS = "user_credentials";
   public static final String PERMISSIONS = "permissions";
   public static final String ROLES = "roles";
   public static final String USER_ROLES = "user_roles";
-
-  public static final List<String> TABLE_NAMES = Lists.newArrayList(
-      USER_CREDENTIALS,
-      USER_ROLES,
-      PERMISSIONS,
-      ROLES,
-      USERS
-  );
 
   private static final String DEFAULT_ADMIN_NAME = "admin";
   private static final String DEFAULT_ADMIN_ROLE = "admin";
@@ -84,23 +73,21 @@ public abstract class SQLBasicSecurityStorageConnector
   private static final String DEFAULT_SYSTEM_USER_ROLE = "druid_system";
 
   private final Supplier<MetadataStorageConnectorConfig> config;
-  private final BasicAuthConfig basicAuthConfig;
   private final ObjectMapper jsonMapper;
   private final PermissionsMapper permMapper;
-  private final UserCredentialsMapper credsMapper;
+  private final Injector injector;
 
   @Inject
-  public SQLBasicSecurityStorageConnector(
+  public SQLBasicAuthorizerStorageConnector(
       Supplier<MetadataStorageConnectorConfig> config,
-      Supplier<BasicAuthConfig> basicAuthConfigSupplier,
+      Injector injector,
       ObjectMapper jsonMapper
   )
   {
     this.config = config;
-    this.basicAuthConfig = basicAuthConfigSupplier.get();
+    this.injector = injector;
     this.jsonMapper = jsonMapper;
     this.permMapper = new PermissionsMapper();
-    this.credsMapper = new UserCredentialsMapper();
     this.shouldRetry = new Predicate<Throwable>()
     {
       @Override
@@ -114,21 +101,59 @@ public abstract class SQLBasicSecurityStorageConnector
   @LifecycleStart
   public void start()
   {
-    createUserTable();
-    createRoleTable();
-    createPermissionTable();
-    createUserRoleTable();
-    createUserCredentialsTable();
+    final AuthorizerMapper authorizerMapper = injector.getInstance(AuthorizerMapper.class);
 
-    makeDefaultSuperuser(DEFAULT_ADMIN_NAME, basicAuthConfig.getInitialAdminPassword(), DEFAULT_ADMIN_ROLE);
-    makeDefaultSuperuser(DEFAULT_SYSTEM_USER_NAME, basicAuthConfig.getInitialInternalClientPassword(), DEFAULT_SYSTEM_USER_ROLE);
+    for (Map.Entry<String, Authorizer> entry : authorizerMapper.getAuthorizerMap().entrySet()) {
+      Authorizer authorizer = entry.getValue();
+      if (authorizer instanceof BasicRoleBasedAuthorizer) {
+        String authorizerName = entry.getKey();
+        BasicRoleBasedAuthorizer basicRoleBasedAuthorizer = (BasicRoleBasedAuthorizer) authorizer;
+        BasicAuthDBConfig dbConfig = basicRoleBasedAuthorizer.getDbConfig();
+
+        retryTransaction(
+            new TransactionCallback<Void>()
+            {
+              @Override
+              public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
+              {
+                if (tableExists(handle, getPrefixedTableName(dbConfig.getDbPrefix(), USERS))) {
+                  return null;
+                }
+
+                createUserTable(dbConfig.getDbPrefix());
+                createRoleTable(dbConfig.getDbPrefix());
+                createPermissionTable(dbConfig.getDbPrefix());
+                createUserRoleTable(dbConfig.getDbPrefix());
+
+                makeDefaultSuperuser(
+                    dbConfig.getDbPrefix(),
+                    DEFAULT_ADMIN_NAME,
+                    DEFAULT_ADMIN_ROLE
+                );
+
+                makeDefaultSuperuser(
+                    dbConfig.getDbPrefix(),
+                    DEFAULT_SYSTEM_USER_NAME,
+                    DEFAULT_SYSTEM_USER_ROLE
+                );
+
+                return null;
+              }
+            },
+            3,
+            10
+        );
+      }
+    }
   }
 
   @Override
-  public void createRoleTable()
+  public void createRoleTable(String dbPrefix)
   {
+    final String roleTableName = getPrefixedTableName(dbPrefix, ROLES);
+
     createTable(
-        ROLES,
+        roleTableName,
         ImmutableList.of(
             StringUtils.format(
                 "CREATE TABLE %1$s (\n"
@@ -136,17 +161,19 @@ public abstract class SQLBasicSecurityStorageConnector
                 + "  PRIMARY KEY (name),\n"
                 + "  UNIQUE (name)\n"
                 + ")",
-                ROLES
+                roleTableName
             )
         )
     );
   }
 
   @Override
-  public void createUserTable()
+  public void createUserTable(String dbPrefix)
   {
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+
     createTable(
-        USERS,
+        userTableName,
         ImmutableList.of(
             StringUtils.format(
                 "CREATE TABLE %1$s (\n"
@@ -154,37 +181,20 @@ public abstract class SQLBasicSecurityStorageConnector
                 + "  PRIMARY KEY (name),\n"
                 + "  UNIQUE (name)\n"
                 + ")",
-                USERS
+                userTableName
             )
         )
     );
   }
 
   @Override
-  public void createUserCredentialsTable()
+  public void createPermissionTable(String dbPrefix)
   {
-    createTable(
-        USER_CREDENTIALS,
-        ImmutableList.of(
-            StringUtils.format(
-                "CREATE TABLE %1$s (\n"
-                + "  user_name VARCHAR(255) NOT NULL, \n"
-                + "  salt VARBINARY(32) NOT NULL, \n"
-                + "  hash VARBINARY(64) NOT NULL, \n"
-                + "  iterations INTEGER NOT NULL, \n"
-                + "  PRIMARY KEY (user_name) REFERENCES users(name) ON DELETE CASCADE\n"
-                + ")",
-                USER_CREDENTIALS
-            )
-        )
-    );
-  }
+    final String roleTableName = getPrefixedTableName(dbPrefix, ROLES);
+    final String permissionTableName = getPrefixedTableName(dbPrefix, PERMISSIONS);
 
-  @Override
-  public void createPermissionTable()
-  {
     createTable(
-        PERMISSIONS,
+        permissionTableName,
         ImmutableList.of(
             StringUtils.format(
                 "CREATE TABLE %1$s (\n"
@@ -192,76 +202,59 @@ public abstract class SQLBasicSecurityStorageConnector
                 + "  resource_json VARCHAR(255) NOT NULL,\n"
                 + "  role_name INTEGER NOT NULL, \n"
                 + "  PRIMARY KEY (id),\n"
-                + "  FOREIGN KEY (role_name) REFERENCES roles(name) ON DELETE CASCADE\n"
+                + "  FOREIGN KEY (role_name) REFERENCES %2$s(name) ON DELETE CASCADE\n"
                 + ")",
-                PERMISSIONS
+                permissionTableName,
+                roleTableName
             )
         )
     );
   }
 
   @Override
-  public void createUserRoleTable()
+  public void createUserRoleTable(String dbPrefix)
   {
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+    final String roleTableName = getPrefixedTableName(dbPrefix, ROLES);
+    final String userRoleTableName = getPrefixedTableName(dbPrefix, USER_ROLES);
+
     createTable(
-        USER_ROLES,
+        userRoleTableName,
         ImmutableList.of(
             StringUtils.format(
                 "CREATE TABLE %1$s (\n"
                 + "  user_name VARCHAR(255) NOT NULL,\n"
                 + "  role_name VARCHAR(255) NOT NULL, \n"
-                + "  FOREIGN KEY (user_name) REFERENCES users(name) ON DELETE CASCADE,\n"
-                + "  FOREIGN KEY (role_name) REFERENCES roles(name) ON DELETE CASCADE\n"
+                + "  FOREIGN KEY (user_name) REFERENCES %2$s(name) ON DELETE CASCADE,\n"
+                + "  FOREIGN KEY (role_name) REFERENCES %3$s(name) ON DELETE CASCADE\n"
                 + ")",
-                USER_ROLES
+                userRoleTableName,
+                userTableName,
+                roleTableName
             )
         )
     );
   }
 
-  public MetadataStorageConnectorConfig getConfig()
-  {
-    return config.get();
-  }
-
-  protected BasicDataSource getDatasource()
-  {
-    MetadataStorageConnectorConfig connectorConfig = getConfig();
-
-    BasicDataSource dataSource = new BasicDataSource();
-    dataSource.setUsername(connectorConfig.getUser());
-    dataSource.setPassword(connectorConfig.getPassword());
-    String uri = connectorConfig.getConnectURI();
-    dataSource.setUrl(uri);
-
-    dataSource.setValidationQuery(getValidationQuery());
-    dataSource.setTestOnBorrow(true);
-
-    return dataSource;
-  }
-
-  public String getValidationQuery()
-  {
-    return "SELECT 1";
-  }
-
   @Override
-  public void createUser(String userName)
+  public void createUser(String dbPrefix, String userName)
   {
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+
     getDBI().inTransaction(
         new TransactionCallback<Void>()
         {
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int count = getUserCount(handle, userName);
+            int count = getUserCount(handle, dbPrefix, userName);
             if (count != 0) {
               throw new BasicSecurityDBResourceException("User [%s] already exists.", userName);
             }
 
             handle.createStatement(
                 StringUtils.format(
-                    "INSERT INTO %1$s (name) VALUES (:user_name)", USERS
+                    "INSERT INTO %1$s (name) VALUES (:user_name)", userTableName
                 )
             )
                   .bind("user_name", userName)
@@ -273,21 +266,23 @@ public abstract class SQLBasicSecurityStorageConnector
   }
 
   @Override
-  public void deleteUser(String userName)
+  public void deleteUser(String dbPrefix, String userName)
   {
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+
     getDBI().inTransaction(
         new TransactionCallback<Void>()
         {
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int count = getUserCount(handle, userName);
+            int count = getUserCount(handle, dbPrefix, userName);
             if (count == 0) {
               throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
             }
             handle.createStatement(
                 StringUtils.format(
-                    "DELETE FROM %1$s WHERE name = :userName", USERS
+                    "DELETE FROM %1$s WHERE name = :userName", userTableName
                 )
             )
                   .bind("userName", userName)
@@ -299,21 +294,23 @@ public abstract class SQLBasicSecurityStorageConnector
   }
 
   @Override
-  public void createRole(String roleName)
+  public void createRole(String dbPrefix, String roleName)
   {
+    final String roleTableName = getPrefixedTableName(dbPrefix, ROLES);
+
     getDBI().inTransaction(
         new TransactionCallback<Void>()
         {
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int count = getRoleCount(handle, roleName);
+            int count = getRoleCount(handle, dbPrefix, roleName);
             if (count != 0) {
               throw new BasicSecurityDBResourceException("Role [%s] already exists.", roleName);
             }
             handle.createStatement(
                 StringUtils.format(
-                    "INSERT INTO %1$s (name) VALUES (:roleName)", ROLES
+                    "INSERT INTO %1$s (name) VALUES (:roleName)", roleTableName
                 )
             )
                   .bind("roleName", roleName)
@@ -325,21 +322,23 @@ public abstract class SQLBasicSecurityStorageConnector
   }
 
   @Override
-  public void deleteRole(String roleName)
+  public void deleteRole(String dbPrefix, String roleName)
   {
+    final String roleTableName = getPrefixedTableName(dbPrefix, ROLES);
+
     getDBI().inTransaction(
         new TransactionCallback<Void>()
         {
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int count = getRoleCount(handle, roleName);
+            int count = getRoleCount(handle, dbPrefix, roleName);
             if (count == 0) {
               throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
             }
             handle.createStatement(
                 StringUtils.format(
-                    "DELETE FROM %1$s WHERE name = :roleName", ROLES
+                    "DELETE FROM %1$s WHERE name = :roleName", roleTableName
                 )
             )
                   .bind("roleName", roleName)
@@ -351,15 +350,17 @@ public abstract class SQLBasicSecurityStorageConnector
   }
 
   @Override
-  public void addPermission(String roleName, ResourceAction resourceAction)
+  public void addPermission(String dbPrefix, String roleName, ResourceAction resourceAction)
   {
+    final String permissionTableName = getPrefixedTableName(dbPrefix, PERMISSIONS);
+
     getDBI().inTransaction(
         new TransactionCallback<Void>()
         {
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int roleCount = getRoleCount(handle, roleName);
+            int roleCount = getRoleCount(handle, dbPrefix, roleName);
             if (roleCount == 0) {
               throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
             }
@@ -380,7 +381,7 @@ public abstract class SQLBasicSecurityStorageConnector
               handle.createStatement(
                   StringUtils.format(
                       "INSERT INTO %1$s (resource_json, role_name) VALUES (:resourceJson, :roleName)",
-                      PERMISSIONS
+                      permissionTableName
                   )
               )
                     .bind("resourceJson", serializedResourceAction)
@@ -398,21 +399,23 @@ public abstract class SQLBasicSecurityStorageConnector
   }
 
   @Override
-  public void deletePermission(int permissionId)
+  public void deletePermission(String dbPrefix, int permissionId)
   {
+    final String permissionTableName = getPrefixedTableName(dbPrefix, PERMISSIONS);
+
     getDBI().inTransaction(
         new TransactionCallback<Void>()
         {
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int permCount = getPermissionCount(handle, permissionId);
+            int permCount = getPermissionCount(handle, dbPrefix, permissionId);
             if (permCount == 0) {
               throw new BasicSecurityDBResourceException("Permission with id [%s] does not exist.", permissionId);
             }
             handle.createStatement(
                 StringUtils.format(
-                    "DELETE FROM %1$s WHERE id = :permissionId", PERMISSIONS
+                    "DELETE FROM %1$s WHERE id = :permissionId", permissionTableName
                 )
             )
                   .bind("permissionId", permissionId)
@@ -424,16 +427,18 @@ public abstract class SQLBasicSecurityStorageConnector
   }
 
   @Override
-  public void assignRole(String userName, String roleName)
+  public void assignRole(String dbPrefix, String userName, String roleName)
   {
+    final String userRoleTableName = getPrefixedTableName(dbPrefix, USER_ROLES);
+
     getDBI().inTransaction(
         new TransactionCallback<Void>()
         {
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int userCount = getUserCount(handle, userName);
-            int roleCount = getRoleCount(handle, roleName);
+            int userCount = getUserCount(handle, dbPrefix, userName);
+            int roleCount = getRoleCount(handle, dbPrefix, roleName);
 
             if (userCount == 0) {
               throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
@@ -443,14 +448,14 @@ public abstract class SQLBasicSecurityStorageConnector
               throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
             }
 
-            int userRoleMappingCount = getUserRoleMappingCount(handle, userName, roleName);
+            int userRoleMappingCount = getUserRoleMappingCount(handle, dbPrefix, userName, roleName);
             if (userRoleMappingCount != 0) {
               throw new BasicSecurityDBResourceException("User [%s] already has role [%s].", userName, roleName);
             }
 
             handle.createStatement(
                 StringUtils.format(
-                    "INSERT INTO %1$s (user_name, role_name) VALUES (:userName, :roleName)", USER_ROLES
+                    "INSERT INTO %1$s (user_name, role_name) VALUES (:userName, :roleName)", userRoleTableName
                 )
             )
                   .bind("userName", userName)
@@ -463,16 +468,18 @@ public abstract class SQLBasicSecurityStorageConnector
   }
 
   @Override
-  public void unassignRole(String userName, String roleName)
+  public void unassignRole(String dbPrefix, String userName, String roleName)
   {
+    final String userRoleTableName = getPrefixedTableName(dbPrefix, USER_ROLES);
+
     getDBI().inTransaction(
         new TransactionCallback<Void>()
         {
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            int userCount = getUserCount(handle, userName);
-            int roleCount = getRoleCount(handle, roleName);
+            int userCount = getUserCount(handle, dbPrefix, userName);
+            int roleCount = getRoleCount(handle, dbPrefix, roleName);
 
             if (userCount == 0) {
               throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
@@ -482,14 +489,14 @@ public abstract class SQLBasicSecurityStorageConnector
               throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
             }
 
-            int userRoleMappingCount = getUserRoleMappingCount(handle, userName, roleName);
+            int userRoleMappingCount = getUserRoleMappingCount(handle, dbPrefix, userName, roleName);
             if (userRoleMappingCount == 0) {
               throw new BasicSecurityDBResourceException("User [%s] does not have role [%s].", userName, roleName);
             }
 
             handle.createStatement(
                 StringUtils.format(
-                    "DELETE FROM %1$s WHERE user_name = :userName AND role_name = :roleName", USER_ROLES
+                    "DELETE FROM %1$s WHERE user_name = :userName AND role_name = :roleName", userRoleTableName
                 )
             )
                   .bind("userName", userName)
@@ -503,8 +510,10 @@ public abstract class SQLBasicSecurityStorageConnector
   }
 
   @Override
-  public List<Map<String, Object>> getAllUsers()
+  public List<Map<String, Object>> getAllUsers(String dbPrefix)
   {
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+
     return getDBI().inTransaction(
         new TransactionCallback<List<Map<String, Object>>>()
         {
@@ -514,7 +523,7 @@ public abstract class SQLBasicSecurityStorageConnector
           {
             return handle
                 .createQuery(
-                    StringUtils.format("SELECT * FROM users")
+                    StringUtils.format("SELECT * FROM %1$s", userTableName)
                 )
                 .list();
           }
@@ -523,8 +532,10 @@ public abstract class SQLBasicSecurityStorageConnector
   }
 
   @Override
-  public List<Map<String, Object>> getAllRoles()
+  public List<Map<String, Object>> getAllRoles(String dbPrefix)
   {
+    final String roleTableName = getPrefixedTableName(dbPrefix, ROLES);
+
     return getDBI().inTransaction(
         new TransactionCallback<List<Map<String, Object>>>()
         {
@@ -534,7 +545,7 @@ public abstract class SQLBasicSecurityStorageConnector
           {
             return handle
                 .createQuery(
-                    StringUtils.format("SELECT * FROM roles")
+                    StringUtils.format("SELECT * FROM %1$s", roleTableName)
                 )
                 .list();
           }
@@ -543,8 +554,10 @@ public abstract class SQLBasicSecurityStorageConnector
   }
 
   @Override
-  public Map<String, Object> getUser(String userName)
+  public Map<String, Object> getUser(String dbPrefix, String userName)
   {
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+
     return getDBI().inTransaction(
         new TransactionCallback<Map<String, Object>>()
         {
@@ -553,7 +566,7 @@ public abstract class SQLBasicSecurityStorageConnector
           {
             return handle
                 .createQuery(
-                    StringUtils.format("SELECT * FROM users where name = :userName")
+                    StringUtils.format("SELECT * FROM %1$s where name = :userName", userTableName)
                 )
                 .bind("userName", userName)
                 .first();
@@ -563,8 +576,10 @@ public abstract class SQLBasicSecurityStorageConnector
   }
 
   @Override
-  public Map<String, Object> getRole(String roleName)
+  public Map<String, Object> getRole(String dbPrefix, String roleName)
   {
+    final String roleTableName = getPrefixedTableName(dbPrefix, ROLES);
+
     return getDBI().inTransaction(
         new TransactionCallback<Map<String, Object>>()
         {
@@ -573,7 +588,7 @@ public abstract class SQLBasicSecurityStorageConnector
           {
             return handle
                 .createQuery(
-                    StringUtils.format("SELECT * FROM roles where name = :roleName")
+                    StringUtils.format("SELECT * FROM %1$s where name = :roleName", roleTableName)
                 )
                 .bind("roleName", roleName)
                 .first();
@@ -583,8 +598,11 @@ public abstract class SQLBasicSecurityStorageConnector
   }
 
   @Override
-  public List<Map<String, Object>> getRolesForUser(String userName)
+  public List<Map<String, Object>> getRolesForUser(String dbPrefix, String userName)
   {
+    final String roleTableName = getPrefixedTableName(dbPrefix, ROLES);
+    final String userRoleTableName = getPrefixedTableName(dbPrefix, USER_ROLES);
+
     return getDBI().inTransaction(
         new TransactionCallback<List<Map<String, Object>>>()
         {
@@ -592,7 +610,7 @@ public abstract class SQLBasicSecurityStorageConnector
           public List<Map<String, Object>> inTransaction(Handle handle, TransactionStatus transactionStatus)
               throws Exception
           {
-            int userCount = getUserCount(handle, userName);
+            int userCount = getUserCount(handle, dbPrefix, userName);
             if (userCount == 0) {
               throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
             }
@@ -600,11 +618,13 @@ public abstract class SQLBasicSecurityStorageConnector
             return handle
                 .createQuery(
                     StringUtils.format(
-                        "SELECT roles.name\n"
-                        + "FROM roles\n"
-                        + "JOIN user_roles\n"
-                        + "    ON user_roles.role_name = roles.name\n"
-                        + "WHERE user_roles.user_name = :userName"
+                        "SELECT %1$s.name\n"
+                        + "FROM %1$s\n"
+                        + "JOIN %2$s\n"
+                        + "    ON %2$s.role_name = %1$s.name\n"
+                        + "WHERE %2$s.user_name = :userName",
+                        roleTableName,
+                        userRoleTableName
                     )
                 )
                 .bind("userName", userName)
@@ -615,8 +635,11 @@ public abstract class SQLBasicSecurityStorageConnector
   }
 
   @Override
-  public List<Map<String, Object>> getUsersWithRole(String roleName)
+  public List<Map<String, Object>> getUsersWithRole(String dbPrefix, String roleName)
   {
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+    final String userRoleTableName = getPrefixedTableName(dbPrefix, USER_ROLES);
+
     return getDBI().inTransaction(
         new TransactionCallback<List<Map<String, Object>>>()
         {
@@ -624,7 +647,7 @@ public abstract class SQLBasicSecurityStorageConnector
           public List<Map<String, Object>> inTransaction(Handle handle, TransactionStatus transactionStatus)
               throws Exception
           {
-            int roleCount = getRoleCount(handle, roleName);
+            int roleCount = getRoleCount(handle, dbPrefix, roleName);
             if (roleCount == 0) {
               throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
             }
@@ -632,17 +655,29 @@ public abstract class SQLBasicSecurityStorageConnector
             return handle
                 .createQuery(
                     StringUtils.format(
-                        "SELECT users.name\n"
-                        + "FROM users\n"
-                        + "JOIN user_roles\n"
-                        + "    ON user_roles.user_name = users.name\n"
-                        + "WHERE user_roles.role_name = :roleName"
+                        "SELECT %1$s.name\n"
+                        + "FROM %1$s\n"
+                        + "JOIN %2$s\n"
+                        + "    ON %2$s.user_name = %1$s.name\n"
+                        + "WHERE %2$s.role_name = :roleName",
+                        userTableName,
+                        userRoleTableName
                     )
                 )
                 .bind("roleName", roleName)
                 .list();
           }
         }
+    );
+  }
+
+  public List<String> getTableNames(String dbPrefix)
+  {
+    return ImmutableList.of(
+      getPrefixedTableName(dbPrefix, USER_ROLES),
+      getPrefixedTableName(dbPrefix, PERMISSIONS),
+      getPrefixedTableName(dbPrefix, ROLES),
+      getPrefixedTableName(dbPrefix, USERS)
     );
   }
 
@@ -668,8 +703,10 @@ public abstract class SQLBasicSecurityStorageConnector
   }
 
   @Override
-  public List<Map<String, Object>> getPermissionsForRole(String roleName)
+  public List<Map<String, Object>> getPermissionsForRole(String dbPrefix, String roleName)
   {
+    final String permissionTableName = getPrefixedTableName(dbPrefix, PERMISSIONS);
+
     return getDBI().inTransaction(
         new TransactionCallback<List<Map<String, Object>>>()
         {
@@ -677,7 +714,7 @@ public abstract class SQLBasicSecurityStorageConnector
           public List<Map<String, Object>> inTransaction(Handle handle, TransactionStatus transactionStatus)
               throws Exception
           {
-            int roleCount = getRoleCount(handle, roleName);
+            int roleCount = getRoleCount(handle, dbPrefix, roleName);
             if (roleCount == 0) {
               throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
             }
@@ -685,9 +722,10 @@ public abstract class SQLBasicSecurityStorageConnector
             return handle
                 .createQuery(
                     StringUtils.format(
-                        "SELECT permissions.id, permissions.resource_json\n"
-                        + "FROM permissions\n"
-                        + "WHERE permissions.role_name = :roleName"
+                        "SELECT %1$s.id, %1$s.resource_json\n"
+                        + "FROM %1$s\n"
+                        + "WHERE %1$s.role_name = :roleName",
+                        permissionTableName
                     )
                 )
                 .map(permMapper)
@@ -699,8 +737,12 @@ public abstract class SQLBasicSecurityStorageConnector
   }
 
   @Override
-  public List<Map<String, Object>> getPermissionsForUser(String userName)
+  public List<Map<String, Object>> getPermissionsForUser(String dbPrefix, String userName)
   {
+    final String roleTableName = getPrefixedTableName(dbPrefix, ROLES);
+    final String userRoleTableName = getPrefixedTableName(dbPrefix, USER_ROLES);
+    final String permissionTableName = getPrefixedTableName(dbPrefix, PERMISSIONS);
+
     return getDBI().inTransaction(
         new TransactionCallback<List<Map<String, Object>>>()
         {
@@ -708,7 +750,7 @@ public abstract class SQLBasicSecurityStorageConnector
           public List<Map<String, Object>> inTransaction(Handle handle, TransactionStatus transactionStatus)
               throws Exception
           {
-            int userCount = getUserCount(handle, userName);
+            int userCount = getUserCount(handle, dbPrefix, userName);
             if (userCount == 0) {
               throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
             }
@@ -716,13 +758,16 @@ public abstract class SQLBasicSecurityStorageConnector
             return handle
                 .createQuery(
                     StringUtils.format(
-                        "SELECT permissions.id, permissions.resource_json, roles.name\n"
-                        + "FROM permissions\n"
-                        + "JOIN roles\n"
-                        + "    ON permissions.role_name = roles.name\n"
-                        + "JOIN user_roles\n"
-                        + "    ON user_roles.role_name = roles.name\n"
-                        + "WHERE user_roles.user_name = :userName"
+                        "SELECT %1$s.id, %1$s.resource_json, %2$s.name\n"
+                        + "FROM %1$s\n"
+                        + "JOIN %2$s\n"
+                        + "    ON %1$s.role_name = %2$s.name\n"
+                        + "JOIN %3$s\n"
+                        + "    ON %3$s.role_name = %2$s.name\n"
+                        + "WHERE %3$s.user_name = :userName",
+                        permissionTableName,
+                        roleTableName,
+                        userRoleTableName
                     )
                 )
                 .map(permMapper)
@@ -733,192 +778,84 @@ public abstract class SQLBasicSecurityStorageConnector
     );
   }
 
-  private static class UserCredentialsMapper implements ResultSetMapper<Map<String, Object>>
+  public MetadataStorageConnectorConfig getConfig()
   {
-    @Override
-    public Map<String, Object> map(int index, ResultSet resultSet, StatementContext context)
-        throws SQLException
-    {
-
-      String user_name = resultSet.getString("user_name");
-      byte[] salt = resultSet.getBytes("salt");
-      byte[] hash = resultSet.getBytes("hash");
-      int iterations = resultSet.getInt("iterations");
-      return ImmutableMap.of(
-          "user_name", user_name,
-          "salt", salt,
-          "hash", hash,
-          "iterations", iterations
-      );
-    }
+    return config.get();
   }
 
-  @Override
-  public Map<String, Object> getUserCredentials(String userName)
+  public String getValidationQuery()
   {
-    return getDBI().inTransaction(
-        new TransactionCallback<Map<String, Object>>()
-        {
-          @Override
-          public Map<String, Object> inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
-          {
-            int userCount = getUserCount(handle, userName);
-            if (userCount == 0) {
-              throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
-            }
-
-            return handle
-                .createQuery(
-                    StringUtils.format("SELECT * FROM %1$s where user_name = :userName", USER_CREDENTIALS)
-                )
-                .map(credsMapper)
-                .bind("userName", userName)
-                .first();
-          }
-        }
-    );
+    return "SELECT 1";
   }
 
-  @Override
-  public void setUserCredentials(String userName, char[] password)
+  protected BasicDataSource getDatasource()
   {
-    getDBI().inTransaction(
-        new TransactionCallback<Void>()
-        {
-          @Override
-          public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
-          {
-            int userCount = getUserCount(handle, userName);
-            if (userCount == 0) {
-              throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
-            }
+    MetadataStorageConnectorConfig connectorConfig = getConfig();
 
-            Map<String, Object> existingMapping = handle
-                .createQuery(
-                    StringUtils.format(
-                        "SELECT user_name FROM %1$s WHERE user_name = :userName",
-                        USER_CREDENTIALS
-                    )
-                )
-                .bind("userName", userName)
-                .first();
+    BasicDataSource dataSource = new BasicDataSource();
+    dataSource.setUsername(connectorConfig.getUser());
+    dataSource.setPassword(connectorConfig.getPassword());
+    String uri = connectorConfig.getConnectURI();
+    dataSource.setUrl(uri);
 
-            int iterations = BasicAuthUtils.KEY_ITERATIONS;
-            byte[] salt = BasicAuthUtils.generateSalt();
-            byte[] hash = BasicAuthUtils.hashPassword(password, salt, iterations);
+    dataSource.setValidationQuery(getValidationQuery());
+    dataSource.setTestOnBorrow(true);
 
-            if (existingMapping == null) {
-              handle.createStatement(
-                  StringUtils.format(
-                      "INSERT INTO %1$s (user_name, salt, hash, iterations) " +
-                      "VALUES (:userName, :salt, :hash, :iterations)",
-                      USER_CREDENTIALS
-                  )
-              )
-                    .bind("userName", userName)
-                    .bind("salt", salt)
-                    .bind("hash", hash)
-                    .bind("iterations", iterations)
-                    .execute();
-            } else {
-              handle.createStatement(
-                  StringUtils.format(
-                      "UPDATE %1$s SET " +
-                      "salt = :salt, " +
-                      "hash = :hash, " +
-                      "iterations = :iterations " +
-                      "WHERE user_name = :userName",
-                      USER_CREDENTIALS
-                  )
-              )
-                    .bind("userName", userName)
-                    .bind("salt", salt)
-                    .bind("hash", hash)
-                    .bind("iterations", iterations)
-                    .execute();
-            }
-
-            return null;
-          }
-        }
-    );
+    return dataSource;
   }
 
-  @Override
-  public boolean checkCredentials(String userName, char[] password)
+  protected static String getPrefixedTableName(String dbPrefix, String baseTableName)
   {
-    return getDBI().inTransaction(
-        new TransactionCallback<Boolean>()
-        {
-          @Override
-          public Boolean inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
-          {
-            Map<String, Object> credentials = handle
-                .createQuery(
-                    StringUtils.format(
-                        "SELECT * FROM %1$s WHERE user_name = :userName",
-                        USER_CREDENTIALS
-                    )
-                )
-                .bind("userName", userName)
-                .map(credsMapper)
-                .first();
-
-            if (credentials == null) {
-              return false;
-            }
-
-            byte[] dbSalt = (byte[]) credentials.get("salt");
-            byte[] dbHash = (byte[]) credentials.get("hash");
-            int iterations = (int) credentials.get("iterations");
-
-            byte[] hash = BasicAuthUtils.hashPassword(password, dbSalt, iterations);
-
-            return Arrays.equals(dbHash, hash);
-          }
-        }
-    );
+    return StringUtils.format("basic_authorization_%s_%s", dbPrefix, baseTableName);
   }
 
-  private int getUserCount(Handle handle, String userName)
+  private int getUserCount(Handle handle, String dbPrefix, String userName)
   {
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+
     return handle
         .createQuery(
-            StringUtils.format("SELECT COUNT(*) FROM %1$s WHERE %2$s = :key", USERS, "name")
+            StringUtils.format("SELECT COUNT(*) FROM %1$s WHERE %2$s = :key", userTableName, "name")
         )
         .bind("key", userName)
         .map(IntegerMapper.FIRST)
         .first();
   }
 
-  private int getRoleCount(Handle handle, String roleName)
+  private int getRoleCount(Handle handle, String dbPrefix, String roleName)
   {
+    final String roleTableName = getPrefixedTableName(dbPrefix, ROLES);
+
     return handle
         .createQuery(
-            StringUtils.format("SELECT COUNT(*) FROM %1$s WHERE %2$s = :key", ROLES, "name")
+            StringUtils.format("SELECT COUNT(*) FROM %1$s WHERE %2$s = :key", roleTableName, "name")
         )
         .bind("key", roleName)
         .map(IntegerMapper.FIRST)
         .first();
   }
 
-  private int getPermissionCount(Handle handle, int permissionId)
+  private int getPermissionCount(Handle handle, String dbPrefix, int permissionId)
   {
+    final String permissionTableName = getPrefixedTableName(dbPrefix, PERMISSIONS);
+
     return handle
         .createQuery(
-            StringUtils.format("SELECT COUNT(*) FROM %1$s WHERE %2$s = :key", PERMISSIONS, "id")
+            StringUtils.format("SELECT COUNT(*) FROM %1$s WHERE %2$s = :key", permissionTableName, "id")
         )
         .bind("key", permissionId)
         .map(IntegerMapper.FIRST)
         .first();
   }
 
-  private int getUserRoleMappingCount(Handle handle, String userName, String roleName)
+  private int getUserRoleMappingCount(Handle handle, String dbPrefix, String userName, String roleName)
   {
+    final String userRoleTableName = getPrefixedTableName(dbPrefix, USER_ROLES);
+
     return handle
         .createQuery(
             StringUtils.format("SELECT COUNT(*) FROM %1$s WHERE %2$s = :userkey AND %3$s = :rolekey",
-                               USER_ROLES,
+                               userRoleTableName,
                                "user_name",
                                "role_name"
             )
@@ -929,15 +866,15 @@ public abstract class SQLBasicSecurityStorageConnector
         .first();
   }
 
-  private void makeDefaultSuperuser(String username, String password, String role)
+  private void makeDefaultSuperuser(String dbPrefix, String username, String role)
   {
-    if (getUser(username) != null) {
+    if (getUser(dbPrefix, username) != null) {
       return;
     }
 
-    createUser(username);
-    createRole(role);
-    assignRole(username, role);
+    createUser(dbPrefix, username);
+    createRole(dbPrefix, role);
+    assignRole(dbPrefix, username, role);
 
     ResourceAction datasourceR = new ResourceAction(
         new Resource(".*", ResourceType.DATASOURCE),
@@ -972,9 +909,7 @@ public abstract class SQLBasicSecurityStorageConnector
     List<ResourceAction> resActs = Lists.newArrayList(datasourceR, datasourceW, configR, configW, stateR, stateW);
 
     for (ResourceAction resAct : resActs) {
-      addPermission(role, resAct);
+      addPermission(dbPrefix, role, resAct);
     }
-
-    setUserCredentials(username, password.toCharArray());
   }
 }

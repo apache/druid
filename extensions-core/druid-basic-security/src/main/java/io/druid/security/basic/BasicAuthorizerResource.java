@@ -20,9 +20,14 @@
 package io.druid.security.basic;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
-import io.druid.security.basic.db.BasicSecurityStorageConnector;
+import io.druid.java.util.common.StringUtils;
+import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
+import io.druid.security.basic.db.BasicAuthorizerStorageConnector;
+import io.druid.server.security.Authorizer;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.ResourceAction;
 import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 
@@ -41,19 +46,30 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Configuration resource for users, roles, and permissions.
+ * Configuration resource for authorizer users/roles/permissions
  */
-@Path("/druid/coordinator/v1/security")
-public class BasicSecurityResource
+@Path("/druid/coordinator/v1/security/authorization")
+public class BasicAuthorizerResource
 {
-  private final BasicSecurityStorageConnector dbConnector;
+  private final BasicAuthorizerStorageConnector dbConnector;
+  private final Map<String, BasicRoleBasedAuthorizer> authorizerMap;
 
   @Inject
-  public BasicSecurityResource(
-      BasicSecurityStorageConnector dbConnector
+  public BasicAuthorizerResource(
+      BasicAuthorizerStorageConnector dbConnector,
+      AuthorizerMapper authorizerMapper
   )
   {
     this.dbConnector = dbConnector;
+    this.authorizerMap = Maps.newHashMap();
+
+    for (Map.Entry<String, Authorizer> authorizerEntry : authorizerMapper.getAuthorizerMap().entrySet()) {
+      final String authorizerName = authorizerEntry.getKey();
+      final Authorizer authorizer = authorizerEntry.getValue();
+      if (authorizer instanceof BasicRoleBasedAuthorizer) {
+        authorizerMap.put(authorizerName, ((BasicRoleBasedAuthorizer) authorizer));
+      }
+    }
   }
 
   /**
@@ -62,15 +78,21 @@ public class BasicSecurityResource
    * @return List of all users
    */
   @GET
-  @Path("/users")
+  @Path("/{authorizerName}/users")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
   public Response getAllUsers(
-      @Context HttpServletRequest req
+      @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName
   )
   {
-    List<Map<String, Object>> users = dbConnector.getAllUsers();
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
+      return makeResponseForAuthorizerNotFound(authorizerName);
+    }
+
+    List<Map<String, Object>> users = dbConnector.getAllUsers(authorizer.getDBPrefix());
     return Response.ok(users).build();
   }
 
@@ -81,19 +103,25 @@ public class BasicSecurityResource
    * @return Name, roles, and permissions of the user with userName, 400 error response if user doesn't exist
    */
   @GET
-  @Path("/users/{userName}")
+  @Path("/{authorizerName}/users/{userName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
   public Response getUser(
       @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName,
       @PathParam("userName") final String userName
   )
   {
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
+      return makeResponseForAuthorizerNotFound(authorizerName);
+    }
+
     try {
-      Map<String, Object> user = dbConnector.getUser(userName);
-      List<Map<String, Object>> roles = dbConnector.getRolesForUser(userName);
-      List<Map<String, Object>> permissions = dbConnector.getPermissionsForUser(userName);
+      Map<String, Object> user = dbConnector.getUser(authorizer.getDBPrefix(), userName);
+      List<Map<String, Object>> roles = dbConnector.getRolesForUser(authorizer.getDBPrefix(), userName);
+      List<Map<String, Object>> permissions = dbConnector.getPermissionsForUser(authorizer.getDBPrefix(), userName);
 
       Map<String, Object> userInfo = ImmutableMap.of(
           "user", user,
@@ -117,18 +145,23 @@ public class BasicSecurityResource
    * @return OK response, or 400 error response if user already exists
    */
   @POST
-  @Path("/users/{userName}")
+  @Path("/{authorizerName}/users/{userName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
   public Response createUser(
       @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName,
       @PathParam("userName") String userName
   )
   {
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
+      return makeResponseForAuthorizerNotFound(authorizerName);
+    }
 
     try {
-      dbConnector.createUser(userName);
+      dbConnector.createUser(authorizer.getDBPrefix(), userName);
       return Response.ok().build();
     }
     catch (CallbackFailedException cfe) {
@@ -145,73 +178,23 @@ public class BasicSecurityResource
    * @return OK response, or 400 error response if user doesn't exist
    */
   @DELETE
-  @Path("/users/{userName}")
+  @Path("/{authorizerName}/users/{userName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
   public Response deleteUser(
       @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName,
       @PathParam("userName") String userName
   )
   {
-    try {
-      dbConnector.deleteUser(userName);
-      return Response.ok().build();
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
+      return makeResponseForAuthorizerNotFound(authorizerName);
     }
-    catch (CallbackFailedException cfe) {
-      return makeResponseForCallbackFailedException(cfe);
-    }
-  }
 
-  /**
-   * Get credential information of user
-   *
-   * @param req      HTTP request
-   * @param userName Name of user
-   *
-   * @return salt, hash, and number of iterations for this user's credentials, 400 error if user doesn't exist
-   */
-  @GET
-  @Path("/credentials/{userName}")
-  @Produces(MediaType.APPLICATION_JSON)
-  @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
-  public Response getUserCredentials(
-      @Context HttpServletRequest req,
-      @PathParam("userName") final String userName
-  )
-  {
     try {
-      Map<String, Object> credentials = dbConnector.getUserCredentials(userName);
-      return Response.ok(credentials).build();
-    }
-    catch (CallbackFailedException cfe) {
-      return makeResponseForCallbackFailedException(cfe);
-    }
-  }
-
-  /**
-   * Assign credentials for a user
-   *
-   * @param req      HTTP request
-   * @param userName Name of user
-   * @param password Password to assign
-   *
-   * @return OK response, 400 error if user doesn't exist
-   */
-  @POST
-  @Path("/credentials/{userName}")
-  @Produces(MediaType.APPLICATION_JSON)
-  @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
-  public Response updateUserCredentials(
-      @Context HttpServletRequest req,
-      @PathParam("userName") String userName,
-      String password
-  )
-  {
-    try {
-      dbConnector.setUserCredentials(userName, password.toCharArray());
+      dbConnector.deleteUser(authorizer.getDBPrefix(), userName);
       return Response.ok().build();
     }
     catch (CallbackFailedException cfe) {
@@ -225,15 +208,21 @@ public class BasicSecurityResource
    * @return List of all roles
    */
   @GET
-  @Path("/roles")
+  @Path("/{authorizerName}/roles")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
   public Response getAllRoles(
-      @Context HttpServletRequest req
+      @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName
   )
   {
-    List<Map<String, Object>> roles = dbConnector.getAllRoles();
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
+      return makeResponseForAuthorizerNotFound(authorizerName);
+    }
+
+    List<Map<String, Object>> roles = dbConnector.getAllRoles(authorizer.getDBPrefix());
     return Response.ok(roles).build();
   }
 
@@ -246,19 +235,25 @@ public class BasicSecurityResource
    * @return Role name, users with role, and permissions of role. 400 error if role doesn't exist.
    */
   @GET
-  @Path("/roles/{roleName}")
+  @Path("/{authorizerName}/roles/{roleName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
   public Response getRole(
       @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName,
       @PathParam("roleName") final String roleName
   )
   {
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
+      return makeResponseForAuthorizerNotFound(authorizerName);
+    }
+
     try {
-      Map<String, Object> role = dbConnector.getRole(roleName);
-      List<Map<String, Object>> users = dbConnector.getUsersWithRole(roleName);
-      List<Map<String, Object>> permissions = dbConnector.getPermissionsForRole(roleName);
+      Map<String, Object> role = dbConnector.getRole(authorizer.getDBPrefix(), roleName);
+      List<Map<String, Object>> users = dbConnector.getUsersWithRole(authorizer.getDBPrefix(), roleName);
+      List<Map<String, Object>> permissions = dbConnector.getPermissionsForRole(authorizer.getDBPrefix(), roleName);
 
       Map<String, Object> roleInfo = ImmutableMap.of(
           "role", role,
@@ -282,17 +277,23 @@ public class BasicSecurityResource
    * @return OK response, 400 error if role already exists
    */
   @POST
-  @Path("/roles/{roleName}")
+  @Path("/{authorizerName}/roles/{roleName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
   public Response createRole(
       @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName,
       @PathParam("roleName") final String roleName
   )
   {
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
+      return makeResponseForAuthorizerNotFound(authorizerName);
+    }
+
     try {
-      dbConnector.createRole(roleName);
+      dbConnector.createRole(authorizer.getDBPrefix(), roleName);
       return Response.ok().build();
     }
     catch (CallbackFailedException cfe) {
@@ -309,17 +310,23 @@ public class BasicSecurityResource
    * @return OK response, 400 error if role doesn't exist.
    */
   @DELETE
-  @Path("/roles/{roleName}")
+  @Path("/{authorizerName}/roles/{roleName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
   public Response deleteRole(
       @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName,
       @PathParam("roleName") String roleName
   )
   {
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
+      return makeResponseForAuthorizerNotFound(authorizerName);
+    }
+
     try {
-      dbConnector.deleteRole(roleName);
+      dbConnector.deleteRole(authorizer.getDBPrefix(), roleName);
       return Response.ok().build();
     }
     catch (CallbackFailedException cfe) {
@@ -337,18 +344,24 @@ public class BasicSecurityResource
    * @return OK response. 400 error if user/role don't exist, or if user already has the role
    */
   @POST
-  @Path("/users/{userName}/roles/{roleName}")
+  @Path("/{authorizerName}/users/{userName}/roles/{roleName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
   public Response assignRoleToUser(
       @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName,
       @PathParam("userName") String userName,
       @PathParam("roleName") String roleName
   )
   {
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
+      return makeResponseForAuthorizerNotFound(authorizerName);
+    }
+
     try {
-      dbConnector.assignRole(userName, roleName);
+      dbConnector.assignRole(authorizer.getDBPrefix(), userName, roleName);
       return Response.ok().build();
     }
     catch (CallbackFailedException cfe) {
@@ -366,18 +379,24 @@ public class BasicSecurityResource
    * @return OK response. 400 error if user/role don't exist, or if user does not have the role.
    */
   @DELETE
-  @Path("/users/{userName}/roles/{roleName}")
+  @Path("/{authorizerName}/users/{userName}/roles/{roleName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
   public Response unassignRoleFromUser(
       @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName,
       @PathParam("userName") String userName,
       @PathParam("roleName") String roleName
   )
   {
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
+      return makeResponseForAuthorizerNotFound(authorizerName);
+    }
+
     try {
-      dbConnector.unassignRole(userName, roleName);
+      dbConnector.unassignRole(authorizer.getDBPrefix(), userName, roleName);
       return Response.ok().build();
     }
     catch (CallbackFailedException cfe) {
@@ -395,19 +414,25 @@ public class BasicSecurityResource
    * @return OK response. 400 error if role doesn't exist.
    */
   @POST
-  @Path("/roles/{roleName}/permissions")
+  @Path("/{authorizerName}/roles/{roleName}/permissions")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
   public Response addPermissionsToRole(
       @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName,
       @PathParam("roleName") String roleName,
       List<ResourceAction> resourceActions
   )
   {
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
+      return makeResponseForAuthorizerNotFound(authorizerName);
+    }
+
     try {
       for (ResourceAction resourceAction : resourceActions) {
-        dbConnector.addPermission(roleName, resourceAction);
+        dbConnector.addPermission(authorizer.getDBPrefix(), roleName, resourceAction);
       }
 
       return Response.ok().build();
@@ -426,22 +451,38 @@ public class BasicSecurityResource
    * @return OK response. 400 error if permission doesn't exist.
    */
   @DELETE
-  @Path("/permissions/{permId}")
+  @Path("/{authorizerName}/permissions/{permId}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
   public Response deletePermission(
       @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName,
       @PathParam("permId") Integer permId
   )
   {
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
+      return makeResponseForAuthorizerNotFound(authorizerName);
+    }
+
     try {
-      dbConnector.deletePermission(permId);
+      dbConnector.deletePermission(authorizer.getDBPrefix(), permId);
       return Response.ok().build();
     }
     catch (CallbackFailedException cfe) {
       return makeResponseForCallbackFailedException(cfe);
     }
+  }
+
+  private static Response makeResponseForAuthorizerNotFound(String authorizerName)
+  {
+    return Response.status(Response.Status.BAD_REQUEST)
+                   .entity(ImmutableMap.<String, Object>of(
+                       "error",
+                       StringUtils.format("Basic authorizer with name [%s] does not exist.", authorizerName)
+                   ))
+                   .build();
   }
 
   private static Response makeResponseForCallbackFailedException(CallbackFailedException cfe)

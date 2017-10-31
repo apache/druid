@@ -17,16 +17,16 @@
  * under the License.
  */
 
-package io.druid.security;
+package io.druid.security.db;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.java.util.common.StringUtils;
-import io.druid.security.basic.BasicAuthUtils;
-import io.druid.security.basic.BasicSecurityResource;
-import io.druid.security.basic.db.SQLBasicSecurityStorageConnector;
-import io.druid.security.db.TestDerbySecurityConnector;
+import io.druid.security.basic.BasicAuthorizerResource;
+import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
 import io.druid.server.security.Action;
+import io.druid.server.security.AllowAllAuthorizer;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.Resource;
 import io.druid.server.security.ResourceAction;
 import io.druid.server.security.ResourceType;
@@ -45,26 +45,39 @@ import javax.ws.rs.core.Response;
 import java.util.List;
 import java.util.Map;
 
-public class BasicSecurityResourceTest
+public class BasicAuthorizerResourceTest
 {
-  private BasicSecurityResource basicSecurityResource;
+  private static final String BASIC_AUTHORIZER_NAME = "basic";
+  private static final String BASIC_AUTHORIZER_NAME2 = "basic2";
+
+  private BasicAuthorizerResource resource;
   private HttpServletRequest req;
-  private TestDerbySecurityConnector connector;
+  private TestDerbyAuthorizerStorageConnector connector;
 
   @Rule
-  public final TestDerbySecurityConnector.DerbyConnectorRule derbyConnectorRule =
-      new TestDerbySecurityConnector.DerbyConnectorRule();
+  public final TestDerbyAuthorizerStorageConnector.DerbyConnectorRule derbyConnectorRule =
+      new TestDerbyAuthorizerStorageConnector.DerbyConnectorRule("test");
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
+
 
   @Before
   public void setUp() throws Exception
   {
     req = EasyMock.createStrictMock(HttpServletRequest.class);
     connector = derbyConnectorRule.getConnector();
+
+    AuthorizerMapper mapper = new AuthorizerMapper(
+        ImmutableMap.of(
+            BASIC_AUTHORIZER_NAME, new BasicRoleBasedAuthorizer(connector, BASIC_AUTHORIZER_NAME, 5000),
+            BASIC_AUTHORIZER_NAME2, new BasicRoleBasedAuthorizer(connector, BASIC_AUTHORIZER_NAME2, 5000),
+            "allowAll", new AllowAllAuthorizer()
+        )
+    );
+
     createAllTables();
-    basicSecurityResource = new BasicSecurityResource(connector);
+    resource = new BasicAuthorizerResource(connector, mapper);
   }
 
   @After
@@ -74,16 +87,61 @@ public class BasicSecurityResourceTest
   }
 
   @Test
-  public void testGetAllUsers()
+  public void testSeparateDatabaseTables()
   {
-    Response response = basicSecurityResource.getAllUsers(req);
+    Response response = resource.getAllUsers(req, BASIC_AUTHORIZER_NAME);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(ImmutableList.of(), response.getEntity());
 
-    basicSecurityResource.createUser(req, "druid");
-    basicSecurityResource.createUser(req, "druid2");
-    basicSecurityResource.createUser(req, "druid3");
+    resource.createUser(req, BASIC_AUTHORIZER_NAME, "druid");
+    resource.createUser(req, BASIC_AUTHORIZER_NAME, "druid2");
+    resource.createUser(req, BASIC_AUTHORIZER_NAME, "druid3");
 
+    resource.createUser(req, BASIC_AUTHORIZER_NAME2, "druid4");
+    resource.createUser(req, BASIC_AUTHORIZER_NAME2, "druid5");
+    resource.createUser(req, BASIC_AUTHORIZER_NAME2, "druid6");
+
+    List<Map<String, Object>> expectedUsers = ImmutableList.of(
+        ImmutableMap.of("name", "druid"),
+        ImmutableMap.of("name", "druid2"),
+        ImmutableMap.of("name", "druid3")
+    );
+    List<Map<String, Object>> expectedUsers2 = ImmutableList.of(
+        ImmutableMap.of("name", "druid4"),
+        ImmutableMap.of("name", "druid5"),
+        ImmutableMap.of("name", "druid6")
+    );
+
+    response = resource.getAllUsers(req, BASIC_AUTHORIZER_NAME);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(expectedUsers, response.getEntity());
+
+    response = resource.getAllUsers(req, BASIC_AUTHORIZER_NAME2);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(expectedUsers2, response.getEntity());
+  }
+
+  @Test
+  public void testInvalidAuthorizer()
+  {
+    Response response = resource.getAllUsers(req, "invalidName");
+    Assert.assertEquals(400, response.getStatus());
+    Assert.assertEquals(
+        errorMapWithMsg("Basic authorizer with name [invalidName] does not exist."),
+        response.getEntity()
+    );
+  }
+
+  @Test
+  public void testGetAllUsers()
+  {
+    Response response = resource.getAllUsers(req, BASIC_AUTHORIZER_NAME);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(ImmutableList.of(), response.getEntity());
+
+    resource.createUser(req, BASIC_AUTHORIZER_NAME, "druid");
+    resource.createUser(req, BASIC_AUTHORIZER_NAME, "druid2");
+    resource.createUser(req, BASIC_AUTHORIZER_NAME, "druid3");
 
     List<Map<String, Object>> expectedUsers = ImmutableList.of(
         ImmutableMap.of("name", "druid"),
@@ -91,21 +149,22 @@ public class BasicSecurityResourceTest
         ImmutableMap.of("name", "druid3")
     );
 
-    response = basicSecurityResource.getAllUsers(req);
+    response = resource.getAllUsers(req, BASIC_AUTHORIZER_NAME);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(expectedUsers, response.getEntity());
   }
 
+
   @Test
   public void testGetAllRoles()
   {
-    Response response = basicSecurityResource.getAllRoles(req);
+    Response response = resource.getAllRoles(req, BASIC_AUTHORIZER_NAME);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(ImmutableList.of(), response.getEntity());
 
-    basicSecurityResource.createRole(req, "druid");
-    basicSecurityResource.createRole(req, "druid2");
-    basicSecurityResource.createRole(req, "druid3");
+    resource.createRole(req, BASIC_AUTHORIZER_NAME, "druid");
+    resource.createRole(req, BASIC_AUTHORIZER_NAME, "druid2");
+    resource.createRole(req, BASIC_AUTHORIZER_NAME, "druid3");
 
     List<Map<String, Object>> expectedRoles = ImmutableList.of(
         ImmutableMap.of("name", "druid"),
@@ -113,7 +172,7 @@ public class BasicSecurityResourceTest
         ImmutableMap.of("name", "druid3")
     );
 
-    response = basicSecurityResource.getAllRoles(req);
+    response = resource.getAllRoles(req, BASIC_AUTHORIZER_NAME);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(expectedRoles, response.getEntity());
   }
@@ -121,10 +180,10 @@ public class BasicSecurityResourceTest
   @Test
   public void testCreateDeleteUser()
   {
-    Response response = basicSecurityResource.createUser(req, "druid");
+    Response response = resource.createUser(req, BASIC_AUTHORIZER_NAME, "druid");
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.getUser(req, "druid");
+    response = resource.getUser(req, BASIC_AUTHORIZER_NAME, "druid");
     Assert.assertEquals(200, response.getStatus());
     Map<String, Object> expectedUser = ImmutableMap.of(
         "user", ImmutableMap.of("name", "druid"),
@@ -133,53 +192,14 @@ public class BasicSecurityResourceTest
     );
     Assert.assertEquals(expectedUser, response.getEntity());
 
-    response = basicSecurityResource.deleteUser(req, "druid");
+    response = resource.deleteUser(req, BASIC_AUTHORIZER_NAME, "druid");
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.deleteUser(req, "druid");
+    response = resource.deleteUser(req, BASIC_AUTHORIZER_NAME, "druid");
     Assert.assertEquals(400, response.getStatus());
     Assert.assertEquals(errorMapWithMsg("User [druid] does not exist."), response.getEntity());
 
-    response = basicSecurityResource.getUser(req, "druid");
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(errorMapWithMsg("User [druid] does not exist."), response.getEntity());
-  }
-
-  @Test
-  public void testUserCredentials()
-  {
-    Response response = basicSecurityResource.createUser(req, "druid");
-    Assert.assertEquals(200, response.getStatus());
-
-    response = basicSecurityResource.updateUserCredentials(req, "druid", "helloworld");
-    Assert.assertEquals(200, response.getStatus());
-
-    response = basicSecurityResource.getUserCredentials(req, "druid");
-    Assert.assertEquals(200, response.getStatus());
-    Map<String, Object> ent = (Map<String, Object> ) response.getEntity();
-    Assert.assertEquals("druid", ent.get("user_name"));
-    byte[] salt = (byte[]) ent.get("salt");
-    byte[] hash = (byte[]) ent.get("hash");
-    int iterations = (Integer) ent.get("iterations");
-    Assert.assertEquals(BasicAuthUtils.SALT_LENGTH, salt.length);
-    Assert.assertEquals(BasicAuthUtils.KEY_LENGTH / 8, hash.length);
-    Assert.assertEquals(BasicAuthUtils.KEY_ITERATIONS, iterations);
-
-    byte[] recalculatedHash = BasicAuthUtils.hashPassword(
-        "helloworld".toCharArray(),
-        salt,
-        iterations
-    );
-    Assert.assertArrayEquals(recalculatedHash, hash);
-
-    response = basicSecurityResource.deleteUser(req, "druid");
-    Assert.assertEquals(200, response.getStatus());
-
-    response = basicSecurityResource.getUserCredentials(req, "druid");
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(errorMapWithMsg("User [druid] does not exist."), response.getEntity());
-
-    response = basicSecurityResource.updateUserCredentials(req, "druid", "helloworld");
+    response = resource.getUser(req, BASIC_AUTHORIZER_NAME, "druid");
     Assert.assertEquals(400, response.getStatus());
     Assert.assertEquals(errorMapWithMsg("User [druid] does not exist."), response.getEntity());
   }
@@ -187,10 +207,10 @@ public class BasicSecurityResourceTest
   @Test
   public void testCreateDeleteRole()
   {
-    Response response = basicSecurityResource.createRole(req, "druidRole");
+    Response response = resource.createRole(req, BASIC_AUTHORIZER_NAME, "druidRole");
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.getRole(req, "druidRole");
+    response = resource.getRole(req, BASIC_AUTHORIZER_NAME, "druidRole");
     Assert.assertEquals(200, response.getStatus());
     Map<String, Object> expectedRole = ImmutableMap.of(
         "role", ImmutableMap.of("name", "druidRole"),
@@ -199,14 +219,14 @@ public class BasicSecurityResourceTest
     );
     Assert.assertEquals(expectedRole, response.getEntity());
 
-    response = basicSecurityResource.deleteRole(req, "druidRole");
+    response = resource.deleteRole(req, BASIC_AUTHORIZER_NAME, "druidRole");
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.deleteRole(req, "druidRole");
+    response = resource.deleteRole(req, BASIC_AUTHORIZER_NAME, "druidRole");
     Assert.assertEquals(400, response.getStatus());
     Assert.assertEquals(errorMapWithMsg("Role [druidRole] does not exist."), response.getEntity());
 
-    response = basicSecurityResource.getRole(req, "druidRole");
+    response = resource.getRole(req, BASIC_AUTHORIZER_NAME, "druidRole");
     Assert.assertEquals(400, response.getStatus());
     Assert.assertEquals(errorMapWithMsg("Role [druidRole] does not exist."), response.getEntity());
   }
@@ -214,16 +234,16 @@ public class BasicSecurityResourceTest
   @Test
   public void testRoleAssignment() throws Exception
   {
-    Response response = basicSecurityResource.createRole(req, "druidRole");
+    Response response = resource.createRole(req, BASIC_AUTHORIZER_NAME, "druidRole");
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.createUser(req, "druid");
+    response = resource.createUser(req, BASIC_AUTHORIZER_NAME, "druid");
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.assignRoleToUser(req, "druid", "druidRole");
+    response = resource.assignRoleToUser(req, BASIC_AUTHORIZER_NAME, "druid", "druidRole");
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.getUser(req, "druid");
+    response = resource.getUser(req, BASIC_AUTHORIZER_NAME, "druid");
     Assert.assertEquals(200, response.getStatus());
     Map<String, Object> expectedUser = ImmutableMap.of(
         "user", ImmutableMap.of("name", "druid"),
@@ -232,7 +252,7 @@ public class BasicSecurityResourceTest
     );
     Assert.assertEquals(expectedUser, response.getEntity());
 
-    response = basicSecurityResource.getRole(req, "druidRole");
+    response = resource.getRole(req, BASIC_AUTHORIZER_NAME, "druidRole");
     Assert.assertEquals(200, response.getStatus());
     Map<String, Object> expectedRole = ImmutableMap.of(
         "role", ImmutableMap.of("name", "druidRole"),
@@ -241,10 +261,10 @@ public class BasicSecurityResourceTest
     );
     Assert.assertEquals(expectedRole, response.getEntity());
 
-    response = basicSecurityResource.unassignRoleFromUser(req, "druid", "druidRole");
+    response = resource.unassignRoleFromUser(req, BASIC_AUTHORIZER_NAME, "druid", "druidRole");
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.getUser(req, "druid");
+    response = resource.getUser(req, BASIC_AUTHORIZER_NAME, "druid");
     Assert.assertEquals(200, response.getStatus());
     expectedUser = ImmutableMap.of(
         "user", ImmutableMap.of("name", "druid"),
@@ -253,7 +273,7 @@ public class BasicSecurityResourceTest
     );
     Assert.assertEquals(expectedUser, response.getEntity());
 
-    response = basicSecurityResource.getRole(req, "druidRole");
+    response = resource.getRole(req, BASIC_AUTHORIZER_NAME, "druidRole");
     Assert.assertEquals(200, response.getStatus());
     expectedRole = ImmutableMap.of(
         "role", ImmutableMap.of("name", "druidRole"),
@@ -266,22 +286,22 @@ public class BasicSecurityResourceTest
   @Test
   public void testDeleteAssignedRole()
   {
-    Response response = basicSecurityResource.createRole(req, "druidRole");
+    Response response = resource.createRole(req, BASIC_AUTHORIZER_NAME, "druidRole");
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.createUser(req, "druid");
+    response = resource.createUser(req, BASIC_AUTHORIZER_NAME, "druid");
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.createUser(req, "druid2");
+    response = resource.createUser(req, BASIC_AUTHORIZER_NAME, "druid2");
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.assignRoleToUser(req, "druid", "druidRole");
+    response = resource.assignRoleToUser(req, BASIC_AUTHORIZER_NAME, "druid", "druidRole");
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.assignRoleToUser(req, "druid2", "druidRole");
+    response = resource.assignRoleToUser(req, BASIC_AUTHORIZER_NAME, "druid2", "druidRole");
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.getUser(req, "druid");
+    response = resource.getUser(req, BASIC_AUTHORIZER_NAME, "druid");
     Assert.assertEquals(200, response.getStatus());
     Map<String, Object> expectedUser = ImmutableMap.of(
         "user", ImmutableMap.of("name", "druid"),
@@ -290,7 +310,7 @@ public class BasicSecurityResourceTest
     );
     Assert.assertEquals(expectedUser, response.getEntity());
 
-    response = basicSecurityResource.getUser(req, "druid2");
+    response = resource.getUser(req, BASIC_AUTHORIZER_NAME, "druid2");
     Assert.assertEquals(200, response.getStatus());
     Map<String, Object> expectedUser2 = ImmutableMap.of(
         "user", ImmutableMap.of("name", "druid2"),
@@ -299,7 +319,7 @@ public class BasicSecurityResourceTest
     );
     Assert.assertEquals(expectedUser2, response.getEntity());
 
-    response = basicSecurityResource.getRole(req, "druidRole");
+    response = resource.getRole(req, BASIC_AUTHORIZER_NAME, "druidRole");
     Assert.assertEquals(200, response.getStatus());
     Map<String, Object> expectedRole = ImmutableMap.of(
         "role", ImmutableMap.of("name", "druidRole"),
@@ -308,10 +328,10 @@ public class BasicSecurityResourceTest
     );
     Assert.assertEquals(expectedRole, response.getEntity());
 
-    response = basicSecurityResource.deleteRole(req, "druidRole");
+    response = resource.deleteRole(req, BASIC_AUTHORIZER_NAME, "druidRole");
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.getUser(req, "druid");
+    response = resource.getUser(req, BASIC_AUTHORIZER_NAME, "druid");
     Assert.assertEquals(200, response.getStatus());
     expectedUser = ImmutableMap.of(
         "user", ImmutableMap.of("name", "druid"),
@@ -320,7 +340,7 @@ public class BasicSecurityResourceTest
     );
     Assert.assertEquals(expectedUser, response.getEntity());
 
-    response = basicSecurityResource.getUser(req, "druid2");
+    response = resource.getUser(req, BASIC_AUTHORIZER_NAME, "druid2");
     Assert.assertEquals(200, response.getStatus());
     expectedUser2 = ImmutableMap.of(
         "user", ImmutableMap.of("name", "druid2"),
@@ -333,7 +353,7 @@ public class BasicSecurityResourceTest
   @Test
   public void testRolesAndPerms()
   {
-    Response response = basicSecurityResource.createRole(req, "druidRole");
+    Response response = resource.createRole(req, BASIC_AUTHORIZER_NAME, "druidRole");
     Assert.assertEquals(200, response.getStatus());
 
     List<ResourceAction> perms = ImmutableList.of(
@@ -342,14 +362,14 @@ public class BasicSecurityResourceTest
         new ResourceAction(new Resource("C", ResourceType.CONFIG), Action.WRITE)
     );
 
-    response = basicSecurityResource.addPermissionsToRole(req, "druidRole", perms);
+    response = resource.addPermissionsToRole(req, BASIC_AUTHORIZER_NAME, "druidRole", perms);
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.addPermissionsToRole(req, "wrongRole", perms);
+    response = resource.addPermissionsToRole(req, BASIC_AUTHORIZER_NAME, "wrongRole", perms);
     Assert.assertEquals(400, response.getStatus());
     Assert.assertEquals(errorMapWithMsg("Role [wrongRole] does not exist."), response.getEntity());
 
-    response = basicSecurityResource.getRole(req, "druidRole");
+    response = resource.getRole(req, BASIC_AUTHORIZER_NAME, "druidRole");
     Assert.assertEquals(200, response.getStatus());
     Map<String, Object> expectedRole = ImmutableMap.of(
         "role", ImmutableMap.of("name", "druidRole"),
@@ -362,14 +382,14 @@ public class BasicSecurityResourceTest
     );
     Assert.assertEquals(expectedRole, response.getEntity());
 
-    response = basicSecurityResource.deletePermission(req, 7);
+    response = resource.deletePermission(req, BASIC_AUTHORIZER_NAME, 7);
     Assert.assertEquals(400, response.getStatus());
     Assert.assertEquals(errorMapWithMsg("Permission with id [7] does not exist."), response.getEntity());
 
-    response = basicSecurityResource.deletePermission(req, 2);
+    response = resource.deletePermission(req, BASIC_AUTHORIZER_NAME, 2);
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.getRole(req, "druidRole");
+    response = resource.getRole(req, BASIC_AUTHORIZER_NAME, "druidRole");
     Assert.assertEquals(200, response.getStatus());
     expectedRole = ImmutableMap.of(
         "role", ImmutableMap.of("name", "druidRole"),
@@ -385,16 +405,16 @@ public class BasicSecurityResourceTest
   @Test
   public void testUsersRolesAndPerms()
   {
-    Response response = basicSecurityResource.createUser(req, "druid");
+    Response response = resource.createUser(req, BASIC_AUTHORIZER_NAME, "druid");
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.createUser(req, "druid2");
+    response = resource.createUser(req, BASIC_AUTHORIZER_NAME, "druid2");
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.createRole(req, "druidRole");
+    response = resource.createRole(req, BASIC_AUTHORIZER_NAME, "druidRole");
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.createRole(req, "druidRole2");
+    response = resource.createRole(req, BASIC_AUTHORIZER_NAME, "druidRole2");
     Assert.assertEquals(200, response.getStatus());
 
     List<ResourceAction> perms = ImmutableList.of(
@@ -409,25 +429,25 @@ public class BasicSecurityResourceTest
         new ResourceAction(new Resource("F", ResourceType.CONFIG), Action.WRITE)
     );
 
-    response = basicSecurityResource.addPermissionsToRole(req, "druidRole", perms);
+    response = resource.addPermissionsToRole(req, BASIC_AUTHORIZER_NAME, "druidRole", perms);
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.addPermissionsToRole(req, "druidRole2", perms2);
+    response = resource.addPermissionsToRole(req, BASIC_AUTHORIZER_NAME, "druidRole2", perms2);
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.assignRoleToUser(req, "druid", "druidRole");
+    response = resource.assignRoleToUser(req, BASIC_AUTHORIZER_NAME, "druid", "druidRole");
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.assignRoleToUser(req, "druid", "druidRole2");
+    response = resource.assignRoleToUser(req, BASIC_AUTHORIZER_NAME, "druid", "druidRole2");
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.assignRoleToUser(req, "druid2", "druidRole");
+    response = resource.assignRoleToUser(req, BASIC_AUTHORIZER_NAME, "druid2", "druidRole");
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.assignRoleToUser(req, "druid2", "druidRole2");
+    response = resource.assignRoleToUser(req, BASIC_AUTHORIZER_NAME, "druid2", "druidRole2");
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.getUser(req, "druid");
+    response = resource.getUser(req, BASIC_AUTHORIZER_NAME, "druid");
     Assert.assertEquals(200, response.getStatus());
     Map<String, Object> expectedUser = ImmutableMap.of(
         "user", ImmutableMap.of("name", "druid"),
@@ -443,7 +463,7 @@ public class BasicSecurityResourceTest
     );
     Assert.assertEquals(expectedUser, response.getEntity());
 
-    response = basicSecurityResource.getUser(req, "druid2");
+    response = resource.getUser(req, BASIC_AUTHORIZER_NAME, "druid2");
     Assert.assertEquals(200, response.getStatus());
     expectedUser = ImmutableMap.of(
         "user", ImmutableMap.of("name", "druid2"),
@@ -459,7 +479,7 @@ public class BasicSecurityResourceTest
     );
     Assert.assertEquals(expectedUser, response.getEntity());
 
-    response = basicSecurityResource.getRole(req, "druidRole");
+    response = resource.getRole(req, BASIC_AUTHORIZER_NAME, "druidRole");
     Assert.assertEquals(200, response.getStatus());
     Map<String, Object> expectedRole = ImmutableMap.of(
         "role", ImmutableMap.of("name", "druidRole"),
@@ -472,7 +492,7 @@ public class BasicSecurityResourceTest
     );
     Assert.assertEquals(expectedRole, response.getEntity());
 
-    response = basicSecurityResource.getRole(req, "druidRole2");
+    response = resource.getRole(req, BASIC_AUTHORIZER_NAME, "druidRole2");
     Assert.assertEquals(200, response.getStatus());
     expectedRole = ImmutableMap.of(
         "role", ImmutableMap.of("name", "druidRole2"),
@@ -485,13 +505,13 @@ public class BasicSecurityResourceTest
     );
     Assert.assertEquals(expectedRole, response.getEntity());
 
-    response = basicSecurityResource.deletePermission(req, 1);
+    response = resource.deletePermission(req, BASIC_AUTHORIZER_NAME, 1);
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.deletePermission(req, 4);
+    response = resource.deletePermission(req, BASIC_AUTHORIZER_NAME, 4);
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.getUser(req, "druid");
+    response = resource.getUser(req, BASIC_AUTHORIZER_NAME, "druid");
     Assert.assertEquals(200, response.getStatus());
     expectedUser = ImmutableMap.of(
         "user", ImmutableMap.of("name", "druid"),
@@ -505,7 +525,7 @@ public class BasicSecurityResourceTest
     );
     Assert.assertEquals(expectedUser, response.getEntity());
 
-    response = basicSecurityResource.getUser(req, "druid2");
+    response = resource.getUser(req, BASIC_AUTHORIZER_NAME, "druid2");
     Assert.assertEquals(200, response.getStatus());
     expectedUser = ImmutableMap.of(
         "user", ImmutableMap.of("name", "druid2"),
@@ -519,13 +539,13 @@ public class BasicSecurityResourceTest
     );
     Assert.assertEquals(expectedUser, response.getEntity());
 
-    response = basicSecurityResource.unassignRoleFromUser(req, "druid", "druidRole");
+    response = resource.unassignRoleFromUser(req, BASIC_AUTHORIZER_NAME, "druid", "druidRole");
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.unassignRoleFromUser(req, "druid2", "druidRole2");
+    response = resource.unassignRoleFromUser(req, BASIC_AUTHORIZER_NAME, "druid2", "druidRole2");
     Assert.assertEquals(200, response.getStatus());
 
-    response = basicSecurityResource.getUser(req, "druid");
+    response = resource.getUser(req, BASIC_AUTHORIZER_NAME, "druid");
     Assert.assertEquals(200, response.getStatus());
     expectedUser = ImmutableMap.of(
         "user", ImmutableMap.of("name", "druid"),
@@ -537,7 +557,7 @@ public class BasicSecurityResourceTest
     );
     Assert.assertEquals(expectedUser, response.getEntity());
 
-    response = basicSecurityResource.getUser(req, "druid2");
+    response = resource.getUser(req, BASIC_AUTHORIZER_NAME, "druid2");
     Assert.assertEquals(200, response.getStatus());
     expectedUser = ImmutableMap.of(
         "user", ImmutableMap.of("name", "druid2"),
@@ -549,19 +569,27 @@ public class BasicSecurityResourceTest
     );
     Assert.assertEquals(expectedUser, response.getEntity());
   }
-
+  
   private void createAllTables()
   {
-    connector.createUserTable();
-    connector.createRoleTable();
-    connector.createPermissionTable();
-    connector.createUserRoleTable();
-    connector.createUserCredentialsTable();
+    connector.createUserTable(BASIC_AUTHORIZER_NAME);
+    connector.createRoleTable(BASIC_AUTHORIZER_NAME);
+    connector.createPermissionTable(BASIC_AUTHORIZER_NAME);
+    connector.createUserRoleTable(BASIC_AUTHORIZER_NAME);
+
+    connector.createUserTable(BASIC_AUTHORIZER_NAME2);
+    connector.createRoleTable(BASIC_AUTHORIZER_NAME2);
+    connector.createPermissionTable(BASIC_AUTHORIZER_NAME2);
+    connector.createUserRoleTable(BASIC_AUTHORIZER_NAME2);
   }
 
   private void dropAllTables()
   {
-    for (String table : SQLBasicSecurityStorageConnector.TABLE_NAMES) {
+    for (String table : connector.getTableNames(BASIC_AUTHORIZER_NAME)) {
+      dropTable(table);
+    }
+
+    for (String table : connector.getTableNames(BASIC_AUTHORIZER_NAME2)) {
       dropTable(table);
     }
   }

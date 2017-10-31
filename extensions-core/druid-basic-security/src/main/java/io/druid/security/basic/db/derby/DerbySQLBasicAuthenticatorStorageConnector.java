@@ -19,39 +19,37 @@
 
 package io.druid.security.basic.db.derby;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import com.google.inject.Injector;
 import io.druid.guice.ManageLifecycle;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorage;
 import io.druid.metadata.MetadataStorageConnectorConfig;
-import io.druid.security.basic.BasicAuthConfig;
-import io.druid.security.basic.db.SQLBasicSecurityStorageConnector;
+import io.druid.security.basic.db.SQLBasicAuthenticatorStorageConnector;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 
 @ManageLifecycle
-public class DerbySQLBasicSecurityStorageConnector extends SQLBasicSecurityStorageConnector
+public class DerbySQLBasicAuthenticatorStorageConnector extends SQLBasicAuthenticatorStorageConnector
 {
-  private static final Logger log = new Logger(DerbySQLBasicSecurityStorageConnector.class);
+  private static final Logger log = new Logger(DerbySQLBasicAuthenticatorStorageConnector.class);
 
   private final DBI dbi;
   private final MetadataStorage storage;
 
   @Inject
-  public DerbySQLBasicSecurityStorageConnector(
+  public DerbySQLBasicAuthenticatorStorageConnector(
       MetadataStorage storage,
       Supplier<MetadataStorageConnectorConfig> config,
-      Supplier<BasicAuthConfig> basicAuthConfigSupplier,
-      ObjectMapper jsonMapper
+      Injector injector
   )
   {
-    super(config, basicAuthConfigSupplier, jsonMapper);
+    super(config, injector);
 
     final BasicDataSource datasource = getDatasource();
     datasource.setDriverClassLoader(getClass().getClassLoader());
@@ -62,19 +60,17 @@ public class DerbySQLBasicSecurityStorageConnector extends SQLBasicSecurityStora
     log.info("Derby connector instantiated with metadata storage [%s].", this.storage.getClass().getName());
   }
 
-  public DerbySQLBasicSecurityStorageConnector(
+  public DerbySQLBasicAuthenticatorStorageConnector(
       MetadataStorage storage,
       Supplier<MetadataStorageConnectorConfig> config,
-      Supplier<BasicAuthConfig> basicAuthConfigSupplier,
-      ObjectMapper jsonMapper,
+      Injector injector,
       DBI dbi
   )
   {
-    super(config, basicAuthConfigSupplier, jsonMapper);
+    super(config, injector);
     this.dbi = dbi;
     this.storage = storage;
   }
-
 
   @Override
   @LifecycleStart
@@ -85,64 +81,32 @@ public class DerbySQLBasicSecurityStorageConnector extends SQLBasicSecurityStora
   }
 
   @Override
-  public void createRoleTable()
+  public void createUserTable(String dbPrefix)
   {
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+
     createTable(
-        ROLES,
+        userTableName,
         ImmutableList.of(
             StringUtils.format(
                 "CREATE TABLE %1$s (\n"
                 + "  name VARCHAR(255) NOT NULL,\n"
                 + "  PRIMARY KEY (name)\n"
                 + ")",
-                ROLES
+                userTableName
             )
         )
     );
   }
 
   @Override
-  public void createUserTable()
+  public void createUserCredentialsTable(String dbPrefix)
   {
-    createTable(
-        USERS,
-        ImmutableList.of(
-            StringUtils.format(
-                "CREATE TABLE %1$s (\n"
-                + "  name VARCHAR(255) NOT NULL,\n"
-                + "  PRIMARY KEY (name)\n"
-                + ")",
-                USERS
-            )
-        )
-    );
-  }
+    final String userTableName = getPrefixedTableName(dbPrefix, USERS);
+    final String credentialsTableName = getPrefixedTableName(dbPrefix, USER_CREDENTIALS);
 
-  @Override
-  public void createPermissionTable()
-  {
     createTable(
-        PERMISSIONS,
-        ImmutableList.of(
-            StringUtils.format(
-                "CREATE TABLE %1$s (\n"
-                + "  id INTEGER NOT NULL GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1),\n"
-                + "  resource_json BLOB(1024) NOT NULL,\n"
-                + "  role_name VARCHAR(255) NOT NULL, \n"
-                + "  PRIMARY KEY (id),\n"
-                + "  FOREIGN KEY (role_name) REFERENCES roles(name) ON DELETE CASCADE\n"
-                + ")",
-                PERMISSIONS
-            )
-        )
-    );
-  }
-
-  @Override
-  public void createUserCredentialsTable()
-  {
-    createTable(
-        USER_CREDENTIALS,
+        credentialsTableName,
         ImmutableList.of(
             StringUtils.format(
                 "CREATE TABLE %1$s (\n"
@@ -151,14 +115,14 @@ public class DerbySQLBasicSecurityStorageConnector extends SQLBasicSecurityStora
                 + "  hash BLOB(64) NOT NULL, \n"
                 + "  iterations INTEGER NOT NULL, \n"
                 + "  PRIMARY KEY (user_name), \n"
-                + "  FOREIGN KEY (user_name) REFERENCES users(name) ON DELETE CASCADE\n"
+                + "  FOREIGN KEY (user_name) REFERENCES %2$s(name) ON DELETE CASCADE\n"
                 + ")",
-                USER_CREDENTIALS
+                credentialsTableName,
+                userTableName
             )
         )
     );
   }
-
 
   @Override
   public boolean tableExists(Handle handle, String tableName)

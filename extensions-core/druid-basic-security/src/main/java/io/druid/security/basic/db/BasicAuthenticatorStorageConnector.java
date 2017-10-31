@@ -17,33 +17,28 @@
  * under the License.
  */
 
-package io.druid.security.basic;
+package io.druid.security.basic.db;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.List;
+import java.util.Map;
 
-public class BasicAuthConfig
+public interface BasicAuthenticatorStorageConnector
 {
-  @JsonProperty
-  private String initialAdminPassword = "druid";
+  void createUser(String dbPrefix, String userName);
 
-  @JsonProperty
-  private String initialInternalClientPassword = "druid";
+  void deleteUser(String dbPrefix, String userName);
 
-  @JsonProperty
-  private int permissionCacheSize = 5000;
+  List<Map<String, Object>> getAllUsers(String dbPrefix);
 
-  public String getInitialAdminPassword()
-  {
-    return initialAdminPassword;
-  }
+  Map<String, Object> getUser(String dbPrefix, String userName);
 
-  public String getInitialInternalClientPassword()
-  {
-    return initialInternalClientPassword;
-  }
+  void setUserCredentials(String dbPrefix, String userName, char[] password);
 
-  public int getPermissionCacheSize()
-  {
-    return permissionCacheSize;
-  }
+  boolean checkCredentials(String dbPrefix, String userName, char[] password);
+
+  Map<String, Object> getUserCredentials(String dbPrefix, String userName);
+
+  void createUserTable(String dbPrefix);
+
+  void createUserCredentialsTable(String dbPrefix);
 }
