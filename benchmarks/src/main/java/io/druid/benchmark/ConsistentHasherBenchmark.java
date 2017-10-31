@@ -20,7 +20,7 @@
 package io.druid.benchmark;
 
 import com.google.common.collect.Sets;
-;
+
 import io.druid.java.util.common.StringUtils;
 import io.druid.server.router.ConsistentHasher;
 import org.openjdk.jmh.annotations.Benchmark;
