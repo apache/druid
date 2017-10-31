@@ -145,6 +145,7 @@ public class RealtimeManagerTest
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
         new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null),
+        null,
         jsonMapper
     );
     schema2 = new DataSchema(
@@ -152,6 +153,7 @@ public class RealtimeManagerTest
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
         new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null),
+        null,
         jsonMapper
     );
     RealtimeIOConfig ioConfig = new RealtimeIOConfig(
@@ -295,6 +297,7 @@ public class RealtimeManagerTest
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("ignore")},
         new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null),
+        null,
         jsonMapper
     );
 
@@ -331,8 +334,8 @@ public class RealtimeManagerTest
     }
 
     Assert.assertEquals(1, realtimeManager.getMetrics("test").processed());
-    Assert.assertEquals(1, realtimeManager.getMetrics("test").thrownAway());
-    Assert.assertEquals(2, realtimeManager.getMetrics("test").unparseable());
+    Assert.assertEquals(2, realtimeManager.getMetrics("test").thrownAway());
+    Assert.assertEquals(1, realtimeManager.getMetrics("test").unparseable());
     Assert.assertTrue(plumber.isStartedJob());
     Assert.assertTrue(plumber.isFinishedJob());
     Assert.assertEquals(0, plumber.getPersistCount());
@@ -859,6 +862,7 @@ public class RealtimeManagerTest
       return rows.hasNext();
     }
 
+    @Nullable
     @Override
     public InputRow nextRow()
     {

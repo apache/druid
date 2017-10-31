@@ -674,6 +674,7 @@ public class IndexTask extends AbstractTask
             final InputRow inputRow = firehose.nextRow();
 
             if (inputRow == null) {
+              fireDepartmentMetrics.incrementThrownAway();
               continue;
             }
 
@@ -682,7 +683,6 @@ public class IndexTask extends AbstractTask
               fireDepartmentMetrics.incrementThrownAway();
               continue;
             }
-
 
             final String sequenceName;
 

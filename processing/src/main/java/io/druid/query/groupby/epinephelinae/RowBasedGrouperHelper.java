@@ -68,7 +68,6 @@ import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import it.unimi.dsi.fastutil.ints.IntArrays;
-import it.unimi.dsi.fastutil.ints.IntComparator;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.joda.time.DateTime;
@@ -1028,20 +1027,7 @@ public class RowBasedGrouperHelper
       rankOfDictionaryIds = IntStream.range(0, dictionarySize).toArray();
       IntArrays.quickSort(
           rankOfDictionaryIds,
-          new IntComparator()
-          {
-            @Override
-            public int compare(int i1, int i2)
-            {
-              return dictionary.get(i1).compareTo(dictionary.get(i2));
-            }
-
-            @Override
-            public int compare(Integer o1, Integer o2)
-            {
-              return compare(o1.intValue(), o2.intValue());
-            }
-          }
+          (i1, i2) -> dictionary.get(i1).compareTo(dictionary.get(i2))
       );
 
       IntArrayUtils.inverse(rankOfDictionaryIds);

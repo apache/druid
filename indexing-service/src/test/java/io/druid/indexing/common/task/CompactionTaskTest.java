@@ -68,6 +68,7 @@ import io.druid.segment.data.ListIndexed;
 import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.TransformingInputRowParser;
 import io.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
@@ -317,7 +318,8 @@ public class CompactionTaskTest
     Assert.assertEquals(DATA_SOURCE, dataSchema.getDataSource());
 
     final InputRowParser parser = objectMapper.convertValue(dataSchema.getParser(), InputRowParser.class);
-    Assert.assertTrue(parser instanceof NoopInputRowParser);
+    Assert.assertTrue(parser instanceof TransformingInputRowParser);
+    Assert.assertTrue(((TransformingInputRowParser)parser).getParser() instanceof NoopInputRowParser);
     Assert.assertTrue(parser.getParseSpec() instanceof TimeAndDimsParseSpec);
     Assert.assertEquals(
         new HashSet<>(expectedDimensionsSpec.getDimensions()),

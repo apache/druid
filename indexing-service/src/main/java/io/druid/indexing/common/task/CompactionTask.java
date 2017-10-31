@@ -303,6 +303,7 @@ public class CompactionTask extends AbstractTask
         jsonMapper.convertValue(parser, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT),
         mergedAggregators,
         granularitySpec,
+        null,
         jsonMapper
     );
   }

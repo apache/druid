@@ -58,7 +58,7 @@ public class TaskAnnouncementTest
         "theid",
         new TaskResource("rofl", 2),
         new FireDepartment(
-            new DataSchema("foo", null, new AggregatorFactory[0], null, new DefaultObjectMapper()),
+            new DataSchema("foo", null, new AggregatorFactory[0], null, null, new DefaultObjectMapper()),
             new RealtimeIOConfig(
                 new LocalFirehoseFactory(new File("lol"), "rofl", null), new PlumberSchool()
                 {

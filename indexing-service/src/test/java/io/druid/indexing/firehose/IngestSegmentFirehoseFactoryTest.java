@@ -39,6 +39,7 @@ import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.SpatialDimensionSchema;
+import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.guice.GuiceAnnotationIntrospector;
 import io.druid.guice.GuiceInjectableValues;
@@ -58,6 +59,7 @@ import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.math.expr.ExprMacroTable;
 import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -65,8 +67,12 @@ import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
+import io.druid.segment.TestHelper;
+import io.druid.segment.column.Column;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.indexing.ExpressionTransform;
+import io.druid.segment.indexing.TransformSpec;
 import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentMover;
@@ -121,7 +127,7 @@ public class IngestSegmentFirehoseFactoryTest
 
   static {
     TestUtils testUtils = new TestUtils();
-    MAPPER = setupInjectablesInObjectMapper(testUtils.getTestObjectMapper());
+    MAPPER = setupInjectablesInObjectMapper(TestHelper.getJsonMapper());
     INDEX_MERGER_V9 = testUtils.getTestIndexMergerV9();
     INDEX_IO = testUtils.getTestIndexIO();
   }
@@ -400,7 +406,9 @@ public class IngestSegmentFirehoseFactoryTest
   )
   {
     this.factory = factory;
-    this.rowParser = rowParser;
+
+    // Must decorate the parser, since IngestSegmentFirehoseFactory will undecorate it.
+    this.rowParser = TransformSpec.NONE.decorate(rowParser);
   }
 
   private static final Logger log = new Logger(IngestSegmentFirehoseFactoryTest.class);
@@ -426,15 +434,13 @@ public class IngestSegmentFirehoseFactoryTest
   private final InputRowParser rowParser;
 
   private static final InputRowParser<Map<String, Object>> ROW_PARSER = new MapInputRowParser(
-      new JSONParseSpec(
+      new TimeAndDimsParseSpec(
           new TimestampSpec(TIME_COLUMN, "auto", null),
           new DimensionsSpec(
               DimensionsSpec.getDefaultSchemas(ImmutableList.of(DIM_NAME)),
               ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME),
-              ImmutableList.<SpatialDimensionSchema>of()
-          ),
-          null,
-          null
+              ImmutableList.of()
+          )
       )
   );
 
@@ -537,6 +543,42 @@ public class IngestSegmentFirehoseFactoryTest
       }
     }
     Assert.assertEquals((int) MAX_SHARD_NUMBER * MAX_ROWS, (int) rowcount);
+  }
+
+  @Test
+  public void testTransformSpec() throws IOException
+  {
+    Assert.assertEquals(MAX_SHARD_NUMBER.longValue(), segmentSet.size());
+    Integer rowcount = 0;
+    final TransformSpec transformSpec = new TransformSpec(
+        new SelectorDimFilter(Column.TIME_COLUMN_NAME, "1", null),
+        ImmutableList.of(
+            new ExpressionTransform(METRIC_FLOAT_NAME, METRIC_FLOAT_NAME + " * 10", ExprMacroTable.nil())
+        )
+    );
+    int skipped = 0;
+    try (final IngestSegmentFirehose firehose =
+             (IngestSegmentFirehose)
+                 factory.connect(transformSpec.decorate(rowParser), null)) {
+      while (firehose.hasMore()) {
+        InputRow row = firehose.nextRow();
+        if (row == null) {
+          skipped++;
+          continue;
+        }
+        Assert.assertArrayEquals(new String[]{DIM_NAME}, row.getDimensions().toArray());
+        Assert.assertArrayEquals(new String[]{DIM_VALUE}, row.getDimension(DIM_NAME).toArray());
+        Assert.assertEquals(METRIC_LONG_VALUE.longValue(), row.getMetric(METRIC_LONG_NAME).longValue());
+        Assert.assertEquals(
+            METRIC_FLOAT_VALUE * 10,
+            row.getMetric(METRIC_FLOAT_NAME).floatValue(),
+            METRIC_FLOAT_VALUE * 0.0001
+        );
+        ++rowcount;
+      }
+    }
+    Assert.assertEquals(90, skipped);
+    Assert.assertEquals((int) MAX_ROWS, (int) rowcount);
   }
 
   @Test

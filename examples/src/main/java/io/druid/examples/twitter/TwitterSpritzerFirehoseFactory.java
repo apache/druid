@@ -250,6 +250,7 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory<InputRowP
         }
       }
 
+      @Nullable
       @Override
       public InputRow nextRow()
       {

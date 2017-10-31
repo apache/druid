@@ -25,9 +25,16 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import io.druid.segment.column.ValueType;
+import io.druid.server.security.AuthenticationResult;
+import io.druid.server.security.AuthorizationUtils;
+import io.druid.server.security.AuthorizerMapper;
+import io.druid.server.security.ResourceAction;
+import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
@@ -50,6 +57,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
 
 public class InformationSchema extends AbstractSchema
 {
@@ -97,12 +105,19 @@ public class InformationSchema extends AbstractSchema
       .add("JDBC_TYPE", ValueType.LONG)
       .build();
   private static final RelDataTypeSystem TYPE_SYSTEM = RelDataTypeSystem.DEFAULT;
+  private static final Function<String, Iterable<ResourceAction>> DRUID_TABLE_RA_GENERATOR = datasourceName -> {
+    return Lists.newArrayList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(datasourceName));
+  };
 
   private final SchemaPlus rootSchema;
   private final Map<String, Table> tableMap;
+  private final AuthorizerMapper authorizerMapper;
 
   @Inject
-  public InformationSchema(final SchemaPlus rootSchema)
+  public InformationSchema(
+      final SchemaPlus rootSchema,
+      final AuthorizerMapper authorizerMapper
+  )
   {
     this.rootSchema = Preconditions.checkNotNull(rootSchema, "rootSchema");
     this.tableMap = ImmutableMap.<String, Table>of(
@@ -110,6 +125,7 @@ public class InformationSchema extends AbstractSchema
         TABLES_TABLE, new TablesTable(),
         COLUMNS_TABLE, new ColumnsTable()
     );
+    this.authorizerMapper = authorizerMapper;
   }
 
   @Override
@@ -181,9 +197,23 @@ public class InformationSchema extends AbstractSchema
                 public Iterable<Object[]> apply(final String schemaName)
                 {
                   final SchemaPlus subSchema = rootSchema.getSubSchema(schemaName);
+
+                  final AuthenticationResult authenticationResult =
+                      (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
+
+                  final Set<String> authorizedTableNames = getAuthorizedTableNamesFromSubSchema(
+                      subSchema,
+                      authenticationResult
+                  );
+
+                  final Set<String> authorizedFunctionNames = getAuthorizedFunctionNamesFromSubSchema(
+                      subSchema,
+                      authenticationResult
+                  );
+
                   return Iterables.filter(
                       Iterables.concat(
-                          FluentIterable.from(subSchema.getTableNames()).transform(
+                          FluentIterable.from(authorizedTableNames).transform(
                               new Function<String, Object[]>()
                               {
                                 @Override
@@ -198,7 +228,7 @@ public class InformationSchema extends AbstractSchema
                                 }
                               }
                           ),
-                          FluentIterable.from(subSchema.getFunctionNames()).transform(
+                          FluentIterable.from(authorizedFunctionNames).transform(
                               new Function<String, Object[]>()
                               {
                                 @Override
@@ -262,10 +292,23 @@ public class InformationSchema extends AbstractSchema
                   final SchemaPlus subSchema = rootSchema.getSubSchema(schemaName);
                   final JavaTypeFactoryImpl typeFactory = new JavaTypeFactoryImpl(TYPE_SYSTEM);
 
+                  final AuthenticationResult authenticationResult =
+                      (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
+
+                  final Set<String> authorizedTableNames = getAuthorizedTableNamesFromSubSchema(
+                      subSchema,
+                      authenticationResult
+                  );
+
+                  final Set<String> authorizedFunctionNames = getAuthorizedFunctionNamesFromSubSchema(
+                      subSchema,
+                      authenticationResult
+                  );
+
                   return Iterables.concat(
                       Iterables.filter(
                           Iterables.concat(
-                              FluentIterable.from(subSchema.getTableNames()).transform(
+                              FluentIterable.from(authorizedTableNames).transform(
                                   new Function<String, Iterable<Object[]>>()
                                   {
                                     @Override
@@ -280,7 +323,7 @@ public class InformationSchema extends AbstractSchema
                                     }
                                   }
                               ),
-                              FluentIterable.from(subSchema.getFunctionNames()).transform(
+                              FluentIterable.from(authorizedFunctionNames).transform(
                                   new Function<String, Iterable<Object[]>>()
                                   {
                                     @Override
@@ -401,5 +444,48 @@ public class InformationSchema extends AbstractSchema
     }
 
     return null;
+  }
+
+  private Set<String> getAuthorizedTableNamesFromSubSchema(
+      final SchemaPlus subSchema,
+      final AuthenticationResult authenticationResult
+  )
+  {
+    if (DruidSchema.NAME.equals(subSchema.getName())) {
+      // The "druid" schema's tables represent Druid datasources which require authorization
+      return ImmutableSet.copyOf(
+          AuthorizationUtils.filterAuthorizedResources(
+              authenticationResult,
+              subSchema.getTableNames(),
+              DRUID_TABLE_RA_GENERATOR,
+              authorizerMapper
+          )
+      );
+    } else {
+      // for non "druid" schema, we don't filter anything
+      return subSchema.getTableNames();
+    }
+  }
+
+  private Set<String> getAuthorizedFunctionNamesFromSubSchema(
+      final SchemaPlus subSchema,
+      final AuthenticationResult authenticationResult
+  )
+  {
+    if (DruidSchema.NAME.equals(subSchema.getName())) {
+      // The "druid" schema's functions represent views on Druid datasources, authorize them as if they were
+      // datasources for now
+      return ImmutableSet.copyOf(
+          AuthorizationUtils.filterAuthorizedResources(
+              authenticationResult,
+              subSchema.getFunctionNames(),
+              DRUID_TABLE_RA_GENERATOR,
+              authorizerMapper
+          )
+      );
+    } else {
+      // for non "druid" schema, we don't filter anything
+      return subSchema.getFunctionNames();
+    }
   }
 }
