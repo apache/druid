@@ -42,6 +42,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import org.apache.commons.lang.mutable.MutableBoolean;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
@@ -384,13 +385,15 @@ public class LookupReferencesManager
   private List<LookupBean> getLookupListFromCoordinator(String tier)
   {
     try {
-      boolean[] firstAttempt = new boolean[] {true};
+      MutableBoolean firstAttempt = new MutableBoolean(true);
       Map<String, LookupExtractorFactoryContainer> lookupMap = RetryUtils.retry(
           () -> {
-            if (firstAttempt[0]) {
-              firstAttempt[0] = false;
+            if (firstAttempt.isTrue()) {
+              firstAttempt.setValue(false);
             } else {
-              // Wait 1 minute between coordinator fetches
+              // Adding an extra minute in addition to the retry wait. In RetryUtils, retry wait starts from a few
+              // seconds, that is likely not enough to coordinator to be back to healthy state, e. g. if it experiences
+              // 30-second GC pause.
               Thread.sleep(60_000);
             }
             return tryGetLookupListFromCoordinator(tier);
