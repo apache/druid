@@ -39,6 +39,7 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.common.task.CompactionTask.SegmentProvider;
 import io.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
@@ -74,19 +75,18 @@ import io.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NumberedShardSpec;
+import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -95,7 +95,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@RunWith(Parameterized.class)
 public class CompactionTaskTest
 {
   private static final String DATA_SOURCE = "dataSource";
@@ -118,6 +117,7 @@ public class CompactionTaskTest
 
   private static Map<String, DimensionSchema> DIMENSIONS;
   private static Map<String, AggregatorFactory> AGGREGATORS;
+  private static List<DataSegment> SEGMENTS;
   private static ObjectMapper objectMapper = new DefaultObjectMapper();
   private static TaskToolbox toolbox;
 
@@ -173,6 +173,7 @@ public class CompactionTaskTest
           new File("file_" + i)
       );
     }
+    SEGMENTS = new ArrayList<>(segmentMap.keySet());
 
     toolbox = new TestTaskToolbox(
         new TestTaskActionClient(new ArrayList<>(segmentMap.keySet())),
@@ -220,8 +221,27 @@ public class CompactionTaskTest
     );
   }
 
-  @Parameters(name = "{0}")
-  public static Collection<Object[]> constructorFeeder()
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
+  @Test
+  public void testCreateIngestionSchema() throws IOException, SegmentLoadingException
+  {
+    final IndexIngestionSpec ingestionSchema = CompactionTask.createIngestionSchema(
+        toolbox,
+        new SegmentProvider(DATA_SOURCE, COMPACTION_INTERVAL),
+        null,
+        TUNING_CONFIG,
+        GuiceInjectors.makeStartupInjector(),
+        objectMapper
+    );
+    final DimensionsSpec expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
+
+    assertIngestionSchema(ingestionSchema, expectedDimensionsSpec);
+  }
+
+  @Test
+  public void testCreateIngestionSchemaWithCustomDimensionsSpec() throws IOException, SegmentLoadingException
   {
     final DimensionsSpec customSpec = new DimensionsSpec(
         Lists.newArrayList(
@@ -252,67 +272,88 @@ public class CompactionTaskTest
         null
     );
 
-    return ImmutableList.of(
-        new Object[]{
-            "autoDimensionsSpec",
-            null,
-            new DimensionsSpec(
-                Lists.newArrayList(
-                    new LongDimensionSchema("timestamp"),
-                    new StringDimensionSchema("string_dim_4"),
-                    new LongDimensionSchema("long_dim_4"),
-                    new FloatDimensionSchema("float_dim_4"),
-                    new DoubleDimensionSchema("double_dim_4"),
-                    new StringDimensionSchema("string_dim_0"),
-                    new LongDimensionSchema("long_dim_0"),
-                    new FloatDimensionSchema("float_dim_0"),
-                    new DoubleDimensionSchema("double_dim_0"),
-                    new StringDimensionSchema("string_dim_1"),
-                    new LongDimensionSchema("long_dim_1"),
-                    new FloatDimensionSchema("float_dim_1"),
-                    new DoubleDimensionSchema("double_dim_1"),
-                    new StringDimensionSchema("string_dim_2"),
-                    new LongDimensionSchema("long_dim_2"),
-                    new FloatDimensionSchema("float_dim_2"),
-                    new DoubleDimensionSchema("double_dim_2"),
-                    new StringDimensionSchema("string_dim_3"),
-                    new LongDimensionSchema("long_dim_3"),
-                    new FloatDimensionSchema("float_dim_3"),
-                    new DoubleDimensionSchema("double_dim_3"),
-                    new DoubleDimensionSchema("string_to_double")
-                ),
-                null,
-                null
-            )
-        },
-        new Object[]{
-            "customDimensionsSpec",
-            customSpec,
-            customSpec
-        }
-    );
-  }
-
-  private final IndexIngestionSpec ingestionSchema;
-  private final DimensionsSpec expectedDimensionsSpec;
-
-  public CompactionTaskTest(String testName, DimensionsSpec dimensionsSpec, DimensionsSpec expectedDimensionsSpec)
-      throws IOException, SegmentLoadingException
-  {
-    this.ingestionSchema = CompactionTask.createIngestionSchema(
+    final IndexIngestionSpec ingestionSchema = CompactionTask.createIngestionSchema(
         toolbox,
-        DATA_SOURCE,
-        COMPACTION_INTERVAL,
-        dimensionsSpec,
+        new SegmentProvider(DATA_SOURCE, COMPACTION_INTERVAL),
+        customSpec,
         TUNING_CONFIG,
         GuiceInjectors.makeStartupInjector(),
         objectMapper
     );
-    this.expectedDimensionsSpec = expectedDimensionsSpec;
+
+    assertIngestionSchema(ingestionSchema, customSpec);
   }
 
   @Test
-  public void testCreateIngestionSchema() throws IOException, SegmentLoadingException
+  public void testCreateIngestionSchemaWithCustomSegments() throws IOException, SegmentLoadingException
+  {
+    final IndexIngestionSpec ingestionSchema = CompactionTask.createIngestionSchema(
+        toolbox,
+        new SegmentProvider(SEGMENTS),
+        null,
+        TUNING_CONFIG,
+        GuiceInjectors.makeStartupInjector(),
+        objectMapper
+    );
+    final DimensionsSpec expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
+
+    assertIngestionSchema(ingestionSchema, expectedDimensionsSpec);
+  }
+
+  @Test
+  public void testCreateIngestionSchemaWithDifferentSegmentSet() throws IOException, SegmentLoadingException
+  {
+    expectedException.expect(CoreMatchers.instanceOf(IllegalStateException.class));
+    expectedException.expectMessage(CoreMatchers.containsString("are different from the currently used segments"));
+
+    final List<DataSegment> segments = new ArrayList<>(SEGMENTS);
+    segments.remove(0);
+    CompactionTask.createIngestionSchema(
+        toolbox,
+        new SegmentProvider(segments),
+        null,
+        TUNING_CONFIG,
+        GuiceInjectors.makeStartupInjector(),
+        objectMapper
+    );
+  }
+
+  private static DimensionsSpec getExpectedDimensionsSpecForAutoGeneration()
+  {
+    return new DimensionsSpec(
+        Lists.newArrayList(
+            new LongDimensionSchema("timestamp"),
+            new StringDimensionSchema("string_dim_4"),
+            new LongDimensionSchema("long_dim_4"),
+            new FloatDimensionSchema("float_dim_4"),
+            new DoubleDimensionSchema("double_dim_4"),
+            new StringDimensionSchema("string_dim_0"),
+            new LongDimensionSchema("long_dim_0"),
+            new FloatDimensionSchema("float_dim_0"),
+            new DoubleDimensionSchema("double_dim_0"),
+            new StringDimensionSchema("string_dim_1"),
+            new LongDimensionSchema("long_dim_1"),
+            new FloatDimensionSchema("float_dim_1"),
+            new DoubleDimensionSchema("double_dim_1"),
+            new StringDimensionSchema("string_dim_2"),
+            new LongDimensionSchema("long_dim_2"),
+            new FloatDimensionSchema("float_dim_2"),
+            new DoubleDimensionSchema("double_dim_2"),
+            new StringDimensionSchema("string_dim_3"),
+            new LongDimensionSchema("long_dim_3"),
+            new FloatDimensionSchema("float_dim_3"),
+            new DoubleDimensionSchema("double_dim_3"),
+            new DoubleDimensionSchema("string_to_double")
+        ),
+        null,
+        null
+    );
+  }
+
+  private static void assertIngestionSchema(
+      IndexIngestionSpec ingestionSchema,
+      DimensionsSpec expectedDimensionsSpec
+  )
   {
     // assert dataSchema
     final DataSchema dataSchema = ingestionSchema.getDataSchema();

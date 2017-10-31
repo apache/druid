@@ -50,6 +50,7 @@ import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import io.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.NoneGranularity;
 import io.druid.java.util.common.guava.Comparators;
@@ -77,6 +78,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -90,8 +92,8 @@ public class CompactionTask extends AbstractTask
   private static final Logger log = new Logger(CompactionTask.class);
   private static final String TYPE = "compact";
 
-  private final Interval interval;
   private final DimensionsSpec dimensionsSpec;
+  private final SegmentProvider segmentProvider;
   private final IndexTuningConfig tuningConfig;
   private final Injector injector;
   private final ObjectMapper jsonMapper;
@@ -104,7 +106,8 @@ public class CompactionTask extends AbstractTask
       @JsonProperty("id") final String id,
       @JsonProperty("resource") final TaskResource taskResource,
       @JsonProperty("dataSource") final String dataSource,
-      @JsonProperty("interval") final Interval interval,
+      @Nullable @JsonProperty("interval") final Interval interval,
+      @Nullable @JsonProperty("segments") final List<DataSegment> segments,
       @Nullable @JsonProperty("dimensions") final DimensionsSpec dimensionsSpec,
       @Nullable @JsonProperty("tuningConfig") final IndexTuningConfig tuningConfig,
       @Nullable @JsonProperty("context") final Map<String, Object> context,
@@ -113,7 +116,10 @@ public class CompactionTask extends AbstractTask
   )
   {
     super(getOrMakeId(id, TYPE, dataSource), null, taskResource, dataSource, context);
-    this.interval = Preconditions.checkNotNull(interval, "interval");
+    Preconditions.checkArgument(interval != null || segments != null, "interval or segments should be specified");
+    Preconditions.checkArgument(interval == null || segments == null, "one of interval and segments should be null");
+
+    this.segmentProvider = segments == null ? new SegmentProvider(dataSource, interval) : new SegmentProvider(segments);
     this.dimensionsSpec = dimensionsSpec;
     this.tuningConfig = tuningConfig;
     this.injector = injector;
@@ -123,7 +129,13 @@ public class CompactionTask extends AbstractTask
   @JsonProperty
   public Interval getInterval()
   {
-    return interval;
+    return segmentProvider.interval;
+  }
+
+  @JsonProperty
+  public List<DataSegment> getSegments()
+  {
+    return segmentProvider.segments;
   }
 
   @JsonProperty
@@ -154,7 +166,7 @@ public class CompactionTask extends AbstractTask
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
     final SortedSet<Interval> intervals = new TreeSet<>(Comparators.intervalsByStartThenEnd());
-    intervals.add(interval);
+    intervals.add(segmentProvider.interval);
     return IndexTask.isReady(taskActionClient, intervals);
   }
 
@@ -164,8 +176,7 @@ public class CompactionTask extends AbstractTask
     if (indexTaskSpec == null) {
       final IndexIngestionSpec ingestionSpec = createIngestionSchema(
           toolbox,
-          getDataSource(),
-          interval,
+          segmentProvider,
           dimensionsSpec,
           tuningConfig,
           injector,
@@ -195,8 +206,7 @@ public class CompactionTask extends AbstractTask
   @VisibleForTesting
   static IndexIngestionSpec createIngestionSchema(
       TaskToolbox toolbox,
-      String dataSource,
-      Interval interval,
+      SegmentProvider segmentProvider,
       DimensionsSpec dimensionsSpec,
       IndexTuningConfig tuningConfig,
       Injector injector,
@@ -205,8 +215,7 @@ public class CompactionTask extends AbstractTask
   {
     Pair<Map<DataSegment, File>, List<TimelineObjectHolder<String, DataSegment>>> pair = prepareSegments(
         toolbox,
-        dataSource,
-        interval
+        segmentProvider
     );
     final Map<DataSegment, File> segmentFileMap = pair.lhs;
     final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = pair.rhs;
@@ -216,8 +225,8 @@ public class CompactionTask extends AbstractTask
     }
 
     final DataSchema dataSchema = createDataSchema(
-        dataSource,
-        interval,
+        segmentProvider.dataSource,
+        segmentProvider.interval,
         dimensionsSpec,
         toolbox.getIndexIO(),
         jsonMapper,
@@ -228,8 +237,8 @@ public class CompactionTask extends AbstractTask
         dataSchema,
         new IndexIOConfig(
             new IngestSegmentFirehoseFactory(
-                dataSource,
-                interval,
+                segmentProvider.dataSource,
+                segmentProvider.interval,
                 null, // no filter
                 // set dimensions and metrics names to make sure that the generated dataSchema is used for the firehose
                 dataSchema.getParser().getParseSpec().getDimensionsSpec().getDimensionNames(),
@@ -245,16 +254,14 @@ public class CompactionTask extends AbstractTask
 
   private static Pair<Map<DataSegment, File>, List<TimelineObjectHolder<String, DataSegment>>> prepareSegments(
       TaskToolbox toolbox,
-      String dataSource,
-      Interval interval
+      SegmentProvider segmentProvider
   ) throws IOException, SegmentLoadingException
   {
-    final List<DataSegment> usedSegments = toolbox.getTaskActionClient()
-                                                  .submit(new SegmentListUsedAction(dataSource, interval, null));
+    final List<DataSegment> usedSegments = segmentProvider.checkAndGetSegments(toolbox);
     final Map<DataSegment, File> segmentFileMap = toolbox.fetchSegments(usedSegments);
     final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = VersionedIntervalTimeline
         .forSegments(usedSegments)
-        .lookup(interval);
+        .lookup(segmentProvider.interval);
     return Pair.of(segmentFileMap, timelineSegments);
   }
 
@@ -420,6 +427,53 @@ public class CompactionTask extends AbstractTask
         return new StringDimensionSchema(name, multiValueHandling);
       default:
         throw new ISE("Unsupported value type[%s] for dimension[%s]", type, name);
+    }
+  }
+
+  @VisibleForTesting
+  static class SegmentProvider
+  {
+    private final String dataSource;
+    private final Interval interval;
+    private final List<DataSegment> segments;
+
+    SegmentProvider(String dataSource, Interval interval)
+    {
+      this.dataSource = Preconditions.checkNotNull(dataSource);
+      this.interval = Preconditions.checkNotNull(interval);
+      this.segments = null;
+    }
+
+    SegmentProvider(List<DataSegment> segments)
+    {
+      Preconditions.checkArgument(segments != null && !segments.isEmpty());
+      final String dataSource = segments.get(0).getDataSource();
+      Preconditions.checkArgument(
+          segments.stream().allMatch(segment -> segment.getDataSource().equals(dataSource)),
+          "segments should have the same dataSource"
+      );
+      this.segments = segments;
+      this.dataSource = dataSource;
+      this.interval = JodaUtils.umbrellaInterval(
+          segments.stream().map(DataSegment::getInterval).collect(Collectors.toList())
+      );
+    }
+
+    List<DataSegment> checkAndGetSegments(TaskToolbox toolbox) throws IOException
+    {
+      final List<DataSegment> usedSegments = toolbox.getTaskActionClient()
+                                                    .submit(new SegmentListUsedAction(dataSource, interval, null));
+      if (segments != null) {
+        Collections.sort(usedSegments);
+        Collections.sort(segments);
+        Preconditions.checkState(
+            usedSegments.equals(segments),
+            "Specified segments[%s] are different from the currently used segments[%s]",
+            segments,
+            usedSegments
+        );
+      }
+      return usedSegments;
     }
   }
 }
