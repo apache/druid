@@ -642,7 +642,7 @@ public class DruidQuery
   @Nullable
   public TimeseriesQuery toTimeseriesQuery()
   {
-    if (grouping == null) {
+    if (grouping == null || grouping.getHavingFilter() != null) {
       return null;
     }
 
