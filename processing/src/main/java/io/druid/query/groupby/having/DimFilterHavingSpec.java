@@ -22,7 +22,6 @@ package io.druid.query.groupby.having;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import io.druid.common.guava.SettableSupplier;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.query.aggregation.AggregatorFactory;
