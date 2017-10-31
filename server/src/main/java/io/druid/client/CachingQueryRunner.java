@@ -181,7 +181,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
             public void run()
             {
               try {
-                CacheUtil.populate(cache, mapper, key, Futures.allAsList(cacheFutures).get());
+                CacheUtil.populate(cache, mapper, key, Futures.allAsList(cacheFutures).get(), 0);
               }
               catch (Exception e) {
                 log.error(e, "Error while getting future for cache task");

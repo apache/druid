@@ -38,12 +38,21 @@ public class CacheConfig
   private boolean populateCache = false;
 
   @JsonProperty
+  private boolean useResultLevelCache = false;
+
+  @JsonProperty
+  private boolean populateResultLevelCache = false;
+
+  @JsonProperty
   @Min(0)
   private int numBackgroundThreads = 0;
 
   @JsonProperty
   @Min(0)
   private int cacheBulkMergeLimit = Integer.MAX_VALUE;
+
+  @JsonProperty
+  private int resultLevelCacheLimit = 10485760;
 
   @JsonProperty
   private List<String> unCacheable = Arrays.asList(Query.GROUP_BY, Query.SELECT);
@@ -58,6 +67,16 @@ public class CacheConfig
     return useCache;
   }
 
+  public boolean isPopulateResultLevelCache()
+  {
+    return populateResultLevelCache;
+  }
+
+  public boolean isUseResultLevelCache()
+  {
+    return useResultLevelCache;
+  }
+
   public int getNumBackgroundThreads()
   {
     return numBackgroundThreads;
@@ -66,6 +85,11 @@ public class CacheConfig
   public int getCacheBulkMergeLimit()
   {
     return cacheBulkMergeLimit;
+  }
+
+  public int getResultLevelCacheLimit()
+  {
+    return resultLevelCacheLimit;
   }
 
   public boolean isQueryCacheable(Query query)

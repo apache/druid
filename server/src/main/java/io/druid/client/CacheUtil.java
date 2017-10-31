@@ -57,7 +57,16 @@ public class CacheUtil
     );
   }
 
-  public static void populate(Cache cache, ObjectMapper mapper, Cache.NamedKey key, Iterable<Object> results)
+  public static Cache.NamedKey computeResultLevelCacheKey(
+      String resultLevelCacheIdentifier
+  )
+  {
+    return new Cache.NamedKey(
+        resultLevelCacheIdentifier, resultLevelCacheIdentifier.getBytes()
+    );
+  }
+
+  public static void populate(Cache cache, ObjectMapper mapper, Cache.NamedKey key, Iterable<Object> results, int cacheLimit)
   {
     try {
       ByteArrayOutputStream bytes = new ByteArrayOutputStream();
@@ -66,7 +75,9 @@ public class CacheUtil
           gen.writeObject(result);
         }
       }
-
+      if (cacheLimit != 0 && bytes.size() > cacheLimit) {
+        return;
+      }
       cache.put(key, bytes.toByteArray());
     }
     catch (IOException e) {
@@ -90,6 +101,24 @@ public class CacheUtil
   )
   {
     return populateCache(query, strategy, cacheConfig) && strategy.isCacheable(query, false);
+  }
+
+  public static <T> boolean useResultLevelCacheOnBrokers(
+      Query<T> query,
+      CacheStrategy<T, Object, Query<T>> strategy,
+      CacheConfig cacheConfig
+  )
+  {
+    return useResultLevelCache(query, strategy, cacheConfig) && strategy.isCacheable(query, false);
+  }
+
+  public static <T> boolean populateResultLevelCacheOnBrokers(
+      Query<T> query,
+      CacheStrategy<T, Object, Query<T>> strategy,
+      CacheConfig cacheConfig
+  )
+  {
+    return populateResultLevelCache(query, strategy, cacheConfig) && strategy.isCacheable(query, false);
   }
 
   public static <T> boolean useCacheOnDataNodes(
@@ -134,4 +163,27 @@ public class CacheUtil
            && cacheConfig.isQueryCacheable(query);
   }
 
+  private static <T> boolean useResultLevelCache(
+      Query<T> query,
+      CacheStrategy<T, Object, Query<T>> strategy,
+      CacheConfig cacheConfig
+  )
+  {
+    return QueryContexts.isUseResultLevelCache(query)
+           && strategy != null
+           && cacheConfig.isUseResultLevelCache()
+           && cacheConfig.isQueryCacheable(query);
+  }
+
+  private static <T> boolean populateResultLevelCache(
+      Query<T> query,
+      CacheStrategy<T, Object, Query<T>> strategy,
+      CacheConfig cacheConfig
+  )
+  {
+    return QueryContexts.isPopulateResultLevelCache(query)
+           && strategy != null
+           && cacheConfig.isPopulateResultLevelCache()
+           && cacheConfig.isQueryCacheable(query);
+  }
 }

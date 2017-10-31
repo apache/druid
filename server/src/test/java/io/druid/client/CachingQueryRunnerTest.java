@@ -351,7 +351,8 @@ public class CachingQueryRunnerTest
         cache,
         objectMapper,
         cacheKey,
-        Iterables.transform(expectedResults, cacheStrategy.prepareForCache())
+        Iterables.transform(expectedResults, cacheStrategy.prepareForCache()),
+        0
     );
 
     CachingQueryRunner runner = new CachingQueryRunner(
