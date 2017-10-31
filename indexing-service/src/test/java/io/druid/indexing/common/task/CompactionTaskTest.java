@@ -46,6 +46,7 @@ import io.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -156,7 +157,7 @@ public class CompactionTaskTest
 
     final Map<DataSegment, File> segmentMap = new HashMap<>(5);
     for (int i = 0; i < 5; i++) {
-      final Interval segmentInterval = Intervals.of(String.format("2017-0%d-01/2017-0%d-01", (i + 1), (i + 2)));
+      final Interval segmentInterval = Intervals.of(StringUtils.format("2017-0%d-01/2017-0%d-01", (i + 1), (i + 2)));
       segmentMap.put(
           new DataSegment(
               DATA_SOURCE,
