@@ -129,6 +129,7 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -257,6 +258,7 @@ public class TaskLifecycleTest
           return true;
         }
 
+        @Nullable
         @Override
         public InputRow nextRow()
         {
@@ -311,6 +313,7 @@ public class TaskLifecycleTest
           return inputRowIterator.hasNext();
         }
 
+        @Nullable
         @Override
         public InputRow nextRow()
         {
@@ -661,6 +664,7 @@ public class TaskLifecycleTest
                     null,
                     ImmutableList.of(Intervals.of("2010-01-01/P2D"))
                 ),
+                null,
                 mapper
             ),
             new IndexIOConfig(new MockFirehoseFactory(false), false),
@@ -718,6 +722,7 @@ public class TaskLifecycleTest
                     null,
                     ImmutableList.of(Intervals.of("2010-01-01/P1D"))
                 ),
+                null,
                 mapper
             ),
             new IndexIOConfig(new MockExceptionalFirehoseFactory(), false),
@@ -1082,6 +1087,7 @@ public class TaskLifecycleTest
                     null,
                     ImmutableList.of(Intervals.of("2010-01-01/P2D"))
                 ),
+                null,
                 mapper
             ),
             new IndexIOConfig(new MockFirehoseFactory(false), false),
@@ -1183,6 +1189,7 @@ public class TaskLifecycleTest
         null,
         new AggregatorFactory[]{new LongSumAggregatorFactory("count", "rows")},
         new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
+        null,
         mapper
     );
     RealtimeIOConfig realtimeIOConfig = new RealtimeIOConfig(

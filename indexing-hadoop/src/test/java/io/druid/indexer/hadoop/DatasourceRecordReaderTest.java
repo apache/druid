@@ -69,7 +69,8 @@ public class DatasourceRecordReaderTest
                 null,
                 segment.getDimensions(),
                 segment.getMetrics(),
-                false
+                false,
+                null
             )
         )
     );

@@ -496,6 +496,7 @@ public class IndexGeneratorJobTest
                 new UniformGranularitySpec(
                     Granularities.DAY, Granularities.NONE, ImmutableList.of(this.interval)
                 ),
+                null,
                 mapper
             ),
             new HadoopIOConfig(

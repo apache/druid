@@ -1895,6 +1895,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             Granularities.NONE,
             ImmutableList.<Interval>of()
         ),
+        null,
         objectMapper
     );
   }

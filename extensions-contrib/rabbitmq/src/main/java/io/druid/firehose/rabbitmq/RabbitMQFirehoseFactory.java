@@ -30,10 +30,10 @@ import com.rabbitmq.client.Envelope;
 import com.rabbitmq.client.QueueingConsumer.Delivery;
 import com.rabbitmq.client.ShutdownListener;
 import com.rabbitmq.client.ShutdownSignalException;
-import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.impl.InputRowParser;
 import io.druid.java.util.common.logger.Logger;
 import net.jodah.lyra.ConnectionOptions;
 import net.jodah.lyra.Connections;
@@ -41,6 +41,7 @@ import net.jodah.lyra.config.Config;
 import net.jodah.lyra.retry.RetryPolicy;
 import net.jodah.lyra.util.Duration;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -100,7 +101,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  * For more information on RabbitMQ high availability please see:
  * <a href="http://www.rabbitmq.com/ha.html">http://www.rabbitmq.com/ha.html</a>.
  */
-public class RabbitMQFirehoseFactory implements FirehoseFactory<ByteBufferInputRowParser>
+public class RabbitMQFirehoseFactory implements FirehoseFactory<InputRowParser<ByteBuffer>>
 {
   private static final Logger log = new Logger(RabbitMQFirehoseFactory.class);
 
@@ -135,7 +136,7 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
   }
 
   @Override
-  public Firehose connect(final ByteBufferInputRowParser firehoseParser, File temporaryDirectory) throws IOException
+  public Firehose connect(final InputRowParser<ByteBuffer> firehoseParser, File temporaryDirectory) throws IOException
   {
     ConnectionOptions lyraOptions = new ConnectionOptions(this.connectionFactory);
     Config lyraConfig = new Config()
@@ -225,6 +226,7 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
         return false;
       }
 
+      @Nullable
       @Override
       public InputRow nextRow()
       {

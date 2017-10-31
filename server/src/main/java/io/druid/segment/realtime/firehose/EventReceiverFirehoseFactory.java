@@ -37,7 +37,7 @@ import io.druid.java.util.common.concurrent.Execs;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.impl.MapInputRowParser;
+import io.druid.data.input.impl.InputRowParser;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.DateTimes;
@@ -52,6 +52,7 @@ import io.druid.server.security.ResourceAction;
 import io.druid.server.security.ResourceType;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
@@ -81,7 +82,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * Builds firehoses that accept events through the {@link EventReceiver} interface. Can also register these
  * firehoses with an {@link ServiceAnnouncingChatHandlerProvider}.
  */
-public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRowParser>
+public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowParser<Map<String, Object>>>
 {
   public static final int MAX_FIREHOSE_PRODUCERS = 10_000;
 
@@ -119,7 +120,10 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
   }
 
   @Override
-  public Firehose connect(MapInputRowParser firehoseParser, File temporaryDirectory) throws IOException
+  public Firehose connect(
+      InputRowParser<Map<String, Object>> firehoseParser,
+      File temporaryDirectory
+  ) throws IOException
   {
     log.info("Connecting firehose: %s", serviceName);
     final EventReceiverFirehose firehose = new EventReceiverFirehose(firehoseParser);
@@ -155,7 +159,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
   {
     private final ScheduledExecutorService exec;
     private final BlockingQueue<InputRow> buffer;
-    private final MapInputRowParser parser;
+    private final InputRowParser<Map<String, Object>> parser;
 
     private final Object readLock = new Object();
 
@@ -165,7 +169,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
     private final AtomicLong lastBufferAddFailMsgTime = new AtomicLong(0);
     private final ConcurrentMap<String, Long> producerSequences = new ConcurrentHashMap<>();
 
-    public EventReceiverFirehose(MapInputRowParser parser)
+    public EventReceiverFirehose(InputRowParser<Map<String, Object>> parser)
     {
       this.buffer = new ArrayBlockingQueue<>(bufferSize);
       this.parser = parser;
@@ -185,7 +189,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
           req,
           new ResourceAction(
               new Resource("STATE", ResourceType.STATE),
-            Action.WRITE
+              Action.WRITE
           ),
           authorizerMapper
       );
@@ -264,6 +268,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
       }
     }
 
+    @Nullable
     @Override
     public InputRow nextRow()
     {

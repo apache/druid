@@ -33,6 +33,7 @@ import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -132,6 +133,7 @@ public class CombiningFirehoseFactoryTest
           return iterator.hasNext();
         }
 
+        @Nullable
         @Override
         public InputRow nextRow()
         {

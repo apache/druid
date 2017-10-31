@@ -142,6 +142,7 @@ public class RealtimePlumberSchoolTest
         ),
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
         new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null),
+        null,
         jsonMapper
     );
 
@@ -161,6 +162,7 @@ public class RealtimePlumberSchoolTest
         ),
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
         new UniformGranularitySpec(Granularities.YEAR, Granularities.NONE, null),
+        null,
         jsonMapper
     );
 

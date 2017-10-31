@@ -24,13 +24,11 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
-
 import io.druid.data.input.InputRow;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.JobHelper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -61,6 +59,7 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
 
   public static final String CONF_INPUT_SEGMENTS = "druid.segments";
   public static final String CONF_DRUID_SCHEMA = "druid.datasource.schema";
+  public static final String CONF_TRANSFORM_SPEC = "druid.datasource.transformSpec";
   public static final String CONF_MAX_SPLIT_SIZE = "druid.datasource.split.max.size";
 
   @Override
