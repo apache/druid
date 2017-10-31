@@ -937,7 +937,7 @@ public class CalciteQueryTest
   public void testHavingOnGrandTotal() throws Exception
   {
     testQuery(
-        "SELECT SUM(m1) AS m1_sum FROM foo HAVING m1_sum = 21",
+        "SELECT SUM(m1) AS m1_sum FROM foo HAVING SUM(m1) = 21",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
