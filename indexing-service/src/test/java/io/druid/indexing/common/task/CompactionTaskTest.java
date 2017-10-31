@@ -319,7 +319,7 @@ public class CompactionTaskTest
 
     final InputRowParser parser = objectMapper.convertValue(dataSchema.getParser(), InputRowParser.class);
     Assert.assertTrue(parser instanceof TransformingInputRowParser);
-    Assert.assertTrue(((TransformingInputRowParser)parser).getParser() instanceof NoopInputRowParser);
+    Assert.assertTrue(((TransformingInputRowParser) parser).getParser() instanceof NoopInputRowParser);
     Assert.assertTrue(parser.getParseSpec() instanceof TimeAndDimsParseSpec);
     Assert.assertEquals(
         new HashSet<>(expectedDimensionsSpec.getDimensions()),
