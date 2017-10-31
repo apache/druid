@@ -22,7 +22,12 @@ package io.druid.data.input;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Maps;
+import com.google.common.primitives.Longs;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.parsers.ParseException;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,9 +36,12 @@ import java.util.Set;
  */
 public class Rows
 {
+  public static final Long LONG_ZERO = 0L;
+
   /**
    * @param timeStamp rollup up timestamp to be used to create group key
-   * @param inputRow input row
+   * @param inputRow  input row
+   *
    * @return groupKey for the given input row
    */
   public static List<Object> toGroupKey(long timeStamp, InputRow inputRow)
@@ -49,5 +57,78 @@ public class Rows
         timeStamp,
         dims
     );
+  }
+
+  /**
+   * Convert an object to a list of strings.
+   */
+  public static List<String> objectToStrings(final Object inputValue)
+  {
+    if (inputValue == null) {
+      return Collections.emptyList();
+    } else if (inputValue instanceof List) {
+      // guava's toString function fails on null objects, so please do not use it
+      final List<Object> values = (List) inputValue;
+
+      final List<String> retVal = new ArrayList<>(values.size());
+      for (Object val : values) {
+        retVal.add(String.valueOf(val));
+      }
+
+      return retVal;
+    } else {
+      return Collections.singletonList(String.valueOf(inputValue));
+    }
+  }
+
+  /**
+   * Convert an object to a number. Nulls are treated as zeroes.
+   *
+   * @param name       field name of the object being converted (may be used for exception messages)
+   * @param inputValue the actual object being converted
+   *
+   * @return a number
+   *
+   * @throws NullPointerException if the string is null
+   * @throws ParseException       if the column cannot be converted to a number
+   */
+  public static Number objectToNumber(final String name, final Object inputValue)
+  {
+    if (inputValue == null) {
+      return Rows.LONG_ZERO;
+    }
+
+    if (inputValue instanceof Number) {
+      return (Number) inputValue;
+    } else if (inputValue instanceof String) {
+      try {
+        String metricValueString = StringUtils.removeChar(((String) inputValue).trim(), ',');
+        // Longs.tryParse() doesn't support leading '+', so we need to trim it ourselves
+        metricValueString = trimLeadingPlusOfLongString(metricValueString);
+        Long v = Longs.tryParse(metricValueString);
+        // Do NOT use ternary operator here, because it makes Java to convert Long to Double
+        if (v != null) {
+          return v;
+        } else {
+          return Double.valueOf(metricValueString);
+        }
+      }
+      catch (Exception e) {
+        throw new ParseException(e, "Unable to parse value[%s] for field[%s]", inputValue, name);
+      }
+    } else {
+      throw new ParseException("Unknown type[%s] for field", inputValue.getClass(), inputValue);
+    }
+  }
+
+  private static String trimLeadingPlusOfLongString(String metricValueString)
+  {
+    if (metricValueString.length() > 1 && metricValueString.charAt(0) == '+') {
+      char secondChar = metricValueString.charAt(1);
+      if (secondChar >= '0' && secondChar <= '9') {
+        metricValueString = metricValueString.substring(1);
+      }
+    }
+    return metricValueString;
   }
 }

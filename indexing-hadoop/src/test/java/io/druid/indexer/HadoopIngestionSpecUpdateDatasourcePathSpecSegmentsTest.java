@@ -93,7 +93,7 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
     PathSpec pathSpec = new DatasourcePathSpec(
         jsonMapper,
         null,
-        new DatasourceIngestionSpec(testDatasource, testDatasourceInterval, null, null, null, null, null, false),
+        new DatasourceIngestionSpec(testDatasource, testDatasourceInterval, null, null, null, null, null, false, null),
         null
     );
     HadoopDruidIndexerConfig config = testRunUpdateSegmentListIfDatasourcePathSpecIsUsed(
@@ -120,7 +120,8 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
             null,
             null,
             null,
-            false
+            false,
+            null
         ),
         null
     );
@@ -148,7 +149,8 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
             null,
             null,
             null,
-            false
+            false,
+            null
         ),
         null
     );
@@ -173,7 +175,8 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
             null,
             null,
             null,
-            false
+            false,
+            null
         ),
         null
     );
@@ -204,7 +207,8 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
                     null,
                     null,
                     null,
-                    false
+                    false,
+                    null
                 ),
                 null
             )
@@ -236,6 +240,7 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
                 null,
                 ImmutableList.of(Intervals.of("2010-01-01/P1D"))
             ),
+            null,
             jsonMapper
         ),
         new HadoopIOConfig(

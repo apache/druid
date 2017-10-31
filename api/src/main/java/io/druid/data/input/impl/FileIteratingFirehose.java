@@ -24,6 +24,7 @@ import io.druid.data.input.InputRow;
 import io.druid.utils.Runnables;
 import org.apache.commons.io.LineIterator;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Iterator;
@@ -69,6 +70,7 @@ public class FileIteratingFirehose implements Firehose
     return lineIterator != null && lineIterator.hasNext();
   }
 
+  @Nullable
   @Override
   public InputRow nextRow()
   {

@@ -33,17 +33,19 @@ import java.util.List;
  */
 public class SegmentInputRow implements InputRow
 {
-  private final InputRow delegate;
+  private final Row delegate;
+  private final List<String> dimensions;
 
-  public SegmentInputRow(InputRow delegate)
+  public SegmentInputRow(Row delegate, List<String> dimensions)
   {
     this.delegate = delegate;
+    this.dimensions = dimensions;
   }
 
   @Override
   public List<String> getDimensions()
   {
-    return delegate.getDimensions();
+    return dimensions;
   }
 
   @Override

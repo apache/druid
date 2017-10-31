@@ -30,6 +30,7 @@ import io.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 
 public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<Object, Object, KEYOUT, VALUEOUT>
@@ -68,10 +69,15 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
         if (reportParseExceptions) {
           throw e;
         }
-        log.debug(e, "Ignoring invalid row [%s] due to parsing error", value.toString());
+        log.debug(e, "Ignoring invalid row [%s] due to parsing error", value);
         context.getCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER).increment(1);
         return; // we're ignoring this invalid row
+      }
 
+      if (inputRow == null) {
+        // Throw away null rows from the parser.
+        log.debug("Throwing away row [%s]", value);
+        return;
       }
 
       if (!granularitySpec.bucketIntervals().isPresent()
@@ -85,7 +91,8 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
     }
   }
 
-  public final static InputRow parseInputRow(Object value, InputRowParser parser)
+  @Nullable
+  public static InputRow parseInputRow(Object value, InputRowParser parser)
   {
     if (parser instanceof StringInputRowParser && value instanceof Text) {
       //Note: This is to ensure backward compatibility with 0.7.0 and before
@@ -94,6 +101,9 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
       return ((StringInputRowParser) parser).parse(value.toString());
     } else if (value instanceof InputRow) {
       return (InputRow) value;
+    } else if (value == null) {
+      // Pass through nulls so they get thrown away.
+      return null;
     } else {
       return parser.parse(value);
     }
