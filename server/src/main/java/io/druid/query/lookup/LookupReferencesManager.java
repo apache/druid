@@ -36,7 +36,7 @@ import io.druid.discovery.DruidLeaderClient;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.RE;
 import io.druid.java.util.common.RetryUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
@@ -474,18 +474,20 @@ public class LookupReferencesManager
         lookupConfig.getNumLookupLoadingThreads(),
         "LookupReferencesManager-Startup-%s"
     );
-    CompletionService<Map.Entry<LookupBean, LookupExtractorFactoryContainer>> completionService =
+    CompletionService<Map.Entry<String, LookupExtractorFactoryContainer>> completionService =
         new ExecutorCompletionService<>(executorService);
     List<Future<?>> allFutures = new ArrayList<>();
     try {
       LOG.info("Starting lookup loading process");
       for (int i = 0; i < lookupConfig.getLookupStartRetries(); i++) {
         LOG.info("Round of attempts #%d, [%d] lookups", i + 1, lookupBeanList.size());
-        Pair<Map<LookupBean, LookupExtractorFactoryContainer>, List<LookupBean>> results =
+        Map<String, LookupExtractorFactoryContainer> successfulLookups =
             startLookups(lookupBeanList, completionService, allFutures);
-        Map<LookupBean, LookupExtractorFactoryContainer> successfulLookups = results.lhs;
-        successfulLookups.forEach((lookupBean, container) -> builder.put(lookupBean.getName(), container));
-        List<LookupBean> failedLookups = results.rhs;
+        builder.putAll(successfulLookups);
+        List<LookupBean> failedLookups = lookupBeanList
+            .stream()
+            .filter(l -> !successfulLookups.containsKey(l.getName()))
+            .collect(Collectors.toList());
         if (failedLookups.isEmpty()) {
           break;
         } else {
@@ -507,54 +509,50 @@ public class LookupReferencesManager
   }
 
   /**
-   * @return a pair of the map with successful lookups and the list of failed lookups
+   * @return a map with successful lookups
    */
-  private Pair<Map<LookupBean, LookupExtractorFactoryContainer>, List<LookupBean>> startLookups(
+  private Map<String, LookupExtractorFactoryContainer> startLookups(
       List<LookupBean> lookupBeans,
-      CompletionService<Map.Entry<LookupBean, LookupExtractorFactoryContainer>> completionService,
+      CompletionService<Map.Entry<String, LookupExtractorFactoryContainer>> completionService,
       List<Future<?>> allFutures
   ) throws InterruptedException
   {
     for (LookupBean lookupBean : lookupBeans) {
       allFutures.add(completionService.submit(() -> startLookup(lookupBean)));
     }
-    Map<LookupBean, LookupExtractorFactoryContainer> successfulLookups = new HashMap<>();
+    Map<String, LookupExtractorFactoryContainer> successfulLookups = new HashMap<>();
     for (int i = 0; i < lookupBeans.size(); i++) {
-      Future<Map.Entry<LookupBean, LookupExtractorFactoryContainer>> completedFuture = completionService.take();
+      Future<Map.Entry<String, LookupExtractorFactoryContainer>> completedFuture = completionService.take();
       try {
-        Map.Entry<LookupBean, LookupExtractorFactoryContainer> lookupResult = completedFuture.get();
+        Map.Entry<String, LookupExtractorFactoryContainer> lookupResult = completedFuture.get();
         if (lookupResult != null) {
           successfulLookups.put(lookupResult.getKey(), lookupResult.getValue());
         }
       }
       catch (ExecutionException e) {
+        LOG.error(e.getCause(), "Exception while starting a lookup");
         // not adding to successfulLookups
       }
     }
-    List<LookupBean> failedLookups = lookupBeans
-        .stream()
-        .filter(l -> !successfulLookups.containsKey(l))
-        .collect(Collectors.toList());
-    return new Pair<>(successfulLookups, failedLookups);
+    return successfulLookups;
   }
 
   @Nullable
-  private Map.Entry<LookupBean, LookupExtractorFactoryContainer> startLookup(LookupBean lookupBean)
+  private Map.Entry<String, LookupExtractorFactoryContainer> startLookup(LookupBean lookupBean)
   {
     LookupExtractorFactoryContainer container = lookupBean.getContainer();
     LOG.info("Starting lookup [%s]:[%s]", lookupBean.getName(), container);
     try {
       if (container.getLookupExtractorFactory().start()) {
         LOG.info("Started lookup [%s]:[%s]", lookupBean.getName(), container);
-        return new AbstractMap.SimpleImmutableEntry<>(lookupBean, container);
+        return new AbstractMap.SimpleImmutableEntry<>(lookupBean.getName(), container);
       } else {
         LOG.error("Failed to start lookup [%s]:[%s]", lookupBean.getName(), container);
         return null;
       }
     }
     catch (Exception e) {
-      LOG.error(e, "Failed to start lookup [%s]:[%s]", lookupBean.getName(), container);
-      throw e;
+      throw new RE(e, "Failed to start lookup [%s]:[%s]", lookupBean.getName(), container);
     }
   }
 
