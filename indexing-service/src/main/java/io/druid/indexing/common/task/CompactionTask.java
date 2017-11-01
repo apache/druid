@@ -92,11 +92,14 @@ public class CompactionTask extends AbstractTask
   private static final Logger log = new Logger(CompactionTask.class);
   private static final String TYPE = "compact";
 
+  private final Interval interval;
+  private final List<DataSegment> segments;
   private final DimensionsSpec dimensionsSpec;
-  private final SegmentProvider segmentProvider;
   private final IndexTuningConfig tuningConfig;
   private final Injector injector;
   private final ObjectMapper jsonMapper;
+  @JsonIgnore
+  private final SegmentProvider segmentProvider;
 
   @JsonIgnore
   private IndexTask indexTaskSpec;
@@ -119,23 +122,25 @@ public class CompactionTask extends AbstractTask
     Preconditions.checkArgument(interval != null || segments != null, "interval or segments should be specified");
     Preconditions.checkArgument(interval == null || segments == null, "one of interval and segments should be null");
 
-    this.segmentProvider = segments == null ? new SegmentProvider(dataSource, interval) : new SegmentProvider(segments);
+    this.interval = interval;
+    this.segments = segments;
     this.dimensionsSpec = dimensionsSpec;
     this.tuningConfig = tuningConfig;
     this.injector = injector;
     this.jsonMapper = jsonMapper;
+    this.segmentProvider = segments == null ? new SegmentProvider(dataSource, interval) : new SegmentProvider(segments);
   }
 
   @JsonProperty
   public Interval getInterval()
   {
-    return segmentProvider.interval;
+    return interval;
   }
 
   @JsonProperty
   public List<DataSegment> getSegments()
   {
-    return segmentProvider.segments;
+    return segments;
   }
 
   @JsonProperty
@@ -160,6 +165,12 @@ public class CompactionTask extends AbstractTask
   public int getPriority()
   {
     return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_MERGE_TASK_PRIORITY);
+  }
+
+  @VisibleForTesting
+  SegmentProvider getSegmentProvider()
+  {
+    return segmentProvider;
   }
 
   @Override
@@ -457,6 +468,11 @@ public class CompactionTask extends AbstractTask
       this.interval = JodaUtils.umbrellaInterval(
           segments.stream().map(DataSegment::getInterval).collect(Collectors.toList())
       );
+    }
+
+    List<DataSegment> getSegments()
+    {
+      return segments;
     }
 
     List<DataSegment> checkAndGetSegments(TaskToolbox toolbox) throws IOException

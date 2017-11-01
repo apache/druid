@@ -20,10 +20,14 @@
 package io.druid.indexing.common.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.introspect.AnnotationIntrospectorPair;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.inject.Injector;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -34,6 +38,8 @@ import io.druid.data.input.impl.LongDimensionSchema;
 import io.druid.data.input.impl.NoopInputRowParser;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
+import io.druid.guice.GuiceAnnotationIntrospector;
+import io.druid.guice.GuiceInjectableValues;
 import io.druid.guice.GuiceInjectors;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
@@ -114,11 +120,12 @@ public class CompactionTaskTest
       new DoubleDimensionSchema(MIXED_TYPE_COLUMN)
   );
   private static final IndexTuningConfig TUNING_CONFIG = createTuningConfig();
+  private static final Injector INJECTOR = GuiceInjectors.makeStartupInjector();
 
   private static Map<String, DimensionSchema> DIMENSIONS;
   private static Map<String, AggregatorFactory> AGGREGATORS;
   private static List<DataSegment> SEGMENTS;
-  private static ObjectMapper objectMapper = new DefaultObjectMapper();
+  private static ObjectMapper objectMapper = setupInjectablesInObjectMapper(new DefaultObjectMapper());
   private static TaskToolbox toolbox;
 
   @BeforeClass
@@ -182,6 +189,24 @@ public class CompactionTaskTest
     );
   }
 
+  private static ObjectMapper setupInjectablesInObjectMapper(ObjectMapper objectMapper)
+  {
+    final GuiceAnnotationIntrospector guiceIntrospector = new GuiceAnnotationIntrospector();
+    objectMapper.setAnnotationIntrospectors(
+        new AnnotationIntrospectorPair(
+            guiceIntrospector, objectMapper.getSerializationConfig().getAnnotationIntrospector()
+        ),
+        new AnnotationIntrospectorPair(
+            guiceIntrospector, objectMapper.getDeserializationConfig().getAnnotationIntrospector()
+        )
+    );
+    objectMapper.setInjectableValues(new GuiceInjectableValues(INJECTOR));
+    objectMapper.registerModule(
+        new SimpleModule().registerSubtypes(new NamedType(NumberedShardSpec.class, "NumberedShardSpec"))
+    );
+    return objectMapper;
+  }
+
   private static List<String> findDimensions(int startIndex, Interval segmentInterval)
   {
     final List<String> dimensions = new ArrayList<>();
@@ -225,6 +250,59 @@ public class CompactionTaskTest
   public ExpectedException expectedException = ExpectedException.none();
 
   @Test
+  public void testSerdeWithInterval() throws IOException
+  {
+    final CompactionTask task = new CompactionTask(
+        null,
+        null,
+        DATA_SOURCE,
+        COMPACTION_INTERVAL,
+        null,
+        null,
+        createTuningConfig(),
+        ImmutableMap.of("testKey", "testContext"),
+        INJECTOR,
+        objectMapper
+    );
+    final byte[] bytes = objectMapper.writeValueAsBytes(task);
+    final CompactionTask fromJson = objectMapper.readValue(bytes, CompactionTask.class);
+    Assert.assertEquals(task.getType(), fromJson.getType());
+    Assert.assertEquals(task.getDataSource(), fromJson.getDataSource());
+    Assert.assertEquals(task.getInterval(), fromJson.getInterval());
+    Assert.assertEquals(task.getSegments(), fromJson.getSegments());
+    Assert.assertEquals(task.getDimensionsSpec(), fromJson.getDimensionsSpec());
+    Assert.assertEquals(task.getTuningConfig(), fromJson.getTuningConfig());
+    Assert.assertEquals(task.getContext(), fromJson.getContext());
+    Assert.assertNull(fromJson.getSegmentProvider().getSegments());
+  }
+
+  @Test
+  public void testSerdeWithSegments() throws IOException
+  {
+    final CompactionTask task = new CompactionTask(
+        null,
+        null,
+        DATA_SOURCE,
+        null,
+        SEGMENTS,
+        null,
+        createTuningConfig(),
+        ImmutableMap.of("testKey", "testContext"),
+        INJECTOR,
+        objectMapper
+    );
+    final byte[] bytes = objectMapper.writeValueAsBytes(task);
+    final CompactionTask fromJson = objectMapper.readValue(bytes, CompactionTask.class);
+    Assert.assertEquals(task.getType(), fromJson.getType());
+    Assert.assertEquals(task.getDataSource(), fromJson.getDataSource());
+    Assert.assertEquals(task.getInterval(), fromJson.getInterval());
+    Assert.assertEquals(task.getSegments(), fromJson.getSegments());
+    Assert.assertEquals(task.getDimensionsSpec(), fromJson.getDimensionsSpec());
+    Assert.assertEquals(task.getTuningConfig(), fromJson.getTuningConfig());
+    Assert.assertEquals(task.getContext(), fromJson.getContext());
+  }
+
+  @Test
   public void testCreateIngestionSchema() throws IOException, SegmentLoadingException
   {
     final IndexIngestionSpec ingestionSchema = CompactionTask.createIngestionSchema(
@@ -232,7 +310,7 @@ public class CompactionTaskTest
         new SegmentProvider(DATA_SOURCE, COMPACTION_INTERVAL),
         null,
         TUNING_CONFIG,
-        GuiceInjectors.makeStartupInjector(),
+        INJECTOR,
         objectMapper
     );
     final DimensionsSpec expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
@@ -277,7 +355,7 @@ public class CompactionTaskTest
         new SegmentProvider(DATA_SOURCE, COMPACTION_INTERVAL),
         customSpec,
         TUNING_CONFIG,
-        GuiceInjectors.makeStartupInjector(),
+        INJECTOR,
         objectMapper
     );
 
@@ -292,7 +370,7 @@ public class CompactionTaskTest
         new SegmentProvider(SEGMENTS),
         null,
         TUNING_CONFIG,
-        GuiceInjectors.makeStartupInjector(),
+        INJECTOR,
         objectMapper
     );
     final DimensionsSpec expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
@@ -313,7 +391,7 @@ public class CompactionTaskTest
         new SegmentProvider(segments),
         null,
         TUNING_CONFIG,
-        GuiceInjectors.makeStartupInjector(),
+        INJECTOR,
         objectMapper
     );
   }
