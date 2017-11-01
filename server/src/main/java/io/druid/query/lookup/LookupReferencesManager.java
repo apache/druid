@@ -433,7 +433,8 @@ public class LookupReferencesManager
     // This check is only for backward compatibility and should be removed in a future release
     if (response.getContent().startsWith("[")) {
       LOG.info(
-          "Failed to retrieve lookup information from coordinator. " +
+          "Failed to retrieve lookup information from coordinator, " +
+          "because coordinator appears to be running on older Druid version. " +
           "Attempting to load lookups using snapshot instead"
       );
       return null;
@@ -494,6 +495,11 @@ public class LookupReferencesManager
           remainingLookups = failedLookups;
         }
       }
+      LOG.info(
+          "Failed to start the following lookups after [%d] attempts: [%s]",
+          lookupConfig.getLookupStartRetries(),
+          remainingLookups
+      );
       stateRef.set(new LookupUpdateState(builder.build(), ImmutableList.of(), ImmutableList.of()));
     }
     catch (InterruptedException | RuntimeException e) {
