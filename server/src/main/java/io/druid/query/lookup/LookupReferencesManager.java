@@ -35,6 +35,7 @@ import io.druid.concurrent.LifecycleLock;
 import io.druid.discovery.DruidLeaderClient;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Json;
+import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.RE;
 import io.druid.java.util.common.RetryUtils;
@@ -420,13 +421,11 @@ public class LookupReferencesManager
   {
     final FullResponseHolder response = fetchLookupsForTier(tier);
     if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-      LOG.error(
+      throw new IOE(
           "Error while fetching lookup code from Coordinator with status[%s] and content[%s]",
           response.getStatus(),
           response.getContent()
       );
-      // to trigger retry
-      throw new Exception();
     }
 
     // Older version of getSpecificTier returns a list of lookup names.
@@ -467,7 +466,7 @@ public class LookupReferencesManager
     return lookups;
   }
 
-  private void startLookups(List<LookupBean> lookupBeanList)
+  private void startLookups(final List<LookupBean> lookupBeanList)
   {
     ImmutableMap.Builder<String, LookupExtractorFactoryContainer> builder = ImmutableMap.builder();
     ExecutorService executorService = Execs.multiThreaded(
@@ -476,15 +475,15 @@ public class LookupReferencesManager
     );
     CompletionService<Map.Entry<String, LookupExtractorFactoryContainer>> completionService =
         new ExecutorCompletionService<>(executorService);
-    List<Future<?>> allFutures = new ArrayList<>();
     try {
       LOG.info("Starting lookup loading process");
+      List<LookupBean> remainingLookups = lookupBeanList;
       for (int i = 0; i < lookupConfig.getLookupStartRetries(); i++) {
-        LOG.info("Round of attempts #%d, [%d] lookups", i + 1, lookupBeanList.size());
+        LOG.info("Round of attempts #%d, [%d] lookups", i + 1, remainingLookups.size());
         Map<String, LookupExtractorFactoryContainer> successfulLookups =
-            startLookups(lookupBeanList, completionService, allFutures);
+            startLookups(remainingLookups, completionService);
         builder.putAll(successfulLookups);
-        List<LookupBean> failedLookups = lookupBeanList
+        List<LookupBean> failedLookups = remainingLookups
             .stream()
             .filter(l -> !successfulLookups.containsKey(l.getName()))
             .collect(Collectors.toList());
@@ -492,16 +491,13 @@ public class LookupReferencesManager
           break;
         } else {
           // next round
-          lookupBeanList = failedLookups;
+          remainingLookups = failedLookups;
         }
       }
       stateRef.set(new LookupUpdateState(builder.build(), ImmutableList.of(), ImmutableList.of()));
     }
-    catch (Exception e) {
+    catch (InterruptedException | RuntimeException e) {
       LOG.error(e, "Failed to finish lookup load process.");
-      for (Future future : allFutures) {
-        future.cancel(true);
-      }
     }
     finally {
       executorService.shutdownNow();
@@ -513,12 +509,11 @@ public class LookupReferencesManager
    */
   private Map<String, LookupExtractorFactoryContainer> startLookups(
       List<LookupBean> lookupBeans,
-      CompletionService<Map.Entry<String, LookupExtractorFactoryContainer>> completionService,
-      List<Future<?>> allFutures
+      CompletionService<Map.Entry<String, LookupExtractorFactoryContainer>> completionService
   ) throws InterruptedException
   {
     for (LookupBean lookupBean : lookupBeans) {
-      allFutures.add(completionService.submit(() -> startLookup(lookupBean)));
+      completionService.submit(() -> startLookup(lookupBean));
     }
     Map<String, LookupExtractorFactoryContainer> successfulLookups = new HashMap<>();
     for (int i = 0; i < lookupBeans.size(); i++) {
@@ -551,7 +546,7 @@ public class LookupReferencesManager
         return null;
       }
     }
-    catch (Exception e) {
+    catch (RuntimeException e) {
       throw new RE(e, "Failed to start lookup [%s]:[%s]", lookupBean.getName(), container);
     }
   }
