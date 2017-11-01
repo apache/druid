@@ -34,7 +34,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.common.guava.ThreadRenamingRunnable;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.Rows;
@@ -42,6 +41,7 @@ import io.druid.indexer.hadoop.SegmentInputRow;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.BaseProgressIndicator;
@@ -63,6 +63,7 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.InvalidJobConfException;
+import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.Partitioner;
@@ -134,17 +135,24 @@ public class IndexGeneratorJob implements Jobby
   }
 
   private final HadoopDruidIndexerConfig config;
+  private IndexGeneratorStats jobStats;
 
   public IndexGeneratorJob(
       HadoopDruidIndexerConfig config
   )
   {
     this.config = config;
+    this.jobStats = new IndexGeneratorStats();
   }
 
   protected void setReducerClass(final Job job)
   {
     job.setReducerClass(IndexGeneratorReducer.class);
+  }
+
+  public IndexGeneratorStats getJobStats()
+  {
+    return jobStats;
   }
 
   @Override
@@ -200,7 +208,13 @@ public class IndexGeneratorJob implements Jobby
       job.submit();
       log.info("Job %s submitted, status available at %s", job.getJobName(), job.getTrackingURL());
 
-      return job.waitForCompletion(true);
+      boolean success = job.waitForCompletion(true);
+
+      Counter invalidRowCount = job.getCounters()
+                                   .findCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER);
+      jobStats.setInvalidRowCount(invalidRowCount.getValue());
+
+      return success;
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -772,6 +786,22 @@ public class IndexGeneratorJob implements Jobby
       if (outDir == null) {
         throw new InvalidJobConfException("Output directory not set.");
       }
+    }
+  }
+
+  public static class IndexGeneratorStats
+  {
+    private long invalidRowCount = 0;
+
+    @SuppressWarnings("unused") // Unused now, but useful in theory, probably needs to be exposed to users.
+    public long getInvalidRowCount()
+    {
+      return invalidRowCount;
+    }
+
+    public void setInvalidRowCount(long invalidRowCount)
+    {
+      this.invalidRowCount = invalidRowCount;
     }
   }
 }
