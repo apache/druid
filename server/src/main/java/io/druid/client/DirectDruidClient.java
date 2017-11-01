@@ -691,7 +691,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     }
   }
 
-  private class BufferedStream
+  private static class BufferedStream
   {
     private final InputStream inputStream;
     private final long bytes;
