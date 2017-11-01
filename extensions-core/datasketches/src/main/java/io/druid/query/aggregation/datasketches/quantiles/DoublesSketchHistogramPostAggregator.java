@@ -29,6 +29,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.cache.CacheKeyBuilder;
 
@@ -36,8 +37,6 @@ import com.yahoo.sketches.quantiles.DoublesSketch;
 
 public class DoublesSketchHistogramPostAggregator implements PostAggregator
 {
-
-  private static final byte CACHE_KEY = 112;
 
   private final String name;
   private final PostAggregator field;
@@ -144,7 +143,8 @@ public class DoublesSketchHistogramPostAggregator implements PostAggregator
   @Override
   public byte[] getCacheKey()
   {
-    final CacheKeyBuilder builder = new CacheKeyBuilder(CACHE_KEY).appendCacheable(field);
+    final CacheKeyBuilder builder = new CacheKeyBuilder(
+        AggregatorUtil.QUANTILES_DOUBLES_SKETCH_TO_HISTOGRAM_CACHE_TYPE_ID).appendCacheable(field);
     for (final double value: splitPoints) {
       builder.appendDouble(value);
     }

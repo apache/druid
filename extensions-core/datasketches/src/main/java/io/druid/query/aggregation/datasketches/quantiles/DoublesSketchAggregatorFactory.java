@@ -29,6 +29,7 @@ import com.yahoo.sketches.quantiles.DoublesUnion;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
+import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.segment.ColumnSelectorFactory;
@@ -43,7 +44,6 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
 {
 
   private static final int DEFAULT_K = 128;
-  private static final byte CACHE_TYPE_ID = 110;
 
   // Used for sketch size estimation.
   private static final long MAX_STREAM_LENGTH = 1_000_000_000;
@@ -59,7 +59,7 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
       @JsonProperty("fieldName") final String fieldName,
       @JsonProperty("k") final Integer k)
   {
-    this(name, fieldName, k, CACHE_TYPE_ID);
+    this(name, fieldName, k, AggregatorUtil.QUANTILES_DOUBLES_SKETCH_BUILD_CACHE_TYPE_ID);
   }
 
   DoublesSketchAggregatorFactory(final String name, final String fieldName, final Integer k, final byte cacheTypeId)

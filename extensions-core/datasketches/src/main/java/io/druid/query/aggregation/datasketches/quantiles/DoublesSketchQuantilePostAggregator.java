@@ -29,6 +29,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
 
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.cache.CacheKeyBuilder;
 
@@ -36,8 +37,6 @@ import com.yahoo.sketches.quantiles.DoublesSketch;
 
 public class DoublesSketchQuantilePostAggregator implements PostAggregator
 {
-
-  private static final byte CACHE_KEY = 113;
 
   private final String name;
   private final PostAggregator field;
@@ -137,7 +136,8 @@ public class DoublesSketchQuantilePostAggregator implements PostAggregator
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(CACHE_KEY).appendCacheable(field).appendDouble(fraction).build();
+    return new CacheKeyBuilder(AggregatorUtil.QUANTILES_DOUBLES_SKETCH_TO_QUANTILE_CACHE_TYPE_ID)
+        .appendCacheable(field).appendDouble(fraction).build();
   }
 
   @Override

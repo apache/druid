@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.yahoo.sketches.quantiles.DoublesSketch;
 import io.druid.query.aggregation.Aggregator;
+import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
@@ -30,14 +31,12 @@ import io.druid.segment.ColumnValueSelector;
 public class CombiningDoublesSketchAggregatorFactory extends DoublesSketchAggregatorFactory
 {
 
-  private static final byte CACHE_TYPE_ID = 111;
-
   @JsonCreator
   public CombiningDoublesSketchAggregatorFactory(
       @JsonProperty("name") final String name,
       @JsonProperty("k") final Integer k)
   {
-    super(name, name, k, CACHE_TYPE_ID);
+    super(name, name, k, AggregatorUtil.QUANTILES_DOUBLES_SKETCH_MERGE_CACHE_TYPE_ID);
   }
 
   @Override
