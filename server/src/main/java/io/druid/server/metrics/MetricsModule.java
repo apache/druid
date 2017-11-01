@@ -34,14 +34,13 @@ import com.metamx.metrics.JvmMonitor;
 import com.metamx.metrics.Monitor;
 import com.metamx.metrics.MonitorScheduler;
 import com.metamx.metrics.SysMonitor;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.guice.DruidBinders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.ExecutorServiceMonitor;
-import io.druid.server.emitter.EmitterMonitorProvider;
 
 import java.util.List;
 import java.util.Set;
@@ -85,10 +84,6 @@ public class MetricsModule implements Module
       MonitorsConfig monitorsConfig,
       Set<Class<? extends Monitor>> monitorSet,
       ServiceEmitter emitter,
-      // emitterMonitorProvider is guaranteed to be initialized, because ServiceEmitter is injected as the previous
-      // parameter, which depends on Emitter (e. g. HttpPostEmitter or ParametrizedUriEmitter), which initialize
-      // EmitterMonitorProvider in their @Provider methods.
-      EmitterMonitorProvider emitterMonitorProvider,
       Injector injector
   )
   {
@@ -100,10 +95,6 @@ public class MetricsModule implements Module
       log.info("Adding monitor[%s]", monitor);
 
       monitors.add(monitor);
-    }
-    Monitor emitterMonitor = emitterMonitorProvider.getEmitterMonitor();
-    if (emitterMonitor != null) {
-      monitors.add(emitterMonitor);
     }
 
     return new MonitorScheduler(

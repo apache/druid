@@ -28,8 +28,6 @@ import com.google.inject.name.Named;
 import com.metamx.emitter.core.Emitter;
 import com.metamx.emitter.core.ParametrizedUriEmitter;
 import com.metamx.emitter.core.ParametrizedUriEmitterConfig;
-import com.metamx.metrics.FeedDefiningMonitor;
-import com.metamx.metrics.ParametrizedUriEmitterMonitor;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.ManageLifecycle;
 import io.druid.java.util.common.lifecycle.Lifecycle;
@@ -58,8 +56,7 @@ public class ParametrizedUriEmitterModule implements Module
       Supplier<ParametrizedUriEmitterConfig> config,
       @Nullable SSLContext sslContext,
       Lifecycle lifecycle,
-      ObjectMapper jsonMapper,
-      EmitterMonitorProvider emitterMonitorProvider
+      ObjectMapper jsonMapper
   )
   {
     final DefaultAsyncHttpClientConfig.Builder builder = new DefaultAsyncHttpClientConfig.Builder();
@@ -69,13 +66,6 @@ public class ParametrizedUriEmitterModule implements Module
     final AsyncHttpClient client = new DefaultAsyncHttpClient(builder.build());
     lifecycle.addCloseableInstance(client);
 
-    final ParametrizedUriEmitter emitter = new ParametrizedUriEmitter(config.get(), client, jsonMapper);
-
-    final ParametrizedUriEmitterMonitor emitterMonitor = new ParametrizedUriEmitterMonitor(
-        FeedDefiningMonitor.DEFAULT_METRICS_FEED,
-        emitter
-    );
-    emitterMonitorProvider.setEmitterMonitor(emitterMonitor);
-    return emitter;
+    return new ParametrizedUriEmitter(config.get(), client, jsonMapper);
   }
 }
