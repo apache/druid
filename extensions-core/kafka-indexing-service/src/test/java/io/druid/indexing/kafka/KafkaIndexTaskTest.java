@@ -62,6 +62,7 @@ import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
+import io.druid.indexing.kafka.supervisor.KafkaSupervisor;
 import io.druid.indexing.kafka.test.TestBroker;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.MetadataTaskStorage;
@@ -142,6 +143,8 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
@@ -157,6 +160,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+@RunWith(Parameterized.class)
 public class KafkaIndexTaskTest
 {
   private static final Logger log = new Logger(KafkaIndexTaskTest.class);
@@ -182,6 +186,18 @@ public class KafkaIndexTaskTest
   private File directory;
   private String topic;
   private List<ProducerRecord<byte[], byte[]>> records;
+  private final boolean isIncrementalHandoffSupported;
+
+  @Parameterized.Parameters(name = "isIncrementalHandoffSupported = {0}")
+  public static Iterable<Object[]> constructorFeeder()
+  {
+    return ImmutableList.of(new Object[]{true}, new Object[]{false});
+  }
+
+  public KafkaIndexTaskTest(boolean isIncrementalHandoffSupported)
+  {
+    this.isIncrementalHandoffSupported = isIncrementalHandoffSupported;
+  }
 
   private static final DataSchema DATA_SCHEMA = new DataSchema(
       "test_ds",
@@ -706,7 +722,10 @@ public class KafkaIndexTaskTest
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for task to exit
-    Assert.assertEquals(TaskStatus.Status.SUCCESS, future.get().getStatusCode());
+    Assert.assertEquals(
+        isIncrementalHandoffSupported ? TaskStatus.Status.SUCCESS : TaskStatus.Status.FAILED,
+        future.get().getStatusCode()
+    );
 
     // Check metrics
     Assert.assertEquals(3, task.getFireDepartmentMetrics().processed());
@@ -1027,7 +1046,7 @@ public class KafkaIndexTaskTest
     // Check published segments & metadata
     SegmentDescriptor desc1 = SD(task, "2010/P1D", 0);
     SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
-    SegmentDescriptor desc3 = SD(task, "2011/P1D", 0);
+    SegmentDescriptor desc3 = SD(task, "2011/P1D", isIncrementalHandoffSupported ? 0 : 1);
     SegmentDescriptor desc4 = SD(task, "2012/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4), publishedDescriptors());
     Assert.assertEquals(
@@ -1041,7 +1060,9 @@ public class KafkaIndexTaskTest
 
     // Check desc2/desc3 without strong ordering because two partitions are interleaved nondeterministically
     Assert.assertEquals(
-        ImmutableSet.of(ImmutableList.of("d", "e"), ImmutableList.of("h")),
+        isIncrementalHandoffSupported
+        ? ImmutableSet.of(ImmutableList.of("d", "e", "h"))
+        : ImmutableSet.of(ImmutableList.of("d", "e"), ImmutableList.of("h")),
         ImmutableSet.of(readSegmentColumn("dim1", desc2), readSegmentColumn("dim1", desc3))
     );
   }
@@ -1531,13 +1552,16 @@ public class KafkaIndexTaskTest
         handoffConditionTimeout,
         resetOffsetAutomatically
     );
+    final Map<String, Object> context = isIncrementalHandoffSupported
+                                        ? ImmutableMap.of(KafkaSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED, true)
+                                        : null;
     final KafkaIndexTask task = new KafkaIndexTask(
         taskId,
         null,
         cloneDataSchema(dataSchema),
         tuningConfig,
         ioConfig,
-        null,
+        context,
         null,
         null
     );

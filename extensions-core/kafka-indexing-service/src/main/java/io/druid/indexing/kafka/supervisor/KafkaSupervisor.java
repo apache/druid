@@ -130,6 +130,8 @@ public class KafkaSupervisor implements Supervisor
   private static final long INITIAL_EMIT_LAG_METRIC_DELAY_MILLIS = 25000;
   private static final CopyOnWriteArrayList EMPTY_LIST = Lists.newCopyOnWriteArrayList();
 
+  public static final String IS_INCREMENTAL_HANDOFF_SUPPORTED = "IS_INCREMENTAL_HANDOFF_SUPPORTED";
+
   // Internal data structures
   // --------------------------------------------------------
 
@@ -999,7 +1001,7 @@ public class KafkaSupervisor implements Supervisor
                     {
                       try {
                         log.debug("Task [%s], status [%s]", taskId, status);
-                        if (status == KafkaIndexTask.Status.FINISHING) {
+                        if (status == KafkaIndexTask.Status.PUBLISHING) {
                           kafkaTask.getIOConfig().getStartPartitions().getPartitionOffsetMap().keySet().forEach(
                               partition -> addDiscoveredTaskToPendingCompletionTaskGroups(
                                   getTaskGroupIdForPartition(partition),
@@ -1770,9 +1772,10 @@ public class KafkaSupervisor implements Supervisor
     {
     }).writeValueAsString(taskGroups.get(groupId).sequenceOffsets);
     final Map<String, Object> context = spec.getContext() == null
-                                        ? ImmutableMap.of("checkpoints", checkpoints)
+                                        ? ImmutableMap.of("checkpoints", checkpoints, IS_INCREMENTAL_HANDOFF_SUPPORTED, true)
                                         : ImmutableMap.<String, Object>builder()
                                             .put("checkpoints", checkpoints)
+                                            .put(IS_INCREMENTAL_HANDOFF_SUPPORTED, true)
                                             .putAll(spec.getContext())
                                             .build();
     for (int i = 0; i < replicas; i++) {
