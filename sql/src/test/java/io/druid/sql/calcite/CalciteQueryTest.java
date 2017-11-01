@@ -934,6 +934,27 @@ public class CalciteQueryTest
   }
 
   @Test
+  public void testHavingOnGrandTotal() throws Exception
+  {
+    testQuery(
+        "SELECT SUM(m1) AS m1_sum FROM foo HAVING SUM(m1) = 21",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(AGGS(new DoubleSumAggregatorFactory("a0", "m1")))
+                        .setHavingSpec(new DimFilterHavingSpec(NUMERIC_SELECTOR("a0", "21", null)))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{21d}
+        )
+    );
+  }
+
+  @Test
   public void testHavingOnDoubleSum() throws Exception
   {
     testQuery(
