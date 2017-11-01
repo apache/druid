@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.segment.indexing;
+package io.druid.segment.transform;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -26,10 +26,12 @@ import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.java.util.common.ISE;
 import io.druid.query.filter.DimFilter;
+import io.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -111,9 +113,22 @@ public class TransformSpec
     }
   }
 
+  /**
+   * Create a {@link Transformer} from this TransformSpec, when the rows to be transformed do not have a known
+   * signature.
+   */
   public Transformer toTransformer()
   {
-    return new Transformer(this);
+    return new Transformer(this, null);
+  }
+
+  /**
+   * Create a {@link Transformer} from this TransformSpec, taking advantage of the known signature of the rows
+   * to be transformed.
+   */
+  public Transformer toTransformer(@Nullable final Map<String, ValueType> rowSignature)
+  {
+    return new Transformer(this, rowSignature);
   }
 
   @Override
