@@ -43,6 +43,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
+ * This class is deprecated. Use {@link io.druid.client.HttpServerInventoryView} for segment discovery.
+ *
  * An InventoryManager watches updates to inventory on Zookeeper (or some other discovery-like service publishing
  * system).  It is built up on two object types: containers and inventory objects.
  * <p/>
@@ -52,6 +54,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * A Strategy is provided to the constructor of an Inventory manager, this strategy provides all of the
  * object-specific logic to serialize, deserialize, compose and alter the container and inventory objects.
  */
+@Deprecated
 public class CuratorInventoryManager<ContainerClass, InventoryClass>
 {
   private static final Logger log = new Logger(CuratorInventoryManager.class);

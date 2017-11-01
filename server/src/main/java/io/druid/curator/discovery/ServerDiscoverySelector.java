@@ -36,7 +36,9 @@ import java.util.Collection;
 import java.util.Collections;
 
 /**
+ * Use {@link io.druid.discovery.DruidNodeDiscovery} for discovery.
  */
+@Deprecated
 public class ServerDiscoverySelector implements DiscoverySelector<Server>
 {
   private static final Logger log = new Logger(ServerDiscoverySelector.class);
