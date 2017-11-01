@@ -300,15 +300,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         return Sequences
             .simple(sequencesByInterval)
             .flatMerge(seq -> seq, query.getResultOrdering());
-      }).map(r -> {
-        final Function<T, Object> cacheFn = strategy.prepareForCache();
-        final CachePopulator resultCachePopulator =
-            getResultCachePopulator(queryResultKey);
-        if (resultCachePopulator != null) {
-          resultCachePopulator.cacheFutures.add(backgroundExecutorService.submit(() -> cacheFn.apply(r)));
-        }
-        return r;
-      }), new SequenceWrapper()
+      }).map(r -> cacheResultEntry(r, queryResultKey)), new SequenceWrapper()
       {
         @Override
         public void after(boolean isDone, Throwable thrown) throws Exception
@@ -320,6 +312,17 @@ public class CachingClusteredClient implements QuerySegmentWalker
           }
         }
       });
+    }
+
+    private T cacheResultEntry(T result, String queryResultKey)
+    {
+      final Function<T, Object> cacheFn = strategy.prepareForCache();
+      final CachePopulator resultCachePopulator =
+          getResultCachePopulator(queryResultKey);
+      if (resultCachePopulator != null) {
+        resultCachePopulator.cacheFutures.add(backgroundExecutorService.submit(() -> cacheFn.apply(result)));
+      }
+      return result;
     }
 
     private Set<ServerToSegment> computeSegmentsToQuery(TimelineLookup<String, ServerSelector> timeline)
@@ -645,32 +648,21 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
       final Function<Object, T> pullFromCacheFunction = strategy.pullFromCache();
       final TypeReference<Object> cacheObjectClazz = strategy.getCacheObjectClazz();
-      Sequence<Object> cachedSequence = new BaseSequence<>(
-          new BaseSequence.IteratorMaker<Object, Iterator<Object>>()
-          {
-            @Override
-            public Iterator<Object> make()
-            {
-              try {
-                if (cachedResult.length == 0) {
-                  return Iterators.emptyIterator();
-                }
-
-                return objectMapper.readValues(
-                    objectMapper.getFactory().createParser(cachedResult),
-                    cacheObjectClazz
-                );
-              }
-              catch (IOException e) {
-                throw new RuntimeException(e);
-              }
-            }
-
-            @Override
-            public void cleanup(Iterator<Object> iterFromMake)
-            {
-            }
+      Sequence<Object> cachedSequence = Sequences.simple(() -> {
+        try {
+          if (cachedResult.length == 0) {
+            return Iterators.emptyIterator();
           }
+
+          return objectMapper.readValues(
+              objectMapper.getFactory().createParser(cachedResult),
+              cacheObjectClazz
+          );
+        }
+        catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
       );
       return Sequences.map(cachedSequence, pullFromCacheFunction);
     }
