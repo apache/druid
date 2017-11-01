@@ -47,7 +47,7 @@ import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
-import io.druid.segment.indexing.TransformSpec;
+import io.druid.segment.transform.TransformSpec;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;

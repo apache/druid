@@ -109,6 +109,11 @@ You can optionally only configure caching to be enabled on the broker by setting
 
 See [cache configuration](caching.html) for how to configure cache settings.
 
+### Segment Discovery
+|Property|Possible Values|Description|Default|
+|--------|---------------|-----------|-------|
+|`druid.announcer.type`|batch or http|Segment discovery method to use. "http" enables discovering segments using HTTP instead of zookeeper.|batch|
+
 ### Others
 
 |Property|Possible Values|Description|Default|

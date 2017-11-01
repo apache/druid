@@ -20,7 +20,9 @@
 package io.druid.server.coordination;
 
 /**
+ * Use announcement made by {@link io.druid.discovery.DruidNodeAnnouncer}
  */
+@Deprecated
 public interface DataSegmentServerAnnouncer
 {
   void announce();

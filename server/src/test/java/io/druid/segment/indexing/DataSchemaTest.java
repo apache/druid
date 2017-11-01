@@ -41,6 +41,8 @@ import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.TestHelper;
 import io.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
+import io.druid.segment.transform.ExpressionTransform;
+import io.druid.segment.transform.TransformSpec;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Rule;

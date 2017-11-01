@@ -214,6 +214,7 @@ class LookupListeningResource extends ListenerResource
   }
 }
 
+@Deprecated
 class LookupResourceListenerAnnouncer extends ListenerResourceAnnouncer
 {
   @Inject

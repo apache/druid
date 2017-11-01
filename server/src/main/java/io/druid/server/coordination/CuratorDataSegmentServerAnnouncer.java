@@ -29,7 +29,9 @@ import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.utils.ZKPaths;
 
 /**
+ * {@link DataSegmentServerAnnouncer} is deprecated.
  */
+@Deprecated
 public class CuratorDataSegmentServerAnnouncer implements DataSegmentServerAnnouncer
 {
   private static final Logger log = new Logger(CuratorDataSegmentServerAnnouncer.class);
