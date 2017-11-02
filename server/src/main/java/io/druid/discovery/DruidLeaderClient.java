@@ -233,14 +233,23 @@ public class DruidLeaderClient
     }
 
     if (responseHolder.getStatus().getCode() == 200) {
-      return responseHolder.getContent();
-    } else {
-      throw new ISE(
-          "Couldn't find leader, failed response status is [%s] and content [%s].",
-          responseHolder.getStatus().getCode(),
-          responseHolder.getContent()
-      );
+      String leaderUrl = responseHolder.getContent();
+
+      //verify this is valid url
+      try {
+        new URL(leaderUrl);
+        currentKnownLeader.set(leaderUrl);
+        return leaderUrl;
+      }
+      catch (MalformedURLException ex) {
+      }
     }
+
+    throw new ISE(
+        "Couldn't find leader, failed response status is [%s] and content [%s].",
+        responseHolder.getStatus().getCode(),
+        responseHolder.getContent()
+    );
   }
 
   private String getCurrentKnownLeader(final boolean cached) throws IOException
