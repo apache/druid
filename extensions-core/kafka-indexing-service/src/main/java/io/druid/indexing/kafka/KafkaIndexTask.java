@@ -965,12 +965,9 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
   private Appenderator newAppenderator(FireDepartmentMetrics metrics, TaskToolbox toolbox)
   {
-    final int maxRowsInMemoryPerPartition = (tuningConfig.getMaxRowsInMemory() /
-                                             ioConfig.getStartPartitions().getPartitionOffsetMap().size());
     return Appenderators.createRealtime(
         dataSchema,
-        tuningConfig.withBasePersistDirectory(toolbox.getPersistDir())
-                    .withMaxRowsInMemory(maxRowsInMemoryPerPartition),
+        tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
         metrics,
         toolbox.getSegmentPusher(),
         toolbox.getObjectMapper(),
