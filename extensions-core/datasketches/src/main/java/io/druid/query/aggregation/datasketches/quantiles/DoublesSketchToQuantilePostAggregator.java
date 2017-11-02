@@ -19,7 +19,6 @@
 
 package io.druid.query.aggregation.datasketches.quantiles;
 
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
@@ -27,6 +26,7 @@ import java.util.Set;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Doubles;
 
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
@@ -35,22 +35,22 @@ import io.druid.query.cache.CacheKeyBuilder;
 
 import com.yahoo.sketches.quantiles.DoublesSketch;
 
-public class DoublesSketchQuantilesPostAggregator implements PostAggregator
+public class DoublesSketchToQuantilePostAggregator implements PostAggregator
 {
 
   private final String name;
   private final PostAggregator field;
-  private final double[] fractions;
+  private final double fraction;
 
   @JsonCreator
-  public DoublesSketchQuantilesPostAggregator(
+  public DoublesSketchToQuantilePostAggregator(
       @JsonProperty("name") final String name,
       @JsonProperty("field") final PostAggregator field,
-      @JsonProperty("fractions") final double[] fractions)
+      @JsonProperty("fraction") final double fraction)
   {
     this.name = Preconditions.checkNotNull(name, "name is null");
     this.field = Preconditions.checkNotNull(field, "field is null");
-    this.fractions = Preconditions.checkNotNull(fractions, "array of fractions is null");
+    this.fraction = fraction;
   }
 
   @Override
@@ -67,29 +67,27 @@ public class DoublesSketchQuantilesPostAggregator implements PostAggregator
   }
 
   @JsonProperty
-  public double[] getFractions()
+  public double getFraction()
   {
-    return fractions;
+    return fraction;
   }
 
   @Override
   public Object compute(final Map<String, Object> combinedAggregators)
   {
     final DoublesSketch sketch = (DoublesSketch) field.compute(combinedAggregators);
-    return sketch.getQuantiles(fractions);
+    return sketch.getQuantile(fraction);
   }
 
-  // comparing arrays of quantiles doesn't make much sense, so this comparator
-  // pretends everything is equal
   @Override
-  public Comparator<double[]> getComparator()
+  public Comparator<Double> getComparator()
   {
-    return new Comparator<double[]>()
+    return new Comparator<Double>()
     {
       @Override
-      public int compare(double[] o1, double[] o2)
+      public int compare(Double a, Double b)
       {
-        return 0;
+        return Doubles.compare(a, b);
       }
     };
   }
@@ -106,7 +104,7 @@ public class DoublesSketchQuantilesPostAggregator implements PostAggregator
     return getClass().getSimpleName() + "{" +
         "name='" + name + '\'' +
         ", field=" + field +
-        ", fractions=" + Arrays.toString(fractions) +
+        ", fraction=" + fraction +
         "}";
   }
 
@@ -119,11 +117,11 @@ public class DoublesSketchQuantilesPostAggregator implements PostAggregator
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final DoublesSketchQuantilesPostAggregator that = (DoublesSketchQuantilesPostAggregator) o;
+    final DoublesSketchToQuantilePostAggregator that = (DoublesSketchToQuantilePostAggregator) o;
     if (!name.equals(that.name)) {
       return false;
     }
-    if (!Arrays.equals(fractions, that.fractions)) {
+    if (fraction != that.fraction) {
       return false;
     }
     return field.equals(that.field);
@@ -132,18 +130,14 @@ public class DoublesSketchQuantilesPostAggregator implements PostAggregator
   @Override
   public int hashCode()
   {
-    return (name.hashCode() * 31 + field.hashCode()) * 31 + Arrays.hashCode(fractions);
+    return (name.hashCode() * 31 + field.hashCode()) * 31 + Double.hashCode(fraction);
   }
 
   @Override
   public byte[] getCacheKey()
   {
-    final CacheKeyBuilder builder = new CacheKeyBuilder(
-        AggregatorUtil.QUANTILES_DOUBLES_SKETCH_TO_QUANTILES_CACHE_TYPE_ID).appendCacheable(field);
-    for (final double value: fractions) {
-      builder.appendDouble(value);
-    }
-    return builder.build();
+    return new CacheKeyBuilder(AggregatorUtil.QUANTILES_DOUBLES_SKETCH_TO_QUANTILE_CACHE_TYPE_ID)
+        .appendCacheable(field).appendDouble(fraction).build();
   }
 
   @Override

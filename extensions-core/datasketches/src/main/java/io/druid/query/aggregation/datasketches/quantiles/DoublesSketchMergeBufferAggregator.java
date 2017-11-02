@@ -32,7 +32,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import java.nio.ByteBuffer;
 import java.util.IdentityHashMap;
 
-public class DoublesSketchBufferAggregator implements BufferAggregator
+public class DoublesSketchMergeBufferAggregator implements BufferAggregator
 {
 
   private final ColumnValueSelector<DoublesSketch> selector;
@@ -41,7 +41,7 @@ public class DoublesSketchBufferAggregator implements BufferAggregator
   private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
   private final IdentityHashMap<ByteBuffer, Int2ObjectMap<DoublesUnion>> unions = new IdentityHashMap<>();
 
-  public DoublesSketchBufferAggregator(
+  public DoublesSketchMergeBufferAggregator(
       final ColumnValueSelector<DoublesSketch> selector,
       final int k,
       final int maxIntermediateSize)

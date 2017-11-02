@@ -55,9 +55,9 @@ public class DoublesSketchModule implements DruidModule
     return Arrays.<Module> asList(
         new SimpleModule("DoublesQuantilesSketchModule").registerSubtypes(
             new NamedType(DoublesSketchAggregatorFactory.class, DOUBLES_SKETCH),
-            new NamedType(DoublesSketchHistogramPostAggregator.class, DOUBLES_SKETCH_HISTOGRAM_POST_AGG),
-            new NamedType(DoublesSketchQuantilePostAggregator.class, DOUBLES_SKETCH_QUANTILE_POST_AGG),
-            new NamedType(DoublesSketchQuantilesPostAggregator.class, DOUBLES_SKETCH_QUANTILES_POST_AGG),
+            new NamedType(DoublesSketchToHistogramPostAggregator.class, DOUBLES_SKETCH_HISTOGRAM_POST_AGG),
+            new NamedType(DoublesSketchToQuantilePostAggregator.class, DOUBLES_SKETCH_QUANTILE_POST_AGG),
+            new NamedType(DoublesSketchToQuantilesPostAggregator.class, DOUBLES_SKETCH_QUANTILES_POST_AGG),
             new NamedType(DoublesSketchToStringPostAggregator.class, DOUBLES_SKETCH_TO_STRING_POST_AGG))
             .addSerializer(DoublesSketch.class, new DoublesSketchJsonSerializer()));
   }

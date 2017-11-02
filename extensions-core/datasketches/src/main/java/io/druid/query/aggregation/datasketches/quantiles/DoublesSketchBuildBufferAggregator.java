@@ -31,7 +31,7 @@ import io.druid.segment.ColumnValueSelector;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
-public class DoublesSketchDoubleBufferAggregator implements BufferAggregator
+public class DoublesSketchBuildBufferAggregator implements BufferAggregator
 {
 
   private final ColumnValueSelector<Double> selector;
@@ -41,7 +41,7 @@ public class DoublesSketchDoubleBufferAggregator implements BufferAggregator
   private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
   private final IdentityHashMap<ByteBuffer, Int2ObjectMap<UpdateDoublesSketch>> sketches = new IdentityHashMap<>();
 
-  public DoublesSketchDoubleBufferAggregator(final ColumnValueSelector<Double> valueSelector, final int size,
+  public DoublesSketchBuildBufferAggregator(final ColumnValueSelector<Double> valueSelector, final int size,
       final int maxIntermediateSize)
   {
     this.selector = valueSelector;

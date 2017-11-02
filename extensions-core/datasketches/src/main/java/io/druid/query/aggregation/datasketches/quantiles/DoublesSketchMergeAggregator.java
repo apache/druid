@@ -19,50 +19,62 @@
 
 package io.druid.query.aggregation.datasketches.quantiles;
 
-import java.nio.ByteBuffer;
+import com.yahoo.sketches.quantiles.DoublesSketch;
+import com.yahoo.sketches.quantiles.DoublesUnion;
 
-import io.druid.query.aggregation.BufferAggregator;
-import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.query.aggregation.Aggregator;
+import io.druid.segment.ColumnValueSelector;
 
-public class EmptyDoublesSketchBufferAggregator implements BufferAggregator
+public class DoublesSketchMergeAggregator implements Aggregator
 {
 
-  @Override
-  public void init(final ByteBuffer buf, final int position)
+  private final ColumnValueSelector<DoublesSketch> selector;
+  private DoublesUnion union;
+
+  public DoublesSketchMergeAggregator(final ColumnValueSelector<DoublesSketch> selector, final int k)
   {
+    this.selector = selector;
+    union = DoublesUnion.builder().setMaxK(k).build();
   }
 
   @Override
-  public void aggregate(final ByteBuffer buf, final int position)
+  public synchronized void aggregate()
   {
+    final DoublesSketch sketch = selector.getObject();
+    if (sketch == null) {
+      return;
+    }
+    union.update(sketch);
   }
 
   @Override
-  public Object get(final ByteBuffer buf, final int position)
+  public synchronized Object get()
   {
-    return DoublesSketchOperations.EMPTY_SKETCH;
+    return union.getResult();
   }
 
   @Override
-  public float getFloat(final ByteBuffer buf, final int position)
+  public float getFloat()
   {
     throw new UnsupportedOperationException("Not implemented");
   }
 
   @Override
-  public long getLong(final ByteBuffer buf, final int position)
+  public long getLong()
   {
     throw new UnsupportedOperationException("Not implemented");
   }
 
   @Override
-  public void close()
+  public synchronized void reset()
   {
+    union.reset();
   }
 
   @Override
-  public void inspectRuntimeShape(final RuntimeShapeInspector inspector)
+  public synchronized void close()
   {
+    union = null;
   }
 
 }

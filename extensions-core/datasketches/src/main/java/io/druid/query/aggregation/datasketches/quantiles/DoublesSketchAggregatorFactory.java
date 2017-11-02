@@ -84,15 +84,15 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
         && ValueType.isNumeric(metricFactory.getColumnCapabilities(fieldName).getType())) {
       final ColumnValueSelector<Double> valueSelector = metricFactory.makeColumnValueSelector(fieldName);
       if (valueSelector == null) {
-        return new EmptyDoublesSketchAggregator();
+        return new DoublesSketchNoOpAggregator();
       }
-      return new DoublesSketchDoubleAggregator(valueSelector, k);
+      return new DoublesSketchBuildAggregator(valueSelector, k);
     }
     final ColumnValueSelector<DoublesSketch> selector = metricFactory.makeColumnValueSelector(fieldName);
     if (selector == null) {
-      return new EmptyDoublesSketchAggregator();
+      return new DoublesSketchNoOpAggregator();
     }
-    return new DoublesSketchAggregator(selector, k);
+    return new DoublesSketchMergeAggregator(selector, k);
   }
 
   @Override
@@ -104,17 +104,17 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
     }
     final ColumnValueSelector<DoublesSketch> selector = metricFactory.makeColumnValueSelector(fieldName);
     if (selector == null) {
-      return new EmptyDoublesSketchBufferAggregator();
+      return new DoublesSketchNoOpBufferAggregator();
     }
-    return new DoublesSketchBufferAggregator(selector, k, getMaxIntermediateSize());
+    return new DoublesSketchMergeBufferAggregator(selector, k, getMaxIntermediateSize());
   }
 
   private BufferAggregator getDoubleBufferAggregator(final ColumnValueSelector<Double> selector)
   {
     if (selector == null) {
-      return new EmptyDoublesSketchBufferAggregator();
+      return new DoublesSketchNoOpBufferAggregator();
     }
-    return new DoublesSketchDoubleBufferAggregator(selector, k, getMaxIntermediateSize());
+    return new DoublesSketchBuildBufferAggregator(selector, k, getMaxIntermediateSize());
   }
 
   @Override
@@ -191,14 +191,14 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new CombiningDoublesSketchAggregatorFactory(name, k);
+    return new DoublesSketchMergeAggregatorFactory(name, k);
   }
 
   @Override
   public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
   {
     if (other.getName().equals(this.getName()) && other instanceof DoublesSketchAggregatorFactory) {
-      return new CombiningDoublesSketchAggregatorFactory(name, k);
+      return new DoublesSketchMergeAggregatorFactory(name, k);
     } else {
       throw new AggregatorFactoryNotMergeableException(this, other);
     }

@@ -28,11 +28,11 @@ import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
 
-public class CombiningDoublesSketchAggregatorFactory extends DoublesSketchAggregatorFactory
+public class DoublesSketchMergeAggregatorFactory extends DoublesSketchAggregatorFactory
 {
 
   @JsonCreator
-  public CombiningDoublesSketchAggregatorFactory(
+  public DoublesSketchMergeAggregatorFactory(
       @JsonProperty("name") final String name,
       @JsonProperty("k") final Integer k)
   {
@@ -44,9 +44,9 @@ public class CombiningDoublesSketchAggregatorFactory extends DoublesSketchAggreg
   {
     final ColumnValueSelector<DoublesSketch> selector = metricFactory.makeColumnValueSelector(getFieldName());
     if (selector == null) {
-      return new EmptyDoublesSketchAggregator();
+      return new DoublesSketchNoOpAggregator();
     }
-    return new DoublesSketchAggregator(selector, getK());
+    return new DoublesSketchMergeAggregator(selector, getK());
   }
 
   @Override
@@ -54,9 +54,9 @@ public class CombiningDoublesSketchAggregatorFactory extends DoublesSketchAggreg
   {
     final ColumnValueSelector<DoublesSketch> selector = metricFactory.makeColumnValueSelector(getFieldName());
     if (selector == null) {
-      return new EmptyDoublesSketchBufferAggregator();
+      return new DoublesSketchNoOpBufferAggregator();
     }
-    return new DoublesSketchBufferAggregator(selector, getK(), getMaxIntermediateSize());
+    return new DoublesSketchMergeBufferAggregator(selector, getK(), getMaxIntermediateSize());
   }
 
 }

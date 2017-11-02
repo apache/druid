@@ -35,7 +35,7 @@ import io.druid.query.cache.CacheKeyBuilder;
 
 import com.yahoo.sketches.quantiles.DoublesSketch;
 
-public class DoublesSketchHistogramPostAggregator implements PostAggregator
+public class DoublesSketchToHistogramPostAggregator implements PostAggregator
 {
 
   private final String name;
@@ -43,7 +43,7 @@ public class DoublesSketchHistogramPostAggregator implements PostAggregator
   private final double[] splitPoints;
 
   @JsonCreator
-  public DoublesSketchHistogramPostAggregator(
+  public DoublesSketchToHistogramPostAggregator(
       @JsonProperty("name") final String name,
       @JsonProperty("field") final PostAggregator field,
       @JsonProperty("splitPoints") final double[] splitPoints)
@@ -122,7 +122,7 @@ public class DoublesSketchHistogramPostAggregator implements PostAggregator
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final DoublesSketchHistogramPostAggregator that = (DoublesSketchHistogramPostAggregator) o;
+    final DoublesSketchToHistogramPostAggregator that = (DoublesSketchToHistogramPostAggregator) o;
     if (!name.equals(that.name)) {
       return false;
     }

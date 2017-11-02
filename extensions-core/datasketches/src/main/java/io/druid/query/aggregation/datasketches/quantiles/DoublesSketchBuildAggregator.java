@@ -19,30 +19,36 @@
 
 package io.druid.query.aggregation.datasketches.quantiles;
 
-import io.druid.query.aggregation.Aggregator;
+import com.yahoo.sketches.quantiles.UpdateDoublesSketch;
 
-public class EmptyDoublesSketchAggregator implements Aggregator
+import io.druid.query.aggregation.Aggregator;
+import io.druid.segment.ColumnValueSelector;
+
+public class DoublesSketchBuildAggregator implements Aggregator
 {
 
-  @Override
-  public Object get()
+  private final ColumnValueSelector<Double> valueSelector;
+  private final int size;
+
+  private UpdateDoublesSketch sketch;
+
+  public DoublesSketchBuildAggregator(final ColumnValueSelector<Double> valueSelector, final int size)
   {
-    return DoublesSketchOperations.EMPTY_SKETCH;
+    this.valueSelector = valueSelector;
+    this.size = size;
+    sketch = UpdateDoublesSketch.builder().setK(size).build();
   }
 
   @Override
-  public void aggregate()
+  public synchronized void aggregate()
   {
+    sketch.update(valueSelector.getDouble());
   }
 
   @Override
-  public void reset()
+  public synchronized Object get()
   {
-  }
-
-  @Override
-  public void close()
-  {
+    return sketch;
   }
 
   @Override
@@ -55,6 +61,18 @@ public class EmptyDoublesSketchAggregator implements Aggregator
   public long getLong()
   {
     throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @Override
+  public synchronized void reset()
+  {
+    sketch = UpdateDoublesSketch.builder().setK(size).build();
+  }
+
+  @Override
+  public synchronized void close()
+  {
+    sketch = null;
   }
 
 }
