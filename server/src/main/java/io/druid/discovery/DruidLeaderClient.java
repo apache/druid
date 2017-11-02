@@ -242,6 +242,7 @@ public class DruidLeaderClient
         return leaderUrl;
       }
       catch (MalformedURLException ex) {
+        log.error(ex, "Received malformed leader url[%s].", leaderUrl);
       }
     }
 
