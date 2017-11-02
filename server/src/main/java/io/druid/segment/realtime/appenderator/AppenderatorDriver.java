@@ -86,7 +86,7 @@ public class AppenderatorDriver implements Closeable
   private final ObjectMapper objectMapper;
   private final FireDepartmentMetrics metrics;
 
-  private enum SegmentState
+  enum SegmentState
   {
     ACTIVE,
     INACTIVE,
