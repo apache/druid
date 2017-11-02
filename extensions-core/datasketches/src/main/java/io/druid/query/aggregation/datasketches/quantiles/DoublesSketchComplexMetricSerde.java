@@ -23,12 +23,15 @@ import com.yahoo.memory.Memory;
 import com.yahoo.sketches.quantiles.DoublesSketch;
 import com.yahoo.sketches.quantiles.UpdateDoublesSketch;
 import io.druid.data.input.InputRow;
+import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.GenericIndexed;
+import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.ObjectStrategy;
 import io.druid.segment.serde.ComplexColumnPartSupplier;
 import io.druid.segment.serde.ComplexMetricExtractor;
 import io.druid.segment.serde.ComplexMetricSerde;
+import io.druid.segment.serde.LargeColumnSupportedComplexColumnSerializer;
 
 import java.nio.ByteBuffer;
 
@@ -91,8 +94,15 @@ public class DoublesSketchComplexMetricSerde extends ComplexMetricSerde
   @Override
   public void deserializeColumn(final ByteBuffer buffer, final ColumnBuilder builder)
   {
-    final GenericIndexed<DoublesSketch> column = GenericIndexed.read(buffer, strategy);
+    final GenericIndexed<DoublesSketch> column = GenericIndexed.read(buffer, strategy, builder.getFileMapper());
     builder.setComplexColumn(new ComplexColumnPartSupplier(getTypeName(), column));
+  }
+
+  // support large columns
+  @Override
+  public GenericColumnSerializer getSerializer(IOPeon peon, String column)
+  {
+    return LargeColumnSupportedComplexColumnSerializer.create(peon, column, this.getObjectStrategy());
   }
 
 }
