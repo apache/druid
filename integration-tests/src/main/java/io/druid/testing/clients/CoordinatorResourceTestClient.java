@@ -155,6 +155,23 @@ public class CoordinatorResourceTestClient
     }
   }
 
+  public HttpResponseStatus getProxiedOverlordScalingResponseStatus()
+  {
+    try {
+      StatusResponseHolder response = makeRequest(
+          HttpMethod.GET,
+          StringUtils.format(
+              "%s/druid/indexer/v1/scaling",
+              coordinator
+          )
+      );
+      return response.getStatus();
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
   private StatusResponseHolder makeRequest(HttpMethod method, String url)
   {
     try {
