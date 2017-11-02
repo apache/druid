@@ -172,6 +172,9 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
     return Collections.singletonList(fieldName);
   }
 
+  // Quantiles sketches never stop growing, but they do so very slowly.
+  // This size must suffice for overwhelming majority of sketches,
+  // but some sketches may request more memory on heap and move there
   @Override
   public int getMaxIntermediateSize()
   {

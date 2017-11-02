@@ -96,6 +96,8 @@ public class DoublesSketchMergeBufferAggregator implements BufferAggregator
     memCache.clear();
   }
 
+  // A small number of sketches may run out of the given memory, request more memory on heap and move there.
+  // In that case we need to reuse the object from the cache as opposed to wrapping the new buffer.
   @Override
   public synchronized void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
   {
