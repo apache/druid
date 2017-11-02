@@ -84,12 +84,12 @@ public class SqlQuery
       }
     };
 
-    public abstract void writeResultStart(final JsonGenerator jsonGenerator) throws IOException;
+    public abstract void writeResultStart(JsonGenerator jsonGenerator) throws IOException;
 
-    public abstract void writeResultField(final JsonGenerator jsonGenerator, final String name, final Object value)
+    public abstract void writeResultField(JsonGenerator jsonGenerator, String name, Object value)
         throws IOException;
 
-    public abstract void writeResultEnd(final JsonGenerator jsonGenerator) throws IOException;
+    public abstract void writeResultEnd(JsonGenerator jsonGenerator) throws IOException;
 
     @JsonCreator
     public static ResultFormat fromString(@Nullable final String name)
