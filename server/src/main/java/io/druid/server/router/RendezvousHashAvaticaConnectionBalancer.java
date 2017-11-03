@@ -17,23 +17,31 @@
  * under the License.
  */
 
-package io.druid.curator.discovery;
+package io.druid.server.router;
 
-import io.druid.server.DruidNode;
+import io.druid.client.selector.Server;
+import io.druid.java.util.common.StringUtils;
 
-/**
- * Does nothing.
- */
-@Deprecated
-public class NoopServiceAnnouncer implements ServiceAnnouncer
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+
+public class RendezvousHashAvaticaConnectionBalancer implements AvaticaConnectionBalancer
 {
-  @Override
-  public void announce(DruidNode node)
-  {
-  }
+  private final RendezvousHasher hasher = new RendezvousHasher();
 
   @Override
-  public void unannounce(DruidNode node)
+  public Server pickServer(Collection<Server> servers, String connectionId)
   {
+    if (servers.isEmpty()) {
+      return null;
+    }
+
+    Map<String, Server> serverMap = new HashMap<>();
+    for (Server server : servers) {
+      serverMap.put(server.getHost(), server);
+    }
+    String chosenServerId = hasher.chooseNode(serverMap.keySet(), StringUtils.toUtf8(connectionId));
+    return serverMap.get(chosenServerId);
   }
 }

@@ -1048,6 +1048,27 @@ public class CalciteQueryTest
   }
 
   @Test
+  public void testHavingOnGrandTotal() throws Exception
+  {
+    testQuery(
+        "SELECT SUM(m1) AS m1_sum FROM foo HAVING m1_sum = 21",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(AGGS(new DoubleSumAggregatorFactory("a0", "m1")))
+                        .setHavingSpec(HAVING(NUMERIC_SELECTOR("a0", "21", null)))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{21d}
+        )
+    );
+  }
+
+  @Test
   public void testHavingOnDoubleSum() throws Exception
   {
     testQuery(
@@ -1060,7 +1081,7 @@ public class CalciteQueryTest
                         .setDimensions(DIMS(new DefaultDimensionSpec("dim1", "d0")))
                         .setAggregatorSpecs(AGGS(new DoubleSumAggregatorFactory("a0", "m1")))
                         .setHavingSpec(
-                            new DimFilterHavingSpec(
+                            HAVING(
                                 new BoundDimFilter(
                                     "a0",
                                     "1",
@@ -1087,6 +1108,105 @@ public class CalciteQueryTest
   }
 
   @Test
+  public void testHavingOnApproximateCountDistinct() throws Exception
+  {
+    testQuery(
+        "SELECT dim2, COUNT(DISTINCT m1) FROM druid.foo GROUP BY dim2 HAVING COUNT(DISTINCT m1) > 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(DIMS(new DefaultDimensionSpec("dim2", "d0")))
+                        .setAggregatorSpecs(
+                            AGGS(
+                                new CardinalityAggregatorFactory(
+                                    "a0",
+                                    null,
+                                    ImmutableList.of(
+                                        new DefaultDimensionSpec("m1", "m1", ValueType.FLOAT)
+                                    ),
+                                    false,
+                                    true
+                                )
+                            )
+                        )
+                        .setHavingSpec(
+                            HAVING(
+                                BOUND(
+                                    "a0",
+                                    "1",
+                                    null,
+                                    true,
+                                    false,
+                                    null,
+                                    StringComparators.NUMERIC
+                                )
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", 3L},
+            new Object[]{"a", 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testHavingOnExactCountDistinct() throws Exception
+  {
+    testQuery(
+        PLANNER_CONFIG_NO_HLL,
+        "SELECT dim2, COUNT(DISTINCT m1) FROM druid.foo GROUP BY dim2 HAVING COUNT(DISTINCT m1) > 1",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(CalciteTests.DATASOURCE1)
+                                            .setInterval(QSS(Filtration.eternity()))
+                                            .setGranularity(Granularities.ALL)
+                                            .setDimensions(
+                                                DIMS(
+                                                    new DefaultDimensionSpec("dim2", "d0", ValueType.STRING),
+                                                    new DefaultDimensionSpec("m1", "d1", ValueType.FLOAT)
+                                                )
+                                            )
+                                            .setContext(QUERY_CONTEXT_DEFAULT)
+                                            .build()
+                            )
+                        )
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(DIMS(new DefaultDimensionSpec("d0", "_d0", ValueType.STRING)))
+                        .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
+                        .setHavingSpec(
+                            HAVING(
+                                BOUND(
+                                    "a0",
+                                    "1",
+                                    null,
+                                    true,
+                                    false,
+                                    null,
+                                    StringComparators.NUMERIC
+                                )
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", 3L},
+            new Object[]{"a", 2L}
+        )
+    );
+  }
+
+  @Test
   public void testHavingOnFloatSum() throws Exception
   {
     testQuery(
@@ -1101,7 +1221,7 @@ public class CalciteQueryTest
                         .setDimensions(DIMS(new DefaultDimensionSpec("dim1", "d0")))
                         .setAggregatorSpecs(AGGS(new DoubleSumAggregatorFactory("a0", "m1")))
                         .setHavingSpec(
-                            new DimFilterHavingSpec(
+                            HAVING(
                                 new BoundDimFilter(
                                     "a0",
                                     "1",
@@ -1181,7 +1301,7 @@ public class CalciteQueryTest
                         .setPostAggregatorSpecs(ImmutableList.of(
                             EXPRESSION_POST_AGG("p0", "(\"a0\" / \"a1\")")
                         ))
-                        .setHavingSpec(new DimFilterHavingSpec(EXPRESSION_FILTER("((\"a0\" / \"a1\") == 1)")))
+                        .setHavingSpec(HAVING(EXPRESSION_FILTER("((\"a0\" / \"a1\") == 1)")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
@@ -4416,7 +4536,7 @@ public class CalciteQueryTest
                                 4
                             )
                         )
-                        .setHavingSpec(new DimFilterHavingSpec(NUMERIC_SELECTOR("a0", "1", null)))
+                        .setHavingSpec(HAVING(NUMERIC_SELECTOR("a0", "1", null)))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
@@ -5826,7 +5946,7 @@ public class CalciteQueryTest
                             new DefaultDimensionSpec("dim2", "d1")
                         ))
                         .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
-                        .setHavingSpec(new DimFilterHavingSpec(NUMERIC_SELECTOR("a0", "1", null)))
+                        .setHavingSpec(HAVING(NUMERIC_SELECTOR("a0", "1", null)))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build(),
             newScanQueryBuilder()
@@ -6200,6 +6320,11 @@ public class CalciteQueryTest
   private static List<AggregatorFactory> AGGS(final AggregatorFactory... aggregators)
   {
     return Arrays.asList(aggregators);
+  }
+
+  private static DimFilterHavingSpec HAVING(final DimFilter filter)
+  {
+    return new DimFilterHavingSpec(filter, true);
   }
 
   private static ExpressionVirtualColumn EXPRESSION_VIRTUAL_COLUMN(

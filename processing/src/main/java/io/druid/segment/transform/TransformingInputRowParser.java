@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.segment.indexing;
+package io.druid.segment.transform;
 
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;

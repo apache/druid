@@ -43,8 +43,8 @@ import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
-import io.druid.segment.indexing.TransformSpec;
-import io.druid.segment.indexing.Transformer;
+import io.druid.segment.transform.TransformSpec;
+import io.druid.segment.transform.Transformer;
 import io.druid.utils.Runnables;
 
 import javax.annotation.Nullable;
