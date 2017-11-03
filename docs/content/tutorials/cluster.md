@@ -202,9 +202,8 @@ In `conf/druid/_common/common.runtime.properties`, replace
 <div class="note caution">
 In production, we recommend running 2 servers, each running a Druid Coordinator
 and a Druid Overlord. We also recommend running a ZooKeeper cluster on its own dedicated hardware,
-as well as  replicated [metadata
-storage](http://druid.io/docs/latest/dependencies/metadata-storage.html) such as MySQL or
-PostgreSQL, on its own dedicated hardware.
+as well as replicated <a href = "http://druid.io/docs/latest/dependencies/metadata-storage.html">metadata storage</a>
+such as MySQL or PostgreSQL, on its own dedicated hardware.
 </div>
 
 ## Tune Druid processes that serve queries
