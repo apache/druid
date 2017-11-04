@@ -104,7 +104,7 @@ Tasks can have different default priorities depening on their types. Here are a 
 |---------|----------------|
 |Realtime index task|75|
 |Batch index task|50|
-|Merge/Append task|25|
+|Merge/Append/Compaction task|25|
 |Other tasks|0|
 
 You can override the task priority by setting your priority in the task context like below.
@@ -184,19 +184,6 @@ On the contrary, in the incremental publishing mode, segments are incrementally 
 
 To enable bulk publishing mode, `forceGuaranteedRollup` should be set in the TuningConfig. Note that this option cannot be used with either `forceExtendableShardSpecs` of TuningConfig or `appendToExisting` of IOConfig.
 
-### Task Context
-
-The task context is used for various task configuration parameters. The following parameters apply to all tasks.
-
-|property|default|description|
-|--------|-------|-----------|
-|taskLockTimeout|300000|task lock timeout in millisecond. For more details, see [the below Locking section](#locking).|
-
-<div class="note caution">
-When a task acquires a lock, it sends a request via HTTP and awaits until it receives a response containing the lock acquisition result.
-As a result, an HTTP timeout error can occur if `taskLockTimeout` is greater than `druid.server.http.maxIdleTime` of overlords.
-</div>
-
 Segment Merging Tasks
 ---------------------
 
@@ -210,7 +197,8 @@ Append tasks append a list of segments together into a single segment (one after
     "id": <task_id>,
     "dataSource": <task_datasource>,
     "segments": <JSON list of DataSegment objects to append>,
-    "aggregations": <optional list of aggregators>
+    "aggregations": <optional list of aggregators>,
+    "context": <task context>
 }
 ```
 
@@ -228,7 +216,8 @@ The grammar is:
     "dataSource": <task_datasource>,
     "aggregations": <list of aggregators>,
     "rollup": <whether or not to rollup data during a merge>,
-    "segments": <JSON list of DataSegment objects to merge>
+    "segments": <JSON list of DataSegment objects to merge>,
+    "context": <task context>
 }
 ```
 
@@ -245,9 +234,66 @@ The grammar is:
     "dataSource": <task_datasource>,
     "aggregations": <list of aggregators>,
     "rollup": <whether or not to rollup data during a merge>,
-    "interval": <DataSegment objects in this interval are going to be merged>
+    "interval": <DataSegment objects in this interval are going to be merged>,
+    "context": <task context>
 }
 ```
+
+### Compaction Task
+
+Compaction tasks merge all segments of the given interval. The syntax is:
+
+```json
+{
+    "type": "compact",
+    "id": <task_id>,
+    "dataSource": <task_datasource>,
+    "interval": <interval to specify segments to be merged>,
+    "dimensions" <custom dimensionsSpec>,
+    "tuningConfig" <index task tuningConfig>,
+    "context": <task context>
+}
+```
+
+|Field|Description|Required|
+|-----|-----------|--------|
+|`type`|Task type. Should be `compact`|Yes|
+|`id`|Task id|No|
+|`dataSource`|dataSource name to be compacted|Yes|
+|`interval`|interval of segments to be compacted|Yes|
+|`dimensions`|custom dimensionsSpec. compaction task will use this dimensionsSpec if exist instead of generating one. See below for more details.|No|
+|`tuningConfig`|[Index task tuningConfig](#tuningconfig)|No|
+|`context`|[Task context](#taskcontext)|No|
+
+An example of compaction task is
+
+```json
+{
+  "type" : "compact",
+  "dataSource" : "wikipedia",
+  "interval" : "2017-01-01/2018-01-01"
+}
+```
+
+This compaction task merges _all segments_ of the interval `2017-01-01/2018-01-01` into a _single segment_.
+To merge each day's worth of data into a separate segment, you can submit multiple `compact` tasks, one for each day. They will run in parallel.
+
+A compaction task internally generates an `index` task spec for performing compaction work with some fixed parameters.
+For example, its `firehose` is always the [ingestSegmentSpec](./firehose.html), and `dimensionsSpec` and `metricsSpec`
+include all dimensions and metrics of the input segments by default.
+
+The output segment can have different metadata from the input segments unless all input segments have the same metadata.
+
+- Dimensions: since Druid supports schema change, the dimensions can be different across segments even if they are a part of the same dataSource.
+If the input segments have different dimensions, the output segment basically includes all dimensions of the input segments.
+However, even if the input segments have the same set of dimensions, the dimension order or the data type of dimensions can be different. For example, the data type of some dimensions can be
+changed from `string` to primitive types, or the order of dimensions can be changed for better locality (See [Partitioning](batch-ingestion.html#partitioning-specification)).
+In this case, the dimensions of recent segments precede that of old segments in terms of data types and the ordering.
+This is because more recent segments are more likely to have the new desired order and data types. If you want to use
+your own ordering and types, you can specify a custom `dimensionsSpec` in the compaction task spec.
+- Roll-up: the output segment is rolled up only when `rollup` is set for all input segments.
+See [Roll-up](../design/index.html#roll-up) for more details. 
+You can check that your segments are rolled up or not by using [Segment Metadata Queries](../querying/segmentmetadataquery.html#analysistypes).
 
 Segment Destroying Tasks
 ------------------------
@@ -261,7 +307,8 @@ Kill tasks delete all information about a segment and removes it from deep stora
     "type": "kill",
     "id": <task_id>,
     "dataSource": <task_datasource>,
-    "interval" : <all_segments_in_this_interval_will_die!>
+    "interval" : <all_segments_in_this_interval_will_die!>,
+    "context": <task context>
 }
 ```
 
@@ -341,6 +388,21 @@ These tasks start, sleep for a time and are used only for testing. The available
     "firehose": <optional_firehose_to_test_connect>
 }
 ```
+
+Task Context
+------------
+
+The task context is used for various task configuration parameters. The following parameters apply to all task types.
+
+|property|default|description|
+|--------|-------|-----------|
+|taskLockTimeout|300000|task lock timeout in millisecond. For more details, see [the below Locking section](#locking).|
+|priority|Different based on task types. See [Task Priority](#task-priority).|Task priority|
+
+<div class="note caution">
+When a task acquires a lock, it sends a request via HTTP and awaits until it receives a response containing the lock acquisition result.
+As a result, an HTTP timeout error can occur if `taskLockTimeout` is greater than `druid.server.http.maxIdleTime` of overlords.
+</div>
 
 Locking
 -------

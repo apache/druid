@@ -55,7 +55,7 @@ public class MoveTask extends AbstractFixedIntervalTask
   )
   {
     super(
-        makeId(id, "move", dataSource, interval),
+        getOrMakeId(id, "move", dataSource, interval),
         dataSource,
         interval,
         context

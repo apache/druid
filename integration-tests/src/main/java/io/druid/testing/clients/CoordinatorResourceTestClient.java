@@ -39,6 +39,7 @@ import org.joda.time.Interval;
 
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 public class CoordinatorResourceTestClient
@@ -80,7 +81,7 @@ public class CoordinatorResourceTestClient
   }
 
   // return a list of the segment dates for the specified datasource
-  public ArrayList<String> getSegmentIntervals(final String dataSource) throws Exception
+  public List<String> getSegmentIntervals(final String dataSource) throws Exception
   {
     ArrayList<String> segments = null;
     try {
