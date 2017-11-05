@@ -47,6 +47,7 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexStorageAdapter;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.transform.TransformSpec;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.loading.LocalDataSegmentPuller;
 import io.druid.segment.realtime.firehose.IngestSegmentFirehose;
@@ -322,6 +323,7 @@ public class BatchDeltaIngestionTest
 
     Firehose firehose = new IngestSegmentFirehose(
         ImmutableList.of(new WindowedStorageAdapter(adapter, windowedDataSegment.getInterval())),
+        TransformSpec.NONE,
         ImmutableList.of("host"),
         ImmutableList.of("visited_sum", "unique_hosts"),
         null
@@ -363,6 +365,7 @@ public class BatchDeltaIngestionTest
                 new UniformGranularitySpec(
                     Granularities.DAY, Granularities.NONE, ImmutableList.of(INTERVAL_FULL)
                 ),
+                null,
                 MAPPER
             ),
             new HadoopIOConfig(

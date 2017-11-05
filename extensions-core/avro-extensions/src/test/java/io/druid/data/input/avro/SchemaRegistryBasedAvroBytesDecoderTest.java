@@ -24,10 +24,10 @@ import io.druid.data.input.AvroStreamInputRowParserTest;
 import io.druid.data.input.SomeAvroDatum;
 import io.druid.java.util.common.parsers.ParseException;
 import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.EncoderFactory;
+import org.apache.avro.specific.SpecificDatumWriter;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -99,7 +99,7 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
   byte[] getAvroDatum(Schema schema, GenericRecord someAvroDatum) throws IOException
   {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
-    DatumWriter<GenericRecord> writer = new GenericDatumWriter<GenericRecord>(schema);
+    DatumWriter<GenericRecord> writer = new SpecificDatumWriter<>(schema);
     writer.write(someAvroDatum, EncoderFactory.get().directBinaryEncoder(out, null));
     return out.toByteArray();
   }

@@ -17,20 +17,14 @@
  * under the License.
  */
 
-package io.druid.server.emitter;
+package io.druid.segment.transform;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Period;
+import io.druid.data.input.Row;
 
 /**
+ * Interface for evaluating functions on rows. Used by {@link Transformer}.
  */
-public class HttpEmitterConfig extends com.metamx.emitter.core.HttpEmitterConfig
+public interface RowFunction
 {
-  @JsonProperty
-  private Period readTimeout = new Period("PT5M");
-
-  public Period getReadTimeout()
-  {
-    return readTimeout;
-  }
+  Object eval(Row row);
 }

@@ -51,7 +51,8 @@ public class DatasourceIngestionSpecTest
         new SelectorDimFilter("dim", "value", null),
         Lists.newArrayList("d1", "d2"),
         Lists.newArrayList("m1", "m2", "m3"),
-        false
+        false,
+        null
     );
 
     DatasourceIngestionSpec actual = MAPPER.readValue(MAPPER.writeValueAsString(expected), DatasourceIngestionSpec.class);
@@ -85,7 +86,8 @@ public class DatasourceIngestionSpecTest
         null,
         null,
         null,
-        false
+        false,
+        null
     );
 
     Assert.assertEquals(expected, actual);
@@ -133,7 +135,8 @@ public class DatasourceIngestionSpecTest
         new SelectorDimFilter("dim", "value", null),
         Lists.newArrayList("d1", "d2"),
         Lists.newArrayList("m1", "m2", "m3"),
-        true
+        true,
+        null
     );
 
     actual = MAPPER.readValue(
@@ -153,7 +156,7 @@ public class DatasourceIngestionSpecTest
     DatasourceIngestionSpec actual = MAPPER.readValue(jsonStr, DatasourceIngestionSpec.class);
 
     Assert.assertEquals(
-        new DatasourceIngestionSpec("test", Intervals.of("2014/2015"), null, null, null, null, null, false),
+        new DatasourceIngestionSpec("test", Intervals.of("2014/2015"), null, null, null, null, null, false, null),
         actual
     );
   }

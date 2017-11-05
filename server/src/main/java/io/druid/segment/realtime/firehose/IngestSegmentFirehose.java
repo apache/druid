@@ -43,6 +43,8 @@ import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
+import io.druid.segment.transform.TransformSpec;
+import io.druid.segment.transform.Transformer;
 import io.druid.utils.Runnables;
 
 import javax.annotation.Nullable;
@@ -53,15 +55,19 @@ import java.util.Map;
 
 public class IngestSegmentFirehose implements Firehose
 {
+  private final Transformer transformer;
   private Yielder<InputRow> rowYielder;
 
   public IngestSegmentFirehose(
       final List<WindowedStorageAdapter> adapters,
+      final TransformSpec transformSpec,
       final List<String> dims,
       final List<String> metrics,
       final DimFilter dimFilter
   )
   {
+    this.transformer = transformSpec.toTransformer();
+
     Sequence<InputRow> rows = Sequences.concat(
         Iterables.transform(
             adapters, new Function<WindowedStorageAdapter, Sequence<InputRow>>()
@@ -184,12 +190,13 @@ public class IngestSegmentFirehose implements Firehose
     return !rowYielder.isDone();
   }
 
+  @Nullable
   @Override
   public InputRow nextRow()
   {
     final InputRow inputRow = rowYielder.get();
     rowYielder = rowYielder.next(null);
-    return inputRow;
+    return transformer.transform(inputRow);
   }
 
   @Override

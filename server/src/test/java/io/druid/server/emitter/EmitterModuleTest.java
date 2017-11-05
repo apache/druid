@@ -52,7 +52,6 @@ public class EmitterModuleTest
     props.setProperty("druid.emitter.parametrized.httpEmitting.basicAuthentication", "a:b");
     props.setProperty("druid.emitter.parametrized.httpEmitting.batchingStrategy", "NEWLINES");
     props.setProperty("druid.emitter.parametrized.httpEmitting.maxBatchSize", "4");
-    props.setProperty("druid.emitter.parametrized.httpEmitting.maxBufferSize", "8");
     props.setProperty("druid.emitter.parametrized.httpEmitting.flushTimeOut", "1000");
 
     final Emitter emitter =

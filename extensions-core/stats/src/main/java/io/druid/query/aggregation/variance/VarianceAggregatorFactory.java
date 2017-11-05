@@ -190,7 +190,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
   {
-    if (Objects.equals(getName(), other.getName()) && this.getClass() == other.getClass()) {
+    if (Objects.equals(getName(), other.getName()) && other instanceof VarianceAggregatorFactory) {
       return getCombiningFactory();
     } else {
       throw new AggregatorFactoryNotMergeableException(this, other);

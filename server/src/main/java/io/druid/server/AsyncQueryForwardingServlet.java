@@ -33,6 +33,7 @@ import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.DruidHttpClientConfig;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.IAE;
 import io.druid.query.DruidMetrics;
 import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
@@ -62,6 +63,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -78,6 +80,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private static final String HOST_ATTRIBUTE = "io.druid.proxy.to.host";
   private static final String SCHEME_ATTRIBUTE = "io.druid.proxy.to.host.scheme";
   private static final String QUERY_ATTRIBUTE = "io.druid.proxy.query";
+  private static final String AVATICA_QUERY_ATTRIBUTE = "io.druid.proxy.avaticaQuery";
   private static final String OBJECTMAPPER_ATTRIBUTE = "io.druid.proxy.objectMapper";
 
   private static final int CANCELLATION_TIMEOUT_MILLIS = 500;
@@ -186,7 +189,17 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     final boolean isQueryEndpoint = request.getRequestURI().startsWith("/druid/v2")
                                     && !request.getRequestURI().startsWith("/druid/v2/sql");
 
-    if (isQueryEndpoint && HttpMethod.DELETE.is(request.getMethod())) {
+    final boolean isAvatica = request.getRequestURI().startsWith("/druid/v2/sql/avatica");
+
+    if (isAvatica) {
+      Map<String, Object> requestMap = objectMapper.readValue(request.getInputStream(), Map.class);
+      String connectionId = getAvaticaConnectionId(requestMap);
+      Server targetServer = hostFinder.findServerAvatica(connectionId);
+      byte[] requestBytes = objectMapper.writeValueAsBytes(requestMap);
+      request.setAttribute(HOST_ATTRIBUTE, targetServer.getHost());
+      request.setAttribute(SCHEME_ATTRIBUTE, targetServer.getScheme());
+      request.setAttribute(AVATICA_QUERY_ATTRIBUTE, requestBytes);
+    } else if (isQueryEndpoint && HttpMethod.DELETE.is(request.getMethod())) {
       // query cancellation request
       for (final Server server: hostFinder.getAllServers()) {
         // send query cancellation to all brokers this query may have gone to
@@ -262,6 +275,11 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   {
     proxyRequest.timeout(httpClientConfig.getReadTimeout().getMillis(), TimeUnit.MILLISECONDS);
     proxyRequest.idleTimeout(httpClientConfig.getReadTimeout().getMillis(), TimeUnit.MILLISECONDS);
+
+    byte[] avaticaQuery = (byte[]) clientRequest.getAttribute(AVATICA_QUERY_ATTRIBUTE);
+    if (avaticaQuery != null) {
+      proxyRequest.content(new BytesContentProvider(avaticaQuery));
+    }
 
     final Query query = (Query) clientRequest.getAttribute(QUERY_ATTRIBUTE);
     if (query != null) {
@@ -371,6 +389,18 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     return interruptedQueryCount.get();
   }
 
+  private static String getAvaticaConnectionId(Map<String, Object> requestMap) throws IOException
+  {
+    Object connectionIdObj = requestMap.get("connectionId");
+    if (connectionIdObj == null) {
+      throw new IAE("Received an Avatica request without a connectionId.");
+    }
+    if (!(connectionIdObj instanceof String)) {
+      throw new IAE("Received an Avatica request with a non-String connectionId.");
+    }
+
+    return (String) connectionIdObj;
+  }
 
   private class MetricsEmittingProxyResponseListener extends ProxyResponseListener
   {
