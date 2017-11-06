@@ -151,7 +151,6 @@ public class LongGenericColumnPartSerdeV2 implements ColumnPartSerde
       final ImmutableBitmap bitmap;
       if (buffer.hasRemaining()) {
         bitmap = ByteBufferSerializer.read(buffer, bitmapSerdeFactory.getObjectStrategy());
-        builder.setNullValueBitmap(Suppliers.ofInstance(bitmap));
       } else {
         bitmap = bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap();
       }

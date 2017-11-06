@@ -33,7 +33,6 @@ class SimpleColumn implements Column
   private final Supplier<ComplexColumn> complexColumn;
   private final Supplier<BitmapIndex> bitmapIndex;
   private final Supplier<SpatialIndex> spatialIndex;
-  private final Supplier<ImmutableBitmap> nullValueBitmap;
 
   SimpleColumn(
       ColumnCapabilities capabilities,
@@ -42,8 +41,7 @@ class SimpleColumn implements Column
       Supplier<GenericColumn> genericColumn,
       Supplier<ComplexColumn> complexColumn,
       Supplier<BitmapIndex> bitmapIndex,
-      Supplier<SpatialIndex> spatialIndex,
-      Supplier<ImmutableBitmap> nullValueBitmap
+      Supplier<SpatialIndex> spatialIndex
   )
   {
     this.capabilities = capabilities;
@@ -53,7 +51,6 @@ class SimpleColumn implements Column
     this.complexColumn = complexColumn;
     this.bitmapIndex = bitmapIndex;
     this.spatialIndex = spatialIndex;
-    this.nullValueBitmap = nullValueBitmap;
   }
 
   @Override

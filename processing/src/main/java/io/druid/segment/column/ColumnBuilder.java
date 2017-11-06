@@ -38,7 +38,6 @@ public class ColumnBuilder
   private Supplier<BitmapIndex> bitmapIndex = null;
   private Supplier<SpatialIndex> spatialIndex = null;
   private SmooshedFileMapper fileMapper = null;
-  private Supplier<ImmutableBitmap> nullValueBitmap = null;
 
   public ColumnBuilder setFileMapper(SmooshedFileMapper fileMapper)
   {
@@ -99,12 +98,6 @@ public class ColumnBuilder
     return this;
   }
 
-  public ColumnBuilder setNullValueBitmap(Supplier<ImmutableBitmap> nullValueBitmap)
-  {
-    this.nullValueBitmap = nullValueBitmap;
-    return this;
-  }
-
   public Column build()
   {
     Preconditions.checkState(type != null, "Type must be set.");
@@ -122,8 +115,7 @@ public class ColumnBuilder
         genericColumn,
         complexColumn,
         bitmapIndex,
-        spatialIndex,
-        nullValueBitmap
+        spatialIndex
     );
   }
 }

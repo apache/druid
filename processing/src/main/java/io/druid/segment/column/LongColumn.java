@@ -31,9 +31,6 @@ public class LongColumn extends AbstractColumn
   private static final ColumnCapabilitiesImpl CAPABILITIES = new ColumnCapabilitiesImpl()
       .setType(ValueType.LONG);
 
-  private static final ColumnCapabilitiesImpl CAPABILITIES_WITH_NULL = new ColumnCapabilitiesImpl()
-      .setType(ValueType.LONG);
-
   private final CompressedLongsIndexedSupplier column;
   private final ImmutableBitmap nullValueBitmap;
 
@@ -46,7 +43,7 @@ public class LongColumn extends AbstractColumn
   @Override
   public ColumnCapabilities getCapabilities()
   {
-    return nullValueBitmap.isEmpty() ? CAPABILITIES : CAPABILITIES_WITH_NULL;
+    return CAPABILITIES;
   }
 
   @Override
