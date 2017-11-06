@@ -5,13 +5,15 @@
             "queryType" : "timeBoundary",
             "dataSource": "wikipedia_index_test"
         },
-        "expectedResults":[ {
-                                "timestamp" : "2013-08-31T01:02:33.000Z",
-                                "result" : {
-                                    "minTime" : "2013-08-31T01:02:33.000Z",
-                                    "maxTime" : "2013-08-31T12:41:27.000Z"
-                                }
-                            } ]
+        "expectedResults":[
+            {
+                "timestamp" : "2013-08-31T01:02:33.000Z",
+                "result" : {
+                    "minTime" : "2013-08-31T01:02:33.000Z",
+                    "maxTime" : "2013-09-01T12:41:27.000Z"
+                }
+            }
+        ]
     },
 
     {

@@ -36,6 +36,11 @@ public class TransformingInputRowParser<T> implements InputRowParser<T>
     this.transformer = transformSpec.toTransformer();
   }
 
+  public InputRowParser<T> getParser()
+  {
+    return parser;
+  }
+
   @Override
   public InputRow parse(final T row)
   {

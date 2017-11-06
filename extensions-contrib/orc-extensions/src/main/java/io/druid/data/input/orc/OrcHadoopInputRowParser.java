@@ -32,10 +32,10 @@ import io.druid.data.input.impl.ParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.java.util.common.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hive.common.type.HiveDecimal;
 import org.apache.hadoop.hive.ql.io.orc.OrcSerde;
 import org.apache.hadoop.hive.ql.io.orc.OrcStruct;
 import org.apache.hadoop.hive.serde2.SerDeException;
+import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable;
 import org.apache.hadoop.hive.serde2.objectinspector.ListObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector;
@@ -51,14 +51,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
 {
   private final ParseSpec parseSpec;
-  private String typeString;
+  private final String typeString;
   private final List<String> dimensions;
-  private StructObjectInspector oip;
-  private final OrcSerde serde;
+  private final StructObjectInspector oip;
 
   @JsonCreator
   public OrcHadoopInputRowParser(
@@ -67,10 +67,9 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
   )
   {
     this.parseSpec = parseSpec;
-    this.typeString = typeString;
+    this.typeString = typeString == null ? typeStringFromParseSpec(parseSpec) : typeString;
     this.dimensions = parseSpec.getDimensionsSpec().getDimensionNames();
-    this.serde = new OrcSerde();
-    initialize();
+    this.oip = makeObjectInspector(this.typeString);
   }
 
   @SuppressWarnings("ArgumentParameterSwap")
@@ -87,7 +86,8 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
           map.put(
               field.getFieldName(),
               coercePrimitiveObject(
-                  primitiveObjectInspector.getPrimitiveJavaObject(oip.getStructFieldData(input, field))
+                  primitiveObjectInspector,
+                  oip.getStructFieldData(input, field)
               )
           );
           break;
@@ -109,46 +109,20 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
     return new MapBasedInputRow(dateTime, dimensions, map);
   }
 
-  private void initialize()
-  {
-    if (typeString == null) {
-      typeString = typeStringFromParseSpec(parseSpec);
-    }
-    TypeInfo typeInfo = TypeInfoUtils.getTypeInfoFromTypeString(typeString);
-    Preconditions.checkArgument(
-        typeInfo instanceof StructTypeInfo,
-        StringUtils.format("typeString should be struct type but not [%s]", typeString)
-    );
-    Properties table = getTablePropertiesFromStructTypeInfo((StructTypeInfo) typeInfo);
-    serde.initialize(new Configuration(), table);
-    try {
-      oip = (StructObjectInspector) serde.getObjectInspector();
-    }
-    catch (SerDeException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
   private List getListObject(ListObjectInspector listObjectInspector, Object listObject)
   {
     if (listObjectInspector.getListLength(listObject) < 0) {
       return null;
     }
-    List objectList = listObjectInspector.getList(listObject);
-    List list = null;
+    List<?> objectList = listObjectInspector.getList(listObject);
+    List<?> list = null;
     ObjectInspector child = listObjectInspector.getListElementObjectInspector();
     switch (child.getCategory()) {
       case PRIMITIVE:
         final PrimitiveObjectInspector primitiveObjectInspector = (PrimitiveObjectInspector) child;
-        list = Lists.transform(objectList, new Function()
-        {
-          @Nullable
-          @Override
-          public Object apply(@Nullable Object input)
-          {
-            return coercePrimitiveObject(primitiveObjectInspector.getPrimitiveJavaObject(input));
-          }
-        });
+        list = objectList.stream()
+                         .map(input -> coercePrimitiveObject(primitiveObjectInspector, input))
+                         .collect(Collectors.toList());
         break;
       default:
         break;
@@ -220,12 +194,32 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
     return builder.toString();
   }
 
-  private static Object coercePrimitiveObject(final Object object)
+  private static Object coercePrimitiveObject(final PrimitiveObjectInspector inspector, final Object object)
   {
-    if (object instanceof HiveDecimal) {
-      return ((HiveDecimal) object).doubleValue();
+    if (object instanceof HiveDecimalWritable) {
+      // inspector on HiveDecimal rounds off to integer for some reason.
+      return ((HiveDecimalWritable) object).getHiveDecimal().doubleValue();
     } else {
-      return object;
+      return inspector.getPrimitiveJavaObject(object);
+    }
+  }
+
+  private static StructObjectInspector makeObjectInspector(final String typeString)
+  {
+    final OrcSerde serde = new OrcSerde();
+
+    TypeInfo typeInfo = TypeInfoUtils.getTypeInfoFromTypeString(typeString);
+    Preconditions.checkArgument(
+        typeInfo instanceof StructTypeInfo,
+        StringUtils.format("typeString should be struct type but not [%s]", typeString)
+    );
+    Properties table = getTablePropertiesFromStructTypeInfo((StructTypeInfo) typeInfo);
+    serde.initialize(new Configuration(), table);
+    try {
+      return (StructObjectInspector) serde.getObjectInspector();
+    }
+    catch (SerDeException e) {
+      throw new RuntimeException(e);
     }
   }
 

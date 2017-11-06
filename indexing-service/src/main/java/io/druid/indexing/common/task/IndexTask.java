@@ -36,8 +36,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.ListenableFuture;
-import io.druid.java.util.common.DateTimes;
-import io.druid.java.util.common.JodaUtils;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -53,6 +51,7 @@ import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Comparators;
@@ -97,6 +96,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
@@ -115,31 +115,6 @@ public class IndexTask extends AbstractTask
   private static final HashFunction hashFunction = Hashing.murmur3_128();
   private static final String TYPE = "index";
 
-  private static String makeId(String id, IndexIngestionSpec ingestionSchema)
-  {
-    if (id != null) {
-      return id;
-    } else {
-      return StringUtils.format("index_%s_%s", makeDataSource(ingestionSchema), DateTimes.nowUtc());
-    }
-  }
-
-  private static String makeGroupId(IndexIngestionSpec ingestionSchema)
-  {
-    if (ingestionSchema.getIOConfig().isAppendToExisting()) {
-      // Shared locking group for all tasks that append, since they are OK to run concurrently.
-      return StringUtils.format("%s_append_%s", TYPE, ingestionSchema.getDataSchema().getDataSource());
-    } else {
-      // Return null, one locking group per task.
-      return null;
-    }
-  }
-
-  private static String makeDataSource(IndexIngestionSpec ingestionSchema)
-  {
-    return ingestionSchema.getDataSchema().getDataSource();
-  }
-
   @JsonIgnore
   private final IndexIngestionSpec ingestionSchema;
 
@@ -151,15 +126,50 @@ public class IndexTask extends AbstractTask
       @JsonProperty("context") final Map<String, Object> context
   )
   {
-    super(
-        makeId(id, ingestionSchema),
+    this(
+        id,
         makeGroupId(ingestionSchema),
         taskResource,
-        makeDataSource(ingestionSchema),
+        ingestionSchema.dataSchema.getDataSource(),
+        ingestionSchema,
+        context
+    );
+  }
+
+  IndexTask(
+      String id,
+      String groupId,
+      TaskResource resource,
+      String dataSource,
+      IndexIngestionSpec ingestionSchema,
+      Map<String, Object> context
+  )
+  {
+    super(
+        getOrMakeId(id, TYPE, dataSource),
+        groupId,
+        resource,
+        dataSource,
         context
     );
 
     this.ingestionSchema = ingestionSchema;
+  }
+
+  private static String makeGroupId(IndexIngestionSpec ingestionSchema)
+  {
+    return makeGroupId(ingestionSchema.ioConfig.appendToExisting, ingestionSchema.dataSchema.getDataSource());
+  }
+
+  private static String makeGroupId(boolean isAppendToExisting, String dataSource)
+  {
+    if (isAppendToExisting) {
+      // Shared locking group for all tasks that append, since they are OK to run concurrently.
+      return StringUtils.format("%s_append_%s", TYPE, dataSource);
+    } else {
+      // Return null, one locking group per task.
+      return null;
+    }
   }
 
   @Override
@@ -182,19 +192,24 @@ public class IndexTask extends AbstractTask
                                                                    .bucketIntervals();
 
     if (intervals.isPresent()) {
-      final List<TaskLock> locks = getTaskLocks(taskActionClient);
-      if (locks.size() == 0) {
-        try {
-          Tasks.tryAcquireExclusiveLocks(taskActionClient, intervals.get());
-        }
-        catch (Exception e) {
-          return false;
-        }
-      }
-      return true;
+      return isReady(taskActionClient, intervals.get());
     } else {
       return true;
     }
+  }
+
+  static boolean isReady(TaskActionClient actionClient, SortedSet<Interval> intervals) throws IOException
+  {
+    final List<TaskLock> locks = getTaskLocks(actionClient);
+    if (locks.size() == 0) {
+      try {
+        Tasks.tryAcquireExclusiveLocks(actionClient, intervals);
+      }
+      catch (Exception e) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @JsonProperty("spec")
@@ -1135,6 +1150,84 @@ public class IndexTask extends AbstractTask
     public Period getIntermediatePersistPeriod()
     {
       return new Period(Integer.MAX_VALUE); // intermediate persist doesn't make much sense for batch jobs
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      final IndexTuningConfig that = (IndexTuningConfig) o;
+
+      if (!Objects.equals(targetPartitionSize, that.targetPartitionSize)) {
+        return false;
+      }
+
+      if (maxRowsInMemory != that.maxRowsInMemory) {
+        return false;
+      }
+
+      if (maxTotalRows != that.maxTotalRows) {
+        return false;
+      }
+
+      if (!Objects.equals(numShards, that.numShards)) {
+        return false;
+      }
+
+      if (!Objects.equals(indexSpec, that.indexSpec)) {
+        return false;
+      }
+
+      if (!Objects.equals(basePersistDirectory, that.basePersistDirectory)) {
+        return false;
+      }
+
+      if (maxPendingPersists != that.maxPendingPersists) {
+        return false;
+      }
+
+      if (forceExtendableShardSpecs != that.forceExtendableShardSpecs) {
+        return false;
+      }
+
+      if (forceGuaranteedRollup != that.forceGuaranteedRollup) {
+        return false;
+      }
+
+      if (reportParseExceptions != that.reportParseExceptions) {
+        return false;
+      }
+
+      if (publishTimeout != that.publishTimeout) {
+        return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(
+          targetPartitionSize,
+          maxRowsInMemory,
+          maxTotalRows,
+          numShards,
+          indexSpec,
+          basePersistDirectory,
+          maxPendingPersists,
+          forceExtendableShardSpecs,
+          forceGuaranteedRollup,
+          reportParseExceptions,
+          publishTimeout
+      );
     }
   }
 }

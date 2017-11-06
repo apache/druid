@@ -24,8 +24,6 @@ import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.TaskActionClient;
-import io.druid.indexing.overlord.LockResult;
-import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.guava.Comparators;
 import org.joda.time.Interval;
@@ -48,13 +46,6 @@ public class Tasks
 
   public static final String PRIORITY_KEY = "priority";
   public static final String LOCK_TIMEOUT_KEY = "taskLockTimeout";
-
-  public static void checkLockResult(LockResult result, Interval interval)
-  {
-    if (!result.isOk()) {
-      throw new ISE("Failed to lock for interval[%s]", interval);
-    }
-  }
 
   public static Map<Interval, TaskLock> tryAcquireExclusiveLocks(TaskActionClient client, SortedSet<Interval> intervals)
       throws IOException

@@ -28,7 +28,7 @@ import org.joda.time.Interval;
 
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.TreeSet;
+import java.util.SortedSet;
 
 /**
  */
@@ -42,9 +42,15 @@ public class JodaUtils
   {
     ArrayList<Interval> retVal = Lists.newArrayList();
 
-    TreeSet<Interval> sortedIntervals = Sets.newTreeSet(Comparators.intervalsByStartThenEnd());
-    for (Interval interval : intervals) {
-      sortedIntervals.add(interval);
+    final SortedSet<Interval> sortedIntervals;
+
+    if (intervals instanceof SortedSet) {
+      sortedIntervals = (SortedSet<Interval>) intervals;
+    } else {
+      sortedIntervals = Sets.newTreeSet(Comparators.intervalsByStartThenEnd());
+      for (Interval interval : intervals) {
+        sortedIntervals.add(interval);
+      }
     }
 
     if (sortedIntervals.isEmpty()) {
