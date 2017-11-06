@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation;
 
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnValueSelector;
 
 /**
@@ -45,8 +46,8 @@ public interface AggregateCombiner<T> extends ColumnValueSelector<T>
    * combiner.get*() should return the same value as selector.get*().
    *
    * If the selector is an {@link io.druid.segment.ObjectColumnSelector}, the object returned from {@link
-   * io.druid.segment.ObjectColumnSelector#getObject()} must not be modified, and must not become a subject for modification
-   * during subsequent {@link #fold} calls.
+   * io.druid.segment.ObjectColumnSelector#getObject()} must not be modified, and must not become a subject for
+   * modification during subsequent {@link #fold} calls.
    */
   void reset(ColumnValueSelector selector);
 
@@ -57,8 +58,8 @@ public interface AggregateCombiner<T> extends ColumnValueSelector<T>
    * aggregatorFactory.combine(combiner.get*(), selector.get*())} call.
    *
    * Unlike {@link AggregatorFactory#combine}, if the selector is an {@link io.druid.segment.ObjectColumnSelector}, the
-   * object returned from {@link io.druid.segment.ObjectColumnSelector#getObject()} must not be modified, and must not become
-   * a subject for modification during subsequent fold() calls.
+   * object returned from {@link io.druid.segment.ObjectColumnSelector#getObject()} must not be modified, and must not
+   * become a subject for modification during subsequent fold() calls.
    *
    * Since the state of AggregateCombiner is undefined before {@link #reset} is ever called on it, the effects of
    * calling fold() are also undefined in this case.
@@ -71,5 +72,10 @@ public interface AggregateCombiner<T> extends ColumnValueSelector<T>
   default boolean isNull()
   {
     return false;
+  }
+
+  default void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    // Usually AggregateCombiner has nothing to inspect
   }
 }

@@ -22,7 +22,6 @@ package io.druid.query.extraction;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.ibm.icu.text.SimpleDateFormat;
 import io.druid.java.util.common.StringUtils;
 import io.druid.segment.NullHandlingHelper;

@@ -30,11 +30,11 @@ import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.extraction.BucketExtractionFn;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.groupby.epinephelinae.TestColumnSelectorFactory;
+import io.druid.segment.BaseFloatColumnValueSelector;
+import io.druid.segment.BaseLongColumnValueSelector;
+import io.druid.segment.BaseObjectColumnValueSelector;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
 import io.druid.segment.NullHandlingHelper;
-import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
@@ -93,7 +93,7 @@ public class ExpressionVirtualColumnTest
   @Test
   public void testObjectSelector()
   {
-    final ObjectColumnSelector selector = XPLUSY.makeObjectColumnSelector("expr", COLUMN_SELECTOR_FACTORY);
+    final BaseObjectColumnValueSelector selector = XPLUSY.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW0);
     Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? "" : null, selector.getObject());
@@ -111,7 +111,7 @@ public class ExpressionVirtualColumnTest
   @Test
   public void testLongSelector()
   {
-    final LongColumnSelector selector = XPLUSY.makeLongColumnSelector("expr", COLUMN_SELECTOR_FACTORY);
+    final BaseLongColumnValueSelector selector = XPLUSY.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW0);
     Assert.assertEquals(0L, selector.getLong());
@@ -129,7 +129,7 @@ public class ExpressionVirtualColumnTest
   @Test
   public void testLongSelectorUsingStringFunction()
   {
-    final LongColumnSelector selector = ZCONCATX.makeLongColumnSelector("expr", COLUMN_SELECTOR_FACTORY);
+    final BaseLongColumnValueSelector selector = ZCONCATX.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW0);
     Assert.assertEquals(0L, selector.getLong());
@@ -147,7 +147,7 @@ public class ExpressionVirtualColumnTest
   @Test
   public void testFloatSelector()
   {
-    final FloatColumnSelector selector = XPLUSY.makeFloatColumnSelector("expr", COLUMN_SELECTOR_FACTORY);
+    final BaseFloatColumnValueSelector selector = XPLUSY.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW0);
     Assert.assertEquals(0.0f, selector.getFloat(), 0.0f);
@@ -266,7 +266,8 @@ public class ExpressionVirtualColumnTest
   @Test
   public void testLongSelectorWithConstantLikeExprMacro()
   {
-    final LongColumnSelector selector = CONSTANT_LIKE.makeLongColumnSelector("expr", COLUMN_SELECTOR_FACTORY);
+    final BaseLongColumnValueSelector selector =
+        CONSTANT_LIKE.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW0);
     Assert.assertEquals(1L, selector.getLong());
@@ -275,7 +276,7 @@ public class ExpressionVirtualColumnTest
   @Test
   public void testLongSelectorWithZLikeExprMacro()
   {
-    final LongColumnSelector selector = ZLIKE.makeLongColumnSelector("expr", COLUMN_SELECTOR_FACTORY);
+    final BaseLongColumnValueSelector selector = ZLIKE.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW0);
     Assert.assertEquals(0L, selector.getLong());

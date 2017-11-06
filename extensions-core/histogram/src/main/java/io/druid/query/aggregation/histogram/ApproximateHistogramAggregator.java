@@ -21,7 +21,7 @@ package io.druid.query.aggregation.histogram;
 
 import com.google.common.primitives.Longs;
 import io.druid.query.aggregation.Aggregator;
-import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.BaseFloatColumnValueSelector;
 
 import java.util.Comparator;
 
@@ -41,7 +41,7 @@ public class ApproximateHistogramAggregator implements Aggregator
     return ((ApproximateHistogram) lhs).foldFast((ApproximateHistogram) rhs);
   }
 
-  private final FloatColumnSelector selector;
+  private final BaseFloatColumnValueSelector selector;
   private final int resolution;
   private final float lowerLimit;
   private final float upperLimit;
@@ -49,7 +49,7 @@ public class ApproximateHistogramAggregator implements Aggregator
   private ApproximateHistogram histogram;
 
   public ApproximateHistogramAggregator(
-      FloatColumnSelector selector,
+      BaseFloatColumnValueSelector selector,
       int resolution,
       float lowerLimit,
       float upperLimit

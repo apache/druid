@@ -225,7 +225,6 @@ public class IncrementalIndexTest
 
     Row row = index.iterator().next();
 
-
     if (NullHandlingHelper.useDefaultValuesForNull()) {
       Assert.assertEquals(Arrays.asList(null, null, "A"), row.getRaw("string"));
       Assert.assertEquals(

@@ -53,6 +53,7 @@ public class SinkTest
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
         new UniformGranularitySpec(Granularities.HOUR, Granularities.MINUTE, null),
+        null,
         new DefaultObjectMapper()
     );
 
@@ -112,21 +113,9 @@ public class SinkTest
           }
 
           @Override
-          public Float getFloatMetric(String metric)
+          public Number getMetric(String metric)
           {
             return 0F;
-          }
-
-          @Override
-          public Long getLongMetric(String metric)
-          {
-            return 0L;
-          }
-
-          @Override
-          public Double getDoubleMetric(String metric)
-          {
-            return 0.0d;
           }
 
           @Override
@@ -177,21 +166,9 @@ public class SinkTest
           }
 
           @Override
-          public Float getFloatMetric(String metric)
+          public Number getMetric(String metric)
           {
             return 0F;
-          }
-
-          @Override
-          public Long getLongMetric(String metric)
-          {
-            return 0L;
-          }
-
-          @Override
-          public Double getDoubleMetric(String metric)
-          {
-            return 0.0d;
           }
 
           @Override

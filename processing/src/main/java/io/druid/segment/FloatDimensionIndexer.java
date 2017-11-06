@@ -92,57 +92,18 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
 
   @Override
   public DimensionSelector makeDimensionSelector(
-      DimensionSpec spec, TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc
+      DimensionSpec spec,
+      TimeAndDimsHolder currEntry,
+      IncrementalIndex.DimensionDesc desc
   )
   {
-    return new FloatWrappingDimensionSelector(
-        makeFloatColumnSelector(currEntry, desc),
-        spec.getExtractionFn()
-    );
+    return new FloatWrappingDimensionSelector(makeColumnValueSelector(currEntry, desc), spec.getExtractionFn());
   }
 
   @Override
-  public LongColumnSelector makeLongColumnSelector(
-      final TimeAndDimsHolder currEntry,
-      final IncrementalIndex.DimensionDesc desc
-  )
-  {
-    final int dimIndex = desc.getIndex();
-    class IndexerLongColumnSelector implements LongColumnSelector
-    {
-      @Override
-      public long getLong()
-      {
-        final Object[] dims = currEntry.getKey().getDims();
-
-        if (dimIndex >= dims.length) {
-          return 0L;
-        }
-
-        return DimensionHandlerUtils.nullToZero((Float) dims[dimIndex]).longValue();
-      }
-
-      @Override
-      public boolean isNull()
-      {
-        final Object[] dims = currEntry.getKey().getDims();
-        return dimIndex >= dims.length || dims[dimIndex] == null;
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        // nothing to inspect
-      }
-    }
-
-    return new IndexerLongColumnSelector();
-  }
-
-  @Override
-  public FloatColumnSelector makeFloatColumnSelector(
-      final TimeAndDimsHolder currEntry,
-      final IncrementalIndex.DimensionDesc desc
+  public ColumnValueSelector<?> makeColumnValueSelector(
+      TimeAndDimsHolder currEntry,
+      IncrementalIndex.DimensionDesc desc
   )
   {
     final int dimIndex = desc.getIndex();
@@ -153,11 +114,11 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
       {
         final Object[] dims = currEntry.getKey().getDims();
 
-        if (dimIndex >= dims.length) {
+        if (dimIndex >= dims.length || dims[dimIndex] == null) {
           return 0.0f;
         }
 
-        return DimensionHandlerUtils.nullToZero((Float) dims[dimIndex]);
+        return (Float) dims[dimIndex];
       }
 
       @Override
@@ -165,6 +126,20 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
       {
         final Object[] dims = currEntry.getKey().getDims();
         return dimIndex >= dims.length || dims[dimIndex] == null;
+      }
+
+      @SuppressWarnings("deprecation")
+      @Nullable
+      @Override
+      public Float getObject()
+      {
+        final Object[] dims = currEntry.getKey().getDims();
+
+        if (dimIndex >= dims.length) {
+          return null;
+        }
+
+        return (Float) dims[dimIndex];
       }
 
       @Override
@@ -175,43 +150,6 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
     }
 
     return new IndexerFloatColumnSelector();
-  }
-
-  @Override
-  public DoubleColumnSelector makeDoubleColumnSelector(
-      final TimeAndDimsHolder currEntry,
-      final IncrementalIndex.DimensionDesc desc
-  )
-  {
-    final int dimIndex = desc.getIndex();
-    class IndexerDoubleColumnSelector implements DoubleColumnSelector
-    {
-      @Override
-      public double getDouble()
-      {
-        final Object[] dims = currEntry.getKey().getDims();
-
-        if (dimIndex >= dims.length) {
-          return 0.0;
-        }
-        return DimensionHandlerUtils.nullToZero((Float) dims[dimIndex]);
-      }
-
-      @Override
-      public boolean isNull()
-      {
-        final Object[] dims = currEntry.getKey().getDims();
-        return dimIndex >= dims.length || dims[dimIndex] == null;
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        // nothing to inspect
-      }
-    }
-
-    return new IndexerDoubleColumnSelector();
   }
 
   @Override
@@ -229,7 +167,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   @Override
   public int getUnsortedEncodedKeyComponentHashCode(@Nullable Float key)
   {
-    return DimensionHandlerUtils.nullToZero(key).hashCode();
+    return DimensionHandlerUtils.nullToZeroFloat(key).hashCode();
   }
 
   @Override

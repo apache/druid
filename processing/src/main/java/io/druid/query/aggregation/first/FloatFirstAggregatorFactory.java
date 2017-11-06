@@ -34,10 +34,10 @@ import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.BaseObjectColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.NullHandlingHelper;
-import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.Column;
 
 import javax.annotation.Nullable;
@@ -79,22 +79,22 @@ public class FloatFirstAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    FloatColumnSelector floatColumnSelector = metricFactory.makeFloatColumnSelector(fieldName);
+    ColumnValueSelector columnValueSelector = metricFactory.makeColumnValueSelector(fieldName);
     return NullHandlingHelper.getNullableAggregator(new FloatFirstAggregator(
         name,
-        metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME),
-        floatColumnSelector
-    ), floatColumnSelector);
+        metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
+        columnValueSelector
+    ), columnValueSelector);
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    FloatColumnSelector floatColumnSelector = metricFactory.makeFloatColumnSelector(fieldName);
+    ColumnValueSelector columnValueSelector = metricFactory.makeColumnValueSelector(fieldName);
     return NullHandlingHelper.getNullableAggregator(new FloatFirstBufferAggregator(
-        metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME),
-        floatColumnSelector
-    ), floatColumnSelector);
+        metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
+        columnValueSelector
+    ), columnValueSelector);
   }
 
   @Override
@@ -130,7 +130,7 @@ public class FloatFirstAggregatorFactory extends AggregatorFactory
       @Override
       public Aggregator factorize(ColumnSelectorFactory metricFactory)
       {
-        final ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(name);
+        final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
         return NullHandlingHelper.getNullableAggregator(new FloatFirstAggregator(name, null, null)
         {
           @Override
@@ -148,7 +148,7 @@ public class FloatFirstAggregatorFactory extends AggregatorFactory
       @Override
       public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
       {
-        final ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(name);
+        final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
         return NullHandlingHelper.getNullableAggregator(new FloatFirstBufferAggregator(null, null)
         {
           @Override

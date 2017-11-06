@@ -240,9 +240,9 @@ public class IndexIO
     }
   }
 
-  static interface IndexIOHandler
+  interface IndexIOHandler
   {
-    public MMappedIndex mapDir(File inDir) throws IOException;
+    MMappedIndex mapDir(File inDir) throws IOException;
   }
 
   public static void validateRowValues(
@@ -412,9 +412,9 @@ public class IndexIO
     }
   }
 
-  static interface IndexLoader
+  interface IndexLoader
   {
-    public QueryableIndex load(File inDir, ObjectMapper mapper) throws IOException;
+    QueryableIndex load(File inDir, ObjectMapper mapper) throws IOException;
   }
 
   static class LegacyIndexLoader implements IndexLoader

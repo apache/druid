@@ -41,7 +41,7 @@ import io.druid.client.ServerInventoryView;
 import io.druid.client.coordinator.Coordinator;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.common.config.JacksonConfigManager;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.curator.discovery.ServiceAnnouncer;
 import io.druid.discovery.DruidLeaderSelector;
 import io.druid.guice.ManageLifecycle;
@@ -248,7 +248,7 @@ public class DruidCoordinator
         ((LoadRule) rule)
             .getTieredReplicants()
             .forEach((final String tier, final Integer ruleReplicants) -> {
-              int currentReplicants = segmentReplicantLookup.getTotalReplicants(segment.getIdentifier(), tier);
+              int currentReplicants = segmentReplicantLookup.getLoadedReplicants(segment.getIdentifier(), tier);
               retVal
                   .computeIfAbsent(tier, ignored -> new Object2LongOpenHashMap<>())
                   .addTo(segment.getDataSource(), Math.max(ruleReplicants - currentReplicants, 0));
@@ -268,7 +268,7 @@ public class DruidCoordinator
     }
 
     for (DataSegment segment : getAvailableDataSegments()) {
-      if (segmentReplicantLookup.getTotalReplicants(segment.getIdentifier()) == 0) {
+      if (segmentReplicantLookup.getLoadedReplicants(segment.getIdentifier()) == 0) {
         retVal.addTo(segment.getDataSource(), 1);
       } else {
         retVal.addTo(segment.getDataSource(), 0);
@@ -735,10 +735,9 @@ public class DruidCoordinator
                   final DruidCluster cluster = new DruidCluster();
                   for (ImmutableDruidServer server : servers) {
                     if (!loadManagementPeons.containsKey(server.getName())) {
-                      String basePath = ZKPaths.makePath(zkPaths.getLoadQueuePath(), server.getName());
-                      LoadQueuePeon loadQueuePeon = taskMaster.giveMePeon(basePath);
+                      LoadQueuePeon loadQueuePeon = taskMaster.giveMePeon(server);
                       loadQueuePeon.start();
-                      log.info("Creating LoadQueuePeon for server[%s] at path[%s]", server.getName(), basePath);
+                      log.info("Created LoadQueuePeon for server[%s].", server.getName());
 
                       loadManagementPeons.put(server.getName(), loadQueuePeon);
                     }

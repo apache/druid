@@ -185,11 +185,9 @@ public final class DimensionHandlerUtils
       case STRING:
         return columnSelectorFactory.makeDimensionSelector(dimSpec);
       case LONG:
-        return columnSelectorFactory.makeLongColumnSelector(dimSpec.getDimension());
       case FLOAT:
-        return columnSelectorFactory.makeFloatColumnSelector(dimSpec.getDimension());
       case DOUBLE:
-        return columnSelectorFactory.makeDoubleColumnSelector(dimSpec.getDimension());
+        return columnSelectorFactory.makeColumnValueSelector(dimSpec.getDimension());
       default:
         return null;
     }
@@ -340,17 +338,17 @@ public final class DimensionHandlerUtils
     }
   }
 
-  public static Double nullToZero(@Nullable Double number)
+  public static Number nullToZeroDouble(@Nullable Number number)
   {
     return number == null ? NullHandlingHelper.ZERO_DOUBLE : number;
   }
 
-  public static Long nullToZero(@Nullable Long number)
+  public static Number nullToZeroLong(@Nullable Number number)
   {
     return number == null ? NullHandlingHelper.ZERO_LONG : number;
   }
 
-  public static Float nullToZero(@Nullable Float number)
+  public static Number nullToZeroFloat(@Nullable Number number)
   {
     return number == null ? NullHandlingHelper.ZERO_FLOAT : number;
   }

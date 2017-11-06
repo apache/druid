@@ -20,6 +20,7 @@
 package io.druid.segment;
 
 import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.Aggregator;
@@ -81,12 +82,15 @@ public class NullHandlingHelper
     return INSTANCE.isUseDefaultValuesForNull() && value == null ? ZERO_FLOAT : value;
   }
 
-  public static Aggregator getNullableAggregator(Aggregator aggregator, ColumnValueSelector selector)
+  public static Aggregator getNullableAggregator(Aggregator aggregator, BaseNullableColumnValueSelector selector)
   {
     return INSTANCE.isUseDefaultValuesForNull() ? aggregator : new NullableAggregator(aggregator, selector);
   }
 
-  public static BufferAggregator getNullableAggregator(BufferAggregator aggregator, ColumnValueSelector selector)
+  public static BufferAggregator getNullableAggregator(
+      BufferAggregator aggregator,
+      BaseNullableColumnValueSelector selector
+  )
   {
     return INSTANCE.isUseDefaultValuesForNull() ? aggregator : new NullableBufferAggregator(aggregator, selector);
   }
@@ -99,5 +103,19 @@ public class NullHandlingHelper
   public static int extraAggregatorBytes()
   {
     return NullHandlingHelper.useDefaultValuesForNull() ? 0 : Byte.BYTES;
+  }
+
+  public static <T> Supplier<T> getNullableSupplier(
+      final Supplier<T> supplier,
+      final BaseNullableColumnValueSelector selector
+  )
+  {
+    return INSTANCE.isUseDefaultValuesForNull() ?
+           supplier : () -> {
+      if (selector.isNull()) {
+        return null;
+      }
+      return supplier.get();
+    };
   }
 }

@@ -38,5 +38,5 @@ public interface DataSegmentPuller
    *
    * @throws SegmentLoadingException if there are any errors
    */
-  public void getSegmentFiles(DataSegment segment, File dir) throws SegmentLoadingException;
+  void getSegmentFiles(DataSegment segment, File dir) throws SegmentLoadingException;
 }

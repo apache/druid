@@ -126,18 +126,15 @@ public class InputRowSerdeTest
     Assert.assertEquals(ImmutableList.of("d2v1", "d2v2"), out.getDimension("d2"));
 
     if (NullHandlingHelper.useDefaultValuesForNull()) {
-      Assert.assertEquals(0.0f, out.getFloatMetric("agg_non_existing"), 0.00001);
-      Assert.assertEquals(0L, out.getLongMetric("unparseable").longValue());
+      Assert.assertEquals(0.0f, out.getMetric("agg_non_existing").floatValue(), 0.00001);
     } else {
-      Assert.assertNull(out.getFloatMetric("agg_non_existing"));
-      Assert.assertNull(out.getLongMetric("unparseable"));
+      Assert.assertNull(out.getMetric("agg_non_existing"));
     }
-    Assert.assertEquals(5.0f, out.getFloatMetric("m1out"), 0.00001);
-    Assert.assertEquals(100L, out.getLongMetric("m2out").longValue());
+
+    Assert.assertEquals(0L, out.getMetric("unparseable"));
+    Assert.assertEquals(5.0f, out.getMetric("m1out").floatValue(), 0.00001);
+    Assert.assertEquals(100L, out.getMetric("m2out"));
     Assert.assertEquals(1, ((HyperLogLogCollector) out.getRaw("m3out")).estimateCardinality(), 0.001);
-
-    Assert.assertEquals(null, out.getLongMetric("m5"));
-
 
     EasyMock.verify(mockedAggregator);
     EasyMock.verify(mockedNullAggregator);

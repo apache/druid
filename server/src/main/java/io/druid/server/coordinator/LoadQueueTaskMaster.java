@@ -21,7 +21,13 @@ package io.druid.server.coordinator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import com.metamx.http.client.HttpClient;
+import io.druid.client.ImmutableDruidServer;
+import io.druid.guice.annotations.Global;
+import io.druid.guice.annotations.Json;
+import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.utils.ZKPaths;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
@@ -36,14 +42,18 @@ public class LoadQueueTaskMaster
   private final ScheduledExecutorService peonExec;
   private final ExecutorService callbackExec;
   private final DruidCoordinatorConfig config;
+  private final HttpClient httpClient;
+  private final ZkPathsConfig zkPaths;
 
   @Inject
   public LoadQueueTaskMaster(
       CuratorFramework curator,
-      ObjectMapper jsonMapper,
+      @Json ObjectMapper jsonMapper,
       ScheduledExecutorService peonExec,
       ExecutorService callbackExec,
-      DruidCoordinatorConfig config
+      DruidCoordinatorConfig config,
+      @Global HttpClient httpClient,
+      ZkPathsConfig zkPaths
   )
   {
     this.curator = curator;
@@ -51,10 +61,23 @@ public class LoadQueueTaskMaster
     this.peonExec = peonExec;
     this.callbackExec = callbackExec;
     this.config = config;
+    this.httpClient = httpClient;
+    this.zkPaths = zkPaths;
   }
 
-  public LoadQueuePeon giveMePeon(String basePath)
+  public LoadQueuePeon giveMePeon(ImmutableDruidServer server)
   {
-    return new LoadQueuePeon(curator, basePath, jsonMapper, peonExec, callbackExec, config);
+    if ("http".equalsIgnoreCase(config.getLoadQueuePeonType())) {
+      return new HttpLoadQueuePeon(server.getURL(), jsonMapper, httpClient, config, peonExec, callbackExec);
+    } else {
+      return new CuratorLoadQueuePeon(
+          curator,
+          ZKPaths.makePath(zkPaths.getLoadQueuePath(), server.getName()),
+          jsonMapper,
+          peonExec,
+          callbackExec,
+          config
+      );
+    }
   }
 }

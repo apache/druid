@@ -22,6 +22,7 @@ package io.druid.firehose.cloudfiles;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.validation.constraints.NotNull;
+import java.util.Objects;
 
 public class CloudFilesBlob
 {
@@ -71,5 +72,28 @@ public class CloudFilesBlob
         + ",path=" + path
         + ",region=" + region
         + "}";
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    final CloudFilesBlob that = (CloudFilesBlob) o;
+    return Objects.equals(container, that.container) &&
+           Objects.equals(path, that.path) &&
+           Objects.equals(region, that.region);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(container, path, region);
   }
 }

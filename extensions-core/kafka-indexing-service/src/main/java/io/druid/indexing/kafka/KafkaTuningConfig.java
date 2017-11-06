@@ -185,22 +185,6 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     );
   }
 
-  public KafkaTuningConfig withMaxRowsInMemory(int rows)
-  {
-    return new KafkaTuningConfig(
-        rows,
-        maxRowsPerSegment,
-        intermediatePersistPeriod,
-        basePersistDirectory,
-        maxPendingPersists,
-        indexSpec,
-        true,
-        reportParseExceptions,
-        handoffConditionTimeout,
-        resetOffsetAutomatically
-    );
-  }
-
   @Override
   public boolean equals(Object o)
   {

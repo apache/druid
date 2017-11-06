@@ -28,7 +28,7 @@ import java.util.Comparator;
 @ExtensionPoint
 public interface ObjectStrategy<T> extends Comparator<T>
 {
-  public Class<? extends T> getClazz();
+  Class<? extends T> getClazz();
 
   /**
    * Convert values from their underlying byte representation.
@@ -44,8 +44,8 @@ public interface ObjectStrategy<T> extends Comparator<T>
    * @return an object created from the given byte buffer representation
    */
   @Nullable
-  public T fromByteBuffer(ByteBuffer buffer, int numBytes);
+  T fromByteBuffer(ByteBuffer buffer, int numBytes);
 
   @Nullable
-  public byte[] toBytes(@Nullable T val);
+  byte[] toBytes(@Nullable T val);
 }

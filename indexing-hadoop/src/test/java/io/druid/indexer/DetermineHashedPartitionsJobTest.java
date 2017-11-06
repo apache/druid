@@ -181,6 +181,7 @@ public class DetermineHashedPartitionsJobTest
                 Granularities.NONE,
                 intervals
             ),
+            null,
             HadoopDruidIndexerConfig.JSON_MAPPER
         ),
         new HadoopIOConfig(

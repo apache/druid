@@ -202,6 +202,16 @@ public class ExpressionsTest
   }
 
   @Test
+  public void testPower()
+  {
+    testExpression(
+        rexBuilder.makeCall(SqlStdOperatorTable.POWER, inputRef("a"), integerLiteral(2)),
+        DruidExpression.fromExpression("pow(\"a\",2)"),
+        100.0
+    );
+  }
+
+  @Test
   public void testFloor()
   {
     testExpression(

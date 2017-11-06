@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import io.druid.java.util.common.ISE;
+import com.google.common.base.Strings;
 import io.druid.java.util.common.StringUtils;
 import io.druid.js.JavaScriptConfig;
 import io.druid.segment.NullHandlingHelper;
@@ -67,8 +67,11 @@ public class JavaScriptExtractionFn implements ExtractionFn
   }
 
   private final String function;
-  private final Function<Object, String> fn;
   private final boolean injective;
+  private final JavaScriptConfig config;
+
+  // This variable is lazily initialized to avoid unnecessary JavaScript compilation during JSON serde
+  private Function<Object, String> fn;
 
   @JsonCreator
   public JavaScriptExtractionFn(
@@ -81,12 +84,7 @@ public class JavaScriptExtractionFn implements ExtractionFn
 
     this.function = function;
     this.injective = injective;
-
-    if (config.isEnabled()) {
-      this.fn = compile(function);
-    } else {
-      this.fn = null;
-    }
+    this.config = config;
   }
 
   @JsonProperty
@@ -115,11 +113,26 @@ public class JavaScriptExtractionFn implements ExtractionFn
   @Nullable
   public String apply(@Nullable Object value)
   {
-    if (fn == null) {
-      throw new ISE("JavaScript is disabled");
-    }
+    checkAndCompileScript();
+    return Strings.emptyToNull(fn.apply(value));
+  }
 
-    return NullHandlingHelper.defaultToNull(fn.apply(value));
+  /**
+   * {@link #apply(Object)} can be called by multiple threads, so this function should be thread-safe to avoid extra
+   * script compilation.
+   */
+  private void checkAndCompileScript()
+  {
+    if (fn == null) {
+      // JavaScript configuration should be checked when it's actually used because someone might still want Druid
+      // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
+      Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
+      synchronized (config) {
+        if (fn == null) {
+          fn = compile(function);
+        }
+      }
+    }
   }
 
   @Override

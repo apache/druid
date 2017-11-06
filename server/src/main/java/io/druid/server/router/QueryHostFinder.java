@@ -38,15 +38,18 @@ public class QueryHostFinder
   private static EmittingLogger log = new EmittingLogger(QueryHostFinder.class);
 
   private final TieredBrokerHostSelector hostSelector;
+  private final AvaticaConnectionBalancer avaticaConnectionBalancer;
 
   private final ConcurrentHashMap<String, Server> serverBackup = new ConcurrentHashMap<>();
 
   @Inject
   public QueryHostFinder(
-      TieredBrokerHostSelector hostSelector
+      TieredBrokerHostSelector hostSelector,
+      AvaticaConnectionBalancer avaticaConnectionBalancer
   )
   {
     this.hostSelector = hostSelector;
+    this.avaticaConnectionBalancer = avaticaConnectionBalancer;
   }
 
   public <T> Server findServer(Query<T> query)
@@ -66,6 +69,25 @@ public class QueryHostFinder
     return ((Collection<List<Server>>) hostSelector.getAllBrokers().values()).stream()
                                                                              .flatMap(Collection::stream)
                                                                              .collect(Collectors.toList());
+  }
+
+  public Server findServerAvatica(String connectionId)
+  {
+    Server chosenServer = avaticaConnectionBalancer.pickServer(getAllServers(), connectionId);
+    if (chosenServer == null) {
+      log.makeAlert(
+          "Catastrophic failure! No servers found at all! Failing request!"
+      ).emit();
+
+      throw new ISE("No server found for Avatica request with connectionId[%s]", connectionId);
+    }
+    log.debug(
+        "Balancer class [%s] sending request with connectionId[%s] to server: %s",
+        avaticaConnectionBalancer.getClass(),
+        connectionId,
+        chosenServer.getHost()
+    );
+    return chosenServer;
   }
 
   public <T> Server getServer(Query<T> query)

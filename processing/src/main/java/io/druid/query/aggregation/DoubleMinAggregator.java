@@ -19,7 +19,7 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.DoubleColumnSelector;
+import io.druid.segment.BaseDoubleColumnValueSelector;
 
 /**
  */
@@ -30,11 +30,11 @@ public class DoubleMinAggregator implements Aggregator
     return Math.min(((Number) lhs).doubleValue(), ((Number) rhs).doubleValue());
   }
 
-  private final DoubleColumnSelector selector;
+  private final BaseDoubleColumnValueSelector selector;
 
   private double min;
 
-  public DoubleMinAggregator(DoubleColumnSelector selector)
+  public DoubleMinAggregator(BaseDoubleColumnValueSelector selector)
   {
     this.selector = selector;
 

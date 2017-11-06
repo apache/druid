@@ -37,6 +37,7 @@ import java.util.Objects;
 public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 {
   public static final Comparator LONG_COMPARATOR = Comparators.<Long>naturalNullsFirst();
+
   @Override
   public ValueType getValueType()
   {
@@ -91,19 +92,18 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 
   @Override
   public DimensionSelector makeDimensionSelector(
-      DimensionSpec spec, TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc
+      DimensionSpec spec,
+      TimeAndDimsHolder currEntry,
+      IncrementalIndex.DimensionDesc desc
   )
   {
-    return new LongWrappingDimensionSelector(
-        makeLongColumnSelector(currEntry, desc),
-        spec.getExtractionFn()
-    );
+    return new LongWrappingDimensionSelector(makeColumnValueSelector(currEntry, desc), spec.getExtractionFn());
   }
 
   @Override
-  public LongColumnSelector makeLongColumnSelector(
-      final TimeAndDimsHolder currEntry,
-      final IncrementalIndex.DimensionDesc desc
+  public ColumnValueSelector<?> makeColumnValueSelector(
+      TimeAndDimsHolder currEntry,
+      IncrementalIndex.DimensionDesc desc
   )
   {
     final int dimIndex = desc.getIndex();
@@ -114,11 +114,11 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
       {
         final Object[] dims = currEntry.getKey().getDims();
 
-        if (dimIndex >= dims.length) {
+        if (dimIndex >= dims.length || dims[dimIndex] == null) {
           return 0;
         }
 
-        return DimensionHandlerUtils.nullToZero((Long) dims[dimIndex]);
+        return (Long) dims[dimIndex];
       }
 
       @Override
@@ -126,6 +126,20 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
       {
         final Object[] dims = currEntry.getKey().getDims();
         return dimIndex >= dims.length || dims[dimIndex] == null;
+      }
+
+      @SuppressWarnings("deprecation")
+      @Nullable
+      @Override
+      public Long getObject()
+      {
+        final Object[] dims = currEntry.getKey().getDims();
+
+        if (dimIndex >= dims.length) {
+          return null;
+        }
+
+        return (Long) dims[dimIndex];
       }
 
       @Override
@@ -137,82 +151,6 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 
     return new IndexerLongColumnSelector();
   }
-
-  @Override
-  public FloatColumnSelector makeFloatColumnSelector(
-      final TimeAndDimsHolder currEntry,
-      final IncrementalIndex.DimensionDesc desc
-  )
-  {
-    final int dimIndex = desc.getIndex();
-    class IndexerFloatColumnSelector implements FloatColumnSelector
-    {
-      @Override
-      public float getFloat()
-      {
-        final Object[] dims = currEntry.getKey().getDims();
-
-        if (dimIndex >= dims.length) {
-          return 0;
-        }
-
-        return DimensionHandlerUtils.nullToZero((Long) dims[dimIndex]);
-      }
-
-      @Override
-      public boolean isNull()
-      {
-        final Object[] dims = currEntry.getKey().getDims();
-        return dimIndex >= dims.length || dims[dimIndex] == null;
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        // nothing to inspect
-      }
-    }
-
-    return new IndexerFloatColumnSelector();
-  }
-
-  @Override
-  public DoubleColumnSelector makeDoubleColumnSelector(
-      final TimeAndDimsHolder currEntry,
-      final IncrementalIndex.DimensionDesc desc
-  )
-  {
-    final int dimIndex = desc.getIndex();
-    class IndexerDoubleColumnSelector implements DoubleColumnSelector
-    {
-      @Override
-      public double getDouble()
-      {
-        final Object[] dims = currEntry.getKey().getDims();
-
-        if (dimIndex >= dims.length) {
-          return 0;
-        }
-
-        return DimensionHandlerUtils.nullToZero((Long) dims[dimIndex]);
-      }
-
-      @Override
-      public boolean isNull()
-      {
-        final Object[] dims = currEntry.getKey().getDims();
-        return dimIndex >= dims.length || dims[dimIndex] == null;
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        // nothing to inspect
-      }
-    }
-    return new IndexerDoubleColumnSelector();
-  }
-
 
   @Override
   public int compareUnsortedEncodedKeyComponents(@Nullable Long lhs, @Nullable Long rhs)
@@ -229,7 +167,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   @Override
   public int getUnsortedEncodedKeyComponentHashCode(@Nullable Long key)
   {
-    return DimensionHandlerUtils.nullToZero(key).hashCode();
+    return DimensionHandlerUtils.nullToZeroLong(key).hashCode();
   }
 
   @Override

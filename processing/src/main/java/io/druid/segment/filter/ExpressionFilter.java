@@ -32,7 +32,7 @@ import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.LongColumnSelector;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.virtual.ExpressionSelectors;
 
@@ -52,7 +52,7 @@ public class ExpressionFilter implements Filter
   @Override
   public ValueMatcher makeMatcher(final ColumnSelectorFactory factory)
   {
-    final LongColumnSelector selector = ExpressionSelectors.makeLongColumnSelector(factory, expr, 0L);
+    final ColumnValueSelector selector = ExpressionSelectors.makeColumnValueSelector(factory, expr);
     return new ValueMatcher()
     {
       @Override

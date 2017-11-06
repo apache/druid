@@ -130,21 +130,9 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
       }
 
       @Override
-      public Long getLongMetric(String metric)
+      public Number getMetric(String metric)
       {
-        return row.getLongMetric(metric);
-      }
-
-      @Override
-      public Double getDoubleMetric(String metric)
-      {
-        return row.getDoubleMetric(metric);
-      }
-
-      @Override
-      public Float getFloatMetric(String metric)
-      {
-        return row.getFloatMetric(metric);
+        return row.getMetric(metric);
       }
 
       @Override

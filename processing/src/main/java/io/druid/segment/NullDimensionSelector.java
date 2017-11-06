@@ -111,6 +111,19 @@ public class NullDimensionSelector implements SingleValueHistoricalDimensionSele
     return NullHandlingHelper.isNullOrDefault(name) ? 0 : -1;
   }
 
+  @Nullable
+  @Override
+  public Object getObject()
+  {
+    return null;
+  }
+
+  @Override
+  public Class classOfObject()
+  {
+    return Object.class;
+  }
+
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {

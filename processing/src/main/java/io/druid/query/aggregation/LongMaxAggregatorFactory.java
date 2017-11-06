@@ -27,9 +27,9 @@ import com.google.common.primitives.Longs;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
+import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
-import io.druid.segment.LongColumnSelector;
 import io.druid.segment.NullHandlingHelper;
 
 import javax.annotation.Nullable;
@@ -77,23 +77,29 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    LongColumnSelector longColumnSelector = getLongColumnSelector(metricFactory);
+    BaseLongColumnValueSelector longColumnSelector = getLongColumnSelector(metricFactory);
     return NullHandlingHelper.getNullableAggregator(new LongMaxAggregator(longColumnSelector), longColumnSelector);
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    LongColumnSelector longColumnSelector = getLongColumnSelector(metricFactory);
+    BaseLongColumnValueSelector longColumnSelector = getLongColumnSelector(metricFactory);
     return NullHandlingHelper.getNullableAggregator(
         new LongMaxBufferAggregator(longColumnSelector),
         longColumnSelector
     );
   }
 
-  private LongColumnSelector getLongColumnSelector(ColumnSelectorFactory metricFactory)
+  private BaseLongColumnValueSelector getLongColumnSelector(ColumnSelectorFactory metricFactory)
   {
-    return AggregatorUtil.getLongColumnSelector(metricFactory, macroTable, fieldName, expression, Long.MIN_VALUE);
+    return AggregatorUtil.makeColumnValueSelectorWithLongDefault(
+        metricFactory,
+        macroTable,
+        fieldName,
+        expression,
+        Long.MIN_VALUE
+    );
   }
 
   @Override

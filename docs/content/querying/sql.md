@@ -108,7 +108,7 @@ Numeric functions will return 64 bit integers or 64 bit floats, depending on the
 |`FLOOR(expr)`|Floor.|
 |`LN(expr)`|Logarithm (base e).|
 |`LOG10(expr)`|Logarithm (base 10).|
-|`POW(expr, power)`|expr to a power.|
+|`POWER(expr, power)`|expr to a power.|
 |`SQRT(expr)`|Square root.|
 |`TRUNCATE(expr[, digits])`|Truncate expr to a specific number of decimal digits. If digits is negative, then this truncates that many places to the left of the decimal point. Digits defaults to zero if not specified.|
 |`TRUNC(expr[, digits])`|Synonym for `TRUNCATE`.|
@@ -116,7 +116,7 @@ Numeric functions will return 64 bit integers or 64 bit floats, depending on the
 |`x - y`|Subtraction.|
 |`x * y`|Multiplication.|
 |`x / y`|Division.|
-|`x % y`|Mod.|
+|`MOD(x, y)`|Modulo (remainder of x divided by y).|
 
 ### String functions
 
@@ -136,7 +136,7 @@ String functions accept strings, and return a type appropriate to the function.
 |`STRPOS(haystack, needle)`|Returns the index of needle within haystack, starting from 1. If the needle is not found, returns 0.|
 |`SUBSTRING(expr, index, [length])`|Returns a substring of expr starting at index, with a max length, both measured in UTF-16 code units.|
 |`SUBSTR(expr, index, [length])`|Synonym for SUBSTRING.|
-|`TRIM([BOTH | LEADING | TRAILING] [<chars> FROM] expr)`|Returns expr with characters removed from the leading, trailing, or both ends of "expr" if they are in "chars". If "chars" is not provided, it defaults to " " (a space). If the directional argument is not provided, it defaults to "BOTH".|
+|`TRIM([BOTH \| LEADING \| TRAILING] [<chars> FROM] expr)`|Returns expr with characters removed from the leading, trailing, or both ends of "expr" if they are in "chars". If "chars" is not provided, it defaults to " " (a space). If the directional argument is not provided, it defaults to "BOTH".|
 |`BTRIM(expr[, chars])`|Alternate form of `TRIM(BOTH <chars> FROM <expr>`).|
 |`LTRIM(expr[, chars])`|Alternate form of `TRIM(LEADING <chars> FROM <expr>`).|
 |`RTRIM(expr[, chars])`|Alternate form of `TRIM(TRAILING <chars> FROM <expr>`).|
@@ -388,9 +388,15 @@ Table metadata is available over JDBC using `connection.getMetaData()` or by que
 ["INFORMATION_SCHEMA" tables](#retrieving-metadata). Parameterized queries (using `?` or other placeholders) don't work properly,
 so avoid those.
 
+#### Connection Stickiness
+
 Druid's JDBC server does not share connection state between brokers. This means that if you're using JDBC and have
 multiple Druid brokers, you should either connect to a specific broker, or use a load balancer with sticky sessions
 enabled.
+
+The Druid Router node provides connection stickiness when balancing JDBC requests. Please see [Router](../development/router.html) documentation for more details.
+
+Note that the non-JDBC [JSON over HTTP](#json-over-http) API is stateless and does not require stickiness.
 
 ### Connection context
 

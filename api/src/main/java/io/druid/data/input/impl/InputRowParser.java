@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.data.input.InputRow;
 import io.druid.guice.annotations.ExtensionPoint;
 
+import javax.annotation.Nullable;
+
 @ExtensionPoint
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = StringInputRowParser.class)
 @JsonSubTypes(value = {
@@ -33,9 +35,14 @@ import io.druid.guice.annotations.ExtensionPoint;
 })
 public interface InputRowParser<T>
 {
-  public InputRow parse(T input);
+  /**
+   * Parse an input into an {@link InputRow}. Return null if this input should be thrown away, or throws
+   * {@code ParseException} if the input is unparseable.
+   */
+  @Nullable
+  InputRow parse(T input);
 
-  public ParseSpec getParseSpec();
+  ParseSpec getParseSpec();
 
-  public InputRowParser withParseSpec(ParseSpec parseSpec);
+  InputRowParser withParseSpec(ParseSpec parseSpec);
 }

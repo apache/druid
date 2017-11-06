@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.guice.annotations.PublicApi;
 import org.joda.time.DateTime;
 
-import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -44,7 +43,7 @@ public interface Row extends Comparable<Row>
    *
    * @return the timestamp from the epoch in milliseconds.
    */
-  public long getTimestampFromEpoch();
+  long getTimestampFromEpoch();
 
   /**
    * Returns the timestamp from the epoch as an org.joda.time.DateTime.  If the event happened _right now_, this would return the
@@ -52,7 +51,7 @@ public interface Row extends Comparable<Row>
    *
    * @return the timestamp from the epoch as an org.joda.time.DateTime object.
    */
-  public DateTime getTimestamp();
+  DateTime getTimestamp();
 
   /**
    * Returns the list of dimension values for the given column name.
@@ -62,45 +61,23 @@ public interface Row extends Comparable<Row>
    *
    * @return the list of values for the provided column name
    */
-  public List<String> getDimension(String dimension);
+  List<String> getDimension(String dimension);
 
   /**
-   * Returns the raw dimension value for the given column name. This is different from #getDimension which
+   * Returns the raw dimension value for the given column name. This is different from {@link #getDimension} which
    * all values to strings before returning them.
    *
    * @param dimension the column name of the dimension requested
    *
    * @return the value of the provided column name
    */
-  @Nullable public Object getRaw(String dimension);
+  Object getRaw(String dimension);
 
   /**
-   * Returns the float value of the given metric column.
-   * <p/>
-   *
-   * @param metric the column name of the metric requested
-   *
-   * @return the float value for the provided column name.
+   * Returns the metric column value for the given column name. This method is different from {@link #getRaw} in two
+   * aspects:
+   *  1. If the column is absent in the row, null is returned.
+   *  2. If the column has string value, an attempt is made to parse this value as a number.
    */
-  @Nullable public Float getFloatMetric(String metric);
-
-  /**
-   * Returns the long value of the given metric column.
-   * <p/>
-   *
-   * @param metric the column name of the metric requested
-   *
-   * @return the long value for the provided column name.
-   */
-  @Nullable public Long getLongMetric(String metric);
-
-  /**
-   * Returns the double value of the given metric column.
-   * <p/>
-   *
-   * @param metric the column name of the metric requested
-   *
-   * @return the double value for the provided column name.
-   */
-  @Nullable public Double getDoubleMetric(String metric);
+  Number getMetric(String metric);
 }

@@ -35,8 +35,9 @@ import io.druid.query.aggregation.NoopAggregator;
 import io.druid.query.aggregation.NoopBufferAggregator;
 import io.druid.query.aggregation.cardinality.HyperLogLogCollectorAggregateCombiner;
 import io.druid.query.cache.CacheKeyBuilder;
+import io.druid.segment.BaseObjectColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.NilColumnValueSelector;
 import org.apache.commons.codec.binary.Base64;
 
 import java.nio.ByteBuffer;
@@ -96,39 +97,31 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
-
-    if (selector == null) {
+    BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
+    if (selector instanceof NilColumnValueSelector) {
       return NoopAggregator.instance();
     }
-
     final Class classOfObject = selector.classOfObject();
     if (classOfObject.equals(Object.class) || HyperLogLogCollector.class.isAssignableFrom(classOfObject)) {
       return new HyperUniquesAggregator(selector);
     }
 
-    throw new IAE(
-        "Incompatible type for metric[%s], expected a HyperUnique, got a %s", fieldName, classOfObject
-    );
+    throw new IAE("Incompatible type for metric[%s], expected a HyperUnique, got a %s", fieldName, classOfObject);
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
-
-    if (selector == null) {
+    BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
+    if (selector instanceof NilColumnValueSelector) {
       return NoopBufferAggregator.instance();
     }
-
     final Class classOfObject = selector.classOfObject();
     if (classOfObject.equals(Object.class) || HyperLogLogCollector.class.isAssignableFrom(classOfObject)) {
       return new HyperUniquesBufferAggregator(selector);
     }
 
-    throw new IAE(
-        "Incompatible type for metric[%s], expected a HyperUnique, got a %s", fieldName, classOfObject
-    );
+    throw new IAE("Incompatible type for metric[%s], expected a HyperUnique, got a %s", fieldName, classOfObject);
   }
 
   @Override

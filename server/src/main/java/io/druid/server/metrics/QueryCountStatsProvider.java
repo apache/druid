@@ -20,9 +20,9 @@ package io.druid.server.metrics;
 
 public interface QueryCountStatsProvider
 {
-  public long getSuccessfulQueryCount();
+  long getSuccessfulQueryCount();
 
-  public long getFailedQueryCount();
+  long getFailedQueryCount();
 
-  public long getInterruptedQueryCount();
+  long getInterruptedQueryCount();
 }

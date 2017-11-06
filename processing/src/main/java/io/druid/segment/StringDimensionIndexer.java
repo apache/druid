@@ -28,6 +28,7 @@ import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Comparators;
+import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.ValueMatcher;
@@ -62,6 +63,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
                                                                           : null;
 
   private static final int ABSENT_VALUE_ID = -1;
+  private static final int[] EMPTY_INT_ARRAY = new int[]{};
 
   private static class DimensionDictionary
   {
@@ -241,7 +243,10 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       }
     } else if (dimValues instanceof List) {
       List<Object> dimValuesList = (List) dimValues;
-      if (dimValuesList.size() == 1) {
+      if (dimValuesList.isEmpty()) {
+        dimLookup.add(null);
+        encodedDimensionValues = EMPTY_INT_ARRAY;
+      } else if (dimValuesList.size() == 1) {
         encodedDimensionValues = new int[]{dimLookup.add(STRING_TRANSFORMER.apply(dimValuesList.get(0)))};
       } else {
         final String[] dimensionValues = new String[dimValuesList.size()];
@@ -569,31 +574,50 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
         return getEncodedValue(name, false);
       }
 
+      @SuppressWarnings("deprecation")
+      @Nullable
+      @Override
+      public Object getObject()
+      {
+        IncrementalIndex.TimeAndDims key = currEntry.getKey();
+        if (key == null) {
+          return null;
+        }
+
+        Object[] dims = key.getDims();
+        if (dimIndex >= dims.length) {
+          return null;
+        }
+
+        return convertUnsortedEncodedKeyComponentToActualArrayOrList(
+            (int[]) dims[dimIndex],
+            DimensionIndexer.ARRAY
+        );
+      }
+
+      @SuppressWarnings("deprecation")
+      @Override
+      public Class classOfObject()
+      {
+        return Object.class;
+      }
+
       @Override
       public void inspectRuntimeShape(RuntimeShapeInspector inspector)
       {
-        inspector.visit("currEntry", currEntry);
+        // nothing to inspect
       }
     }
     return new IndexerDimensionSelector();
   }
 
   @Override
-  public LongColumnSelector makeLongColumnSelector(TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc)
+  public ColumnValueSelector<?> makeColumnValueSelector(
+      TimeAndDimsHolder currEntry,
+      IncrementalIndex.DimensionDesc desc
+  )
   {
-    return ZeroLongColumnSelector.instance();
-  }
-
-  @Override
-  public FloatColumnSelector makeFloatColumnSelector(TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc)
-  {
-    return ZeroFloatColumnSelector.instance();
-  }
-
-  @Override
-  public DoubleColumnSelector makeDoubleColumnSelector(TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc)
-  {
-    return ZeroDoubleColumnSelector.instance();
+    return makeDimensionSelector(DefaultDimensionSpec.of(desc.getName()), currEntry, desc);
   }
 
   @Override

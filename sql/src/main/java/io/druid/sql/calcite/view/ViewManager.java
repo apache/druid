@@ -29,11 +29,11 @@ import java.util.Map;
  */
 public interface ViewManager
 {
-  void createView(final PlannerFactory plannerFactory, final String viewName, final String viewSql);
+  void createView(PlannerFactory plannerFactory, String viewName, String viewSql);
 
-  void alterView(final PlannerFactory plannerFactory, final String viewName, final String viewSql);
+  void alterView(PlannerFactory plannerFactory, String viewName, String viewSql);
 
-  void dropView(final String viewName);
+  void dropView(String viewName);
 
   Map<String, DruidViewMacro> getViews();
 }

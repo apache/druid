@@ -288,10 +288,22 @@ public class SchemaEvolutionTest
     );
 
     // Only nonexistent(4)
-    Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("a", 0L, "b", 0.0, "c", 0L, "d", 0.0)),
-        runQuery(query, factory, ImmutableList.of(index4))
-    );
+    if (NullHandlingHelper.useDefaultValuesForNull()) {
+      Assert.assertEquals(
+          timeseriesResult(ImmutableMap.of("a", 0L, "b", 0.0, "c", 0L, "d", 0.0)),
+          runQuery(query, factory, ImmutableList.of(index4))
+      );
+    } else {
+      Map<String, Object> result = Maps.newHashMap();
+      result.put("a", null);
+      result.put("b", null);
+      result.put("c", 0L);
+      result.put("d", 0.0d);
+      Assert.assertEquals(
+          timeseriesResult(result),
+          runQuery(query, factory, ImmutableList.of(index4))
+      );
+    }
 
     // string(1) + long(2) + float(3) + nonexistent(4)
     // Note: Expressions implicitly cast strings to numbers, leading to the a/b vs c/d difference.

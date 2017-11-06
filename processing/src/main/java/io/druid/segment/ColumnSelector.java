@@ -26,6 +26,7 @@ import io.druid.segment.data.Indexed;
  */
 public interface ColumnSelector
 {
-  public Indexed<String> getColumnNames();
-  public Column getColumn(String columnName);
+  Indexed<String> getColumnNames();
+
+  Column getColumn(String columnName);
 }

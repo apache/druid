@@ -19,7 +19,7 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.BaseNullableColumnValueSelector;
 
 import javax.annotation.Nullable;
 
@@ -32,10 +32,10 @@ import javax.annotation.Nullable;
 public class NullableAggregator implements Aggregator
 {
   private final Aggregator delegate;
-  private final ColumnValueSelector selector;
+  private final BaseNullableColumnValueSelector selector;
   private boolean isNullResult = true;
 
-  public NullableAggregator(Aggregator delegate, ColumnValueSelector selector)
+  public NullableAggregator(Aggregator delegate, BaseNullableColumnValueSelector selector)
   {
     this.delegate = delegate;
     this.selector = selector;

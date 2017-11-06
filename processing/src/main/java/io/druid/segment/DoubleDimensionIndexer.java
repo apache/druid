@@ -96,110 +96,52 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
       IncrementalIndex.DimensionDesc desc
   )
   {
-    return new DoubleWrappingDimensionSelector(makeDoubleColumnSelector(currEntry, desc), spec.getExtractionFn());
+    return new DoubleWrappingDimensionSelector(makeColumnValueSelector(currEntry, desc), spec.getExtractionFn());
   }
 
   @Override
-  public LongColumnSelector makeLongColumnSelector(TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc)
-  {
-    final int dimIndex = desc.getIndex();
-    class IndexerLongColumnSelector implements LongColumnSelector
-    {
-      @Override
-      public long getLong()
-      {
-        final Object[] dims = currEntry.getKey().getDims();
-
-        if (dimIndex >= dims.length) {
-          return 0L;
-        }
-        double doubleValue = DimensionHandlerUtils.nullToZero((Double) dims[dimIndex]);
-        return (long) doubleValue;
-      }
-
-      @Override
-      public boolean isNull()
-      {
-        if (NullHandlingHelper.useDefaultValuesForNull()) {
-          return false;
-        }
-        final Object[] dims = currEntry.getKey().getDims();
-        return dimIndex >= dims.length || dims[dimIndex] == null;
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        // nothing to inspect
-      }
-    }
-
-    return new IndexerLongColumnSelector();
-  }
-
-  @Override
-  public FloatColumnSelector makeFloatColumnSelector(TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc)
-  {
-    final int dimIndex = desc.getIndex();
-    class IndexerFloatColumnSelector implements FloatColumnSelector
-    {
-      @Override
-      public float getFloat()
-      {
-        final Object[] dims = currEntry.getKey().getDims();
-
-        if (dimIndex >= dims.length) {
-          return 0.0f;
-        }
-        double doubleValue = DimensionHandlerUtils.nullToZero((Double) dims[dimIndex]);
-        return (float) doubleValue;
-      }
-
-      @Override
-      public boolean isNull()
-      {
-        if (NullHandlingHelper.useDefaultValuesForNull()) {
-          return false;
-        }
-        final Object[] dims = currEntry.getKey().getDims();
-        return dimIndex >= dims.length || dims[dimIndex] == null;
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        // nothing to inspect
-      }
-    }
-
-    return new IndexerFloatColumnSelector();
-  }
-
-  @Override
-  public DoubleColumnSelector makeDoubleColumnSelector(TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc)
+  public ColumnValueSelector<?> makeColumnValueSelector(
+      TimeAndDimsHolder currEntry,
+      IncrementalIndex.DimensionDesc desc
+  )
   {
     final int dimIndex = desc.getIndex();
     class IndexerDoubleColumnSelector implements DoubleColumnSelector
     {
+
+      @Override
+      public boolean isNull()
+      {
+        if (NullHandlingHelper.useDefaultValuesForNull()) {
+          return false;
+        }
+        final Object[] dims = currEntry.getKey().getDims();
+        return dimIndex >= dims.length || dims[dimIndex] == null;
+      }
+
       @Override
       public double getDouble()
       {
         final Object[] dims = currEntry.getKey().getDims();
 
-        if (dimIndex >= dims.length) {
-          return 0;
+        if (dimIndex >= dims.length || dims[dimIndex] == null) {
+          return 0.0;
         }
-        return DimensionHandlerUtils.nullToZero((Double) dims[dimIndex]);
+        return (Double) dims[dimIndex];
       }
 
+      @SuppressWarnings("deprecation")
+      @Nullable
       @Override
-      public boolean isNull()
+      public Double getObject()
       {
-        if (NullHandlingHelper.useDefaultValuesForNull()) {
-          return false;
-        }
         final Object[] dims = currEntry.getKey().getDims();
-        return dimIndex >= dims.length || dims[dimIndex] == null;
+
+        if (dimIndex >= dims.length) {
+          return null;
+        }
+
+        return (Double) dims[dimIndex];
       }
 
       @Override
@@ -227,7 +169,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
   @Override
   public int getUnsortedEncodedKeyComponentHashCode(@Nullable Double key)
   {
-    return DimensionHandlerUtils.nullToZero(key).hashCode();
+    return DimensionHandlerUtils.nullToZeroDouble(key).hashCode();
   }
 
   @Override

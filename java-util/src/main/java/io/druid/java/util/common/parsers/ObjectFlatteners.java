@@ -78,7 +78,7 @@ public class ObjectFlatteners
           @Override
           public int size()
           {
-            throw new UnsupportedOperationException();
+            return keySet().size();
           }
 
           @Override
@@ -201,10 +201,10 @@ public class ObjectFlatteners
   {
     Iterable<String> discoverRootFields(T obj);
 
-    Object getRootField(final T obj, final String key);
+    Object getRootField(T obj, String key);
 
-    Function<T, Object> makeJsonPathExtractor(final String expr);
+    Function<T, Object> makeJsonPathExtractor(String expr);
 
-    Function<T, Object> makeJsonQueryExtractor(final String expr);
+    Function<T, Object> makeJsonQueryExtractor(String expr);
   }
 }

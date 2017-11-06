@@ -25,18 +25,18 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
-import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.NoopAggregator;
 import io.druid.query.aggregation.NoopBufferAggregator;
 import io.druid.query.aggregation.ObjectAggregateCombiner;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
-import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.NilColumnValueSelector;
 import org.apache.commons.codec.binary.Base64;
 
 import java.nio.ByteBuffer;
@@ -96,15 +96,15 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
-    if (selector == null) {
+    ColumnValueSelector<?> selector = metricFactory.makeColumnValueSelector(fieldName);
+    if (selector instanceof NilColumnValueSelector) {
       return NoopAggregator.instance();
     }
 
     if ("float".equalsIgnoreCase(inputType)) {
-      return new VarianceAggregator.FloatVarianceAggregator(metricFactory.makeFloatColumnSelector(fieldName));
+      return new VarianceAggregator.FloatVarianceAggregator(selector);
     } else if ("long".equalsIgnoreCase(inputType)) {
-      return new VarianceAggregator.LongVarianceAggregator(metricFactory.makeLongColumnSelector(fieldName));
+      return new VarianceAggregator.LongVarianceAggregator(selector);
     } else if ("variance".equalsIgnoreCase(inputType)) {
       return new VarianceAggregator.ObjectVarianceAggregator(selector);
     }
@@ -116,20 +116,14 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
-    if (selector == null) {
+    ColumnValueSelector<?> selector = metricFactory.makeColumnValueSelector(fieldName);
+    if (selector instanceof NilColumnValueSelector) {
       return NoopBufferAggregator.instance();
     }
     if ("float".equalsIgnoreCase(inputType)) {
-      return new VarianceBufferAggregator.FloatVarianceAggregator(
-          name,
-          metricFactory.makeFloatColumnSelector(fieldName)
-      );
+      return new VarianceBufferAggregator.FloatVarianceAggregator(name, selector);
     } else if ("long".equalsIgnoreCase(inputType)) {
-      return new VarianceBufferAggregator.LongVarianceAggregator(
-          name,
-          metricFactory.makeLongColumnSelector(fieldName)
-      );
+      return new VarianceBufferAggregator.LongVarianceAggregator(name, selector);
     } else if ("variance".equalsIgnoreCase(inputType)) {
       return new VarianceBufferAggregator.ObjectVarianceAggregator(name, selector);
     }
@@ -156,16 +150,14 @@ public class VarianceAggregatorFactory extends AggregatorFactory
       @Override
       public void reset(ColumnValueSelector selector)
       {
-        @SuppressWarnings("unchecked")
-        VarianceAggregatorCollector first = ((ObjectColumnSelector<VarianceAggregatorCollector>) selector).getObject();
+        VarianceAggregatorCollector first = (VarianceAggregatorCollector) selector.getObject();
         combined.copyFrom(first);
       }
 
       @Override
       public void fold(ColumnValueSelector selector)
       {
-        @SuppressWarnings("unchecked")
-        VarianceAggregatorCollector other = ((ObjectColumnSelector<VarianceAggregatorCollector>) selector).getObject();
+        VarianceAggregatorCollector other = (VarianceAggregatorCollector) selector.getObject();
         combined.fold(other);
       }
 

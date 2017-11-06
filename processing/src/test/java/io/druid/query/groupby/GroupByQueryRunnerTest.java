@@ -47,7 +47,6 @@ import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.java.util.common.guava.MergeSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.java.util.common.parsers.ParseException;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.BySegmentResultValue;
 import io.druid.query.BySegmentResultValueClass;
@@ -298,6 +297,26 @@ public class GroupByQueryRunnerTest
         return "v2SmallDictionary";
       }
     };
+    final GroupByQueryConfig v2ParallelCombineConfig = new GroupByQueryConfig()
+    {
+      @Override
+      public String getDefaultStrategy()
+      {
+        return GroupByStrategySelector.STRATEGY_V2;
+      }
+
+      @Override
+      public int getNumParallelCombineThreads()
+      {
+        return DEFAULT_PROCESSING_CONFIG.getNumThreads();
+      }
+
+      @Override
+      public String toString()
+      {
+        return "v2ParallelCombine";
+      }
+    };
 
     v1Config.setMaxIntermediateRows(10000);
     v1SingleThreadedConfig.setMaxIntermediateRows(10000);
@@ -307,7 +326,8 @@ public class GroupByQueryRunnerTest
         v1SingleThreadedConfig,
         v2Config,
         v2SmallBufferConfig,
-        v2SmallDictionaryConfig
+        v2SmallDictionaryConfig,
+        v2ParallelCombineConfig
     );
   }
 
@@ -2765,7 +2785,7 @@ public class GroupByQueryRunnerTest
           @Override
           public int compare(Row o1, Row o2)
           {
-            return Float.compare(o1.getFloatMetric("idx"), o2.getFloatMetric("idx"));
+            return Float.compare(o1.getMetric("idx").floatValue(), o2.getMetric("idx").floatValue());
           }
         };
 
@@ -2776,7 +2796,7 @@ public class GroupByQueryRunnerTest
           @Override
           public int compare(Row o1, Row o2)
           {
-            int value = Float.compare(o1.getFloatMetric("rows"), o2.getFloatMetric("rows"));
+            int value = Float.compare(o1.getMetric("rows").floatValue(), o2.getMetric("rows").floatValue());
             if (value != 0) {
               return value;
             }
@@ -3320,10 +3340,6 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    // havingSpec equalTo/greaterThan/lessThan do not work on complex aggregators, even if they could be finalized.
-    // See also: https://github.com/druid-io/druid/issues/2507
-    expectedException.expect(ParseException.class);
-    expectedException.expectMessage("Unknown type[class io.druid.hll.HLLCV1]");
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "order-limit");
   }
@@ -3863,7 +3879,8 @@ public class GroupByQueryRunnerTest
                 ),
                 new SelectorDimFilter("__time", String.valueOf(DateTimes.of("2011-04-01").getMillis()), null)
             )
-        )
+        ),
+        null
     );
 
     GroupByQuery.Builder builder = GroupByQuery
@@ -3909,7 +3926,8 @@ public class GroupByQueryRunnerTest
                 new BoundDimFilter("rows", "12", null, true, false, null, extractionFn2, StringComparators.NUMERIC),
                 new SelectorDimFilter("idx", "super-217", extractionFn)
             )
-        )
+        ),
+        null
     );
 
     GroupByQuery.Builder builder = GroupByQuery
@@ -5122,7 +5140,7 @@ public class GroupByQueryRunnerTest
               @Override
               public boolean eval(Row row)
               {
-                return (row.getFloatMetric("idx_subpostagg") < 3800);
+                return (row.getMetric("idx_subpostagg").floatValue() < 3800);
               }
             }
         )
@@ -5387,7 +5405,7 @@ public class GroupByQueryRunnerTest
               @Override
               public boolean eval(Row row)
               {
-                return (row.getFloatMetric("idx_subpostagg") < 3800);
+                return (row.getMetric("idx_subpostagg").floatValue() < 3800);
               }
             }
         )
@@ -8078,7 +8096,8 @@ public class GroupByQueryRunnerTest
                             StringComparators.NUMERIC
                         )
                     )
-                )
+                ),
+                null
             )
         )
         .setGranularity(QueryRunnerTestHelper.allGran)
@@ -8264,6 +8283,7 @@ public class GroupByQueryRunnerTest
             )
         )
         .setGranularity(QueryRunnerTestHelper.allGran)
+        .addOrderByColumn("ql")
         .build();
 
     List<Row> expectedResults;

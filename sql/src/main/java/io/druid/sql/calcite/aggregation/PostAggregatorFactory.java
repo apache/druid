@@ -26,7 +26,7 @@ import io.druid.query.aggregation.PostAggregator;
  */
 public abstract class PostAggregatorFactory
 {
-  public abstract PostAggregator factorize(final String outputName);
+  public abstract PostAggregator factorize(String outputName);
 
   @Override
   public boolean equals(Object o)

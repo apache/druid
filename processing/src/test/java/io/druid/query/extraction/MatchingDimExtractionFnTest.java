@@ -76,7 +76,7 @@ public class MatchingDimExtractionFnTest
 
     Assert.assertNull(extractionFn.apply((Object) null));
     Assert.assertNull(extractionFn.apply((String) null));
-    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? null : "" , extractionFn.apply((String) ""));
+    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? null : "", extractionFn.apply((String) ""));
   }
 
   @Test

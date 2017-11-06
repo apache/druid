@@ -142,6 +142,7 @@ public class RealtimePlumberSchoolTest
         ),
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
         new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null),
+        null,
         jsonMapper
     );
 
@@ -161,6 +162,7 @@ public class RealtimePlumberSchoolTest
         ),
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
         new UniformGranularitySpec(Granularities.YEAR, Granularities.NONE, null),
+        null,
         jsonMapper
     );
 
@@ -596,19 +598,7 @@ public class RealtimePlumberSchoolTest
       }
 
       @Override
-      public Float getFloatMetric(String metric)
-      {
-        return 0F;
-      }
-
-      @Override
-      public Long getLongMetric(String metric)
-      {
-        return 0L;
-      }
-
-      @Override
-      public Double getDoubleMetric(String metric)
+      public Number getMetric(String metric)
       {
         return 0D;
       }
@@ -656,27 +646,15 @@ public class RealtimePlumberSchoolTest
       }
 
       @Override
-      public Float getFloatMetric(String metric)
+      public Number getMetric(String metric)
       {
         return 0F;
-      }
-
-      @Override
-      public Long getLongMetric(String metric)
-      {
-        return 0L;
       }
 
       @Override
       public Object getRaw(String dimension)
       {
         return dimVals;
-      }
-
-      @Override
-      public Double getDoubleMetric(String metric)
-      {
-        return 0D;
       }
 
       @Override

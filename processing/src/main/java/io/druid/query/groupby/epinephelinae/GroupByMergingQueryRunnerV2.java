@@ -22,6 +22,7 @@ package io.druid.query.groupby.epinephelinae;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Predicates;
+import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -33,8 +34,10 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.collections.BlockingPool;
+import io.druid.collections.NonBlockingPool;
 import io.druid.collections.ReferenceCountingResourceHolder;
 import io.druid.collections.Releaser;
+import io.druid.collections.ResourceHolder;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
@@ -80,6 +83,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
   private final ListeningExecutorService exec;
   private final QueryWatcher queryWatcher;
   private final int concurrencyHint;
+  private final NonBlockingPool<ByteBuffer> processingBufferPool;
   private final BlockingPool<ByteBuffer> mergeBufferPool;
   private final ObjectMapper spillMapper;
   private final String processingTmpDir;
@@ -91,6 +95,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
       QueryWatcher queryWatcher,
       Iterable<QueryRunner<Row>> queryables,
       int concurrencyHint,
+      NonBlockingPool<ByteBuffer> processingBufferPool,
       BlockingPool<ByteBuffer> mergeBufferPool,
       int mergeBufferSize,
       ObjectMapper spillMapper,
@@ -102,6 +107,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
     this.queryWatcher = queryWatcher;
     this.queryables = Iterables.unmodifiableIterable(Iterables.filter(queryables, Predicates.notNull()));
     this.concurrencyHint = concurrencyHint;
+    this.processingBufferPool = processingBufferPool;
     this.mergeBufferPool = mergeBufferPool;
     this.spillMapper = spillMapper;
     this.processingTmpDir = processingTmpDir;
@@ -154,6 +160,22 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
     final boolean hasTimeout = QueryContexts.hasTimeout(query);
     final long timeoutAt = System.currentTimeMillis() + queryTimeout;
 
+    final Supplier<ResourceHolder<ByteBuffer>> combineBufferSupplier = new Supplier<ResourceHolder<ByteBuffer>>()
+    {
+      private boolean initialized;
+      private ResourceHolder<ByteBuffer> buffer;
+
+      @Override
+      public ResourceHolder<ByteBuffer> get()
+      {
+        if (!initialized) {
+          buffer = processingBufferPool.take();
+          initialized = true;
+        }
+        return buffer;
+      }
+    };
+
     return new BaseSequence<>(
         new BaseSequence.IteratorMaker<Row, CloseableGrouperIterator<RowBasedKey, Row>>()
         {
@@ -194,6 +216,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
                   null,
                   config,
                   Suppliers.ofInstance(mergeBufferHolder.get()),
+                  combineBufferSupplier,
                   concurrencyHint,
                   temporaryStorage,
                   spillMapper,

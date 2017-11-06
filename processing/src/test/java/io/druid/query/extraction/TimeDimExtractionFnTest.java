@@ -22,6 +22,7 @@ package io.druid.query.extraction;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.segment.NullHandlingHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -47,7 +48,11 @@ public class TimeDimExtractionFnTest
     ExtractionFn extractionFn = new TimeDimExtractionFn("MM/dd/yyyy", "MM/yyyy");
 
     Assert.assertNull(extractionFn.apply(null));
-    Assert.assertNull(extractionFn.apply(""));
+    if (NullHandlingHelper.useDefaultValuesForNull()) {
+      Assert.assertNull(extractionFn.apply(""));
+    } else {
+      Assert.assertEquals("", extractionFn.apply(""));
+    }
   }
 
   @Test

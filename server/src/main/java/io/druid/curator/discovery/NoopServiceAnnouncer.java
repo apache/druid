@@ -24,6 +24,7 @@ import io.druid.server.DruidNode;
 /**
  * Does nothing.
  */
+@Deprecated
 public class NoopServiceAnnouncer implements ServiceAnnouncer
 {
   @Override

@@ -19,11 +19,9 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.ObjectColumnSelector;
-
 /**
  */
-public class TestObjectColumnSelector<T> implements ObjectColumnSelector
+public class TestObjectColumnSelector<T> extends io.druid.segment.TestObjectColumnSelector<T>
 {
   private final Object[] objects;
 
@@ -35,15 +33,15 @@ public class TestObjectColumnSelector<T> implements ObjectColumnSelector
   }
 
   @Override
-  public Class classOfObject()
+  public Class<T> classOfObject()
   {
-    return objects[index].getClass();
+    return (Class<T>) objects[index].getClass();
   }
 
   @Override
-  public Object getObject()
+  public T getObject()
   {
-    return objects[index];
+    return (T) objects[index];
   }
 
   public void increment()

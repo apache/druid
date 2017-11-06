@@ -50,6 +50,7 @@ import io.druid.server.AsyncQueryForwardingServlet;
 import io.druid.server.http.RouterResource;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.metrics.QueryCountStatsProvider;
+import io.druid.server.router.AvaticaConnectionBalancer;
 import io.druid.server.router.CoordinatorRuleManager;
 import io.druid.server.router.QueryHostFinder;
 import io.druid.server.router.Router;
@@ -65,7 +66,7 @@ import java.util.List;
  */
 @Command(
     name = "router",
-    description = "Experimental! Understands tiers and routes things to different brokers"
+    description = "Experimental! Understands tiers and routes things to different brokers, see http://druid.io/docs/latest/development/router.html for a description"
 )
 public class CliRouter extends ServerRunnable
 {
@@ -94,6 +95,7 @@ public class CliRouter extends ServerRunnable
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(9088);
 
             JsonConfigProvider.bind(binder, "druid.router", TieredBrokerConfig.class);
+            JsonConfigProvider.bind(binder, "druid.router.avatica.balancer", AvaticaConnectionBalancer.class);
 
             binder.bind(CoordinatorRuleManager.class);
             LifecycleModule.register(binder, CoordinatorRuleManager.class);

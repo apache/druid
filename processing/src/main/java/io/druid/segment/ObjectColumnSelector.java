@@ -19,9 +19,16 @@
 
 package io.druid.segment;
 
+/**
+ * This interface is convenient for implementation of "object-sourcing" {@link ColumnValueSelector}s, it provides
+ * default implementations for all {@link ColumnValueSelector}'s methods except {@link #getObject()} and {@link
+ * #classOfObject()}.
+ * <p>
+ * This interface should appear ONLY in "implements" clause or anonymous class creation, but NOT in "user" code, where
+ * {@link BaseObjectColumnValueSelector} must be used instead.
+ */
 public interface ObjectColumnSelector<T> extends ColumnValueSelector<T>
 {
-
   /**
    * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidential
    * calling. "Polymorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}

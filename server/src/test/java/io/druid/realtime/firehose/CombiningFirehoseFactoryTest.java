@@ -33,6 +33,7 @@ import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -58,7 +59,7 @@ public class CombiningFirehoseFactoryTest
       Assert.assertTrue(firehose.hasMore());
       final InputRow inputRow = firehose.nextRow();
       Assert.assertEquals(i, inputRow.getTimestampFromEpoch());
-      Assert.assertEquals(i, inputRow.getFloatMetric("test"), 0);
+      Assert.assertEquals(i, inputRow.getMetric("test").floatValue(), 0);
     }
     Assert.assertFalse(firehose.hasMore());
   }
@@ -92,21 +93,9 @@ public class CombiningFirehoseFactoryTest
       }
 
       @Override
-      public Float getFloatMetric(String metric)
+      public Number getMetric(String metric)
       {
         return metricValue;
-      }
-
-      @Override
-      public Long getLongMetric(String metric)
-      {
-        return new Float(metricValue).longValue();
-      }
-
-      @Override
-      public Double getDoubleMetric(String metric)
-      {
-        return new Float(metricValue).doubleValue();
       }
 
       @Override
@@ -144,6 +133,7 @@ public class CombiningFirehoseFactoryTest
           return iterator.hasNext();
         }
 
+        @Nullable
         @Override
         public InputRow nextRow()
         {

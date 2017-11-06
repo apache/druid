@@ -21,35 +21,26 @@ package io.druid.segment.column;
 
 import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import io.druid.query.monomorphicprocessing.HotLoopCallee;
-import io.druid.segment.DoubleColumnSelector;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
-import io.druid.segment.data.ReadableOffset;
-
-import java.io.Closeable;
 
 /**
  */
-public interface GenericColumn extends HotLoopCallee, Closeable
+public interface GenericColumn extends BaseColumn, HotLoopCallee
 {
-  public int length();
-  public ValueType getType();
-  public boolean hasMultipleValues();
+  int length();
+
+  ValueType getType();
 
   @CalledFromHotLoop
-  public String getStringSingleValueRow(int rowNum);
+  String getStringSingleValueRow(int rowNum);
 
   @CalledFromHotLoop
   float getFloatSingleValueRow(int rowNum);
-  FloatColumnSelector makeFloatSingleValueRowSelector(ReadableOffset offset);
 
   @CalledFromHotLoop
   long getLongSingleValueRow(int rowNum);
-  LongColumnSelector makeLongSingleValueRowSelector(ReadableOffset offset);
 
   @CalledFromHotLoop
   double getDoubleSingleValueRow(int rowNum);
-  DoubleColumnSelector makeDoubleSingleValueRowSelector(ReadableOffset offset);
 
   @CalledFromHotLoop
   boolean isNull(int rowNum);

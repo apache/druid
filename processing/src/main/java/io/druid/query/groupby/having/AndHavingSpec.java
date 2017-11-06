@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import io.druid.data.input.Row;
+import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.column.ValueType;
 
 import java.util.List;
@@ -52,6 +53,14 @@ public class AndHavingSpec extends BaseHavingSpec
   {
     for (HavingSpec havingSpec : havingSpecs) {
       havingSpec.setRowSignature(rowSignature);
+    }
+  }
+
+  @Override
+  public void setAggregators(Map<String, AggregatorFactory> aggregators)
+  {
+    for (HavingSpec havingSpec : havingSpecs) {
+      havingSpec.setAggregators(aggregators);
     }
   }
 

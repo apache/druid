@@ -34,10 +34,10 @@ import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.BaseObjectColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.DoubleColumnSelector;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.NullHandlingHelper;
-import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.Column;
 
 import javax.annotation.Nullable;
@@ -62,6 +62,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
 
   private final String fieldName;
   private final String name;
+  private final boolean storeDoubleAsFloat;
 
   @JsonCreator
   public DoubleFirstAggregatorFactory(
@@ -74,28 +75,29 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
 
     this.name = name;
     this.fieldName = fieldName;
+    this.storeDoubleAsFloat = Column.storeDoubleAsFloat();
   }
 
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
 
-    DoubleColumnSelector doubleColumnSelector = metricFactory.makeDoubleColumnSelector(fieldName);
+    ColumnValueSelector columnValueSelector = metricFactory.makeColumnValueSelector(fieldName);
     return NullHandlingHelper.getNullableAggregator(new DoubleFirstAggregator(
         name,
-        metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME),
-        doubleColumnSelector
-    ), doubleColumnSelector);
+        metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
+        columnValueSelector
+    ), columnValueSelector);
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    DoubleColumnSelector doubleColumnSelector = metricFactory.makeDoubleColumnSelector(fieldName);
+    ColumnValueSelector columnValueSelector = metricFactory.makeColumnValueSelector(fieldName);
     return NullHandlingHelper.getNullableAggregator(new DoubleFirstBufferAggregator(
-        metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME),
-        doubleColumnSelector
-    ), doubleColumnSelector);
+        metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
+        columnValueSelector
+    ), columnValueSelector);
   }
 
   @Override
@@ -131,7 +133,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
       @Override
       public Aggregator factorize(ColumnSelectorFactory metricFactory)
       {
-        final ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(name);
+        final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
         return NullHandlingHelper.getNullableAggregator(new DoubleFirstAggregator(name, null, null)
         {
           @Override
@@ -149,7 +151,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
       @Override
       public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
       {
-        final ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(name);
+        final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
         return NullHandlingHelper.getNullableAggregator(new DoubleFirstBufferAggregator(null, null)
         {
           @Override
@@ -236,6 +238,9 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   @Override
   public String getTypeName()
   {
+    if (storeDoubleAsFloat) {
+      return "float";
+    }
     return "double";
   }
 

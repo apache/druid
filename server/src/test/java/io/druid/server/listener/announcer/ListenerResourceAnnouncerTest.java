@@ -20,7 +20,7 @@
 package io.druid.server.listener.announcer;
 
 import com.google.common.primitives.Longs;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.curator.CuratorTestBase;
 import io.druid.curator.announcement.Announcer;
 import io.druid.java.util.common.StringUtils;

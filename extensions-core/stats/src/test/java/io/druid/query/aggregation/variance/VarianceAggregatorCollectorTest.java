@@ -21,8 +21,8 @@ package io.druid.query.aggregation.variance;
 
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.Pair;
-import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.TestFloatColumnSelector;
+import io.druid.segment.TestObjectColumnSelector;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -159,7 +159,7 @@ public class VarianceAggregatorCollectorTest
 
   }
 
-  private static class ObjectHandOver implements ObjectColumnSelector
+  private static class ObjectHandOver extends TestObjectColumnSelector
   {
     Object v;
 

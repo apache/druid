@@ -25,11 +25,11 @@ import java.io.IOException;
 
 public interface DataSegmentAnnouncer
 {
-  public void announceSegment(DataSegment segment) throws IOException;
+  void announceSegment(DataSegment segment) throws IOException;
 
-  public void unannounceSegment(DataSegment segment) throws IOException;
+  void unannounceSegment(DataSegment segment) throws IOException;
 
-  public void announceSegments(Iterable<DataSegment> segments) throws IOException;
+  void announceSegments(Iterable<DataSegment> segments) throws IOException;
 
-  public void unannounceSegments(Iterable<DataSegment> segments) throws IOException;
+  void unannounceSegments(Iterable<DataSegment> segments) throws IOException;
 }

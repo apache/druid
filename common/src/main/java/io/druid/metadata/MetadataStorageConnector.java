@@ -24,18 +24,18 @@ package io.druid.metadata;
 public interface MetadataStorageConnector
 {
   Void insertOrUpdate(
-      final String tableName,
-      final String keyColumn,
-      final String valueColumn,
-      final String key,
-      final byte[] value
+      String tableName,
+      String keyColumn,
+      String valueColumn,
+      String key,
+      byte[] value
   ) throws Exception;
 
   byte[] lookup(
-      final String tableName,
-      final String keyColumn,
-      final String valueColumn,
-      final String key
+      String tableName,
+      String keyColumn,
+      String valueColumn,
+      String key
   );
 
   void createDataSourceTable();

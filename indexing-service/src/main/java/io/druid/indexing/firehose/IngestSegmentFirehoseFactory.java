@@ -42,6 +42,7 @@ import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.filter.DimFilter;
 import io.druid.segment.IndexIO;
 import io.druid.segment.QueryableIndexStorageAdapter;
+import io.druid.segment.transform.TransformSpec;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.realtime.firehose.IngestSegmentFirehose;
 import io.druid.segment.realtime.firehose.WindowedStorageAdapter;
@@ -281,7 +282,8 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
           )
       );
 
-      return new IngestSegmentFirehose(adapters, dims, metricsList, dimFilter);
+      final TransformSpec transformSpec = TransformSpec.fromInputRowParser(inputRowParser);
+      return new IngestSegmentFirehose(adapters, transformSpec, dims, metricsList, dimFilter);
     }
     catch (IOException | SegmentLoadingException e) {
       throw Throwables.propagate(e);

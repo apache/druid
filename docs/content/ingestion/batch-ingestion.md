@@ -114,7 +114,7 @@ A type of inputSpec where a static path to the data files is provided.
 For example, using the static input paths:
 
 ```
-"paths" : "s3n://billy-bucket/the/data/is/here/data.gz, s3n://billy-bucket/the/data/is/here/moredata.gz, s3n://billy-bucket/the/data/is/here/evenmoredata.gz"
+"paths" : "s3n://billy-bucket/the/data/is/here/data.gz,s3n://billy-bucket/the/data/is/here/moredata.gz,s3n://billy-bucket/the/data/is/here/evenmoredata.gz"
 ```
 
 ##### `granularity`

@@ -42,7 +42,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
@@ -1370,7 +1370,7 @@ public class KafkaSupervisor implements Supervisor
         ) : Optional.<DateTime>absent());
 
         Optional<DateTime> maximumMessageTime = (ioConfig.getEarlyMessageRejectionPeriod().isPresent() ? Optional.of(
-            DateTimes.nowUtc().plus(ioConfig.getEarlyMessageRejectionPeriod().get())
+            DateTimes.nowUtc().plus(ioConfig.getTaskDuration()).plus(ioConfig.getEarlyMessageRejectionPeriod().get())
         ) : Optional.<DateTime>absent());
 
         taskGroups.put(groupId, new TaskGroup(generateStartingOffsetsForPartitionGroup(groupId), minimumMessageTime, maximumMessageTime));

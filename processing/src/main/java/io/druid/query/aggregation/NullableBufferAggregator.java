@@ -19,7 +19,7 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.BaseNullableColumnValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -36,10 +36,10 @@ public class NullableBufferAggregator implements BufferAggregator
   private static final byte IS_NULL_BYTE = (byte) 1;
   private static final byte IS_NOT_NULL_BYTE = (byte) 0;
   private final BufferAggregator delegate;
-  private final ColumnValueSelector selector;
+  private final BaseNullableColumnValueSelector selector;
 
 
-  public NullableBufferAggregator(BufferAggregator delegate, ColumnValueSelector selector)
+  public NullableBufferAggregator(BufferAggregator delegate, BaseNullableColumnValueSelector selector)
   {
     this.delegate = delegate;
     this.selector = selector;
