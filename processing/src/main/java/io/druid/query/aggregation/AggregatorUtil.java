@@ -31,10 +31,11 @@ import io.druid.segment.BaseDoubleColumnValueSelector;
 import io.druid.segment.BaseFloatColumnValueSelector;
 import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
-import io.druid.segment.virtual.ExpressionObjectSelector;
+import io.druid.segment.virtual.ExpressionSelectors;
 
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -140,7 +141,7 @@ public class AggregatorUtil
     }
     if (fieldName == null && fieldExpression != null) {
       final Expr expr = Parser.parse(fieldExpression, macroTable);
-      final ExpressionObjectSelector baseSelector = ExpressionObjectSelector.from(metricFactory, expr);
+      final ColumnValueSelector<ExprEval> baseSelector = ExpressionSelectors.makeExprEvalSelector(metricFactory, expr);
       class ExpressionFloatColumnSelector implements FloatColumnSelector
       {
         @Override
@@ -174,7 +175,7 @@ public class AggregatorUtil
     }
     if (fieldName == null && fieldExpression != null) {
       final Expr expr = Parser.parse(fieldExpression, macroTable);
-      final ExpressionObjectSelector baseSelector = ExpressionObjectSelector.from(metricFactory, expr);
+      final ColumnValueSelector<ExprEval> baseSelector = ExpressionSelectors.makeExprEvalSelector(metricFactory, expr);
       class ExpressionLongColumnSelector implements LongColumnSelector
       {
         @Override
@@ -208,7 +209,7 @@ public class AggregatorUtil
     }
     if (fieldName == null && fieldExpression != null) {
       final Expr expr = Parser.parse(fieldExpression, macroTable);
-      final ExpressionObjectSelector baseSelector = ExpressionObjectSelector.from(metricFactory, expr);
+      final ColumnValueSelector<ExprEval> baseSelector = ExpressionSelectors.makeExprEvalSelector(metricFactory, expr);
       class ExpressionDoubleColumnSelector implements DoubleColumnSelector
       {
         @Override

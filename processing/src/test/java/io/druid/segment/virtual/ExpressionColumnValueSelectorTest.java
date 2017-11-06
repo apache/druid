@@ -30,13 +30,13 @@ import org.junit.Test;
 
 import java.util.List;
 
-public class ExpressionObjectSelectorTest
+public class ExpressionColumnValueSelectorTest
 {
   @Test
   public void testSupplierFromDimensionSelector()
   {
     final SettableSupplier<String> settableSupplier = new SettableSupplier<>();
-    final Supplier<Object> supplier = ExpressionObjectSelector.supplierFromDimensionSelector(
+    final Supplier<Object> supplier = ExpressionSelectors.supplierFromDimensionSelector(
         dimensionSelectorFromSupplier(settableSupplier)
     );
 
@@ -54,7 +54,7 @@ public class ExpressionObjectSelectorTest
   public void testSupplierFromObjectSelectorObject()
   {
     final SettableSupplier<Object> settableSupplier = new SettableSupplier<>();
-    final Supplier<Object> supplier = ExpressionObjectSelector.supplierFromObjectSelector(
+    final Supplier<Object> supplier = ExpressionSelectors.supplierFromObjectSelector(
         objectSelectorFromSupplier(settableSupplier, Object.class)
     );
 
@@ -78,7 +78,7 @@ public class ExpressionObjectSelectorTest
   public void testSupplierFromObjectSelectorNumber()
   {
     final SettableSupplier<Number> settableSupplier = new SettableSupplier<>();
-    final Supplier<Object> supplier = ExpressionObjectSelector.supplierFromObjectSelector(
+    final Supplier<Object> supplier = ExpressionSelectors.supplierFromObjectSelector(
         objectSelectorFromSupplier(settableSupplier, Number.class)
     );
 
@@ -97,7 +97,7 @@ public class ExpressionObjectSelectorTest
   public void testSupplierFromObjectSelectorString()
   {
     final SettableSupplier<String> settableSupplier = new SettableSupplier<>();
-    final Supplier<Object> supplier = ExpressionObjectSelector.supplierFromObjectSelector(
+    final Supplier<Object> supplier = ExpressionSelectors.supplierFromObjectSelector(
         objectSelectorFromSupplier(settableSupplier, String.class)
     );
 
@@ -115,7 +115,7 @@ public class ExpressionObjectSelectorTest
   public void testSupplierFromObjectSelectorList()
   {
     final SettableSupplier<List> settableSupplier = new SettableSupplier<>();
-    final Supplier<Object> supplier = ExpressionObjectSelector.supplierFromObjectSelector(
+    final Supplier<Object> supplier = ExpressionSelectors.supplierFromObjectSelector(
         objectSelectorFromSupplier(settableSupplier, List.class)
     );
 

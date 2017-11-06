@@ -19,7 +19,7 @@
 
 package io.druid.sql.calcite.expression.builtin;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.expression.TimestampExtractExprMacro;
 import io.druid.sql.calcite.expression.DruidExpression;
@@ -37,8 +37,6 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.joda.time.DateTimeZone;
 
-import java.util.Map;
-
 public class TimeExtractOperatorConversion implements SqlOperatorConversion
 {
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
@@ -49,44 +47,18 @@ public class TimeExtractOperatorConversion implements SqlOperatorConversion
       .functionCategory(SqlFunctionCategory.TIMEDATE)
       .build();
 
-  // Note that QUARTER is not supported here.
-  private static final Map<TimestampExtractExprMacro.Unit, String> EXTRACT_FORMAT_MAP =
-      ImmutableMap.<TimestampExtractExprMacro.Unit, String>builder()
-          .put(TimestampExtractExprMacro.Unit.SECOND, "s")
-          .put(TimestampExtractExprMacro.Unit.MINUTE, "m")
-          .put(TimestampExtractExprMacro.Unit.HOUR, "H")
-          .put(TimestampExtractExprMacro.Unit.DAY, "d")
-          .put(TimestampExtractExprMacro.Unit.DOW, "e")
-          .put(TimestampExtractExprMacro.Unit.DOY, "D")
-          .put(TimestampExtractExprMacro.Unit.WEEK, "w")
-          .put(TimestampExtractExprMacro.Unit.MONTH, "M")
-          .put(TimestampExtractExprMacro.Unit.YEAR, "Y")
-          .build();
-
   public static DruidExpression applyTimeExtract(
       final DruidExpression timeExpression,
       final TimestampExtractExprMacro.Unit unit,
       final DateTimeZone timeZone
   )
   {
-    return timeExpression.map(
-        simpleExtraction -> {
-          final String formatString = EXTRACT_FORMAT_MAP.get(unit);
-          if (formatString == null) {
-            return null;
-          } else {
-            return TimeFormatOperatorConversion.applyTimestampFormat(
-                simpleExtraction,
-                formatString,
-                timeZone
-            );
-          }
-        },
-        expression -> StringUtils.format(
-            "timestamp_extract(%s,%s,%s)",
-            expression,
-            DruidExpression.stringLiteral(unit.name()),
-            DruidExpression.stringLiteral(timeZone.getID())
+    return DruidExpression.fromFunctionCall(
+        "timestamp_extract",
+        ImmutableList.of(
+            timeExpression,
+            DruidExpression.fromExpression(DruidExpression.stringLiteral(unit.name())),
+            DruidExpression.fromExpression(DruidExpression.stringLiteral(timeZone.getID()))
         )
     );
   }
