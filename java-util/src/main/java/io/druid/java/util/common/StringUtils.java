@@ -79,7 +79,7 @@ public class StringUtils
   }
 
   @Nullable
-  public static String fromUtf8Nullable(final byte[] bytes)
+  public static String fromUtf8Nullable(@Nullable final byte[] bytes)
   {
     if (bytes == null) {
       return null;
@@ -91,15 +91,18 @@ public class StringUtils
   {
     final byte[] bytes = new byte[numBytes];
     buffer.get(bytes);
-    return StringUtils.fromUtf8(bytes);
+    return fromUtf8(bytes);
   }
 
   @Nullable
   public static String fromUtf8Nullable(final ByteBuffer buffer, final int numBytes)
   {
+    if(numBytes < 0){
+      return null;
+    }
     final byte[] bytes = new byte[numBytes];
     buffer.get(bytes);
-    return StringUtils.fromUtf8Nullable(bytes);
+    return fromUtf8(bytes);
   }
 
   public static String fromUtf8(final ByteBuffer buffer)

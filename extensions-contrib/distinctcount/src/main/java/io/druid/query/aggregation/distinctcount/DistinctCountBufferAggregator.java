@@ -52,11 +52,15 @@ public class DistinctCountBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
+    boolean countNulls = !selector.nameLookupPossibleInAdvance() || NullHandlingHelper.useDefaultValuesForNull();
     MutableBitmap mutableBitmap = getMutableBitmap(buf, position);
     IndexedInts row = selector.getRow();
     for (int i = 0; i < row.size(); i++) {
+
       int index = row.get(i);
-      mutableBitmap.add(index);
+      if (countNulls || selector.lookupName(index) != null) {
+        mutableBitmap.add(index);
+      }
     }
     buf.putLong(position, mutableBitmap.size());
   }
@@ -110,7 +114,7 @@ public class DistinctCountBufferAggregator implements BufferAggregator
   private long countValues(ByteBuffer buf, int position)
   {
     MutableBitmap mutableBitmap = getMutableBitmap(buf, position);
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (!selector.nameLookupPossibleInAdvance() || NullHandlingHelper.useDefaultValuesForNull()) {
       return mutableBitmap.size();
     }
     int nullId = selector.idLookup().lookupId(null);

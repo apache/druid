@@ -168,7 +168,7 @@ public class TimestampAggregatorFactory extends AggregatorFactory
 
   @Override
   @Nullable
-  public Object finalizeComputation(Object object)
+  public Object finalizeComputation(@Nullable Object object)
   {
     return object == null ? null : DateTimes.utc((long) object);
   }

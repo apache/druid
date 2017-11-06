@@ -30,7 +30,7 @@ import java.nio.ByteBuffer;
  * A BufferAggregator is an object that can aggregate metrics into a ByteBuffer.  Its aggregation-related methods
  * (namely, aggregate(...) and get(...)) only take the ByteBuffer and position because it is assumed that the Aggregator
  * was given something (one or more MetricSelector(s)) in its constructor that it can use to get at the next bit of data.
- *
+ * <p>
  * Thus, an Aggregator can be thought of as a closure over some other thing that is stateful and changes between calls
  * to aggregate(...).
  */
@@ -39,15 +39,15 @@ public interface BufferAggregator extends HotLoopCallee
 {
   /**
    * Initializes the buffer location
-   *
+   * <p>
    * Implementations of this method must initialize the byte buffer at the given position
-   *
+   * <p>
    * <b>Implementations must not change the position, limit or mark of the given buffer</b>
-   *
+   * <p>
    * This method must not exceed the number of bytes returned by {@link AggregatorFactory#getMaxIntermediateSize()}
    * in the corresponding {@link AggregatorFactory}
    *
-   * @param buf byte buffer to initialize
+   * @param buf      byte buffer to initialize
    * @param position offset within the byte buffer for initialization
    */
   @CalledFromHotLoop
@@ -55,13 +55,13 @@ public interface BufferAggregator extends HotLoopCallee
 
   /**
    * Aggregates metric values into the given aggregate byte representation
-   *
+   * <p>
    * Implementations of this method must read in the aggregate value from the buffer at the given position,
    * aggregate the next element of data and write the updated aggregate value back into the buffer.
-   *
+   * <p>
    * <b>Implementations must not change the position, limit or mark of the given buffer</b>
    *
-   * @param buf byte buffer storing the byte array representation of the aggregate
+   * @param buf      byte buffer storing the byte array representation of the aggregate
    * @param position offset within the byte buffer at which the current aggregate value is stored
    */
   @CalledFromHotLoop
@@ -69,68 +69,72 @@ public interface BufferAggregator extends HotLoopCallee
 
   /**
    * Returns the intermediate object representation of the given aggregate.
-   *
+   * <p>
    * Converts the given byte buffer representation into an intermediate aggregate Object
-   *
+   * <p>
    * <b>Implementations must not change the position, limit or mark of the given buffer</b>
    *
-   * @param buf byte buffer storing the byte array representation of the aggregate
+   * @param buf      byte buffer storing the byte array representation of the aggregate
    * @param position offset within the byte buffer at which the aggregate value is stored
+   *
    * @return the Object representation of the aggregate
    */
   Object get(ByteBuffer buf, int position);
 
   /**
    * Returns the float representation of the given aggregate byte array
-   *
+   * <p>
    * Converts the given byte buffer representation into the intermediate aggregate value.
-   *
+   * <p>
    * <b>Implementations must not change the position, limit or mark of the given buffer</b>
-   *
+   * <p>
    * Implementations are only required to support this method if they are aggregations which
    * have an {@link AggregatorFactory#getTypeName()} of "float".
    * If unimplemented, throwing an {@link UnsupportedOperationException} is common and recommended.
    *
-   * @param buf byte buffer storing the byte array representation of the aggregate
+   * @param buf      byte buffer storing the byte array representation of the aggregate
    * @param position offset within the byte buffer at which the aggregate value is stored
+   *
    * @return the float representation of the aggregate
    */
   float getFloat(ByteBuffer buf, int position);
 
   /**
    * Returns the long representation of the given aggregate byte array
-   *
+   * <p>
    * Converts the given byte buffer representation into the intermediate aggregate value.
-   *
+   * <p>
    * <b>Implementations must not change the position, limit or mark of the given buffer</b>
-   *
+   * <p>
    * Implementations are only required to support this method if they are aggregations which
    * have an {@link AggregatorFactory#getTypeName()} of "long".
    * If unimplemented, throwing an {@link UnsupportedOperationException} is common and recommended.
    *
-   * @param buf byte buffer storing the byte array representation of the aggregate
+   * @param buf      byte buffer storing the byte array representation of the aggregate
    * @param position offset within the byte buffer at which the aggregate value is stored
+   *
    * @return the long representation of the aggregate
    */
   long getLong(ByteBuffer buf, int position);
 
   /**
    * Returns the double representation of the given aggregate byte array
-   *
+   * <p>
    * Converts the given byte buffer representation into the intermediate aggregate value.
-   *
+   * <p>
    * <b>Implementations must not change the position, limit or mark of the given buffer</b>
-   *
+   * <p>
    * Implementations are only required to support this method if they are aggregations which
    * have an {@link AggregatorFactory#getTypeName()} of "double".
    * If unimplemented, throwing an {@link UnsupportedOperationException} is common and recommended.
-   *
+   * <p>
    * The default implementation casts {@link BufferAggregator#getFloat(ByteBuffer, int)} to double.
    * This default method is added to enable smooth backward compatibility, please re-implement it if your aggregators
    * work with numeric double columns.
    *
-   * @param buf byte buffer storing the byte array representation of the aggregate
+   * @param buf      byte buffer storing the byte array representation of the aggregate
    * @param position offset within the byte buffer at which the aggregate value is stored
+   *
    * @return the double representation of the aggregate
    */
   default double getDouble(ByteBuffer buf, int position)
@@ -145,7 +149,7 @@ public interface BufferAggregator extends HotLoopCallee
 
   /**
    * {@inheritDoc}
-   *
+   * <p>
    * <p>The default implementation inspects nothing. Classes that implement {@code BufferAggregator} are encouraged to
    * override this method, following the specification of {@link HotLoopCallee#inspectRuntimeShape}.
    */
@@ -161,18 +165,18 @@ public interface BufferAggregator extends HotLoopCallee
    * built on top of old ByteBuffer can not be used for further {@link BufferAggregator#aggregate(ByteBuffer, int)}
    * calls. This method tells the BufferAggregator that the cached objects at a certain location has been relocated to
    * a different location.
-   *
+   * <p>
    * Only used if there is any positional caches/objects in the BufferAggregator implementation.
-   *
+   * <p>
    * If relocate happens to be across multiple new ByteBuffers (say n ByteBuffers), this method should be called
    * multiple times(n times) given all the new positions/old positions should exist in newBuffer/OldBuffer.
-   *
+   * <p>
    * <b>Implementations must not change the position, limit or mark of the given buffer</b>
    *
    * @param oldPosition old position of a cached object before aggregation buffer relocates to a new ByteBuffer.
    * @param newPosition new position of a cached object after aggregation buffer relocates to a new ByteBuffer.
-   * @param oldBuffer old aggregation buffer.
-   * @param newBuffer new aggregation buffer.
+   * @param oldBuffer   old aggregation buffer.
+   * @param newBuffer   new aggregation buffer.
    */
   default void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
   {
@@ -182,10 +186,7 @@ public interface BufferAggregator extends HotLoopCallee
    * Returns true if the aggregator is nullable and the aggregated value is null
    * <p>
    * <b>Implementations must not change the position, limit or mark of the given buffer</b>
-   * <p>
-   * Implementations are only required to support this method if they the aggregator supports null values.
-   * If it doesn't support null always returning false is recommended.
-   * <p>
+   * 
    * The default implementation always returns false.
    * This default method is added to enable smooth backward compatibility, please re-implement it if your aggregators
    * support null values
@@ -194,6 +195,7 @@ public interface BufferAggregator extends HotLoopCallee
    * @param position offset within the byte buffer at which the aggregate value is stored
    *
    * @return true if the aggrgeated value is null otherwise false.
+   * For backwards compatibility, isNull() may return false even if get() returns null. Users of this method should account for this case.
    */
   default boolean isNull(ByteBuffer buf, int position)
   {

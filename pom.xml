@@ -79,8 +79,8 @@
         <!-- Cannot update to AWS SDK 1.11+ because of Jackson incompatibility.
         Need to update Druid to use Jackson 2.6+ -->
         <aws.sdk.version>1.10.77</aws.sdk.version>
-	      <druid.null.handling.useDefaultValueForNull>true</druid.null.handling.useDefaultValueForNull>
         <caffeine.version>2.5.5</caffeine.version>
+        <druid.null.handling.useDefaultValueForNull>true</druid.null.handling.useDefaultValueForNull>
     </properties>
 
     <modules>
