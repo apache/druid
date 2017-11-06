@@ -484,7 +484,7 @@ public class CompactionTask extends AbstractTask
         Collections.sort(segments);
         Preconditions.checkState(
             usedSegments.equals(segments),
-            "Specified segments[%s] are different from the currently used segments[%s]",
+            "Specified segments[%s] are different from the current used segments[%s]",
             segments,
             usedSegments
         );
