@@ -17,31 +17,23 @@
  * under the License.
  */
 
-package io.druid.server.security;
+package io.druid.security;
 
-import io.druid.guice.ManageLifecycle;
+import io.druid.security.basic.BasicAuthUtils;
+import org.junit.Assert;
+import org.junit.Test;
 
-import java.util.Map;
-
-@ManageLifecycle
-public class AuthorizerMapper
+public class BasicAuthUtilsTest
 {
-  private Map<String, Authorizer> authorizerMap;
-
-  public AuthorizerMapper(
-      Map<String, Authorizer> authorizerMap
-  )
+  @Test
+  public void testHashPassword()
   {
-    this.authorizerMap = authorizerMap;
-  }
+    char[] password = "HELLO".toCharArray();
+    int iterations = BasicAuthUtils.KEY_ITERATIONS;
+    byte[] salt = BasicAuthUtils.generateSalt();
+    byte[] hash = BasicAuthUtils.hashPassword(password, salt, iterations);
 
-  public Authorizer getAuthorizer(String name)
-  {
-    return authorizerMap.get(name);
-  }
-
-  public Map<String, Authorizer> getAuthorizerMap()
-  {
-    return authorizerMap;
+    Assert.assertEquals(BasicAuthUtils.SALT_LENGTH, salt.length);
+    Assert.assertEquals(BasicAuthUtils.KEY_LENGTH / 8, hash.length);
   }
 }

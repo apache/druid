@@ -80,6 +80,8 @@
         Need to update Druid to use Jackson 2.6+ -->
         <aws.sdk.version>1.10.77</aws.sdk.version>
         <caffeine.version>2.5.5</caffeine.version>
+        <mysql.version>5.1.38</mysql.version>
+        <postgresql.version>9.4.1208.jre7</postgresql.version>
     </properties>
 
     <modules>
@@ -116,6 +118,7 @@
         <module>extensions-core/lookups-cached-single</module>
         <module>extensions-core/s3-extensions</module>
         <module>extensions-core/simple-client-sslcontext</module>
+        <module>extensions-core/druid-basic-security</module>
         <!-- Community extensions -->
         <module>extensions-contrib/azure-extensions</module>
         <module>extensions-contrib/cassandra-storage</module>

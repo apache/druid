@@ -17,31 +17,18 @@
  * under the License.
  */
 
-package io.druid.server.security;
+package io.druid.security.basic;
 
-import io.druid.guice.ManageLifecycle;
+import io.druid.java.util.common.StringUtils;
 
-import java.util.Map;
-
-@ManageLifecycle
-public class AuthorizerMapper
+/**
+ * Throw this in the BasicSecurityStorageConnectors for invalid resource accesses that are likely a result of user error
+ * (e.g., entry not found, duplicate entries).
+ */
+public class BasicSecurityDBResourceException extends IllegalArgumentException
 {
-  private Map<String, Authorizer> authorizerMap;
-
-  public AuthorizerMapper(
-      Map<String, Authorizer> authorizerMap
-  )
+  public BasicSecurityDBResourceException(String formatText, Object... arguments)
   {
-    this.authorizerMap = authorizerMap;
-  }
-
-  public Authorizer getAuthorizer(String name)
-  {
-    return authorizerMap.get(name);
-  }
-
-  public Map<String, Authorizer> getAuthorizerMap()
-  {
-    return authorizerMap;
+    super(StringUtils.nonStrictFormat(formatText, arguments));
   }
 }

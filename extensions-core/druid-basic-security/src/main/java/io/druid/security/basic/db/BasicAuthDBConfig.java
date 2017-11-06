@@ -17,31 +17,37 @@
  * under the License.
  */
 
-package io.druid.server.security;
+package io.druid.security.basic.db;
 
-import io.druid.guice.ManageLifecycle;
-
-import java.util.Map;
-
-@ManageLifecycle
-public class AuthorizerMapper
+public class BasicAuthDBConfig
 {
-  private Map<String, Authorizer> authorizerMap;
+  private final String dbPrefix;
+  private final String initialAdminPassword;
+  private final String initialInternalClientPassword;
 
-  public AuthorizerMapper(
-      Map<String, Authorizer> authorizerMap
+  public BasicAuthDBConfig(
+      final String dbPrefix,
+      final String initialAdminPassword,
+      final String initialInternalClientPassword
   )
   {
-    this.authorizerMap = authorizerMap;
+    this.dbPrefix = dbPrefix;
+    this.initialAdminPassword = initialAdminPassword;
+    this.initialInternalClientPassword = initialInternalClientPassword;
   }
 
-  public Authorizer getAuthorizer(String name)
+  public String getDbPrefix()
   {
-    return authorizerMap.get(name);
+    return dbPrefix;
   }
 
-  public Map<String, Authorizer> getAuthorizerMap()
+  public String getInitialAdminPassword()
   {
-    return authorizerMap;
+    return initialAdminPassword;
+  }
+
+  public String getInitialInternalClientPassword()
+  {
+    return initialInternalClientPassword;
   }
 }
