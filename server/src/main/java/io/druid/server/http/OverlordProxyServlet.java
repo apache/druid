@@ -24,9 +24,12 @@ import com.google.inject.Inject;
 import io.druid.client.indexing.IndexingService;
 import io.druid.discovery.DruidLeaderClient;
 import io.druid.java.util.common.ISE;
+import io.druid.server.security.AuthConfig;
+import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.proxy.ProxyServlet;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.net.URI;
 import java.net.URISyntaxException;
 
@@ -65,5 +68,25 @@ public class OverlordProxyServlet extends ProxyServlet
     catch (URISyntaxException e) {
       throw Throwables.propagate(e);
     }
+  }
+
+  @Override
+  protected void sendProxyRequest(
+      HttpServletRequest clientRequest,
+      HttpServletResponse proxyResponse,
+      Request proxyRequest
+  )
+  {
+    // Since we can't see the request object on the remote side, we can't check whether the remote side actually
+    // performed an authorization check here, so always set this to true for the proxy servlet.
+    // If the remote node failed to perform an authorization check, PreResponseAuthorizationCheckFilter
+    // will log that on the remote node.
+    clientRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+
+    super.sendProxyRequest(
+        clientRequest,
+        proxyResponse,
+        proxyRequest
+    );
   }
 }

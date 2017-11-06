@@ -29,6 +29,7 @@ import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.RE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.guice.TestClient;
@@ -151,6 +152,23 @@ public class CoordinatorResourceTestClient
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
+    }
+  }
+
+  public HttpResponseStatus getProxiedOverlordScalingResponseStatus()
+  {
+    try {
+      StatusResponseHolder response = makeRequest(
+          HttpMethod.GET,
+          StringUtils.format(
+              "%s/druid/indexer/v1/scaling",
+              coordinator
+          )
+      );
+      return response.getStatus();
+    }
+    catch (Exception e) {
+      throw new RE(e, "Unable to get scaling status from [%s]", coordinator);
     }
   }
 
