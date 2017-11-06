@@ -443,7 +443,7 @@ public class DruidAvaticaHandlerTest
                 Pair.of("COLUMN_NAME", "unique_dim1"),
                 Pair.of("DATA_TYPE", Types.OTHER),
                 Pair.of("TYPE_NAME", "OTHER"),
-                Pair.of("IS_NULLABLE", "NO")
+                Pair.of("IS_NULLABLE", "YES")
             )
         ),
         getRows(
@@ -526,7 +526,7 @@ public class DruidAvaticaHandlerTest
                 Pair.of("COLUMN_NAME", "unique_dim1"),
                 Pair.of("DATA_TYPE", Types.OTHER),
                 Pair.of("TYPE_NAME", "OTHER"),
-                Pair.of("IS_NULLABLE", "NO")
+                Pair.of("IS_NULLABLE", "YES")
             )
         ),
         getRows(
