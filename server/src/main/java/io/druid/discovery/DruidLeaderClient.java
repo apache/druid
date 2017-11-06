@@ -237,9 +237,12 @@ public class DruidLeaderClient
 
       //verify this is valid url
       try {
-        new URL(leaderUrl);
+        URL validatedUrl = new URL(leaderUrl);
         currentKnownLeader.set(leaderUrl);
-        return leaderUrl;
+
+        // validatedUrl.toString() is returned instead of leaderUrl or else teamcity build fails because of breaking
+        // the rule of ignoring new URL(leaderUrl) object.
+        return validatedUrl.toString();
       }
       catch (MalformedURLException ex) {
         log.error(ex, "Received malformed leader url[%s].", leaderUrl);
