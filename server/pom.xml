@@ -47,11 +47,7 @@
         </dependency>
         <dependency>
             <groupId>com.metamx</groupId>
-            <artifactId>http-client</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.metamx</groupId>
-            <artifactId>server-metrics</artifactId>
+            <artifactId>java-util</artifactId>
         </dependency>
         <dependency>
             <groupId>commons-cli</groupId>

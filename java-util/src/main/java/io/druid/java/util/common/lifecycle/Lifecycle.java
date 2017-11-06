@@ -23,6 +23,7 @@ import com.google.common.collect.Lists;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 
+import java.io.Closeable;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.List;
@@ -235,6 +236,16 @@ public class Lifecycle
   public <T> T addMaybeStartStartCloseInstance(T o, Stage stage) throws Exception
   {
     addMaybeStartHandler(new StartCloseHandler(o), stage);
+    return o;
+  }
+
+  /**
+   * Adds a Closeable instance to the lifecycle at {@link Stage#NORMAL} stage, doesn't try to call any "start" method on
+   * it, use {@link #addStartCloseInstance(Object)} instead if you need the latter behaviour.
+   */
+  public <T extends Closeable> T addCloseableInstance(T o)
+  {
+    addHandler(new CloseableHandler(o));
     return o;
   }
 
@@ -469,6 +480,35 @@ public class Lifecycle
       }
       catch (Exception e) {
         log.error(e, "Unable to invoke stopMethod() on %s", o.getClass());
+      }
+    }
+  }
+
+  private static class CloseableHandler implements Handler
+  {
+    private static final Logger log = new Logger(CloseableHandler.class);
+    private final Closeable o;
+
+    private CloseableHandler(Closeable o)
+    {
+      this.o = o;
+    }
+
+    @Override
+    public void start() throws Exception
+    {
+      // do nothing
+    }
+
+    @Override
+    public void stop()
+    {
+      log.info("Closing object[%s]", o);
+      try {
+        o.close();
+      }
+      catch (Exception e) {
+        log.error(e, "Exception when closing object [%s]", o);
       }
     }
   }

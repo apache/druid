@@ -51,6 +51,12 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   }
 
   @Override
+  public MultiValueHandling getMultivalueHandling()
+  {
+    return multiValueHandling;
+  }
+
+  @Override
   public int getLengthOfEncodedKeyComponent(int[] dimVals)
   {
     return dimVals.length;

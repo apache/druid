@@ -54,7 +54,7 @@
     </dependency>
     <dependency>
       <groupId>com.metamx</groupId>
-      <artifactId>emitter</artifactId>
+      <artifactId>java-util</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>

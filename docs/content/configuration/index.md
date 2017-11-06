@@ -196,6 +196,7 @@ The following monitors are available:
 |`io.druid.segment.realtime.RealtimeMetricsMonitor`|Reports statistics on Realtime nodes.|
 |`io.druid.server.metrics.EventReceiverFirehoseMonitor`|Reports how many events have been queued in the EventReceiverFirehose.|
 |`io.druid.server.metrics.QueryCountStatsMonitor`|Reports how many queries have been successful/failed/interrupted.|
+|`io.druid.server.emitter.HttpEmitterMonitor`|Reports internal metrics of `http` or `parametrized` emitter (see below). Must not be used with another emitter type. See the description of the metrics here: https://github.com/druid-io/druid/pull/4973.|
 
 ### Emitting Metrics
 
@@ -216,26 +217,26 @@ The Druid servers [emit various metrics](../operations/metrics.html) and alerts 
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.emitter.http.readTimeout`|The timeout for data reads.|PT5M|
 |`druid.emitter.http.flushMillis`|How often the internal message buffer is flushed (data is sent).|60000|
 |`druid.emitter.http.flushCount`|How many messages the internal message buffer can hold before flushing (sending).|500|
 |`druid.emitter.http.basicAuthentication`|Login and password for authentification in "login:password" form, e. g. `druid.emitter.http.basicAuthentication=admin:adminpassword`|not specified = no authentification|
 |`druid.emitter.http.flushTimeOut|The timeout after which an event should be sent to the endpoint, even if internal buffers are not filled, in milliseconds.|not specified = no timeout|
 |`druid.emitter.http.batchingStrategy`|The strategy of how the batch is formatted. "ARRAY" means `[event1,event2]`, "NEWLINES" means `event1\nevent2`, ONLY_EVENTS means `event1event2`.|ARRAY|
 |`druid.emitter.http.maxBatchSize`|The maximum batch size, in bytes.|5191680 (i. e. 5 MB)|
+|`druid.emitter.http.batchQueueSizeLimit`|The maximum number of batches in emitter queue, if there are problems with emitting.|50|
+|`druid.emitter.http.minHttpTimeoutMillis`|If the speed of filling batches imposes timeout smaller than that, not even trying to send batch to endpoint, because it will likely fail, not being able to send the data that fast. Configure this depending based on emitter/successfulSending/minTimeMs metric. Reasonable values are 10ms..100ms.|0|
 |`druid.emitter.http.recipientBaseUrl`|The base URL to emit messages to. Druid will POST JSON to be consumed at the HTTP endpoint specified by this property.|none, required config|
 
 #### Parametrized Http Emitter Module
 
 `druid.emitter.parametrized.httpEmitting.*` configs correspond to the configs of Http Emitter Modules, see above.
-Except `readTimeout` and `recipientBaseUrl`. E. g. `druid.emitter.parametrized.httpEmitting.flushMillis`,
+Except `recipientBaseUrl`. E. g. `druid.emitter.parametrized.httpEmitting.flushMillis`,
 `druid.emitter.parametrized.httpEmitting.flushCount`, etc.
 
 The additional configs are:
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.emitter.parametrized.readTimeout`|The timeout for data reads.|PT5M|
 |`druid.emitter.parametrized.recipientBaseUrlPattern`|The URL pattern to send an event to, based on the event's feed. E. g. `http://foo.bar/{feed}`, that will send event to `http://foo.bar/metrics` if the event's feed is "metrics".|none, required config|
 
 #### Composing Emitter Module

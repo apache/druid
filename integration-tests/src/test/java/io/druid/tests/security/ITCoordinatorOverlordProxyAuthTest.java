@@ -17,20 +17,26 @@
  * under the License.
  */
 
-package io.druid.server.emitter;
+package io.druid.tests.security;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Period;
+import com.google.inject.Inject;
+import io.druid.testing.clients.CoordinatorResourceTestClient;
+import io.druid.testing.guice.DruidTestModuleFactory;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.testng.Assert;
+import org.testng.annotations.Guice;
+import org.testng.annotations.Test;
 
-/**
- */
-public class HttpEmitterConfig extends com.metamx.emitter.core.HttpEmitterConfig
+@Guice(moduleFactory = DruidTestModuleFactory.class)
+public class ITCoordinatorOverlordProxyAuthTest
 {
-  @JsonProperty
-  private Period readTimeout = new Period("PT5M");
-
-  public Period getReadTimeout()
+  @Inject
+  CoordinatorResourceTestClient coordinatorClient;
+  
+  @Test
+  public void testProxyAuth() throws Exception
   {
-    return readTimeout;
+    HttpResponseStatus responseStatus = coordinatorClient.getProxiedOverlordScalingResponseStatus();
+    Assert.assertEquals(HttpResponseStatus.OK, responseStatus);
   }
 }

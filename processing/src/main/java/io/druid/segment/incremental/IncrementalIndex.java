@@ -100,7 +100,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
   // Used to discover ValueType based on the class of values in a row
   // Also used to convert between the duplicate ValueType enums in DimensionSchema (druid-api) and main druid.
-  private static final Map<Object, ValueType> TYPE_MAP = ImmutableMap.<Object, ValueType>builder()
+  public static final Map<Object, ValueType> TYPE_MAP = ImmutableMap.<Object, ValueType>builder()
       .put(Long.class, ValueType.LONG)
       .put(Double.class, ValueType.DOUBLE)
       .put(Float.class, ValueType.FLOAT)

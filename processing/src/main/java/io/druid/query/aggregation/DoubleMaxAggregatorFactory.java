@@ -32,7 +32,6 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 
 /**
  */
@@ -140,30 +139,5 @@ public class DoubleMaxAggregatorFactory extends SimpleDoubleAggregatorFactory
            ", expression='" + expression + '\'' +
            ", name='" + name + '\'' +
            '}';
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    DoubleMaxAggregatorFactory that = (DoubleMaxAggregatorFactory) o;
-
-    if (!Objects.equals(fieldName, that.fieldName)) {
-      return false;
-    }
-    if (!Objects.equals(expression, that.expression)) {
-      return false;
-    }
-    if (!Objects.equals(name, that.name)) {
-      return false;
-    }
-
-    return true;
   }
 }

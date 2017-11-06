@@ -47,7 +47,7 @@ public class ArchiveTask extends AbstractFixedIntervalTask
   )
   {
     super(
-        makeId(id, "archive", dataSource, interval),
+        getOrMakeId(id, "archive", dataSource, interval),
         dataSource,
         interval,
         context

@@ -21,7 +21,7 @@ package io.druid.data.input.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.junit.Test;
 
 /**
