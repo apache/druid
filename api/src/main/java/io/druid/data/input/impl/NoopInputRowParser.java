@@ -43,6 +43,7 @@ public class NoopInputRowParser implements InputRowParser<InputRow>
     return input;
   }
 
+  @JsonProperty
   @Override
   public ParseSpec getParseSpec()
   {

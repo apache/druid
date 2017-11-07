@@ -53,7 +53,7 @@ public class TestUtils
 
   public TestUtils()
   {
-    jsonMapper = new DefaultObjectMapper();
+    this.jsonMapper = new DefaultObjectMapper();
     indexIO = new IndexIO(
         jsonMapper,
         new ColumnConfig()
