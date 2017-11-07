@@ -22,6 +22,7 @@ package io.druid.metadata;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.DBI;
@@ -111,20 +112,20 @@ public class OracleMetadataConnector extends SQLMetadataConnector
     createTable(
         tableName,
         ImmutableList.of(
-            String.format("CREATE TABLE %1$s (\n"
-                          + "  id %2$s NOT NULL,\n"
-                          + "  audit_key VARCHAR2(255) NOT NULL,\n"
-                          + "  type VARCHAR2(255) NOT NULL,\n"
-                          + "  author VARCHAR2(255) NOT NULL,\n"
-                          + "  %4$scomment%4$s VARCHAR2(2048) NOT NULL,\n"
-                          + "  created_date VARCHAR2(255) NOT NULL,\n"
-                          + "  payload %3$s NOT NULL,\n"
-                          + "  PRIMARY KEY(id)\n"
-                          + ")", tableName, getSerialType(), getPayloadType(), getQuoteString()),
-            String.format("CREATE SEQUENCE %1$s_seq MINVALUE 1 START WITH 1 INCREMENT BY 1 NOCACHE", tableName),
-            String.format("CREATE INDEX idx_%1$s_key_time ON %1$s(audit_key, created_date)", tableName),
-            String.format("CREATE INDEX idx_%1$s_type_time ON %1$s(type, created_date)", tableName),
-            String.format("CREATE INDEX idx_%1$s_audit_time ON %1$s(created_date)", tableName)
+            StringUtils.format("CREATE TABLE %1$s (\n"
+                               + "  id %2$s NOT NULL,\n"
+                               + "  audit_key VARCHAR2(255) NOT NULL,\n"
+                               + "  type VARCHAR2(255) NOT NULL,\n"
+                               + "  author VARCHAR2(255) NOT NULL,\n"
+                               + "  %4$scomment%4$s VARCHAR2(2048) NOT NULL,\n"
+                               + "  created_date VARCHAR2(255) NOT NULL,\n"
+                               + "  payload %3$s NOT NULL,\n"
+                               + "  PRIMARY KEY(id)\n"
+                               + ")", tableName, getSerialType(), getPayloadType(), getQuoteString()),
+            StringUtils.format("CREATE SEQUENCE %1$s_seq MINVALUE 1 START WITH 1 INCREMENT BY 1 NOCACHE", tableName),
+            StringUtils.format("CREATE INDEX idx_%1$s_key_time ON %1$s(audit_key, created_date)", tableName),
+            StringUtils.format("CREATE INDEX idx_%1$s_type_time ON %1$s(type, created_date)", tableName),
+            StringUtils.format("CREATE INDEX idx_%1$s_audit_time ON %1$s(created_date)", tableName)
         )
     );
   }
@@ -143,19 +144,19 @@ public class OracleMetadataConnector extends SQLMetadataConnector
   {
     createTable(
         tableName,
-        ImmutableList.of(String.format("CREATE TABLE %1$s (\n"
-                                       + "  id VARCHAR2(255) NOT NULL,\n"
-                                       + "  dataSource VARCHAR2(255) NOT NULL,\n"
-                                       + "  created_date VARCHAR2(255) NOT NULL,\n"
-                                       + "  %3$sstart%3$s VARCHAR2(255) NOT NULL,\n"
-                                       + "  %3$send%3$s VARCHAR2(255) NOT NULL,\n"
-                                       + "  sequence_name VARCHAR2(255) NOT NULL,\n"
-                                       + "  sequence_prev_id VARCHAR2(255),\n"
-                                       + "  sequence_name_prev_id_sha1 VARCHAR2(255) NOT NULL,\n"
-                                       + "  payload %2$s NOT NULL,\n"
-                                       + "  PRIMARY KEY (id),\n"
-                                       + "  UNIQUE (sequence_name_prev_id_sha1)\n"
-                                       + ")", tableName, getPayloadType(), getQuoteString()))
+        ImmutableList.of(StringUtils.format("CREATE TABLE %1$s (\n"
+                                            + "  id VARCHAR2(255) NOT NULL,\n"
+                                            + "  dataSource VARCHAR2(255) NOT NULL,\n"
+                                            + "  created_date VARCHAR2(255) NOT NULL,\n"
+                                            + "  %3$sstart%3$s VARCHAR2(255) NOT NULL,\n"
+                                            + "  %3$send%3$s VARCHAR2(255) NOT NULL,\n"
+                                            + "  sequence_name VARCHAR2(255) NOT NULL,\n"
+                                            + "  sequence_prev_id VARCHAR2(255),\n"
+                                            + "  sequence_name_prev_id_sha1 VARCHAR2(255) NOT NULL,\n"
+                                            + "  payload %2$s NOT NULL,\n"
+                                            + "  PRIMARY KEY (id),\n"
+                                            + "  UNIQUE (sequence_name_prev_id_sha1)\n"
+                                            + ")", tableName, getPayloadType(), getQuoteString()))
     );
   }
 
@@ -164,13 +165,13 @@ public class OracleMetadataConnector extends SQLMetadataConnector
   {
     createTable(
         tableName,
-        ImmutableList.of(String.format("CREATE TABLE %1$s (\n"
-                                       + "  dataSource VARCHAR2(255) NOT NULL,\n"
-                                       + "  created_date VARCHAR2(255) NOT NULL,\n"
-                                       + "  commit_metadata_payload %2$s NOT NULL,\n"
-                                       + "  commit_metadata_sha1 VARCHAR2(255) NOT NULL,\n"
-                                       + "  PRIMARY KEY (dataSource)\n"
-                                       + ")", tableName, getPayloadType()))
+        ImmutableList.of(StringUtils.format("CREATE TABLE %1$s (\n"
+                                            + "  dataSource VARCHAR2(255) NOT NULL,\n"
+                                            + "  created_date VARCHAR2(255) NOT NULL,\n"
+                                            + "  commit_metadata_payload %2$s NOT NULL,\n"
+                                            + "  commit_metadata_sha1 VARCHAR2(255) NOT NULL,\n"
+                                            + "  PRIMARY KEY (dataSource)\n"
+                                            + ")", tableName, getPayloadType()))
     );
   }
 
@@ -180,20 +181,20 @@ public class OracleMetadataConnector extends SQLMetadataConnector
     createTable(
         tableName,
         ImmutableList.of(
-            String.format("CREATE TABLE %1$s (\n"
-                          + "  id VARCHAR2(255) NOT NULL,\n"
-                          + "  dataSource VARCHAR2(255) NOT NULL,\n"
-                          + "  created_date VARCHAR2(255) NOT NULL,\n"
-                          + "  %3$sstart%3$s VARCHAR2(255) NOT NULL,\n"
-                          + "  %3$send%3$s VARCHAR2(255) NOT NULL,\n"
-                          + "  partitioned VARCHAR2(10) NOT NULL,\n"
-                          + "  version VARCHAR2(255) NOT NULL,\n"
-                          + "  used VARCHAR2(10) NOT NULL,\n"
-                          + "  payload %2$s NOT NULL,\n"
-                          + "  PRIMARY KEY (id)\n"
-                          + ")", tableName, getPayloadType(), getQuoteString()),
-            String.format("CREATE INDEX idx_%1$s_datasource ON %1$s(dataSource)", tableName),
-            String.format("CREATE INDEX idx_%1$s_used ON %1$s(used)", tableName)
+            StringUtils.format("CREATE TABLE %1$s (\n"
+                               + "  id VARCHAR2(255) NOT NULL,\n"
+                               + "  dataSource VARCHAR2(255) NOT NULL,\n"
+                               + "  created_date VARCHAR2(255) NOT NULL,\n"
+                               + "  %3$sstart%3$s VARCHAR2(255) NOT NULL,\n"
+                               + "  %3$send%3$s VARCHAR2(255) NOT NULL,\n"
+                               + "  partitioned VARCHAR2(10) NOT NULL,\n"
+                               + "  version VARCHAR2(255) NOT NULL,\n"
+                               + "  used VARCHAR2(10) NOT NULL,\n"
+                               + "  payload %2$s NOT NULL,\n"
+                               + "  PRIMARY KEY (id)\n"
+                               + ")", tableName, getPayloadType(), getQuoteString()),
+            StringUtils.format("CREATE INDEX idx_%1$s_datasource ON %1$s(dataSource)", tableName),
+            StringUtils.format("CREATE INDEX idx_%1$s_used ON %1$s(used)", tableName)
         )
     );
   }
@@ -204,14 +205,14 @@ public class OracleMetadataConnector extends SQLMetadataConnector
     createTable(
         tableName,
         ImmutableList.of(
-            String.format("CREATE TABLE %1$s (\n"
-                          + "  id VARCHAR2(255) NOT NULL,\n"
-                          + "  dataSource VARCHAR2(255) NOT NULL,\n"
-                          + "  version VARCHAR2(255) NOT NULL,\n"
-                          + "  payload %2$s NOT NULL,\n"
-                          + "  PRIMARY KEY (id)\n"
-                          + ")", tableName, getPayloadType()),
-            String.format("CREATE INDEX idx_%1$s_datasource ON %1$s(dataSource)", tableName)
+            StringUtils.format("CREATE TABLE %1$s (\n"
+                               + "  id VARCHAR2(255) NOT NULL,\n"
+                               + "  dataSource VARCHAR2(255) NOT NULL,\n"
+                               + "  version VARCHAR2(255) NOT NULL,\n"
+                               + "  payload %2$s NOT NULL,\n"
+                               + "  PRIMARY KEY (id)\n"
+                               + ")", tableName, getPayloadType()),
+            StringUtils.format("CREATE INDEX idx_%1$s_datasource ON %1$s(dataSource)", tableName)
         )
     );
   }
@@ -221,11 +222,11 @@ public class OracleMetadataConnector extends SQLMetadataConnector
   {
     createTable(
         tableName,
-        ImmutableList.of(String.format("CREATE TABLE %1$s (\n"
-                                       + "  name VARCHAR2(255) NOT NULL,\n"
-                                       + "  payload %2$s NOT NULL,\n"
-                                       + "  PRIMARY KEY(name)\n"
-                                       + ")", tableName, getPayloadType()))
+        ImmutableList.of(StringUtils.format("CREATE TABLE %1$s (\n"
+                                            + "  name VARCHAR2(255) NOT NULL,\n"
+                                            + "  payload %2$s NOT NULL,\n"
+                                            + "  PRIMARY KEY(name)\n"
+                                            + ")", tableName, getPayloadType()))
     );
   }
 
@@ -235,16 +236,16 @@ public class OracleMetadataConnector extends SQLMetadataConnector
     createTable(
         tableName,
         ImmutableList.of(
-            String.format("CREATE TABLE %1$s (\n"
-                          + "  id VARCHAR2(255) NOT NULL,\n"
-                          + "  created_date VARCHAR2(255) NOT NULL,\n"
-                          + "  datasource VARCHAR2(255) NOT NULL,\n"
-                          + "  payload %2$s NOT NULL,\n"
-                          + "  status_payload %2$s NOT NULL,\n"
-                          + "  active VARCHAR2(10) DEFAULT 'false' NOT NULL,\n"
-                          + "  PRIMARY KEY (id)\n"
-                          + ")", tableName, getPayloadType()),
-            String.format(
+            StringUtils.format("CREATE TABLE %1$s (\n"
+                               + "  id VARCHAR2(255) NOT NULL,\n"
+                               + "  created_date VARCHAR2(255) NOT NULL,\n"
+                               + "  datasource VARCHAR2(255) NOT NULL,\n"
+                               + "  payload %2$s NOT NULL,\n"
+                               + "  status_payload %2$s NOT NULL,\n"
+                               + "  active VARCHAR2(10) DEFAULT 'false' NOT NULL,\n"
+                               + "  PRIMARY KEY (id)\n"
+                               + ")", tableName, getPayloadType()),
+            StringUtils.format(
                 "CREATE INDEX idx_%1$s_active_cdate ON %1$s(active, created_date)",
                 tableName
             )
@@ -256,16 +257,16 @@ public class OracleMetadataConnector extends SQLMetadataConnector
   public void createLogTable(final String tableName, final String entryTypeName)
   {
     createTable(tableName, ImmutableList.of(
-        String.format("CREATE TABLE %1$s (\n"
-                      + "  id %2$s NOT NULL,\n"
-                      + "  %4$s_id VARCHAR2(255) DEFAULT NULL,\n"
-                      + "  log_payload %3$s,\n"
-                      + "  PRIMARY KEY (id)\n"
-                      + ")",
-                      tableName, getSerialType(), getPayloadType(), entryTypeName
+        StringUtils.format("CREATE TABLE %1$s (\n"
+                           + "  id %2$s NOT NULL,\n"
+                           + "  %4$s_id VARCHAR2(255) DEFAULT NULL,\n"
+                           + "  log_payload %3$s,\n"
+                           + "  PRIMARY KEY (id)\n"
+                           + ")",
+                           tableName, getSerialType(), getPayloadType(), entryTypeName
         ),
-        String.format("CREATE SEQUENCE %1$s_seq MINVALUE 1 START WITH 1 INCREMENT BY 1 NOCACHE", tableName),
-        String.format("CREATE INDEX idx_%1$s_%2$s_id ON %1$s(%2$s_id)", tableName, entryTypeName)
+        StringUtils.format("CREATE SEQUENCE %1$s_seq MINVALUE 1 START WITH 1 INCREMENT BY 1 NOCACHE", tableName),
+        StringUtils.format("CREATE INDEX idx_%1$s_%2$s_id ON %1$s(%2$s_id)", tableName, entryTypeName)
     ));
   }
 
@@ -273,16 +274,16 @@ public class OracleMetadataConnector extends SQLMetadataConnector
   public void createLockTable(final String tableName, final String entryTypeName)
   {
     createTable(tableName, ImmutableList.of(
-        String.format("CREATE TABLE %1$s (\n"
-                      + "  id %2$s NOT NULL,\n"
-                      + "  %4$s_id VARCHAR2(255) DEFAULT NULL,\n"
-                      + "  lock_payload %3$s,\n"
-                      + "  PRIMARY KEY (id)\n"
-                      + ")",
-                      tableName, getSerialType(), getPayloadType(), entryTypeName
+        StringUtils.format("CREATE TABLE %1$s (\n"
+                           + "  id %2$s NOT NULL,\n"
+                           + "  %4$s_id VARCHAR2(255) DEFAULT NULL,\n"
+                           + "  lock_payload %3$s,\n"
+                           + "  PRIMARY KEY (id)\n"
+                           + ")",
+                           tableName, getSerialType(), getPayloadType(), entryTypeName
         ),
-        String.format("CREATE SEQUENCE %1$s_seq MINVALUE 1 START WITH 1 INCREMENT BY 1 NOCACHE", tableName),
-        String.format("CREATE INDEX idx_%1$s_%2$s_id ON %1$s(%2$s_id)", tableName, entryTypeName)
+        StringUtils.format("CREATE SEQUENCE %1$s_seq MINVALUE 1 START WITH 1 INCREMENT BY 1 NOCACHE", tableName),
+        StringUtils.format("CREATE INDEX idx_%1$s_%2$s_id ON %1$s(%2$s_id)", tableName, entryTypeName)
     ));
   }
 
@@ -290,16 +291,16 @@ public class OracleMetadataConnector extends SQLMetadataConnector
   public void createSupervisorsTable(final String tableName)
   {
     createTable(tableName, ImmutableList.of(
-        String.format("CREATE TABLE %1$s (\n"
-                      + "  id %2$s NOT NULL,\n"
-                      + "  spec_id VARCHAR2(255) NOT NULL,\n"
-                      + "  created_date VARCHAR2(255) NOT NULL,\n"
-                      + "  payload %3$s NOT NULL,\n"
-                      + "  PRIMARY KEY (id)\n" + ")",
-                      tableName, getSerialType(), getPayloadType()
+        StringUtils.format("CREATE TABLE %1$s (\n"
+                           + "  id %2$s NOT NULL,\n"
+                           + "  spec_id VARCHAR2(255) NOT NULL,\n"
+                           + "  created_date VARCHAR2(255) NOT NULL,\n"
+                           + "  payload %3$s NOT NULL,\n"
+                           + "  PRIMARY KEY (id)\n" + ")",
+                           tableName, getSerialType(), getPayloadType()
         ),
-        String.format("CREATE SEQUENCE %1$s_seq MINVALUE 1 START WITH 1 INCREMENT BY 1 NOCACHE", tableName),
-        String.format("CREATE INDEX idx_%1$s_spec_id ON %1$s(spec_id)", tableName)
+        StringUtils.format("CREATE SEQUENCE %1$s_seq MINVALUE 1 START WITH 1 INCREMENT BY 1 NOCACHE", tableName),
+        StringUtils.format("CREATE INDEX idx_%1$s_spec_id ON %1$s(spec_id)", tableName)
     ));
   }
 }
