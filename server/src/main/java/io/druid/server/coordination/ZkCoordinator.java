@@ -37,7 +37,9 @@ import org.apache.curator.utils.ZKPaths;
 import java.io.IOException;
 
 /**
+ * Use {@link io.druid.server.coordinator.HttpLoadQueuePeon} for segment load/drops.
  */
+@Deprecated
 public class ZkCoordinator
 {
   private static final EmittingLogger log = new EmittingLogger(ZkCoordinator.class);

@@ -21,11 +21,11 @@ package io.druid.indexing.kafka;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.indexing.TuningConfig;
 import io.druid.segment.realtime.appenderator.AppenderatorConfig;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
@@ -192,23 +192,6 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         maxRowsPerSegment,
         intermediatePersistPeriod,
         dir,
-        maxPendingPersists,
-        indexSpec,
-        true,
-        reportParseExceptions,
-        handoffConditionTimeout,
-        resetOffsetAutomatically,
-        segmentWriteOutMediumFactory
-    );
-  }
-
-  public KafkaTuningConfig withMaxRowsInMemory(int rows)
-  {
-    return new KafkaTuningConfig(
-        rows,
-        maxRowsPerSegment,
-        intermediatePersistPeriod,
-        basePersistDirectory,
         maxPendingPersists,
         indexSpec,
         true,

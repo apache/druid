@@ -128,6 +128,7 @@ public class DefaultOfflineAppenderatorFactoryTest
             new LongSumAggregatorFactory("met", "met")
         },
         new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null),
+        null,
         objectMapper
     );
 

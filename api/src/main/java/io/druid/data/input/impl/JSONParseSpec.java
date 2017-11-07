@@ -30,6 +30,7 @@ import io.druid.java.util.common.parsers.Parser;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  */
@@ -96,5 +97,39 @@ public class JSONParseSpec extends ParseSpec
   public Map<String, Boolean> getFeatureSpec()
   {
     return featureSpec;
+  }
+
+  @Override
+  public boolean equals(final Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    final JSONParseSpec that = (JSONParseSpec) o;
+    return Objects.equals(flattenSpec, that.flattenSpec) &&
+           Objects.equals(featureSpec, that.featureSpec);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), flattenSpec, featureSpec);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "JSONParseSpec{" +
+           "timestampSpec=" + getTimestampSpec() +
+           ", dimensionsSpec=" + getDimensionsSpec() +
+           ", flattenSpec=" + flattenSpec +
+           ", featureSpec=" + featureSpec +
+           '}';
   }
 }

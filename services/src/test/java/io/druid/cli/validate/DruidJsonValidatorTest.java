@@ -150,6 +150,7 @@ public class DruidJsonValidatorTest
                 null,
                 new AggregatorFactory[0],
                 new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null),
+                null,
                 jsonMapper
             ),
             new RealtimeIOConfig(

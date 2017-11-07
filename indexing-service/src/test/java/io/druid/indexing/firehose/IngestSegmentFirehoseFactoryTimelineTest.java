@@ -59,6 +59,7 @@ import io.druid.segment.IndexSpec;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
+import io.druid.segment.transform.TransformSpec;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.StorageLocationConfig;
@@ -91,16 +92,20 @@ public class IngestSegmentFirehoseFactoryTimelineTest
   private static final String TIME_COLUMN = "t";
   private static final String[] DIMENSIONS = new String[]{"d1"};
   private static final String[] METRICS = new String[]{"m1"};
-  private static final InputRowParser<Map<String, Object>> ROW_PARSER = new MapInputRowParser(
-      new JSONParseSpec(
-          new TimestampSpec(TIME_COLUMN, "auto", null),
-          new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(Arrays.asList(DIMENSIONS)),
+
+  // Must decorate the parser, since IngestSegmentFirehoseFactory will undecorate it.
+  private static final InputRowParser<Map<String, Object>> ROW_PARSER = TransformSpec.NONE.decorate(
+      new MapInputRowParser(
+          new JSONParseSpec(
+              new TimestampSpec(TIME_COLUMN, "auto", null),
+              new DimensionsSpec(
+                  DimensionsSpec.getDefaultSchemas(Arrays.asList(DIMENSIONS)),
+                  null,
+                  null
+              ),
               null,
               null
-          ),
-          null,
-          null
+          )
       )
   );
 

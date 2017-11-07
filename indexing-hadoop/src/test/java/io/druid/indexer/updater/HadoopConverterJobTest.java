@@ -182,6 +182,7 @@ public class HadoopConverterJobTest
                     Granularities.DAY,
                     ImmutableList.<Interval>of(interval)
                 ),
+                null,
                 HadoopDruidIndexerConfig.JSON_MAPPER
             ),
             new HadoopIOConfig(

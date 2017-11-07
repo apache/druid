@@ -90,7 +90,8 @@ public class QueryHostFinderTest
   public void testFindServer() throws Exception
   {
     QueryHostFinder queryRunner = new QueryHostFinder(
-        brokerSelector
+        brokerSelector,
+        new RendezvousHashAvaticaConnectionBalancer()
     );
 
     Server server = queryRunner.findServer(

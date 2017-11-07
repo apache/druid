@@ -19,10 +19,11 @@
 
 package io.druid.segment;
 
-import io.druid.segment.writeout.SegmentWriteOutMedium;
+import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.Indexed;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -68,6 +69,14 @@ public interface DimensionHandler
    */
   String getDimensionName();
 
+  /**
+   * Get {@link MultiValueHandling} for the column associated with this handler.
+   * Only string columns can have {@link MultiValueHandling} currently.
+   */
+  default MultiValueHandling getMultivalueHandling()
+  {
+    return null;
+  }
 
   /**
    * Creates a new DimensionIndexer, a per-dimension object responsible for processing ingested rows in-memory, used

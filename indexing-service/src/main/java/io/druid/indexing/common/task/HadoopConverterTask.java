@@ -78,7 +78,7 @@ public class HadoopConverterTask extends ConvertSegmentTask
   )
   {
     super(
-        makeId(
+        getOrMakeId(
             id,
             TYPE,
             Preconditions.checkNotNull(dataSource, "dataSource"),

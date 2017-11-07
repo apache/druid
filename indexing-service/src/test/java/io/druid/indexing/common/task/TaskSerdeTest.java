@@ -186,6 +186,7 @@ public class TaskSerdeTest
                     null,
                     ImmutableList.of(Intervals.of("2010-01-01/P2D"))
                 ),
+                null,
                 jsonMapper
             ),
             new IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
@@ -248,6 +249,7 @@ public class TaskSerdeTest
                     null,
                     ImmutableList.of(Intervals.of("2010-01-01/P2D"))
                 ),
+                null,
                 jsonMapper
             ),
             new IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
@@ -475,6 +477,7 @@ public class TaskSerdeTest
                 null,
                 new AggregatorFactory[0],
                 new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null),
+                null,
                 jsonMapper
             ),
             new RealtimeIOConfig(
@@ -771,6 +774,7 @@ public class TaskSerdeTest
                 null,
                 ImmutableList.of(Intervals.of("2010-01-01/P1D"))
             ),
+                null,
                 jsonMapper
             ), new HadoopIOConfig(ImmutableMap.<String, Object>of("paths", "bar"), null, null), null
         ),

@@ -20,6 +20,7 @@
 package io.druid.indexing.common.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
@@ -48,12 +49,16 @@ import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.parsers.ParseException;
+import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
+import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.transform.ExpressionTransform;
+import io.druid.segment.transform.TransformSpec;
 import io.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -207,6 +212,50 @@ public class IndexTaskTest
     Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(1).getInterval());
     Assert.assertEquals(NumberedShardSpec.class, segments.get(1).getShardSpec().getClass());
     Assert.assertEquals(1, segments.get(1).getShardSpec().getPartitionNum());
+  }
+
+  @Test
+  public void testTransformSpec() throws Exception
+  {
+    File tmpDir = temporaryFolder.newFolder();
+
+    File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("2014-01-01T00:00:10Z,a,1\n");
+      writer.write("2014-01-01T01:00:20Z,b,1\n");
+      writer.write("2014-01-01T02:00:30Z,c,1\n");
+    }
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        createIngestionSpec(
+            tmpDir,
+            null,
+            new TransformSpec(
+                new SelectorDimFilter("dim", "b", null),
+                ImmutableList.of(
+                    new ExpressionTransform("dimt", "concat(dim,dim)", ExprMacroTable.nil())
+                )
+            ),
+            null,
+            createTuningConfig(2, null, true, false),
+            false
+        ),
+        null
+    );
+
+    Assert.assertEquals(indexTask.getId(), indexTask.getGroupId());
+
+    final List<DataSegment> segments = runTask(indexTask);
+
+    Assert.assertEquals(1, segments.size());
+
+    Assert.assertEquals("test", segments.get(0).getDataSource());
+    Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
+    Assert.assertEquals(NumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
+    Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
   }
 
   @Test
@@ -1013,6 +1062,18 @@ public class IndexTaskTest
       boolean appendToExisting
   )
   {
+    return createIngestionSpec(baseDir, parseSpec, TransformSpec.NONE, granularitySpec, tuningConfig, appendToExisting);
+  }
+
+  private IndexTask.IndexIngestionSpec createIngestionSpec(
+      File baseDir,
+      ParseSpec parseSpec,
+      TransformSpec transformSpec,
+      GranularitySpec granularitySpec,
+      IndexTuningConfig tuningConfig,
+      boolean appendToExisting
+  )
+  {
     return new IndexTask.IndexIngestionSpec(
         new DataSchema(
             "test",
@@ -1031,6 +1092,7 @@ public class IndexTaskTest
                 Granularities.MINUTE,
                 Arrays.asList(Intervals.of("2014/2015"))
             ),
+            transformSpec,
             jsonMapper
         ),
         new IndexTask.IndexIOConfig(

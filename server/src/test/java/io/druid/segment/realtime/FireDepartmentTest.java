@@ -98,6 +98,7 @@ public class FireDepartmentTest
                 new CountAggregatorFactory("count")
             },
             new UniformGranularitySpec(Granularities.HOUR, Granularities.MINUTE, null),
+            null,
             jsonMapper
         ),
         new RealtimeIOConfig(
