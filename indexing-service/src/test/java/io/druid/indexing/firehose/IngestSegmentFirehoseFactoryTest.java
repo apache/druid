@@ -44,7 +44,6 @@ import io.druid.guice.GuiceAnnotationIntrospector;
 import io.druid.guice.GuiceInjectableValues;
 import io.druid.guice.GuiceInjectors;
 import io.druid.indexing.common.SegmentLoaderFactory;
-import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.actions.LocalTaskActionClientFactory;
@@ -480,7 +479,6 @@ public class IngestSegmentFirehoseFactoryTest
   @BeforeClass
   public static void setUpStatic() throws IOException, InterruptedException
   {
-    TASK_LOCKBOX.lock(TaskLockType.EXCLUSIVE, TASK, Intervals.ETERNITY);
     for (int i = 0; i < MAX_SHARD_NUMBER; ++i) {
       segmentSet.add(buildSegment(i));
     }
@@ -490,7 +488,6 @@ public class IngestSegmentFirehoseFactoryTest
   public static void tearDownStatic()
   {
     recursivelyDelete(tmpDir);
-    TASK_LOCKBOX.unlock(TASK, Intervals.ETERNITY);
   }
 
   private static void recursivelyDelete(final File dir)

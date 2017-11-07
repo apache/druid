@@ -69,7 +69,6 @@ public class SegmentListUnusedAction implements TaskAction<List<DataSegment>>
   @Override
   public List<DataSegment> perform(Task task, TaskActionToolbox toolbox) throws IOException
   {
-    TaskActionPreconditions.checkLockCoversInterval(task, toolbox.getTaskLockbox(), dataSource, interval);
     return toolbox.getIndexerMetadataStorageCoordinator().getUnusedSegmentsForInterval(dataSource, interval);
   }
 

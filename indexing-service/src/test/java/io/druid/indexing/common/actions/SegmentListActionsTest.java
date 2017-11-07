@@ -20,20 +20,16 @@
 package io.druid.indexing.common.actions;
 
 import com.google.common.collect.ImmutableList;
-import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
-import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Intervals;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
-import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -45,9 +41,6 @@ public class SegmentListActionsTest
 
   @Rule
   public TaskActionTestKit actionTestKit = new TaskActionTestKit();
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   private Task task;
   private Set<DataSegment> expectedUnusedSegments;
@@ -103,8 +96,6 @@ public class SegmentListActionsTest
   @Test
   public void testSegmentListUsedAction() throws IOException, InterruptedException
   {
-    Assert.assertTrue(actionTestKit.getTaskLockbox().lock(TaskLockType.EXCLUSIVE, task, INTERVAL, 500L).isOk());
-
     final SegmentListUsedAction action = new SegmentListUsedAction(
         task.getDataSource(),
         null,
@@ -115,34 +106,10 @@ public class SegmentListActionsTest
   }
 
   @Test
-  public void testSegmentListUsedActionWithoutLock() throws IOException
-  {
-    final SegmentListUsedAction action = new SegmentListUsedAction(
-        task.getDataSource(),
-        null,
-        ImmutableList.of(INTERVAL)
-    );
-    expectedException.expect(CoreMatchers.instanceOf(ISE.class));
-    expectedException.expectMessage(CoreMatchers.startsWith("Intervals not covered by locks for task"));
-    action.perform(task, actionTestKit.getTaskActionToolbox());
-  }
-
-  @Test
   public void testSegmentListUnusedAction() throws InterruptedException, IOException
   {
-    Assert.assertTrue(actionTestKit.getTaskLockbox().lock(TaskLockType.EXCLUSIVE, task, INTERVAL, 500L).isOk());
-
     final SegmentListUnusedAction action = new SegmentListUnusedAction(task.getDataSource(), INTERVAL);
     final Set<DataSegment> resultSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
     Assert.assertEquals(expectedUnusedSegments, resultSegments);
-  }
-
-  @Test
-  public void testSegmentListUnusedActionWithoutLock() throws IOException
-  {
-    final SegmentListUnusedAction action = new SegmentListUnusedAction(task.getDataSource(), INTERVAL);
-    expectedException.expect(CoreMatchers.instanceOf(ISE.class));
-    expectedException.expectMessage(CoreMatchers.startsWith("Intervals not covered by locks for task"));
-    action.perform(task, actionTestKit.getTaskActionToolbox());
   }
 }
