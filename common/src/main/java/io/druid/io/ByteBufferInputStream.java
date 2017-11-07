@@ -23,10 +23,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 
+/**
+ * Streams bytes from the {@link ByteBuffer}'s position to the limit as {@link InputStream}.
+ */
 public final class ByteBufferInputStream extends InputStream
 {
   private final ByteBuffer buffer;
 
+  /**
+   * Does *not* make a copy of the given buffer, so the position of the given buffer is incremented, as the created
+   * InputStream is used.
+   */
   public ByteBufferInputStream(ByteBuffer buffer)
   {
     this.buffer = buffer;
