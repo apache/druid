@@ -128,4 +128,29 @@ public class ImmutableDruidServer
            + "', sources='" + dataSources
            + "'}";
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    DruidServer that = (DruidServer) o;
+
+    if (getName() != null ? !getName().equals(that.getName()) : that.getName() != null) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return getName() != null ? getName().hashCode() : 0;
+  }
 }

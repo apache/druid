@@ -21,7 +21,7 @@ package io.druid.server.coordinator.helper;
 
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import io.druid.client.DruidDataSource;
+import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.DruidMetrics;
@@ -259,7 +259,7 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
     final Stream<DataSegment> allSegments = params
         .getDataSources()
         .stream()
-        .flatMap((final DruidDataSource dataSource) -> dataSource.getSegments().stream());
+        .flatMap((ImmutableDruidDataSource dataSource) -> dataSource.getSegments().stream());
 
     allSegments
         .collect(Collectors.groupingBy(DataSegment::getDataSource))

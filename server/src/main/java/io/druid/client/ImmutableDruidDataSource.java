@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import io.druid.timeline.DataSegment;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -32,19 +33,19 @@ public class ImmutableDruidDataSource
 {
   private final String name;
   private final ImmutableMap<String, String> properties;
-  private final ImmutableMap<String, DataSegment> partitionNames;
+  private final ImmutableMap<String, DataSegment> idToSegments;
   private final ImmutableSet<DataSegment> segmentsHolder;
 
   public ImmutableDruidDataSource(
       String name,
       ImmutableMap<String, String> properties,
-      ImmutableMap<String, DataSegment> partitionNames,
+      ImmutableMap<String, DataSegment> idToSegments,
       ImmutableSet<DataSegment> segmentsHolder
   )
   {
     this.name = name;
     this.properties = properties;
-    this.partitionNames = partitionNames;
+    this.idToSegments = idToSegments;
     this.segmentsHolder = segmentsHolder;
   }
 
@@ -58,11 +59,6 @@ public class ImmutableDruidDataSource
     return properties;
   }
 
-  public Map<String, DataSegment> getPartitionNames()
-  {
-    return partitionNames;
-  }
-
   public boolean isEmpty()
   {
     return segmentsHolder.isEmpty();
@@ -73,14 +69,52 @@ public class ImmutableDruidDataSource
     return segmentsHolder;
   }
 
+  public DataSegment getSegment(String segmentIdentifier)
+  {
+    return idToSegments.get(segmentIdentifier);
+  }
+
   @Override
   public String toString()
   {
-    // partitionNames is intentionally ignored because it is usually large
+    // idToSegments is intentionally ignored because it is usually large
     return "ImmutableDruidDataSource{"
            + "name='" + name
            + "', segments='" + segmentsHolder
            + "', properties='" + properties
            + "'}";
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+
+    if (o == null || !getClass().equals(o.getClass())) {
+      return false;
+    }
+
+    final ImmutableDruidDataSource that = (ImmutableDruidDataSource) o;
+    if (!this.name.equals(that.name)) {
+      return false;
+    }
+
+    if (!this.properties.equals(that.properties)) {
+      return false;
+    }
+
+    if (!this.idToSegments.equals(that.idToSegments)) {
+      return false;
+    }
+
+    return this.segmentsHolder.equals(that.segmentsHolder);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(name, properties, idToSegments, segmentsHolder);
   }
 }

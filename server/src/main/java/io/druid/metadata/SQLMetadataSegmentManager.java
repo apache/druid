@@ -495,7 +495,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
         }
 
         if (!dataSource.getSegments().contains(segment)) {
-          dataSource.addSegment(segment.getIdentifier(), segment);
+          dataSource.addSegment(segment);
         }
       }
 
