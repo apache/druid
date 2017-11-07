@@ -96,7 +96,7 @@ public class OracleMetadataConnector extends SQLMetadataConnector
   public boolean tableExists(Handle handle, String tableName)
   {
     return !handle.createQuery("SELECT * FROM user_tables WHERE table_name = :tableName")
-                  .bind("tableName", tableName.toUpperCase())
+                  .bind("tableName", StringUtils.toUpperCase(tableName))
                   .list()
                   .isEmpty();
   }
