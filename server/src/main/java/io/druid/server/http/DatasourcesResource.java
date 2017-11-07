@@ -573,10 +573,9 @@ public class DatasourcesResource
     long totalSegmentSize = 0;
     DateTime minTime = DateTimes.MAX;
     DateTime maxTime = DateTimes.MIN;
-    String tier;
     for (DruidServer druidServer : serverInventoryView.getInventory()) {
       DruidDataSource druidDataSource = druidServer.getDataSource(dataSourceName);
-      tier = druidServer.getTier();
+      final String tier = druidServer.getTier();
 
       if (druidDataSource == null) {
         continue;
@@ -607,7 +606,7 @@ public class DatasourcesResource
       Map<String, Object> tierStats = (Map) tiers.get(tier);
       if (tierStats == null) {
         tierStats = Maps.newHashMap();
-        tiers.put(druidServer.getTier(), tierStats);
+        tiers.put(tier, tierStats);
       }
       tierStats.put("segmentCount", tierDistinctSegments.get(tier).size());
 

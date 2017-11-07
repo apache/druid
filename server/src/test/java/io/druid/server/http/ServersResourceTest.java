@@ -116,12 +116,12 @@ public class ServersResourceTest
   @Test
   public void testDruidServerSerde() throws Exception
   {
-    DruidServer server = new DruidServer("dummy", "dummyHost", null, 1234, ServerType.HISTORICAL, "dummyTier", 1);
+    final DruidServer server = new DruidServer("dummy", "dummyHost", null, 1234, ServerType.HISTORICAL, "dummyTier", 1);
     String serverJson = objectMapper.writeValueAsString(server);
     String expected = "{\"name\":\"dummy\",\"host\":\"dummyHost\",\"hostAndTlsPort\":null,\"maxSize\":1234,\"type\":\"historical\",\"tier\":\"dummyTier\",\"priority\":1}";
     Assert.assertEquals(expected, serverJson);
-    DruidServer deserializedServer = objectMapper.readValue(serverJson, DruidServer.class);
-    Assert.assertEquals(server, deserializedServer);
+    final DruidServer deserializedServer = objectMapper.readValue(serverJson, DruidServer.class);
+    Assert.assertEquals(server.toImmutableDruidServer(), deserializedServer.toImmutableDruidServer());
   }
 
   @Test

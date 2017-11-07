@@ -19,6 +19,7 @@
 
 package io.druid.client;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.StringUtils;
 import io.druid.server.coordination.DruidServerMetadata;
@@ -27,6 +28,7 @@ import io.druid.timeline.DataSegment;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  */
@@ -128,5 +130,26 @@ public class ImmutableDruidServer
            + "', size='" + currSize
            + "', sources='" + dataSources
            + "'}";
+  }
+
+  @VisibleForTesting
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ImmutableDruidServer that = (ImmutableDruidServer) o;
+    return Objects.equals(getMetadata(), that.getMetadata());
+  }
+
+  @VisibleForTesting
+  @Override
+  public int hashCode()
+  {
+    return Objects.hashCode(getMetadata());
   }
 }
