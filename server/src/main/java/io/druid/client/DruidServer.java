@@ -179,7 +179,9 @@ public class DruidServer implements Comparable
 
   public DruidServer addDataSegment(String segmentId, DataSegment segment)
   {
-    segments.putIfAbsent(segmentId, segment);
+    if (segments.putIfAbsent(segmentId, segment) != null) {
+      log.warn("Asked to add data segment that already exists!? server[%s], segment[%s]", getName(), segmentId);
+    }
     return this;
   }
 
