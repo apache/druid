@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import io.druid.client.CoordinatorServerView;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
+import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.java.util.common.Intervals;
 import io.druid.server.coordination.ServerType;
@@ -52,13 +53,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.stream.Collectors;
 
 public class DatasourcesResourceTest
 {
   private CoordinatorServerView inventoryView;
   private DruidServer server;
-  private List<DruidDataSource> listDataSources;
+  private List<ImmutableDruidDataSource> listDataSources;
   private List<DataSegment> dataSegmentList;
   private HttpServletRequest request;
 
@@ -112,10 +112,12 @@ public class DatasourcesResourceTest
     listDataSources.add(
         new DruidDataSource("datasource1", ImmutableMap.of())
             .addSegment("part1", dataSegmentList.get(0))
+            .toImmutableDruidDataSource()
     );
     listDataSources.add(
         new DruidDataSource("datasource2", ImmutableMap.of())
             .addSegment("part1", dataSegmentList.get(1))
+            .toImmutableDruidDataSource()
     );
   }
 
@@ -125,8 +127,8 @@ public class DatasourcesResourceTest
     // first request
     EasyMock.expect(server.getDataSources()).andReturn(
         ImmutableList.of(
-            listDataSources.get(0).toImmutableDruidDataSource(),
-            listDataSources.get(1).toImmutableDruidDataSource()
+            listDataSources.get(0),
+            listDataSources.get(1)
         )
     ).once();
     EasyMock.expect(inventoryView.getInventory()).andReturn(
@@ -142,8 +144,8 @@ public class DatasourcesResourceTest
     // second request
     EasyMock.expect(server.getDataSources()).andReturn(
         ImmutableList.of(
-            listDataSources.get(0).toImmutableDruidDataSource(),
-            listDataSources.get(1).toImmutableDruidDataSource()
+            listDataSources.get(0),
+            listDataSources.get(1)
         )
     ).once();
     EasyMock.expect(inventoryView.getInventory()).andReturn(
@@ -165,8 +167,8 @@ public class DatasourcesResourceTest
         AuthTestUtils.TEST_AUTHORIZER_MAPPER
     );
     Response response = datasourcesResource.getQueryableDataSources("full", null, request);
-    Set<DruidDataSource> result = (Set<DruidDataSource>) response.getEntity();
-    DruidDataSource[] resultantDruidDataSources = new DruidDataSource[result.size()];
+    Set<ImmutableDruidDataSource> result = (Set<ImmutableDruidDataSource>) response.getEntity();
+    ImmutableDruidDataSource[] resultantDruidDataSources = new ImmutableDruidDataSource[result.size()];
     result.toArray(resultantDruidDataSources);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(2, resultantDruidDataSources.length);
@@ -188,8 +190,8 @@ public class DatasourcesResourceTest
     // first request
     EasyMock.expect(server.getDataSources()).andReturn(
         ImmutableList.of(
-            listDataSources.get(0).toImmutableDruidDataSource(),
-            listDataSources.get(1).toImmutableDruidDataSource()
+            listDataSources.get(0),
+            listDataSources.get(1)
         )
     ).once();
 
@@ -207,8 +209,8 @@ public class DatasourcesResourceTest
     // second request
     EasyMock.expect(server.getDataSources()).andReturn(
         ImmutableList.of(
-            listDataSources.get(0).toImmutableDruidDataSource(),
-            listDataSources.get(1).toImmutableDruidDataSource()
+            listDataSources.get(0),
+            listDataSources.get(1)
         )
     ).once();
 
@@ -253,8 +255,8 @@ public class DatasourcesResourceTest
         authMapper
     );
     Response response = datasourcesResource.getQueryableDataSources("full", null, request);
-    Set<DruidDataSource> result = (Set<DruidDataSource>) response.getEntity();
-    DruidDataSource[] resultantDruidDataSources = new DruidDataSource[result.size()];
+    Set<ImmutableDruidDataSource> result = (Set<ImmutableDruidDataSource>) response.getEntity();
+    ImmutableDruidDataSource[] resultantDruidDataSources = new ImmutableDruidDataSource[result.size()];
     result.toArray(resultantDruidDataSources);
 
     Assert.assertEquals(200, response.getStatus());
@@ -275,14 +277,16 @@ public class DatasourcesResourceTest
   public void testGetSimpleQueryableDataSources() throws Exception
   {
     EasyMock.expect(server.getDataSources()).andReturn(
-        listDataSources.stream().map(DruidDataSource::toImmutableDruidDataSource).collect(Collectors.toList())
+        listDataSources
     ).atLeastOnce();
-    EasyMock.expect(server.getDataSource("datasource1")).andReturn(
-        listDataSources.get(0)
+    final ImmutableDruidDataSource ds0 = listDataSources.get(0);
+    final ImmutableDruidDataSource ds1 = listDataSources.get(1);
+    EasyMock.expect(server.getDataSource(EasyMock.eq("datasource1"))).andReturn(
+        ds0.newMutable()
     ).atLeastOnce();
     EasyMock.expect(server.getTier()).andReturn(null).atLeastOnce();
-    EasyMock.expect(server.getDataSource("datasource2")).andReturn(
-        listDataSources.get(1)
+    EasyMock.expect(server.getDataSource(EasyMock.eq("datasource2"))).andReturn(
+        ds1.newMutable()
     ).atLeastOnce();
     EasyMock.expect(server.getTier()).andReturn(null).atLeastOnce();
     EasyMock.expect(inventoryView.getInventory()).andReturn(
@@ -403,20 +407,23 @@ public class DatasourcesResourceTest
   @Test
   public void testSimpleGetTheDataSourceManyTiers() throws Exception
   {
-    EasyMock.expect(server.getDataSource("datasource1")).andReturn(
-        listDataSources.get(0)
+
+    final ImmutableDruidDataSource ds0 = listDataSources.get(0);
+    final ImmutableDruidDataSource ds1 = listDataSources.get(1);
+    EasyMock.expect(server.getDataSource(EasyMock.eq("datasource1"))).andReturn(
+        ds0.newMutable()
     ).atLeastOnce();
     EasyMock.expect(server.getTier()).andReturn("cold").atLeastOnce();
 
     DruidServer server2 = EasyMock.createStrictMock(DruidServer.class);
-    EasyMock.expect(server2.getDataSource("datasource1")).andReturn(
-        listDataSources.get(1)
+    EasyMock.expect(server2.getDataSource(EasyMock.eq("datasource1"))).andReturn(
+        ds1.newMutable()
     ).atLeastOnce();
     EasyMock.expect(server2.getTier()).andReturn("hot").atLeastOnce();
 
     DruidServer server3 = EasyMock.createStrictMock(DruidServer.class);
-    EasyMock.expect(server3.getDataSource("datasource1")).andReturn(
-        listDataSources.get(1)
+    EasyMock.expect(server3.getDataSource(EasyMock.eq("datasource1"))).andReturn(
+        ds1.newMutable()
     ).atLeastOnce();
     EasyMock.expect(server3.getTier()).andReturn("cold").atLeastOnce();
 
@@ -471,7 +478,7 @@ public class DatasourcesResourceTest
     );
 
     Response response = datasourcesResource.getSegmentDataSourceIntervals("invalidDataSource", null, null);
-    Assert.assertEquals(response.getEntity(), null);
+    Assert.assertNull(response.getEntity());
 
     response = datasourcesResource.getSegmentDataSourceIntervals("datasource1", null, null);
     TreeSet<Interval> actualIntervals = (TreeSet) response.getEntity();
@@ -528,7 +535,7 @@ public class DatasourcesResourceTest
         null,
         null
     );
-    Assert.assertEquals(null, response.getEntity());
+    Assert.assertNull(response.getEntity());
 
     response = datasourcesResource.getSegmentDataSourceSpecificInterval(
         "datasource1",

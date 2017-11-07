@@ -73,6 +73,13 @@ public class ImmutableDruidDataSource
     return segmentsHolder;
   }
 
+  public DruidDataSource newMutable()
+  {
+    final DruidDataSource ds = new DruidDataSource(getName(), getProperties());
+    getSegments().forEach(segment -> ds.addSegment(segment.getIdentifier(), segment));
+    return ds;
+  }
+
   @Override
   public String toString()
   {

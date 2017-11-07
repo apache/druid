@@ -242,13 +242,19 @@ public class DruidServer implements Comparable
           @Override
           public Function<DruidDataSource, DruidDataSource> finisher()
           {
-            return Function.identity();
+            return druidDataSource -> {
+              if (druidDataSource.getSegments().isEmpty()) {
+                // Mimic the behavior of `Map::get`
+                return null;
+              }
+              return druidDataSource;
+            };
           }
 
           @Override
           public Set<Characteristics> characteristics()
           {
-            return ImmutableSet.of(Characteristics.IDENTITY_FINISH, Characteristics.UNORDERED);
+            return ImmutableSet.of(Characteristics.UNORDERED);
           }
         });
   }

@@ -66,10 +66,15 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 /**
  */
@@ -348,11 +353,10 @@ public class DatasourcesResource
       final Map<Interval, Map<String, Object>> retVal = Maps.newTreeMap(comparator);
       for (DataSegment dataSegment : dataSource.getSegments()) {
         if (theInterval.contains(dataSegment.getInterval())) {
-          Map<String, Object> segments = retVal.get(dataSegment.getInterval());
-          if (segments == null) {
-            segments = Maps.newHashMap();
-            retVal.put(dataSegment.getInterval(), segments);
-          }
+          final Map<String, Object> segments = retVal.computeIfAbsent(
+              dataSegment.getInterval(),
+              ignored -> new HashMap<>()
+          );
 
           Pair<DataSegment, Set<String>> val = getSegment(dataSegment.getIdentifier());
 
@@ -487,45 +491,33 @@ public class DatasourcesResource
       @PathParam("dataSourceName") String dataSourceName
   )
   {
-    Set<String> retVal = Sets.newHashSet();
-    for (DruidServer druidServer : serverInventoryView.getInventory()) {
-      if (druidServer.getDataSource(dataSourceName) != null) {
-        retVal.add(druidServer.getTier());
-      }
-    }
-
+    final Set<String> retVal = StreamSupport
+        .stream(serverInventoryView.getInventory().spliterator(), false)
+        .filter(server -> server.getDataSource(dataSourceName) != null)
+        .map(DruidServer::getTier)
+        .collect(Collectors.toSet());
     return Response.ok(retVal).build();
   }
 
   private DruidDataSource getDataSource(final String dataSourceName)
   {
-    Iterable<DruidDataSource> dataSources =
-        Iterables.concat(
-            Iterables.transform(
-                serverInventoryView.getInventory(),
-                (DruidServer input) -> input.getDataSource(dataSourceName)
-            )
-        );
+    final List<DruidDataSource> dataSources =
+        StreamSupport
+            .stream(serverInventoryView.getInventory().spliterator(), false)
+            .map((DruidServer server) -> server.getDataSource(dataSourceName))
+            .filter(Objects::nonNull)
+            .filter(ds -> dataSourceName.equalsIgnoreCase(ds.getName()))
+            .collect(Collectors.toList());
 
-    List<DruidDataSource> validDataSources = Lists.newArrayList();
-    for (DruidDataSource dataSource : dataSources) {
-      if (dataSource != null) {
-        validDataSources.add(dataSource);
-      }
-    }
-    if (validDataSources.isEmpty()) {
+    if (dataSources.isEmpty()) {
       return null;
     }
 
-    Map<String, DataSegment> segmentMap = Maps.newHashMap();
-    for (DruidDataSource dataSource : validDataSources) {
-      if (dataSource != null) {
-        Iterable<DataSegment> segments = dataSource.getSegments();
-        for (DataSegment segment : segments) {
-          segmentMap.put(segment.getIdentifier(), segment);
-        }
-      }
-    }
+    final Map<String, DataSegment> segmentMap = dataSources
+        .stream()
+        .map(DruidDataSource::getSegments)
+        .flatMap(Set::stream)
+        .collect(Collectors.toMap(DataSegment::getIdentifier, Function.identity()));
 
     return new DruidDataSource(
         dataSourceName,
@@ -535,21 +527,28 @@ public class DatasourcesResource
 
   private Pair<DataSegment, Set<String>> getSegment(String segmentId)
   {
-    DataSegment theSegment = null;
-    Set<String> servers = Sets.newHashSet();
-    for (DruidServer druidServer : serverInventoryView.getInventory()) {
-      DataSegment currSegment = druidServer.getSegments().get(segmentId);
-      if (currSegment != null) {
-        theSegment = currSegment;
-        servers.add(druidServer.getHost());
-      }
-    }
+    final List<Pair<DataSegment, DruidServer>> servers = StreamSupport
+        .stream(serverInventoryView.getInventory().spliterator(), false)
+        .map(server -> {
+          // Pair up segments and servers for later use
+          final DataSegment segment = server.getSegment(segmentId);
+          if (segment == null) {
+            return null;
+          }
+          return Pair.of(segment, server);
+        })
+        .filter(Objects::nonNull)
+        .collect(Collectors.toList());
 
-    if (theSegment == null) {
+    if (servers.isEmpty()) {
       return null;
     }
-
-    return new Pair<>(theSegment, servers);
+    final Set<String> serverHosts = servers
+        .stream()
+        .map(p -> p.rhs)
+        .map(DruidServer::getHost)
+        .collect(Collectors.toSet());
+    return Pair.of(servers.get(0).lhs, serverHosts);
   }
 
   private Map<String, Object> makeSimpleDatasource(ImmutableDruidDataSource input)
