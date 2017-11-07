@@ -19,60 +19,40 @@
 
 package io.druid.server.http;
 
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-
-import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
+import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.InventoryView;
 import io.druid.java.util.common.ISE;
 import io.druid.server.security.AuthorizationUtils;
 import io.druid.server.security.AuthorizerMapper;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.stream.StreamSupport;
 
 public class InventoryViewUtils
 {
 
-  public static Set<DruidDataSource> getDataSources(InventoryView serverInventoryView)
+  public static Set<ImmutableDruidDataSource> getDataSources(InventoryView serverInventoryView)
   {
-    TreeSet<DruidDataSource> dataSources = Sets.newTreeSet(
-        new Comparator<DruidDataSource>()
-        {
-          @Override
-          public int compare(DruidDataSource druidDataSource, DruidDataSource druidDataSource1)
-          {
-            return druidDataSource.getName().compareTo(druidDataSource1.getName());
-          }
-        }
+    final TreeSet<ImmutableDruidDataSource> dataSources = Sets.newTreeSet(
+        Comparator.comparing(ImmutableDruidDataSource::getName)
     );
-    dataSources.addAll(
-        Lists.newArrayList(
-            Iterables.concat(
-                Iterables.transform(
-                    serverInventoryView.getInventory(),
-                    new Function<DruidServer, Iterable<DruidDataSource>>()
-                    {
-                      @Override
-                      public Iterable<DruidDataSource> apply(DruidServer input)
-                      {
-                        return input.getDataSources();
-                      }
-                    }
-                )
-            )
-        )
-    );
+    StreamSupport
+        .stream(serverInventoryView.getInventory().spliterator(), false)
+        .map(DruidServer::getDataSources)
+        .flatMap(Collection::stream)
+        .forEach(dataSources::add);
     return dataSources;
   }
 
-  public static Set<DruidDataSource> getSecuredDataSources(
+  public static Set<ImmutableDruidDataSource> getSecuredDataSources(
       HttpServletRequest request,
       InventoryView inventoryView,
       final AuthorizerMapper authorizerMapper
@@ -86,11 +66,9 @@ public class InventoryViewUtils
         AuthorizationUtils.filterAuthorizedResources(
             request,
             getDataSources(inventoryView),
-            datasource -> {
-              return Lists.newArrayList(
-                  AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(datasource.getName())
-              );
-            },
+            datasource -> Lists.newArrayList(
+                AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(datasource.getName())
+            ),
             authorizerMapper
         )
     );

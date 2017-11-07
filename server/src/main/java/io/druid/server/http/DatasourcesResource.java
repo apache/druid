@@ -29,6 +29,7 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.client.CoordinatorServerView;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
+import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.ImmutableSegmentLoadInfo;
 import io.druid.client.SegmentLoadInfo;
 import io.druid.client.indexing.IndexingServiceClient;
@@ -108,7 +109,7 @@ public class DatasourcesResource
   )
   {
     Response.ResponseBuilder builder = Response.ok();
-    final Set<DruidDataSource> datasources = InventoryViewUtils.getSecuredDataSources(
+    final Set<ImmutableDruidDataSource> datasources = InventoryViewUtils.getSecuredDataSources(
         req,
         serverInventoryView,
         authorizerMapper
@@ -121,7 +122,7 @@ public class DatasourcesResource
           Lists.newArrayList(
               Iterables.transform(
                   datasources,
-                  (DruidDataSource dataSource) -> makeSimpleDatasource(dataSource)
+                  (ImmutableDruidDataSource dataSource) -> makeSimpleDatasource(dataSource)
               )
           )
       ).build();
@@ -131,7 +132,7 @@ public class DatasourcesResource
         Lists.newArrayList(
             Iterables.transform(
                 datasources,
-                (DruidDataSource dataSource) -> dataSource.getName()
+                (ImmutableDruidDataSource dataSource) -> dataSource.getName()
             )
         )
     ).build();
@@ -551,7 +552,7 @@ public class DatasourcesResource
     return new Pair<>(theSegment, servers);
   }
 
-  private Map<String, Object> makeSimpleDatasource(DruidDataSource input)
+  private Map<String, Object> makeSimpleDatasource(ImmutableDruidDataSource input)
   {
     return new ImmutableMap.Builder<String, Object>()
         .put("name", input.getName())
