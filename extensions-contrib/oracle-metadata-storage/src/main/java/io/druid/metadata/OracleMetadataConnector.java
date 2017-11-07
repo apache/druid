@@ -61,6 +61,7 @@ public class OracleMetadataConnector extends SQLMetadataConnector
     log.info("Configured Oracle as metadata storage");
   }
 
+  @Override
   public String getValidationQuery()
   {
     return "SELECT 1 FROM DUAL";
@@ -128,6 +129,7 @@ public class OracleMetadataConnector extends SQLMetadataConnector
     );
   }
 
+  @Override
   public void createAuditTable()
   {
     if (this.config.get().isCreateTables()) {
@@ -136,6 +138,7 @@ public class OracleMetadataConnector extends SQLMetadataConnector
 
   }
 
+  @Override
   public void createPendingSegmentsTable(final String tableName)
   {
     createTable(
@@ -156,6 +159,7 @@ public class OracleMetadataConnector extends SQLMetadataConnector
     );
   }
 
+  @Override
   public void createDataSourceTable(final String tableName)
   {
     createTable(
@@ -170,6 +174,7 @@ public class OracleMetadataConnector extends SQLMetadataConnector
     );
   }
 
+  @Override
   public void createSegmentTable(final String tableName)
   {
     createTable(
@@ -193,6 +198,7 @@ public class OracleMetadataConnector extends SQLMetadataConnector
     );
   }
 
+  @Override
   public void createRulesTable(final String tableName)
   {
     createTable(
@@ -210,6 +216,7 @@ public class OracleMetadataConnector extends SQLMetadataConnector
     );
   }
 
+  @Override
   public void createConfigTable(final String tableName)
   {
     createTable(
@@ -222,6 +229,7 @@ public class OracleMetadataConnector extends SQLMetadataConnector
     );
   }
 
+  @Override
   public void createEntryTable(final String tableName)
   {
     createTable(
@@ -244,6 +252,7 @@ public class OracleMetadataConnector extends SQLMetadataConnector
     );
   }
 
+  @Override
   public void createLogTable(final String tableName, final String entryTypeName)
   {
     createTable(tableName, ImmutableList.of(
@@ -260,6 +269,7 @@ public class OracleMetadataConnector extends SQLMetadataConnector
     ));
   }
 
+  @Override
   public void createLockTable(final String tableName, final String entryTypeName)
   {
     createTable(tableName, ImmutableList.of(
@@ -276,6 +286,7 @@ public class OracleMetadataConnector extends SQLMetadataConnector
     ));
   }
 
+  @Override
   public void createSupervisorsTable(final String tableName)
   {
     createTable(tableName, ImmutableList.of(
