@@ -22,7 +22,6 @@ package io.druid.server.router;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
-import com.google.common.collect.Iterables;
 import io.druid.query.Query;
 import io.druid.query.QueryContexts;
 
