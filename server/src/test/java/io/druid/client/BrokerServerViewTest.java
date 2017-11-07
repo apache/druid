@@ -22,7 +22,6 @@ package io.druid.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
-import com.google.common.base.Function;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -48,7 +47,6 @@ import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.PartitionHolder;
-import io.druid.timeline.partition.SingleElementPartitionChunk;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -253,7 +251,8 @@ public class BrokerServerViewTest extends CuratorTestBase
   }
 
   private void assertValues(
-      List<Pair<Interval, Pair<String, Pair<ImmutableDruidServer, DataSegment>>>> expected, List<TimelineObjectHolder> actual
+      List<Pair<Interval, Pair<String, Pair<ImmutableDruidServer, DataSegment>>>> expected,
+      List<TimelineObjectHolder> actual
   )
   {
     Assert.assertEquals(expected.size(), actual.size());
