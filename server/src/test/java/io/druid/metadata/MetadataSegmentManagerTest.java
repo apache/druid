@@ -32,10 +32,13 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+
+import java.io.IOException;
 
 
 public class MetadataSegmentManagerTest
@@ -102,6 +105,14 @@ public class MetadataSegmentManagerTest
     publisher.publishSegment(segment2);
   }
 
+  @After
+  public void teardown()
+  {
+    if (manager.isStarted()) {
+      manager.stop();
+    }
+  }
+
   @Test
   public void testPoll()
   {
@@ -115,7 +126,6 @@ public class MetadataSegmentManagerTest
         ImmutableSet.of(segment1, segment2),
         manager.getInventoryValue("wikipedia").getSegments()
     );
-    manager.stop();
   }
 
   @Test
@@ -161,5 +171,63 @@ public class MetadataSegmentManagerTest
         ImmutableList.of(segment2.getInterval(), segment1.getInterval()),
         manager.getUnusedSegmentIntervals("wikipedia", Intervals.of("1970/3000"), 5)
     );
+  }
+
+  @Test
+  public void testRemoveDataSource() throws IOException
+  {
+    manager.start();
+    manager.poll();
+
+    final String newDataSource = "wikipedia2";
+    final DataSegment newSegment = new DataSegment(
+        newDataSource,
+        Intervals.of("2017-10-15T00:00:00.000/2017-10-16T00:00:00.000"),
+        "2017-10-15T20:19:12.565Z",
+        ImmutableMap.of(
+            "type", "s3_zip",
+            "bucket", "test",
+            "key", "wikipedia2/index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip"
+        ),
+        ImmutableList.of("dim1", "dim2", "dim3"),
+        ImmutableList.of("count", "value"),
+        NoneShardSpec.instance(),
+        0,
+        1234L
+    );
+
+    publisher.publishSegment(newSegment);
+
+    Assert.assertNull(manager.getInventoryValue(newDataSource));
+    Assert.assertTrue(manager.removeDatasource(newDataSource));
+  }
+
+  @Test
+  public void testRemoveDataSegment() throws IOException
+  {
+    manager.start();
+    manager.poll();
+
+    final String newDataSource = "wikipedia2";
+    final DataSegment newSegment = new DataSegment(
+        newDataSource,
+        Intervals.of("2017-10-15T00:00:00.000/2017-10-16T00:00:00.000"),
+        "2017-10-15T20:19:12.565Z",
+        ImmutableMap.of(
+            "type", "s3_zip",
+            "bucket", "test",
+            "key", "wikipedia2/index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip"
+        ),
+        ImmutableList.of("dim1", "dim2", "dim3"),
+        ImmutableList.of("count", "value"),
+        NoneShardSpec.instance(),
+        0,
+        1234L
+    );
+
+    publisher.publishSegment(newSegment);
+
+    Assert.assertNull(manager.getInventoryValue(newDataSource));
+    Assert.assertTrue(manager.removeSegment(newDataSource, newSegment.getIdentifier()));
   }
 }

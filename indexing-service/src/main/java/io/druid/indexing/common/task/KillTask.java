@@ -52,7 +52,7 @@ public class KillTask extends AbstractFixedIntervalTask
   )
   {
     super(
-        makeId(id, "kill", dataSource, interval),
+        getOrMakeId(id, "kill", dataSource, interval),
         dataSource,
         interval,
         context

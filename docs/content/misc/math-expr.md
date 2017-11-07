@@ -13,13 +13,16 @@ This expression language supports the following operators (listed in decreasing 
 |<, <=, >, >=, ==, !=|Binary Comparison|
 |&&,\|\||Binary Logical AND, OR|
 
-Long, double and string data types are supported. If a number contains a dot, it is interpreted as a double, otherwise it is interpreted as a long. That means, always add a '.' to your number if you want it interpreted as a double value. String literal should be quoted by single quotation marks.
+Long, double, and string data types are supported. If a number contains a dot, it is interpreted as a double, otherwise it is interpreted as a long. That means, always add a '.' to your number if you want it interpreted as a double value. String literals should be quoted by single quotation marks.
 
-Expressions can contain variables. Variable names may contain letters, digits, '\_' and '$'. Variable names must not begin with a digit. To escape other special characters, user can quote it with double quotation marks.
+Multi-value types are not fully supported yet. Expressions may behave inconsistently on multi-value types, and you
+should not rely on the behavior in this case to stay the same in future releases.
 
-For logical operators, a number is true if and only if it is positive (0 or minus value means false). For string type, it's evaluation result of 'Boolean.valueOf(string)'.
+Expressions can contain variables. Variable names may contain letters, digits, '\_' and '$'. Variable names must not begin with a digit. To escape other special characters, you can quote it with double quotation marks.
 
-Also, the following built-in functions are supported.
+For logical operators, a number is true if and only if it is positive (0 or negative value means false). For string type, it's the evaluation result of 'Boolean.valueOf(string)'.
+
+The following built-in functions are available.
 
 ## General functions
 

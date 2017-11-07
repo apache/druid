@@ -50,6 +50,7 @@ import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.router.QueryHostFinder;
+import io.druid.server.router.RendezvousHashAvaticaConnectionBalancer;
 import io.druid.server.security.AllowAllAuthorizer;
 import io.druid.server.security.AuthTestUtils;
 import io.druid.server.security.Authorizer;
@@ -208,7 +209,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
       root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
 
-      final QueryHostFinder hostFinder = new QueryHostFinder(null)
+      final QueryHostFinder hostFinder = new QueryHostFinder(null, new RendezvousHashAvaticaConnectionBalancer())
       {
         @Override
         public io.druid.client.selector.Server getServer(Query query)
