@@ -22,6 +22,7 @@ package io.druid.math.expr;
 import com.google.common.base.Preconditions;
 import com.google.common.math.LongMath;
 import com.google.common.primitives.Ints;
+import io.druid.common.config.NullHandlingExpressionHelper;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Comparators;
@@ -361,6 +362,13 @@ abstract class BinaryEvalOpExprBase extends BinaryOpExprBase
   {
     ExprEval leftVal = left.eval(bindings);
     ExprEval rightVal = right.eval(bindings);
+
+    // Result of any Binary expressions is null if any of the argument is null.
+    // e.g "select null * 2 as c;" or "select null + 1 as c;" will return null as per Standard SQL spec.
+    if (!NullHandlingExpressionHelper.useDefaultValuesForNull() && (leftVal.isNull() || rightVal.isNull())) {
+      return ExprEval.of(null);
+    }
+
     if (leftVal.type() == ExprType.STRING && rightVal.type() == ExprType.STRING) {
       return evalString(leftVal.asString(), rightVal.asString());
     } else if (leftVal.type() == ExprType.LONG && rightVal.type() == ExprType.LONG) {
@@ -490,11 +498,6 @@ class BinPlusExpr extends BinaryEvalOpExprBase
   @Override
   protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
-    // Result of expression is Null if any of the argument is null.
-    // e.g "select null * 2 as c;" will return null as per Standard SQL spec.
-    if (left == null || right == null) {
-      return ExprEval.of(null);
-    }
     return ExprEval.of(left + right);
   }
 

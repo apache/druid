@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.segment;
+package io.druid.common.config;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

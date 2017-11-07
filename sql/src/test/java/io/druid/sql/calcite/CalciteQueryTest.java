@@ -479,6 +479,7 @@ public class CalciteQueryTest
   @Test
   public void testSelectStar() throws Exception
   {
+    String nullValue = NullHandlingHelper.useDefaultValuesForNull() ? "" : null;
     testQuery(
         "SELECT * FROM druid.foo",
         ImmutableList.<Query>of(
@@ -490,22 +491,13 @@ public class CalciteQueryTest
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
-        NullHandlingHelper.useDefaultValuesForNull() ?
         ImmutableList.of(
             new Object[]{T("2000-01-01"), 1L, "", "a", 1f, 1.0, HLLCV1.class.getName()},
-            new Object[]{T("2000-01-02"), 1L, "10.1", "", 2f, 2.0, HLLCV1.class.getName()},
+            new Object[]{T("2000-01-02"), 1L, "10.1", nullValue, 2f, 2.0, HLLCV1.class.getName()},
             new Object[]{T("2000-01-03"), 1L, "2", "", 3f, 3.0, HLLCV1.class.getName()},
             new Object[]{T("2001-01-01"), 1L, "1", "a", 4f, 4.0, HLLCV1.class.getName()},
             new Object[]{T("2001-01-02"), 1L, "def", "abc", 5f, 5.0, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-03"), 1L, "abc", "", 6f, 6.0, HLLCV1.class.getName()}
-        ) :
-        ImmutableList.of(
-            new Object[]{T("2000-01-01"), 1L, "", "a", 1f, 1.0, HLLCV1.class.getName()},
-            new Object[]{T("2000-01-02"), 1L, "10.1", null, 2f, 2.0, HLLCV1.class.getName()},
-            new Object[]{T("2000-01-03"), 1L, "2", "", 3f, 3.0, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-01"), 1L, "1", "a", 4f, 4.0, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5f, 5.0, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-03"), 1L, "abc", null, 6f, 6.0, HLLCV1.class.getName()}
+            new Object[]{T("2001-01-03"), 1L, "abc", nullValue, 6f, 6.0, HLLCV1.class.getName()}
         )
     );
   }
@@ -574,6 +566,8 @@ public class CalciteQueryTest
   @Test
   public void testSelectStarWithLimit() throws Exception
   {
+    String nullValue = NullHandlingHelper.useDefaultValuesForNull() ? "" : null;
+
     testQuery(
         "SELECT * FROM druid.foo LIMIT 2",
         ImmutableList.of(
@@ -586,14 +580,9 @@ public class CalciteQueryTest
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
-        NullHandlingHelper.useDefaultValuesForNull() ?
         ImmutableList.of(
             new Object[]{T("2000-01-01"), 1L, "", "a", 1.0f, 1.0, HLLCV1.class.getName()},
-            new Object[]{T("2000-01-02"), 1L, "10.1", "", 2.0f, 2.0, HLLCV1.class.getName()}
-        ) :
-        ImmutableList.of(
-            new Object[]{T("2000-01-01"), 1L, "", "a", 1.0f, 1.0, HLLCV1.class.getName()},
-            new Object[]{T("2000-01-02"), 1L, "10.1", null, 2.0f, 2.0, HLLCV1.class.getName()}
+            new Object[]{T("2000-01-02"), 1L, "10.1", nullValue, 2.0f, 2.0, HLLCV1.class.getName()}
         )
     );
   }
@@ -601,6 +590,7 @@ public class CalciteQueryTest
   @Test
   public void testSelectWithProjection() throws Exception
   {
+    String nullValue = NullHandlingHelper.useDefaultValuesForNull() ? "" : null;
     testQuery(
         "SELECT SUBSTRING(dim2, 1, 1) FROM druid.foo LIMIT 2",
         ImmutableList.of(
@@ -616,14 +606,9 @@ public class CalciteQueryTest
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
-        NullHandlingHelper.useDefaultValuesForNull() ?
         ImmutableList.of(
             new Object[]{"a"},
-            new Object[]{""}
-        ) :
-        ImmutableList.of(
-            new Object[]{"a"},
-            new Object[]{null}
+            new Object[]{nullValue}
         )
     );
   }
@@ -631,6 +616,8 @@ public class CalciteQueryTest
   @Test
   public void testSelectStarWithLimitTimeDescending() throws Exception
   {
+    String nullValue = NullHandlingHelper.useDefaultValuesForNull() ? "" : null;
+
     testQuery(
         "SELECT * FROM druid.foo ORDER BY __time DESC LIMIT 2",
         ImmutableList.of(
@@ -645,13 +632,8 @@ public class CalciteQueryTest
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        NullHandlingHelper.useDefaultValuesForNull() ?
         ImmutableList.of(
-            new Object[]{T("2001-01-03"), 1L, "abc", "", 6f, 6d, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5f, 5d, HLLCV1.class.getName()}
-        ) :
-        ImmutableList.of(
-            new Object[]{T("2001-01-03"), 1L, "abc", null, 6f, 6d, HLLCV1.class.getName()},
+            new Object[]{T("2001-01-03"), 1L, "abc", nullValue, 6f, 6d, HLLCV1.class.getName()},
             new Object[]{T("2001-01-02"), 1L, "def", "abc", 5f, 5d, HLLCV1.class.getName()}
         )
     );
@@ -660,6 +642,7 @@ public class CalciteQueryTest
   @Test
   public void testSelectStarWithoutLimitTimeAscending() throws Exception
   {
+    String nullValue = NullHandlingHelper.useDefaultValuesForNull() ? "" : null;
     testQuery(
         "SELECT * FROM druid.foo ORDER BY __time",
         ImmutableList.of(
@@ -690,22 +673,13 @@ public class CalciteQueryTest
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        NullHandlingHelper.useDefaultValuesForNull() ?
         ImmutableList.of(
             new Object[]{T("2000-01-01"), 1L, "", "a", 1f, 1.0, HLLCV1.class.getName()},
-            new Object[]{T("2000-01-02"), 1L, "10.1", "", 2f, 2.0, HLLCV1.class.getName()},
+            new Object[]{T("2000-01-02"), 1L, "10.1", nullValue, 2f, 2.0, HLLCV1.class.getName()},
             new Object[]{T("2000-01-03"), 1L, "2", "", 3f, 3.0, HLLCV1.class.getName()},
             new Object[]{T("2001-01-01"), 1L, "1", "a", 4f, 4.0, HLLCV1.class.getName()},
             new Object[]{T("2001-01-02"), 1L, "def", "abc", 5f, 5.0, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-03"), 1L, "abc", "", 6f, 6.0, HLLCV1.class.getName()}
-        ) :
-        ImmutableList.of(
-            new Object[]{T("2000-01-01"), 1L, "", "a", 1f, 1.0, HLLCV1.class.getName()},
-            new Object[]{T("2000-01-02"), 1L, "10.1", null, 2f, 2.0, HLLCV1.class.getName()},
-            new Object[]{T("2000-01-03"), 1L, "2", "", 3f, 3.0, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-01"), 1L, "1", "a", 4f, 4.0, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5f, 5.0, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-03"), 1L, "abc", null, 6f, 6.0, HLLCV1.class.getName()}
+            new Object[]{T("2001-01-03"), 1L, "abc", nullValue, 6f, 6.0, HLLCV1.class.getName()}
         )
     );
   }
@@ -713,6 +687,7 @@ public class CalciteQueryTest
   @Test
   public void testSelectSingleColumnTwice() throws Exception
   {
+    String nullValue = NullHandlingHelper.useDefaultValuesForNull() ? "" : null;
     testQuery(
         "SELECT dim2 x, dim2 y FROM druid.foo LIMIT 2",
         ImmutableList.of(
@@ -725,14 +700,9 @@ public class CalciteQueryTest
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
-        NullHandlingHelper.useDefaultValuesForNull() ?
         ImmutableList.of(
             new Object[]{"a", "a"},
-            new Object[]{"", ""}
-        ) :
-        ImmutableList.of(
-            new Object[]{"a", "a"},
-            new Object[]{null, null}
+            new Object[]{nullValue, nullValue}
         )
     );
   }
@@ -1523,6 +1493,7 @@ public class CalciteQueryTest
   @Test
   public void testGroupByCaseWhen() throws Exception
   {
+    String nullValue = NullHandlingHelper.useDefaultValuesForNull() ? "" : null;
     testQuery(
         "SELECT\n"
         + "  CASE EXTRACT(DAY FROM __time)\n"
@@ -1562,14 +1533,8 @@ public class CalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandlingHelper.useDefaultValuesForNull() ?
         ImmutableList.of(
-            new Object[]{"", 2L},
-            new Object[]{"match-cnt", 1L},
-            new Object[]{"match-m1 ", 3L}
-        ) :
-        ImmutableList.of(
-            new Object[]{null, 2L},
+            new Object[]{nullValue, 2L},
             new Object[]{"match-cnt", 1L},
             new Object[]{"match-m1 ", 3L}
         )
@@ -4646,6 +4611,7 @@ public class CalciteQueryTest
   @Test
   public void testRegexpExtract() throws Exception
   {
+    String nullValue = NullHandlingHelper.useDefaultValuesForNull() ? "" : null;
     testQuery(
         "SELECT DISTINCT\n"
         + "  REGEXP_EXTRACT(dim1, '^.'),\n"
@@ -4681,16 +4647,8 @@ public class CalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandlingHelper.useDefaultValuesForNull() ?
         ImmutableList.of(
-            new Object[]{"", ""},
-            new Object[]{"1", "1"},
-            new Object[]{"2", "2"},
-            new Object[]{"a", "a"},
-            new Object[]{"d", "d"}
-        ) :
-        ImmutableList.of(
-            new Object[]{null, null},
+            new Object[]{nullValue, nullValue},
             new Object[]{"1", "1"},
             new Object[]{"2", "2"},
             new Object[]{"a", "a"},
@@ -4702,6 +4660,7 @@ public class CalciteQueryTest
   @Test
   public void testGroupBySortPushDown() throws Exception
   {
+    String nullValue = NullHandlingHelper.useDefaultValuesForNull() ? "" : null;
     testQuery(
         "SELECT dim2, dim1, SUM(cnt) FROM druid.foo GROUP BY dim2, dim1 ORDER BY dim1 LIMIT 4",
         ImmutableList.of(
@@ -4731,17 +4690,10 @@ public class CalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandlingHelper.useDefaultValuesForNull() ?
         ImmutableList.of(
             new Object[]{"a", "", 1L},
             new Object[]{"a", "1", 1L},
-            new Object[]{"", "10.1", 1L},
-            new Object[]{"", "2", 1L}
-        ) :
-        ImmutableList.of(
-            new Object[]{"a", "", 1L},
-            new Object[]{"a", "1", 1L},
-            new Object[]{null, "10.1", 1L},
+            new Object[]{nullValue, "10.1", 1L},
             new Object[]{"", "2", 1L}
         )
     );
@@ -4750,6 +4702,7 @@ public class CalciteQueryTest
   @Test
   public void testGroupByLimitPushDownWithHavingOnLong() throws Exception
   {
+    String nullValue = NullHandlingHelper.useDefaultValuesForNull() ? "" : null;
     testQuery(
         "SELECT dim1, dim2, SUM(cnt) AS thecnt "
         + "FROM druid.foo "
@@ -4785,16 +4738,9 @@ public class CalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandlingHelper.useDefaultValuesForNull() ?
         ImmutableList.of(
-            new Object[]{"10.1", "", 1L},
-            new Object[]{"2", "", 1L},
-            new Object[]{"abc", "", 1L},
-            new Object[]{"", "a", 1L}
-        ) :
-        ImmutableList.of(
-            new Object[]{"10.1", null, 1L},
-            new Object[]{"abc", null, 1L},
+            new Object[]{"10.1", nullValue, 1L},
+            new Object[]{"abc", nullValue, 1L},
             new Object[]{"2", "", 1L},
             new Object[]{"", "a", 1L}
         )
@@ -5247,6 +5193,7 @@ public class CalciteQueryTest
   @Test
   public void testFilterAndGroupByLookup() throws Exception
   {
+    String nullValue = NullHandlingHelper.useDefaultValuesForNull() ? "" : null;
     final RegisteredLookupExtractionFn extractionFn = new RegisteredLookupExtractionFn(
         null,
         "lookyloo",
@@ -5290,13 +5237,8 @@ public class CalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandlingHelper.useDefaultValuesForNull() ?
         ImmutableList.of(
-            new Object[]{"", 5L},
-            new Object[]{"xabc", 1L}
-        ) :
-        ImmutableList.of(
-            new Object[]{null, 5L},
+            new Object[]{nullValue, 5L},
             new Object[]{"xabc", 1L}
         )
     );
@@ -6244,6 +6186,8 @@ public class CalciteQueryTest
   @Test
   public void testUsingSubqueryAsFilterWithInnerSort() throws Exception
   {
+    String nullValue = NullHandlingHelper.useDefaultValuesForNull() ? "" : null;
+
     // Regression test for https://github.com/druid-io/druid/issues/4208
     List<String> expectedSubqueryResult = NullHandlingHelper.useDefaultValuesForNull() ?
                                           ImmutableList.of("", "a", "abc") :
@@ -6285,22 +6229,13 @@ public class CalciteQueryTest
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
-        NullHandlingHelper.useDefaultValuesForNull() ?
         ImmutableList.of(
             new Object[]{"", "a"},
-            new Object[]{"10.1", ""},
+            new Object[]{"10.1", nullValue},
             new Object[]{"2", ""},
             new Object[]{"1", "a"},
             new Object[]{"def", "abc"},
-            new Object[]{"abc", ""}
-        ) :
-        ImmutableList.of(
-            new Object[]{"", "a"},
-            new Object[]{"10.1", null},
-            new Object[]{"2", ""},
-            new Object[]{"1", "a"},
-            new Object[]{"def", "abc"},
-            new Object[]{"abc", null}
+            new Object[]{"abc", nullValue}
         )
     );
   }

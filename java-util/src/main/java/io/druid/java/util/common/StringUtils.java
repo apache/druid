@@ -102,7 +102,7 @@ public class StringUtils
     }
     final byte[] bytes = new byte[numBytes];
     buffer.get(bytes);
-    return fromUtf8(bytes);
+    return fromUtf8Nullable(bytes);
   }
 
   public static String fromUtf8(final ByteBuffer buffer)

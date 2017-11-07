@@ -20,6 +20,7 @@
 package io.druid.math.expr;
 
 import com.google.common.base.Strings;
+import io.druid.common.config.NullHandlingExpressionHelper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
@@ -74,6 +75,9 @@ interface Function
     @Override
     protected final ExprEval eval(ExprEval param)
     {
+      if (!NullHandlingExpressionHelper.useDefaultValuesForNull() && param.isNull()) {
+        return ExprEval.of(null);
+      }
       if (param.type() == ExprType.LONG) {
         return eval(param.asLong());
       } else if (param.type() == ExprType.DOUBLE) {
@@ -899,12 +903,12 @@ interface Function
         final StringBuilder builder = new StringBuilder(Strings.nullToEmpty(args.get(0).eval(bindings).asString()));
         for (int i = 1; i < args.size(); i++) {
           final String s = args.get(i).eval(bindings).asString();
-          if (s != null) {
-            builder.append(s);
-          } else {
+          if (!NullHandlingExpressionHelper.useDefaultValuesForNull() && s == null) {
             // Result of concatenation is null if any of the Values is null.
             // e.g. 'select CONCAT(null, "abc") as c;' will return null as per Standard SQL spec.
             return ExprEval.of(null);
+          } else {
+            builder.append(s);
           }
         }
         return ExprEval.of(builder.toString());

@@ -309,11 +309,8 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
 
               for (int i = 0; i < values.size(); i++) {
                 final String value = values.get(i);
-                if (value == null) {
-                  subConditions.add(
-                      getCluster().getRexBuilder()
-                                  .makeCall(SqlStdOperatorTable.IS_NULL, leftExpressions.get(i)));
-                } else {
+                // NULLS are not supposed to match NULLs in a join. So ignore them.
+                if (value != null) {
                   subConditions.add(
                       getCluster().getRexBuilder().makeCall(
                           SqlStdOperatorTable.EQUALS,

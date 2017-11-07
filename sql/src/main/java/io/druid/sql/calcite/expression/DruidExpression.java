@@ -91,7 +91,7 @@ public class DruidExpression
 
   public static String nullLiteral()
   {
-    return NullHandlingHelper.useDefaultValuesForNull() ? "''" : null;
+    return "null";
   }
 
   public static String functionCall(final String functionName, final List<DruidExpression> args)

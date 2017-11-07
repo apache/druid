@@ -17,20 +17,12 @@
  * under the License.
  */
 
-package io.druid.segment;
+package io.druid.common.config;
 
 import com.google.common.base.Strings;
-import com.google.common.base.Supplier;
 import com.google.inject.Inject;
-import io.druid.common.config.NullValueHandlingConfig;
-import io.druid.query.aggregation.AggregateCombiner;
-import io.druid.query.aggregation.Aggregator;
-import io.druid.query.aggregation.BufferAggregator;
-import io.druid.query.aggregation.NullableAggregateCombiner;
-import io.druid.query.aggregation.NullableAggregator;
-import io.druid.query.aggregation.NullableBufferAggregator;
 
-public class NullHandlingHelper
+public class NullHandlingExpressionHelper
 {
   private static String NULL_HANDLING_CONFIG_STRING = "druid.null.handling.useDefaultValueForNull";
 
@@ -81,42 +73,5 @@ public class NullHandlingHelper
   public static Float nullToDefault(Float value)
   {
     return INSTANCE.isUseDefaultValuesForNull() && value == null ? ZERO_FLOAT : value;
-  }
-
-  public static Aggregator getNullableAggregator(Aggregator aggregator, BaseNullableColumnValueSelector selector)
-  {
-    return INSTANCE.isUseDefaultValuesForNull() ? aggregator : new NullableAggregator(aggregator, selector);
-  }
-
-  public static BufferAggregator getNullableAggregator(
-      BufferAggregator aggregator,
-      BaseNullableColumnValueSelector selector
-  )
-  {
-    return INSTANCE.isUseDefaultValuesForNull() ? aggregator : new NullableBufferAggregator(aggregator, selector);
-  }
-
-  public static AggregateCombiner getNullableCombiner(AggregateCombiner combiner)
-  {
-    return INSTANCE.isUseDefaultValuesForNull() ? combiner : new NullableAggregateCombiner(combiner);
-  }
-
-  public static int extraAggregatorBytes()
-  {
-    return NullHandlingHelper.useDefaultValuesForNull() ? 0 : Byte.BYTES;
-  }
-
-  public static <T> Supplier<T> getNullableSupplier(
-      final Supplier<T> supplier,
-      final BaseNullableColumnValueSelector selector
-  )
-  {
-    return INSTANCE.isUseDefaultValuesForNull() ?
-           supplier : () -> {
-      if (selector.isNull()) {
-        return null;
-      }
-      return supplier.get();
-    };
   }
 }
