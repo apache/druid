@@ -504,7 +504,7 @@ public class DatasourcesResource
     final List<DruidDataSource> dataSources =
         StreamSupport
             .stream(serverInventoryView.getInventory().spliterator(), false)
-            .map((DruidServer server) -> server.getDataSource(dataSourceName))
+            .map(server -> server.getDataSource(dataSourceName))
             .filter(Objects::nonNull)
             .filter(ds -> dataSourceName.equalsIgnoreCase(ds.getName()))
             .collect(Collectors.toList());
