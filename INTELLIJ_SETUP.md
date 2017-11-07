@@ -8,7 +8,7 @@ The "SDK", configured for the Druid project, *must* be called `1.8`, to avoid an
 dev machine with this name, you should either rename one of the existing SDKs to `1.8`, or create another one with this
 name, and it could point to the same files as some other existing SDK, even if it's actually JDK 9+. `1.8` is just
 an alias name. You can do this in Using `File` -> `Project Structure...` -> `Platform Settings` -> `SDKs`
-(see also [IntelliJ help page about this](https://www.jetbrains.com/help/idea/configuring-intellij-platform-plugin-sdk.html):
+(see also [IntelliJ help page about this](https://www.jetbrains.com/help/idea/configuring-intellij-platform-plugin-sdk.html)):
 ![IntelliJ SDK Config](intellij-sdk-config.jpg)
 
 ## Code Style
