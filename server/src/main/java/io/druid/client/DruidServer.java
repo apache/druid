@@ -298,10 +298,15 @@ public class DruidServer implements Comparable
   {
     final ImmutableMap<String, DataSegment> segmentMap = ImmutableMap.copyOf(segments);
     final Map<String, DruidDataSource> dataSourceMap = new HashMap<>();
-    segmentMap.values().forEach(ds -> dataSourceMap.computeIfAbsent(ds.getDataSource(), name -> new DruidDataSource(
-        name,
-        ImmutableMap.of("client", "side")
-    )).addSegment(ds.getIdentifier(), ds));
+    segmentMap.values().forEach(
+        ds -> dataSourceMap.computeIfAbsent(
+            ds.getDataSource(),
+            name -> new DruidDataSource(
+                name,
+                ImmutableMap.of("client", "side")
+            )
+        ).addSegment(ds.getIdentifier(), ds) // Result is accumulated in dataSourceMap
+    );
     final long size = sumSize(segmentMap);
     final Map<String, ImmutableDruidDataSource> dataSourceImmutableMap = Maps.transformValues(
         dataSourceMap,
