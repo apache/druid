@@ -9,8 +9,8 @@ Make sure to [include](../../operations/including-extensions.html) `oracle-metad
 ## Setting up Extension
 
 1. Add the OJDBC library to the Druid classpath
-  - To ensure the oracle.jdbc.OracleDriver class is loaded you will have to add the appropriate OJDBC library (ojdbc7.jar) to the Druid classpath.
-  - For instance, if all jar files in your "druid/lib" directory are automatically added to your Druid classpath, then manually download the OJDBC drivers from oracle and drop it into my druid/lib directory.
+  - To ensure the oracle.jdbc.OracleDriver class is loaded you will have to add the appropriate OJDBC library (ojdbc6.jar or ojdbc7.jar) to the Druid classpath.
+  - For instance, if all jar files in your "druid/lib" directory are automatically added to your Druid classpath, then manually download the OJDBC drivers from oracle official website and drop it into my druid/lib directory.
 
 2. Configure your Druid metadata storage extension:
 
