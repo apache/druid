@@ -518,7 +518,7 @@ public class LookupReferencesManager
         druidLeaderClient.makeRequest(
             HttpMethod.GET,
             StringUtils.format(
-                "/druid/coordinator/v1/lookups/%s?detailed=true",
+                "/druid/coordinator/v1/lookups/config/%s?detailed=true",
                 tier
             )
         ));

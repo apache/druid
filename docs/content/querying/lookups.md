@@ -48,12 +48,12 @@ The tiers for lookups are completely independent of historical tiers.
 These configs are accessed using JSON through the following URI template
 
 ```
-http://<COORDINATOR_IP>:<PORT>/druid/coordinator/v1/lookups/{tier}/{id}
+http://<COORDINATOR_IP>:<PORT>/druid/coordinator/v1/lookups/config/{tier}/{id}
 ```
 
 All URIs below are assumed to have `http://<COORDINATOR_IP>:<PORT>` prepended.
 
-If you have NEVER configured lookups before, you MUST post an empty json object `{}` to `/druid/coordinator/v1/lookups` to initialize the configuration.
+If you have NEVER configured lookups before, you MUST post an empty json object `{}` to `/druid/coordinator/v1/lookups/config` to initialize the configuration.
 
 These endpoints will return one of the following results:
 
@@ -70,7 +70,7 @@ The coordinator periodically checks if any of the nodes need to load/drop lookup
 # API for configuring lookups
 
 ## Bulk update
-Lookups can be updated in bulk by posting a JSON object to `/druid/coordinator/v1/lookups`. The format of the json object is as follows:
+Lookups can be updated in bulk by posting a JSON object to `/druid/coordinator/v1/lookups/config`. The format of the json object is as follows:
 
 ```json
 {
@@ -188,9 +188,9 @@ For example, a config might look something like:
 All entries in the map will UPDATE existing entries. No entries will be deleted.
 
 ## Update Lookup
-A `POST` to a particular lookup extractor factory via `/druid/coordinator/v1/lookups/{tier}/{id}` will update that specific extractor factory.
+A `POST` to a particular lookup extractor factory via `/druid/coordinator/v1/lookups/config/{tier}/{id}` will update that specific extractor factory.
 
-For example, a post to `/druid/coordinator/v1/lookups/realtime_customer1/site_id_customer1` might contain the following:
+For example, a post to `/druid/coordinator/v1/lookups/config/realtime_customer1/site_id_customer1` might contain the following:
 
 ```json
 {
@@ -209,7 +209,7 @@ This will replace the `site_id_customer1` lookup in the `realtime_customer1` wit
 ## Get Lookup
 A `GET` to a particular lookup extractor factory is accomplished via `/druid/coordinator/v1/lookups/{tier}/{id}`
 
-Using the prior example, a `GET` to `/druid/coordinator/v1/lookups/realtime_customer2/site_id_customer2` should return
+Using the prior example, a `GET` to `/druid/coordinator/v1/lookups/config/realtime_customer2/site_id_customer2` should return
 
 ```json
 {
@@ -224,14 +224,14 @@ Using the prior example, a `GET` to `/druid/coordinator/v1/lookups/realtime_cust
 ```
 
 ## Delete Lookup
-A `DELETE` to `/druid/coordinator/v1/lookups/{tier}/{id}` will remove that lookup from the cluster.
+A `DELETE` to `/druid/coordinator/v1/lookups/config/{tier}/{id}` will remove that lookup from the cluster.
 
 ## List tier names
-A `GET` to `/druid/coordinator/v1/lookups` will return a list of known tier names in the dynamic configuration.
+A `GET` to `/druid/coordinator/v1/lookups/config` will return a list of known tier names in the dynamic configuration.
 To discover a list of tiers currently active in the cluster **instead of** ones known in the dynamic configuration, the parameter `discover=true` can be added as per `/druid/coordinator/v1/lookups?discover=true`.
 
 ## List lookup names
-A `GET` to `/druid/coordinator/v1/lookups/{tier}` will return a list of known lookup names for that tier.
+A `GET` to `/druid/coordinator/v1/lookups/config/{tier}` will return a list of known lookup names for that tier.
 
 # Additional API related to status of configured lookups
 These end points can be used to get the propagation status of configured lookups to lookup nodes such as historicals.
