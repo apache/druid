@@ -317,10 +317,12 @@ public class TieredBrokerHostSelector<T>
 
       while (true) {
         int nextIndex = index + 1;
-        if (nextIndex >= currNodes.size()) nextIndex = 0;
+        if (nextIndex < 0) nextIndex %= currNodes.size();
         if (roundRobinIndex.compareAndSet(index, nextIndex)) break;
         index = roundRobinIndex.get();
       }
+
+      index %= currNodes.size();
 
       return currNodes.get(index);
     }
