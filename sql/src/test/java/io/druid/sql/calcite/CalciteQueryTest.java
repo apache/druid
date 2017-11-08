@@ -1340,6 +1340,7 @@ public class CalciteQueryTest
   @Test
   public void testGroupByWithSelectProjections() throws Exception
   {
+    String nullValue = NullHandlingHelper.useDefaultValuesForNull() ? "" : null;
     testQuery(
         "SELECT\n"
         + "  dim1,"
@@ -1359,10 +1360,10 @@ public class CalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{"", ""},
-            new Object[]{"1", ""},
+            new Object[]{"", nullValue},
+            new Object[]{"1", nullValue},
             new Object[]{"10.1", "0.1"},
-            new Object[]{"2", ""},
+            new Object[]{"2", nullValue},
             new Object[]{"abc", "bc"},
             new Object[]{"def", "ef"}
         )
@@ -1372,6 +1373,7 @@ public class CalciteQueryTest
   @Test
   public void testGroupByWithSelectAndOrderByProjections() throws Exception
   {
+    String nullValue = NullHandlingHelper.useDefaultValuesForNull() ? "" : null;
     testQuery(
         "SELECT\n"
         + "  dim1,"
@@ -1411,9 +1413,9 @@ public class CalciteQueryTest
             new Object[]{"10.1", "0.1"},
             new Object[]{"abc", "bc"},
             new Object[]{"def", "ef"},
-            new Object[]{"1", ""},
-            new Object[]{"2", ""},
-            new Object[]{"", ""}
+            new Object[]{"1", nullValue},
+            new Object[]{"2", nullValue},
+            new Object[]{"", nullValue}
         )
     );
   }
@@ -1421,6 +1423,8 @@ public class CalciteQueryTest
   @Test
   public void testTopNWithSelectProjections() throws Exception
   {
+    String nullValue = NullHandlingHelper.useDefaultValuesForNull() ? "" : null;
+
     testQuery(
         "SELECT\n"
         + "  dim1,"
@@ -1443,10 +1447,10 @@ public class CalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{"", ""},
-            new Object[]{"1", ""},
+            new Object[]{"", nullValue},
+            new Object[]{"1", nullValue},
             new Object[]{"10.1", "0.1"},
-            new Object[]{"2", ""},
+            new Object[]{"2", nullValue},
             new Object[]{"abc", "bc"},
             new Object[]{"def", "ef"}
         )
@@ -1456,6 +1460,8 @@ public class CalciteQueryTest
   @Test
   public void testTopNWithSelectAndOrderByProjections() throws Exception
   {
+    String nullValue = NullHandlingHelper.useDefaultValuesForNull() ? "" : null;
+
     testQuery(
         "SELECT\n"
         + "  dim1,"
@@ -1483,9 +1489,9 @@ public class CalciteQueryTest
             new Object[]{"10.1", "0.1"},
             new Object[]{"abc", "bc"},
             new Object[]{"def", "ef"},
-            new Object[]{"1", ""},
-            new Object[]{"2", ""},
-            new Object[]{"", ""}
+            new Object[]{"1", nullValue},
+            new Object[]{"2", nullValue},
+            new Object[]{"", nullValue}
         )
     );
   }
@@ -3927,6 +3933,9 @@ public class CalciteQueryTest
   @Test
   public void testTopNFilterJoin() throws Exception
   {
+    DimFilter filter = NullHandlingHelper.useDefaultValuesForNull() ?
+                       IN("dim2", Arrays.asList(null, "a"), null)
+                                                                    : SELECTOR("dim2", "a", null);
     // Filters on top N values of some dimension by using an inner join.
     testQuery(
         "SELECT t1.dim1, SUM(t1.cnt)\n"
@@ -3957,7 +3966,7 @@ public class CalciteQueryTest
                         .setDataSource(CalciteTests.DATASOURCE1)
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setDimFilter(IN("dim2", Arrays.asList(null, "a"), null))
+                        .setDimFilter(filter)
                         .setDimensions(DIMS(new DefaultDimensionSpec("dim1", "d0")))
                         .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                         .setLimitSpec(
@@ -3985,9 +3994,7 @@ public class CalciteQueryTest
         ) :
         ImmutableList.of(
             new Object[]{"", 1L},
-            new Object[]{"1", 1L},
-            new Object[]{"10.1", 1L},
-            new Object[]{"abc", 1L}
+            new Object[]{"1", 1L}
         )
     );
   }
@@ -6146,6 +6153,13 @@ public class CalciteQueryTest
   @Test
   public void testUsingSubqueryAsFilterOnTwoColumns() throws Exception
   {
+    DimFilter filter = NullHandlingHelper.useDefaultValuesForNull() ?
+                       AND(SELECTOR("dim1", "def", null), SELECTOR("dim2", "abc", null))
+                                                                    : OR(SELECTOR("dim1", "def", null),
+                                                                         AND(
+                                                                             SELECTOR("dim1", "def", null),
+                                                                             SELECTOR("dim2", "abc", null)
+                                                                         ));
     testQuery(
         "SELECT __time, cnt, dim1, dim2 FROM druid.foo "
         + " WHERE (dim1, dim2) IN ("
@@ -6174,7 +6188,7 @@ public class CalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(QSS(Filtration.eternity()))
-                .filters(AND(SELECTOR("dim1", "def", null), SELECTOR("dim2", "abc", null)))
+                .filters(filter)
                 .columns("__time", "cnt", "dim1", "dim2")
                 .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -6192,10 +6206,6 @@ public class CalciteQueryTest
     String nullValue = NullHandlingHelper.useDefaultValuesForNull() ? "" : null;
 
     // Regression test for https://github.com/druid-io/druid/issues/4208
-    List<String> expectedSubqueryResult = NullHandlingHelper.useDefaultValuesForNull() ?
-                                          ImmutableList.of("", "a", "abc") :
-                                          Arrays.asList(null, "", "a", "abc");
-
     testQuery(
         "SELECT dim1, dim2 FROM druid.foo\n"
         + " WHERE dim2 IN (\n"
@@ -6227,11 +6237,12 @@ public class CalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(QSS(Filtration.eternity()))
-                .filters(IN("dim2", expectedSubqueryResult, null))
+                .filters(IN("dim2", ImmutableList.of("", "a", "abc"), null))
                 .columns("dim1", "dim2")
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
+        NullHandlingHelper.useDefaultValuesForNull() ?
         ImmutableList.of(
             new Object[]{"", "a"},
             new Object[]{"10.1", nullValue},
@@ -6239,6 +6250,12 @@ public class CalciteQueryTest
             new Object[]{"1", "a"},
             new Object[]{"def", "abc"},
             new Object[]{"abc", nullValue}
+        ) :
+        ImmutableList.of(
+            new Object[]{"", "a"},
+            new Object[]{"2", ""},
+            new Object[]{"1", "a"},
+            new Object[]{"def", "abc"}
         )
     );
   }

@@ -202,7 +202,7 @@ public class ExpressionFilterTest extends BaseFilterTest
     }
     assertFilterMatches(EDF("missing == '1'"), ImmutableList.of());
     assertFilterMatches(EDF("missing == 2"), ImmutableList.of());
-    if(NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandlingHelper.useDefaultValuesForNull()) {
       // missing equivaluent to 0
       assertFilterMatches(EDF("missing < '2'"), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
       assertFilterMatches(EDF("missing < 2"), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));

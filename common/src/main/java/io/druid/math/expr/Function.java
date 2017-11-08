@@ -753,7 +753,7 @@ interface Function
       return ExprEval.of(null);
     }
   }
-  
+
   /**
    * "Simple CASE" function, similar to {@code CASE expr WHEN value THEN result [ELSE else_result] END} in SQL.
    */

@@ -295,6 +295,10 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
 
             for (int i : rightKeys) {
               final Object value = row[i];
+              if (value == null) {
+                // NULLS are not supposed to match NULLs in a join. So ignore them.
+                continue;
+              }
               final String stringValue = DimensionHandlerUtils.convertObjectToString(value);
               values.add(stringValue);
               if (values.size() > maxSemiJoinRowsInMemory) {
@@ -319,9 +323,8 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
                       )
                   );
                 }
+                theConditions.add(makeAnd(subConditions));
               }
-
-              theConditions.add(makeAnd(subConditions));
             }
             return theConditions;
           }
