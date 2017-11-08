@@ -32,10 +32,10 @@ import com.metamx.emitter.core.HttpPostEmitter;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.JdkSslContext;
-import io.netty.util.concurrent.DefaultThreadFactory;
 import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.DefaultAsyncHttpClient;
 import org.asynchttpclient.DefaultAsyncHttpClientConfig;
@@ -83,7 +83,7 @@ public class HttpEmitterModule implements Module
     if (sslContext != null) {
       builder.setSslContext(new JdkSslContext(sslContext, true, ClientAuth.NONE));
     }
-    builder.setThreadFactory(new DefaultThreadFactory("emitter-http-client", true));
+    builder.setThreadFactory(Execs.makeThreadFactory("HttpPostEmitter-AsyncHttpClient-%d"));
     final AsyncHttpClient client = new DefaultAsyncHttpClient(builder.build());
     lifecycle.addCloseableInstance(client);
 
