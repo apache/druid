@@ -33,6 +33,7 @@ import io.druid.guice.ManageLifecycle;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.JdkSslContext;
+import io.netty.util.concurrent.DefaultThreadFactory;
 import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.DefaultAsyncHttpClient;
 import org.asynchttpclient.DefaultAsyncHttpClientConfig;
@@ -63,6 +64,7 @@ public class ParametrizedUriEmitterModule implements Module
     if (sslContext != null) {
       builder.setSslContext(new JdkSslContext(sslContext, true, ClientAuth.NONE));
     }
+    builder.setThreadFactory(new DefaultThreadFactory("parametrized-emitter-http-client", true));
     final AsyncHttpClient client = new DefaultAsyncHttpClient(builder.build());
     lifecycle.addCloseableInstance(client);
 
