@@ -21,6 +21,8 @@ package io.druid.segment.virtual;
 
 import io.druid.math.expr.Expr;
 
+import javax.annotation.Nullable;
+
 public class SingleInputBindings implements Expr.ObjectBinding
 {
   private Object value;
@@ -31,7 +33,7 @@ public class SingleInputBindings implements Expr.ObjectBinding
     return value;
   }
 
-  public void set(final Object value)
+  public void set(@Nullable final Object value)
   {
     this.value = value;
   }

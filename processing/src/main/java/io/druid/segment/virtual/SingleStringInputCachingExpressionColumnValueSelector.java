@@ -35,7 +35,7 @@ import javax.annotation.Nullable;
 
 /**
  * Like {@link ExpressionColumnValueSelector}, but caches results for the first CACHE_SIZE dictionary IDs of
- * a string column.
+ * a string column. Must only be used on selectors with dictionaries.
  */
 public class SingleStringInputCachingExpressionColumnValueSelector implements ColumnValueSelector<ExprEval>
 {
@@ -60,14 +60,12 @@ public class SingleStringInputCachingExpressionColumnValueSelector implements Co
     this.selector = Preconditions.checkNotNull(selector, "selector");
     this.expression = Preconditions.checkNotNull(expression, "expression");
 
-    if (selector.getValueCardinality() == DimensionSelector.CARDINALITY_UNKNOWN) {
-      throw new ISE("Selector must have a dictionary");
-    }
-
     final Supplier<Object> inputSupplier = ExpressionSelectors.supplierFromDimensionSelector(selector);
     this.bindings = name -> inputSupplier.get();
 
-    if (selector.getValueCardinality() <= CACHE_SIZE) {
+    if (selector.getValueCardinality() == DimensionSelector.CARDINALITY_UNKNOWN) {
+      throw new ISE("Selector must have a dictionary");
+    } else if (selector.getValueCardinality() <= CACHE_SIZE) {
       arrayEvalCache = new ExprEval[selector.getValueCardinality()];
       lruEvalCache = null;
     } else {

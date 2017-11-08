@@ -43,7 +43,9 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
   private final Expr expression;
   private final SingleInputBindings bindings = new SingleInputBindings();
 
-  // 0 if selector has null as a value; 1 if it doesn't.
+  /**
+   * 0 if selector has null as a value; 1 if it doesn't.
+   */
   private final int nullAdjustment;
 
   public SingleStringInputDimensionSelector(
@@ -74,23 +76,26 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
     inspector.visit("expression", expression);
   }
 
+  /**
+   * Treats any non-single-valued row as a row containing a single null value, to ensure consistency with
+   * other expression selectors. See also {@link ExpressionSelectors#supplierFromDimensionSelector} for similar
+   * behavior.
+   */
   @Override
   public IndexedInts getRow()
   {
-    // Treat any non-single-valued row as a row containing a single null value, to ensure consistency with
-    // other expression selectors. See also ExpressionSelectors.supplierFromDimensionSelector for similar behavior.
     final IndexedInts row = selector.getRow();
 
     if (row.size() == 1) {
       if (nullAdjustment == 0) {
         return row;
       } else {
-        return new SingleIndexedInt(row.get(0) + nullAdjustment);
+        return SingleIndexedInt.of(row.get(0) + nullAdjustment);
       }
     } else {
       // Can't handle non-singly-valued rows in expressions.
       // Treat them as nulls until we think of something better to do.
-      return new SingleIndexedInt(0);
+      return SingleIndexedInt.of(0);
     }
   }
 

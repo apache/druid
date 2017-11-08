@@ -38,6 +38,7 @@ import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.ConstantColumnValueSelector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.DimensionSelectorUtils;
+import io.druid.segment.NilColumnValueSelector;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
@@ -93,6 +94,7 @@ public class ExpressionSelectors
       public Object getObject()
       {
         // No need for null check on getObject() since baseSelector impls will never return null.
+        //noinspection ConstantConditions
         return baseSelector.getObject().value();
       }
 
@@ -295,7 +297,7 @@ public class ExpressionSelectors
   @Nullable
   static Supplier<Object> supplierFromObjectSelector(final BaseObjectColumnValueSelector<?> selector)
   {
-    if (selector == null) {
+    if (selector instanceof NilColumnValueSelector) {
       return null;
     }
 
