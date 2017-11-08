@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Intervals;
@@ -39,6 +39,7 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.HashSet;
 
 
 public class MetadataSegmentManagerTest
@@ -123,8 +124,8 @@ public class MetadataSegmentManagerTest
         manager.getAllDatasourceNames()
     );
     Assert.assertEquals(
-        ImmutableSet.of(segment1, segment2),
-        manager.getInventoryValue("wikipedia").getSegments()
+        Sets.newHashSet(segment1, segment2),
+        new HashSet<>(manager.getInventoryValue("wikipedia").getSegments())
     );
   }
 

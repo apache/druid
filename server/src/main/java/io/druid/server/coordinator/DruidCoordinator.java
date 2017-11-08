@@ -291,7 +291,7 @@ public class DruidCoordinator
   public Map<String, Double> getLoadStatus()
   {
     Map<String, Double> loadStatus = Maps.newHashMap();
-    for (ImmutableDruidDataSource dataSource : metadataSegmentManager.getImmutableInventory()) {
+    for (ImmutableDruidDataSource dataSource : metadataSegmentManager.getInventory()) {
       final Set<DataSegment> segments = Sets.newHashSet(dataSource.getSegments());
       final int availableSegmentSize = segments.size();
 
@@ -352,7 +352,7 @@ public class DruidCoordinator
         throw new IAE("Cannot move [%s] to and from the same server [%s]", segmentName, fromServer.getName());
       }
 
-      ImmutableDruidDataSource dataSource = metadataSegmentManager.getImmutableInventoryValue(segment.getDataSource());
+      ImmutableDruidDataSource dataSource = metadataSegmentManager.getInventoryValue(segment.getDataSource());
       if (dataSource == null) {
         throw new IAE("Unable to find dataSource for segment [%s] in metadata", segmentName);
       }
@@ -454,9 +454,9 @@ public class DruidCoordinator
 
   private List<DataSegment> getAvailableDataSegments()
   {
-    return metadataSegmentManager.getImmutableInventory().stream()
-        .flatMap(source -> source.getSegments().stream())
-        .collect(Collectors.toList());
+    return metadataSegmentManager.getInventory().stream()
+                                 .flatMap(source -> source.getSegments().stream())
+                                 .collect(Collectors.toList());
   }
 
   @LifecycleStart
@@ -642,7 +642,7 @@ public class DruidCoordinator
         DruidCoordinatorRuntimeParams params =
                 DruidCoordinatorRuntimeParams.newBuilder()
                         .withStartTime(startTime)
-                        .withDatasources(metadataSegmentManager.getImmutableInventory())
+                        .withDatasources(metadataSegmentManager.getInventory())
                         .withDynamicConfigs(getDynamicConfigs())
                         .withEmitter(emitter)
                         .withBalancerStrategy(balancerStrategy)
