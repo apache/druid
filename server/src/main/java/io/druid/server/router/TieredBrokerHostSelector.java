@@ -313,21 +313,21 @@ public class TieredBrokerHostSelector<T>
         return null;
       }
 
-      int index = roundRobinIndex.get();
-      int nextIndex = index + 1;
+      return currNodes.get(getIndex(currNodes));
+    }
 
+    int getIndex(ImmutableList<Server> currNodes)
+    {
       while (true) {
-        if (nextIndex < 0 || nextIndex >= currNodes.size()) {
+        int index = roundRobinIndex.get();
+        int nextIndex = index + 1;
+        if (nextIndex >= currNodes.size()) {
           nextIndex = 0;
         }
         if (roundRobinIndex.compareAndSet(index, nextIndex)) {
-          break;
+          return nextIndex;
         }
-        index = roundRobinIndex.get();
-        nextIndex = index + 1;
       }
-
-      return currNodes.get(nextIndex);
     }
   }
 }
