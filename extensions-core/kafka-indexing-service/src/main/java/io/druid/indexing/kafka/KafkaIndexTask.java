@@ -2004,7 +2004,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       Preconditions.checkNotNull(endOffsets);
       this.sequenceId = sequenceId;
       this.sequenceName = sequenceName;
-      this.startOffsets = startOffsets;
+      this.startOffsets = ImmutableMap.copyOf(startOffsets);
       this.endOffsets = Maps.newHashMap(endOffsets);
       this.assignments = Sets.newHashSet(startOffsets.keySet());
       this.checkpointed = checkpointed;

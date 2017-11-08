@@ -438,6 +438,7 @@ public class KafkaIndexTaskTest
       return;
     }
     final String baseSequenceName = "sequence0";
+    // as soon as any segment has more than one record, incremental publishing should happen
     maxRowsPerSegment = 1;
 
     // Insert data
@@ -450,7 +451,10 @@ public class KafkaIndexTaskTest
     consumerProps.put("max.poll.records", "1");
 
     final KafkaPartitions startPartitions = new KafkaPartitions(topic, ImmutableMap.of(0, 0L, 1, 0L));
-    final KafkaPartitions checkpointPartitions = new KafkaPartitions(topic, ImmutableMap.of(0, 5L, 1, 0L));
+    // Checkpointing will happen at either checkpoint1 or checkpoint2 depending on ordering
+    // of events fetched across two partitions from Kafka
+    final KafkaPartitions checkpoint1 = new KafkaPartitions(topic, ImmutableMap.of(0, 5L, 1, 0L));
+    final KafkaPartitions checkpoint2 = new KafkaPartitions(topic, ImmutableMap.of(0, 4L, 1, 2L));
     final KafkaPartitions endPartitions = new KafkaPartitions(topic, ImmutableMap.of(0, 8L, 1, 2L));
     final KafkaIndexTask task = createTask(
         null,
@@ -470,15 +474,19 @@ public class KafkaIndexTaskTest
     while (task.getStatus() != KafkaIndexTask.Status.PAUSED) {
       Thread.sleep(10);
     }
-    task.setEndOffsets(checkpointPartitions.getPartitionOffsetMap(), true, false);
+    final Map<Integer, Long> currentOffsets = ImmutableMap.copyOf(task.getCurrentOffsets());
+    Assert.assertTrue(checkpoint1.getPartitionOffsetMap().equals(currentOffsets) || checkpoint2.getPartitionOffsetMap()
+                                                                                               .equals(currentOffsets));
+    task.setEndOffsets(currentOffsets, true, false);
     Assert.assertEquals(TaskStatus.Status.SUCCESS, future.get().getStatusCode());
 
     Assert.assertEquals(1, checkpointRequestsHash.size());
     Assert.assertTrue(checkpointRequestsHash.contains(
-        Objects.hash(DATA_SCHEMA.getDataSource(),
-                     baseSequenceName,
-                     new KafkaDataSourceMetadata(startPartitions),
-                     new KafkaDataSourceMetadata(checkpointPartitions)
+        Objects.hash(
+            DATA_SCHEMA.getDataSource(),
+            baseSequenceName,
+            new KafkaDataSourceMetadata(startPartitions),
+            new KafkaDataSourceMetadata(new KafkaPartitions(topic, currentOffsets))
         )
     ));
 
@@ -505,8 +513,10 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(ImmutableList.of("a"), readSegmentColumn("dim1", desc1));
     Assert.assertEquals(ImmutableList.of("b"), readSegmentColumn("dim1", desc2));
     Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", desc3));
-    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", desc4));
-    Assert.assertEquals(ImmutableList.of("h"), readSegmentColumn("dim1", desc5));
+    Assert.assertTrue((ImmutableList.of("d", "e").equals(readSegmentColumn("dim1", desc4))
+                       && ImmutableList.of("h").equals(readSegmentColumn("dim1", desc5))) ||
+                      (ImmutableList.of("d", "h").equals(readSegmentColumn("dim1", desc4))
+                       && ImmutableList.of("e").equals(readSegmentColumn("dim1", desc5))));
     Assert.assertEquals(ImmutableList.of("g"), readSegmentColumn("dim1", desc6));
     Assert.assertEquals(ImmutableList.of("f"), readSegmentColumn("dim1", desc7));
   }
@@ -1740,6 +1750,7 @@ public class KafkaIndexTaskTest
               @Nullable DataSourceMetadata currentDataSourceMetadata
           )
           {
+            log.info("Adding checkpoint hash to the set");
             checkpointRequestsHash.add(Objects.hash(
                 supervisorId,
                 sequenceName,

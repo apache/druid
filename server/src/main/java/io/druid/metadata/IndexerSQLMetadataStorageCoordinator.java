@@ -765,7 +765,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     if (!startMetadataMatchesExisting) {
       // Not in the desired start state.
       log.info("Not updating metadata, existing state is not the expected start state.");
-      log.debug("Existing database state [%s], request's start metadata", oldCommitMetadataFromDb, startMetadata);
+      log.debug("Existing database state [%s], request's start metadata [%s]", oldCommitMetadataFromDb, startMetadata);
       return DataSourceMetadataUpdateResult.FAILURE;
     }
 

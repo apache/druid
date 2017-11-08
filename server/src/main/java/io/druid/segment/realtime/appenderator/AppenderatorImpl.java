@@ -96,6 +96,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 /**
@@ -125,9 +127,13 @@ public class AppenderatorImpl implements Appenderator
   // This variable updated in add(), persist(), and drop()
   private final AtomicInteger rowsCurrentlyInMemory = new AtomicInteger();
   private final AtomicInteger totalRows = new AtomicInteger();
+  // Synchronize persisting commitMetadata so that multiple persist threads (if present)
+  // and abandon threads do not step over each other
+  private final Lock commitLock = new ReentrantLock();
 
   private volatile ListeningExecutorService persistExecutor = null;
   private volatile ListeningExecutorService pushExecutor = null;
+  private volatile ListeningExecutorService abandonExecutor = null;
   private volatile long nextFlush;
   private volatile FileLock basePersistDirLock = null;
   private volatile FileChannel basePersistDirLockChannel = null;
@@ -331,7 +337,12 @@ public class AppenderatorImpl implements Appenderator
             @Override
             public Object call() throws Exception
             {
-              objectMapper.writeValue(computeCommitFile(), Committed.nil());
+              try {
+                commitLock.lock();
+                objectMapper.writeValue(computeCommitFile(), Committed.nil());
+              } finally {
+                commitLock.unlock();
+              }
               return null;
             }
           }
@@ -426,15 +437,20 @@ public class AppenderatorImpl implements Appenderator
 
               committer.run();
 
-              final File commitFile = computeCommitFile();
-              final Map<String, Integer> commitHydrants = Maps.newHashMap();
-              if (commitFile.exists()) {
-                // merge current hydrants with existing hydrants
-                final Committed oldCommitted = objectMapper.readValue(commitFile, Committed.class);
-                commitHydrants.putAll(oldCommitted.getHydrants());
+              try {
+                commitLock.lock();
+                final File commitFile = computeCommitFile();
+                final Map<String, Integer> commitHydrants = Maps.newHashMap();
+                if (commitFile.exists()) {
+                  // merge current hydrants with existing hydrants
+                  final Committed oldCommitted = objectMapper.readValue(commitFile, Committed.class);
+                  commitHydrants.putAll(oldCommitted.getHydrants());
+                }
+                commitHydrants.putAll(currentHydrants);
+                objectMapper.writeValue(commitFile, new Committed(commitHydrants, commitMetadata));
+              } finally {
+                commitLock.unlock();
               }
-              commitHydrants.putAll(currentHydrants);
-              objectMapper.writeValue(commitFile, new Committed(commitHydrants, commitMetadata));
 
               return commitMetadata;
             }
@@ -669,6 +685,10 @@ public class AppenderatorImpl implements Appenderator
           pushExecutor == null || pushExecutor.awaitTermination(365, TimeUnit.DAYS),
           "pushExecutor not terminated"
       );
+      Preconditions.checkState(
+          abandonExecutor == null || abandonExecutor.awaitTermination(365, TimeUnit.DAYS),
+          "abandonExecutor not terminated"
+      );
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -711,6 +731,10 @@ public class AppenderatorImpl implements Appenderator
       Preconditions.checkState(
           persistExecutor == null || persistExecutor.awaitTermination(365, TimeUnit.DAYS),
           "persistExecutor not terminated"
+      );
+      Preconditions.checkState(
+          abandonExecutor == null || abandonExecutor.awaitTermination(365, TimeUnit.DAYS),
+          "abandonExecutor not terminated"
       );
     }
     catch (InterruptedException e) {
@@ -774,6 +798,14 @@ public class AppenderatorImpl implements Appenderator
           )
       );
     }
+    if (abandonExecutor== null) {
+      // use single threaded executor with SynchronousQueue so that all abandon operations occur sequentially
+      abandonExecutor = MoreExecutors.listeningDecorator(
+          Execs.newBlockingSingleThreaded(
+              "appenderator_abandon_%d", 0
+          )
+      );
+    }
   }
 
   private void shutdownExecutors()
@@ -783,6 +815,9 @@ public class AppenderatorImpl implements Appenderator
     }
     if (pushExecutor != null) {
       pushExecutor.shutdownNow();
+    }
+    if (abandonExecutor != null) {
+      abandonExecutor.shutdownNow();
     }
   }
 
@@ -810,9 +845,12 @@ public class AppenderatorImpl implements Appenderator
       return null;
     }
 
-    final File commitFile = computeCommitFile();
+
     final Committed committed;
+    File commitFile = null;
     try {
+      commitLock.lock();
+      commitFile = computeCommitFile();
       if (commitFile.exists()) {
         committed = objectMapper.readValue(commitFile, Committed.class);
       } else {
@@ -821,6 +859,8 @@ public class AppenderatorImpl implements Appenderator
     }
     catch (Exception e) {
       throw new ISE(e, "Failed to read commitFile: %s", commitFile);
+    } finally {
+      commitLock.unlock();
     }
 
     log.info("Loading sinks from[%s]: %s", baseDir, committed.getHydrants().keySet());
@@ -982,6 +1022,7 @@ public class AppenderatorImpl implements Appenderator
               // Remove this segment from the committed list. This must be done from the persist thread.
               log.info("Removing commit metadata for segment[%s].", identifier);
               try {
+                commitLock.lock();
                 final File commitFile = computeCommitFile();
                 if (commitFile.exists()) {
                   final Committed oldCommitted = objectMapper.readValue(commitFile, Committed.class);
@@ -993,6 +1034,8 @@ public class AppenderatorImpl implements Appenderator
                    .addData("identifier", identifier.getIdentifierAsString())
                    .emit();
                 throw Throwables.propagate(e);
+              } finally {
+                commitLock.unlock();
               }
             }
 
@@ -1029,7 +1072,7 @@ public class AppenderatorImpl implements Appenderator
             return null;
           }
         },
-        persistExecutor
+        abandonExecutor
     );
   }
 
