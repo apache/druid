@@ -259,7 +259,7 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
     final Stream<DataSegment> allSegments = params
         .getDataSources()
         .stream()
-        .flatMap((ImmutableDruidDataSource dataSource) -> dataSource.getSegments().stream());
+        .flatMap(dataSource -> dataSource.getSegments().stream());
 
     allSegments
         .collect(Collectors.groupingBy(DataSegment::getDataSource))

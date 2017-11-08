@@ -38,7 +38,8 @@ public interface InventoryViewUtils
 
   static Set<ImmutableDruidDataSource> getDataSources(InventoryView serverInventoryView)
   {
-    return serverInventoryView.getInventory().stream()
+    return serverInventoryView.getInventory()
+                              .stream()
                               .flatMap(server -> server.getDataSources().stream())
                               .map(DruidDataSource::toImmutableDruidDataSource)
                               .collect(

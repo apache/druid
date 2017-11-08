@@ -297,7 +297,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   @Override
   public Collection<DruidServer> getInventory()
   {
-    return servers.values().stream()
+    return servers.values()
+                  .stream()
                   .map(serverHolder -> serverHolder.druidServer)
                   .collect(Collectors.toList());
   }

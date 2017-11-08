@@ -21,25 +21,19 @@ package io.druid.client;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import io.druid.timeline.DataSegment;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.Collection;
 import java.util.Map;
-import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  */
 public class DruidDataSource
 {
-  private final Object lock = new Object();
-
   private final String name;
   private final Map<String, String> properties;
-  private final Map<String, DataSegment> idToSegmentMap;
-  private final Set<DataSegment> segmentsHolder;
+  private final ConcurrentHashMap<String, DataSegment> idToSegmentMap;
 
   public DruidDataSource(
       String name,
@@ -48,9 +42,7 @@ public class DruidDataSource
   {
     this.name = name;
     this.properties = properties;
-
-    this.idToSegmentMap = new HashMap<>();
-    this.segmentsHolder = new HashSet<>();
+    this.idToSegmentMap = new ConcurrentHashMap<>();
   }
 
   @JsonProperty
@@ -65,81 +57,66 @@ public class DruidDataSource
     return properties;
   }
 
-  @JsonProperty
-  public Set<DataSegment> getSegments()
+  public Collection<DataSegment> getSegments()
   {
-    return Collections.unmodifiableSet(segmentsHolder);
+    return idToSegmentMap.values();
   }
 
   public DruidDataSource addSegment(DataSegment dataSegment)
   {
-    synchronized (lock) {
-      idToSegmentMap.put(dataSegment.getIdentifier(), dataSegment);
-
-      segmentsHolder.add(dataSegment);
-    }
+    idToSegmentMap.put(dataSegment.getIdentifier(), dataSegment);
     return this;
   }
 
   public DruidDataSource addSegments(Map<String, DataSegment> partitionMap)
   {
-    synchronized (lock) {
-      idToSegmentMap.putAll(partitionMap);
-
-      segmentsHolder.addAll(partitionMap.values());
-    }
+    idToSegmentMap.putAll(partitionMap);
     return this;
   }
 
   public DruidDataSource removePartition(String segmentId)
   {
-    synchronized (lock) {
-      DataSegment dataPart = idToSegmentMap.remove(segmentId);
-
-      if (dataPart == null) {
-        return this;
-      }
-
-      segmentsHolder.remove(dataPart);
-    }
-
+    idToSegmentMap.remove(segmentId);
     return this;
   }
 
   public DataSegment getSegment(String identifier)
   {
-    synchronized (lock) {
-      return idToSegmentMap.get(identifier);
-    }
+    return idToSegmentMap.get(identifier);
   }
 
   public boolean isEmpty()
   {
-    synchronized (lock) {
-      return segmentsHolder.isEmpty();
-    }
+    return idToSegmentMap.isEmpty();
   }
 
   public ImmutableDruidDataSource toImmutableDruidDataSource()
   {
-    synchronized (lock) {
-      return new ImmutableDruidDataSource(
-          name,
-          ImmutableMap.copyOf(properties),
-          ImmutableMap.copyOf(idToSegmentMap),
-          ImmutableSet.copyOf(segmentsHolder)
-      );
-    }
+    return new ImmutableDruidDataSource(
+        name,
+        ImmutableMap.copyOf(properties),
+        ImmutableMap.copyOf(idToSegmentMap)
+    );
   }
 
   @Override
   public String toString()
   {
-    synchronized (lock) {
-      return "DruidDataSource{" +
-             "properties=" + properties +
-             ", partitions=" + segmentsHolder.toString() +
-             '}';
-    }
+    return "DruidDataSource{" +
+           "properties=" + properties +
+           ", partitions=" + getSegments().toString() +
+           '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    throw new UnsupportedOperationException("Use ImmutableDruidDataSource instead");
+  }
+
+  @Override
+  public int hashCode()
+  {
+    throw new UnsupportedOperationException("Use ImmutableDruidDataSource instead");
   }
 }

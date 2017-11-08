@@ -20,12 +20,11 @@
 package io.druid.client;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import io.druid.timeline.DataSegment;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 
 /**
  */
@@ -34,19 +33,16 @@ public class ImmutableDruidDataSource
   private final String name;
   private final ImmutableMap<String, String> properties;
   private final ImmutableMap<String, DataSegment> idToSegments;
-  private final ImmutableSet<DataSegment> segmentsHolder;
 
   public ImmutableDruidDataSource(
       String name,
       ImmutableMap<String, String> properties,
-      ImmutableMap<String, DataSegment> idToSegments,
-      ImmutableSet<DataSegment> segmentsHolder
+      ImmutableMap<String, DataSegment> idToSegments
   )
   {
     this.name = name;
     this.properties = properties;
     this.idToSegments = idToSegments;
-    this.segmentsHolder = segmentsHolder;
   }
 
   public String getName()
@@ -61,12 +57,12 @@ public class ImmutableDruidDataSource
 
   public boolean isEmpty()
   {
-    return segmentsHolder.isEmpty();
+    return idToSegments.isEmpty();
   }
 
-  public Set<DataSegment> getSegments()
+  public Collection<DataSegment> getSegments()
   {
-    return segmentsHolder;
+    return idToSegments.values();
   }
 
   public DataSegment getSegment(String segmentIdentifier)
@@ -80,7 +76,7 @@ public class ImmutableDruidDataSource
     // idToSegments is intentionally ignored because it is usually large
     return "ImmutableDruidDataSource{"
            + "name='" + name
-           + "', segments='" + segmentsHolder
+           + "', segments='" + idToSegments.values()
            + "', properties='" + properties
            + "'}";
   }
@@ -105,16 +101,12 @@ public class ImmutableDruidDataSource
       return false;
     }
 
-    if (!this.idToSegments.equals(that.idToSegments)) {
-      return false;
-    }
-
-    return this.segmentsHolder.equals(that.segmentsHolder);
+    return this.idToSegments.equals(that.idToSegments);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, properties, idToSegments, segmentsHolder);
+    return Objects.hash(name, properties, idToSegments);
   }
 }
