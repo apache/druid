@@ -340,7 +340,8 @@ public class AppenderatorImpl implements Appenderator
               try {
                 commitLock.lock();
                 objectMapper.writeValue(computeCommitFile(), Committed.nil());
-              } finally {
+              }
+              finally {
                 commitLock.unlock();
               }
               return null;
@@ -448,7 +449,8 @@ public class AppenderatorImpl implements Appenderator
                 }
                 commitHydrants.putAll(currentHydrants);
                 objectMapper.writeValue(commitFile, new Committed(commitHydrants, commitMetadata));
-              } finally {
+              }
+              finally {
                 commitLock.unlock();
               }
 
@@ -798,7 +800,7 @@ public class AppenderatorImpl implements Appenderator
           )
       );
     }
-    if (abandonExecutor== null) {
+    if (abandonExecutor == null) {
       // use single threaded executor with SynchronousQueue so that all abandon operations occur sequentially
       abandonExecutor = MoreExecutors.listeningDecorator(
           Execs.newBlockingSingleThreaded(
@@ -859,7 +861,8 @@ public class AppenderatorImpl implements Appenderator
     }
     catch (Exception e) {
       throw new ISE(e, "Failed to read commitFile: %s", commitFile);
-    } finally {
+    }
+    finally {
       commitLock.unlock();
     }
 
@@ -1034,7 +1037,8 @@ public class AppenderatorImpl implements Appenderator
                    .addData("identifier", identifier.getIdentifierAsString())
                    .emit();
                 throw Throwables.propagate(e);
-              } finally {
+              }
+              finally {
                 commitLock.unlock();
               }
             }
