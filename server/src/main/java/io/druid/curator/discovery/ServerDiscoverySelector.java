@@ -44,10 +44,12 @@ public class ServerDiscoverySelector implements DiscoverySelector<Server>
   private static final Logger log = new Logger(ServerDiscoverySelector.class);
 
   private final ServiceProvider serviceProvider;
+  private final String name;
 
-  public ServerDiscoverySelector(ServiceProvider serviceProvider)
+  public ServerDiscoverySelector(ServiceProvider serviceProvider, String name)
   {
     this.serviceProvider = serviceProvider;
+    this.name = name;
   }
 
   private static final Function<ServiceInstance, Server> TO_SERVER = new Function<ServiceInstance, Server>()
@@ -105,12 +107,12 @@ public class ServerDiscoverySelector implements DiscoverySelector<Server>
       instance = serviceProvider.getInstance();
     }
     catch (Exception e) {
-      log.info(e, "Exception getting instance");
+      log.info(e, "Exception getting instance for " + name);
       return null;
     }
 
     if (instance == null) {
-      log.error("No server instance found");
+      log.error("No server instance found for " + name);
       return null;
     }
 

@@ -38,9 +38,6 @@ RUN /etc/init.d/mysql start \
       && echo "GRANT ALL ON druid.* TO 'druid'@'%' IDENTIFIED BY 'diurd'; CREATE database druid DEFAULT CHARACTER SET utf8;" | mysql -u root \
       && /etc/init.d/mysql stop
 
-# Add Druid jars
-ADD lib/* /usr/local/druid/lib/
-
 # Add sample data
 RUN /etc/init.d/mysql start \
       && java -cp "/usr/local/druid/lib/*" -Ddruid.metadata.storage.type=mysql io.druid.cli.Main tools metadata-init --connectURI="jdbc:mysql://localhost:3306/druid" --user=druid --password=diurd \
