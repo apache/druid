@@ -55,7 +55,7 @@ public class DruidExpression
   private DruidExpression(final SimpleExtraction simpleExtraction, final String expression)
   {
     this.simpleExtraction = simpleExtraction;
-    this.expression = expression;
+    this.expression = Preconditions.checkNotNull(expression);
   }
 
   public static DruidExpression of(final SimpleExtraction simpleExtraction, final String expression)

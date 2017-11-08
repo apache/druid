@@ -26,7 +26,7 @@ import org.junit.Test;
 
 public class NullHandlingHelperInjectionTest
 {
-  public static String NULL_HANDLING_CONFIG_STRING = ("druid.null.handling.useDefaultValueForNull");
+  public static String NULL_HANDLING_CONFIG_STRING = ("druid.generic.useDefaultValueForNull");
 
   @Test
   public void testNullHandlingHelperUseDefaultValues()

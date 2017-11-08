@@ -24,7 +24,7 @@ import com.google.inject.Inject;
 
 public class NullHandlingExpressionHelper
 {
-  private static String NULL_HANDLING_CONFIG_STRING = "druid.null.handling.useDefaultValueForNull";
+  private static String NULL_HANDLING_CONFIG_STRING = "druid.generic.useDefaultValueForNull";
 
   // use these values to ensure that convertObjectToLong(), convertObjectToDouble() and convertObjectToFloat()
   // return the same boxed object when returning a constant zero.

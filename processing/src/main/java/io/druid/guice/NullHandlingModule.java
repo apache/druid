@@ -32,7 +32,7 @@ public class NullHandlingModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    JsonConfigProvider.bind(binder, "druid.null.handling", NullValueHandlingConfig.class);
+    JsonConfigProvider.bind(binder, "druid.generic", NullValueHandlingConfig.class);
     binder.requestStaticInjection(NullHandlingHelper.class);
     binder.requestStaticInjection(NullHandlingExpressionHelper.class);
 

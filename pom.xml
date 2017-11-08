@@ -80,7 +80,7 @@
         Need to update Druid to use Jackson 2.6+ -->
         <aws.sdk.version>1.10.77</aws.sdk.version>
         <caffeine.version>2.5.5</caffeine.version>
-        <druid.null.handling.useDefaultValueForNull>true</druid.null.handling.useDefaultValueForNull>
+        <druid.generic.useDefaultValueForNull>true</druid.generic.useDefaultValueForNull>
     </properties>
 
     <modules>
@@ -1027,7 +1027,7 @@
                         <!-- set heap size to work around https://github.com/travis-ci/travis-ci/issues/3396 -->
                         <argLine>-Xmx3000m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
                             -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
-                  			    -Ddruid.null.handling.useDefaultValueForNull=${druid.null.handling.useDefaultValueForNull}
+                  			    -Ddruid.generic.useDefaultValueForNull=${druid.generic.useDefaultValueForNull}
                             <!--@TODO After fixing https://github.com/druid-io/druid/issues/4964 remove this parameter-->
                             -Ddruid.indexing.doubleStorage=double
                         </argLine>
