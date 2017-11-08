@@ -47,12 +47,10 @@ public class PriorityTieredBrokerSelectorStrategy implements TieredBrokerSelecto
   {
     final int priority = QueryContexts.getPriority(query);
 
-    if (priority < minPriority) {
+    if (priority < minPriority || priority > maxPriority) {
       return Optional.of(
           tierConfig.getDefaultBrokerServiceName()
       );
-    } else if (priority >= maxPriority) {
-      return Optional.of(tierConfig.getDefaultBrokerServiceName());
     }
 
     return Optional.absent();

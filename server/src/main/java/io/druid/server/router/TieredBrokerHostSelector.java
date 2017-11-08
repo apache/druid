@@ -309,13 +309,18 @@ public class TieredBrokerHostSelector<T>
     {
       ImmutableList<Server> currNodes = nodes;
 
-      int index = roundRobinIndex.getAndIncrement();
-
       if (currNodes.size() == 0) {
         return null;
       }
 
-      index %= currNodes.size();
+      int index = roundRobinIndex.get();
+
+      while (true) {
+        int nextIndex = index + 1;
+        if (nextIndex >= currNodes.size()) nextIndex = 0;
+        if (roundRobinIndex.compareAndSet(index, nextIndex)) break;
+        index = roundRobinIndex.get();
+      }
 
       return currNodes.get(index);
     }
