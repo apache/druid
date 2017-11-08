@@ -20,7 +20,6 @@
 package io.druid.sql.calcite.planner;
 
 import com.google.common.collect.ImmutableSortedSet;
-import io.druid.sql.calcite.expression.DruidExpression;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -29,7 +28,6 @@ public class CalcitesTest
   @Test
   public void testEscapeStringLiteral()
   {
-    Assert.assertEquals(DruidExpression.nullLiteral(), Calcites.escapeStringLiteral(null));
     Assert.assertEquals("''", Calcites.escapeStringLiteral(""));
     Assert.assertEquals("'foo'", Calcites.escapeStringLiteral("foo"));
     Assert.assertEquals("'foo bar'", Calcites.escapeStringLiteral("foo bar"));

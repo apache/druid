@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import io.druid.java.util.common.DateTimes;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.Parser;
+import io.druid.segment.NullHandlingHelper;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -42,6 +43,9 @@ public class ExprMacroTest
           .put("spacey", "  hey there  ")
           .build()
   );
+
+  public static String emptyStringResult = NullHandlingHelper.useDefaultValuesForNull() ? null : "";
+
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -139,36 +143,36 @@ public class ExprMacroTest
   @Test
   public void testTrim()
   {
-    assertExpr("trim('')", "");
+    assertExpr("trim('')", emptyStringResult);
     assertExpr("trim(concat(' ',x,' '))", "foo");
     assertExpr("trim(spacey)", "hey there");
     assertExpr("trim(spacey, '')", "  hey there  ");
     assertExpr("trim(spacey, 'he ')", "y ther");
-    assertExpr("trim(spacey, spacey)", "");
+    assertExpr("trim(spacey, spacey)", emptyStringResult);
     assertExpr("trim(spacey, substring(spacey, 0, 4))", "y ther");
   }
 
   @Test
   public void testLTrim()
   {
-    assertExpr("ltrim('')", "");
+    assertExpr("ltrim('')", emptyStringResult);
     assertExpr("ltrim(concat(' ',x,' '))", "foo ");
     assertExpr("ltrim(spacey)", "hey there  ");
     assertExpr("ltrim(spacey, '')", "  hey there  ");
     assertExpr("ltrim(spacey, 'he ')", "y there  ");
-    assertExpr("ltrim(spacey, spacey)", "");
+    assertExpr("ltrim(spacey, spacey)", emptyStringResult);
     assertExpr("ltrim(spacey, substring(spacey, 0, 4))", "y there  ");
   }
 
   @Test
   public void testRTrim()
   {
-    assertExpr("rtrim('')", "");
+    assertExpr("rtrim('')", emptyStringResult);
     assertExpr("rtrim(concat(' ',x,' '))", " foo");
     assertExpr("rtrim(spacey)", "  hey there");
     assertExpr("rtrim(spacey, '')", "  hey there  ");
     assertExpr("rtrim(spacey, 'he ')", "  hey ther");
-    assertExpr("rtrim(spacey, spacey)", "");
+    assertExpr("rtrim(spacey, spacey)", emptyStringResult);
     assertExpr("rtrim(spacey, substring(spacey, 0, 4))", "  hey ther");
   }
 

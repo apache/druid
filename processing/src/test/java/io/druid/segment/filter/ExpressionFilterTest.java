@@ -135,7 +135,8 @@ public class ExpressionFilterTest extends BaseFilterTest
       assertFilterMatches(EDF("dim4 == ''"), ImmutableList.of("0", "1", "2", "4", "5", "6", "7", "8"));
     } else {
       assertFilterMatches(EDF("dim4 == ''"), ImmutableList.of("2"));
-      assertFilterMatches(EDF("dim4 == null"), ImmutableList.of("0", "1", "4", "5", "6", "7", "8"));
+      // AS per SQL standard null == null returns false.
+      assertFilterMatches(EDF("dim4 == null"), ImmutableList.of());
     }
     assertFilterMatches(EDF("dim4 == '1'"), ImmutableList.of());
     assertFilterMatches(EDF("dim4 == '3'"), ImmutableList.of("3"));
@@ -196,13 +197,22 @@ public class ExpressionFilterTest extends BaseFilterTest
     if (NullHandlingHelper.useDefaultValuesForNull()) {
       assertFilterMatches(EDF("missing == ''"), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
     } else {
-      assertFilterMatches(EDF("missing == null"), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
+      // AS per SQL standard null == null returns false.
+      assertFilterMatches(EDF("missing == null"), ImmutableList.of());
     }
     assertFilterMatches(EDF("missing == '1'"), ImmutableList.of());
     assertFilterMatches(EDF("missing == 2"), ImmutableList.of());
-    assertFilterMatches(EDF("missing < '2'"), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
-    assertFilterMatches(EDF("missing < 2"), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
-    assertFilterMatches(EDF("missing < 2.0"), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
+    if(NullHandlingHelper.useDefaultValuesForNull()) {
+      // missing equivaluent to 0
+      assertFilterMatches(EDF("missing < '2'"), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
+      assertFilterMatches(EDF("missing < 2"), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
+      assertFilterMatches(EDF("missing < 2.0"), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
+    } else {
+      // missing equivalent to null
+      assertFilterMatches(EDF("missing < '2'"), ImmutableList.of());
+      assertFilterMatches(EDF("missing < 2"), ImmutableList.of());
+      assertFilterMatches(EDF("missing < 2.0"), ImmutableList.of());
+    }
     assertFilterMatches(EDF("missing > '2'"), ImmutableList.of());
     assertFilterMatches(EDF("missing > 2"), ImmutableList.of());
     assertFilterMatches(EDF("missing > 2.0"), ImmutableList.of());

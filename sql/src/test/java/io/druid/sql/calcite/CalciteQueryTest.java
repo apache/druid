@@ -1588,9 +1588,7 @@ public class CalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(QSS(Filtration.eternity()))
                   .granularity(Granularities.ALL)
-                  .filters(EXPRESSION_FILTER("case_searched((\"dim2\" == 'a'),1,(\"dim2\" == "
-                                             + DruidExpression.nullLiteral()
-                                             + "))"))
+                  .filters(EXPRESSION_FILTER("case_searched((\"dim2\" == 'a'),1,isnull(\"dim2\"))"))
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
@@ -1624,7 +1622,7 @@ public class CalciteQueryTest
                         .setVirtualColumns(
                             EXPRESSION_VIRTUAL_COLUMN(
                                 "d0:v",
-                                "case_searched((\"dim2\" != " + DruidExpression.nullLiteral() + "),\"dim2\",\"dim1\")",
+                                "case_searched(notnull(\"dim2\"),\"dim2\",\"dim1\")",
                                 ValueType.STRING
                             )
                         )
@@ -1916,11 +1914,9 @@ public class CalciteQueryTest
                       new FilteredAggregatorFactory(
                           new CountAggregatorFactory("a0"),
                           EXPRESSION_FILTER(
-                              "(case_searched((\"dim2\" == 'abc'),'yes',(\"dim2\" == 'def'),'yes',"
+                              "notnull(case_searched((\"dim2\" == 'abc'),'yes',(\"dim2\" == 'def'),'yes',"
                               + DruidExpression.nullLiteral()
-                              + ") != "
-                              + DruidExpression.nullLiteral()
-                              + ")"
+                              + "))"
                           )
                       )
                   ))
@@ -4738,9 +4734,16 @@ public class CalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
+        NullHandlingHelper.useDefaultValuesForNull() ?
         ImmutableList.of(
-            new Object[]{"10.1", nullValue, 1L},
-            new Object[]{"abc", nullValue, 1L},
+            new Object[]{"10.1", "", 1L},
+            new Object[]{"2", "", 1L},
+            new Object[]{"abc", "", 1L},
+            new Object[]{"", "a", 1L}
+        ) :
+        ImmutableList.of(
+            new Object[]{"10.1", null, 1L},
+            new Object[]{"abc", null, 1L},
             new Object[]{"2", "", 1L},
             new Object[]{"", "a", 1L}
         )

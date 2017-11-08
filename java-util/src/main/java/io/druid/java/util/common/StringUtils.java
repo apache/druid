@@ -97,7 +97,7 @@ public class StringUtils
   @Nullable
   public static String fromUtf8Nullable(final ByteBuffer buffer, final int numBytes)
   {
-    if(numBytes < 0){
+    if (numBytes < 0) {
       return null;
     }
     final byte[] bytes = new byte[numBytes];

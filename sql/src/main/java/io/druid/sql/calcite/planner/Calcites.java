@@ -30,7 +30,6 @@ import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
 import io.druid.segment.column.ValueType;
 import io.druid.server.security.AuthorizerMapper;
-import io.druid.sql.calcite.expression.DruidExpression;
 import io.druid.sql.calcite.schema.DruidSchema;
 import io.druid.sql.calcite.schema.InformationSchema;
 import org.apache.calcite.jdbc.CalciteSchema;

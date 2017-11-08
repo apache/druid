@@ -32,7 +32,7 @@ public class NullValueHandlingConfig
   public NullValueHandlingConfig(@JsonProperty("useDefaultValueForNull") Boolean useDefaultValuesForNull)
   {
     this.useDefaultValuesForNull = useDefaultValuesForNull == null
-                                   ? true
+                                   ? false
                                    : useDefaultValuesForNull;
   }
 

@@ -26,7 +26,6 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
 

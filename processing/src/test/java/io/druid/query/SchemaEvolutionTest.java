@@ -297,8 +297,8 @@ public class SchemaEvolutionTest
       Map<String, Object> result = Maps.newHashMap();
       result.put("a", null);
       result.put("b", null);
-      result.put("c", 0L);
-      result.put("d", 0.0d);
+      result.put("c", null);
+      result.put("d", null);
       Assert.assertEquals(
           timeseriesResult(result),
           runQuery(query, factory, ImmutableList.of(index4))

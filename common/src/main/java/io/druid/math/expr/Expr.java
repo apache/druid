@@ -31,6 +31,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.UnaryOperator;
 
 /**
  */
@@ -124,7 +125,7 @@ class StringExpr extends ConstantExpr
 
   public StringExpr(String value)
   {
-    this.value = value;
+    this.value = NullHandlingExpressionHelper.defaultToNull(value);
   }
 
   @Nullable
@@ -498,7 +499,8 @@ class BinPlusExpr extends BinaryEvalOpExprBase
   @Override
   protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
-    return ExprEval.of(left + right);
+    return ExprEval.of(NullHandlingExpressionHelper.nullToDefault(left)
+                       + NullHandlingExpressionHelper.nullToDefault(right));
   }
 
   @Override
@@ -705,3 +707,4 @@ class BinOrExpr extends BinaryOpExprBase
     return leftVal.asBoolean() ? leftVal : right.eval(bindings);
   }
 }
+

@@ -753,7 +753,7 @@ interface Function
       return ExprEval.of(null);
     }
   }
-
+  
   /**
    * "Simple CASE" function, similar to {@code CASE expr WHEN value THEN result [ELSE else_result] END} in SQL.
    */
@@ -908,7 +908,7 @@ interface Function
             // e.g. 'select CONCAT(null, "abc") as c;' will return null as per Standard SQL spec.
             return ExprEval.of(null);
           } else {
-            builder.append(s);
+            builder.append(NullHandlingExpressionHelper.nullToDefault(s));
           }
         }
         return ExprEval.of(builder.toString());
@@ -992,7 +992,7 @@ interface Function
       } else {
         // If starting index of substring is greater then the lengh of string, the result will be a zero length string.
         // e.g. 'select substring("abc", 4,5) as c;' will return an empty string
-        return ExprEval.of("");
+        return ExprEval.of(NullHandlingExpressionHelper.nullToDefault((String) null));
       }
     }
   }
@@ -1016,10 +1016,10 @@ interface Function
       final String pattern = args.get(1).eval(bindings).asString();
       final String replacement = args.get(2).eval(bindings).asString();
       if (arg == null) {
-        return ExprEval.of(null);
+        return ExprEval.of(NullHandlingExpressionHelper.nullToDefault((String) null));
       }
       return ExprEval.of(
-          arg.replace(Strings.nullToEmpty(pattern), Strings.nullToEmpty(replacement))
+          NullHandlingExpressionHelper.nullToDefault(arg).replace(Strings.nullToEmpty(pattern), Strings.nullToEmpty(replacement))
       );
     }
   }
@@ -1041,7 +1041,7 @@ interface Function
 
       final String arg = args.get(0).eval(bindings).asString();
       if (arg == null) {
-        return ExprEval.of(null);
+        return ExprEval.of(NullHandlingExpressionHelper.nullToDefault((String) null));
       }
       return ExprEval.of(StringUtils.toLowerCase(arg));
     }
@@ -1064,9 +1064,49 @@ interface Function
 
       final String arg = args.get(0).eval(bindings).asString();
       if (arg == null) {
-        return ExprEval.of(null);
+        return ExprEval.of(NullHandlingExpressionHelper.nullToDefault((String) null));
       }
       return ExprEval.of(StringUtils.toUpperCase(arg));
+    }
+  }
+
+  class IsNullFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "isnull";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 1) {
+        throw new IAE("Function[%s] needs 1 argument", name());
+      }
+
+      final ExprEval expr = args.get(0).eval(bindings);
+      return ExprEval.of(expr.isNull(), ExprType.LONG);
+    }
+  }
+
+  class IsNotNullFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "notnull";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 1) {
+        throw new IAE("Function[%s] needs 1 argument", name());
+      }
+
+      final ExprEval expr = args.get(0).eval(bindings);
+      return ExprEval.of(!expr.isNull(), ExprType.LONG);
     }
   }
 }
