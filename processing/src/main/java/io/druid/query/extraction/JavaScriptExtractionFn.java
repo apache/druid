@@ -139,7 +139,7 @@ public class JavaScriptExtractionFn implements ExtractionFn
   @Nullable
   public String apply(@Nullable String value)
   {
-    return this.apply((Object) NullHandlingHelper.defaultToNull(value));
+    return this.apply((Object) NullHandlingHelper.emptyToNullIfNeeded(value));
   }
 
   @Override

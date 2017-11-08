@@ -26,12 +26,6 @@ public class NullHandlingExpressionHelper
 {
   private static String NULL_HANDLING_CONFIG_STRING = "druid.generic.useDefaultValueForNull";
 
-  // use these values to ensure that convertObjectToLong(), convertObjectToDouble() and convertObjectToFloat()
-  // return the same boxed object when returning a constant zero.
-  public static final Double ZERO_DOUBLE = 0.0d;
-  public static final Float ZERO_FLOAT = 0.0f;
-  public static final Long ZERO_LONG = 0L;
-
   // INSTANCE is injected using static injection to avoid adding JacksonInject annotations all over the code.
   // See NullHandlingModule for details.
   // The default system property is supposed to be used only in tests.
@@ -45,33 +39,13 @@ public class NullHandlingExpressionHelper
     return INSTANCE.isUseDefaultValuesForNull();
   }
 
-  public static String nullToDefault(String value)
+  public static String nullToEmptyIfNeeded(String value)
   {
     return INSTANCE.isUseDefaultValuesForNull() ? Strings.nullToEmpty(value) : value;
   }
 
-  public static String defaultToNull(String value)
+  public static String emptyToNullIfNeeded(String value)
   {
     return INSTANCE.isUseDefaultValuesForNull() ? Strings.emptyToNull(value) : value;
-  }
-
-  public static boolean isNullOrDefault(String value)
-  {
-    return INSTANCE.isUseDefaultValuesForNull() ? Strings.isNullOrEmpty(value) : value == null;
-  }
-
-  public static Long nullToDefault(Long value)
-  {
-    return INSTANCE.isUseDefaultValuesForNull() && value == null ? ZERO_LONG : value;
-  }
-
-  public static Double nullToDefault(Double value)
-  {
-    return INSTANCE.isUseDefaultValuesForNull() && value == null ? ZERO_DOUBLE : value;
-  }
-
-  public static Float nullToDefault(Float value)
-  {
-    return INSTANCE.isUseDefaultValuesForNull() && value == null ? ZERO_FLOAT : value;
   }
 }

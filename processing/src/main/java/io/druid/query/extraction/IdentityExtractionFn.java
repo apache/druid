@@ -42,14 +42,14 @@ public class IdentityExtractionFn implements ExtractionFn
   @Nullable
   public String apply(@Nullable Object value)
   {
-    return value == null ? null : NullHandlingHelper.defaultToNull(value.toString());
+    return value == null ? null : NullHandlingHelper.emptyToNullIfNeeded(value.toString());
   }
 
   @Override
   @Nullable
   public String apply(@Nullable String value)
   {
-    return NullHandlingHelper.defaultToNull(value);
+    return NullHandlingHelper.emptyToNullIfNeeded(value);
   }
 
   @Override

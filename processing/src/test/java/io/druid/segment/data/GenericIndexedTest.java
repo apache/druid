@@ -149,7 +149,7 @@ public class GenericIndexedTest
         )
     );
     Assert.assertNull(deserialized.get(0));
-    Assert.assertEquals(deserialized.get(1), NullHandlingHelper.defaultToNull(""));
+    Assert.assertEquals(deserialized.get(1), NullHandlingHelper.emptyToNullIfNeeded(""));
   }
 
   @Test
@@ -166,7 +166,7 @@ public class GenericIndexedTest
         unCached, CachingIndexed.INITIAL_CACHE_CAPACITY);
 
     Assert.assertNull(deserialized.get(0));
-    Assert.assertEquals(deserialized.get(1), NullHandlingHelper.defaultToNull(""));
+    Assert.assertEquals(deserialized.get(1), NullHandlingHelper.emptyToNullIfNeeded(""));
   }
 
 

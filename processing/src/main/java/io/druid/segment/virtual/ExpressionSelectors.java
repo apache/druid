@@ -107,7 +107,7 @@ public class ExpressionSelectors
         @Override
         protected String getValue()
         {
-          return NullHandlingHelper.defaultToNull(baseSelector.getObject().asString());
+          return NullHandlingHelper.emptyToNullIfNeeded(baseSelector.getObject().asString());
         }
 
         @Override
@@ -123,7 +123,7 @@ public class ExpressionSelectors
         @Override
         protected String getValue()
         {
-          return extractionFn.apply(NullHandlingHelper.defaultToNull(baseSelector.getObject().asString()));
+          return extractionFn.apply(NullHandlingHelper.emptyToNullIfNeeded(baseSelector.getObject().asString()));
         }
 
         @Override

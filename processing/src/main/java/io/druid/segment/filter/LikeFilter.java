@@ -93,7 +93,7 @@ public class LikeFilter implements Filter
       // Verify that dimension equals prefix.
       return ImmutableList.of(selector.getBitmapIndex(
           dimension,
-          NullHandlingHelper.defaultToNull(likeMatcher.getPrefix())
+          NullHandlingHelper.emptyToNullIfNeeded(likeMatcher.getPrefix())
       ));
     } else if (isSimplePrefix()) {
       // Verify that dimension startsWith prefix, and is accepted by likeMatcher.matchesSuffixOnly.

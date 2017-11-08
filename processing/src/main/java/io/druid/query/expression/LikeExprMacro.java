@@ -63,7 +63,7 @@ public class LikeExprMacro implements ExprMacroTable.ExprMacro
     }
 
     final LikeDimFilter.LikeMatcher likeMatcher = LikeDimFilter.LikeMatcher.from(
-        NullHandlingHelper.nullToDefault((String) patternExpr.getLiteralValue()),
+        NullHandlingHelper.nullToEmptyIfNeeded((String) patternExpr.getLiteralValue()),
         escapeChar
     );
 

@@ -106,7 +106,7 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
       }
     } else {
       for (int i = 0; i < selectorCardinality; i++) {
-        if (values.contains(NullHandlingHelper.nullToDefault(selector.lookupName(i)))) {
+        if (values.contains(NullHandlingHelper.nullToEmptyIfNeeded(selector.lookupName(i)))) {
           forwardMapping.put(i, count);
           reverseMapping[count++] = i;
         }
@@ -137,7 +137,7 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
     forwardMapping.defaultReturnValue(-1);
     final int[] reverseMapping = new int[maxPossibleFilteredCardinality];
     for (int i = 0; i < selectorCardinality; i++) {
-      if (!values.contains(NullHandlingHelper.nullToDefault(selector.lookupName(i)))) {
+      if (!values.contains(NullHandlingHelper.nullToEmptyIfNeeded(selector.lookupName(i)))) {
         forwardMapping.put(i, count);
         reverseMapping[count++] = i;
       }

@@ -232,7 +232,7 @@ public class IncrementalIndexTest
           row.getRaw("float")
       );
       Assert.assertEquals(Arrays.asList(null, null, String.valueOf(Long.MIN_VALUE)), row.getRaw("long"));
-      Assert.assertEquals(NullHandlingHelper.nullToDefault((Double) null), row.getRaw("double"));
+      Assert.assertEquals(NullHandlingHelper.nullToZeroIfNeeded((Double) null), row.getRaw("double"));
     } else {
       Assert.assertEquals(Arrays.asList(null, "", "A"), row.getRaw("string"));
       Assert.assertEquals(
@@ -240,7 +240,7 @@ public class IncrementalIndexTest
           row.getRaw("float")
       );
       Assert.assertEquals(Arrays.asList(null, "", String.valueOf(Long.MIN_VALUE)), row.getRaw("long"));
-      Assert.assertEquals(NullHandlingHelper.nullToDefault((Double) null), row.getRaw("double"));
+      Assert.assertEquals(NullHandlingHelper.nullToZeroIfNeeded((Double) null), row.getRaw("double"));
     }
   }
 

@@ -49,7 +49,7 @@ public class StringGroupByColumnSelectorStrategy implements GroupByColumnSelecto
           ((DimensionSelector) selectorPlus.getSelector()).lookupName(id)
       );
     } else {
-      resultMap.put(selectorPlus.getOutputName(), NullHandlingHelper.nullToDefault((String) null));
+      resultMap.put(selectorPlus.getOutputName(), NullHandlingHelper.nullToEmptyIfNeeded((String) null));
     }
   }
 

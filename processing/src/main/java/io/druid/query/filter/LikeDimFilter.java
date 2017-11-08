@@ -152,7 +152,7 @@ public class LikeDimFilter implements DimFilter
 
     public boolean matches(@Nullable final String s)
     {
-      String val = NullHandlingHelper.nullToDefault(s);
+      String val = NullHandlingHelper.nullToEmptyIfNeeded(s);
       return val != null && pattern.matcher(val).matches();
     }
 

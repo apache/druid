@@ -442,7 +442,7 @@ public class RowBasedGrouperHelper
               Object dimVal = entry.getKey().getKey()[i];
               theMap.put(
                   query.getDimensions().get(i - dimStart).getOutputName(),
-                  dimVal instanceof String ? NullHandlingHelper.defaultToNull((String) dimVal) : dimVal
+                  dimVal instanceof String ? NullHandlingHelper.emptyToNullIfNeeded((String) dimVal) : dimVal
               );
             }
 
@@ -1588,7 +1588,7 @@ public class RowBasedGrouperHelper
       protected Long readFromBuffer(ByteBuffer buffer, int initialOffset)
       {
         if (buffer.get(initialOffset + keyBufferPosition) == (byte) 1) {
-          return NullHandlingHelper.nullToDefault((Long) null);
+          return NullHandlingHelper.nullToZeroIfNeeded((Long) null);
         } else {
           return buffer.getLong(initialOffset + keyBufferPosition + Byte.BYTES);
         }
@@ -1656,7 +1656,7 @@ public class RowBasedGrouperHelper
       protected Float readFromBuffer(ByteBuffer buffer, int initialOffset)
       {
         if (buffer.get(initialOffset + keyBufferPosition) == (byte) 1) {
-          return NullHandlingHelper.nullToDefault((Float) null);
+          return NullHandlingHelper.nullToZeroIfNeeded((Float) null);
         } else {
           return buffer.getFloat(initialOffset + keyBufferPosition + Byte.BYTES);
         }
@@ -1724,7 +1724,7 @@ public class RowBasedGrouperHelper
       protected Double readFromBuffer(ByteBuffer buffer, int initialOffset)
       {
         if (buffer.get(initialOffset + keyBufferPosition) == (byte) 1) {
-          return NullHandlingHelper.nullToDefault((Double) null);
+          return NullHandlingHelper.nullToZeroIfNeeded((Double) null);
         } else {
           return buffer.getDouble(initialOffset + keyBufferPosition + Byte.BYTES);
         }

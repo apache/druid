@@ -40,7 +40,7 @@ public class SearchHit implements Comparable<SearchHit>
   )
   {
     this.dimension = Preconditions.checkNotNull(dimension);
-    this.value = NullHandlingHelper.nullToDefault(value);
+    this.value = NullHandlingHelper.nullToEmptyIfNeeded(value);
     this.count = count;
   }
 

@@ -52,7 +52,7 @@ public abstract class FunctionalExtraction extends DimExtractionFn
   )
   {
     this.retainMissingValue = retainMissingValue;
-    this.replaceMissingValueWith = NullHandlingHelper.defaultToNull(replaceMissingValueWith);
+    this.replaceMissingValueWith = NullHandlingHelper.emptyToNullIfNeeded(replaceMissingValueWith);
     Preconditions.checkArgument(
         !(this.retainMissingValue && !(this.replaceMissingValueWith == null)),
         "Cannot specify a [replaceMissingValueWith] and set [retainMissingValue] to true"
@@ -69,7 +69,7 @@ public abstract class FunctionalExtraction extends DimExtractionFn
         public String apply(@Nullable String dimValue)
         {
           final String retval = extractionFunction.apply(dimValue);
-          return NullHandlingHelper.isNullOrDefault(retval) ? NullHandlingHelper.defaultToNull(dimValue) : retval;
+          return NullHandlingHelper.isNullOrEquivalent(retval) ? NullHandlingHelper.emptyToNullIfNeeded(dimValue) : retval;
         }
       };
     } else {
@@ -79,7 +79,7 @@ public abstract class FunctionalExtraction extends DimExtractionFn
         @Override
         public String apply(@Nullable String dimValue)
         {
-          final String retval = NullHandlingHelper.defaultToNull(extractionFunction.apply(dimValue));
+          final String retval = NullHandlingHelper.emptyToNullIfNeeded(extractionFunction.apply(dimValue));
           return retval == null
                  ? FunctionalExtraction.this.replaceMissingValueWith
                  : retval;

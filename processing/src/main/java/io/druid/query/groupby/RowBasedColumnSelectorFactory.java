@@ -234,7 +234,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
                 }
 
                 for (String dimensionValue : dimensionValues) {
-                  if (Objects.equals(NullHandlingHelper.defaultToNull(dimensionValue), value)) {
+                  if (Objects.equals(NullHandlingHelper.emptyToNullIfNeeded(dimensionValue), value)) {
                     return true;
                   }
                 }
@@ -259,7 +259,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
                 }
 
                 for (String dimensionValue : dimensionValues) {
-                  if (Objects.equals(extractionFn.apply(NullHandlingHelper.defaultToNull(dimensionValue)), value)) {
+                  if (Objects.equals(extractionFn.apply(NullHandlingHelper.emptyToNullIfNeeded(dimensionValue)), value)) {
                     return true;
                   }
                 }
@@ -292,7 +292,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
                 }
 
                 for (String dimensionValue : dimensionValues) {
-                  if (predicate.apply(NullHandlingHelper.defaultToNull(dimensionValue))) {
+                  if (predicate.apply(NullHandlingHelper.emptyToNullIfNeeded(dimensionValue))) {
                     return true;
                   }
                 }
@@ -318,7 +318,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
                 }
 
                 for (String dimensionValue : dimensionValues) {
-                  if (predicate.apply(extractionFn.apply(NullHandlingHelper.defaultToNull(dimensionValue)))) {
+                  if (predicate.apply(extractionFn.apply(NullHandlingHelper.emptyToNullIfNeeded(dimensionValue)))) {
                     return true;
                   }
                 }
@@ -344,7 +344,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         @Override
         public String lookupName(int id)
         {
-          final String value = NullHandlingHelper.defaultToNull(row.get().getDimension(dimension).get(id));
+          final String value = NullHandlingHelper.emptyToNullIfNeeded(row.get().getDimension(dimension).get(id));
           return extractionFn == null ? value : extractionFn.apply(value);
         }
 

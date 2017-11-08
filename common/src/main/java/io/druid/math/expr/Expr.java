@@ -124,7 +124,7 @@ class StringExpr extends ConstantExpr
 
   public StringExpr(String value)
   {
-    this.value = NullHandlingExpressionHelper.defaultToNull(value);
+    this.value = NullHandlingExpressionHelper.emptyToNullIfNeeded(value);
   }
 
   @Nullable
@@ -498,8 +498,8 @@ class BinPlusExpr extends BinaryEvalOpExprBase
   @Override
   protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
-    return ExprEval.of(NullHandlingExpressionHelper.nullToDefault(left)
-                       + NullHandlingExpressionHelper.nullToDefault(right));
+    return ExprEval.of(NullHandlingExpressionHelper.nullToEmptyIfNeeded(left)
+                       + NullHandlingExpressionHelper.nullToEmptyIfNeeded(right));
   }
 
   @Override

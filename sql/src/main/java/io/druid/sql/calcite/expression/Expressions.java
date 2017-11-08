@@ -305,7 +305,7 @@ public class Expressions
 
       final DimFilter equalFilter = new SelectorDimFilter(
           druidExpression.getSimpleExtraction().getColumn(),
-          NullHandlingHelper.nullToDefault((String) null),
+          NullHandlingHelper.nullToEmptyIfNeeded((String) null),
           druidExpression.getSimpleExtraction().getExtractionFn()
       );
 

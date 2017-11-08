@@ -60,7 +60,7 @@ public class DictionaryBuildingStringGroupByColumnSelectorStrategy extends Strin
           value
       );
     } else {
-      resultMap.put(selectorPlus.getOutputName(), NullHandlingHelper.nullToDefault((String) null));
+      resultMap.put(selectorPlus.getOutputName(), NullHandlingHelper.nullToEmptyIfNeeded((String) null));
     }
   }
 

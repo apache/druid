@@ -65,7 +65,7 @@ public class SelectorDimFilter implements DimFilter
     Preconditions.checkArgument(dimension != null, "dimension must not be null");
 
     this.dimension = dimension;
-    this.value = NullHandlingHelper.defaultToNull(value);
+    this.value = NullHandlingHelper.emptyToNullIfNeeded(value);
     this.extractionFn = extractionFn;
   }
 

@@ -108,7 +108,7 @@ public class NullDimensionSelector implements SingleValueHistoricalDimensionSele
   @Override
   public int lookupId(String name)
   {
-    return NullHandlingHelper.isNullOrDefault(name) ? 0 : -1;
+    return NullHandlingHelper.isNullOrEquivalent(name) ? 0 : -1;
   }
 
   @Nullable

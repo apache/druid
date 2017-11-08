@@ -53,7 +53,7 @@ public class LowerExtractionFn extends DimExtractionFn
   @Override
   public String apply(@Nullable String key)
   {
-    if (NullHandlingHelper.isNullOrDefault(key)) {
+    if (NullHandlingHelper.isNullOrEquivalent(key)) {
       return null;
     }
     return key.toLowerCase(locale);

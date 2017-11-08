@@ -59,7 +59,7 @@ import java.util.function.Function;
 public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], String>
 {
   private static final Function<Object, String> STRING_TRANSFORMER = o -> o != null
-                                                                          ? NullHandlingHelper.defaultToNull(o.toString())
+                                                                          ? NullHandlingHelper.emptyToNullIfNeeded(o.toString())
                                                                           : null;
 
   private static final int ABSENT_VALUE_ID = -1;

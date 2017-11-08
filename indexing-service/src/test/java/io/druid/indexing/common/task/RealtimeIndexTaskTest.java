@@ -1120,7 +1120,7 @@ public class RealtimeIndexTaskTest
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     if (results.isEmpty()) {
-      return NullHandlingHelper.nullToDefault((Long) null);
+      return NullHandlingHelper.nullToZeroIfNeeded((Long) null);
     }
     return results.get(0).getValue().getLongMetric(metric);
   }

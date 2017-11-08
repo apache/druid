@@ -184,7 +184,7 @@ public class IndexMergerNullHandlingTest
             final List<Integer> expectedNullRows = new ArrayList<>();
             for (int i = 0; i < index.getNumRows(); i++) {
               final List<String> row = getRow(dictionaryColumn, i);
-              if (row.isEmpty() || row.stream().anyMatch(NullHandlingHelper::isNullOrDefault)) {
+              if (row.isEmpty() || row.stream().anyMatch(NullHandlingHelper::isNullOrEquivalent)) {
                 expectedNullRows.add(i);
               }
             }
@@ -221,14 +221,14 @@ public class IndexMergerNullHandlingTest
     if (value == null) {
       retVal.add(null);
     } else if (value instanceof String) {
-      retVal.add(NullHandlingHelper.defaultToNull(((String) value)));
+      retVal.add(NullHandlingHelper.emptyToNullIfNeeded(((String) value)));
     } else if (value instanceof List) {
       final List<String> list = (List<String>) value;
       if (list.isEmpty() && !hasMultipleValues) {
         // empty lists become nulls in single valued columns
-        retVal.add(NullHandlingHelper.defaultToNull(null));
+        retVal.add(NullHandlingHelper.emptyToNullIfNeeded(null));
       } else {
-        retVal.addAll(list.stream().map(NullHandlingHelper::defaultToNull).collect(Collectors.toList()));
+        retVal.addAll(list.stream().map(NullHandlingHelper::emptyToNullIfNeeded).collect(Collectors.toList()));
       }
     } else {
       throw new ISE("didn't expect class[%s]", value.getClass());

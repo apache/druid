@@ -53,32 +53,32 @@ public class NullHandlingHelper
     return INSTANCE.isUseDefaultValuesForNull();
   }
 
-  public static String nullToDefault(String value)
+  public static String nullToEmptyIfNeeded(String value)
   {
     return INSTANCE.isUseDefaultValuesForNull() ? Strings.nullToEmpty(value) : value;
   }
 
-  public static String defaultToNull(String value)
+  public static String emptyToNullIfNeeded(String value)
   {
     return INSTANCE.isUseDefaultValuesForNull() ? Strings.emptyToNull(value) : value;
   }
 
-  public static boolean isNullOrDefault(String value)
+  public static boolean isNullOrEquivalent(String value)
   {
     return INSTANCE.isUseDefaultValuesForNull() ? Strings.isNullOrEmpty(value) : value == null;
   }
 
-  public static Long nullToDefault(Long value)
+  public static Long nullToZeroIfNeeded(Long value)
   {
     return INSTANCE.isUseDefaultValuesForNull() && value == null ? ZERO_LONG : value;
   }
 
-  public static Double nullToDefault(Double value)
+  public static Double nullToZeroIfNeeded(Double value)
   {
     return INSTANCE.isUseDefaultValuesForNull() && value == null ? ZERO_DOUBLE : value;
   }
 
-  public static Float nullToDefault(Float value)
+  public static Float nullToZeroIfNeeded(Float value)
   {
     return INSTANCE.isUseDefaultValuesForNull() && value == null ? ZERO_FLOAT : value;
   }

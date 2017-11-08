@@ -79,7 +79,7 @@ public class InDimFilter implements DimFilter
 
     this.values = new TreeSet<>(Comparators.naturalNullsFirst());
     for (String value : values) {
-      this.values.add(NullHandlingHelper.defaultToNull(value));
+      this.values.add(NullHandlingHelper.emptyToNullIfNeeded(value));
     }
     this.dimension = dimension;
     this.extractionFn = extractionFn;
@@ -175,7 +175,7 @@ public class InDimFilter implements DimFilter
         // there may be row values that match the selector value but are not included
         // in the lookup map. Match on the selector value as well.
         // If the selector value is overwritten in the lookup map, don't add selector value to keys.
-        if (exFn.isRetainMissingValue() && NullHandlingHelper.isNullOrDefault(lookup.apply(convertedValue))) {
+        if (exFn.isRetainMissingValue() && NullHandlingHelper.isNullOrEquivalent(lookup.apply(convertedValue))) {
           keys.add(convertedValue);
         }
       }

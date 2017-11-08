@@ -106,14 +106,14 @@ public class RegexDimExtractionFn extends DimExtractionFn
   public String apply(@Nullable String dimValue)
   {
     final String retVal;
-    String val = NullHandlingHelper.nullToDefault(dimValue);
+    String val = NullHandlingHelper.nullToEmptyIfNeeded(dimValue);
     final Matcher matcher = val == null ? null : pattern.matcher(val);
     if (matcher != null && matcher.find()) {
       retVal = matcher.group(index);
     } else {
       retVal = replaceMissingValue ? replaceMissingValueWith : dimValue;
     }
-    return NullHandlingHelper.defaultToNull(retVal);
+    return NullHandlingHelper.emptyToNullIfNeeded(retVal);
   }
 
   @JsonProperty("expr")

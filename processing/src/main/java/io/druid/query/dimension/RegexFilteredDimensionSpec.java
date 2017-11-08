@@ -76,7 +76,7 @@ public class RegexFilteredDimensionSpec extends BaseFilteredDimensionSpec
             @Override
             public boolean apply(@Nullable String input)
             {
-              return compiledRegex.matcher(NullHandlingHelper.nullToDefault(input)).matches();
+              return compiledRegex.matcher(NullHandlingHelper.nullToEmptyIfNeeded(input)).matches();
             }
           }
       );
@@ -86,7 +86,7 @@ public class RegexFilteredDimensionSpec extends BaseFilteredDimensionSpec
     final Int2IntOpenHashMap forwardMapping = new Int2IntOpenHashMap();
     forwardMapping.defaultReturnValue(-1);
     for (int i = 0; i < selectorCardinality; i++) {
-      String val = NullHandlingHelper.nullToDefault(selector.lookupName(i));
+      String val = NullHandlingHelper.nullToEmptyIfNeeded(selector.lookupName(i));
       if (val != null && compiledRegex.matcher(val).matches()) {
         forwardMapping.put(i, count++);
       }

@@ -64,9 +64,9 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
       public ExprEval eval(final ObjectBinding bindings)
       {
         String s = arg.eval(bindings).asString();
-        final Matcher matcher = pattern.matcher(NullHandlingHelper.nullToDefault(s));
+        final Matcher matcher = pattern.matcher(NullHandlingHelper.nullToEmptyIfNeeded(s));
         final String retVal = matcher.find() ? matcher.group(index) : null;
-        return ExprEval.of(NullHandlingHelper.defaultToNull(retVal));
+        return ExprEval.of(NullHandlingHelper.emptyToNullIfNeeded(retVal));
       }
 
       @Override

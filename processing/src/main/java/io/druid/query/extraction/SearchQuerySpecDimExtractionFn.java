@@ -64,7 +64,7 @@ public class SearchQuerySpecDimExtractionFn extends DimExtractionFn
   @Override
   public String apply(@Nullable String dimValue)
   {
-    return searchQuerySpec.accept(dimValue) ? NullHandlingHelper.defaultToNull(dimValue) : null;
+    return searchQuerySpec.accept(dimValue) ? NullHandlingHelper.emptyToNullIfNeeded(dimValue) : null;
   }
 
   @Override

@@ -233,7 +233,7 @@ public abstract class ExprEval<T>
   {
     private StringExprEval(String value)
     {
-      super(NullHandlingExpressionHelper.defaultToNull(value));
+      super(NullHandlingExpressionHelper.emptyToNullIfNeeded(value));
     }
 
     @Override

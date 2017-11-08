@@ -149,7 +149,7 @@ public class BoundFilter implements Filter
     if (!boundDimFilter.hasLowerBound()) {
       startIndex = 0;
     } else {
-      final int found = bitmapIndex.getIndex(NullHandlingHelper.defaultToNull(boundDimFilter.getLower()));
+      final int found = bitmapIndex.getIndex(NullHandlingHelper.emptyToNullIfNeeded(boundDimFilter.getLower()));
       if (found >= 0) {
         startIndex = boundDimFilter.isLowerStrict() ? found + 1 : found;
       } else {
@@ -160,7 +160,7 @@ public class BoundFilter implements Filter
     if (!boundDimFilter.hasUpperBound()) {
       endIndex = bitmapIndex.getCardinality();
     } else {
-      final int found = bitmapIndex.getIndex(NullHandlingHelper.defaultToNull(boundDimFilter.getUpper()));
+      final int found = bitmapIndex.getIndex(NullHandlingHelper.emptyToNullIfNeeded(boundDimFilter.getUpper()));
       if (found >= 0) {
         endIndex = boundDimFilter.isUpperStrict() ? found : found + 1;
       } else {
@@ -250,10 +250,10 @@ public class BoundFilter implements Filter
   {
     if (input == null) {
       return (!boundDimFilter.hasLowerBound()
-              || (NullHandlingHelper.isNullOrDefault(boundDimFilter.getLower()) && !boundDimFilter.isLowerStrict()))
+              || (NullHandlingHelper.isNullOrEquivalent(boundDimFilter.getLower()) && !boundDimFilter.isLowerStrict()))
              // lower bound allows null
              && (!boundDimFilter.hasUpperBound()
-                 || !NullHandlingHelper.isNullOrDefault(boundDimFilter.getUpper())
+                 || !NullHandlingHelper.isNullOrEquivalent(boundDimFilter.getUpper())
                  || !boundDimFilter.isUpperStrict()); // upper bound allows null
     }
     int lowerComparing = 1;

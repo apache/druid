@@ -398,7 +398,7 @@ public class QueryMaker
 
     if (SqlTypeName.CHAR_TYPES.contains(sqlType)) {
       if (value == null || value instanceof String) {
-        coercedValue = NullHandlingHelper.nullToDefault((String) value);
+        coercedValue = NullHandlingHelper.nullToEmptyIfNeeded((String) value);
       } else if (value instanceof NlsString) {
         coercedValue = ((NlsString) value).getValue();
       } else if (value instanceof Number) {

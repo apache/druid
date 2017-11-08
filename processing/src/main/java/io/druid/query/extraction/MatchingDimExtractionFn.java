@@ -62,7 +62,7 @@ public class MatchingDimExtractionFn extends DimExtractionFn
   @Override
   public String apply(@Nullable String dimValue)
   {
-    if (NullHandlingHelper.isNullOrDefault(dimValue)) {
+    if (NullHandlingHelper.isNullOrEquivalent(dimValue)) {
       // We'd return null whether or not the pattern matched
       return null;
     }

@@ -93,7 +93,7 @@ public class GenericIndexed<T> implements Indexed<T>
         // nulBytes will be -1 for null values.
         return null;
       }
-      return NullHandlingHelper.defaultToNull(StringUtils.fromUtf8Nullable(buffer, numBytes));
+      return NullHandlingHelper.emptyToNullIfNeeded(StringUtils.fromUtf8Nullable(buffer, numBytes));
     }
 
     @Override

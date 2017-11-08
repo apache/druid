@@ -58,7 +58,7 @@ public class LookupExtractionFn extends FunctionalExtraction
           @Override
           public String apply(@Nullable String input)
           {
-            return NullHandlingHelper.defaultToNull(lookup.apply(NullHandlingHelper.nullToDefault(input)));
+            return NullHandlingHelper.emptyToNullIfNeeded(lookup.apply(NullHandlingHelper.nullToEmptyIfNeeded(input)));
           }
         },
         retainMissingValue,

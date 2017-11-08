@@ -104,13 +104,13 @@ public class ExpressionObjectSelector implements ObjectColumnSelector<ExprEval>
       final IndexedInts row = selector.getRow();
       if (row.size() == 0) {
         // Treat empty multi-value rows as nulls.
-        return NullHandlingHelper.nullToDefault((String) null);
+        return NullHandlingHelper.nullToEmptyIfNeeded((String) null);
       } else if (row.size() == 1) {
-        return NullHandlingHelper.nullToDefault(selector.lookupName(row.get(0)));
+        return NullHandlingHelper.nullToEmptyIfNeeded(selector.lookupName(row.get(0)));
       } else {
         // Can't handle multi-value rows in expressions.
         // Treat them as nulls until we think of something better to do.
-        return NullHandlingHelper.nullToDefault((String) null);
+        return NullHandlingHelper.nullToEmptyIfNeeded((String) null);
       }
     };
   }
@@ -121,7 +121,7 @@ public class ExpressionObjectSelector implements ObjectColumnSelector<ExprEval>
   {
     if (selector == null) {
       // Missing column.
-      return Suppliers.ofInstance(NullHandlingHelper.nullToDefault((String) null));
+      return Suppliers.ofInstance(NullHandlingHelper.nullToEmptyIfNeeded((String) null));
     }
 
     final Class<?> clazz = selector.classOfObject();
@@ -133,11 +133,11 @@ public class ExpressionObjectSelector implements ObjectColumnSelector<ExprEval>
       return () -> {
         final Object val = selector.getObject();
         if (val instanceof String) {
-          return NullHandlingHelper.nullToDefault((String) val);
+          return NullHandlingHelper.nullToEmptyIfNeeded((String) val);
         } else if (val instanceof Number) {
           return val;
         } else {
-          return NullHandlingHelper.nullToDefault((String) null);
+          return NullHandlingHelper.nullToEmptyIfNeeded((String) null);
         }
       };
     } else {

@@ -65,7 +65,7 @@ public class SubstringDimExtractionFn extends DimExtractionFn
   @Override
   public String apply(@Nullable String dimValue)
   {
-    if (NullHandlingHelper.isNullOrDefault(dimValue)) {
+    if (NullHandlingHelper.isNullOrEquivalent(dimValue)) {
       return null;
     }
 

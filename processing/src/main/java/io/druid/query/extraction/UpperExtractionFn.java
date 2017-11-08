@@ -52,7 +52,7 @@ public class UpperExtractionFn extends DimExtractionFn
   @Override
   public String apply(@Nullable String key)
   {
-    if (NullHandlingHelper.isNullOrDefault(key)) {
+    if (NullHandlingHelper.isNullOrEquivalent(key)) {
       return null;
     }
     return key.toUpperCase(locale);
