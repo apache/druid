@@ -278,7 +278,7 @@ public class TieredBrokerHostSelector<T>
 
   private static class NodesHolder
   {
-    private AtomicInteger roundRobinIndex = new AtomicInteger(0);
+    private AtomicInteger roundRobinIndex = new AtomicInteger(-1);
 
     private Map<String, Server> nodesMap = new HashMap<>();
     private ImmutableList<Server> nodes = ImmutableList.of();
@@ -314,21 +314,20 @@ public class TieredBrokerHostSelector<T>
       }
 
       int index = roundRobinIndex.get();
+      int nextIndex = index + 1;
 
       while (true) {
-        int nextIndex = index + 1;
-        if (nextIndex < 0) {
-          nextIndex %= currNodes.size();
+        if (nextIndex < 0 || nextIndex >= currNodes.size()) {
+          nextIndex = 0;
         }
         if (roundRobinIndex.compareAndSet(index, nextIndex)) {
           break;
         }
         index = roundRobinIndex.get();
+        nextIndex = index + 1;
       }
 
-      index %= currNodes.size();
-
-      return currNodes.get(index);
+      return currNodes.get(nextIndex);
     }
   }
 }
