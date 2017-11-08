@@ -69,6 +69,19 @@ public class HttpEmitterModule implements Module
     binder.bind(SSLContext.class).toProvider(Providers.of(context)).in(LazySingleton.class);
   }
 
+  static AsyncHttpClient createAsyncHttpClient(
+      String nameFormat,
+      @Nullable SSLContext sslContext
+  )
+  {
+    final DefaultAsyncHttpClientConfig.Builder builder = new DefaultAsyncHttpClientConfig.Builder()
+        .setThreadFactory(Execs.makeThreadFactory(nameFormat));
+    if (sslContext != null) {
+      builder.setSslContext(new JdkSslContext(sslContext, true, ClientAuth.NONE));
+    }
+    return new DefaultAsyncHttpClient(builder.build());
+  }
+
   @Provides
   @ManageLifecycle
   @Named("http")
@@ -79,14 +92,12 @@ public class HttpEmitterModule implements Module
       ObjectMapper jsonMapper
   )
   {
-    final DefaultAsyncHttpClientConfig.Builder builder = new DefaultAsyncHttpClientConfig.Builder();
-    if (sslContext != null) {
-      builder.setSslContext(new JdkSslContext(sslContext, true, ClientAuth.NONE));
-    }
-    builder.setThreadFactory(Execs.makeThreadFactory("HttpPostEmitter-AsyncHttpClient-%d"));
-    final AsyncHttpClient client = new DefaultAsyncHttpClient(builder.build());
-    lifecycle.addCloseableInstance(client);
-
-    return new HttpPostEmitter(config.get(), client, jsonMapper);
+    return new HttpPostEmitter(
+        config.get(),
+        lifecycle.addCloseableInstance(
+            createAsyncHttpClient("HttpPostEmitter-AsyncHttpClient-%d", sslContext)
+        ),
+        jsonMapper
+    );
   }
 }
