@@ -37,6 +37,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import javax.ws.rs.HEAD;
 import java.io.IOException;
 import java.net.URL;
 import java.util.HashMap;
@@ -556,13 +557,14 @@ public class LookupReferencesManagerTest
     expect(config.getLookupTier()).andReturn(LOOKUP_TIER);
     replay(config);
     expect(druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"))
-        .andReturn(request);
+        .andReturn(request)
+        .anyTimes();
     FullResponseHolder responseHolder = new FullResponseHolder(
         HttpResponseStatus.NOT_FOUND,
         EasyMock.createNiceMock(HttpResponse.class),
         new StringBuilder().append(strResult)
     );
-    expect(druidLeaderClient.go(request)).andThrow(new IllegalStateException());
+    expect(druidLeaderClient.go(request)).andThrow(new IllegalStateException()).anyTimes();
     replay(druidLeaderClient);
 
     lookupReferencesManager.start();
@@ -579,8 +581,9 @@ public class LookupReferencesManagerTest
     expect(config.getLookupTier()).andReturn(LOOKUP_TIER);
     replay(config);
     expect(druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"))
-        .andReturn(request);
-    expect(druidLeaderClient.go(request)).andThrow(new IllegalStateException());
+        .andReturn(request)
+        .anyTimes();
+    expect(druidLeaderClient.go(request)).andThrow(new IllegalStateException()).anyTimes();
     replay(druidLeaderClient);
     lookupReferencesManager.start();
     Assert.assertEquals(container, lookupReferencesManager.get("testMockForLoadLookupOnCoordinatorFailure"));
