@@ -20,20 +20,19 @@
 package io.druid.server.http;
 
 import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
-import io.druid.client.DruidDataSource;
+import io.druid.client.ImmutableDruidDataSource;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.metadata.MetadataSegmentManager;
 import io.druid.server.http.security.DatasourceResourceFilter;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.ResourceAction;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -49,6 +48,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -85,22 +85,13 @@ public class MetadataResource
       @Context final HttpServletRequest req
   )
   {
+    final Collection<ImmutableDruidDataSource> druidDataSources = metadataSegmentManager.getInventory();
     final Set<String> dataSourceNamesPreAuth;
     if (includeDisabled != null) {
       dataSourceNamesPreAuth = Sets.newTreeSet(metadataSegmentManager.getAllDatasourceNames());
     } else {
       dataSourceNamesPreAuth = Sets.newTreeSet(
-          Iterables.transform(
-              metadataSegmentManager.getInventory(),
-              new Function<DruidDataSource, String>()
-              {
-                @Override
-                public String apply(DruidDataSource input)
-                {
-                  return input.getName();
-                }
-              }
-          )
+          Iterables.transform(druidDataSources, ImmutableDruidDataSource::getName)
       );
     }
 
@@ -123,17 +114,7 @@ public class MetadataResource
     // Always use dataSourceNamesPostAuth to determine the set of returned dataSources
     if (full != null && includeDisabled == null) {
       return Response.ok().entity(
-          Collections2.filter(
-              metadataSegmentManager.getInventory(),
-              new Predicate<DruidDataSource>()
-              {
-                @Override
-                public boolean apply(DruidDataSource input)
-                {
-                  return dataSourceNamesPostAuth.contains(input.getName());
-                }
-              }
-          )
+          Collections2.filter(druidDataSources, dataSource -> dataSourceNamesPostAuth.contains(dataSource.getName()))
       ).build();
     } else {
       return Response.ok().entity(dataSourceNamesPostAuth).build();
@@ -148,7 +129,7 @@ public class MetadataResource
       @PathParam("dataSourceName") final String dataSourceName
   )
   {
-    DruidDataSource dataSource = metadataSegmentManager.getInventoryValue(dataSourceName);
+    ImmutableDruidDataSource dataSource = metadataSegmentManager.getInventoryValue(dataSourceName);
     if (dataSource == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
@@ -165,7 +146,7 @@ public class MetadataResource
       @QueryParam("full") String full
   )
   {
-    DruidDataSource dataSource = metadataSegmentManager.getInventoryValue(dataSourceName);
+    ImmutableDruidDataSource dataSource = metadataSegmentManager.getInventoryValue(dataSourceName);
     if (dataSource == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
@@ -237,7 +218,7 @@ public class MetadataResource
       @PathParam("segmentId") String segmentId
   )
   {
-    DruidDataSource dataSource = metadataSegmentManager.getInventoryValue(dataSourceName);
+    ImmutableDruidDataSource dataSource = metadataSegmentManager.getInventoryValue(dataSourceName);
     if (dataSource == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
