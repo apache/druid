@@ -1,37 +1,5 @@
-# This is intended to be a temporary unblocker for Travis CI
-# We should revert this when ppa:webupd8team/java repo maintainers fix the issue shown here: https://github.com/druid-io/druid/pull/4970
-# Or if we stick to using a non-base Ubuntu image, the custom image should reside in an org repo and not an individual repo
-# https://hub.docker.com/r/jonweiimply/ubuntu-j8/
-FROM jonweiimply/ubuntu-j8
-
-# MySQL (Metadata store)
-RUN apt-get install -y mysql-server
-
-# Supervisor
-RUN apt-get install -y supervisor
-
-# Zookeeper
-RUN wget -q -O - http://www.us.apache.org/dist/zookeeper/zookeeper-3.4.6/zookeeper-3.4.6.tar.gz | tar -xzf - -C /usr/local \
-      && cp /usr/local/zookeeper-3.4.6/conf/zoo_sample.cfg /usr/local/zookeeper-3.4.6/conf/zoo.cfg \
-      && ln -s /usr/local/zookeeper-3.4.6 /usr/local/zookeeper
-
-# Kafka
-# Match the version to the Kafka client used by KafkaSupervisor
-RUN wget -q -O - http://www.us.apache.org/dist/kafka/0.10.2.0/kafka_2.11-0.10.2.0.tgz | tar -xzf - -C /usr/local \
-      && ln -s /usr/local/kafka_2.11-0.10.2.0 /usr/local/kafka
-
-# Druid system user
-RUN adduser --system --group --no-create-home druid \
-      && mkdir -p /var/lib/druid \
-      && chown druid:druid /var/lib/druid
-
-# clean up time
-RUN apt-get clean \
-      && rm -rf /tmp/* \
-                /var/tmp/* \
-                /var/lib/apt/lists \
-                /root/.m2
-
+# Base image is built from integration-tests/docker-base in the Druid repo
+FROM imply/druiditbase
 
 # Setup metadata store
 RUN /etc/init.d/mysql start \
