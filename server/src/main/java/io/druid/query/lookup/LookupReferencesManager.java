@@ -420,7 +420,10 @@ public class LookupReferencesManager
   private Map<String, LookupExtractorFactoryContainer> tryGetLookupListFromCoordinator(String tier) throws Exception
   {
     final FullResponseHolder response = fetchLookupsForTier(tier);
-    if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+    if (response.getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
+      LOG.warn("No lookups found for tier [%s], response [%s]", tier, response);
+      return null;
+    } else if (!response.getStatus().equals(HttpResponseStatus.OK)) {
       throw new IOE(
           "Error while fetching lookup code from Coordinator with status[%s] and content[%s]",
           response.getStatus(),
