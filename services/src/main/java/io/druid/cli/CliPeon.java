@@ -35,6 +35,7 @@ import io.airlift.airline.Arguments;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.CacheMonitor;
 import io.druid.client.coordinator.CoordinatorClient;
 import io.druid.guice.Binders;
 import io.druid.guice.CacheModule;
@@ -94,6 +95,7 @@ import io.druid.server.http.SegmentListerResource;
 import io.druid.server.initialization.jetty.ChatHandlerServerModule;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.metrics.DataSourceTaskIdHolder;
+import io.druid.server.metrics.MetricsModule;
 import org.eclipse.jetty.server.Server;
 
 import javax.annotation.Nullable;
@@ -193,6 +195,7 @@ public class CliPeon extends GuiceRunnable
 
             JsonConfigProvider.bind(binder, "druid.realtime.cache", CacheConfig.class);
             binder.install(new CacheModule());
+            MetricsModule.register(binder, CacheMonitor.class);
 
             JsonConfigProvider.bind(
                 binder,
