@@ -22,7 +22,6 @@ package io.druid.segment;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.query.dimension.DimensionSpec;
-import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.TimeAndDimsHolder;
@@ -68,7 +67,6 @@ import javax.annotation.Nullable;
  * persisted segments.
  *
  * Note that after calling the methods below that deal with sorted encodings,
- * - getSortedEncodedValueFromUnsorted()
  * - getUnsortedEncodedValueFromSorted()
  * - getSortedIndexedValues()
  * - convertUnsortedEncodedKeyComponentToSortedEncodedKeyComponent()
@@ -111,10 +109,6 @@ import javax.annotation.Nullable;
 public interface DimensionIndexer
     <EncodedType extends Comparable<EncodedType>, EncodedKeyComponentType, ActualType extends Comparable<ActualType>>
 {
-  /**
-   * @return The ValueType corresponding to this dimension indexer's ActualType.
-   */
-  ValueType getValueType();
 
   /**
    * Given a single row value or list of row values (for multi-valued dimensions), update any internal data structures
@@ -131,19 +125,6 @@ public interface DimensionIndexer
    * @return An array containing an encoded representation of the input row value.
    */
   EncodedKeyComponentType processRowValsToUnsortedEncodedKeyComponent(Object dimValues);
-
-
-  /**
-   * Given an encoded value that was ordered by time of ingestion, return the equivalent
-   * encoded value ordered by associated actual value.
-   *
-   * Using the example in the class description:
-   *   getSortedEncodedValueFromUnsorted(0) would return 2
-   *
-   * @param unsortedIntermediateValue value to convert
-   * @return converted value
-   */
-  EncodedType getSortedEncodedValueFromUnsorted(EncodedType unsortedIntermediateValue);
 
 
   /**

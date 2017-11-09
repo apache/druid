@@ -19,21 +19,26 @@
 
 package io.druid.query.groupby;
 
+import io.druid.guice.annotations.ExtensionPoint;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.query.QueryMetrics;
 
 /**
  * Specialization of {@link QueryMetrics} for {@link GroupByQuery}.
  */
+@ExtensionPoint
 public interface GroupByQueryMetrics extends QueryMetrics<GroupByQuery>
 {
   /**
    * Sets the size of {@link GroupByQuery#getDimensions()} of the given query as dimension.
    */
+  @PublicApi
   void numDimensions(GroupByQuery query);
 
   /**
    * Sets the number of metrics of the given groupBy query as dimension.
    */
+  @PublicApi
   void numMetrics(GroupByQuery query);
 
   /**
@@ -41,10 +46,12 @@ public interface GroupByQueryMetrics extends QueryMetrics<GroupByQuery>
    * "complex" metric is a metric of not long or double type, but it could be redefined in the implementation of this
    * method.
    */
+  @PublicApi
   void numComplexMetrics(GroupByQuery query);
 
   /**
    * Sets the granularity of {@link GroupByQuery#getGranularity()} of the given query as dimension.
    */
+  @PublicApi
   void granularity(GroupByQuery query);
 }

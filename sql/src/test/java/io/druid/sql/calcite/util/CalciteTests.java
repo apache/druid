@@ -251,7 +251,7 @@ public class CalciteTests
                       QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
                       SELECT_CONFIG_SUPPLIER
                   ),
-                  new SelectQueryEngine(SELECT_CONFIG_SUPPLIER),
+                  new SelectQueryEngine(),
                   QueryRunnerTestHelper.NOOP_QUERYWATCHER
               )
           )

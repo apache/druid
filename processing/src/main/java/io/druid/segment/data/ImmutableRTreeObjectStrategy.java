@@ -25,9 +25,7 @@ import io.druid.collections.spatial.ImmutableRTree;
 
 import java.nio.ByteBuffer;
 
-/**
- */
-public class IndexedRTree implements Comparable<IndexedRTree>
+public class ImmutableRTreeObjectStrategy implements ObjectStrategy<ImmutableRTree>
 {
   private static Ordering<ImmutableRTree> comparator = new Ordering<ImmutableRTree>()
   {
@@ -49,60 +47,38 @@ public class IndexedRTree implements Comparable<IndexedRTree>
     }
   }.nullsFirst();
 
-  private final ImmutableRTree immutableRTree;
+  private final BitmapFactory bitmapFactory;
 
-  public IndexedRTree(ImmutableRTree immutableRTree)
+  public ImmutableRTreeObjectStrategy(BitmapFactory bitmapFactory)
   {
-    this.immutableRTree = immutableRTree;
+    this.bitmapFactory = bitmapFactory;
   }
 
   @Override
-  public int compareTo(IndexedRTree spatialIndexedInts)
+  public Class<? extends ImmutableRTree> getClazz()
   {
-    return immutableRTree.compareTo(spatialIndexedInts.getImmutableRTree());
+    return ImmutableRTree.class;
   }
 
-  public ImmutableRTree getImmutableRTree()
+  @Override
+  public ImmutableRTree fromByteBuffer(ByteBuffer buffer, int numBytes)
   {
-    return immutableRTree;
+    buffer.limit(buffer.position() + numBytes);
+    return new ImmutableRTree(buffer, bitmapFactory);
   }
 
-  public static class ImmutableRTreeObjectStrategy
-      implements ObjectStrategy<ImmutableRTree>
+  @Override
+  public byte[] toBytes(ImmutableRTree val)
   {
-    private final BitmapFactory bitmapFactory;
-
-    public ImmutableRTreeObjectStrategy(BitmapFactory bitmapFactory)
-    {
-      this.bitmapFactory = bitmapFactory;
+    if (val == null || val.size() == 0) {
+      return new byte[]{};
     }
+    return val.toBytes();
+  }
 
-    @Override
-    public Class<? extends ImmutableRTree> getClazz()
-    {
-      return ImmutableRTree.class;
-    }
-
-    @Override
-    public ImmutableRTree fromByteBuffer(ByteBuffer buffer, int numBytes)
-    {
-      buffer.limit(buffer.position() + numBytes);
-      return new ImmutableRTree(buffer, bitmapFactory);
-    }
-
-    @Override
-    public byte[] toBytes(ImmutableRTree val)
-    {
-      if (val == null || val.size() == 0) {
-        return new byte[]{};
-      }
-      return val.toBytes();
-    }
-
-    @Override
-    public int compare(ImmutableRTree o1, ImmutableRTree o2)
-    {
-      return comparator.compare(o1, o2);
-    }
+  @Override
+  public int compare(ImmutableRTree o1, ImmutableRTree o2)
+  {
+    return comparator.compare(o1, o2);
   }
 }

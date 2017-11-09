@@ -19,7 +19,6 @@
 
 package io.druid.segment.data;
 
-import com.google.common.io.ByteSink;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.CountingOutputStream;
 import com.google.common.primitives.Doubles;
@@ -31,7 +30,6 @@ import io.druid.segment.CompressedPools;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.ByteOrder;
 import java.nio.DoubleBuffer;
 import java.nio.channels.Channels;
@@ -76,12 +74,6 @@ public class BlockLayoutDoubleSupplierSerializer implements DoubleSupplierSerial
   }
 
   @Override
-  public int size()
-  {
-    return numInserted;
-  }
-
-  @Override
   public void add(double value) throws IOException
   {
     if (!endBuffer.hasRemaining()) {
@@ -93,17 +85,6 @@ public class BlockLayoutDoubleSupplierSerializer implements DoubleSupplierSerial
 
     endBuffer.put(value);
     ++numInserted;
-  }
-
-  @Override
-  public void closeAndConsolidate(ByteSink consolidatedOut) throws IOException
-  {
-    close();
-    try (OutputStream out = consolidatedOut.openStream();
-         InputStream meta = ioPeon.makeInputStream(metaFile)) {
-      ByteStreams.copy(meta, out);
-      ByteStreams.copy(flattener.combineStreams(), out);
-    }
   }
 
   @Override

@@ -36,7 +36,7 @@ import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.metadata.metadata.ColumnAnalysis;
 import io.druid.query.metadata.metadata.SegmentAnalysis;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
-import io.druid.query.spec.QuerySegmentSpecs;
+import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
@@ -50,7 +50,7 @@ public class SegmentMetadataQueryQueryToolChestTest
   {
     SegmentMetadataQuery query = new SegmentMetadataQuery(
         new TableDataSource("dummy"),
-        QuerySegmentSpecs.create("2015-01-01/2015-01-02"),
+        new LegacySegmentSpec("2015-01-01/2015-01-02"),
         null,
         null,
         null,

@@ -35,12 +35,6 @@ public class FloatSumBufferAggregator extends SimpleFloatBufferAggregator
 
 
   @Override
-  public void putFirst(ByteBuffer buf, int position, float value)
-  {
-    buf.putFloat(position, value);
-  }
-
-  @Override
   public void aggregate(ByteBuffer buf, int position, float value)
   {
     buf.putFloat(position, buf.getFloat(position) + value);

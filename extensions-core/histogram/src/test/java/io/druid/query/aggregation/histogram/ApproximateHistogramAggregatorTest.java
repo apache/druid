@@ -46,7 +46,7 @@ public class ApproximateHistogramAggregatorTest
     ApproximateHistogramAggregatorFactory factory = new ApproximateHistogramAggregatorFactory(
         "billy", "billy", resolution, numBuckets, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY
     );
-    ApproximateHistogramBufferAggregator agg = new ApproximateHistogramBufferAggregator(selector, resolution, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY);
+    ApproximateHistogramBufferAggregator agg = new ApproximateHistogramBufferAggregator(selector, resolution);
 
     ByteBuffer buf = ByteBuffer.allocate(factory.getMaxIntermediateSize());
     int position = 0;

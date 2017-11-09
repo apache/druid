@@ -20,9 +20,11 @@
 package io.druid.cli;
 
 import io.airlift.airline.Cli;
+import io.druid.guice.annotations.ExtensionPoint;
 
 /**
  */
+@ExtensionPoint
 public interface CliCommandCreator
 {
   void addCommands(Cli.CliBuilder builder);

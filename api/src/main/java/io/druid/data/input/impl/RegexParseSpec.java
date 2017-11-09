@@ -103,13 +103,4 @@ public class RegexParseSpec extends ParseSpec
     return new RegexParseSpec(getTimestampSpec(), spec, listDelimiter, columns, pattern);
   }
 
-  public ParseSpec withColumns(List<String> cols)
-  {
-    return new RegexParseSpec(getTimestampSpec(), getDimensionsSpec(), listDelimiter, cols, pattern);
-  }
-
-  public ParseSpec withPattern(String pat)
-  {
-    return new RegexParseSpec(getTimestampSpec(), getDimensionsSpec(), listDelimiter, columns, pat);
-  }
 }

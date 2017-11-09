@@ -19,7 +19,6 @@
 
 package io.druid.segment.data;
 
-import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import io.druid.java.util.common.IAE;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -43,11 +42,6 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
   public static VSizeIndexedInts fromArray(int[] array, int maxValue)
   {
     return fromList(Ints.asList(array), maxValue);
-  }
-
-  public static VSizeIndexedInts empty()
-  {
-    return fromList(Lists.<Integer>newArrayList(), 0);
   }
 
   /**
@@ -142,13 +136,6 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
   {
     int bytesToTake = buffer.remaining() - (4 - numBytes);
     byte[] bytes = new byte[bytesToTake];
-    buffer.asReadOnlyBuffer().get(bytes);
-    return bytes;
-  }
-
-  public byte[] getBytes()
-  {
-    byte[] bytes = new byte[buffer.remaining()];
     buffer.asReadOnlyBuffer().get(bytes);
     return bytes;
   }

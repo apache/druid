@@ -380,14 +380,12 @@ public class BenchmarkDataGeneratorTest
 
     BenchmarkDataGenerator dataGenerator = new BenchmarkDataGenerator(schemas, 9999, Intervals.utc(50000, 600000), 100);
     for (int i = 0; i < 100; i++) {
-      InputRow row = dataGenerator.nextRow();
-      //System.out.println("S-ROW: " + row);
+      dataGenerator.nextRow();
     }
 
     BenchmarkDataGenerator dataGenerator2 = new BenchmarkDataGenerator(schemas, 9999, Intervals.utc(50000, 50001), 100);
     for (int i = 0; i < 100; i++) {
-      InputRow row = dataGenerator2.nextRow();
-      //System.out.println("S2-ROW: " + row);
+      dataGenerator2.nextRow();
     }
   }
 

@@ -21,6 +21,8 @@ package io.druid.query;
 
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.collections.bitmap.BitmapFactory;
+import io.druid.guice.annotations.ExtensionPoint;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.query.filter.Filter;
 import io.druid.query.search.SearchQueryMetricsFactory;
 import org.joda.time.Interval;
@@ -79,8 +81,8 @@ import java.util.List;
  * dimension or metric is useful and not very expensive to process and store then emit, skip (see above Goals, 1.)
  * otherwise.
  *
- * <p>This interface can be extended, but is not marked as an {@code ExtensionPoint}, because it may change in breaking
- * ways even in minor releases.
+ * <p>Despite this interface is annotated as {@link ExtensionPoint} and some of it's methods as {@link PublicApi}, it
+ * may be changed in breaking ways even in minor releases.
  *
  * <p>If implementors of custom QueryMetrics don't want to fix builds on every Druid release (e. g. if they want to add
  * a single dimension to emitted events and don't want to alter other dimensions and emitted metrics), they could
@@ -157,6 +159,7 @@ import java.util.List;
  *
  * @param <QueryType>
  */
+@ExtensionPoint
 public interface QueryMetrics<QueryType extends Query<?>>
 {
 
@@ -168,31 +171,37 @@ public interface QueryMetrics<QueryType extends Query<?>>
   /**
    * Sets {@link Query#getDataSource()} of the given query as dimension.
    */
+  @PublicApi
   void dataSource(QueryType query);
 
   /**
    * Sets {@link Query#getType()} of the given query as dimension.
    */
+  @PublicApi
   void queryType(QueryType query);
 
   /**
    * Sets {@link Query#getIntervals()} of the given query as dimension.
    */
+  @PublicApi
   void interval(QueryType query);
 
   /**
    * Sets {@link Query#hasFilters()} of the given query as dimension.
    */
+  @PublicApi
   void hasFilters(QueryType query);
 
   /**
    * Sets {@link Query#getDuration()} of the given query as dimension.
    */
+  @PublicApi
   void duration(QueryType query);
 
   /**
    * Sets {@link Query#getId()} of the given query as dimension.
    */
+  @PublicApi
   void queryId(QueryType query);
 
   /**

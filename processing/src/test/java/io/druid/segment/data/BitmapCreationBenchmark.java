@@ -61,14 +61,12 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
   }
 
   final BitmapFactory factory;
-  final ObjectStrategy<ImmutableBitmap> objectStrategy;
 
   public BitmapCreationBenchmark(Class<? extends BitmapSerdeFactory> clazz)
       throws IllegalAccessException, InstantiationException
   {
     BitmapSerdeFactory serdeFactory = clazz.newInstance();
     factory = serdeFactory.getBitmapFactory();
-    objectStrategy = serdeFactory.getObjectStrategy();
   }
 
   private static final int numBits = 100000;

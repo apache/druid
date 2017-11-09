@@ -128,8 +128,4 @@ public class CSVParseSpec extends ParseSpec
     return new CSVParseSpec(getTimestampSpec(), spec, listDelimiter, columns, hasHeaderRow, skipHeaderRows);
   }
 
-  public ParseSpec withColumns(List<String> cols)
-  {
-    return new CSVParseSpec(getTimestampSpec(), getDimensionsSpec(), listDelimiter, cols, hasHeaderRow, skipHeaderRows);
-  }
 }

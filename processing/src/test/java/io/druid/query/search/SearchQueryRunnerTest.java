@@ -46,6 +46,7 @@ import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.ExtractionDimFilter;
+import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.ordering.StringComparators;
@@ -435,20 +436,10 @@ public class SearchQueryRunnerTest
     List<SearchHit> expectedHits = Lists.newLinkedList();
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "automotive", 93));
 
-    DimFilter filter = Druids.newAndDimFilterBuilder()
-                             .fields(
-                                 Arrays.<DimFilter>asList(
-                                     Druids.newSelectorDimFilterBuilder()
-                                           .dimension(QueryRunnerTestHelper.marketDimension)
-                                           .value("spot")
-                                           .build(),
-                                     Druids.newSelectorDimFilterBuilder()
-                                           .dimension(QueryRunnerTestHelper.qualityDimension)
-                                           .value("automotive")
-                                           .build()
-                                 )
-                             )
-                             .build();
+    DimFilter filter = new AndDimFilter(
+        new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot", null),
+        new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "automotive", null)
+    );
 
     checkSearchQuery(
         Druids.newSearchQueryBuilder()
@@ -469,20 +460,10 @@ public class SearchQueryRunnerTest
     List<SearchHit> expectedHits = Lists.newLinkedList();
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "automotive", 93));
 
-    DimFilter filter = Druids.newOrDimFilterBuilder()
-                             .fields(
-                                 Arrays.<DimFilter>asList(
-                                     Druids.newSelectorDimFilterBuilder()
-                                           .dimension(QueryRunnerTestHelper.qualityDimension)
-                                           .value("total_market")
-                                           .build(),
-                                     Druids.newSelectorDimFilterBuilder()
-                                           .dimension(QueryRunnerTestHelper.qualityDimension)
-                                           .value("automotive")
-                                           .build()
-                                 )
-                             )
-                             .build();
+    DimFilter filter = new OrDimFilter(
+        new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "total_market", null),
+        new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "automotive", null)
+    );
 
     checkSearchQuery(
         Druids.newSearchQueryBuilder()
@@ -518,20 +499,10 @@ public class SearchQueryRunnerTest
   {
     List<SearchHit> expectedHits = Lists.newLinkedList();
 
-    DimFilter filter = Druids.newAndDimFilterBuilder()
-                             .fields(
-                                 Arrays.<DimFilter>asList(
-                                     Druids.newSelectorDimFilterBuilder()
-                                           .dimension(QueryRunnerTestHelper.marketDimension)
-                                           .value("total_market")
-                                           .build(),
-                                     Druids.newSelectorDimFilterBuilder()
-                                           .dimension(QueryRunnerTestHelper.qualityDimension)
-                                           .value("automotive")
-                                           .build()
-                                 )
-                             )
-                             .build();
+    DimFilter filter = new AndDimFilter(
+        new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "total_market", null),
+        new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "automotive", null)
+    );
 
     checkSearchQuery(
         Druids.newSearchQueryBuilder()

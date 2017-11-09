@@ -31,7 +31,5 @@ public interface ProgressIndicator
 
   void startSection(String section);
 
-  void progressSection(String section, String message);
-
   void stopSection(String section);
 }

@@ -61,11 +61,6 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
     this.encoding = encoding;
   }
 
-  public int size()
-  {
-    return totalSize;
-  }
-
   @Override
   public IndexedLongs get()
   {

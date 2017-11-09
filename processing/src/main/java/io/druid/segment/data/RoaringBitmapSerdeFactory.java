@@ -21,7 +21,6 @@ package io.druid.segment.data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Ordering;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.bitmap.RoaringBitmapFactory;
@@ -69,27 +68,6 @@ public class RoaringBitmapSerdeFactory implements BitmapSerdeFactory
     return bitmapFactory;
   }
 
-  private static final Ordering<WrappedImmutableRoaringBitmap> RORING_COMPARATOR = new Ordering<WrappedImmutableRoaringBitmap>()
-  {
-    @Override
-    public int compare(
-        WrappedImmutableRoaringBitmap set1, WrappedImmutableRoaringBitmap set2
-    )
-    {
-      if (set1.isEmpty() && set2.isEmpty()) {
-        return 0;
-      }
-      if (set1.isEmpty()) {
-        return -1;
-      }
-      if (set2.isEmpty()) {
-        return 1;
-      }
-
-      return set1.compareTo(set2);
-    }
-  }.nullsFirst();
-
   private static class ImmutableRoaringBitmapObjectStrategy
       implements ObjectStrategy<ImmutableBitmap>
   {
@@ -118,7 +96,7 @@ public class RoaringBitmapSerdeFactory implements BitmapSerdeFactory
     @Override
     public int compare(ImmutableBitmap o1, ImmutableBitmap o2)
     {
-      return RORING_COMPARATOR.compare((WrappedImmutableRoaringBitmap) o1, (WrappedImmutableRoaringBitmap) o2);
+      throw new UnsupportedOperationException();
     }
   }
 

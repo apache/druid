@@ -52,7 +52,6 @@ import io.druid.query.BySegmentResultValue;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.ChainedExecutionQueryRunner;
 import io.druid.query.DruidProcessingConfig;
-import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.QueryContexts;
 import io.druid.query.QueryDataSource;
@@ -189,7 +188,6 @@ public class GroupByQueryRunnerTest
   private final QueryRunner<Row> runner;
   private GroupByQueryRunnerFactory factory;
   private GroupByQueryConfig config;
-  private final String testName;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -424,7 +422,6 @@ public class GroupByQueryRunnerTest
       String testName, GroupByQueryConfig config, GroupByQueryRunnerFactory factory, QueryRunner runner
   )
   {
-    this.testName = testName;
     this.config = config;
     this.factory = factory;
     this.runner = factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.<QueryRunner<Row>>of(runner));
@@ -682,7 +679,7 @@ public class GroupByQueryRunnerTest
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("[alias] already defined");
 
-    GroupByQuery query = GroupByQuery
+    GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
@@ -1108,7 +1105,6 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    List<Row> res = Lists.newArrayList(results);
     TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
 
@@ -4730,7 +4726,7 @@ public class GroupByQueryRunnerTest
         "'__time' cannot be used as an output name for dimensions, aggregators, or post-aggregators."
     );
 
-    GroupByQuery query = GroupByQuery
+    GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
@@ -4772,7 +4768,7 @@ public class GroupByQueryRunnerTest
         "'__time' cannot be used as an output name for dimensions, aggregators, or post-aggregators."
     );
 
-    GroupByQuery query = GroupByQuery
+    GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
@@ -6896,7 +6892,7 @@ public class GroupByQueryRunnerTest
                                          )
                                      )
                                      .setGranularity(QueryRunnerTestHelper.dayGran)
-                                     .setDimFilter(Druids.newOrDimFilterBuilder().fields(dimFilters).build())
+                                     .setDimFilter(new OrDimFilter(dimFilters))
                                      .build();
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
@@ -9086,10 +9082,8 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByLimitPushDownPostAggNotSupported()
   {
-    //if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
     expectedException.expect(UnsupportedOperationException.class);
     expectedException.expectMessage("Limit push down when sorting by a post aggregator is not supported.");
-    //}
 
     GroupByQuery query = new GroupByQuery.Builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
@@ -9132,7 +9126,7 @@ public class GroupByQueryRunnerTest
         )
         .build();
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
   }
 
   @Test
@@ -9280,7 +9274,8 @@ public class GroupByQueryRunnerTest
     expectedException.expect(IAE.class);
     expectedException.expectMessage("Cannot force limit push down when a having spec is present.");
 
-    GroupByQuery query = new GroupByQuery.Builder()
+    GroupByQuery
+        .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(QueryRunnerTestHelper.allGran)
         .setDimensions(

@@ -33,7 +33,6 @@ import io.druid.collections.spatial.split.LinearGutmanSplitStrategy;
 import io.druid.java.util.common.ByteBufferUtils;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnDescriptor;
@@ -48,9 +47,9 @@ import io.druid.segment.data.CompressedVSizeIntsIndexedWriter;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.IOPeon;
+import io.druid.segment.data.ImmutableRTreeObjectStrategy;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedIntsWriter;
-import io.druid.segment.data.IndexedRTree;
 import io.druid.segment.data.VSizeIndexedIntsWriter;
 import io.druid.segment.data.VSizeIndexedWriter;
 import io.druid.segment.serde.DictionaryEncodedColumnPartSerde;
@@ -272,18 +271,15 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
   }
 
   @Override
-  public void writeIndexes(List<IntBuffer> segmentRowNumConversions, Closer closer) throws IOException
+  public void writeIndexes(List<IntBuffer> segmentRowNumConversions) throws IOException
   {
     long dimStartTime = System.currentTimeMillis();
     final BitmapSerdeFactory bitmapSerdeFactory = indexSpec.getBitmapSerdeFactory();
 
     String bmpFilename = StringUtils.format("%s.inverted", dimensionName);
-    bitmapWriter = new GenericIndexedWriter<>(
-        ioPeon,
-        bmpFilename,
-        bitmapSerdeFactory.getObjectStrategy()
-    );
+    bitmapWriter = new GenericIndexedWriter<>(ioPeon, bmpFilename, bitmapSerdeFactory.getObjectStrategy());
     bitmapWriter.open();
+    bitmapWriter.setObjectsNotSorted();
 
     // write dim values to one single file because we need to read it
     File dimValueFile = IndexIO.makeDimFile(outDir, dimensionName);
@@ -310,7 +306,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
         spatialWriter = new ByteBufferWriter<>(
             ioPeon,
             StringUtils.format("%s.spatial", dimensionName),
-            new IndexedRTree.ImmutableRTreeObjectStrategy(bmpFactory)
+            new ImmutableRTreeObjectStrategy(bmpFactory)
         );
         spatialWriter.open();
         tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50, bmpFactory), bmpFactory);
@@ -542,11 +538,6 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     {
       this.baseValues = baseValues;
       this.conversionBuffer = conversionBuffer;
-    }
-
-    public int size()
-    {
-      return baseValues.size();
     }
 
     @Nonnull

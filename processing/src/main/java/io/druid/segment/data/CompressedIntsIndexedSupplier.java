@@ -62,11 +62,6 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
     this.compression = compression;
   }
 
-  public int size()
-  {
-    return totalSize;
-  }
-
   @Override
   public IndexedInts get()
   {
@@ -115,16 +110,6 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
     baseIntBuffers.writeToChannel(channel);
   }
 
-  public CompressedIntsIndexedSupplier convertByteOrder(ByteOrder order)
-  {
-    return new CompressedIntsIndexedSupplier(
-        totalSize,
-        sizePer,
-        GenericIndexed.fromIterable(baseIntBuffers, CompressedIntBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)),
-        compression
-    );
-  }
-
   /**
    * For testing.  Do not use unless you like things breaking
    */
@@ -160,11 +145,6 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
     }
 
     throw new IAE("Unknown version[%s]", versionFromBuffer);
-  }
-
-  public static CompressedIntsIndexedSupplier fromIntBuffer(IntBuffer buffer, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression)
-  {
-    return fromIntBuffer(buffer, MAX_INTS_IN_BUFFER, byteOrder, compression);
   }
 
   public static CompressedIntsIndexedSupplier fromIntBuffer(

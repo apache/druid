@@ -59,7 +59,7 @@ public abstract class GutmanSplitStrategy implements SplitStrategy
    * S2. [Check if done]. If all entries have been assigned, stop. If one group has so few entries that all the rest
    * must be assigned to it in order for it to have the minimum number m, assign them and stop.
    *
-   * S3. [Select entry to assign]. Invoke Algorithm {@link #pickNext(List, Node[])}
+   * S3. [Select entry to assign]. Invoke Algorithm {@link #pickNext(List)}
    * to choose the next entry to assign. Add it to the group whose covering rectangle will have to be enlarged least to
    * accommodate it. Resolve ties by adding the entry to the group smaller area, then to the one with fewer entries, then
    * to either. Repeat from S2.
@@ -104,7 +104,7 @@ public abstract class GutmanSplitStrategy implements SplitStrategy
         }
       }
 
-      Node nextToAssign = pickNext(children, groups);
+      Node nextToAssign = pickNext(children);
       double group0ExpandedArea = RTreeUtils.getEnclosingArea(groups[0], nextToAssign);
       double group1ExpandedArea = RTreeUtils.getEnclosingArea(groups[1], nextToAssign);
 
@@ -131,5 +131,5 @@ public abstract class GutmanSplitStrategy implements SplitStrategy
 
   public abstract Node[] pickSeeds(List<Node> nodes);
 
-  public abstract Node pickNext(List<Node> nodes, Node[] groups);
+  public abstract Node pickNext(List<Node> nodes);
 }

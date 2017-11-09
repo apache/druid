@@ -103,9 +103,4 @@ public class S3TimestampVersionedDataFinder extends S3DataSegmentPuller implemen
     }
   }
 
-  @Override
-  public Class<URI> getDataDescriptorClass()
-  {
-    return URI.class;
-  }
 }

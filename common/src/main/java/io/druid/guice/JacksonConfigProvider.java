@@ -40,24 +40,9 @@ public class JacksonConfigProvider<T> implements Provider<Supplier<T>>
           .in(LazySingleton.class);
   }
 
-  public static <T> JacksonConfigProvider<T> of(String key, Class<T> clazz)
-  {
-    return of(key, clazz, null);
-  }
-
   public static <T> JacksonConfigProvider<T> of(String key, Class<T> clazz, T defaultVal)
   {
     return new JacksonConfigProvider<T>(key, clazz, null, defaultVal);
-  }
-
-  public static <T> JacksonConfigProvider<T> of(String key, TypeReference<T> clazz)
-  {
-    return of(key, clazz, null);
-  }
-
-  public static <T> JacksonConfigProvider<T> of(String key, TypeReference<T> typeRef, T defaultVal)
-  {
-    return new JacksonConfigProvider<T>(key, null, typeRef, defaultVal);
   }
 
   private final String key;

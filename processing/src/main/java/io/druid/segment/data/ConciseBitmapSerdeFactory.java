@@ -19,15 +19,13 @@
 
 package io.druid.segment.data;
 
-import java.nio.ByteBuffer;
-
-import com.google.common.collect.Ordering;
-
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ConciseBitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.bitmap.WrappedImmutableConciseBitmap;
 import io.druid.extendedset.intset.ImmutableConciseSet;
+
+import java.nio.ByteBuffer;
 
 /**
  */
@@ -47,26 +45,6 @@ public class ConciseBitmapSerdeFactory implements BitmapSerdeFactory
   {
     return bitmapFactory;
   }
-
-  private static final Ordering<WrappedImmutableConciseBitmap> CONCISE_COMPARATOR = new Ordering<WrappedImmutableConciseBitmap>()
-  {
-    @Override
-    public int compare(
-        WrappedImmutableConciseBitmap conciseSet, WrappedImmutableConciseBitmap conciseSet1
-    )
-    {
-      if (conciseSet.isEmpty() && conciseSet1.isEmpty()) {
-        return 0;
-      }
-      if (conciseSet.isEmpty()) {
-        return -1;
-      }
-      if (conciseSet1.isEmpty()) {
-        return 1;
-      }
-      return conciseSet.compareTo(conciseSet1);
-    }
-  }.nullsFirst();
 
   private static class ImmutableConciseSetObjectStrategy
       implements ObjectStrategy<ImmutableBitmap>
@@ -96,7 +74,7 @@ public class ConciseBitmapSerdeFactory implements BitmapSerdeFactory
     @Override
     public int compare(ImmutableBitmap o1, ImmutableBitmap o2)
     {
-      return CONCISE_COMPARATOR.compare((WrappedImmutableConciseBitmap) o1, (WrappedImmutableConciseBitmap) o2);
+      throw new UnsupportedOperationException();
     }
   }
 

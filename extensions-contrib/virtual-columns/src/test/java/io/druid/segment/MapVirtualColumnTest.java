@@ -80,7 +80,7 @@ public class MapVirtualColumnTest
             QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
             selectConfigSupplier
         ),
-        new SelectQueryEngine(selectConfigSupplier),
+        new SelectQueryEngine(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
 

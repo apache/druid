@@ -64,7 +64,6 @@ public class WrappedImmutableConciseBitmap implements ImmutableBitmap
     return bitmap.toBytes();
   }
 
-  @Override
   public int compareTo(ImmutableBitmap other)
   {
     return bitmap.compareTo(((WrappedImmutableConciseBitmap) other).getBitmap());
@@ -95,14 +94,6 @@ public class WrappedImmutableConciseBitmap implements ImmutableBitmap
   }
 
   @Override
-  public ImmutableBitmap union(ImmutableBitmap otherBitmap)
-  {
-    WrappedImmutableConciseBitmap other = (WrappedImmutableConciseBitmap) otherBitmap;
-    ImmutableConciseSet unwrappedOtherBitmap = other.bitmap;
-    return new WrappedImmutableConciseBitmap(ImmutableConciseSet.union(bitmap, unwrappedOtherBitmap));
-  }
-
-  @Override
   public ImmutableBitmap intersection(ImmutableBitmap otherBitmap)
   {
     WrappedImmutableConciseBitmap other = (WrappedImmutableConciseBitmap) otherBitmap;
@@ -110,16 +101,4 @@ public class WrappedImmutableConciseBitmap implements ImmutableBitmap
     return new WrappedImmutableConciseBitmap(ImmutableConciseSet.intersection(bitmap, unwrappedOtherBitmap));
   }
 
-  @Override
-  public ImmutableBitmap difference(ImmutableBitmap otherBitmap)
-  {
-    WrappedImmutableConciseBitmap other = (WrappedImmutableConciseBitmap) otherBitmap;
-    ImmutableConciseSet unwrappedOtherBitmap = other.bitmap;
-    return new WrappedImmutableConciseBitmap(
-        ImmutableConciseSet.intersection(
-            bitmap,
-            ImmutableConciseSet.complement(unwrappedOtherBitmap)
-        )
-    );
-  }
 }

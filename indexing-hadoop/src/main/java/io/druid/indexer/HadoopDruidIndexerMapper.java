@@ -57,15 +57,8 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
     return config;
   }
 
-  public InputRowParser getParser()
-  {
-    return parser;
-  }
-
   @Override
-  protected void map(
-      Object key, Object value, Context context
-  ) throws IOException, InterruptedException
+  protected void map(Object key, Object value, Context context) throws IOException, InterruptedException
   {
     try {
       final InputRow inputRow;
@@ -90,7 +83,7 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
       if (!granularitySpec.bucketIntervals().isPresent()
           || granularitySpec.bucketInterval(DateTimes.utc(inputRow.getTimestampFromEpoch()))
                             .isPresent()) {
-        innerMap(inputRow, value, context, reportParseExceptions);
+        innerMap(inputRow, context, reportParseExceptions);
       }
     }
     catch (RuntimeException e) {
@@ -116,7 +109,7 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
     }
   }
 
-  abstract protected void innerMap(InputRow inputRow, Object value, Context context, boolean reportParseExceptions)
+  abstract protected void innerMap(InputRow inputRow, Context context, boolean reportParseExceptions)
       throws IOException, InterruptedException;
 
 }

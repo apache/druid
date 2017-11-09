@@ -27,7 +27,6 @@ import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesQueryRunnerTest;
 import io.druid.query.timeseries.TimeseriesResultValue;
@@ -69,10 +68,8 @@ public class VarianceTimeseriesQueryTest
                                   .intervals(VarianceTestHelper.firstToThird)
                                   .aggregators(VarianceTestHelper.commonPlusVarAggregators)
                                   .postAggregators(
-                                      Arrays.<PostAggregator>asList(
-                                          VarianceTestHelper.addRowsIndexConstant,
-                                          VarianceTestHelper.stddevOfIndexPostAggr
-                                      )
+                                      VarianceTestHelper.addRowsIndexConstant,
+                                      VarianceTestHelper.stddevOfIndexPostAggr
                                   )
                                   .descending(descending)
                                   .build();

@@ -197,7 +197,6 @@ public class HadoopDruidIndexerMapperTest
     @Override
     protected void innerMap(
         final InputRow inputRow,
-        final Object value,
         final Context context,
         final boolean reportParseExceptions
     ) throws IOException, InterruptedException

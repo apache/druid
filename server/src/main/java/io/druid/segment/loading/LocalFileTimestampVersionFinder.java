@@ -104,9 +104,4 @@ public class LocalFileTimestampVersionFinder extends LocalDataSegmentPuller
     }
   }
 
-  @Override
-  public Class<URI> getDataDescriptorClass()
-  {
-    return URI.class;
-  }
 }

@@ -126,7 +126,7 @@ public class FloatGenericColumnPartSerde implements ColumnPartSerde
         );
         builder.setType(ValueType.FLOAT)
                .setHasMultipleValues(false)
-               .setGenericColumn(new FloatGenericColumnSupplier(column, byteOrder));
+               .setGenericColumn(new FloatGenericColumnSupplier(column));
       }
     };
   }

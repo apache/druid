@@ -22,7 +22,6 @@ package io.druid.collections.spatial;
 import com.google.common.base.Preconditions;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
-import io.druid.collections.spatial.split.LinearGutmanSplitStrategy;
 import io.druid.collections.spatial.split.SplitStrategy;
 
 import java.util.Arrays;
@@ -40,11 +39,6 @@ public class RTree
   private final BitmapFactory bitmapFactory;
   private Node root;
   private int size;
-
-  public RTree(BitmapFactory bitmapFactory)
-  {
-    this(0, new LinearGutmanSplitStrategy(0, 0, bitmapFactory), bitmapFactory);
-  }
 
   public RTree(int numDims, SplitStrategy splitStrategy, BitmapFactory bitmapFactory)
   {
@@ -91,19 +85,6 @@ public class RTree
     insertInner(new Point(coords, entry));
   }
 
-  /**
-   * Not yet implemented.
-   *
-   * @param coords - the coordinates of the entry
-   * @param entry  - the integer to insert
-   *
-   * @return - whether the operation completed successfully
-   */
-  public boolean delete(double[] coords, int entry)
-  {
-    throw new UnsupportedOperationException();
-  }
-
   public int getSize()
   {
     return size;
@@ -112,11 +93,6 @@ public class RTree
   public int getNumDims()
   {
     return numDims;
-  }
-
-  public SplitStrategy getSplitStrategy()
-  {
-    return splitStrategy;
   }
 
   public Node getRoot()

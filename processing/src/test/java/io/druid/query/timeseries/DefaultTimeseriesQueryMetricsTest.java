@@ -30,8 +30,6 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -54,13 +52,8 @@ public class DefaultTimeseriesQueryMetricsTest
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.dayGran)
         .intervals(QueryRunnerTestHelper.fullOnInterval)
-        .aggregators(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                QueryRunnerTestHelper.indexDoubleSum
-            )
-        )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .aggregators(QueryRunnerTestHelper.rowsCount, QueryRunnerTestHelper.indexDoubleSum)
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .descending(true)
         .build();
     queryMetrics.query(query);

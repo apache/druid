@@ -51,7 +51,6 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class InvalidFilteringTest extends BaseFilterTest
 {
-  private static final String COUNT_COLUMN = "count";
   private static final String TIMESTAMP_COLUMN = "ts";
 
   private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(

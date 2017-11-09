@@ -47,7 +47,6 @@ import io.druid.query.aggregation.FloatMinAggregatorFactory;
 import io.druid.query.aggregation.LongMaxAggregatorFactory;
 import io.druid.query.aggregation.LongMinAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
@@ -302,19 +301,17 @@ public class CalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .postAggregators(
-                      ImmutableList.<PostAggregator>builder()
-                          .add(EXPRESSION_POST_AGG("p0", "'foo'"))
-                          .add(EXPRESSION_POST_AGG("p1", "'xfoo'"))
-                          .add(EXPRESSION_POST_AGG("p2", "'foo'"))
-                          .add(EXPRESSION_POST_AGG("p3", "' foo'"))
-                          .add(EXPRESSION_POST_AGG("p4", "'foo'"))
-                          .add(EXPRESSION_POST_AGG("p5", "'foo'"))
-                          .add(EXPRESSION_POST_AGG("p6", "'foo'"))
-                          .add(EXPRESSION_POST_AGG("p7", "'foo '"))
-                          .add(EXPRESSION_POST_AGG("p8", "'foox'"))
-                          .add(EXPRESSION_POST_AGG("p9", "' foo'"))
-                          .add(EXPRESSION_POST_AGG("p10", "'xfoo'"))
-                          .build()
+                      EXPRESSION_POST_AGG("p0", "'foo'"),
+                      EXPRESSION_POST_AGG("p1", "'xfoo'"),
+                      EXPRESSION_POST_AGG("p2", "'foo'"),
+                      EXPRESSION_POST_AGG("p3", "' foo'"),
+                      EXPRESSION_POST_AGG("p4", "'foo'"),
+                      EXPRESSION_POST_AGG("p5", "'foo'"),
+                      EXPRESSION_POST_AGG("p6", "'foo'"),
+                      EXPRESSION_POST_AGG("p7", "'foo '"),
+                      EXPRESSION_POST_AGG("p8", "'foox'"),
+                      EXPRESSION_POST_AGG("p9", "' foo'"),
+                      EXPRESSION_POST_AGG("p10", "'xfoo'")
                   )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
@@ -2161,17 +2158,15 @@ public class CalciteQueryTest
                       )
                   )
                   .postAggregators(
-                      ImmutableList.of(
-                          new ArithmeticPostAggregator(
-                              "a2",
-                              "quotient",
-                              ImmutableList.of(
-                                  new FieldAccessPostAggregator(null, "a2:sum"),
-                                  new FieldAccessPostAggregator(null, "a2:count")
-                              )
-                          ),
-                          EXPRESSION_POST_AGG("p0", "((\"a3\" + \"a4\") + \"a5\")")
-                      )
+                      new ArithmeticPostAggregator(
+                          "a2",
+                          "quotient",
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator(null, "a2:sum"),
+                              new FieldAccessPostAggregator(null, "a2:count")
+                          )
+                      ),
+                      EXPRESSION_POST_AGG("p0", "((\"a3\" + \"a4\") + \"a5\")")
                   )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
@@ -2471,10 +2466,10 @@ public class CalciteQueryTest
                       new LongSumAggregatorFactory("a3", null, "strlen(CAST((\"cnt\" * 10), 'STRING'))", macroTable),
                       new DoubleMaxAggregatorFactory("a4", null, "(strlen(\"dim2\") + log(\"m1\"))", macroTable)
                   ))
-                  .postAggregators(ImmutableList.of(
+                  .postAggregators(
                       EXPRESSION_POST_AGG("p0", "log((\"a1\" + \"a2\"))"),
                       EXPRESSION_POST_AGG("p1", "(\"a1\" % 4)")
-                  ))
+                  )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -4296,12 +4291,12 @@ public class CalciteQueryTest
                           )
                       )
                   )
-                  .postAggregators(ImmutableList.of(
+                  .postAggregators(
                       EXPRESSION_POST_AGG("p0", "CAST(\"a1\", 'DOUBLE')"),
                       EXPRESSION_POST_AGG("p1", "(\"a0\" / \"a1\")"),
                       EXPRESSION_POST_AGG("p2", "((\"a0\" / \"a1\") + 3)"),
                       EXPRESSION_POST_AGG("p3", "((CAST(\"a0\", 'DOUBLE') / CAST(\"a1\", 'DOUBLE')) + 3)")
-                  ))
+                  )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
