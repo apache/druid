@@ -19,9 +19,12 @@
 
 package io.druid.client.selector;
 
+import javax.annotation.Nullable;
+
 /**
  */
 public interface DiscoverySelector<T>
 {
+  @Nullable
   T pick();
 }
