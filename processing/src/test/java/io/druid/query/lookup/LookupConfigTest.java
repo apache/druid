@@ -51,7 +51,9 @@ public class LookupConfigTest
     String json = "{\n"
                   + "  \"enableLookupSyncOnStartup\": false,\n"
                   + "  \"snapshotWorkingDir\": \"/tmp\",\n"
-                  + "  \"numLookupLoadingThreads\": 4 \n"
+                  + "  \"numLookupLoadingThreads\": 4,\n"
+                  + "  \"coordinatorFetchRetries\": 4,\n"
+                  + "  \"lookupStartRetries\": 4 \n"
                   + "}\n";
     LookupConfig config = mapper.readValue(
         mapper.writeValueAsString(
@@ -63,5 +65,7 @@ public class LookupConfigTest
     Assert.assertEquals("/tmp", config.getSnapshotWorkingDir());
     Assert.assertEquals(false, config.getEnableLookupSyncOnStartup());
     Assert.assertEquals(4, config.getNumLookupLoadingThreads());
+    Assert.assertEquals(4, config.getCoordinatorFetchRetries());
+    Assert.assertEquals(4, config.getLookupStartRetries());
   }
 }
