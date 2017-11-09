@@ -37,7 +37,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import javax.ws.rs.HEAD;
 import java.io.IOException;
 import java.net.URL;
 import java.util.HashMap;
@@ -57,13 +56,7 @@ public class LookupReferencesManagerTest
 
   private LookupListeningAnnouncerConfig config;
 
-  private static final String propertyBase = "some.property";
-
   private static final String LOOKUP_TIER = "lookupTier";
-
-  private static final int LOOKUP_THREADS = 1;
-
-  private static final boolean LOOKUP_DISABLE = false;
 
   LookupExtractorFactory lookupExtractorFactory;
 
