@@ -27,9 +27,9 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
-import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.FilteredServerInventoryView;
+import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.ServerViewUtil;
 import io.druid.client.TimelineServerView;
 import io.druid.client.selector.ServerSelector;
@@ -42,8 +42,8 @@ import io.druid.query.TableDataSource;
 import io.druid.query.metadata.SegmentMetadataQueryConfig;
 import io.druid.server.http.security.DatasourceResourceFilter;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.ResourceAction;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
@@ -106,12 +106,10 @@ public class ClientInfoResource
   {
     final Map<String, List<DataSegment>> dataSourceMap = Maps.newHashMap();
     for (DruidServer server : serverInventoryView.getInventory()) {
-      for (DruidDataSource dataSource : server.getDataSources()) {
-        if (!dataSourceMap.containsKey(dataSource.getName())) {
-          dataSourceMap.put(dataSource.getName(), Lists.<DataSegment>newArrayList());
-        }
-        List<DataSegment> segments = dataSourceMap.get(dataSource.getName());
-        segments.addAll(dataSource.getSegments());
+      for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
+        dataSourceMap
+            .computeIfAbsent(dataSource.getName(), ignored -> Lists.newArrayList())
+            .addAll(dataSource.getSegments());
       }
     }
     return dataSourceMap;

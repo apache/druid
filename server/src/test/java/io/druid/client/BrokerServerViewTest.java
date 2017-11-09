@@ -22,7 +22,6 @@ package io.druid.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
-import com.google.common.base.Function;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -48,7 +47,6 @@ import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.PartitionHolder;
-import io.druid.timeline.partition.SingleElementPartitionChunk;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -129,11 +127,13 @@ public class BrokerServerViewTest extends CuratorTestBase
     Assert.assertTrue(actualPartitionHolder.isComplete());
     Assert.assertEquals(1, Iterables.size(actualPartitionHolder));
 
-    ServerSelector selector = ((SingleElementPartitionChunk<ServerSelector>) actualPartitionHolder.iterator()
-                                                                                                  .next()).getObject();
+    ServerSelector selector = actualPartitionHolder
+        .iterator()
+        .next()
+        .getObject();
     Assert.assertFalse(selector.isEmpty());
     Assert.assertEquals(segment, selector.getSegment());
-    Assert.assertEquals(druidServer, selector.pick().getServer());
+    Assert.assertEquals(druidServer.toImmutableDruidServer(), selector.pick().getServer().toImmutableDruidServer());
 
     unannounceSegmentForServer(druidServer, segment, zkPathsConfig);
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
@@ -158,22 +158,15 @@ public class BrokerServerViewTest extends CuratorTestBase
 
     final List<DruidServer> druidServers = Lists.transform(
         ImmutableList.<String>of("locahost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
-        new Function<String, DruidServer>()
-        {
-          @Override
-          public DruidServer apply(String input)
-          {
-            return new DruidServer(
-                input,
-                input,
-                null,
-                10000000L,
-                ServerType.HISTORICAL,
-                "default_tier",
-                0
-            );
-          }
-        }
+        input -> new DruidServer(
+            input,
+            input,
+            null,
+            10000000L,
+            ServerType.HISTORICAL,
+            "default_tier",
+            0
+        )
     );
 
     for (DruidServer druidServer : druidServers) {
@@ -181,20 +174,13 @@ public class BrokerServerViewTest extends CuratorTestBase
     }
 
     final List<DataSegment> segments = Lists.transform(
-        ImmutableList.<Pair<String, String>>of(
+        ImmutableList.of(
             Pair.of("2011-04-01/2011-04-03", "v1"),
             Pair.of("2011-04-03/2011-04-06", "v1"),
             Pair.of("2011-04-01/2011-04-09", "v2"),
             Pair.of("2011-04-06/2011-04-09", "v3"),
             Pair.of("2011-04-01/2011-04-02", "v3")
-        ), new Function<Pair<String, String>, DataSegment>()
-        {
-          @Override
-          public DataSegment apply(Pair<String, String> input)
-          {
-            return dataSegmentWithIntervalAndVersion(input.lhs, input.rhs);
-          }
-        }
+        ), input -> dataSegmentWithIntervalAndVersion(input.lhs, input.rhs)
     );
 
     for (int i = 0; i < 5; ++i) {
@@ -254,24 +240,25 @@ public class BrokerServerViewTest extends CuratorTestBase
     );
   }
 
-  private Pair<Interval, Pair<String, Pair<DruidServer, DataSegment>>> createExpected(
+  private Pair<Interval, Pair<String, Pair<ImmutableDruidServer, DataSegment>>> createExpected(
       String intervalStr,
       String version,
       DruidServer druidServer,
       DataSegment segment
   )
   {
-    return Pair.of(Intervals.of(intervalStr), Pair.of(version, Pair.of(druidServer, segment)));
+    return Pair.of(Intervals.of(intervalStr), Pair.of(version, Pair.of(druidServer.toImmutableDruidServer(), segment)));
   }
 
   private void assertValues(
-      List<Pair<Interval, Pair<String, Pair<DruidServer, DataSegment>>>> expected, List<TimelineObjectHolder> actual
+      List<Pair<Interval, Pair<String, Pair<ImmutableDruidServer, DataSegment>>>> expected,
+      List<TimelineObjectHolder> actual
   )
   {
     Assert.assertEquals(expected.size(), actual.size());
 
     for (int i = 0; i < expected.size(); ++i) {
-      Pair<Interval, Pair<String, Pair<DruidServer, DataSegment>>> expectedPair = expected.get(i);
+      Pair<Interval, Pair<String, Pair<ImmutableDruidServer, DataSegment>>> expectedPair = expected.get(i);
       TimelineObjectHolder<String, ServerSelector> actualTimelineObjectHolder = actual.get(i);
 
       Assert.assertEquals(expectedPair.lhs, actualTimelineObjectHolder.getInterval());
@@ -281,10 +268,12 @@ public class BrokerServerViewTest extends CuratorTestBase
       Assert.assertTrue(actualPartitionHolder.isComplete());
       Assert.assertEquals(1, Iterables.size(actualPartitionHolder));
 
-      ServerSelector selector = ((SingleElementPartitionChunk<ServerSelector>) actualPartitionHolder.iterator()
-                                                                                                    .next()).getObject();
+      ServerSelector selector = actualPartitionHolder
+          .iterator()
+          .next()
+          .getObject();
       Assert.assertFalse(selector.isEmpty());
-      Assert.assertEquals(expectedPair.rhs.rhs.lhs, selector.pick().getServer());
+      Assert.assertEquals(expectedPair.rhs.rhs.lhs, selector.pick().getServer().toImmutableDruidServer());
       Assert.assertEquals(expectedPair.rhs.rhs.rhs, selector.getSegment());
     }
   }
@@ -295,7 +284,7 @@ public class BrokerServerViewTest extends CuratorTestBase
         zkPathsConfig,
         curator,
         jsonMapper,
-        Predicates.<Pair<DruidServerMetadata, DataSegment>>alwaysTrue()
+        Predicates.alwaysTrue()
     )
     {
       @Override

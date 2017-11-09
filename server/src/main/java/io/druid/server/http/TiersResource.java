@@ -19,16 +19,12 @@
 
 package io.druid.server.http;
 
-import com.google.common.base.Function;
 import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
-import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
 import io.druid.java.util.common.MapUtils;
@@ -45,6 +41,8 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 /**
  */
@@ -124,26 +122,12 @@ public class TiersResource
       return Response.ok(retVal.rowMap()).build();
     }
 
-    Set<String> retVal = Sets.newHashSet();
-    for (DruidServer druidServer : serverInventoryView.getInventory()) {
-      if (druidServer.getTier().equalsIgnoreCase(tierName)) {
-        retVal.addAll(
-            Lists.newArrayList(
-                Iterables.transform(
-                    druidServer.getDataSources(),
-                    new Function<DruidDataSource, String>()
-                    {
-                      @Override
-                      public String apply(DruidDataSource input)
-                      {
-                        return input.getName();
-                      }
-                    }
-                )
-            )
-        );
-      }
-    }
+    final Set<String> retVal = StreamSupport
+        .stream(serverInventoryView.getInventory().spliterator(), false)
+        .filter(server -> tierName.equalsIgnoreCase(server.getTier()))
+        .map(DruidServer::getDataSourceNames)
+        .flatMap(Set::stream)
+        .collect(Collectors.toSet());
 
     return Response.ok(retVal).build();
   }

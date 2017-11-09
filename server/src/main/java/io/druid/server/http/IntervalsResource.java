@@ -21,7 +21,7 @@ package io.druid.server.http;
 
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import io.druid.client.DruidDataSource;
+import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.InventoryView;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.MapUtils;
@@ -41,6 +41,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -50,7 +51,7 @@ import java.util.Set;
 public class IntervalsResource
 {
   private final InventoryView serverInventoryView;
-  private final AuthConfig authConfig;
+  private final AuthConfig authConfig; // Unused
   private final AuthorizerMapper authorizerMapper;
 
   @Inject
@@ -70,20 +71,15 @@ public class IntervalsResource
   public Response getIntervals(@Context final HttpServletRequest req)
   {
     final Comparator<Interval> comparator = Comparators.inverse(Comparators.intervalsByStartThenEnd());
-    final Set<DruidDataSource> datasources = InventoryViewUtils.getSecuredDataSources(
+    final Set<ImmutableDruidDataSource> datasources = InventoryViewUtils.getSecuredDataSources(
         req,
         serverInventoryView,
         authorizerMapper
     );
 
     final Map<Interval, Map<String, Map<String, Object>>> retVal = Maps.newTreeMap(comparator);
-    for (DruidDataSource dataSource : datasources) {
+    for (ImmutableDruidDataSource dataSource : datasources) {
       for (DataSegment dataSegment : dataSource.getSegments()) {
-        Map<String, Map<String, Object>> interval = retVal.get(dataSegment.getInterval());
-        if (interval == null) {
-          Map<String, Map<String, Object>> tmp = Maps.newHashMap();
-          retVal.put(dataSegment.getInterval(), tmp);
-        }
         setProperties(retVal, dataSource, dataSegment);
       }
     }
@@ -102,7 +98,7 @@ public class IntervalsResource
   )
   {
     final Interval theInterval = Intervals.of(interval.replace("_", "/"));
-    final Set<DruidDataSource> datasources = InventoryViewUtils.getSecuredDataSources(
+    final Set<ImmutableDruidDataSource> datasources = InventoryViewUtils.getSecuredDataSources(
         req,
         serverInventoryView,
         authorizerMapper
@@ -112,14 +108,9 @@ public class IntervalsResource
 
     if (full != null) {
       final Map<Interval, Map<String, Map<String, Object>>> retVal = Maps.newTreeMap(comparator);
-      for (DruidDataSource dataSource : datasources) {
+      for (ImmutableDruidDataSource dataSource : datasources) {
         for (DataSegment dataSegment : dataSource.getSegments()) {
           if (theInterval.contains(dataSegment.getInterval())) {
-            Map<String, Map<String, Object>> dataSourceInterval = retVal.get(dataSegment.getInterval());
-            if (dataSourceInterval == null) {
-              Map<String, Map<String, Object>> tmp = Maps.newHashMap();
-              retVal.put(dataSegment.getInterval(), tmp);
-            }
             setProperties(retVal, dataSource, dataSegment);
           }
         }
@@ -130,7 +121,7 @@ public class IntervalsResource
 
     if (simple != null) {
       final Map<Interval, Map<String, Object>> retVal = Maps.newHashMap();
-      for (DruidDataSource dataSource : datasources) {
+      for (ImmutableDruidDataSource dataSource : datasources) {
         for (DataSegment dataSegment : dataSource.getSegments()) {
           if (theInterval.contains(dataSegment.getInterval())) {
             Map<String, Object> properties = retVal.get(dataSegment.getInterval());
@@ -152,7 +143,7 @@ public class IntervalsResource
     }
 
     final Map<String, Object> retVal = Maps.newHashMap();
-    for (DruidDataSource dataSource : datasources) {
+    for (ImmutableDruidDataSource dataSource : datasources) {
       for (DataSegment dataSegment : dataSource.getSegments()) {
         if (theInterval.contains(dataSegment.getInterval())) {
           retVal.put("size", MapUtils.getLong(retVal, "size", 0L) + dataSegment.getSize());
@@ -164,21 +155,17 @@ public class IntervalsResource
     return Response.ok(retVal).build();
   }
 
+  // Modifies the retVal map to add properties
   private void setProperties(
       final Map<Interval, Map<String, Map<String, Object>>> retVal,
-      DruidDataSource dataSource, DataSegment dataSegment
+      final ImmutableDruidDataSource dataSource,
+      final DataSegment dataSegment
   )
   {
-    Map<String, Object> properties = retVal.get(dataSegment.getInterval()).get(dataSource.getName());
-    if (properties == null) {
-      properties = Maps.newHashMap();
-      properties.put("size", dataSegment.getSize());
-      properties.put("count", 1);
-
-      retVal.get(dataSegment.getInterval()).put(dataSource.getName(), properties);
-    } else {
-      properties.put("size", MapUtils.getLong(properties, "size", 0L) + dataSegment.getSize());
-      properties.put("count", MapUtils.getInt(properties, "count", 0) + 1);
-    }
+    final Map<String, Object> properties = retVal
+        .computeIfAbsent(dataSegment.getInterval(), ignored -> new HashMap<>())
+        .computeIfAbsent(dataSource.getName(), ignored -> new HashMap<>());
+    properties.put("size", MapUtils.getLong(properties, "size", 0L) + dataSegment.getSize());
+    properties.put("count", MapUtils.getInt(properties, "count", 0) + 1);
   }
 }
