@@ -50,9 +50,9 @@ Druid currently has a dependency on [Apache ZooKeeper](http://zookeeper.apache.o
 need to download and run Zookeeper.
 
 ```bash
-curl http://www.gtlib.gatech.edu/pub/apache/zookeeper/zookeeper-3.4.6/zookeeper-3.4.6.tar.gz -o zookeeper-3.4.6.tar.gz
-tar -xzf zookeeper-3.4.6.tar.gz
-cd zookeeper-3.4.6
+curl http://www.gtlib.gatech.edu/pub/apache/zookeeper/zookeeper-3.4.10/zookeeper-3.4.10.tar.gz -o zookeeper-3.4.10.tar.gz
+tar -xzf zookeeper-3.4.10.tar.gz
+cd zookeeper-3.4.10
 cp conf/zoo_sample.cfg conf/zoo.cfg
 ./bin/zkServer.sh start
 ```
