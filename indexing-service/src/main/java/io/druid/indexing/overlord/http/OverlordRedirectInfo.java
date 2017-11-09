@@ -53,7 +53,7 @@ public class OverlordRedirectInfo implements RedirectInfo
   }
 
   @Override
-  public URL getRedirectURL(String scheme, String queryString, String requestURI)
+  public URL getRedirectURL(String queryString, String requestURI)
   {
     try {
       final String leader = taskMaster.getCurrentLeader();
@@ -61,7 +61,7 @@ public class OverlordRedirectInfo implements RedirectInfo
         return null;
       }
 
-      String location = StringUtils.format("%s://%s%s", scheme, leader, requestURI);
+      String location = StringUtils.format("%s%s", leader, requestURI);
 
       if (queryString != null) {
         location = StringUtils.format("%s?%s", location, queryString);

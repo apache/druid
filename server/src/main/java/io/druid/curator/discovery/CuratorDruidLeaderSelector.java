@@ -71,7 +71,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
   private LeaderLatch createNewLeaderLatch()
   {
     final LeaderLatch newLeaderLatch = new LeaderLatch(
-        curator, latchPath, self.getHostAndPortToUse()
+        curator, latchPath, self.getServiceScheme() + "://" + self.getHostAndPortToUse()
     );
 
     newLeaderLatch.addListener(
