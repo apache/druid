@@ -22,12 +22,12 @@ package io.druid.curator.discovery;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.discovery.DruidLeaderSelector;
 import io.druid.guice.annotations.Self;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.server.DruidNode;
 import org.apache.curator.framework.CuratorFramework;
@@ -71,7 +71,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
   private LeaderLatch createNewLeaderLatch()
   {
     final LeaderLatch newLeaderLatch = new LeaderLatch(
-        curator, latchPath, self.getHostAndPortToUse()
+        curator, latchPath, self.getServiceScheme() + "://" + self.getHostAndPortToUse()
     );
 
     newLeaderLatch.addListener(
