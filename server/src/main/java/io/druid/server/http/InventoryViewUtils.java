@@ -19,7 +19,6 @@
 
 package io.druid.server.http;
 
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import io.druid.client.DruidDataSource;
 import io.druid.client.ImmutableDruidDataSource;
@@ -29,22 +28,32 @@ import io.druid.server.security.AuthorizationUtils;
 import io.druid.server.security.AuthorizerMapper;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 public interface InventoryViewUtils
 {
+  static Comparator<ImmutableDruidDataSource> comparingByName()
+  {
+    return Comparator.comparing(ImmutableDruidDataSource::getName);
+  }
 
-  static Set<ImmutableDruidDataSource> getDataSources(InventoryView serverInventoryView)
+  static SortedSet<ImmutableDruidDataSource> getDataSources(InventoryView serverInventoryView)
   {
     return serverInventoryView.getInventory()
                               .stream()
                               .flatMap(server -> server.getDataSources().stream())
                               .map(DruidDataSource::toImmutableDruidDataSource)
-                              .collect(Collectors.toSet());
+                              .collect(
+                                  () -> new TreeSet<>(comparingByName()),
+                                  TreeSet::add,
+                                  TreeSet::addAll
+                              );
   }
 
-  static Set<ImmutableDruidDataSource> getSecuredDataSources(
+  static SortedSet<ImmutableDruidDataSource> getSecuredDataSources(
       HttpServletRequest request,
       InventoryView inventoryView,
       final AuthorizerMapper authorizerMapper
@@ -54,15 +63,16 @@ public interface InventoryViewUtils
       throw new ISE("No authorization mapper found");
     }
 
-    return ImmutableSet.copyOf(
-        AuthorizationUtils.filterAuthorizedResources(
-            request,
-            getDataSources(inventoryView),
-            datasource -> Lists.newArrayList(
-                AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(datasource.getName())
-            ),
-            authorizerMapper
-        )
+    Iterable<ImmutableDruidDataSource> filteredResources = AuthorizationUtils.filterAuthorizedResources(
+        request,
+        getDataSources(inventoryView),
+        datasource -> Lists.newArrayList(
+            AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(datasource.getName())
+        ),
+        authorizerMapper
     );
+    SortedSet<ImmutableDruidDataSource> set = new TreeSet<>(comparingByName());
+    filteredResources.forEach(set::add);
+    return Collections.unmodifiableSortedSet(set);
   }
 }

@@ -68,7 +68,7 @@ public class DatasourcesResourceTest
   {
     request = EasyMock.createStrictMock(HttpServletRequest.class);
     inventoryView = EasyMock.createStrictMock(CoordinatorServerView.class);
-    server = EasyMock.createStrictMock(DruidServer.class);
+    server = EasyMock.niceMock(DruidServer.class);
     dataSegmentList = new ArrayList<>();
     dataSegmentList.add(
         new DataSegment(
@@ -274,7 +274,6 @@ public class DatasourcesResourceTest
     EasyMock.expect(server.getDataSource("datasource2")).andReturn(
         listDataSources.get(1)
     ).atLeastOnce();
-    EasyMock.expect(server.getTier()).andReturn(null).atLeastOnce();
     EasyMock.expect(inventoryView.getInventory()).andReturn(
         ImmutableList.of(server)
     ).atLeastOnce();

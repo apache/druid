@@ -74,9 +74,10 @@ public class ImmutableDruidDataSource
   @Override
   public String toString()
   {
+    // The detail of idToSegments is intentionally ignored because it is usually large
     return "ImmutableDruidDataSource{"
            + "name='" + name
-           + "', segments='" + idToSegments.values()
+           + "', # of segments='" + idToSegments.size()
            + "', properties='" + properties
            + "'}";
   }
