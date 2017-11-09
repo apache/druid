@@ -19,6 +19,7 @@
 
 package io.druid.client;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import io.druid.timeline.DataSegment;
 
@@ -40,7 +41,7 @@ public class ImmutableDruidDataSource
       ImmutableMap<String, DataSegment> idToSegments
   )
   {
-    this.name = name;
+    this.name = Preconditions.checkNotNull(name);
     this.properties = properties;
     this.idToSegments = idToSegments;
   }
@@ -73,7 +74,6 @@ public class ImmutableDruidDataSource
   @Override
   public String toString()
   {
-    // idToSegments is intentionally ignored because it is usually large
     return "ImmutableDruidDataSource{"
            + "name='" + name
            + "', segments='" + idToSegments.values()

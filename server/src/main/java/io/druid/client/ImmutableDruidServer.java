@@ -19,6 +19,7 @@
 
 package io.druid.client;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.StringUtils;
 import io.druid.server.coordination.DruidServerMetadata;
@@ -43,7 +44,7 @@ public class ImmutableDruidServer
       ImmutableMap<String, DataSegment> segments
   )
   {
-    this.metadata = metadata;
+    this.metadata = Preconditions.checkNotNull(metadata);
     this.currSize = currSize;
     this.segments = segments;
     this.dataSources = dataSources;
@@ -139,9 +140,9 @@ public class ImmutableDruidServer
       return false;
     }
 
-    DruidServer that = (DruidServer) o;
+    ImmutableDruidServer that = (ImmutableDruidServer) o;
 
-    if (getName() != null ? !getName().equals(that.getName()) : that.getName() != null) {
+    if (metadata.equals(that.metadata)) {
       return false;
     }
 
@@ -151,6 +152,6 @@ public class ImmutableDruidServer
   @Override
   public int hashCode()
   {
-    return getName() != null ? getName().hashCode() : 0;
+    return metadata.hashCode();
   }
 }

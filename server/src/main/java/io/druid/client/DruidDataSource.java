@@ -20,10 +20,12 @@
 package io.druid.client;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import io.druid.timeline.DataSegment;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -40,7 +42,7 @@ public class DruidDataSource
       Map<String, String> properties
   )
   {
-    this.name = name;
+    this.name = Preconditions.checkNotNull(name);
     this.properties = properties;
     this.idToSegmentMap = new ConcurrentHashMap<>();
   }
@@ -59,7 +61,7 @@ public class DruidDataSource
 
   public Collection<DataSegment> getSegments()
   {
-    return idToSegmentMap.values();
+    return Collections.unmodifiableCollection(idToSegmentMap.values());
   }
 
   public DruidDataSource addSegment(DataSegment dataSegment)
@@ -104,7 +106,7 @@ public class DruidDataSource
   {
     return "DruidDataSource{" +
            "properties=" + properties +
-           ", partitions=" + getSegments().toString() +
+           ", partitions=" + idToSegmentMap.values() +
            '}';
   }
 

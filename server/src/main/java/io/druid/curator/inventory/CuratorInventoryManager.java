@@ -165,7 +165,8 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
 
   public Collection<ContainerClass> getInventory()
   {
-    return containers.values().stream()
+    return containers.values()
+                     .stream()
                      .map(ContainerHolder::getContainer)
                      .collect(Collectors.toList());
   }

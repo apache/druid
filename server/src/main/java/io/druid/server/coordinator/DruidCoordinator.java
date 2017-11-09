@@ -454,7 +454,8 @@ public class DruidCoordinator
 
   private List<DataSegment> getAvailableDataSegments()
   {
-    return metadataSegmentManager.getInventory().stream()
+    return metadataSegmentManager.getInventory()
+                                 .stream()
                                  .flatMap(source -> source.getSegments().stream())
                                  .collect(Collectors.toList());
   }

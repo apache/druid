@@ -493,6 +493,7 @@ public class DatasourcesResource
     return Response.ok(retVal).build();
   }
 
+  @Nullable
   private ImmutableDruidDataSource getDataSource(final String dataSourceName)
   {
     List<ImmutableDruidDataSource> dataSources = serverInventoryView
@@ -515,10 +516,11 @@ public class DatasourcesResource
       }
     }
 
-    return new DruidDataSource(
+    return new ImmutableDruidDataSource(
         dataSourceName,
-        ImmutableMap.of()
-    ).addSegments(segmentMap).toImmutableDruidDataSource();
+        ImmutableMap.of(),
+        ImmutableMap.copyOf(segmentMap)
+    );
   }
 
   private Pair<DataSegment, Set<String>> getSegment(String segmentId)

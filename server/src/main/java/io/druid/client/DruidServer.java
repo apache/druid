@@ -271,7 +271,7 @@ public class DruidServer implements Comparable
 
     DruidServer that = (DruidServer) o;
 
-    if (getName() != null ? !getName().equals(that.getName()) : that.getName() != null) {
+    if (!metadata.equals(that.metadata)) {
       return false;
     }
 
@@ -281,7 +281,7 @@ public class DruidServer implements Comparable
   @Override
   public int hashCode()
   {
-    return getName() != null ? getName().hashCode() : 0;
+    return metadata.hashCode();
   }
 
   @Override
