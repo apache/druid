@@ -556,13 +556,14 @@ public class LookupReferencesManagerTest
     expect(config.getLookupTier()).andReturn(LOOKUP_TIER);
     replay(config);
     expect(druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/lookups/lookupTier?detailed=true"))
-        .andReturn(request);
+        .andReturn(request)
+        .anyTimes();
     FullResponseHolder responseHolder = new FullResponseHolder(
         HttpResponseStatus.NOT_FOUND,
         EasyMock.createNiceMock(HttpResponse.class),
         new StringBuilder().append(strResult)
     );
-    expect(druidLeaderClient.go(request)).andThrow(new IllegalStateException());
+    expect(druidLeaderClient.go(request)).andThrow(new IllegalStateException()).anyTimes();
     replay(druidLeaderClient);
 
     lookupReferencesManager.start();
@@ -579,8 +580,9 @@ public class LookupReferencesManagerTest
     expect(config.getLookupTier()).andReturn(LOOKUP_TIER);
     replay(config);
     expect(druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/lookups/lookupTier?detailed=true"))
-        .andReturn(request);
-    expect(druidLeaderClient.go(request)).andThrow(new IllegalStateException());
+        .andReturn(request)
+        .anyTimes();
+    expect(druidLeaderClient.go(request)).andThrow(new IllegalStateException()).anyTimes();
     replay(druidLeaderClient);
     lookupReferencesManager.start();
     Assert.assertEquals(container, lookupReferencesManager.get("testMockForLoadLookupOnCoordinatorFailure"));
