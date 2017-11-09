@@ -29,9 +29,8 @@ import io.druid.server.security.AuthorizationUtils;
 import io.druid.server.security.AuthorizerMapper;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.Comparator;
 import java.util.Set;
-import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 public interface InventoryViewUtils
 {
@@ -42,11 +41,7 @@ public interface InventoryViewUtils
                               .stream()
                               .flatMap(server -> server.getDataSources().stream())
                               .map(DruidDataSource::toImmutableDruidDataSource)
-                              .collect(
-                                  () -> new TreeSet<>(Comparator.comparing(ImmutableDruidDataSource::getName)),
-                                  TreeSet::add,
-                                  TreeSet::addAll
-                              );
+                              .collect(Collectors.toSet());
   }
 
   static Set<ImmutableDruidDataSource> getSecuredDataSources(
