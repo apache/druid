@@ -36,8 +36,8 @@ import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.TestHelper;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.indexing.ExpressionTransform;
-import io.druid.segment.indexing.TransformSpec;
+import io.druid.segment.transform.ExpressionTransform;
+import io.druid.segment.transform.TransformSpec;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.NullWritable;
@@ -197,7 +197,6 @@ public class HadoopDruidIndexerMapperTest
     @Override
     protected void innerMap(
         final InputRow inputRow,
-        final Object value,
         final Context context,
         final boolean reportParseExceptions
     ) throws IOException, InterruptedException

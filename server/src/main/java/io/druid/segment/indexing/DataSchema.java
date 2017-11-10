@@ -34,6 +34,7 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
+import io.druid.segment.transform.TransformSpec;
 
 import java.util.Arrays;
 import java.util.HashSet;

@@ -27,11 +27,9 @@ import com.google.inject.Provides;
 import com.google.inject.name.Named;
 import com.metamx.emitter.core.Emitter;
 import com.metamx.emitter.core.ParametrizedUriEmitter;
-import com.metamx.http.client.HttpClientConfig;
-import com.metamx.http.client.HttpClientInit;
+import com.metamx.emitter.core.ParametrizedUriEmitterConfig;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.ManageLifecycle;
-import io.druid.guice.http.LifecycleUtils;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 
 import javax.annotation.Nullable;
@@ -56,16 +54,11 @@ public class ParametrizedUriEmitterModule implements Module
       ObjectMapper jsonMapper
   )
   {
-    final HttpClientConfig.Builder builder = HttpClientConfig
-        .builder()
-        .withNumConnections(1)
-        .withReadTimeout(config.get().getReadTimeout().toStandardDuration());
-    if (sslContext != null) {
-      builder.withSslContext(sslContext);
-    }
     return new ParametrizedUriEmitter(
         config.get(),
-        HttpClientInit.createClient(builder.build(), LifecycleUtils.asMmxLifecycle(lifecycle)),
+        lifecycle.addCloseableInstance(
+            HttpEmitterModule.createAsyncHttpClient("ParmetrizedUriEmitter-AsyncHttpClient-%d", sslContext)
+        ),
         jsonMapper
     );
   }

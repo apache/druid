@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.segment.indexing;
+package io.druid.segment.transform;
 
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
@@ -26,6 +26,7 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.groupby.RowBasedColumnSelectorFactory;
 import io.druid.segment.column.Column;
+import io.druid.segment.column.ValueType;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -43,7 +44,7 @@ public class Transformer
   private final ThreadLocal<Row> rowSupplierForValueMatcher = new ThreadLocal<>();
   private final ValueMatcher valueMatcher;
 
-  Transformer(final TransformSpec transformSpec)
+  Transformer(final TransformSpec transformSpec, final Map<String, ValueType> rowSignature)
   {
     for (final Transform transform : transformSpec.getTransforms()) {
       transforms.put(transform.getName(), transform.getRowFunction());
@@ -54,7 +55,7 @@ public class Transformer
                                   .makeMatcher(
                                       RowBasedColumnSelectorFactory.create(
                                           rowSupplierForValueMatcher,
-                                          null
+                                          rowSignature
                                       )
                                   );
     } else {

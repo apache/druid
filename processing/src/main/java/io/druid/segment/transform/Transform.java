@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.segment.indexing;
+package io.druid.segment.transform;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;

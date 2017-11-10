@@ -19,6 +19,7 @@
 
 package io.druid.math.expr;
 
+import io.druid.annotations.UsedInGeneratedCode;
 import io.druid.java.util.common.RE;
 import io.druid.math.expr.antlr.ExprBaseListener;
 import io.druid.math.expr.antlr.ExprParser;
@@ -284,6 +285,7 @@ public class ExprListenerImpl extends ExprBaseListener
     );
   }
 
+  @UsedInGeneratedCode
   @Override
   public void exitFunctionExpr(ExprParser.FunctionExprContext ctx)
   {

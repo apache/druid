@@ -92,7 +92,6 @@ public class FilteredAggregatorTest
       public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
       {
         final String dimensionName = dimensionSpec.getDimension();
-        final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
 
         if (dimensionName.equals("dim")) {
           return dimensionSpec.decorate(

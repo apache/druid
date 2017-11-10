@@ -724,7 +724,7 @@ public class ExpressionsTest
         ),
         DruidExpression.of(
             null,
-            "timestamp_parse(\"tstr\",'yyyy-MM-dd HH:mm:ss','UTC')"
+            "timestamp_parse(\"tstr\",'','UTC')"
         ),
         DateTimes.of("2000-02-03T04:05:06Z").getMillis()
     );
@@ -784,7 +784,7 @@ public class ExpressionsTest
             inputRef("dstr")
         ),
         DruidExpression.fromExpression(
-            "timestamp_floor(timestamp_parse(\"dstr\",'yyyy-MM-dd','UTC'),'P1D','','UTC')"
+            "timestamp_floor(timestamp_parse(\"dstr\",'','UTC'),'P1D','','UTC')"
         ),
         DateTimes.of("2000-02-03").getMillis()
     );

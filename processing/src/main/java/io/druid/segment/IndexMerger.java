@@ -37,7 +37,6 @@ import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
@@ -206,15 +205,6 @@ public interface IndexMerger
       IndexSpec indexSpec
   ) throws IOException;
 
-  File merge(
-      List<IndexableAdapter> indexes,
-      boolean rollup,
-      AggregatorFactory[] metricAggs,
-      File outDir,
-      IndexSpec indexSpec,
-      ProgressIndicator progress
-  ) throws IOException;
-
   // Faster than IndexMaker
   File convert(File inDir, File outDir, IndexSpec indexSpec) throws IOException;
 
@@ -223,14 +213,6 @@ public interface IndexMerger
 
   File append(List<IndexableAdapter> indexes, AggregatorFactory[] aggregators, File outDir, IndexSpec indexSpec)
       throws IOException;
-
-  File append(
-      List<IndexableAdapter> indexes,
-      AggregatorFactory[] aggregators,
-      File outDir,
-      IndexSpec indexSpec,
-      ProgressIndicator progress
-  ) throws IOException;
 
   interface IndexSeeker
   {
@@ -301,7 +283,6 @@ public interface IndexMerger
     private final Iterable<Rowboat> index;
     private final List<String> convertedDims;
     private final int indexNumber;
-    private final List<ColumnCapabilitiesImpl> dimCapabilities;
     private final List<DimensionMerger> mergers;
 
 
@@ -309,20 +290,13 @@ public interface IndexMerger
         Iterable<Rowboat> index,
         List<String> convertedDims,
         int indexNumber,
-        final List<ColumnCapabilitiesImpl> dimCapabilities,
         final List<DimensionMerger> mergers
     )
     {
       this.index = index;
       this.convertedDims = convertedDims;
       this.indexNumber = indexNumber;
-      this.dimCapabilities = dimCapabilities;
       this.mergers = mergers;
-    }
-
-    public Iterable<Rowboat> getIndex()
-    {
-      return index;
     }
 
     @Override

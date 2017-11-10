@@ -27,14 +27,18 @@ import com.google.inject.Provides;
 import com.google.inject.name.Named;
 import com.google.inject.util.Providers;
 import com.metamx.emitter.core.Emitter;
+import com.metamx.emitter.core.HttpEmitterConfig;
 import com.metamx.emitter.core.HttpPostEmitter;
-import com.metamx.http.client.HttpClientConfig;
-import com.metamx.http.client.HttpClientInit;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;
-import io.druid.guice.http.LifecycleUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.Lifecycle;
+import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.JdkSslContext;
+import org.asynchttpclient.AsyncHttpClient;
+import org.asynchttpclient.DefaultAsyncHttpClient;
+import org.asynchttpclient.DefaultAsyncHttpClientConfig;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLContext;
@@ -65,6 +69,19 @@ public class HttpEmitterModule implements Module
     binder.bind(SSLContext.class).toProvider(Providers.of(context)).in(LazySingleton.class);
   }
 
+  static AsyncHttpClient createAsyncHttpClient(
+      String nameFormat,
+      @Nullable SSLContext sslContext
+  )
+  {
+    final DefaultAsyncHttpClientConfig.Builder builder = new DefaultAsyncHttpClientConfig.Builder()
+        .setThreadFactory(Execs.makeThreadFactory(nameFormat));
+    if (sslContext != null) {
+      builder.setSslContext(new JdkSslContext(sslContext, true, ClientAuth.NONE));
+    }
+    return new DefaultAsyncHttpClient(builder.build());
+  }
+
   @Provides
   @ManageLifecycle
   @Named("http")
@@ -75,14 +92,12 @@ public class HttpEmitterModule implements Module
       ObjectMapper jsonMapper
   )
   {
-    final HttpClientConfig.Builder builder = HttpClientConfig
-        .builder()
-        .withNumConnections(1)
-        .withReadTimeout(config.get().getReadTimeout().toStandardDuration());
-
-    if (sslContext != null) {
-      builder.withSslContext(sslContext);
-    }
-    return new HttpPostEmitter(config.get(), HttpClientInit.createClient(builder.build(), LifecycleUtils.asMmxLifecycle(lifecycle)), jsonMapper);
+    return new HttpPostEmitter(
+        config.get(),
+        lifecycle.addCloseableInstance(
+            createAsyncHttpClient("HttpPostEmitter-AsyncHttpClient-%d", sslContext)
+        ),
+        jsonMapper
+    );
   }
 }

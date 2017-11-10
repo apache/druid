@@ -100,7 +100,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
   // Used to discover ValueType based on the class of values in a row
   // Also used to convert between the duplicate ValueType enums in DimensionSchema (druid-api) and main druid.
-  private static final Map<Object, ValueType> TYPE_MAP = ImmutableMap.<Object, ValueType>builder()
+  public static final Map<Object, ValueType> TYPE_MAP = ImmutableMap.<Object, ValueType>builder()
       .put(Long.class, ValueType.LONG)
       .put(Double.class, ValueType.DOUBLE)
       .put(Float.class, ValueType.FLOAT)
@@ -475,23 +475,6 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     return row;
   }
 
-  private ValueType getTypeFromDimVal(Object dimVal)
-  {
-    Object singleVal;
-    if (dimVal instanceof List) {
-      List dimValList = (List) dimVal;
-      singleVal = dimValList.size() == 0 ? null : dimValList.get(0);
-    } else {
-      singleVal = dimVal;
-    }
-
-    if (singleVal == null) {
-      return null;
-    }
-
-    return TYPE_MAP.get(singleVal.getClass());
-  }
-
   public Map<String, ColumnCapabilitiesImpl> getColumnCapabilities()
   {
     return columnCapabilities;
@@ -770,18 +753,6 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   public List<String> getMetricNames()
   {
     return ImmutableList.copyOf(metricDescs.keySet());
-  }
-
-  public List<MetricDesc> getMetrics()
-  {
-    return ImmutableList.copyOf(metricDescs.values());
-  }
-
-  @Nullable
-  public Integer getMetricIndex(String metricName)
-  {
-    MetricDesc metSpec = metricDescs.get(metricName);
-    return metSpec == null ? null : metSpec.getIndex();
   }
 
   public ColumnCapabilities getCapabilities(String column)
@@ -1407,7 +1378,6 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
   private class ObjectMetricColumnSelector implements ObjectColumnSelector
   {
-    private final MetricDesc metricDesc;
     private final TimeAndDimsHolder currEntry;
     private final int metricIndex;
     private Class classOfObject;
@@ -1418,7 +1388,6 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         int metricIndex
     )
     {
-      this.metricDesc = metricDesc;
       this.currEntry = currEntry;
       this.metricIndex = metricIndex;
       classOfObject = ComplexMetrics.getSerdeForType(metricDesc.getType()).getObjectStrategy().getClazz();

@@ -61,6 +61,7 @@ public class DelimitedParseSpecTest
   @Test(expected = IllegalArgumentException.class)
   public void testColumnMissing() throws Exception
   {
+    @SuppressWarnings("unused") // expected exception
     final ParseSpec spec = new DelimitedParseSpec(
         new TimestampSpec(
             "timestamp",
@@ -83,6 +84,7 @@ public class DelimitedParseSpecTest
   @Test(expected = IllegalArgumentException.class)
   public void testComma() throws Exception
   {
+    @SuppressWarnings("unused") // expected exception
     final ParseSpec spec = new DelimitedParseSpec(
         new TimestampSpec(
             "timestamp",
@@ -105,6 +107,7 @@ public class DelimitedParseSpecTest
   @Test(expected = IllegalArgumentException.class)
   public void testDefaultColumnList()
   {
+    @SuppressWarnings("unused") // expected exception
     final DelimitedParseSpec spec = new DelimitedParseSpec(
         new TimestampSpec(
             "timestamp",

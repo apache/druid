@@ -96,9 +96,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   {
     return new ApproximateHistogramBufferAggregator(
         metricFactory.makeColumnValueSelector(fieldName),
-        resolution,
-        lowerLimit,
-        upperLimit
+        resolution
     );
   }
 

@@ -126,7 +126,7 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
     }
 
     Assert.assertTrue(leaderSelector2.isLeader());
-    Assert.assertEquals("h2:8080", leaderSelector1.getCurrentLeader());
+    Assert.assertEquals("http://h2:8080", leaderSelector1.getCurrentLeader());
     Assert.assertEquals(2, leaderSelector2.localTerm());
 
     CuratorDruidLeaderSelector leaderSelector3 = new CuratorDruidLeaderSelector(
@@ -159,7 +159,7 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
     }
 
     Assert.assertTrue(leaderSelector3.isLeader());
-    Assert.assertEquals("h3:8080", leaderSelector1.getCurrentLeader());
+    Assert.assertEquals("http://h3:8080", leaderSelector1.getCurrentLeader());
     Assert.assertEquals(1, leaderSelector3.localTerm());
   }
 

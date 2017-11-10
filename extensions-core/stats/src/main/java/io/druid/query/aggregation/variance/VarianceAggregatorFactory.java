@@ -121,11 +121,11 @@ public class VarianceAggregatorFactory extends AggregatorFactory
       return NoopBufferAggregator.instance();
     }
     if ("float".equalsIgnoreCase(inputType)) {
-      return new VarianceBufferAggregator.FloatVarianceAggregator(name, selector);
+      return new VarianceBufferAggregator.FloatVarianceAggregator(selector);
     } else if ("long".equalsIgnoreCase(inputType)) {
-      return new VarianceBufferAggregator.LongVarianceAggregator(name, selector);
+      return new VarianceBufferAggregator.LongVarianceAggregator(selector);
     } else if ("variance".equalsIgnoreCase(inputType)) {
-      return new VarianceBufferAggregator.ObjectVarianceAggregator(name, selector);
+      return new VarianceBufferAggregator.ObjectVarianceAggregator(selector);
     }
     throw new IAE(
         "Incompatible type for metric[%s], expected a float, long or variance, got a %s", fieldName, inputType
@@ -190,7 +190,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
   {
-    if (Objects.equals(getName(), other.getName()) && this.getClass() == other.getClass()) {
+    if (Objects.equals(getName(), other.getName()) && other instanceof VarianceAggregatorFactory) {
       return getCombiningFactory();
     } else {
       throw new AggregatorFactoryNotMergeableException(this, other);

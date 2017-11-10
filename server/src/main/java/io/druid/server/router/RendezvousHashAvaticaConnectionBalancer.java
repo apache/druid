@@ -17,36 +17,31 @@
  * under the License.
  */
 
-package io.druid.common.guava;
+package io.druid.server.router;
 
-import com.google.common.io.OutputSupplier;
+import io.druid.client.selector.Server;
+import io.druid.java.util.common.StringUtils;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
-/**
-*/
-public class FileOutputSupplier implements OutputSupplier<OutputStream>
+public class RendezvousHashAvaticaConnectionBalancer implements AvaticaConnectionBalancer
 {
-  private final File file;
-  private final boolean append;
-
-  public FileOutputSupplier(File file, boolean append)
-  {
-    this.file = file;
-    this.append = append;
-  }
+  private final RendezvousHasher hasher = new RendezvousHasher();
 
   @Override
-  public OutputStream getOutput() throws IOException
+  public Server pickServer(Collection<Server> servers, String connectionId)
   {
-    return new FileOutputStream(file, append);
-  }
+    if (servers.isEmpty()) {
+      return null;
+    }
 
-  public File getFile()
-  {
-    return file;
+    Map<String, Server> serverMap = new HashMap<>();
+    for (Server server : servers) {
+      serverMap.put(server.getHost(), server);
+    }
+    String chosenServerId = hasher.chooseNode(serverMap.keySet(), StringUtils.toUtf8(connectionId));
+    return serverMap.get(chosenServerId);
   }
 }

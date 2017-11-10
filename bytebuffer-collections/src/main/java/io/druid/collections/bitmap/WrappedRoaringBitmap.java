@@ -86,12 +86,6 @@ public class WrappedRoaringBitmap implements MutableBitmap
   }
 
   @Override
-  public int compareTo(ImmutableBitmap other)
-  {
-    return 0;
-  }
-
-  @Override
   public void clear()
   {
     this.bitmap.clear();
@@ -105,31 +99,6 @@ public class WrappedRoaringBitmap implements MutableBitmap
     bitmap.or(unwrappedOtherBitmap);
   }
 
-  @Override
-  public void and(MutableBitmap mutableBitmap)
-  {
-    WrappedRoaringBitmap other = (WrappedRoaringBitmap) mutableBitmap;
-    MutableRoaringBitmap unwrappedOtherBitmap = other.bitmap;
-    bitmap.and(unwrappedOtherBitmap);
-  }
-
-
-  @Override
-  public void andNot(MutableBitmap mutableBitmap)
-  {
-    WrappedRoaringBitmap other = (WrappedRoaringBitmap) mutableBitmap;
-    MutableRoaringBitmap unwrappedOtherBitmap = other.bitmap;
-    bitmap.andNot(unwrappedOtherBitmap);
-  }
-
-
-  @Override
-  public void xor(MutableBitmap mutableBitmap)
-  {
-    WrappedRoaringBitmap other = (WrappedRoaringBitmap) mutableBitmap;
-    MutableRoaringBitmap unwrappedOtherBitmap = other.bitmap;
-    bitmap.xor(unwrappedOtherBitmap);
-  }
 
   @Override
   public int getSizeInBytes()
@@ -152,7 +121,6 @@ public class WrappedRoaringBitmap implements MutableBitmap
     return bitmap.getCardinality();
   }
 
-  @Override
   public void serialize(ByteBuffer buffer)
   {
     if (compressRunOnSerialization) {
@@ -234,27 +202,11 @@ public class WrappedRoaringBitmap implements MutableBitmap
   }
 
   @Override
-  public ImmutableBitmap union(ImmutableBitmap otherBitmap)
-  {
-    WrappedRoaringBitmap other = (WrappedRoaringBitmap) otherBitmap;
-    MutableRoaringBitmap unwrappedOtherBitmap = other.bitmap;
-    return new WrappedImmutableRoaringBitmap(MutableRoaringBitmap.or(bitmap, unwrappedOtherBitmap));
-  }
-
-  @Override
   public ImmutableBitmap intersection(ImmutableBitmap otherBitmap)
   {
     WrappedRoaringBitmap other = (WrappedRoaringBitmap) otherBitmap;
     MutableRoaringBitmap unwrappedOtherBitmap = other.bitmap;
     return new WrappedImmutableRoaringBitmap(MutableRoaringBitmap.and(bitmap, unwrappedOtherBitmap));
-  }
-
-  @Override
-  public ImmutableBitmap difference(ImmutableBitmap otherBitmap)
-  {
-    WrappedRoaringBitmap other = (WrappedRoaringBitmap) otherBitmap;
-    MutableRoaringBitmap unwrappedOtherBitmap = other.bitmap;
-    return new WrappedImmutableRoaringBitmap(MutableRoaringBitmap.andNot(bitmap, unwrappedOtherBitmap));
   }
 
   @Override

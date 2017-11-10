@@ -29,7 +29,6 @@ import io.druid.java.util.common.UOE;
 import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.first.FloatFirstAggregatorFactory;
@@ -68,7 +67,6 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     return new FloatLastAggregator(
-        name,
         metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
         metricFactory.makeColumnValueSelector(fieldName)
     );
@@ -110,7 +108,7 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
       public Aggregator factorize(ColumnSelectorFactory metricFactory)
       {
         final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
-        return new FloatLastAggregator(name, null, null)
+        return new FloatLastAggregator(null, null)
         {
           @Override
           public void aggregate()
@@ -149,16 +147,6 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
         };
       }
     };
-  }
-
-  @Override
-  public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
-  {
-    if (other.getName().equals(this.getName()) && this.getClass() == other.getClass()) {
-      return getCombiningFactory();
-    } else {
-      throw new AggregatorFactoryNotMergeableException(this, other);
-    }
   }
 
   @Override

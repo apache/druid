@@ -47,7 +47,7 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexStorageAdapter;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.indexing.TransformSpec;
+import io.druid.segment.transform.TransformSpec;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.loading.LocalDataSegmentPuller;
 import io.druid.segment.realtime.firehose.IngestSegmentFirehose;

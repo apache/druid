@@ -70,8 +70,7 @@ public class TopNUnionQueryTest
                         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
                     ),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
-                ),
-                QueryRunnerTestHelper.unionDataSource
+                )
             ),
             QueryRunnerTestHelper.makeUnionQueryRunners(
                 new TopNQueryRunnerFactory(
@@ -84,8 +83,7 @@ public class TopNUnionQueryTest
                         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
                     ),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
-                ),
-                QueryRunnerTestHelper.unionDataSource
+                )
             )
         )
     );

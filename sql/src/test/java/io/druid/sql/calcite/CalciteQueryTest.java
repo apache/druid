@@ -47,7 +47,6 @@ import io.druid.query.aggregation.FloatMinAggregatorFactory;
 import io.druid.query.aggregation.LongMaxAggregatorFactory;
 import io.druid.query.aggregation.LongMinAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
@@ -105,6 +104,7 @@ import io.druid.sql.calcite.util.QueryLogHook;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import io.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.calcite.plan.RelOptPlanner;
+import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -116,6 +116,8 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.util.ArrayList;
@@ -220,6 +222,9 @@ public class CalciteQueryTest
   private static final PagingSpec FIRST_PAGING_SPEC = new PagingSpec(null, 1000, true);
 
   @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
+  @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Rule
@@ -302,19 +307,17 @@ public class CalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .postAggregators(
-                      ImmutableList.<PostAggregator>builder()
-                          .add(EXPRESSION_POST_AGG("p0", "'foo'"))
-                          .add(EXPRESSION_POST_AGG("p1", "'xfoo'"))
-                          .add(EXPRESSION_POST_AGG("p2", "'foo'"))
-                          .add(EXPRESSION_POST_AGG("p3", "' foo'"))
-                          .add(EXPRESSION_POST_AGG("p4", "'foo'"))
-                          .add(EXPRESSION_POST_AGG("p5", "'foo'"))
-                          .add(EXPRESSION_POST_AGG("p6", "'foo'"))
-                          .add(EXPRESSION_POST_AGG("p7", "'foo '"))
-                          .add(EXPRESSION_POST_AGG("p8", "'foox'"))
-                          .add(EXPRESSION_POST_AGG("p9", "' foo'"))
-                          .add(EXPRESSION_POST_AGG("p10", "'xfoo'"))
-                          .build()
+                      EXPRESSION_POST_AGG("p0", "'foo'"),
+                      EXPRESSION_POST_AGG("p1", "'xfoo'"),
+                      EXPRESSION_POST_AGG("p2", "'foo'"),
+                      EXPRESSION_POST_AGG("p3", "' foo'"),
+                      EXPRESSION_POST_AGG("p4", "'foo'"),
+                      EXPRESSION_POST_AGG("p5", "'foo'"),
+                      EXPRESSION_POST_AGG("p6", "'foo'"),
+                      EXPRESSION_POST_AGG("p7", "'foo '"),
+                      EXPRESSION_POST_AGG("p8", "'foox'"),
+                      EXPRESSION_POST_AGG("p9", "' foo'"),
+                      EXPRESSION_POST_AGG("p10", "'xfoo'")
                   )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
@@ -1058,7 +1061,7 @@ public class CalciteQueryTest
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(AGGS(new DoubleSumAggregatorFactory("a0", "m1")))
-                        .setHavingSpec(new DimFilterHavingSpec(NUMERIC_SELECTOR("a0", "21", null)))
+                        .setHavingSpec(HAVING(NUMERIC_SELECTOR("a0", "21", null)))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
@@ -1081,7 +1084,7 @@ public class CalciteQueryTest
                         .setDimensions(DIMS(new DefaultDimensionSpec("dim1", "d0")))
                         .setAggregatorSpecs(AGGS(new DoubleSumAggregatorFactory("a0", "m1")))
                         .setHavingSpec(
-                            new DimFilterHavingSpec(
+                            HAVING(
                                 new BoundDimFilter(
                                     "a0",
                                     "1",
@@ -1108,6 +1111,105 @@ public class CalciteQueryTest
   }
 
   @Test
+  public void testHavingOnApproximateCountDistinct() throws Exception
+  {
+    testQuery(
+        "SELECT dim2, COUNT(DISTINCT m1) FROM druid.foo GROUP BY dim2 HAVING COUNT(DISTINCT m1) > 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(DIMS(new DefaultDimensionSpec("dim2", "d0")))
+                        .setAggregatorSpecs(
+                            AGGS(
+                                new CardinalityAggregatorFactory(
+                                    "a0",
+                                    null,
+                                    ImmutableList.of(
+                                        new DefaultDimensionSpec("m1", "m1", ValueType.FLOAT)
+                                    ),
+                                    false,
+                                    true
+                                )
+                            )
+                        )
+                        .setHavingSpec(
+                            HAVING(
+                                BOUND(
+                                    "a0",
+                                    "1",
+                                    null,
+                                    true,
+                                    false,
+                                    null,
+                                    StringComparators.NUMERIC
+                                )
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", 3L},
+            new Object[]{"a", 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testHavingOnExactCountDistinct() throws Exception
+  {
+    testQuery(
+        PLANNER_CONFIG_NO_HLL,
+        "SELECT dim2, COUNT(DISTINCT m1) FROM druid.foo GROUP BY dim2 HAVING COUNT(DISTINCT m1) > 1",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(CalciteTests.DATASOURCE1)
+                                            .setInterval(QSS(Filtration.eternity()))
+                                            .setGranularity(Granularities.ALL)
+                                            .setDimensions(
+                                                DIMS(
+                                                    new DefaultDimensionSpec("dim2", "d0", ValueType.STRING),
+                                                    new DefaultDimensionSpec("m1", "d1", ValueType.FLOAT)
+                                                )
+                                            )
+                                            .setContext(QUERY_CONTEXT_DEFAULT)
+                                            .build()
+                            )
+                        )
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(DIMS(new DefaultDimensionSpec("d0", "_d0", ValueType.STRING)))
+                        .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
+                        .setHavingSpec(
+                            HAVING(
+                                BOUND(
+                                    "a0",
+                                    "1",
+                                    null,
+                                    true,
+                                    false,
+                                    null,
+                                    StringComparators.NUMERIC
+                                )
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", 3L},
+            new Object[]{"a", 2L}
+        )
+    );
+  }
+
+  @Test
   public void testHavingOnFloatSum() throws Exception
   {
     testQuery(
@@ -1122,7 +1224,7 @@ public class CalciteQueryTest
                         .setDimensions(DIMS(new DefaultDimensionSpec("dim1", "d0")))
                         .setAggregatorSpecs(AGGS(new DoubleSumAggregatorFactory("a0", "m1")))
                         .setHavingSpec(
-                            new DimFilterHavingSpec(
+                            HAVING(
                                 new BoundDimFilter(
                                     "a0",
                                     "1",
@@ -1202,7 +1304,7 @@ public class CalciteQueryTest
                         .setPostAggregatorSpecs(ImmutableList.of(
                             EXPRESSION_POST_AGG("p0", "(\"a0\" / \"a1\")")
                         ))
-                        .setHavingSpec(new DimFilterHavingSpec(EXPRESSION_FILTER("((\"a0\" / \"a1\") == 1)")))
+                        .setHavingSpec(HAVING(EXPRESSION_FILTER("((\"a0\" / \"a1\") == 1)")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
@@ -2062,17 +2164,15 @@ public class CalciteQueryTest
                       )
                   )
                   .postAggregators(
-                      ImmutableList.of(
-                          new ArithmeticPostAggregator(
-                              "a2",
-                              "quotient",
-                              ImmutableList.of(
-                                  new FieldAccessPostAggregator(null, "a2:sum"),
-                                  new FieldAccessPostAggregator(null, "a2:count")
-                              )
-                          ),
-                          EXPRESSION_POST_AGG("p0", "((\"a3\" + \"a4\") + \"a5\")")
-                      )
+                      new ArithmeticPostAggregator(
+                          "a2",
+                          "quotient",
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator(null, "a2:sum"),
+                              new FieldAccessPostAggregator(null, "a2:count")
+                          )
+                      ),
+                      EXPRESSION_POST_AGG("p0", "((\"a3\" + \"a4\") + \"a5\")")
                   )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
@@ -2372,10 +2472,10 @@ public class CalciteQueryTest
                       new LongSumAggregatorFactory("a3", null, "strlen(CAST((\"cnt\" * 10), 'STRING'))", macroTable),
                       new DoubleMaxAggregatorFactory("a4", null, "(strlen(\"dim2\") + log(\"m1\"))", macroTable)
                   ))
-                  .postAggregators(ImmutableList.of(
+                  .postAggregators(
                       EXPRESSION_POST_AGG("p0", "log((\"a1\" + \"a2\"))"),
                       EXPRESSION_POST_AGG("p1", "(\"a1\" % 4)")
-                  ))
+                  )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -2714,15 +2814,23 @@ public class CalciteQueryTest
   @Test
   public void testCountStarWithTimeFilterUsingStringLiterals() throws Exception
   {
-    // Strings are implicitly cast to timestamps.
+    // Strings are implicitly cast to timestamps. Test a few different forms.
 
     testQuery(
-        "SELECT COUNT(*) FROM druid.foo "
-        + "WHERE __time >= '2000-01-01 00:00:00' AND __time < '2001-01-01 00:00:00'",
+        "SELECT COUNT(*) FROM druid.foo\n"
+        + "WHERE __time >= '2000-01-01 00:00:00' AND __time < '2001-01-01T00:00:00'\n"
+        + "OR __time >= '2001-02-01' AND __time < '2001-02-02'\n"
+        + "OR __time BETWEEN '2001-03-01' AND '2001-03-02'",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Intervals.of("2000-01-01/2001-01-01")))
+                  .intervals(
+                      QSS(
+                          Intervals.of("2000-01-01/2001-01-01"),
+                          Intervals.of("2001-02-01/2001-02-02"),
+                          Intervals.of("2001-03-01/2001-03-02T00:00:00.001")
+                      )
+                  )
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
@@ -2731,6 +2839,26 @@ public class CalciteQueryTest
         ImmutableList.of(
             new Object[]{3L}
         )
+    );
+  }
+
+  @Test
+  public void testCountStarWithTimeFilterUsingStringLiteralsInvalid() throws Exception
+  {
+    // Strings are implicitly cast to timestamps. Test an invalid string.
+
+    // This error message isn't ideal but it is at least better than silently ignoring the problem.
+    expectedException.expect(RuntimeException.class);
+    expectedException.expectMessage("Error while applying rule ReduceExpressionsRule");
+    expectedException.expectCause(
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Illegal TIMESTAMP constant"))
+    );
+
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo\n"
+        + "WHERE __time >= 'z2000-01-01 00:00:00' AND __time < '2001-01-01 00:00:00'\n",
+        ImmutableList.of(),
+        ImmutableList.of()
     );
   }
 
@@ -4197,12 +4325,12 @@ public class CalciteQueryTest
                           )
                       )
                   )
-                  .postAggregators(ImmutableList.of(
+                  .postAggregators(
                       EXPRESSION_POST_AGG("p0", "CAST(\"a1\", 'DOUBLE')"),
                       EXPRESSION_POST_AGG("p1", "(\"a0\" / \"a1\")"),
                       EXPRESSION_POST_AGG("p2", "((\"a0\" / \"a1\") + 3)"),
                       EXPRESSION_POST_AGG("p3", "((CAST(\"a0\", 'DOUBLE') / CAST(\"a1\", 'DOUBLE')) + 3)")
-                  ))
+                  )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -4437,7 +4565,7 @@ public class CalciteQueryTest
                                 4
                             )
                         )
-                        .setHavingSpec(new DimFilterHavingSpec(NUMERIC_SELECTOR("a0", "1", null)))
+                        .setHavingSpec(HAVING(NUMERIC_SELECTOR("a0", "1", null)))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
@@ -5847,7 +5975,7 @@ public class CalciteQueryTest
                             new DefaultDimensionSpec("dim2", "d1")
                         ))
                         .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
-                        .setHavingSpec(new DimFilterHavingSpec(NUMERIC_SELECTOR("a0", "1", null)))
+                        .setHavingSpec(HAVING(NUMERIC_SELECTOR("a0", "1", null)))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build(),
             newScanQueryBuilder()
@@ -6221,6 +6349,11 @@ public class CalciteQueryTest
   private static List<AggregatorFactory> AGGS(final AggregatorFactory... aggregators)
   {
     return Arrays.asList(aggregators);
+  }
+
+  private static DimFilterHavingSpec HAVING(final DimFilter filter)
+  {
+    return new DimFilterHavingSpec(filter, true);
   }
 
   private static ExpressionVirtualColumn EXPRESSION_VIRTUAL_COLUMN(

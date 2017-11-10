@@ -113,7 +113,7 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory
         @Override
         public long getLong()
         {
-          return timeAndDimsHolder.getKey().getTimestamp();
+          return timeAndDimsHolder.get().getTimestamp();
         }
 
         @Override

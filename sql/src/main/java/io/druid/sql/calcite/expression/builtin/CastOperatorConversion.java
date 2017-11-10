@@ -140,12 +140,12 @@ public class CastOperatorConversion implements SqlOperatorConversion
       final SqlTypeName toType
   )
   {
-    // Cast strings to datetimes by parsin them from SQL format.
+    // Cast strings to datetimes by parsing them from SQL format.
     final DruidExpression timestampExpression = DruidExpression.fromFunctionCall(
         "timestamp_parse",
         ImmutableList.of(
             operand,
-            DruidExpression.fromExpression(DruidExpression.stringLiteral(dateTimeFormatString(toType))),
+            DruidExpression.fromExpression(DruidExpression.nullLiteral()),
             DruidExpression.fromExpression(DruidExpression.stringLiteral(plannerContext.getTimeZone().getID()))
         )
     );

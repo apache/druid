@@ -38,14 +38,6 @@ public class TimeAndDimsHolder
   }
 
   /**
-   * This method doesn't have well-defined semantics ("key" of what?), should be removed in favor of {@link #get()}.
-   */
-  public IncrementalIndex.TimeAndDims getKey()
-  {
-    return currEntry;
-  }
-
-  /**
    * This method doesn't have well-defined semantics ("value" of what?), should be removed in favor of chaining
    * get().getRowIndex().
    */

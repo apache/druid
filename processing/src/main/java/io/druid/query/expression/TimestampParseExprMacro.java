@@ -26,6 +26,10 @@ import io.druid.math.expr.ExprEval;
 import io.druid.math.expr.ExprMacroTable;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.DateTimeFormatterBuilder;
+import org.joda.time.format.DateTimeParser;
+import org.joda.time.format.ISODateTimeFormat;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -57,7 +61,7 @@ public class TimestampParseExprMacro implements ExprMacroTable.ExprMacro
 
     final DateTimes.UtcFormatter formatter =
         formatString == null
-        ? DateTimes.ISO_DATE_OR_TIME
+        ? createDefaultParser(timeZone)
         : DateTimes.wrapFormatter(DateTimeFormat.forPattern(formatString).withZone(timeZone));
 
     class TimestampParseExpr implements Expr
@@ -90,5 +94,36 @@ public class TimestampParseExprMacro implements ExprMacroTable.ExprMacro
     }
 
     return new TimestampParseExpr();
+  }
+
+  /**
+   * Default formatter that parses according to the docs for this method: "If the pattern is not provided, this parses
+   * time strings in either ISO8601 or SQL format."
+   */
+  private static DateTimes.UtcFormatter createDefaultParser(final DateTimeZone timeZone)
+  {
+    final DateTimeFormatter offsetElement = new DateTimeFormatterBuilder()
+        .appendTimeZoneOffset("Z", true, 2, 4)
+        .toFormatter();
+
+    DateTimeParser timeOrOffset = new DateTimeFormatterBuilder()
+        .append(
+            null,
+            new DateTimeParser[]{
+                new DateTimeFormatterBuilder().appendLiteral('T').toParser(),
+                new DateTimeFormatterBuilder().appendLiteral(' ').toParser()
+            }
+        )
+        .appendOptional(ISODateTimeFormat.timeElementParser().getParser())
+        .appendOptional(offsetElement.getParser())
+        .toParser();
+
+    return DateTimes.wrapFormatter(
+        new DateTimeFormatterBuilder()
+            .append(ISODateTimeFormat.dateElementParser())
+            .appendOptional(timeOrOffset)
+            .toFormatter()
+            .withZone(timeZone)
+    );
   }
 }

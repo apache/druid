@@ -208,7 +208,6 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn<St
           return new SingleIndexedInt(getRowValue());
         }
 
-        @Override
         public int getRowValue()
         {
           return column.get(offset.getOffset());

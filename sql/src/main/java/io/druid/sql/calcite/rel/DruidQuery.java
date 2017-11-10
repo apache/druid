@@ -804,7 +804,7 @@ public class DruidQuery
         grouping.getDimensionSpecs(),
         grouping.getAggregatorFactories(),
         grouping.getPostAggregators(),
-        grouping.getHavingFilter() != null ? new DimFilterHavingSpec(grouping.getHavingFilter()) : null,
+        grouping.getHavingFilter() != null ? new DimFilterHavingSpec(grouping.getHavingFilter(), true) : null,
         limitSpec,
         ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
     );

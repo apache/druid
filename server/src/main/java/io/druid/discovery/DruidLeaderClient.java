@@ -233,14 +233,27 @@ public class DruidLeaderClient
     }
 
     if (responseHolder.getStatus().getCode() == 200) {
-      return responseHolder.getContent();
-    } else {
-      throw new ISE(
-          "Couldn't find leader, failed response status is [%s] and content [%s].",
-          responseHolder.getStatus().getCode(),
-          responseHolder.getContent()
-      );
+      String leaderUrl = responseHolder.getContent();
+
+      //verify this is valid url
+      try {
+        URL validatedUrl = new URL(leaderUrl);
+        currentKnownLeader.set(leaderUrl);
+
+        // validatedUrl.toString() is returned instead of leaderUrl or else teamcity build fails because of breaking
+        // the rule of ignoring new URL(leaderUrl) object.
+        return validatedUrl.toString();
+      }
+      catch (MalformedURLException ex) {
+        log.error(ex, "Received malformed leader url[%s].", leaderUrl);
+      }
     }
+
+    throw new ISE(
+        "Couldn't find leader, failed response status is [%s] and content [%s].",
+        responseHolder.getStatus().getCode(),
+        responseHolder.getContent()
+    );
   }
 
   private String getCurrentKnownLeader(final boolean cached) throws IOException

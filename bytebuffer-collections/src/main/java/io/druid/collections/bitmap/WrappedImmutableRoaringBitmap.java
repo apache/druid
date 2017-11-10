@@ -68,12 +68,6 @@ public class WrappedImmutableRoaringBitmap implements ImmutableBitmap
   }
 
   @Override
-  public int compareTo(ImmutableBitmap other)
-  {
-    return 0;
-  }
-
-  @Override
   public String toString()
   {
     return getClass().getSimpleName() + bitmap.toString();
@@ -98,14 +92,6 @@ public class WrappedImmutableRoaringBitmap implements ImmutableBitmap
   }
 
   @Override
-  public ImmutableBitmap union(ImmutableBitmap otherBitmap)
-  {
-    WrappedImmutableRoaringBitmap other = (WrappedImmutableRoaringBitmap) otherBitmap;
-    ImmutableRoaringBitmap unwrappedOtherBitmap = other.bitmap;
-    return new WrappedImmutableRoaringBitmap(ImmutableRoaringBitmap.or(bitmap, unwrappedOtherBitmap));
-  }
-
-  @Override
   public boolean get(int value)
   {
     return bitmap.contains(value);
@@ -119,11 +105,4 @@ public class WrappedImmutableRoaringBitmap implements ImmutableBitmap
     return new WrappedImmutableRoaringBitmap(ImmutableRoaringBitmap.and(bitmap, unwrappedOtherBitmap));
   }
 
-  @Override
-  public ImmutableBitmap difference(ImmutableBitmap otherBitmap)
-  {
-    WrappedImmutableRoaringBitmap other = (WrappedImmutableRoaringBitmap) otherBitmap;
-    ImmutableRoaringBitmap unwrappedOtherBitmap = other.bitmap;
-    return new WrappedImmutableRoaringBitmap(ImmutableRoaringBitmap.andNot(bitmap, unwrappedOtherBitmap));
-  }
 }

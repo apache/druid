@@ -33,8 +33,8 @@ import org.joda.time.Interval;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.Callable;
 
 public abstract class AbstractIndexerTest
@@ -55,7 +55,7 @@ public abstract class AbstractIndexerTest
 
   protected void unloadAndKillData(final String dataSource) throws Exception
   {
-    ArrayList<String> intervals = coordinator.getSegmentIntervals(dataSource);
+    List<String> intervals = coordinator.getSegmentIntervals(dataSource);
 
     // each element in intervals has this form:
     //   2015-12-01T23:15:00.000Z/2015-12-01T23:16:00.000Z
@@ -74,7 +74,7 @@ public abstract class AbstractIndexerTest
     // realtime tasks can get stuck waiting for handoff. https://github.com/druid-io/druid/issues/1729
     waitForAllTasksToComplete();
     Interval interval = Intervals.of(start + "/" + end);
-    coordinator.unloadSegmentsForDataSource(dataSource, interval);
+    coordinator.unloadSegmentsForDataSource(dataSource);
     RetryUtil.retryUntilFalse(
         new Callable<Boolean>()
         {

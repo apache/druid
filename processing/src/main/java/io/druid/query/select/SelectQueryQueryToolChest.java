@@ -79,7 +79,6 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
 
   private final ObjectMapper jsonMapper;
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
-  private final Supplier<SelectQueryConfig> configSupplier;
   private final SelectQueryMetricsFactory queryMetricsFactory;
 
   public SelectQueryQueryToolChest(
@@ -101,7 +100,6 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
   {
     this.jsonMapper = jsonMapper;
     this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
-    this.configSupplier = configSupplier;
     this.queryMetricsFactory = queryMetricsFactory;
   }
 

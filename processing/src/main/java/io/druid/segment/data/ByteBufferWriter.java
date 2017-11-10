@@ -28,7 +28,6 @@ import com.google.common.io.InputSupplier;
 import com.google.common.primitives.Ints;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.io.smoosh.FileSmoosher;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -121,7 +120,7 @@ public class ByteBufferWriter<T> implements Closeable
     );
   }
 
-  public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  public void writeToChannel(WritableByteChannel channel) throws IOException
   {
     try (final ReadableByteChannel from = Channels.newChannel(combineStreams().getInput())) {
       ByteStreams.copy(from, channel);

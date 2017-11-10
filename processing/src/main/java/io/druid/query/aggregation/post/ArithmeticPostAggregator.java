@@ -55,7 +55,6 @@ public class ArithmeticPostAggregator implements PostAggregator
   private final Ops op;
   private final Comparator comparator;
   private final String ordering;
-  private Map<String, AggregatorFactory> aggFactoryMap;
 
   public ArithmeticPostAggregator(
       String name,
@@ -266,8 +265,13 @@ public class ArithmeticPostAggregator implements PostAggregator
 
   public enum Ordering implements Comparator<Double>
   {
-    // ensures the following order: numeric > NaN > Infinite
-    // The name may be referenced via Ordering.valueOf(ordering) in the constructor.
+    /**
+     * Ensures the following order: numeric > NaN > Infinite.
+     *
+     * The name may be referenced via {@link #valueOf(String)} in the constructor {@link
+     * ArithmeticPostAggregator#ArithmeticPostAggregator(String, String, List, String)}.
+     */
+    @SuppressWarnings("unused")
     numericFirst {
       @Override
       public int compare(Double lhs, Double rhs)

@@ -19,14 +19,12 @@
 
 package io.druid.indexing.common;
 
-import com.metamx.emitter.EmittingLogger;
 import org.joda.time.Duration;
 
 /**
  */
 public class RetryPolicy
 {
-  private static final EmittingLogger log = new EmittingLogger(RetryPolicy.class);
 
   private final long maxNumRetries;
   private final Duration maxRetryDelay;

@@ -114,7 +114,7 @@ public class BroadcastDistributionRuleTest
             ServerType.HISTORICAL,
             "hot",
             0
-        ).addDataSegment(smallSegment.getIdentifier(), smallSegment)
+        ).addDataSegment(smallSegment)
          .toImmutableDruidServer(),
         new LoadQueuePeonTester()
     );
@@ -129,7 +129,7 @@ public class BroadcastDistributionRuleTest
                 ServerType.HISTORICAL,
                 "hot",
                 0
-            ).addDataSegment(largeSegments.get(0).getIdentifier(), largeSegments.get(0))
+            ).addDataSegment(largeSegments.get(0))
              .toImmutableDruidServer(),
             new LoadQueuePeonTester()
         )
@@ -144,7 +144,7 @@ public class BroadcastDistributionRuleTest
                 ServerType.HISTORICAL,
                 DruidServer.DEFAULT_TIER,
                 0
-            ).addDataSegment(largeSegments.get(1).getIdentifier(), largeSegments.get(1))
+            ).addDataSegment(largeSegments.get(1))
              .toImmutableDruidServer(),
             new LoadQueuePeonTester()
         )
@@ -159,7 +159,7 @@ public class BroadcastDistributionRuleTest
                 ServerType.HISTORICAL,
                 DruidServer.DEFAULT_TIER,
                 0
-            ).addDataSegment(largeSegments.get(2).getIdentifier(), largeSegments.get(2))
+            ).addDataSegment(largeSegments.get(2))
              .toImmutableDruidServer(),
             new LoadQueuePeonTester()
         )
@@ -175,7 +175,7 @@ public class BroadcastDistributionRuleTest
                 ServerType.HISTORICAL,
                 "hot",
                 0
-            ).addDataSegment(largeSegments2.get(0).getIdentifier(), largeSegments2.get(0))
+            ).addDataSegment(largeSegments2.get(0))
              .toImmutableDruidServer(),
             new LoadQueuePeonTester()
         )
@@ -190,7 +190,7 @@ public class BroadcastDistributionRuleTest
                 ServerType.HISTORICAL,
                 DruidServer.DEFAULT_TIER,
                 0
-            ).addDataSegment(largeSegments2.get(1).getIdentifier(), largeSegments2.get(1))
+            ).addDataSegment(largeSegments2.get(1))
              .toImmutableDruidServer(),
             new LoadQueuePeonTester()
         )

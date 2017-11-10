@@ -116,6 +116,7 @@ public class ReferenceCountingResourceHolderTest
     // Wait until Closer runs
     for (int i = 0; i < 6000 && ReferenceCountingResourceHolder.leakedResources() == initialLeakedResources; i++) {
       System.gc();
+      @SuppressWarnings("unused")
       byte[] garbage = new byte[10_000_000];
       Thread.sleep(10);
     }

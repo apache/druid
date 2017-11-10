@@ -106,16 +106,6 @@ public class ImmutableRTree
     return data.capacity();
   }
 
-  public ImmutableNode getRoot()
-  {
-    return root;
-  }
-
-  public int getNumDims()
-  {
-    return numDims;
-  }
-
   public Iterable<ImmutableBitmap> search(Bound bound)
   {
     return search(defaultSearchStrategy, bound);

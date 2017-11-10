@@ -20,37 +20,31 @@
 package io.druid.client;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
 import io.druid.timeline.DataSegment;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  */
 public class DruidDataSource
 {
-  private final Object lock = new Object();
-
   private final String name;
   private final Map<String, String> properties;
-  private final Map<String, DataSegment> partitionNames;
-  private final ConcurrentSkipListSet<DataSegment> segmentsHolder;
+  private final ConcurrentHashMap<String, DataSegment> idToSegmentMap;
 
   public DruidDataSource(
       String name,
       Map<String, String> properties
   )
   {
-    this.name = name;
+    this.name = Preconditions.checkNotNull(name);
     this.properties = properties;
-
-    this.partitionNames = Maps.newHashMap();
-    this.segmentsHolder = new ConcurrentSkipListSet<DataSegment>();
+    this.idToSegmentMap = new ConcurrentHashMap<>();
   }
 
   @JsonProperty
@@ -65,115 +59,60 @@ public class DruidDataSource
     return properties;
   }
 
-  @JsonProperty
-  public Set<DataSegment> getSegments()
+  public Collection<DataSegment> getSegments()
   {
-    return Collections.unmodifiableSet(segmentsHolder);
+    return Collections.unmodifiableCollection(idToSegmentMap.values());
   }
 
-  public DruidDataSource addSegment(String partitionName, DataSegment dataSegment)
+  public DruidDataSource addSegment(DataSegment dataSegment)
   {
-    synchronized (lock) {
-      partitionNames.put(partitionName, dataSegment);
-
-      segmentsHolder.add(dataSegment);
-    }
+    idToSegmentMap.put(dataSegment.getIdentifier(), dataSegment);
     return this;
   }
 
-  public DruidDataSource addSegments(Map<String, DataSegment> partitionMap)
+  public DruidDataSource removePartition(String segmentId)
   {
-    synchronized (lock) {
-      partitionNames.putAll(partitionMap);
-
-      segmentsHolder.addAll(partitionMap.values());
-    }
+    idToSegmentMap.remove(segmentId);
     return this;
   }
 
-  public DruidDataSource removePartition(String partitionName)
+  public DataSegment getSegment(String identifier)
   {
-    synchronized (lock) {
-      DataSegment dataPart = partitionNames.remove(partitionName);
-
-      if (dataPart == null) {
-        return this;
-      }
-
-      segmentsHolder.remove(dataPart);
-    }
-
-    return this;
+    return idToSegmentMap.get(identifier);
   }
 
   public boolean isEmpty()
   {
-    return segmentsHolder.isEmpty();
+    return idToSegmentMap.isEmpty();
+  }
+
+  public ImmutableDruidDataSource toImmutableDruidDataSource()
+  {
+    return new ImmutableDruidDataSource(
+        name,
+        ImmutableMap.copyOf(properties),
+        ImmutableMap.copyOf(idToSegmentMap)
+    );
   }
 
   @Override
   public String toString()
   {
-    synchronized (lock) {
-      return "DruidDataSource{" +
-             "properties=" + properties +
-             ", partitions=" + segmentsHolder.toString() +
-             '}';
-    }
-  }
-
-  public ImmutableDruidDataSource toImmutableDruidDataSource()
-  {
-    synchronized (lock) {
-      return new ImmutableDruidDataSource(
-          name,
-          ImmutableMap.copyOf(properties),
-          ImmutableMap.copyOf(partitionNames),
-          ImmutableSet.copyOf(segmentsHolder)
-      );
-    }
+    return "DruidDataSource{" +
+           "properties=" + properties +
+           ", partitions=" + idToSegmentMap.values() +
+           '}';
   }
 
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    DruidDataSource that = (DruidDataSource) o;
-
-    if (name != null ? !name.equals(that.name) : that.name != null) {
-      return false;
-    }
-    if (partitionNames != null ? !partitionNames.equals(that.partitionNames) : that.partitionNames != null) {
-      return false;
-    }
-    if (properties != null ? !properties.equals(that.properties) : that.properties != null) {
-      return false;
-    }
-    if (segmentsHolder != null ? !segmentsHolder.equals(that.segmentsHolder) : that.segmentsHolder != null) {
-      return false;
-    }
-
-    return true;
+    throw new UnsupportedOperationException("Use ImmutableDruidDataSource instead");
   }
 
   @Override
   public int hashCode()
   {
-    int result = name != null ? name.hashCode() : 0;
-    result = 31 * result + (properties != null ? properties.hashCode() : 0);
-    result = 31 * result + (partitionNames != null ? partitionNames.hashCode() : 0);
-    result = 31 * result + (segmentsHolder != null ? segmentsHolder.hashCode() : 0);
-    return result;
-  }
-
-  public DataSegment getSegment(String identifier)
-  {
-    return partitionNames.get(identifier);
+    throw new UnsupportedOperationException("Use ImmutableDruidDataSource instead");
   }
 }

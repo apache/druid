@@ -78,6 +78,8 @@ public abstract class HadoopTask extends AbstractTask
   // This could stand to have a more robust detection methodology.
   // Right now it just looks for `druid.*\.jar`
   // This is only used for classpath isolation in the runTask isolation stuff, so it shooouuullldddd be ok.
+  /** {@link #buildClassLoader(TaskToolbox)} has outdated javadocs referencing this field, TODO update */
+  @SuppressWarnings("unused")
   protected static final Predicate<URL> IS_DRUID_URL = new Predicate<URL>()
   {
     @Override
@@ -101,18 +103,20 @@ public abstract class HadoopTask extends AbstractTask
    *
    * This isolation is *only* for the part of the HadoopTask that calls runTask in an isolated manner.
    *
-   * Jars for the job are the same jars as for the classloader EXCEPT the hadoopDependencyCoordinates, which are not used in the job jars.
+   * Jars for the job are the same jars as for the classloader EXCEPT the hadoopDependencyCoordinates, which are not
+   * used in the job jars.
    *
    * The URLs in the resultant classloader are loaded in this priority:
    *
-   * 1. Non-Druid jars (see IS_DRUID_URL) found in the ClassLoader for HadoopIndexTask.class. This will probably be the ApplicationClassLoader
+   * 1. Non-Druid jars (see {@link #IS_DRUID_URL}) found in the ClassLoader for HadoopIndexTask.class. This will
+   * probably be the ApplicationClassLoader
    * 2. Hadoop jars found in the hadoop dependency coordinates directory, loaded in the order they are specified in
-   * 3. Druid jars (see IS_DRUID_URL) found in the ClassLoader for HadoopIndexTask.class
+   * 3. Druid jars (see {@link #IS_DRUID_URL}) found in the ClassLoader for HadoopIndexTask.class
    * 4. Extension URLs maintaining the order specified in the extensions list in the extensions config
    *
    * At one point I tried making each one of these steps a URLClassLoader, but it is not easy to make a properly
-   * predictive IS_DRUID_URL that captures all things which reference druid classes. This lead to a case where the
-   * class loader isolation worked great for stock druid, but failed in many common use cases including extension
+   * predictive {@link #IS_DRUID_URL} that captures all things which reference druid classes. This lead to a case where
+   * the class loader isolation worked great for stock druid, but failed in many common use cases including extension
    * jars on the classpath which were not listed in the extensions list.
    *
    * As such, the current approach is to make a list of URLs for a URLClassLoader based on the priority above, and use

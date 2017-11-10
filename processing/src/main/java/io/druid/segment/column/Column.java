@@ -38,7 +38,7 @@ public interface Column
 
   int getLength();
   DictionaryEncodedColumn getDictionaryEncoding();
-  RunLengthColumn getRunLengthColumn();
+
   GenericColumn getGenericColumn();
   ComplexColumn getComplexColumn();
   BitmapIndex getBitmapIndex();

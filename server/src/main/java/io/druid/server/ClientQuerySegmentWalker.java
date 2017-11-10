@@ -88,7 +88,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         .create(
             new RetryQueryRunner<>(
                 baseClientRunner,
-                toolChest,
                 retryConfig,
                 objectMapper
             )

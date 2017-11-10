@@ -23,7 +23,6 @@ import com.google.common.collect.Lists;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.DataSource;
-import io.druid.query.QueryMetrics;
 import io.druid.query.TableDataSource;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -76,7 +75,6 @@ public class TopNQueryBuilder
   private List<AggregatorFactory> aggregatorSpecs;
   private List<PostAggregator> postAggregatorSpecs;
   private Map<String, Object> context;
-  private QueryMetrics<?> queryMetrics;
 
   public TopNQueryBuilder()
   {
@@ -106,61 +104,6 @@ public class TopNQueryBuilder
     this.aggregatorSpecs = query.getAggregatorSpecs();
     this.postAggregatorSpecs = query.getPostAggregatorSpecs();
     this.context = query.getContext();
-  }
-
-  public DataSource getDataSource()
-  {
-    return dataSource;
-  }
-
-  public VirtualColumns getVirtualColumns()
-  {
-    return virtualColumns;
-  }
-
-  public DimensionSpec getDimensionSpec()
-  {
-    return dimensionSpec;
-  }
-
-  public TopNMetricSpec getTopNMetricSpec()
-  {
-    return topNMetricSpec;
-  }
-
-  public int getThreshold()
-  {
-    return threshold;
-  }
-
-  public QuerySegmentSpec getQuerySegmentSpec()
-  {
-    return querySegmentSpec;
-  }
-
-  public DimFilter getDimFilter()
-  {
-    return dimFilter;
-  }
-
-  public Granularity getGranularity()
-  {
-    return granularity;
-  }
-
-  public List<AggregatorFactory> getAggregatorSpecs()
-  {
-    return aggregatorSpecs;
-  }
-
-  public List<PostAggregator> getPostAggregatorSpecs()
-  {
-    return postAggregatorSpecs;
-  }
-
-  public Map<String, Object> getContext()
-  {
-    return context;
   }
 
   public TopNQuery build()
@@ -213,11 +156,6 @@ public class TopNQueryBuilder
   {
     this.virtualColumns = virtualColumns;
     return this;
-  }
-
-  public TopNQueryBuilder virtualColumns(List<VirtualColumn> virtualColumns)
-  {
-    return virtualColumns(VirtualColumns.create(virtualColumns));
   }
 
   public TopNQueryBuilder virtualColumns(VirtualColumn... virtualColumns)
@@ -300,12 +238,6 @@ public class TopNQueryBuilder
     return this;
   }
 
-  public TopNQueryBuilder granularity(String g)
-  {
-    granularity = Granularity.fromString(g);
-    return this;
-  }
-
   public TopNQueryBuilder granularity(Granularity g)
   {
     granularity = g;
@@ -331,9 +263,4 @@ public class TopNQueryBuilder
     return this;
   }
 
-  public TopNQueryBuilder queryMetrics(QueryMetrics<?> m)
-  {
-    queryMetrics = m;
-    return this;
-  }
 }

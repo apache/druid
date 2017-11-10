@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.segment.indexing;
+package io.druid.segment.transform;
 
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
@@ -34,6 +34,11 @@ public class TransformingInputRowParser<T> implements InputRowParser<T>
     this.parser = parser;
     this.transformSpec = transformSpec;
     this.transformer = transformSpec.toTransformer();
+  }
+
+  public InputRowParser<T> getParser()
+  {
+    return parser;
   }
 
   @Override

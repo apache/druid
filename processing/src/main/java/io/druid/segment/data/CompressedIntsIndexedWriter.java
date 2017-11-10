@@ -23,7 +23,6 @@ import com.google.common.primitives.Ints;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.segment.IndexIO;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -37,21 +36,6 @@ import java.nio.channels.WritableByteChannel;
 public class CompressedIntsIndexedWriter extends SingleValueIndexedIntsWriter
 {
   private static final byte VERSION = CompressedIntsIndexedSupplier.VERSION;
-
-  public static CompressedIntsIndexedWriter create(
-      final IOPeon ioPeon,
-      final String filenameBase,
-      final CompressedObjectStrategy.CompressionStrategy compression
-  )
-  {
-    return new CompressedIntsIndexedWriter(
-        ioPeon,
-        filenameBase,
-        CompressedIntsIndexedSupplier.MAX_INTS_IN_BUFFER,
-        IndexIO.BYTE_ORDER,
-        compression
-    );
-  }
 
   private final int chunkFactor;
   private final CompressedObjectStrategy.CompressionStrategy compression;

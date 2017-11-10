@@ -19,8 +19,6 @@
 
 package io.druid.collections.bitmap;
 
-import java.nio.ByteBuffer;
-
 /**
  * This class is meant to represent a simple wrapper around a bitmap class.
  */
@@ -41,36 +39,6 @@ public interface MutableBitmap extends ImmutableBitmap
    */
   void or(MutableBitmap mutableBitmap);
 
-  /**
-   * Compute the bitwise-and of this bitmap with another bitmap. The current
-   * bitmap is modified whereas the other bitmap is left intact.
-   *
-   * Note that the other bitmap should be of the same class instance.
-   *
-   * @param mutableBitmap other bitmap
-   */
-  void and(MutableBitmap mutableBitmap);
-
-
-  /**
-   * Compute the bitwise-xor of this bitmap with another bitmap. The current
-   * bitmap is modified whereas the other bitmap is left intact.
-   *
-   * Note that the other bitmap should be of the same class instance.
-   *
-   * @param mutableBitmap other bitmap
-   */
-  void xor(MutableBitmap mutableBitmap);
-
-  /**
-   * Compute the bitwise-andNot of this bitmap with another bitmap. The current
-   * bitmap is modified whereas the other bitmap is left intact.
-   *
-   * Note that the other bitmap should be of the same class instance.
-   *
-   * @param mutableBitmap other bitmap
-   */
-  void andNot(MutableBitmap mutableBitmap);
 
   /**
    * Return the size in bytes for the purpose of serialization to a ByteBuffer.
@@ -96,16 +64,4 @@ public interface MutableBitmap extends ImmutableBitmap
    */
   void remove(int entry);
 
-  /**
-   * Write out a serialized (Immutable) version of the bitmap to the ByteBuffer. We preprend
-   * the serialized bitmap with a 4-byte int indicating the size in bytes. Thus
-   * getSizeInBytes() + 4 bytes are written.
-   *
-   * (These 4 bytes are required by ConciseSet but not by RoaringBitmap.
-   * Nevertheless, we always write them for the sake of simplicity, even if it
-   * wastes 4 bytes in some instances.)
-   *
-   * @param buffer where we write
-   */
-  void serialize(ByteBuffer buffer);
 }

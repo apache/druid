@@ -26,7 +26,7 @@ import com.google.common.collect.ImmutableList;
 import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.filter.DimFilter;
-import io.druid.segment.indexing.TransformSpec;
+import io.druid.segment.transform.TransformSpec;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 

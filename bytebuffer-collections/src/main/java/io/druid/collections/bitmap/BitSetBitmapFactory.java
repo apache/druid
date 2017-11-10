@@ -81,14 +81,6 @@ public class BitSetBitmapFactory implements BitmapFactory
   }
 
   @Override
-  public ImmutableBitmap complement(ImmutableBitmap b)
-  {
-    BitSet bitSet = ((WrappedBitSetBitmap) b).cloneBitSet();
-    bitSet.flip(0, bitSet.size());
-    return new WrappedBitSetBitmap(bitSet);
-  }
-
-  @Override
   public ImmutableBitmap complement(
       ImmutableBitmap b, int length
   )

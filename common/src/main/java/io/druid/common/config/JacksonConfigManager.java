@@ -61,11 +61,6 @@ public class JacksonConfigManager
     return configManager.watchConfig(key, create(clazz, defaultVal));
   }
 
-  public <T> AtomicReference<T> watch(String key, TypeReference<T> clazz)
-  {
-    return watch(key, clazz, null);
-  }
-
   public <T> AtomicReference<T> watch(String key, TypeReference<T> clazz, T defaultVal)
   {
     return configManager.watchConfig(key, create(clazz, defaultVal));

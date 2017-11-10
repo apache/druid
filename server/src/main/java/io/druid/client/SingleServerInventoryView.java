@@ -38,7 +38,9 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 
 /**
+ * This class is deprecated. Use {@link HttpServerInventoryView} instead.
  */
+@Deprecated
 @ManageLifecycle
 public class SingleServerInventoryView extends AbstractCuratorServerInventoryView<DataSegment> implements FilteredServerInventoryView
 {

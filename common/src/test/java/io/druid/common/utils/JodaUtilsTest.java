@@ -55,18 +55,10 @@ public class JodaUtilsTest
     );
   }
 
-  @Test
+  @Test(expected = IllegalArgumentException.class)
   public void testUmbrellaIntervalsNull() throws Exception
   {
-    List<Interval> intervals = Collections.emptyList();
-    Throwable thrown = null;
-    try {
-      Interval res = JodaUtils.umbrellaInterval(intervals);
-    }
-    catch (IllegalArgumentException e) {
-      thrown = e;
-    }
-    Assert.assertNotNull("Empty list of intervals", thrown);
+    JodaUtils.umbrellaInterval(Collections.emptyList());
   }
 
   @Test

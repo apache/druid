@@ -17,10 +17,26 @@
  * under the License.
  */
 
-package io.druid.cli;
+package io.druid.tests.security;
 
-/**
- */
-public interface CliRunnable extends Runnable
+import com.google.inject.Inject;
+import io.druid.testing.clients.CoordinatorResourceTestClient;
+import io.druid.testing.guice.DruidTestModuleFactory;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.testng.Assert;
+import org.testng.annotations.Guice;
+import org.testng.annotations.Test;
+
+@Guice(moduleFactory = DruidTestModuleFactory.class)
+public class ITCoordinatorOverlordProxyAuthTest
 {
+  @Inject
+  CoordinatorResourceTestClient coordinatorClient;
+  
+  @Test
+  public void testProxyAuth() throws Exception
+  {
+    HttpResponseStatus responseStatus = coordinatorClient.getProxiedOverlordScalingResponseStatus();
+    Assert.assertEquals(HttpResponseStatus.OK, responseStatus);
+  }
 }

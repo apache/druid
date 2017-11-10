@@ -74,8 +74,6 @@ public class SchemalessTestFullTest
 
   final String dataSource = "testing";
   final Granularity allGran = Granularities.ALL;
-  final String dimensionValue = "dimension";
-  final String valueValue = "value";
   final String marketDimension = "market";
   final String qualityDimension = "quality";
   final String placementDimension = "placement";
@@ -1402,7 +1400,9 @@ public class SchemalessTestFullTest
       Segment adapter,
       List<Result<TimeseriesResultValue>> expectedTimeseriesResults,
       List<Result<TimeseriesResultValue>> expectedFilteredTimeseriesResults,
+      @SuppressWarnings("unused") // see below
       List<Result<TopNResultValue>> expectedTopNResults,
+      @SuppressWarnings("unused") // see below
       List<Result<TopNResultValue>> expectedFilteredTopNResults,
       List<Result<SearchResultValue>> expectedSearchResults,
       List<Result<SearchResultValue>> expectedFilteredSearchResults,
@@ -1447,7 +1447,7 @@ public class SchemalessTestFullTest
                                           )
                                       )
                                   )
-                                  .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+                                  .postAggregators(addRowsIndexConstant)
                                   .build();
 
     failMsg += " timeseries ";
@@ -1481,7 +1481,7 @@ public class SchemalessTestFullTest
                                           )
                                       )
                                   )
-                                  .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+                                  .postAggregators(addRowsIndexConstant)
                                   .build();
 
     failMsg += " filtered timeseries ";
@@ -1493,7 +1493,8 @@ public class SchemalessTestFullTest
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
   }
 
-
+  /** See {@link #runTests} */
+  @SuppressWarnings("unused")
   private void testFullOnTopN(QueryRunner runner, List<Result<TopNResultValue>> expectedResults, String failMsg)
   {
     TopNQuery query = new TopNQueryBuilder()
@@ -1527,6 +1528,8 @@ public class SchemalessTestFullTest
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
   }
 
+  /** See {@link #runTests} */
+  @SuppressWarnings("unused")
   private void testFilteredTopN(QueryRunner runner, List<Result<TopNResultValue>> expectedResults, String failMsg)
   {
     TopNQuery query = new TopNQueryBuilder()
