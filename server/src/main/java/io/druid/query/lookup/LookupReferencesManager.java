@@ -573,7 +573,7 @@ public class LookupReferencesManager
     return druidLeaderClient.go(
         druidLeaderClient.makeRequest(
             HttpMethod.GET,
-            StringUtils.format("/druid/coordinator/v1/lookups/%s?detailed=true", tier)
+            StringUtils.format("/druid/coordinator/v1/lookups/config/%s?detailed=true", tier)
         )
     );
   }
