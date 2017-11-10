@@ -62,7 +62,7 @@ public class CacheUtil
   )
   {
     return new Cache.NamedKey(
-        resultLevelCacheIdentifier, resultLevelCacheIdentifier.getBytes()
+        resultLevelCacheIdentifier, StringUtils.toUtf8(resultLevelCacheIdentifier)
     );
   }
 
@@ -75,7 +75,7 @@ public class CacheUtil
           gen.writeObject(result);
         }
       }
-      if (cacheLimit != 0 && bytes.size() > cacheLimit) {
+      if (cacheLimit > 0 && bytes.size() > cacheLimit) {
         return;
       }
       cache.put(key, bytes.toByteArray());

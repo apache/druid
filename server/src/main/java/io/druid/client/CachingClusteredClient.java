@@ -273,8 +273,15 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final Set<ServerToSegment> segments = computeSegmentsToQuery(timeline);
       @Nullable
       final byte[] queryCacheKey = computeQueryCacheKey();
-      @Nullable
-      final String queryResultKey = computeCurrentEtag(segments, queryCacheKey);
+      String queryKeyFromEtag;
+      if (useResultCache) {
+        log.debug("Result level caching has been enabled.");
+        queryKeyFromEtag = computeCurrentEtag(segments, queryCacheKey);
+      } else {
+        queryKeyFromEtag = null;
+      }
+
+      final String queryResultKey = queryKeyFromEtag;
       if (query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH) != null) {
         @Nullable
         final String prevEtag = (String) query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH);
@@ -284,49 +291,36 @@ public class CachingClusteredClient implements QuerySegmentWalker
           return Sequences.empty();
         }
       }
-        if(false) {
-          @Nullable
-          final byte[] cachedResultSet = fetchFromResultLevelCache(queryResultKey);
-          if (cachedResultSet != null) {
-            log.info("Fetching entire result set from cache");
-            return fetchSequenceFromResultLevelCache(cachedResultSet);
-          }
-        }
+      @Nullable
+      final byte[] cachedResultSet = fetchFromResultLevelCache(queryResultKey);
+      if (cachedResultSet != null) {
+        log.debug("Fetching entire result set from cache");
+        return fetchSequenceFromResultLevelCache(cachedResultSet);
+      }
 
       final List<Pair<Interval, byte[]>> alreadyCachedResults = pruneSegmentsWithCachedResults(queryCacheKey, segments);
       final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer = groupSegmentsByServer(segments);
-      if (true) {
-        return new LazySequence<>(() -> {
-          List<Sequence<T>> sequencesByInterval = new ArrayList<>(alreadyCachedResults.size()
-                                                                  + segmentsByServer.size());
-          addSequencesFromCache(sequencesByInterval, alreadyCachedResults);
-          addSequencesFromServer(sequencesByInterval, segmentsByServer);
-          return Sequences
-              .simple(sequencesByInterval)
-              .flatMerge(seq -> seq, query.getResultOrdering());
-        });
-      } else {
-        return Sequences.wrap(new LazySequence<>(() -> {
-          List<Sequence<T>> sequencesByInterval = new ArrayList<>(alreadyCachedResults.size()
-                                                                  + segmentsByServer.size());
-          addSequencesFromCache(sequencesByInterval, alreadyCachedResults);
-          addSequencesFromServer(sequencesByInterval, segmentsByServer);
-          return Sequences
-              .simple(sequencesByInterval)
-              .flatMerge(seq -> seq, query.getResultOrdering());
-        }).map(r -> cacheResultEntry(r, queryResultKey)), new SequenceWrapper()
+
+      return Sequences.wrap(new LazySequence<>(() -> {
+        List<Sequence<T>> sequencesByInterval = new ArrayList<>(alreadyCachedResults.size()
+                                                                + segmentsByServer.size());
+        addSequencesFromCache(sequencesByInterval, alreadyCachedResults);
+        addSequencesFromServer(sequencesByInterval, segmentsByServer);
+        return Sequences
+            .simple(sequencesByInterval)
+            .flatMerge(seq -> seq, query.getResultOrdering());
+      }).map(r -> cacheResultEntry(r, queryResultKey)), new SequenceWrapper()
+      {
+        @Override
+        public void after(boolean isDone, Throwable thrown) throws Exception
         {
-          @Override
-          public void after(boolean isDone, Throwable thrown) throws Exception
-          {
-            final CachePopulator cachePopulator =
-                getResultCachePopulator(queryResultKey);
-            if (cachePopulator != null) {
-              cachePopulator.populate();
-            }
+          final CachePopulator cachePopulator =
+              getResultCachePopulator(queryResultKey);
+          if (cachePopulator != null) {
+            cachePopulator.populate();
           }
-        });
-      }
+        }
+      });
     }
 
     private T cacheResultEntry(T result, String queryResultKey)
@@ -644,7 +638,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
         final MultipleSpecificSegmentSpec segmentsOfServerSpec = new MultipleSpecificSegmentSpec(segmentsOfServer);
 
         Sequence<T> serverResults;
-        log.info("[A2L] Sending request to historical ");
         if (isBySegment) {
           serverResults = getBySegmentServerResults(serverRunner, segmentsOfServerSpec);
         } else if (!server.segmentReplicatable() || !populateCache) {
@@ -652,8 +645,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
         } else {
           serverResults = getAndCacheServerResults(serverRunner, segmentsOfServerSpec);
         }
-        log.info("[A2L] Got query results ");
-
         listOfSequences.add(serverResults);
       });
     }
@@ -679,7 +670,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
           );
         }
         catch (IOException e) {
-          throw new RuntimeException(e);
+          log.error("Exception while parsing cached results");
+          return null;
         }
       }
       );
