@@ -25,7 +25,6 @@ import java.net.URL;
  */
 public interface RedirectInfo
 {
-  public boolean doLocal(String requestURI);
-
-  public URL getRedirectURL(String scheme, String queryString, String requestURI);
+  boolean doLocal(String requestURI);
+  URL getRedirectURL(String queryString, String requestURI);
 }
