@@ -21,6 +21,7 @@ package io.druid.server.emitter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
@@ -32,7 +33,6 @@ import com.metamx.emitter.core.HttpPostEmitter;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.JdkSslContext;
@@ -75,7 +75,12 @@ public class HttpEmitterModule implements Module
   )
   {
     final DefaultAsyncHttpClientConfig.Builder builder = new DefaultAsyncHttpClientConfig.Builder()
-        .setThreadFactory(Execs.makeThreadFactory(nameFormat));
+        .setThreadFactory(
+            new ThreadFactoryBuilder()
+                .setDaemon(true)
+                .setNameFormat(nameFormat)
+                .build()
+        );
     if (sslContext != null) {
       builder.setSslContext(new JdkSslContext(sslContext, true, ClientAuth.NONE));
     }
