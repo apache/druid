@@ -33,6 +33,8 @@ public class QueryContexts
   public static final String MAX_SCATTER_GATHER_BYTES_KEY = "maxScatterGatherBytes";
   public static final String DEFAULT_TIMEOUT_KEY = "defaultTimeout";
   public static final String CHUNK_PERIOD_KEY = "chunkPeriod";
+  public static final String MAX_BUFFER_SIZE_BYTES = "maxBufferSizeBytes";
+  public static final String QUERY_BUFFERING_TIMEOUT_KEY = "queryBufferingTimeout";
 
   public static final boolean DEFAULT_BY_SEGMENT = false;
   public static final boolean DEFAULT_POPULATE_CACHE = true;
@@ -112,29 +114,50 @@ public class QueryContexts
     return query.getContextValue(CHUNK_PERIOD_KEY, "P0D");
   }
 
-  public static <T> Query<T> withMaxScatterGatherBytes(Query<T> query, long maxScatterGatherBytesLimit)
+  private static <T> Query<T> withCustomizedLimit(Query<T> query, String key, long maxLimit)
   {
-    Object obj = query.getContextValue(MAX_SCATTER_GATHER_BYTES_KEY);
+    Object obj = query.getContextValue(key);
     if (obj == null) {
-      return query.withOverriddenContext(ImmutableMap.of(MAX_SCATTER_GATHER_BYTES_KEY, maxScatterGatherBytesLimit));
+      return query.withOverriddenContext(ImmutableMap.of(key, maxLimit));
     } else {
       long curr = ((Number) obj).longValue();
-      if (curr > maxScatterGatherBytesLimit) {
-        throw new IAE(
-            "configured [%s = %s] is more than enforced limit of [%s].",
-            MAX_SCATTER_GATHER_BYTES_KEY,
-            curr,
-            maxScatterGatherBytesLimit
-        );
+      if (curr > maxLimit) {
+        String err = "configured [%s = %s] is more than enforced limit of [%s].";
+        throw new IAE(err, key, curr, maxLimit);
       } else {
         return query;
       }
     }
   }
 
+  public static <T> Query<T> withMaxScatterGatherBytes(Query<T> query, long maxScatterGatherBytesLimit)
+  {
+    return withCustomizedLimit(query, MAX_SCATTER_GATHER_BYTES_KEY, maxScatterGatherBytesLimit);
+  }
+
   public static <T> long getMaxScatterGatherBytes(Query<T> query)
   {
     return parseLong(query, MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
+  }
+
+  public static <T> Query<T> withMaxBufferSizeBytes(Query<T> query, long maxBufferSizeBytes)
+  {
+    return withCustomizedLimit(query, MAX_BUFFER_SIZE_BYTES, maxBufferSizeBytes);
+  }
+
+  public static <T> long getMaxBufferSizeBytes(Query<T> query)
+  {
+    return parseLong(query, MAX_BUFFER_SIZE_BYTES, Long.MAX_VALUE);
+  }
+
+  public static <T> Query<T> withQueryBufferingTimeout(Query<T> query, long bufferingTimeout)
+  {
+    return query.withOverriddenContext(ImmutableMap.of(QUERY_BUFFERING_TIMEOUT_KEY, bufferingTimeout));
+  }
+
+  public static <T> long getQueryBufferingTimeout(Query<T> query)
+  {
+    return parseLong(query, QUERY_BUFFERING_TIMEOUT_KEY, DEFAULT_TIMEOUT_MILLIS);
   }
 
   public static <T> boolean hasTimeout(Query<T> query)

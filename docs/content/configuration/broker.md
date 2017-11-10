@@ -44,6 +44,8 @@ Druid uses Jetty to serve HTTP requests.
 |`druid.broker.http.numConnections`|Size of connection pool for the Broker to connect to historical and real-time processes. If there are more queries than this number that all need to speak to the same node, then they will queue up.|20|
 |`druid.broker.http.compressionCodec`|Compression codec the Broker uses to communicate with historical and real-time processes. May be "gzip" or "identity".|gzip|
 |`druid.broker.http.readTimeout`|The timeout for data reads from historical and real-time processes.|PT15M|
+|`druid.broker.http.maxBufferSizeBytes`|The maximum number of bytes collected from query nodes to buffer at broker to execute a query. Compared to `maxScatterGatherBytes`, this advanced configuration protects broker having OOMs without aborting the query immediately when reaching maximum buffer size limit. This limit can be further reduced at query time using `maxBufferSizeBytes` in the context. |Long.MAX_VALUE|
+|`druid.broker.http.queryBufferingTimeout`|The timeout in milliseconds, beyond which broker will stop waiting for buffer space to accept data from query nodes and abort the query. This timeout can be further adjusted at query time using `queryBufferingTimeout` in the context |300000|
 
 #### Retry Policy
 
