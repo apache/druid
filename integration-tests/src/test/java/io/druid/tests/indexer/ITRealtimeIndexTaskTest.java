@@ -174,6 +174,7 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
     finally {
       unloadAndKillData(INDEX_DATASOURCE);
     }
+    throw new RuntimeException();
   }
 
   private String setShutOffTime(String taskAsString, DateTime time)
