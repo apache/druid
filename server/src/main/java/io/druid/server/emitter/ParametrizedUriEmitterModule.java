@@ -31,11 +31,6 @@ import com.metamx.emitter.core.ParametrizedUriEmitterConfig;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.ManageLifecycle;
 import io.druid.java.util.common.lifecycle.Lifecycle;
-import io.netty.handler.ssl.ClientAuth;
-import io.netty.handler.ssl.JdkSslContext;
-import org.asynchttpclient.AsyncHttpClient;
-import org.asynchttpclient.DefaultAsyncHttpClient;
-import org.asynchttpclient.DefaultAsyncHttpClientConfig;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLContext;
@@ -59,13 +54,12 @@ public class ParametrizedUriEmitterModule implements Module
       ObjectMapper jsonMapper
   )
   {
-    final DefaultAsyncHttpClientConfig.Builder builder = new DefaultAsyncHttpClientConfig.Builder();
-    if (sslContext != null) {
-      builder.setSslContext(new JdkSslContext(sslContext, true, ClientAuth.NONE));
-    }
-    final AsyncHttpClient client = new DefaultAsyncHttpClient(builder.build());
-    lifecycle.addCloseableInstance(client);
-
-    return new ParametrizedUriEmitter(config.get(), client, jsonMapper);
+    return new ParametrizedUriEmitter(
+        config.get(),
+        lifecycle.addCloseableInstance(
+            HttpEmitterModule.createAsyncHttpClient("ParmetrizedUriEmitter-AsyncHttpClient-%d", sslContext)
+        ),
+        jsonMapper
+    );
   }
 }
