@@ -284,34 +284,49 @@ public class CachingClusteredClient implements QuerySegmentWalker
           return Sequences.empty();
         }
       }
-
-      @Nullable
-      final byte[] cachedResultSet = fetchFromResultLevelCache(queryResultKey);
-      if (cachedResultSet != null) {
-        log.info("Fetching entire result set from cache");
-        return fetchSequenceFromResultLevelCache(cachedResultSet);
-      }
-      final List<Pair<Interval, byte[]>> alreadyCachedResults = pruneSegmentsWithCachedResults(queryCacheKey, segments);
-      final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer = groupSegmentsByServer(segments);
-      return Sequences.wrap(new LazySequence<>(() -> {
-        List<Sequence<T>> sequencesByInterval = new ArrayList<>(alreadyCachedResults.size() + segmentsByServer.size());
-        addSequencesFromCache(sequencesByInterval, alreadyCachedResults);
-        addSequencesFromServer(sequencesByInterval, segmentsByServer);
-        return Sequences
-            .simple(sequencesByInterval)
-            .flatMerge(seq -> seq, query.getResultOrdering());
-      }).map(r -> cacheResultEntry(r, queryResultKey)), new SequenceWrapper()
-      {
-        @Override
-        public void after(boolean isDone, Throwable thrown) throws Exception
-        {
-          final CachePopulator cachePopulator =
-              getResultCachePopulator(queryResultKey);
-          if (cachePopulator != null) {
-            cachePopulator.populate();
+        if(false) {
+          @Nullable
+          final byte[] cachedResultSet = fetchFromResultLevelCache(queryResultKey);
+          if (cachedResultSet != null) {
+            log.info("Fetching entire result set from cache");
+            return fetchSequenceFromResultLevelCache(cachedResultSet);
           }
         }
-      });
+
+      final List<Pair<Interval, byte[]>> alreadyCachedResults = pruneSegmentsWithCachedResults(queryCacheKey, segments);
+      final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer = groupSegmentsByServer(segments);
+      if (true) {
+        return new LazySequence<>(() -> {
+          List<Sequence<T>> sequencesByInterval = new ArrayList<>(alreadyCachedResults.size()
+                                                                  + segmentsByServer.size());
+          addSequencesFromCache(sequencesByInterval, alreadyCachedResults);
+          addSequencesFromServer(sequencesByInterval, segmentsByServer);
+          return Sequences
+              .simple(sequencesByInterval)
+              .flatMerge(seq -> seq, query.getResultOrdering());
+        });
+      } else {
+        return Sequences.wrap(new LazySequence<>(() -> {
+          List<Sequence<T>> sequencesByInterval = new ArrayList<>(alreadyCachedResults.size()
+                                                                  + segmentsByServer.size());
+          addSequencesFromCache(sequencesByInterval, alreadyCachedResults);
+          addSequencesFromServer(sequencesByInterval, segmentsByServer);
+          return Sequences
+              .simple(sequencesByInterval)
+              .flatMerge(seq -> seq, query.getResultOrdering());
+        }).map(r -> cacheResultEntry(r, queryResultKey)), new SequenceWrapper()
+        {
+          @Override
+          public void after(boolean isDone, Throwable thrown) throws Exception
+          {
+            final CachePopulator cachePopulator =
+                getResultCachePopulator(queryResultKey);
+            if (cachePopulator != null) {
+              cachePopulator.populate();
+            }
+          }
+        });
+      }
     }
 
     private T cacheResultEntry(T result, String queryResultKey)
@@ -414,6 +429,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       Hasher hasher = Hashing.sha1().newHasher();
       boolean hasOnlyHistoricalSegments = true;
       for (ServerToSegment p : segments) {
+        log.info(p.getServer().pick().getServer().getType().toString());
         if (!p.getServer().pick().getServer().segmentReplicatable()) {
           hasOnlyHistoricalSegments = false;
           break;
@@ -628,6 +644,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         final MultipleSpecificSegmentSpec segmentsOfServerSpec = new MultipleSpecificSegmentSpec(segmentsOfServer);
 
         Sequence<T> serverResults;
+        log.info("[A2L] Sending request to historical ");
         if (isBySegment) {
           serverResults = getBySegmentServerResults(serverRunner, segmentsOfServerSpec);
         } else if (!server.segmentReplicatable() || !populateCache) {
@@ -635,6 +652,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
         } else {
           serverResults = getAndCacheServerResults(serverRunner, segmentsOfServerSpec);
         }
+        log.info("[A2L] Got query results ");
+
         listOfSequences.add(serverResults);
       });
     }
