@@ -265,7 +265,7 @@ public class TieredBrokerHostSelectorTest
               .build()
     ).lhs;
 
-    Assert.assertEquals("coldBroker", brokerName);
+    Assert.assertEquals("hotBroker", brokerName);
   }
 
   @Test
