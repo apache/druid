@@ -21,6 +21,7 @@ package io.druid.server.emitter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
@@ -68,6 +69,24 @@ public class HttpEmitterModule implements Module
     binder.bind(SSLContext.class).toProvider(Providers.of(context)).in(LazySingleton.class);
   }
 
+  static AsyncHttpClient createAsyncHttpClient(
+      String nameFormat,
+      @Nullable SSLContext sslContext
+  )
+  {
+    final DefaultAsyncHttpClientConfig.Builder builder = new DefaultAsyncHttpClientConfig.Builder()
+        .setThreadFactory(
+            new ThreadFactoryBuilder()
+                .setDaemon(true)
+                .setNameFormat(nameFormat)
+                .build()
+        );
+    if (sslContext != null) {
+      builder.setSslContext(new JdkSslContext(sslContext, true, ClientAuth.NONE));
+    }
+    return new DefaultAsyncHttpClient(builder.build());
+  }
+
   @Provides
   @ManageLifecycle
   @Named("http")
@@ -78,13 +97,12 @@ public class HttpEmitterModule implements Module
       ObjectMapper jsonMapper
   )
   {
-    final DefaultAsyncHttpClientConfig.Builder builder = new DefaultAsyncHttpClientConfig.Builder();
-    if (sslContext != null) {
-      builder.setSslContext(new JdkSslContext(sslContext, true, ClientAuth.NONE));
-    }
-    final AsyncHttpClient client = new DefaultAsyncHttpClient(builder.build());
-    lifecycle.addCloseableInstance(client);
-
-    return new HttpPostEmitter(config.get(), client, jsonMapper);
+    return new HttpPostEmitter(
+        config.get(),
+        lifecycle.addCloseableInstance(
+            createAsyncHttpClient("HttpPostEmitter-AsyncHttpClient-%d", sslContext)
+        ),
+        jsonMapper
+    );
   }
 }
