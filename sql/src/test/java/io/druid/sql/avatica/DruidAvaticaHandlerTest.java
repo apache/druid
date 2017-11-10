@@ -41,10 +41,12 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.DruidNode;
+import io.druid.server.security.AllowAllEscalator;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthTestUtils;
 import io.druid.server.security.AuthenticatorMapper;
 import io.druid.server.security.AuthorizerMapper;
+import io.druid.server.security.Escalator;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
@@ -145,6 +147,7 @@ public class DruidAvaticaHandlerTest
                 binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
                 binder.bind(AuthenticatorMapper.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_MAPPER);
                 binder.bind(AuthorizerMapper.class).toInstance(CalciteTests.TEST_AUTHORIZER_MAPPER);
+                binder.bind(Escalator.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
               }
             }
         )
@@ -157,8 +160,8 @@ public class DruidAvaticaHandlerTest
             macroTable,
             plannerConfig,
             new AuthConfig(),
-            CalciteTests.TEST_AUTHENTICATOR_MAPPER,
             CalciteTests.TEST_AUTHORIZER_MAPPER,
+            CalciteTests.TEST_AUTHENTICATOR_ESCALATOR,
             CalciteTests.getJsonMapper()
         ),
         AVATICA_CONFIG,
@@ -719,8 +722,8 @@ public class DruidAvaticaHandlerTest
             macroTable,
             plannerConfig,
             new AuthConfig(),
-            AuthTestUtils.TEST_AUTHENTICATOR_MAPPER,
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+            new AllowAllEscalator(),
             CalciteTests.getJsonMapper()
         ),
         smallFrameConfig,

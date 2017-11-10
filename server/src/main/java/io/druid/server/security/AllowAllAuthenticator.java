@@ -19,8 +19,6 @@
 
 package io.druid.server.security;
 
-import com.metamx.http.client.HttpClient;
-
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -99,24 +97,6 @@ public class AllowAllAuthenticator implements Authenticator
 
   @Override
   public AuthenticationResult authenticateJDBCContext(Map<String, Object> context)
-  {
-    return ALLOW_ALL_RESULT;
-  }
-
-  @Override
-  public HttpClient createEscalatedClient(HttpClient baseClient)
-  {
-    return baseClient;
-  }
-
-  @Override
-  public org.eclipse.jetty.client.HttpClient createEscalatedJettyClient(org.eclipse.jetty.client.HttpClient baseClient)
-  {
-    return baseClient;
-  }
-
-  @Override
-  public AuthenticationResult createEscalatedAuthenticationResult()
   {
     return ALLOW_ALL_RESULT;
   }

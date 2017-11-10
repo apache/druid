@@ -21,23 +21,23 @@ package io.druid.server.security;
 
 import com.metamx.http.client.HttpClient;
 
-/**
- * Singleton utility object that creates escalated HttpClients using a configuration-specified Authenticator's
- * getEscalatedClient() method.
- */
-public class AuthenticatorHttpClientWrapper
+public class AllowAllEscalator implements Escalator
 {
-  private Authenticator escalatingAuthenticator;
-
-  public AuthenticatorHttpClientWrapper(
-      final Authenticator escalatingAuthenticator
-  )
+  @Override
+  public HttpClient createEscalatedClient(HttpClient baseClient)
   {
-    this.escalatingAuthenticator = escalatingAuthenticator;
+    return baseClient;
   }
 
-  public HttpClient getEscalatedClient(HttpClient baseClient)
+  @Override
+  public org.eclipse.jetty.client.HttpClient createEscalatedJettyClient(org.eclipse.jetty.client.HttpClient baseClient)
   {
-    return escalatingAuthenticator.createEscalatedClient(baseClient);
+    return baseClient;
+  }
+
+  @Override
+  public AuthenticationResult createEscalatedAuthenticationResult()
+  {
+    return AllowAllAuthenticator.ALLOW_ALL_RESULT;
   }
 }

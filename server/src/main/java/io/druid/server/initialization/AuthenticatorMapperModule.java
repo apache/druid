@@ -41,9 +41,11 @@ import io.druid.server.security.AuthenticatorMapper;
 import io.druid.server.security.AllowAllAuthenticator;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 public class AuthenticatorMapperModule implements DruidModule
 {
@@ -91,14 +93,12 @@ public class AuthenticatorMapperModule implements DruidModule
 
       List<String> authenticators = authConfig.getAuthenticatorChain();
 
+      validateProperties(props, authenticators);
+
       // Default configuration is to allow all requests.
       if (authenticators == null) {
         authenticatorMap.put("allowAll", new AllowAllAuthenticator());
-        return new AuthenticatorMapper(authenticatorMap, "allowAll");
-      }
-
-      if (authenticators.isEmpty()) {
-        throw new IAE("Must have at least one Authenticator configured.");
+        return new AuthenticatorMapper(authenticatorMap);
       }
 
       for (String authenticatorName : authenticators) {
@@ -125,7 +125,43 @@ public class AuthenticatorMapperModule implements DruidModule
         authenticatorMap.put(authenticatorName, authenticator);
       }
 
-      return new AuthenticatorMapper(authenticatorMap, authConfig.getEscalatedAuthenticator());
+      return new AuthenticatorMapper(authenticatorMap);
     }
+  }
+
+  private static void validateProperties(Properties properties, List<String> authenticators)
+  {
+    String escalatorType = properties.getProperty("druid.escalator.type");
+    if (escalatorType == null) {
+      escalatorType = "allowAll";
+    }
+
+    if (authenticators == null) {
+      if (escalatorType.equals("allowAll")) {
+        return;
+      } else {
+        throw new ISE("Using default unsecured configuration with invalid druid.escalator.type [%s]", escalatorType);
+      }
+    }
+
+    if (authenticators.isEmpty()) {
+      throw new IAE("Must have at least one Authenticator configured.");
+    }
+
+    Set<String> authenticatorSet = new HashSet<>();
+    for (String authenticator : authenticators) {
+      if (authenticatorSet.contains(authenticator)) {
+        throw new ISE("Cannot have multiple authenticators with the same name: [%s]", authenticator);
+      }
+      authenticatorSet.add(authenticator);
+    }
+
+    for (String authenticator : authenticators) {
+      String typeProperty = StringUtils.format("druid.auth.authenticator.%s.type", authenticator);
+      if (escalatorType.equals(properties.getProperty(typeProperty))) {
+        return;
+      }
+    }
+    throw new ISE("druid.escalator.type [%s] does not match any configured authenticator's type!", escalatorType);
   }
 }

@@ -20,32 +20,15 @@
 package io.druid.guice.security;
 
 import com.google.inject.Binder;
-import com.google.inject.Key;
 import com.google.inject.Module;
-import com.google.inject.Provides;
-import com.google.inject.multibindings.MapBinder;
-import com.google.inject.name.Named;
-import io.druid.guice.LazySingleton;
-import io.druid.guice.PolyBind;
-import io.druid.server.security.AllowAllAuthenticator;
-import io.druid.server.security.Authenticator;
+import io.druid.guice.JsonConfigProvider;
+import io.druid.server.security.Escalator;
 
-public class AuthenticatorModule implements Module
+public class EscalatorModule implements Module
 {
   @Override
   public void configure(Binder binder)
   {
-    final MapBinder<String, Authenticator> authenticatorMapBinder = PolyBind.optionBinder(
-        binder,
-        Key.get(Authenticator.class)
-    );
-    authenticatorMapBinder.addBinding("allowAll").to(AllowAllAuthenticator.class).in(LazySingleton.class);
-  }
-
-  @Provides
-  @Named("allowAll")
-  public Authenticator getAuthenticator()
-  {
-    return new AllowAllAuthenticator();
+    JsonConfigProvider.bind(binder, "druid.escalator", Escalator.class);
   }
 }

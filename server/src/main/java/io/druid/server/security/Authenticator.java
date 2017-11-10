@@ -21,7 +21,6 @@ package io.druid.server.security;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.metamx.http.client.HttpClient;
 import io.druid.server.initialization.jetty.ServletFilterHolder;
 
 import javax.annotation.Nullable;
@@ -37,10 +36,6 @@ import java.util.Map;
  *
  * - A method that returns a WWW-Authenticate challenge header appropriate for the
  *   authentication mechanism, getAuthChallengeHeader().
- * - A method for creating a wrapped HTTP client that can authenticate using the Authenticator's authentication scheme,
- *   used for internal Druid node communications (e.g., broker -> historical messages), createEscalatedClient().
- * - A method for creating a wrapped Jetty HTTP client that can authenticate using the Authenticator's authentication scheme,
- *   used by the Druid router, createEscalatedJettyClient().
  * - A method for authenticating credentials contained in a JDBC connection context, used for authenticating Druid SQL
  *   requests received via JDBC, authenticateJDBCContext().
  */
@@ -98,34 +93,4 @@ public interface Authenticator extends ServletFilterHolder
    */
   @Nullable
   AuthenticationResult authenticateJDBCContext(Map<String, Object> context);
-
-  /**
-   * Return a client that sends requests with the format/information necessary to authenticate successfully
-   * against this Authenticator's authentication scheme using the identity of the internal system user.
-   * <p>
-   * This HTTP client is used for internal communications between Druid nodes, such as when a broker communicates
-   * with a historical node during query processing.
-   *
-   * @param baseClient Base HTTP client for internal Druid communications
-   *
-   * @return metamx HttpClient that sends requests with the credentials of the internal system user
-   */
-  HttpClient createEscalatedClient(HttpClient baseClient);
-
-  /**
-   * Return a client that sends requests with the format/information necessary to authenticate successfully
-   * against this Authenticator's authentication scheme using the identity of the internal system user.
-   * <p>
-   * This HTTP client is used by the Druid Router node.
-   *
-   * @param baseClient Base Jetty HttpClient
-   *
-   * @return Jetty HttpClient that sends requests with the credentials of the internal system user
-   */
-  org.eclipse.jetty.client.HttpClient createEscalatedJettyClient(org.eclipse.jetty.client.HttpClient baseClient);
-
-  /**
-   * @return an AuthenticationResult representing the identity of the internal system user.
-   */
-  AuthenticationResult createEscalatedAuthenticationResult();
 }

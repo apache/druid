@@ -31,7 +31,7 @@ public class AuthTestUtils
   static {
     final Map<String, Authenticator> defaultMap = Maps.newHashMap();
     defaultMap.put("allowAll", new AllowAllAuthenticator());
-    TEST_AUTHENTICATOR_MAPPER = new AuthenticatorMapper(defaultMap, "allowAll");
+    TEST_AUTHENTICATOR_MAPPER = new AuthenticatorMapper(defaultMap);
 
     TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null) {
       @Override

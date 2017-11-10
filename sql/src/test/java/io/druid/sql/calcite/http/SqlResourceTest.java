@@ -30,6 +30,7 @@ import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.ResourceLimitExceededException;
 import io.druid.server.security.AllowAllAuthenticator;
+import io.druid.server.security.AllowAllEscalator;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.planner.Calcites;
@@ -108,8 +109,8 @@ public class SqlResourceTest
             macroTable,
             plannerConfig,
             new AuthConfig(),
-            AuthTestUtils.TEST_AUTHENTICATOR_MAPPER,
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+            new AllowAllEscalator(),
             CalciteTests.getJsonMapper()
         )
     );

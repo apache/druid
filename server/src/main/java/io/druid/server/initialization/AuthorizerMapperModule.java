@@ -41,9 +41,11 @@ import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 public class AuthorizerMapperModule implements DruidModule
 {
@@ -89,6 +91,8 @@ public class AuthorizerMapperModule implements DruidModule
       Map<String, Authorizer> authorizerMap = Maps.newHashMap();
       List<String> authorizers = authConfig.getAuthorizers();
 
+      validateProperties(authorizers);
+
       // Default is allow all
       if (authorizers == null) {
         return new AuthorizerMapper(null) {
@@ -98,10 +102,6 @@ public class AuthorizerMapperModule implements DruidModule
             return new AllowAllAuthorizer();
           }
         };
-      }
-
-      if (authorizers.isEmpty()) {
-        throw new IAE("Must have at least one Authorizer configured.");
       }
 
       for (String authorizerName : authorizers) {
@@ -130,6 +130,25 @@ public class AuthorizerMapperModule implements DruidModule
       }
 
       return new AuthorizerMapper(authorizerMap);
+    }
+  }
+
+  private static void validateProperties(List<String> authorizers)
+  {
+    if (authorizers == null) {
+      return;
+    }
+
+    if (authorizers.isEmpty()) {
+      throw new IAE("Must have at least one Authorizer configured.");
+    }
+
+    Set<String> authorizerSet = new HashSet<>();
+    for (String authorizer : authorizers) {
+      if (authorizerSet.contains(authorizer)) {
+        throw new ISE("Cannot have multiple authorizers with the same name: [%s]", authorizer);
+      }
+      authorizerSet.add(authorizer);
     }
   }
 }

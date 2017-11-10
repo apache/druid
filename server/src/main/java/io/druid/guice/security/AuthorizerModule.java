@@ -27,8 +27,8 @@ import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Named;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.PolyBind;
-import io.druid.server.security.Authorizer;
 import io.druid.server.security.AllowAllAuthorizer;
+import io.druid.server.security.Authorizer;
 
 public class AuthorizerModule implements Module
 {

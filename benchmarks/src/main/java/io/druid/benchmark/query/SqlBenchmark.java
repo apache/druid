@@ -39,6 +39,7 @@ import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.segment.QueryableIndex;
+import io.druid.server.security.AllowAllEscalator;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.planner.DruidPlanner;
@@ -120,8 +121,8 @@ public class SqlBenchmark
         CalciteTests.createExprMacroTable(),
         plannerConfig,
         new AuthConfig(),
-        AuthTestUtils.TEST_AUTHENTICATOR_MAPPER,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        new AllowAllEscalator(),
         CalciteTests.getJsonMapper()
     );
     groupByQuery = GroupByQuery

@@ -52,7 +52,7 @@ import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.router.QueryHostFinder;
 import io.druid.server.router.RendezvousHashAvaticaConnectionBalancer;
 import io.druid.server.security.AllowAllAuthorizer;
-import io.druid.server.security.AuthTestUtils;
+import io.druid.server.security.AllowAllEscalator;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
 import org.eclipse.jetty.client.HttpClient;
@@ -253,7 +253,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                 }
               },
               new DefaultGenericQueryMetricsFactory(jsonMapper),
-              AuthTestUtils.TEST_AUTHENTICATOR_MAPPER
+              new AllowAllEscalator()
           )
           {
             @Override
