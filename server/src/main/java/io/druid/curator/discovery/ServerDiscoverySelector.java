@@ -31,6 +31,7 @@ import io.druid.java.util.common.logger.Logger;
 import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.ServiceProvider;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
@@ -44,10 +45,12 @@ public class ServerDiscoverySelector implements DiscoverySelector<Server>
   private static final Logger log = new Logger(ServerDiscoverySelector.class);
 
   private final ServiceProvider serviceProvider;
+  private final String name;
 
-  public ServerDiscoverySelector(ServiceProvider serviceProvider)
+  public ServerDiscoverySelector(ServiceProvider serviceProvider, String name)
   {
     this.serviceProvider = serviceProvider;
+    this.name = name;
   }
 
   private static final Function<ServiceInstance, Server> TO_SERVER = new Function<ServiceInstance, Server>()
@@ -97,6 +100,7 @@ public class ServerDiscoverySelector implements DiscoverySelector<Server>
     }
   };
 
+  @Nullable
   @Override
   public Server pick()
   {
@@ -105,12 +109,12 @@ public class ServerDiscoverySelector implements DiscoverySelector<Server>
       instance = serviceProvider.getInstance();
     }
     catch (Exception e) {
-      log.info(e, "Exception getting instance");
+      log.info(e, "Exception getting instance for [%s]", name);
       return null;
     }
 
     if (instance == null) {
-      log.error("No server instance found");
+      log.error("No server instance found for [%s]", name);
       return null;
     }
 
