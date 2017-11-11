@@ -57,7 +57,11 @@ public class ParametrizedUriEmitterModule implements Module
     return new ParametrizedUriEmitter(
         config.get(),
         lifecycle.addCloseableInstance(
-            HttpEmitterModule.createAsyncHttpClient("ParmetrizedUriEmitter-AsyncHttpClient-%d", sslContext)
+            HttpEmitterModule.createAsyncHttpClient(
+                "ParmetrizedUriEmitter-AsyncHttpClient-%d",
+                "ParmetrizedUriEmitter-AsyncHttpClient-Timer-%d",
+                sslContext
+            )
         ),
         jsonMapper
     );
