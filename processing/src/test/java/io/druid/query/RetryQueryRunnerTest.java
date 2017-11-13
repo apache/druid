@@ -29,7 +29,6 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.spec.MultipleSpecificSegmentSpec;
 import io.druid.query.timeseries.TimeseriesQuery;
-import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.SegmentMissingException;
 import io.druid.segment.TestHelper;
@@ -103,9 +102,6 @@ public class RetryQueryRunnerTest
             return Sequences.empty();
           }
         },
-        (QueryToolChest) new TimeseriesQueryQueryToolChest(
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-        ),
         new RetryQueryRunnerConfig()
         {
           @Override
@@ -171,9 +167,6 @@ public class RetryQueryRunnerTest
             }
           }
         },
-        (QueryToolChest) new TimeseriesQueryQueryToolChest(
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-        ),
         new TestRetryQueryRunnerConfig(1, true),
         jsonMapper
     );
@@ -225,9 +218,6 @@ public class RetryQueryRunnerTest
             }
           }
         },
-        (QueryToolChest) new TimeseriesQueryQueryToolChest(
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-        ),
         new TestRetryQueryRunnerConfig(4, true),
         jsonMapper
     );
@@ -264,14 +254,11 @@ public class RetryQueryRunnerTest
             return Sequences.empty();
           }
         },
-        (QueryToolChest) new TimeseriesQueryQueryToolChest(
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-        ),
         new TestRetryQueryRunnerConfig(1, false),
         jsonMapper
     );
 
-    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
+    Sequences.toList(
         runner.run(QueryPlus.wrap(query), context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
@@ -353,9 +340,6 @@ public class RetryQueryRunnerTest
             }
           }
         },
-        (QueryToolChest) new TimeseriesQueryQueryToolChest(
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-        ),
         new TestRetryQueryRunnerConfig(2, false),
         jsonMapper
     );

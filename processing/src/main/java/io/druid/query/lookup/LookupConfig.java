@@ -23,6 +23,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Strings;
 
+import javax.validation.constraints.Min;
+import java.util.Objects;
+
 public class LookupConfig
 {
 
@@ -32,13 +35,21 @@ public class LookupConfig
   @JsonProperty("enableLookupSyncOnStartup")
   private boolean enableLookupSyncOnStartup = true;
 
+  @Min(1)
   @JsonProperty("numLookupLoadingThreads")
   private int numLookupLoadingThreads = Runtime.getRuntime().availableProcessors() / 2;
 
+  @Min(1)
+  @JsonProperty("coordinatorFetchRetries")
+  private int coordinatorFetchRetries = 3;
+
+  @Min(1)
+  @JsonProperty("lookupStartRetries")
+  private int lookupStartRetries = 3;
+
   /**
-   * @param snapshotWorkingDir        working directory to store lookups snapshot file, passing null or empty string will disable the snapshot utility
-   * @param numLookupLoadingThreads   number of threads for loading the lookups as part of the synchronization process
-   * @param enableLookupSyncOnStartup decides whether the lookup synchronization process should be enabled at startup
+   * @param snapshotWorkingDir working directory to store lookups snapshot file, passing null or empty string will
+   *                           disable the snapshot utility
    */
   @JsonCreator
   public LookupConfig(
@@ -63,6 +74,16 @@ public class LookupConfig
     return enableLookupSyncOnStartup;
   }
 
+  public int getCoordinatorFetchRetries()
+  {
+    return coordinatorFetchRetries;
+  }
+
+  public int getLookupStartRetries()
+  {
+    return lookupStartRetries;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -75,19 +96,34 @@ public class LookupConfig
 
     LookupConfig that = (LookupConfig) o;
 
-    return snapshotWorkingDir.equals(that.snapshotWorkingDir) &&
+    return Objects.equals(snapshotWorkingDir, that.snapshotWorkingDir) &&
            enableLookupSyncOnStartup == that.enableLookupSyncOnStartup &&
-           numLookupLoadingThreads == that.numLookupLoadingThreads;
+           numLookupLoadingThreads == that.numLookupLoadingThreads &&
+           coordinatorFetchRetries == that.coordinatorFetchRetries &&
+           lookupStartRetries == that.lookupStartRetries;
+  }
 
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        snapshotWorkingDir,
+        enableLookupSyncOnStartup,
+        numLookupLoadingThreads,
+        coordinatorFetchRetries,
+        lookupStartRetries
+    );
   }
 
   @Override
   public String toString()
   {
     return "LookupConfig{" +
-           "snapshotWorkingDir='" + getSnapshotWorkingDir() + '\'' +
-           " numLookupLoadingThreads='" + getNumLookupLoadingThreads() + '\'' +
-           " enableLookupSyncOnStartup='" + getEnableLookupSyncOnStartup() + '\'' +
+           "snapshotWorkingDir='" + snapshotWorkingDir + '\'' +
+           ", enableLookupSyncOnStartup=" + enableLookupSyncOnStartup +
+           ", numLookupLoadingThreads=" + numLookupLoadingThreads +
+           ", coordinatorFetchRetries=" + coordinatorFetchRetries +
+           ", lookupStartRetries=" + lookupStartRetries +
            '}';
   }
 }

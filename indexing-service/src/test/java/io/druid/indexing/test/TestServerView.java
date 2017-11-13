@@ -27,6 +27,7 @@ import io.druid.java.util.common.Pair;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -126,7 +127,7 @@ public class TestServerView implements FilteredServerInventoryView, ServerView.S
   }
 
   @Override
-  public Iterable<DruidServer> getInventory()
+  public Collection<DruidServer> getInventory()
   {
     return null;
   }

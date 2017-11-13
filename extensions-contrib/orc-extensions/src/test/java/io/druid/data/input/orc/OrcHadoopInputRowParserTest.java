@@ -37,6 +37,7 @@ import io.druid.guice.GuiceInjectors;
 import io.druid.initialization.Initialization;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
+import org.apache.hadoop.hive.common.type.HiveDecimal;
 import org.apache.hadoop.hive.ql.io.orc.OrcStruct;
 import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable;
 import org.apache.hadoop.hive.serde2.objectinspector.SettableStructObjectInspector;
@@ -49,6 +50,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 
 public class OrcHadoopInputRowParserTest
 {
@@ -161,18 +163,22 @@ public class OrcHadoopInputRowParserTest
     oi.setStructFieldData(struct, oi.getStructFieldRef("timestamp"), new Text("2000-01-01"));
     oi.setStructFieldData(struct, oi.getStructFieldRef("col1"), new Text("foo"));
     oi.setStructFieldData(struct, oi.getStructFieldRef("col2"), ImmutableList.of(new Text("foo"), new Text("bar")));
-    oi.setStructFieldData(struct, oi.getStructFieldRef("col3"), new FloatWritable(1));
+    oi.setStructFieldData(struct, oi.getStructFieldRef("col3"), new FloatWritable(1.5f));
     oi.setStructFieldData(struct, oi.getStructFieldRef("col4"), new LongWritable(2));
-    oi.setStructFieldData(struct, oi.getStructFieldRef("col5"), new HiveDecimalWritable(3));
+    oi.setStructFieldData(
+        struct,
+        oi.getStructFieldRef("col5"),
+        new HiveDecimalWritable(HiveDecimal.create(BigDecimal.valueOf(3.5d)))
+    );
     oi.setStructFieldData(struct, oi.getStructFieldRef("col6"), null);
 
     final InputRow row = parser.parse(struct);
     Assert.assertEquals("timestamp", DateTimes.of("2000-01-01"), row.getTimestamp());
     Assert.assertEquals("col1", "foo", row.getRaw("col1"));
     Assert.assertEquals("col2", ImmutableList.of("foo", "bar"), row.getRaw("col2"));
-    Assert.assertEquals("col3", 1.0f, row.getRaw("col3"));
+    Assert.assertEquals("col3", 1.5f, row.getRaw("col3"));
     Assert.assertEquals("col4", 2L, row.getRaw("col4"));
-    Assert.assertEquals("col5", 3.0d, row.getRaw("col5"));
+    Assert.assertEquals("col5", 3.5d, row.getRaw("col5"));
     Assert.assertNull("col6", row.getRaw("col6"));
   }
 }

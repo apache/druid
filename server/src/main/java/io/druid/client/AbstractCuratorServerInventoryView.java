@@ -36,6 +36,7 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.ZKPaths;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -204,7 +205,7 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
   }
 
   @Override
-  public Iterable<DruidServer> getInventory()
+  public Collection<DruidServer> getInventory()
   {
     return inventoryManager.getInventory();
   }
@@ -282,7 +283,7 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
       return;
     }
 
-    container.addDataSegment(inventory.getIdentifier(), inventory);
+    container.addDataSegment(inventory);
 
     runSegmentCallbacks(
         new Function<SegmentCallback, CallbackAction>()

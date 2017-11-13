@@ -47,6 +47,7 @@ import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import io.druid.segment.transform.TransformSpec;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -117,6 +118,7 @@ public class IngestSegmentFirehoseTest
       final WindowedStorageAdapter wsa = new WindowedStorageAdapter(sa, sa.getInterval());
       final IngestSegmentFirehose firehose = new IngestSegmentFirehose(
           ImmutableList.of(wsa, wsa),
+          TransformSpec.NONE,
           ImmutableList.of("host", "spatial"),
           ImmutableList.of("visited_sum", "unique_hosts"),
           null
@@ -149,6 +151,7 @@ public class IngestSegmentFirehoseTest
       // Do a spatial filter
       final IngestSegmentFirehose firehose2 = new IngestSegmentFirehose(
           ImmutableList.of(new WindowedStorageAdapter(queryable, Intervals.of("2000/3000"))),
+          TransformSpec.NONE,
           ImmutableList.of("host", "spatial"),
           ImmutableList.of("visited_sum", "unique_hosts"),
           new SpatialDimFilter("spatial", new RadiusBound(new float[]{1, 0}, 0.1f))

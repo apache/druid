@@ -228,6 +228,7 @@ public class ConditionalMultibind<T>
    *
    * @return self to support a continuous syntax for adding more conditional bindings.
    */
+  @PublicApi
   public ConditionalMultibind<T> addConditionBinding(
       String property,
       Predicate<String> condition,

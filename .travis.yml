@@ -42,3 +42,11 @@ matrix:
         - mvn install -q -ff -DskipTests -B
       script:
         - $TRAVIS_BUILD_DIR/ci/travis_script_integration.sh
+      after_failure:
+        - for v in ~/shared/logs/*.log ; do
+          echo $v logtail ======================== ; tail -100 $v ;
+          done
+        - for v in broker middlemanager overlord router coordinator historical ; do
+          echo $v dmesg ======================== ;
+          docker exec -it druid-$v sh -c 'dmesg | tail -3' ;
+          done

@@ -35,12 +35,14 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.client.DruidDataSource;
-import io.druid.java.util.common.concurrent.Execs;
+import io.druid.client.ImmutableDruidDataSource;
+import io.druid.concurrent.LifecycleLock;
 import io.druid.guice.ManageLifecycle;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.MapUtils;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.timeline.DataSegment;
@@ -62,6 +64,7 @@ import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
 import org.skife.jdbi.v2.util.ByteArrayMapper;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -73,6 +76,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -82,19 +86,16 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   private static final Interner<DataSegment> DATA_SEGMENT_INTERNER = Interners.newWeakInterner();
   private static final EmittingLogger log = new EmittingLogger(SQLMetadataSegmentManager.class);
 
-
-  private final Object lock = new Object();
+  private final LifecycleLock lifecycleLock = new LifecycleLock();
 
   private final ObjectMapper jsonMapper;
   private final Supplier<MetadataSegmentManagerConfig> config;
   private final Supplier<MetadataStorageTablesConfig> dbTables;
-  private final AtomicReference<ConcurrentHashMap<String, DruidDataSource>> dataSources;
+  private final AtomicReference<ConcurrentHashMap<String, DruidDataSource>> dataSourcesRef;
   private final SQLMetadataConnector connector;
 
   private volatile ListeningScheduledExecutorService exec = null;
   private volatile ListenableFuture<?> future = null;
-
-  private volatile boolean started = false;
 
   @Inject
   public SQLMetadataSegmentManager(
@@ -107,7 +108,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     this.jsonMapper = jsonMapper;
     this.config = config;
     this.dbTables = dbTables;
-    this.dataSources = new AtomicReference<>(
+    this.dataSourcesRef = new AtomicReference<>(
         new ConcurrentHashMap<String, DruidDataSource>()
     );
     this.connector = connector;
@@ -117,11 +118,11 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   @LifecycleStart
   public void start()
   {
-    synchronized (lock) {
-      if (started) {
-        return;
-      }
+    if (!lifecycleLock.canStart()) {
+      return;
+    }
 
+    try {
       exec = MoreExecutors.listeningDecorator(Execs.scheduledSingleThreaded("DatabaseSegmentManager-Exec--%d"));
 
       final Duration delay = config.get().getPollDuration().toStandardDuration();
@@ -144,7 +145,10 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
           delay.getMillis(),
           TimeUnit.MILLISECONDS
       );
-      started = true;
+      lifecycleLock.started();
+    }
+    finally {
+      lifecycleLock.exitStart();
     }
   }
 
@@ -152,17 +156,23 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   @LifecycleStop
   public void stop()
   {
-    synchronized (lock) {
-      if (!started) {
-        return;
-      }
+    if (!lifecycleLock.canStop()) {
+      return;
+    }
+    try {
+      final ConcurrentHashMap<String, DruidDataSource> emptyMap = new ConcurrentHashMap<>();
+      ConcurrentHashMap<String, DruidDataSource> current;
+      do {
+        current = dataSourcesRef.get();
+      } while (!dataSourcesRef.compareAndSet(current, emptyMap));
 
-      started = false;
-      dataSources.set(new ConcurrentHashMap<String, DruidDataSource>());
       future.cancel(false);
       future = null;
       exec.shutdownNow();
       exec = null;
+    }
+    finally {
+      lifecycleLock.exitStop();
     }
   }
 
@@ -302,31 +312,17 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   public boolean removeDatasource(final String ds)
   {
     try {
-      ConcurrentHashMap<String, DruidDataSource> dataSourceMap = dataSources.get();
-
-      if (!dataSourceMap.containsKey(ds)) {
-        log.warn("Cannot delete datasource %s, does not exist", ds);
-        return false;
-      }
-
-      connector.getDBI().withHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle) throws Exception
-            {
-              handle.createStatement(
-                  StringUtils.format("UPDATE %s SET used=false WHERE dataSource = :dataSource", getSegmentsTable())
-              )
-                    .bind("dataSource", ds)
-                    .execute();
-
-              return null;
-            }
-          }
+      final int removed = connector.getDBI().withHandle(
+          handle -> handle.createStatement(
+              StringUtils.format("UPDATE %s SET used=false WHERE dataSource = :dataSource", getSegmentsTable())
+          ).bind("dataSource", ds).execute()
       );
 
-      dataSourceMap.remove(ds);
+      dataSourcesRef.get().remove(ds);
+
+      if (removed == 0) {
+        return false;
+      }
     }
     catch (Exception e) {
       log.error(e, "Error removing datasource %s", ds);
@@ -340,34 +336,25 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   public boolean removeSegment(String ds, final String segmentID)
   {
     try {
-      connector.getDBI().withHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle) throws Exception
-            {
-              handle.createStatement(
-                  StringUtils.format("UPDATE %s SET used=false WHERE id = :segmentID", getSegmentsTable())
-              ).bind("segmentID", segmentID)
-                    .execute();
-
-              return null;
-            }
-          }
+      final int removed = connector.getDBI().withHandle(
+          handle -> handle.createStatement(
+              StringUtils.format("UPDATE %s SET used=false WHERE id = :segmentID", getSegmentsTable())
+          ).bind("segmentID", segmentID).execute()
       );
 
-      ConcurrentHashMap<String, DruidDataSource> dataSourceMap = dataSources.get();
-
-      if (!dataSourceMap.containsKey(ds)) {
-        log.warn("Cannot find datasource %s", ds);
-        return false;
-      }
+      ConcurrentHashMap<String, DruidDataSource> dataSourceMap = dataSourcesRef.get();
 
       DruidDataSource dataSource = dataSourceMap.get(ds);
-      dataSource.removePartition(segmentID);
+      if (dataSource != null) {
+        dataSource.removePartition(segmentID);
 
-      if (dataSource.isEmpty()) {
-        dataSourceMap.remove(ds);
+        if (dataSource.isEmpty()) {
+          dataSourceMap.remove(ds);
+        }
+      }
+
+      if (removed == 0) {
+        return false;
       }
     }
     catch (Exception e) {
@@ -381,69 +368,65 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   @Override
   public boolean isStarted()
   {
-    return started;
+    return lifecycleLock.isStarted();
   }
 
   @Override
-  public DruidDataSource getInventoryValue(String key)
+  @Nullable
+  public ImmutableDruidDataSource getInventoryValue(String key)
   {
-    return dataSources.get().get(key);
+    final DruidDataSource dataSource = dataSourcesRef.get().get(key);
+    return dataSource == null ? null : dataSource.toImmutableDruidDataSource();
   }
 
   @Override
-  public Collection<DruidDataSource> getInventory()
+  public Collection<ImmutableDruidDataSource> getInventory()
   {
-    return dataSources.get().values();
+    return dataSourcesRef.get()
+                         .values()
+                         .stream()
+                         .map(DruidDataSource::toImmutableDruidDataSource)
+                         .collect(Collectors.toList());
   }
 
   @Override
   public Collection<String> getAllDatasourceNames()
   {
-    synchronized (lock) {
-      return connector.getDBI().withHandle(
-          new HandleCallback<List<String>>()
-          {
-            @Override
-            public List<String> withHandle(Handle handle) throws Exception
-            {
-              return handle.createQuery(
-                  StringUtils.format("SELECT DISTINCT(datasource) FROM %s", getSegmentsTable())
-              )
-                           .fold(
-                               Lists.<String>newArrayList(),
-                               new Folder3<ArrayList<String>, Map<String, Object>>()
-                               {
-                                 @Override
-                                 public ArrayList<String> fold(
-                                     ArrayList<String> druidDataSources,
-                                     Map<String, Object> stringObjectMap,
-                                     FoldController foldController,
-                                     StatementContext statementContext
-                                 ) throws SQLException
-                                 {
-                                   druidDataSources.add(
-                                       MapUtils.getString(stringObjectMap, "datasource")
-                                   );
-                                   return druidDataSources;
-                                 }
-                               }
-                           );
-
-            }
-          }
-      );
-    }
+    return connector.getDBI().withHandle(
+        handle -> handle.createQuery(
+            StringUtils.format("SELECT DISTINCT(datasource) FROM %s", getSegmentsTable())
+        )
+                        .fold(
+                            new ArrayList<>(),
+                            new Folder3<List<String>, Map<String, Object>>()
+                            {
+                              @Override
+                              public List<String> fold(
+                                  List<String> druidDataSources,
+                                  Map<String, Object> stringObjectMap,
+                                  FoldController foldController,
+                                  StatementContext statementContext
+                              ) throws SQLException
+                              {
+                                druidDataSources.add(
+                                    MapUtils.getString(stringObjectMap, "datasource")
+                                );
+                                return druidDataSources;
+                              }
+                            }
+                        )
+    );
   }
 
   @Override
   public void poll()
   {
     try {
-      if (!started) {
+      if (!lifecycleLock.isStarted()) {
         return;
       }
 
-      ConcurrentHashMap<String, DruidDataSource> newDataSources = new ConcurrentHashMap<String, DruidDataSource>();
+      ConcurrentHashMap<String, DruidDataSource> newDataSources = new ConcurrentHashMap<>();
 
       log.debug("Starting polling of segment table");
 
@@ -521,15 +504,14 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
         }
 
         if (!dataSource.getSegments().contains(segment)) {
-          dataSource.addSegment(segment.getIdentifier(), segment);
+          dataSource.addSegment(segment);
         }
       }
 
-      synchronized (lock) {
-        if (started) {
-          dataSources.set(newDataSources);
-        }
-      }
+      ConcurrentHashMap<String, DruidDataSource> current;
+      do {
+        current = dataSourcesRef.get();
+      } while (!dataSourcesRef.compareAndSet(current, newDataSources));
     }
     catch (Exception e) {
       log.makeAlert(e, "Problem polling DB.").emit();

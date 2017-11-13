@@ -42,18 +42,6 @@ public class IndexedFloatsGenericColumn implements GenericColumn
   }
 
   @Override
-  public ValueType getType()
-  {
-    return ValueType.FLOAT;
-  }
-
-  @Override
-  public String getStringSingleValueRow(int rowNum)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public ColumnValueSelector makeColumnValueSelector(ReadableOffset offset)
   {
     return column.makeColumnValueSelector(offset);

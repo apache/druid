@@ -47,7 +47,6 @@ import io.druid.query.aggregation.FloatMinAggregatorFactory;
 import io.druid.query.aggregation.LongMaxAggregatorFactory;
 import io.druid.query.aggregation.LongMinAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
@@ -89,7 +88,8 @@ import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthTestUtils;
+import io.druid.server.security.AuthenticationResult;
+import io.druid.server.security.ForbiddenException;
 import io.druid.sql.calcite.filtration.Filtration;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
@@ -104,6 +104,7 @@ import io.druid.sql.calcite.util.QueryLogHook;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import io.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.calcite.plan.RelOptPlanner;
+import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -115,6 +116,8 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.util.ArrayList;
@@ -219,6 +222,9 @@ public class CalciteQueryTest
   private static final PagingSpec FIRST_PAGING_SPEC = new PagingSpec(null, 1000, true);
 
   @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
+  @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Rule
@@ -301,19 +307,17 @@ public class CalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .postAggregators(
-                      ImmutableList.<PostAggregator>builder()
-                          .add(EXPRESSION_POST_AGG("p0", "'foo'"))
-                          .add(EXPRESSION_POST_AGG("p1", "'xfoo'"))
-                          .add(EXPRESSION_POST_AGG("p2", "'foo'"))
-                          .add(EXPRESSION_POST_AGG("p3", "' foo'"))
-                          .add(EXPRESSION_POST_AGG("p4", "'foo'"))
-                          .add(EXPRESSION_POST_AGG("p5", "'foo'"))
-                          .add(EXPRESSION_POST_AGG("p6", "'foo'"))
-                          .add(EXPRESSION_POST_AGG("p7", "'foo '"))
-                          .add(EXPRESSION_POST_AGG("p8", "'foox'"))
-                          .add(EXPRESSION_POST_AGG("p9", "' foo'"))
-                          .add(EXPRESSION_POST_AGG("p10", "'xfoo'"))
-                          .build()
+                      EXPRESSION_POST_AGG("p0", "'foo'"),
+                      EXPRESSION_POST_AGG("p1", "'xfoo'"),
+                      EXPRESSION_POST_AGG("p2", "'foo'"),
+                      EXPRESSION_POST_AGG("p3", "' foo'"),
+                      EXPRESSION_POST_AGG("p4", "'foo'"),
+                      EXPRESSION_POST_AGG("p5", "'foo'"),
+                      EXPRESSION_POST_AGG("p6", "'foo'"),
+                      EXPRESSION_POST_AGG("p7", "'foo '"),
+                      EXPRESSION_POST_AGG("p8", "'foox'"),
+                      EXPRESSION_POST_AGG("p9", "' foo'"),
+                      EXPRESSION_POST_AGG("p10", "'xfoo'")
                   )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
@@ -367,6 +371,25 @@ public class CalciteQueryTest
             new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE"}
         )
     );
+
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        "SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE\n"
+        + "FROM INFORMATION_SCHEMA.TABLES\n"
+        + "WHERE TABLE_TYPE IN ('SYSTEM_TABLE', 'TABLE', 'VIEW')",
+        CalciteTests.SUPER_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of(
+            new Object[]{"druid", CalciteTests.DATASOURCE1, "TABLE"},
+            new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE"},
+            new Object[]{"druid", CalciteTests.FORBIDDEN_DATASOURCE, "TABLE"},
+            new Object[]{"druid", "aview", "VIEW"},
+            new Object[]{"druid", "bview", "VIEW"},
+            new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE"},
+            new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE"},
+            new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE"}
+        )
+    );
   }
 
   @Test
@@ -388,6 +411,37 @@ public class CalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testInformationSchemaColumnsOnForbiddenTable() throws Exception
+  {
+    testQuery(
+        "SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE\n"
+        + "FROM INFORMATION_SCHEMA.COLUMNS\n"
+        + "WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = 'forbiddenDatasource'",
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        "SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE\n"
+        + "FROM INFORMATION_SCHEMA.COLUMNS\n"
+        + "WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = 'forbiddenDatasource'",
+        CalciteTests.SUPER_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of(
+            new Object[]{"__time", "TIMESTAMP", "NO"},
+            new Object[]{"cnt", "BIGINT", "NO"},
+            new Object[]{"dim1", "VARCHAR", "YES"},
+            new Object[]{"dim2", "VARCHAR", "YES"},
+            new Object[]{"m1", "FLOAT", "NO"},
+            new Object[]{"m2", "DOUBLE", "NO"},
+            new Object[]{"unique_dim1", "OTHER", "NO"}
+        )
+    );
+  }
+
 
   @Test
   public void testInformationSchemaColumnsOnView() throws Exception
@@ -444,6 +498,33 @@ public class CalciteQueryTest
             new Object[]{T("2001-01-01"), 1L, "1", "a", 4f, 4.0, HLLCV1.class.getName()},
             new Object[]{T("2001-01-02"), 1L, "def", "abc", 5f, 5.0, HLLCV1.class.getName()},
             new Object[]{T("2001-01-03"), 1L, "abc", "", 6f, 6.0, HLLCV1.class.getName()}
+        )
+    );
+  }
+
+  @Test
+  public void testSelectStarOnForbiddenTable() throws Exception
+  {
+    assertQueryIsForbidden(
+        "SELECT * FROM druid.forbiddenDatasource",
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
+
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        "SELECT * FROM druid.forbiddenDatasource",
+        CalciteTests.SUPER_USER_AUTH_RESULT,
+        ImmutableList.<Query>of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.FORBIDDEN_DATASOURCE)
+                .intervals(QSS(Filtration.eternity()))
+                .columns("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1")
+                .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{T("2000-01-01"), 1L, "forbidden", "abcd", 9999.0f, 0.0, HLLCV1.class.getName()}
         )
     );
   }
@@ -650,6 +731,7 @@ public class CalciteQueryTest
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         "SELECT dim1 FROM druid.foo GROUP BY dim1 ORDER BY dim1 DESC",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             new GroupByQuery.Builder()
                 .setDataSource(CalciteTests.DATASOURCE1)
@@ -692,6 +774,7 @@ public class CalciteQueryTest
         + "  druid.foo x INNER JOIN druid.foo y ON x.dim1 = y.dim2\n"
         + "WHERE\n"
         + "  x.dim1 <> ''",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -731,6 +814,7 @@ public class CalciteQueryTest
         + "  druid.foo x INNER JOIN druid.foo y ON x.dim1 = y.dim2\n"
         + "WHERE\n"
         + "  x.dim1 <> ''",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{explanation}
@@ -967,6 +1051,27 @@ public class CalciteQueryTest
   }
 
   @Test
+  public void testHavingOnGrandTotal() throws Exception
+  {
+    testQuery(
+        "SELECT SUM(m1) AS m1_sum FROM foo HAVING m1_sum = 21",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(AGGS(new DoubleSumAggregatorFactory("a0", "m1")))
+                        .setHavingSpec(HAVING(NUMERIC_SELECTOR("a0", "21", null)))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{21d}
+        )
+    );
+  }
+
+  @Test
   public void testHavingOnDoubleSum() throws Exception
   {
     testQuery(
@@ -979,7 +1084,7 @@ public class CalciteQueryTest
                         .setDimensions(DIMS(new DefaultDimensionSpec("dim1", "d0")))
                         .setAggregatorSpecs(AGGS(new DoubleSumAggregatorFactory("a0", "m1")))
                         .setHavingSpec(
-                            new DimFilterHavingSpec(
+                            HAVING(
                                 new BoundDimFilter(
                                     "a0",
                                     "1",
@@ -1006,11 +1111,111 @@ public class CalciteQueryTest
   }
 
   @Test
+  public void testHavingOnApproximateCountDistinct() throws Exception
+  {
+    testQuery(
+        "SELECT dim2, COUNT(DISTINCT m1) FROM druid.foo GROUP BY dim2 HAVING COUNT(DISTINCT m1) > 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(DIMS(new DefaultDimensionSpec("dim2", "d0")))
+                        .setAggregatorSpecs(
+                            AGGS(
+                                new CardinalityAggregatorFactory(
+                                    "a0",
+                                    null,
+                                    ImmutableList.of(
+                                        new DefaultDimensionSpec("m1", "m1", ValueType.FLOAT)
+                                    ),
+                                    false,
+                                    true
+                                )
+                            )
+                        )
+                        .setHavingSpec(
+                            HAVING(
+                                BOUND(
+                                    "a0",
+                                    "1",
+                                    null,
+                                    true,
+                                    false,
+                                    null,
+                                    StringComparators.NUMERIC
+                                )
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", 3L},
+            new Object[]{"a", 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testHavingOnExactCountDistinct() throws Exception
+  {
+    testQuery(
+        PLANNER_CONFIG_NO_HLL,
+        "SELECT dim2, COUNT(DISTINCT m1) FROM druid.foo GROUP BY dim2 HAVING COUNT(DISTINCT m1) > 1",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(CalciteTests.DATASOURCE1)
+                                            .setInterval(QSS(Filtration.eternity()))
+                                            .setGranularity(Granularities.ALL)
+                                            .setDimensions(
+                                                DIMS(
+                                                    new DefaultDimensionSpec("dim2", "d0", ValueType.STRING),
+                                                    new DefaultDimensionSpec("m1", "d1", ValueType.FLOAT)
+                                                )
+                                            )
+                                            .setContext(QUERY_CONTEXT_DEFAULT)
+                                            .build()
+                            )
+                        )
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(DIMS(new DefaultDimensionSpec("d0", "_d0", ValueType.STRING)))
+                        .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
+                        .setHavingSpec(
+                            HAVING(
+                                BOUND(
+                                    "a0",
+                                    "1",
+                                    null,
+                                    true,
+                                    false,
+                                    null,
+                                    StringComparators.NUMERIC
+                                )
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", 3L},
+            new Object[]{"a", 2L}
+        )
+    );
+  }
+
+  @Test
   public void testHavingOnFloatSum() throws Exception
   {
     testQuery(
         PLANNER_CONFIG_FALLBACK,
         "SELECT dim1, CAST(SUM(m1) AS FLOAT) AS m1_sum FROM druid.foo GROUP BY dim1 HAVING CAST(SUM(m1) AS FLOAT) > 1",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -1019,7 +1224,7 @@ public class CalciteQueryTest
                         .setDimensions(DIMS(new DefaultDimensionSpec("dim1", "d0")))
                         .setAggregatorSpecs(AGGS(new DoubleSumAggregatorFactory("a0", "m1")))
                         .setHavingSpec(
-                            new DimFilterHavingSpec(
+                            HAVING(
                                 new BoundDimFilter(
                                     "a0",
                                     "1",
@@ -1099,7 +1304,7 @@ public class CalciteQueryTest
                         .setPostAggregatorSpecs(ImmutableList.of(
                             EXPRESSION_POST_AGG("p0", "(\"a0\" / \"a1\")")
                         ))
-                        .setHavingSpec(new DimFilterHavingSpec(EXPRESSION_FILTER("((\"a0\" / \"a1\") == 1)")))
+                        .setHavingSpec(HAVING(EXPRESSION_FILTER("((\"a0\" / \"a1\") == 1)")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
@@ -1450,7 +1655,7 @@ public class CalciteQueryTest
   {
     Exception e = null;
     try {
-      testQuery(plannerConfig, sql, ImmutableList.of(), ImmutableList.of());
+      testQuery(plannerConfig, sql, CalciteTests.REGULAR_USER_AUTH_RESULT, ImmutableList.of(), ImmutableList.of());
     }
     catch (Exception e1) {
       e = e1;
@@ -1458,6 +1663,34 @@ public class CalciteQueryTest
 
     if (!(e instanceof RelOptPlanner.CannotPlanException)) {
       log.error(e, "Expected CannotPlanException for query: %s", sql);
+      Assert.fail(sql);
+    }
+  }
+
+  /**
+   * Provided for tests that wish to check multiple queries instead of relying on ExpectedException.
+   */
+  private void assertQueryIsForbidden(final String sql, final AuthenticationResult authenticationResult)
+  {
+    assertQueryIsForbidden(PLANNER_CONFIG_DEFAULT, sql, authenticationResult);
+  }
+
+  private void assertQueryIsForbidden(
+      final PlannerConfig plannerConfig,
+      final String sql,
+      final AuthenticationResult authenticationResult
+  )
+  {
+    Exception e = null;
+    try {
+      testQuery(plannerConfig, sql, authenticationResult, ImmutableList.of(), ImmutableList.of());
+    }
+    catch (Exception e1) {
+      e = e1;
+    }
+
+    if (!(e instanceof ForbiddenException)) {
+      log.error(e, "Expected ForbiddenException for query: %s with authResult: %s", sql, authenticationResult);
       Assert.fail(sql);
     }
   }
@@ -1931,17 +2164,15 @@ public class CalciteQueryTest
                       )
                   )
                   .postAggregators(
-                      ImmutableList.of(
-                          new ArithmeticPostAggregator(
-                              "a2",
-                              "quotient",
-                              ImmutableList.of(
-                                  new FieldAccessPostAggregator(null, "a2:sum"),
-                                  new FieldAccessPostAggregator(null, "a2:count")
-                              )
-                          ),
-                          EXPRESSION_POST_AGG("p0", "((\"a3\" + \"a4\") + \"a5\")")
-                      )
+                      new ArithmeticPostAggregator(
+                          "a2",
+                          "quotient",
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator(null, "a2:sum"),
+                              new FieldAccessPostAggregator(null, "a2:count")
+                          )
+                      ),
+                      EXPRESSION_POST_AGG("p0", "((\"a3\" + \"a4\") + \"a5\")")
                   )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
@@ -1995,6 +2226,7 @@ public class CalciteQueryTest
     testQuery(
         PLANNER_CONFIG_NO_TOPN,
         "SELECT dim1, MIN(m1) + MAX(m1) AS x FROM druid.foo GROUP BY dim1 ORDER BY x LIMIT 3",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -2040,6 +2272,7 @@ public class CalciteQueryTest
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_NO_TOPN,
         "SELECT dim1, MIN(m1) + MAX(m1) AS x FROM druid.foo GROUP BY dim1 ORDER BY x LIMIT 3",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -2239,10 +2472,10 @@ public class CalciteQueryTest
                       new LongSumAggregatorFactory("a3", null, "strlen(CAST((\"cnt\" * 10), 'STRING'))", macroTable),
                       new DoubleMaxAggregatorFactory("a4", null, "(strlen(\"dim2\") + log(\"m1\"))", macroTable)
                   ))
-                  .postAggregators(ImmutableList.of(
+                  .postAggregators(
                       EXPRESSION_POST_AGG("p0", "log((\"a1\" + \"a2\"))"),
                       EXPRESSION_POST_AGG("p1", "(\"a1\" % 4)")
-                  ))
+                  )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -2581,15 +2814,23 @@ public class CalciteQueryTest
   @Test
   public void testCountStarWithTimeFilterUsingStringLiterals() throws Exception
   {
-    // Strings are implicitly cast to timestamps.
+    // Strings are implicitly cast to timestamps. Test a few different forms.
 
     testQuery(
-        "SELECT COUNT(*) FROM druid.foo "
-        + "WHERE __time >= '2000-01-01 00:00:00' AND __time < '2001-01-01 00:00:00'",
+        "SELECT COUNT(*) FROM druid.foo\n"
+        + "WHERE __time >= '2000-01-01 00:00:00' AND __time < '2001-01-01T00:00:00'\n"
+        + "OR __time >= '2001-02-01' AND __time < '2001-02-02'\n"
+        + "OR __time BETWEEN '2001-03-01' AND '2001-03-02'",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Intervals.of("2000-01-01/2001-01-01")))
+                  .intervals(
+                      QSS(
+                          Intervals.of("2000-01-01/2001-01-01"),
+                          Intervals.of("2001-02-01/2001-02-02"),
+                          Intervals.of("2001-03-01/2001-03-02T00:00:00.001")
+                      )
+                  )
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
@@ -2598,6 +2839,26 @@ public class CalciteQueryTest
         ImmutableList.of(
             new Object[]{3L}
         )
+    );
+  }
+
+  @Test
+  public void testCountStarWithTimeFilterUsingStringLiteralsInvalid() throws Exception
+  {
+    // Strings are implicitly cast to timestamps. Test an invalid string.
+
+    // This error message isn't ideal but it is at least better than silently ignoring the problem.
+    expectedException.expect(RuntimeException.class);
+    expectedException.expectMessage("Error while applying rule ReduceExpressionsRule");
+    expectedException.expectCause(
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Illegal TIMESTAMP constant"))
+    );
+
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo\n"
+        + "WHERE __time >= 'z2000-01-01 00:00:00' AND __time < '2001-01-01 00:00:00'\n",
+        ImmutableList.of(),
+        ImmutableList.of()
     );
   }
 
@@ -3202,6 +3463,7 @@ public class CalciteQueryTest
     testQuery(
         PLANNER_CONFIG_NO_HLL,
         "SELECT COUNT(distinct dim2) FROM druid.foo",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(
@@ -3240,6 +3502,7 @@ public class CalciteQueryTest
     testQuery(
         PLANNER_CONFIG_NO_HLL,
         "SELECT APPROX_COUNT_DISTINCT(dim2) FROM druid.foo",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -3273,6 +3536,7 @@ public class CalciteQueryTest
     testQuery(
         PLANNER_CONFIG_NO_HLL,
         "SELECT dim2, SUM(cnt), COUNT(distinct dim1) FROM druid.foo GROUP BY dim2",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(
@@ -3532,6 +3796,7 @@ public class CalciteQueryTest
         + "  SUM(cnt),\n"
         + "  COUNT(*)\n"
         + "FROM (SELECT dim2, SUM(cnt) AS cnt FROM druid.foo GROUP BY dim2)",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(
@@ -4060,12 +4325,12 @@ public class CalciteQueryTest
                           )
                       )
                   )
-                  .postAggregators(ImmutableList.of(
+                  .postAggregators(
                       EXPRESSION_POST_AGG("p0", "CAST(\"a1\", 'DOUBLE')"),
                       EXPRESSION_POST_AGG("p1", "(\"a0\" / \"a1\")"),
                       EXPRESSION_POST_AGG("p2", "((\"a0\" / \"a1\") + 3)"),
                       EXPRESSION_POST_AGG("p3", "((CAST(\"a0\", 'DOUBLE') / CAST(\"a1\", 'DOUBLE')) + 3)")
-                  ))
+                  )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -4300,7 +4565,7 @@ public class CalciteQueryTest
                                 4
                             )
                         )
-                        .setHavingSpec(new DimFilterHavingSpec(NUMERIC_SELECTOR("a0", "1", null)))
+                        .setHavingSpec(HAVING(NUMERIC_SELECTOR("a0", "1", null)))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
@@ -4366,6 +4631,7 @@ public class CalciteQueryTest
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_LOS_ANGELES,
         "SELECT CURRENT_TIMESTAMP, CURRENT_DATE, CURRENT_DATE + INTERVAL '1' DAY",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{T("2000-01-01T00Z", LOS_ANGELES), D("1999-12-31"), D("2000-01-01")}
@@ -4381,6 +4647,7 @@ public class CalciteQueryTest
         QUERY_CONTEXT_LOS_ANGELES,
         "SELECT COUNT(*) FROM druid.foo\n"
         + "WHERE __time >= CURRENT_TIMESTAMP + INTERVAL '1' DAY AND __time < TIMESTAMP '2002-01-01 00:00:00'",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -4426,6 +4693,7 @@ public class CalciteQueryTest
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_LOS_ANGELES,
         "SELECT * FROM bview",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -4581,6 +4849,7 @@ public class CalciteQueryTest
     testQuery(
         PLANNER_CONFIG_NO_SUBQUERIES, // Sanity check; this simple query should work with subqueries disabled.
         "SELECT floor(CAST(dim1 AS float)), COUNT(*) FROM druid.foo GROUP BY floor(CAST(dim1 AS float))",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -4924,6 +5193,7 @@ public class CalciteQueryTest
         + ") AS x\n"
         + "GROUP BY gran\n"
         + "ORDER BY gran",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -5090,6 +5360,7 @@ public class CalciteQueryTest
         + ") AS x\n"
         + "GROUP BY gran\n"
         + "ORDER BY gran",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -5122,6 +5393,7 @@ public class CalciteQueryTest
         + ") AS x\n"
         + "GROUP BY gran\n"
         + "ORDER BY gran",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -5375,6 +5647,7 @@ public class CalciteQueryTest
         + "EXTRACT(YEAR FROM FLOOR(__time TO YEAR)) AS \"year\", SUM(cnt)\n"
         + "FROM druid.foo\n"
         + "GROUP BY EXTRACT(YEAR FROM FLOOR(__time TO YEAR))",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -5421,6 +5694,7 @@ public class CalciteQueryTest
         + "GROUP BY gran\n"
         + "ORDER BY gran\n"
         + "LIMIT 1",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -5591,6 +5865,7 @@ public class CalciteQueryTest
         + "WHERE dim2 IN (SELECT dim1 FROM druid.foo WHERE dim1 <> '')\n"
         + "AND dim1 <> 'xxx'\n"
         + "group by dim1, dim2 ORDER BY dim2",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -5657,6 +5932,7 @@ public class CalciteQueryTest
     testQuery(
         PLANNER_CONFIG_FALLBACK,
         "EXPLAIN PLAN FOR " + theQuery,
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(new Object[]{explanation})
     );
@@ -5699,7 +5975,7 @@ public class CalciteQueryTest
                             new DefaultDimensionSpec("dim2", "d1")
                         ))
                         .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
-                        .setHavingSpec(new DimFilterHavingSpec(NUMERIC_SELECTOR("a0", "1", null)))
+                        .setHavingSpec(HAVING(NUMERIC_SELECTOR("a0", "1", null)))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build(),
             newScanQueryBuilder()
@@ -5855,6 +6131,7 @@ public class CalciteQueryTest
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_DEFAULT,
         sql,
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         expectedQueries,
         expectedResults
     );
@@ -5863,31 +6140,34 @@ public class CalciteQueryTest
   private void testQuery(
       final PlannerConfig plannerConfig,
       final String sql,
+      final AuthenticationResult authenticationResult,
       final List<Query> expectedQueries,
       final List<Object[]> expectedResults
   ) throws Exception
   {
-    testQuery(plannerConfig, QUERY_CONTEXT_DEFAULT, sql, expectedQueries, expectedResults);
+    testQuery(plannerConfig, QUERY_CONTEXT_DEFAULT, sql, authenticationResult, expectedQueries, expectedResults);
   }
 
   private void testQuery(
       final PlannerConfig plannerConfig,
       final Map<String, Object> queryContext,
       final String sql,
+      final AuthenticationResult authenticationResult,
       final List<Query> expectedQueries,
       final List<Object[]> expectedResults
   ) throws Exception
   {
     log.info("SQL: %s", sql);
     queryLogHook.clearRecordedQueries();
-    final List<Object[]> plannerResults = getResults(plannerConfig, queryContext, sql);
+    final List<Object[]> plannerResults = getResults(plannerConfig, queryContext, sql, authenticationResult);
     verifyResults(sql, expectedQueries, expectedResults, plannerResults);
   }
 
   private List<Object[]> getResults(
       final PlannerConfig plannerConfig,
       final Map<String, Object> queryContext,
-      final String sql
+      final String sql,
+      final AuthenticationResult authenticationResult
   ) throws Exception
   {
     final InProcessViewManager viewManager = new InProcessViewManager();
@@ -5902,8 +6182,8 @@ public class CalciteQueryTest
         macroTable,
         plannerConfig,
         new AuthConfig(),
-        AuthTestUtils.TEST_AUTHENTICATOR_MAPPER,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        CalciteTests.TEST_AUTHENTICATOR_MAPPER,
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper()
     );
 
@@ -5921,7 +6201,7 @@ public class CalciteQueryTest
     );
 
     try (DruidPlanner planner = plannerFactory.createPlanner(queryContext)) {
-      final PlannerResult plan = planner.plan(sql);
+      final PlannerResult plan = planner.plan(sql, null, authenticationResult);
       return Sequences.toList(plan.run(), Lists.newArrayList());
     }
   }
@@ -6069,6 +6349,11 @@ public class CalciteQueryTest
   private static List<AggregatorFactory> AGGS(final AggregatorFactory... aggregators)
   {
     return Arrays.asList(aggregators);
+  }
+
+  private static DimFilterHavingSpec HAVING(final DimFilter filter)
+  {
+    return new DimFilterHavingSpec(filter, true);
   }
 
   private static ExpressionVirtualColumn EXPRESSION_VIRTUAL_COLUMN(

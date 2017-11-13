@@ -19,9 +19,10 @@
 
 package io.druid.metadata;
 
-import io.druid.client.DruidDataSource;
+import io.druid.client.ImmutableDruidDataSource;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
 
@@ -44,9 +45,10 @@ public interface MetadataSegmentManager
 
   boolean isStarted();
 
-  DruidDataSource getInventoryValue(String key);
+  @Nullable
+  ImmutableDruidDataSource getInventoryValue(String key);
 
-  Collection<DruidDataSource> getInventory();
+  Collection<ImmutableDruidDataSource> getInventory();
 
   Collection<String> getAllDatasourceNames();
 

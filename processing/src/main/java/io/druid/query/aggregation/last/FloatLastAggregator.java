@@ -33,11 +33,7 @@ public class FloatLastAggregator implements Aggregator
   protected long lastTime;
   protected float lastValue;
 
-  public FloatLastAggregator(
-      String name,
-      BaseLongColumnValueSelector timeSelector,
-      BaseFloatColumnValueSelector valueSelector
-  )
+  public FloatLastAggregator(BaseLongColumnValueSelector timeSelector, BaseFloatColumnValueSelector valueSelector)
   {
     this.valueSelector = valueSelector;
     this.timeSelector = timeSelector;

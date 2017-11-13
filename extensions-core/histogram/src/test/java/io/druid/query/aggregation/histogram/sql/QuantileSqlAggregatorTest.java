@@ -29,7 +29,6 @@ import io.druid.query.Druids;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.histogram.ApproximateHistogramAggregatorFactory;
 import io.druid.query.aggregation.histogram.ApproximateHistogramDruidModule;
 import io.druid.query.aggregation.histogram.ApproximateHistogramFoldingAggregatorFactory;
@@ -216,7 +215,7 @@ public class QuantileSqlAggregatorTest
                     ),
                     new ApproximateHistogramAggregatorFactory("a8:agg", "cnt", null, null, null, null)
                 ))
-                .postAggregators(ImmutableList.<PostAggregator>of(
+                .postAggregators(
                     new QuantilePostAggregator("a0", "a0:agg", 0.01f),
                     new QuantilePostAggregator("a1", "a0:agg", 0.50f),
                     new QuantilePostAggregator("a2", "a2:agg", 0.98f),
@@ -226,7 +225,7 @@ public class QuantileSqlAggregatorTest
                     new QuantilePostAggregator("a6", "a6:agg", 0.999f),
                     new QuantilePostAggregator("a7", "a5:agg", 0.999f),
                     new QuantilePostAggregator("a8", "a8:agg", 0.50f)
-                ))
+                )
                 .context(ImmutableMap.<String, Object>of("skipEmptyBuckets", true))
                 .build(),
           Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
@@ -278,7 +277,7 @@ public class QuantileSqlAggregatorTest
                         new NotDimFilter(new SelectorDimFilter("dim1", "abc", null))
                     )
                 ))
-                .postAggregators(ImmutableList.<PostAggregator>of(
+                .postAggregators(
                     new QuantilePostAggregator("a0", "a0:agg", 0.01f),
                     new QuantilePostAggregator("a1", "a0:agg", 0.50f),
                     new QuantilePostAggregator("a2", "a2:agg", 0.98f),
@@ -286,7 +285,7 @@ public class QuantileSqlAggregatorTest
                     new QuantilePostAggregator("a4", "a4:agg", 0.99f),
                     new QuantilePostAggregator("a5", "a5:agg", 0.999f),
                     new QuantilePostAggregator("a6", "a4:agg", 0.999f)
-                ))
+                )
                 .context(ImmutableMap.<String, Object>of("skipEmptyBuckets", true))
                 .build(),
           Iterables.getOnlyElement(queryLogHook.getRecordedQueries())

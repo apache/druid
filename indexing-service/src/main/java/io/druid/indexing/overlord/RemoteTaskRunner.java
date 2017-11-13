@@ -379,6 +379,9 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
+    finally {
+      lifecycleLock.exitStop();
+    }
   }
 
   @Override

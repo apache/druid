@@ -24,10 +24,8 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.InjectableValues;
-import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -192,7 +190,6 @@ public class AggregationTestHelper
             configSupplier
         ),
         new SelectQueryEngine(
-            configSupplier
         ),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
@@ -534,7 +531,6 @@ public class AggregationTestHelper
                                   return makeStringSerdeQueryRunner(
                                       mapper,
                                       toolChest,
-                                      query,
                                       factory.createRunner(segment)
                                   );
                                 }
@@ -554,7 +550,11 @@ public class AggregationTestHelper
     return baseRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
   }
 
-  public QueryRunner<Row> makeStringSerdeQueryRunner(final ObjectMapper mapper, final QueryToolChest toolChest, final Query<Row> query, final QueryRunner<Row> baseRunner)
+  public QueryRunner<Row> makeStringSerdeQueryRunner(
+      final ObjectMapper mapper,
+      final QueryToolChest toolChest,
+      final QueryRunner<Row> baseRunner
+  )
   {
     return new QueryRunner<Row>()
     {
@@ -576,9 +576,6 @@ public class AggregationTestHelper
               }
           );
           String resultStr = mapper.writer().writeValueAsString(yielder);
-
-          TypeFactory typeFactory = mapper.getTypeFactory();
-          JavaType baseType = typeFactory.constructType(toolChest.getResultTypeReference());
 
           List resultRows = Lists.transform(
               readQueryResultArrayFromString(resultStr),

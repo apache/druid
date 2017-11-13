@@ -47,8 +47,6 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
-import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.InDimFilter;
@@ -125,13 +123,6 @@ public class FilteredAggregatorBenchmark
   private BenchmarkSchemaInfo schemaInfo;
   private TimeseriesQuery query;
   private File tmpDir;
-
-  private static String JS_FN = "function(str) { return 'super-' + str; }";
-  private static ExtractionFn JS_EXTRACTION_FN = new JavaScriptExtractionFn(
-      JS_FN,
-      false,
-      JavaScriptConfig.getEnabledInstance()
-  );
 
   static {
     JSON_MAPPER = new DefaultObjectMapper();
@@ -256,9 +247,7 @@ public class FilteredAggregatorBenchmark
     return Sequences.toList(queryResult, Lists.<T>newArrayList());
   }
 
-  // Filtered agg doesn't work with ingestion, cardinality is not supported in incremental index
-  // See https://github.com/druid-io/druid/issues/3164
-  // @Benchmark
+  @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void ingest(Blackhole blackhole) throws Exception

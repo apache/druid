@@ -40,10 +40,10 @@ import io.druid.segment.data.ByteBufferWriter;
 import io.druid.segment.data.CompressedVSizeIntsIndexedSupplier;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.GenericIndexedWriter;
+import io.druid.segment.data.ImmutableRTreeObjectStrategy;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIntsWriter;
 import io.druid.segment.data.IndexedMultivalue;
-import io.druid.segment.data.IndexedRTree;
 import io.druid.segment.data.VSizeIndexed;
 import io.druid.segment.data.VSizeIndexedInts;
 import io.druid.segment.data.WritableSupplier;
@@ -249,7 +249,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
                 bitmapIndexWriter.writeToChannel(channel, smoosher);
               }
               if (spatialIndexWriter != null) {
-                spatialIndexWriter.writeToChannel(channel, smoosher);
+                spatialIndexWriter.writeToChannel(channel);
               }
             }
           }
@@ -324,7 +324,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
         ImmutableRTree rSpatialIndex = null;
         if (buffer.hasRemaining()) {
           rSpatialIndex = ByteBufferSerializer.read(
-              buffer, new IndexedRTree.ImmutableRTreeObjectStrategy(bitmapSerdeFactory.getBitmapFactory())
+              buffer, new ImmutableRTreeObjectStrategy(bitmapSerdeFactory.getBitmapFactory())
           );
           builder.setSpatialIndex(new SpatialIndexColumnPartSupplier(rSpatialIndex));
         }

@@ -655,11 +655,6 @@ public class GroupByQuery extends BaseQuery<Row>
     return new Builder(this).setLimitSpec(limitSpec).build();
   }
 
-  public GroupByQuery withAggregatorSpecs(final List<AggregatorFactory> aggregatorSpecs)
-  {
-    return new Builder(this).setAggregatorSpecs(aggregatorSpecs).build();
-  }
-
   public GroupByQuery withPostAggregatorSpecs(final List<PostAggregator> postAggregatorSpecs)
   {
     return new Builder(this).setPostAggregatorSpecs(postAggregatorSpecs).build();
@@ -806,12 +801,6 @@ public class GroupByQuery extends BaseQuery<Row>
       return this;
     }
 
-    public Builder setVirtualColumns(List<VirtualColumn> virtualColumns)
-    {
-      this.virtualColumns = VirtualColumns.create(virtualColumns);
-      return this;
-    }
-
     public Builder setVirtualColumns(VirtualColumn... virtualColumns)
     {
       this.virtualColumns = VirtualColumns.create(Arrays.asList(virtualColumns));
@@ -927,17 +916,6 @@ public class GroupByQuery extends BaseQuery<Row>
     public Builder setAggregatorSpecs(List<AggregatorFactory> aggregatorSpecs)
     {
       this.aggregatorSpecs = Lists.newArrayList(aggregatorSpecs);
-      this.postProcessingFn = null;
-      return this;
-    }
-
-    public Builder addPostAggregator(PostAggregator postAgg)
-    {
-      if (postAggregatorSpecs == null) {
-        postAggregatorSpecs = Lists.newArrayList();
-      }
-
-      postAggregatorSpecs.add(postAgg);
       this.postProcessingFn = null;
       return this;
     }

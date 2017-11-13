@@ -31,7 +31,6 @@ import io.druid.segment.VirtualColumns;
  */
 public class IncrementalIndexSchema
 {
-  public static final boolean DEFAULT_ROLLUP = true;
   private final long minTimestamp;
   private final TimestampSpec timestampSpec;
   private final Granularity gran;

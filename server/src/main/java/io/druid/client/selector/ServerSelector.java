@@ -23,6 +23,7 @@ import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -110,6 +111,7 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
     }
   }
 
+  @Nullable
   @Override
   public QueryableDruidServer pick()
   {

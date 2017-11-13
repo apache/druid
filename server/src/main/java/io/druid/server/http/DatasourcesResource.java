@@ -29,6 +29,7 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.client.CoordinatorServerView;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
+import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.ImmutableSegmentLoadInfo;
 import io.druid.client.SegmentLoadInfo;
 import io.druid.client.indexing.IndexingServiceClient;
@@ -68,7 +69,9 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -108,33 +111,27 @@ public class DatasourcesResource
   )
   {
     Response.ResponseBuilder builder = Response.ok();
-    final Set<DruidDataSource> datasources = InventoryViewUtils.getSecuredDataSources(
+    final Set<ImmutableDruidDataSource> datasources = InventoryViewUtils.getSecuredDataSources(
         req,
         serverInventoryView,
         authorizerMapper
     );
 
+    final Object entity;
+
     if (full != null) {
-      return builder.entity(datasources).build();
+      entity = datasources;
     } else if (simple != null) {
-      return builder.entity(
-          Lists.newArrayList(
-              Iterables.transform(
-                  datasources,
-                  (DruidDataSource dataSource) -> makeSimpleDatasource(dataSource)
-              )
-          )
-      ).build();
+      entity = datasources.stream()
+                          .map(this::makeSimpleDatasource)
+                          .collect(Collectors.toList());
+    } else {
+      entity = datasources.stream()
+                          .map(ImmutableDruidDataSource::getName)
+                          .collect(Collectors.toList());
     }
 
-    return builder.entity(
-        Lists.newArrayList(
-            Iterables.transform(
-                datasources,
-                (DruidDataSource dataSource) -> dataSource.getName()
-            )
-        )
-    ).build();
+    return builder.entity(entity).build();
   }
 
   @GET
@@ -146,7 +143,7 @@ public class DatasourcesResource
       @QueryParam("full") final String full
   )
   {
-    DruidDataSource dataSource = getDataSource(dataSourceName);
+    ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
 
     if (dataSource == null) {
       return Response.noContent().build();
@@ -270,7 +267,7 @@ public class DatasourcesResource
       @QueryParam("full") String full
   )
   {
-    final DruidDataSource dataSource = getDataSource(dataSourceName);
+    final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
 
     if (dataSource == null) {
       return Response.noContent().build();
@@ -335,7 +332,7 @@ public class DatasourcesResource
       @QueryParam("full") String full
   )
   {
-    final DruidDataSource dataSource = getDataSource(dataSourceName);
+    final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
     final Interval theInterval = Intervals.of(interval.replace("_", "/"));
 
     if (dataSource == null) {
@@ -404,7 +401,7 @@ public class DatasourcesResource
       @QueryParam("full") String full
   )
   {
-    DruidDataSource dataSource = getDataSource(dataSourceName);
+    ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
     if (dataSource == null) {
       return Response.noContent().build();
     }
@@ -431,7 +428,7 @@ public class DatasourcesResource
       @PathParam("segmentId") String segmentId
   )
   {
-    DruidDataSource dataSource = getDataSource(dataSourceName);
+    ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
     if (dataSource == null) {
       return Response.noContent().build();
     }
@@ -496,40 +493,34 @@ public class DatasourcesResource
     return Response.ok(retVal).build();
   }
 
-  private DruidDataSource getDataSource(final String dataSourceName)
+  @Nullable
+  private ImmutableDruidDataSource getDataSource(final String dataSourceName)
   {
-    Iterable<DruidDataSource> dataSources =
-        Iterables.concat(
-            Iterables.transform(
-                serverInventoryView.getInventory(),
-                (DruidServer input) -> input.getDataSource(dataSourceName)
-            )
-        );
+    List<ImmutableDruidDataSource> dataSources = serverInventoryView
+        .getInventory()
+        .stream()
+        .map(server -> server.getDataSource(dataSourceName))
+        .filter(Objects::nonNull)
+        .map(DruidDataSource::toImmutableDruidDataSource)
+        .collect(Collectors.toList());
 
-    List<DruidDataSource> validDataSources = Lists.newArrayList();
-    for (DruidDataSource dataSource : dataSources) {
-      if (dataSource != null) {
-        validDataSources.add(dataSource);
-      }
-    }
-    if (validDataSources.isEmpty()) {
+    if (dataSources.isEmpty()) {
       return null;
     }
 
     Map<String, DataSegment> segmentMap = Maps.newHashMap();
-    for (DruidDataSource dataSource : validDataSources) {
-      if (dataSource != null) {
-        Iterable<DataSegment> segments = dataSource.getSegments();
-        for (DataSegment segment : segments) {
-          segmentMap.put(segment.getIdentifier(), segment);
-        }
+    for (ImmutableDruidDataSource dataSource : dataSources) {
+      Iterable<DataSegment> segments = dataSource.getSegments();
+      for (DataSegment segment : segments) {
+        segmentMap.put(segment.getIdentifier(), segment);
       }
     }
 
-    return new DruidDataSource(
+    return new ImmutableDruidDataSource(
         dataSourceName,
-        ImmutableMap.of()
-    ).addSegments(segmentMap);
+        ImmutableMap.of(),
+        ImmutableMap.copyOf(segmentMap)
+    );
   }
 
   private Pair<DataSegment, Set<String>> getSegment(String segmentId)
@@ -551,7 +542,7 @@ public class DatasourcesResource
     return new Pair<>(theSegment, servers);
   }
 
-  private Map<String, Object> makeSimpleDatasource(DruidDataSource input)
+  private Map<String, Object> makeSimpleDatasource(ImmutableDruidDataSource input)
   {
     return new ImmutableMap.Builder<String, Object>()
         .put("name", input.getName())

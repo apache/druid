@@ -94,7 +94,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                 serverConfig,
                 new RetryQueryRunner<>(
                     baseClientRunner,
-                    toolChest,
                     retryConfig,
                     objectMapper
                 )

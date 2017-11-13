@@ -52,6 +52,7 @@ public class SameIntervalMergeTask extends AbstractFixedIntervalTask
       @JsonProperty("rollup") Boolean rollup,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
       // This parameter is left for compatibility when reading existing JSONs, to be removed in Druid 0.12.
+      @SuppressWarnings("unused")
       @JsonProperty("buildV9Directly") Boolean buildV9Directly,
       @JsonProperty("context") Map<String, Object> context
   )

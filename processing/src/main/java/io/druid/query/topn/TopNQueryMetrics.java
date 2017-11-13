@@ -19,6 +19,8 @@
 
 package io.druid.query.topn;
 
+import io.druid.guice.annotations.ExtensionPoint;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.query.QueryMetrics;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.Cursor;
@@ -26,52 +28,63 @@ import io.druid.segment.Cursor;
 /**
  * Specialization of {@link QueryMetrics} for {@link TopNQuery}.
  */
+@ExtensionPoint
 public interface TopNQueryMetrics extends QueryMetrics<TopNQuery>
 {
   /**
    * Sets {@link TopNQuery#getThreshold()} of the given query as dimension.
    */
+  @PublicApi
   void threshold(TopNQuery query);
 
   /**
    * Sets {@link TopNQuery#getDimensionSpec()}.{@link io.druid.query.dimension.DimensionSpec#getDimension()
    * getDimension()} of the given query as dimension.
    */
+  @PublicApi
   void dimension(TopNQuery query);
 
   /**
    * Sets the number of metrics of the given topN query as dimension.
    */
+  @PublicApi
   void numMetrics(TopNQuery query);
 
   /**
    * Sets the number of "complex" metrics of the given topN query as dimension. By default it is assumed that "complex"
    * metric is a metric of not long or double type, but it could be redefined in the implementation of this method.
    */
+  @PublicApi
   void numComplexMetrics(TopNQuery query);
 
   /**
    * Sets the granularity of {@link TopNQuery#getGranularity()} of the given query as dimension.
    */
+  @PublicApi
   void granularity(TopNQuery query);
 
+  @PublicApi
   void dimensionCardinality(int cardinality);
 
+  @PublicApi
   void algorithm(TopNAlgorithm algorithm);
 
   /**
    * This method is called exactly once with each cursor, processed for the query.
    */
+  @PublicApi
   void cursor(Cursor cursor);
 
   /**
    * This method is called exactly once with the columnValueSelector object of each cursor, processed for the query.
    */
+  @PublicApi
   void columnValueSelector(ColumnValueSelector columnValueSelector);
 
   /**
    * This method may set {@link TopNParams#getNumValuesPerPass()} of the query as dimension.
    */
+  @PublicApi
   void numValuesPerPass(TopNParams params);
 
   /**
@@ -80,6 +93,7 @@ public interface TopNQueryMetrics extends QueryMetrics<TopNQuery>
    * {@link #reportPreFilteredRows(long)}, because {@link #postFilters} are additionally applied. If there
    * are no postFilters, preFilteredRows and processedRows are equal.
    */
+  @PublicApi
   TopNQueryMetrics addProcessedRows(long numRows);
 
   /**

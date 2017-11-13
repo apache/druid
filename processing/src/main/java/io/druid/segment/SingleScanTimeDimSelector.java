@@ -31,7 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class SingleScanTimeDimSelector implements SingleValueDimensionSelector
+public class SingleScanTimeDimSelector implements DimensionSelector
 {
   private final ExtractionFn extractionFn;
   private final BaseLongColumnValueSelector selector;
@@ -62,12 +62,6 @@ public class SingleScanTimeDimSelector implements SingleValueDimensionSelector
   public IndexedInts getRow()
   {
     return new SingleIndexedInt(getDimensionValueIndex());
-  }
-
-  @Override
-  public int getRowValue()
-  {
-    return getDimensionValueIndex();
   }
 
   @Override

@@ -54,3 +54,8 @@ which can provide an instance of SSLContext. Druid comes with a simple extension
 which should be useful enough for most simple cases, see [this](./including-extensions.html) for how to include extensions.
 If this extension does not satisfy the requirements then please follow the extension [implementation](https://github.com/druid-io/druid/tree/master/extensions-core/simple-client-sslcontext)
 to create your own extension.
+
+# Upgrading Clients that interact with Overlord or Coordinator
+When Druid Coordinator/Overlord have both HTTP and HTTPS enabled and Client sends request to non-leader node, then Client is always redirected to the HTTPS endpoint on leader node.
+So, Clients should be first upgraded to be able to handle redirect to HTTPS. Then Druid Overlord/Coordinator should be upgraded and configured to run both HTTP and HTTPS ports. Then Client configuration should be changed to refer to Druid Coordinator/Overlord via the HTTPS endpoint and then HTTP port on Druid Coordinator/Overlord should be disabled.
+

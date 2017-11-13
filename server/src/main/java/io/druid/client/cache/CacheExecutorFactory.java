@@ -35,6 +35,8 @@ public enum CacheExecutorFactory
       return ForkJoinPool.commonPool();
     }
   },
+  /** Could be configured in {@link CaffeineCacheConfig} */
+  @SuppressWarnings("unused")
   SINGLE_THREAD {
     @Override
     public Executor createExecutor()
@@ -42,6 +44,8 @@ public enum CacheExecutorFactory
       return Execs.singleThreaded("CaffeineWorker-%s");
     }
   },
+  /** Could be configured in {@link CaffeineCacheConfig} */
+  @SuppressWarnings("unused")
   SAME_THREAD {
     @Override
     public Executor createExecutor()

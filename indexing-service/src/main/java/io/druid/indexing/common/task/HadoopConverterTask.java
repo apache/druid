@@ -69,7 +69,7 @@ public class HadoopConverterTask extends ConvertSegmentTask
   )
   {
     super(
-        makeId(
+        getOrMakeId(
             id,
             TYPE,
             Preconditions.checkNotNull(dataSource, "dataSource"),
@@ -255,6 +255,8 @@ public class HadoopConverterTask extends ConvertSegmentTask
     }
   }
 
+  /** Called indirectly in {@link ConverterSubTask#run(TaskToolbox)}. */
+  @SuppressWarnings("unused")
   public static class JobInvoker
   {
     public static String runTask(String[] input)

@@ -101,7 +101,7 @@ public class AppendTask extends MergeTaskBase
                       {
                         DataSegment segment = chunkInput.getObject();
                         return new SegmentToMergeHolder(
-                            segment, input.getInterval(),
+                            input.getInterval(),
                             Preconditions.checkNotNull(
                                 segments.get(segment),
                                 "File for segment %s", segment.getIdentifier()
@@ -157,20 +157,13 @@ public class AppendTask extends MergeTaskBase
 
   private static class SegmentToMergeHolder
   {
-    private final DataSegment segment;
     private final Interval interval;
     private final File file;
 
-    private SegmentToMergeHolder(DataSegment segment, Interval interval, File file)
+    private SegmentToMergeHolder(Interval interval, File file)
     {
-      this.segment = segment;
       this.interval = interval;
       this.file = file;
-    }
-
-    public DataSegment getSegment()
-    {
-      return segment;
     }
 
     public Interval getInterval()

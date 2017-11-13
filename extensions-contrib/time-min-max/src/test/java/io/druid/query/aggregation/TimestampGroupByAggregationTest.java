@@ -64,8 +64,8 @@ public class TimestampGroupByAggregationTest
     final List<Object[]> constructors = Lists.newArrayList();
 
     final List<List<Object>> partialConstructors = ImmutableList.<List<Object>>of(
-        ImmutableList.<Object>of("timeMin", "tmin", "time_min", TimestampMinAggregatorFactory.class, DateTimes.of("2011-01-12T01:00:00.000Z")),
-        ImmutableList.<Object>of("timeMax", "tmax", "time_max", TimestampMaxAggregatorFactory.class, DateTimes.of("2011-01-31T01:00:00.000Z"))
+        ImmutableList.<Object>of("timeMin", "tmin", "time_min", DateTimes.of("2011-01-12T01:00:00.000Z")),
+        ImmutableList.<Object>of("timeMax", "tmax", "time_max", DateTimes.of("2011-01-31T01:00:00.000Z"))
     );
 
     for (final List<Object> partialConstructor : partialConstructors) {
@@ -82,7 +82,6 @@ public class TimestampGroupByAggregationTest
   private final String aggType;
   private final String aggField;
   private final String groupByField;
-  private final Class<? extends TimestampAggregatorFactory> aggClass;
   private final DateTime expected;
   private final GroupByQueryConfig config;
 
@@ -90,7 +89,6 @@ public class TimestampGroupByAggregationTest
       String aggType,
       String aggField,
       String groupByField,
-      Class<? extends TimestampAggregatorFactory> aggClass,
       DateTime expected,
       GroupByQueryConfig config
   )
@@ -98,7 +96,6 @@ public class TimestampGroupByAggregationTest
     this.aggType = aggType;
     this.aggField = aggField;
     this.groupByField = groupByField;
-    this.aggClass = aggClass;
     this.expected = expected;
     this.config = config;
   }

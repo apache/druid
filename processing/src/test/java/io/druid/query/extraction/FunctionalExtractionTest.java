@@ -212,6 +212,7 @@ public class FunctionalExtractionTest
   @Test(expected = IllegalArgumentException.class)
   public void testBadConfig()
   {
+    @SuppressWarnings("unused") // expected exception
     final FunctionalExtraction exFn = new SimpleFunctionExtraction(
         fn,
         true,
@@ -220,6 +221,7 @@ public class FunctionalExtractionTest
     );
   }
 
+  @Test
   public void testUniqueProjections()
   {
     Assert.assertEquals(

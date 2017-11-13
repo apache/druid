@@ -29,7 +29,6 @@ import com.metamx.emitter.core.NoopEmitter;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
-import io.druid.java.util.common.UOE;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.MergeSequence;
@@ -53,7 +52,6 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.query.spec.SpecificSegmentSpec;
-import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesQueryEngine;
 import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import io.druid.query.timeseries.TimeseriesQueryRunnerFactory;
@@ -364,8 +362,7 @@ public class QueryRunnerTestHelper
 
   @SuppressWarnings("unchecked")
   public static Collection<?> makeUnionQueryRunners(
-      QueryRunnerFactory factory,
-      DataSource unionDataSource
+      QueryRunnerFactory factory
   )
       throws IOException
   {
@@ -382,63 +379,6 @@ public class QueryRunnerTestHelper
             "mergedRealtimeIndex"
         )
     );
-  }
-
-  /**
-   * Iterate through the iterables in a synchronous manner and return each step as an Object[]
-   *
-   * @param in The iterables to step through. (effectively columns)
-   *
-   * @return An iterable of Object[] containing the "rows" of the input (effectively rows)
-   */
-  public static Iterable<Object[]> transformToConstructionFeeder(Iterable<?>... in)
-  {
-    if (in == null) {
-      return ImmutableList.<Object[]>of();
-    }
-    final List<Iterable<?>> iterables = Arrays.asList(in);
-    final int length = in.length;
-    final List<Iterator<?>> iterators = new ArrayList<>(in.length);
-    for (Iterable<?> iterable : iterables) {
-      iterators.add(iterable.iterator());
-    }
-    return new Iterable<Object[]>()
-    {
-      @Override
-      public Iterator<Object[]> iterator()
-      {
-        return new Iterator<Object[]>()
-        {
-          @Override
-          public boolean hasNext()
-          {
-            int hasMore = 0;
-            for (Iterator<?> it : iterators) {
-              if (it.hasNext()) {
-                ++hasMore;
-              }
-            }
-            return hasMore == length;
-          }
-
-          @Override
-          public Object[] next()
-          {
-            final ArrayList<Object> list = new ArrayList<Object>(length);
-            for (Iterator<?> it : iterators) {
-              list.add(it.next());
-            }
-            return list.toArray();
-          }
-
-          @Override
-          public void remove()
-          {
-            throw new UOE("Remove not supported");
-          }
-        };
-      }
-    };
   }
 
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
@@ -601,15 +541,6 @@ public class QueryRunnerTestHelper
       builder.put(String.valueOf(keyvalues[i]), keyvalues[i + 1]);
     }
     return builder.build();
-  }
-
-  public static QueryRunnerFactoryConglomerate newConglomerate()
-  {
-    return new DefaultQueryRunnerFactoryConglomerate(
-        ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>builder()
-            .put(TimeseriesQuery.class, newTimeseriesQueryRunnerFactory())
-            .build()
-    );
   }
 
   public static TimeseriesQueryRunnerFactory newTimeseriesQueryRunnerFactory()

@@ -100,3 +100,15 @@ Authenticators must implement three methods related to the internal system user:
 `createEscalatedJettyClient` is similar to `createEscalatedClient`, except that it operates on a Jetty HttpClient.
 
 `createEscalatedAuthenticationResult` returns an AuthenticationResult containing the identity of the "internal system user".
+
+## Reserved Name Configuration Property
+
+For extension implementers, please note that the following configuration properties are reserved for the names of Authenticators and Authorizers:
+
+```
+druid.auth.authenticator.<authenticator-name>.name=<authenticator-name>
+druid.auth.authorizer.<authorizer-name>.name=<authorizer-name>
+
+```
+
+These properties provide the authenticator and authorizer names to the implementations as @JsonProperty parameters, potentially useful when multiple authenticators or authorizers of the same type are configured.

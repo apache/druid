@@ -30,6 +30,7 @@ import io.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 
 public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<Object, Object, KEYOUT, VALUEOUT>
@@ -56,15 +57,8 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
     return config;
   }
 
-  public InputRowParser getParser()
-  {
-    return parser;
-  }
-
   @Override
-  protected void map(
-      Object key, Object value, Context context
-  ) throws IOException, InterruptedException
+  protected void map(Object key, Object value, Context context) throws IOException, InterruptedException
   {
     try {
       final InputRow inputRow;
@@ -75,16 +69,21 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
         if (reportParseExceptions) {
           throw e;
         }
-        log.debug(e, "Ignoring invalid row [%s] due to parsing error", value.toString());
+        log.debug(e, "Ignoring invalid row [%s] due to parsing error", value);
         context.getCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER).increment(1);
         return; // we're ignoring this invalid row
+      }
 
+      if (inputRow == null) {
+        // Throw away null rows from the parser.
+        log.debug("Throwing away row [%s]", value);
+        return;
       }
 
       if (!granularitySpec.bucketIntervals().isPresent()
           || granularitySpec.bucketInterval(DateTimes.utc(inputRow.getTimestampFromEpoch()))
                             .isPresent()) {
-        innerMap(inputRow, value, context, reportParseExceptions);
+        innerMap(inputRow, context, reportParseExceptions);
       }
     }
     catch (RuntimeException e) {
@@ -92,7 +91,8 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
     }
   }
 
-  public final static InputRow parseInputRow(Object value, InputRowParser parser)
+  @Nullable
+  public static InputRow parseInputRow(Object value, InputRowParser parser)
   {
     if (parser instanceof StringInputRowParser && value instanceof Text) {
       //Note: This is to ensure backward compatibility with 0.7.0 and before
@@ -101,12 +101,15 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
       return ((StringInputRowParser) parser).parse(value.toString());
     } else if (value instanceof InputRow) {
       return (InputRow) value;
+    } else if (value == null) {
+      // Pass through nulls so they get thrown away.
+      return null;
     } else {
       return parser.parse(value);
     }
   }
 
-  abstract protected void innerMap(InputRow inputRow, Object value, Context context, boolean reportParseExceptions)
+  abstract protected void innerMap(InputRow inputRow, Context context, boolean reportParseExceptions)
       throws IOException, InterruptedException;
 
 }

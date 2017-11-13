@@ -200,7 +200,6 @@ public class TestIntegerSet
   public void testToArray() throws IllegalAccessException, InstantiationException
   {
     for (Class<? extends MutableBitmap> clazz : clazzes) {
-      Exception e = null;
       MutableBitmap wrappedBitmap = clazz.newInstance();
       IntSetTestUtility.addAllToMutable(wrappedBitmap, IntSetTestUtility.getSetBits());
       IntegerSet integerSet = IntegerSet.wrap(wrappedBitmap);
@@ -214,7 +213,6 @@ public class TestIntegerSet
   public void testToSmallArray() throws IllegalAccessException, InstantiationException
   {
     for (Class<? extends MutableBitmap> clazz : clazzes) {
-      Exception e = null;
       MutableBitmap wrappedBitmap = clazz.newInstance();
       IntSetTestUtility.addAllToMutable(wrappedBitmap, IntSetTestUtility.getSetBits());
       IntegerSet integerSet = IntegerSet.wrap(wrappedBitmap);
@@ -228,7 +226,6 @@ public class TestIntegerSet
   public void testToBigArray() throws IllegalAccessException, InstantiationException
   {
     for (Class<? extends MutableBitmap> clazz : clazzes) {
-      Exception e = null;
       MutableBitmap wrappedBitmap = clazz.newInstance();
       IntSetTestUtility.addAllToMutable(wrappedBitmap, IntSetTestUtility.getSetBits());
       IntegerSet integerSet = IntegerSet.wrap(wrappedBitmap);

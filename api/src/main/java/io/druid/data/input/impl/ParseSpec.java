@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.guice.annotations.ExtensionPoint;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.parsers.Parser;
 
 import java.util.List;
@@ -62,6 +63,7 @@ public abstract class ParseSpec
     return dimensionsSpec;
   }
 
+  @PublicApi
   public void verify(List<String> usedCols)
   {
     // do nothing
@@ -72,6 +74,7 @@ public abstract class ParseSpec
     return null;
   }
 
+  @PublicApi
   public ParseSpec withTimestampSpec(TimestampSpec spec)
   {
     throw new UnsupportedOperationException();

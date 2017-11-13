@@ -38,10 +38,10 @@ import io.druid.data.input.impl.TimestampSpec;
 import io.druid.data.input.schemarepo.Avro1124RESTRepositoryClientWrapper;
 import io.druid.data.input.schemarepo.Avro1124SubjectAndIdConverter;
 import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.EncoderFactory;
+import org.apache.avro.specific.SpecificDatumWriter;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
 import org.junit.Before;
@@ -210,7 +210,7 @@ public class AvroStreamInputRowParserTest
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     out.write(byteBuffer.array());
     // encode data
-    DatumWriter<GenericRecord> writer = new GenericDatumWriter<GenericRecord>(someAvroDatum.getSchema());
+    DatumWriter<GenericRecord> writer = new SpecificDatumWriter<>(someAvroDatum.getSchema());
     // write avro datum to bytes
     writer.write(someAvroDatum, EncoderFactory.get().directBinaryEncoder(out, null));
 
@@ -251,7 +251,7 @@ public class AvroStreamInputRowParserTest
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     out.write(byteBuffer.array());
     // encode data
-    DatumWriter<GenericRecord> writer = new GenericDatumWriter<GenericRecord>(someAvroDatum.getSchema());
+    DatumWriter<GenericRecord> writer = new SpecificDatumWriter<>(someAvroDatum.getSchema());
     // write avro datum to bytes
     writer.write(someAvroDatum, EncoderFactory.get().directBinaryEncoder(out, null));
 
@@ -321,29 +321,27 @@ public class AvroStreamInputRowParserTest
     assertEquals(SOME_INT_VALUE, inputRow.getMetric("someInt"));
   }
 
-  public static GenericRecord buildSomeAvroDatum() throws IOException
+  public static SomeAvroDatum buildSomeAvroDatum() throws IOException
   {
-    SomeAvroDatum datum = SomeAvroDatum.newBuilder()
-                                       .setTimestamp(DATE_TIME.getMillis())
-                                       .setEventType(EVENT_TYPE_VALUE)
-                                       .setId(ID_VALUE)
-                                       .setSomeOtherId(SOME_OTHER_ID_VALUE)
-                                       .setIsValid(true)
-                                       .setSomeFloat(SOME_FLOAT_VALUE)
-                                       .setSomeInt(SOME_INT_VALUE)
-                                       .setSomeLong(SOME_LONG_VALUE)
-                                       .setSomeIntArray(SOME_INT_ARRAY_VALUE)
-                                       .setSomeStringArray(SOME_STRING_ARRAY_VALUE)
-                                       .setSomeIntValueMap(SOME_INT_VALUE_MAP_VALUE)
-                                       .setSomeStringValueMap(SOME_STRING_VALUE_MAP_VALUE)
-                                       .setSomeUnion(SOME_UNION_VALUE)
-                                       .setSomeFixed(SOME_FIXED_VALUE)
-                                       .setSomeBytes(SOME_BYTES_VALUE)
-                                       .setSomeNull(null)
-                                       .setSomeEnum(MyEnum.ENUM1)
-                                       .setSomeRecord(SOME_RECORD_VALUE)
-                                       .build();
-
-    return datum;
+    return SomeAvroDatum.newBuilder()
+                                   .setTimestamp(DATE_TIME.getMillis())
+                                   .setEventType(EVENT_TYPE_VALUE)
+                                   .setId(ID_VALUE)
+                                   .setSomeOtherId(SOME_OTHER_ID_VALUE)
+                                   .setIsValid(true)
+                                   .setSomeFloat(SOME_FLOAT_VALUE)
+                                   .setSomeInt(SOME_INT_VALUE)
+                                   .setSomeLong(SOME_LONG_VALUE)
+                                   .setSomeIntArray(SOME_INT_ARRAY_VALUE)
+                                   .setSomeStringArray(SOME_STRING_ARRAY_VALUE)
+                                   .setSomeIntValueMap(SOME_INT_VALUE_MAP_VALUE)
+                                   .setSomeStringValueMap(SOME_STRING_VALUE_MAP_VALUE)
+                                   .setSomeUnion(SOME_UNION_VALUE)
+                                   .setSomeFixed(SOME_FIXED_VALUE)
+                                   .setSomeBytes(SOME_BYTES_VALUE)
+                                   .setSomeNull(null)
+                                   .setSomeEnum(MyEnum.ENUM1)
+                                   .setSomeRecord(SOME_RECORD_VALUE)
+                                   .build();
   }
 }

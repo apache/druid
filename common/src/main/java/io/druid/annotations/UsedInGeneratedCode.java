@@ -17,42 +17,16 @@
  * under the License.
  */
 
-package io.druid.segment.data;
+package io.druid.annotations;
 
-import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-
-import java.io.IOException;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
 /**
+ * Annotation for members, which are used in generated code (e. g. by Antlr), but not in regular code. IntelliJ
+ * inspection "unused declarations" knows about this annotation.
  */
-public class EmptyIndexedInts implements IndexedInts
+@Retention(RetentionPolicy.SOURCE)
+public @interface UsedInGeneratedCode
 {
-  public static final EmptyIndexedInts EMPTY_INDEXED_INTS = new EmptyIndexedInts();
-
-  private EmptyIndexedInts()
-  {
-  }
-
-  @Override
-  public int size()
-  {
-    return 0;
-  }
-
-  @Override
-  public int get(int index)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public void close() throws IOException
-  {
-  }
-
-  @Override
-  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-  {
-    // nothing to inspect
-  }
 }

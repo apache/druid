@@ -48,7 +48,7 @@ public class RestoreTask extends AbstractFixedIntervalTask
   )
   {
     super(
-        makeId(id, "restore", dataSource, interval),
+        getOrMakeId(id, "restore", dataSource, interval),
         dataSource,
         interval,
         context

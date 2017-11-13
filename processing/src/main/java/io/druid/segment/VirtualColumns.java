@@ -217,11 +217,6 @@ public class VirtualColumns implements Cacheable
     }
   }
 
-  public boolean isEmpty()
-  {
-    return withDotSupport.isEmpty() && withoutDotSupport.isEmpty();
-  }
-
   @JsonValue
   public VirtualColumn[] getVirtualColumns()
   {

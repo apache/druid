@@ -21,7 +21,6 @@ package io.druid.segment;
 
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
-import io.druid.segment.column.DoubleColumn;
 import io.druid.segment.column.GenericColumn;
 import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.Indexed;
@@ -59,17 +58,14 @@ public class DoubleDimensionHandler implements DimensionHandler<Double, Double, 
     return new DoubleDimensionMergerV9(
         dimensionName,
         indexSpec,
-        outDir,
-        ioPeon,
-        capabilities,
-        progress
+        ioPeon
     );
   }
 
   @Override
   public int getLengthOfEncodedKeyComponent(Double dimVals)
   {
-    return DoubleColumn.ROW_SIZE;
+    return 1;
   }
 
   @Override

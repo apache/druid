@@ -22,25 +22,16 @@ package io.druid.data.input.avro;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.jayway.jsonpath.Configuration;
-import com.jayway.jsonpath.Option;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.java.util.common.parsers.JSONPathSpec;
 import io.druid.data.input.impl.ParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.parsers.JSONPathSpec;
 import io.druid.java.util.common.parsers.Parser;
 
-import java.util.EnumSet;
 import java.util.Objects;
 
 public class AvroParseSpec extends ParseSpec
 {
-  private static final Configuration JSONPATH_CONFIGURATION =
-      Configuration.builder()
-                   .jsonProvider(new GenericAvroJsonProvider())
-                   .mappingProvider(new GenericAvroMappingProvider())
-                   .options(EnumSet.noneOf(Option.class))
-                   .build();
 
   @JsonIgnore
   private final JSONPathSpec flattenSpec;

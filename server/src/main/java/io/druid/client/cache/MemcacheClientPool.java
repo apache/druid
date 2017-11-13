@@ -92,6 +92,10 @@ final class MemcacheClientPool implements Supplier<ResourceHolder<MemcachedClien
   {
     private final AtomicInteger count = new AtomicInteger(0);
     private final MemcachedClientIF clientIF;
+    /**
+     * The point of Cleaner is to be referenced. Action is performed when it becomes unreachable, so it doesn't need
+     * to be used directly.
+     */
     @SuppressWarnings("unused")
     private final Cleaner cleaner;
 

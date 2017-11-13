@@ -80,8 +80,8 @@ import io.druid.segment.realtime.firehose.ChatHandler;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
-import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.ForbiddenException;
 import io.druid.server.security.Resource;
 import io.druid.server.security.ResourceAction;
@@ -466,17 +466,9 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
               try {
                 final byte[] valueBytes = record.value();
-                if (valueBytes == null) {
-                  throw new ParseException("null value");
-                }
+                final InputRow row = valueBytes == null ? null : parser.parse(ByteBuffer.wrap(valueBytes));
 
-                final InputRow row = Preconditions.checkNotNull(parser.parse(ByteBuffer.wrap(valueBytes)), "row");
-
-                final boolean beforeMinimumMessageTime = ioConfig.getMinimumMessageTime().isPresent() && ioConfig.getMinimumMessageTime().get().isAfter(row.getTimestamp());
-                final boolean afterMaximumMessageTime = ioConfig.getMaximumMessageTime().isPresent() && ioConfig.getMaximumMessageTime().get().isBefore(row.getTimestamp());
-
-                if (!beforeMinimumMessageTime && !afterMaximumMessageTime) {
-
+                if (row != null && withinMinMaxRecordTime(row)) {
                   final String sequenceName = sequenceNames.get(record.partition());
                   final AppenderatorDriverAddResult addResult = driver.add(
                       row,
@@ -965,12 +957,9 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
   private Appenderator newAppenderator(FireDepartmentMetrics metrics, TaskToolbox toolbox)
   {
-    final int maxRowsInMemoryPerPartition = (tuningConfig.getMaxRowsInMemory() /
-                                             ioConfig.getStartPartitions().getPartitionOffsetMap().size());
     return Appenderators.createRealtime(
         dataSchema,
-        tuningConfig.withBasePersistDirectory(toolbox.getPersistDir())
-                    .withMaxRowsInMemory(maxRowsInMemoryPerPartition),
+        tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
         metrics,
         toolbox.getSegmentPusher(),
         toolbox.getObjectMapper(),
@@ -1214,5 +1203,32 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     } else {
       log.makeAlert("Failed to send reset request for partitions [%s]", partitionOffsetMap.keySet()).emit();
     }
+  }
+
+  private boolean withinMinMaxRecordTime(final InputRow row)
+  {
+    final boolean beforeMinimumMessageTime = ioConfig.getMinimumMessageTime().isPresent()
+                                             && ioConfig.getMinimumMessageTime().get().isAfter(row.getTimestamp());
+
+    final boolean afterMaximumMessageTime = ioConfig.getMaximumMessageTime().isPresent()
+                                            && ioConfig.getMaximumMessageTime().get().isBefore(row.getTimestamp());
+
+    if (log.isDebugEnabled()) {
+      if (beforeMinimumMessageTime) {
+        log.debug(
+            "CurrentTimeStamp[%s] is before MinimumMessageTime[%s]",
+            row.getTimestamp(),
+            ioConfig.getMinimumMessageTime().get()
+        );
+      } else if (afterMaximumMessageTime) {
+        log.debug(
+            "CurrentTimeStamp[%s] is after MaximumMessageTime[%s]",
+            row.getTimestamp(),
+            ioConfig.getMaximumMessageTime().get()
+        );
+      }
+    }
+
+    return !beforeMinimumMessageTime && !afterMaximumMessageTime;
   }
 }

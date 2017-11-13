@@ -19,18 +19,27 @@
 
 package io.druid.server.emitter;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Period;
+import com.google.inject.BindingAnnotation;
+import io.druid.guice.annotations.PublicApi;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
+ * Annotation to inject extra dimensions, added to all events, emitted via {@link EmitterModule#getServiceEmitter}.
+ *
+ * For example, write this in a body of {@link com.google.inject.Module#configure} of your extension module):
+ *
+ * MapBinder<String, String> extraDims =
+ *     MapBinder.newMapBinder(binder, String.class, String.class, ExtraServiceDimensions.class);
+ * extraDims.addBinding("foo").toInstance("bar");
  */
-public class HttpEmitterConfig extends com.metamx.emitter.core.HttpEmitterConfig
+@Target(ElementType.PARAMETER)
+@Retention(RetentionPolicy.RUNTIME)
+@BindingAnnotation
+@PublicApi
+public @interface ExtraServiceDimensions
 {
-  @JsonProperty
-  private Period readTimeout = new Period("PT5M");
-
-  public Period getReadTimeout()
-  {
-    return readTimeout;
-  }
 }
