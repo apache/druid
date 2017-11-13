@@ -451,7 +451,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       ));
     }
 
-    sequencesPersistFile = new File(toolbox.getTaskWorkDir(), "sequences.json");
+    sequencesPersistFile = new File(toolbox.getPersistDir(), "sequences.json");
     restoreSequences();
     log.info("Starting with sequences:  %s", sequences);
 
