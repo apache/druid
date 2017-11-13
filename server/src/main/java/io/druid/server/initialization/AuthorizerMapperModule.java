@@ -111,7 +111,15 @@ public class AuthorizerMapperModule implements DruidModule
             Authorizer.class
         );
 
-        authorizerProvider.inject(props, configurator);
+        String nameProperty = StringUtils.format("druid.auth.authorizer.%s.name", authorizerName);
+        Properties adjustedProps = new Properties(props);
+        if (adjustedProps.containsKey(nameProperty)) {
+          throw new IAE("Name property [%s] is reserved.", nameProperty);
+        } else {
+          adjustedProps.put(nameProperty, authorizerName);
+        }
+
+        authorizerProvider.inject(adjustedProps, configurator);
 
         Supplier<Authorizer> authorizerSupplier = authorizerProvider.get();
         if (authorizerSupplier == null) {
