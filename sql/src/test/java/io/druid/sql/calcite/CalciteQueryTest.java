@@ -407,7 +407,7 @@ public class CalciteQueryTest
             new Object[]{"dim2", "VARCHAR", "YES"},
             new Object[]{"m1", "FLOAT", "NO"},
             new Object[]{"m2", "DOUBLE", "NO"},
-            new Object[]{"unique_dim1", "OTHER", "NO"}
+            new Object[]{"unique_dim1", "OTHER", "YES"}
         )
     );
   }
@@ -437,11 +437,10 @@ public class CalciteQueryTest
             new Object[]{"dim2", "VARCHAR", "YES"},
             new Object[]{"m1", "FLOAT", "NO"},
             new Object[]{"m2", "DOUBLE", "NO"},
-            new Object[]{"unique_dim1", "OTHER", "NO"}
+            new Object[]{"unique_dim1", "OTHER", "YES"}
         )
     );
   }
-
 
   @Test
   public void testInformationSchemaColumnsOnView() throws Exception
@@ -2327,9 +2326,10 @@ public class CalciteQueryTest
         + "SUM(cnt) filter(WHERE dim2 = 'a'), "
         + "SUM(case when dim1 <> '1' then cnt end) filter(WHERE dim2 = 'a'), "
         + "SUM(CASE WHEN dim1 <> '1' THEN cnt ELSE 0 END), "
-        + "MAX(CASE WHEN dim1 <> '1' THEN cnt END) "
+        + "MAX(CASE WHEN dim1 <> '1' THEN cnt END), "
+        + "COUNT(DISTINCT CASE WHEN dim1 <> '1' THEN m1 END) "
         + "FROM druid.foo",
-        ImmutableList.<Query>of(
+        ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(QSS(Filtration.eternity()))
@@ -2380,13 +2380,23 @@ public class CalciteQueryTest
                       new FilteredAggregatorFactory(
                           new LongMaxAggregatorFactory("a9", "cnt"),
                           NOT(SELECTOR("dim1", "1", null))
+                      ),
+                      new FilteredAggregatorFactory(
+                          new CardinalityAggregatorFactory(
+                              "a10",
+                              null,
+                              DIMS(new DefaultDimensionSpec("m1", "m1", ValueType.FLOAT)),
+                              false,
+                              true
+                          ),
+                          NOT(SELECTOR("dim1", "1", null))
                       )
                   ))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{1L, 5L, 1L, 2L, 5L, 5L, 2L, 1L, 5L, 1L}
+            new Object[]{1L, 5L, 1L, 2L, 5L, 5L, 2L, 1L, 5L, 1L, 5L}
         )
     );
   }
@@ -3451,6 +3461,57 @@ public class CalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{6L, 3L, 6L}
+        )
+    );
+  }
+
+  @Test
+  public void testCountDistinctOfCaseWhen() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + "COUNT(DISTINCT CASE WHEN m1 >= 4 THEN m1 END),\n"
+        + "COUNT(DISTINCT CASE WHEN m1 >= 4 THEN dim1 END),\n"
+        + "COUNT(DISTINCT CASE WHEN m1 >= 4 THEN unique_dim1 END)\n"
+        + "FROM druid.foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      AGGS(
+                          new FilteredAggregatorFactory(
+                              new CardinalityAggregatorFactory(
+                                  "a0",
+                                  null,
+                                  ImmutableList.of(new DefaultDimensionSpec("m1", "m1", ValueType.FLOAT)),
+                                  false,
+                                  true
+                              ),
+                              BOUND("m1", "4", null, false, false, null, StringComparators.NUMERIC)
+                          ),
+                          new FilteredAggregatorFactory(
+                              new CardinalityAggregatorFactory(
+                                  "a1",
+                                  null,
+                                  ImmutableList.of(new DefaultDimensionSpec("dim1", "dim1", ValueType.STRING)),
+                                  false,
+                                  true
+                              ),
+                              BOUND("m1", "4", null, false, false, null, StringComparators.NUMERIC)
+                          ),
+                          new FilteredAggregatorFactory(
+                              new HyperUniquesAggregatorFactory("a2", "unique_dim1", false, true),
+                              BOUND("m1", "4", null, false, false, null, StringComparators.NUMERIC)
+                          )
+                      )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3L, 3L, 3L}
         )
     );
   }
