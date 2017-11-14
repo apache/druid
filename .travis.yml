@@ -1,13 +1,12 @@
 language: java
 
 jdk:
-  - oraclejdk7
   - oraclejdk8
 
 script:
   - mvn test -B && mvn clean -Pstrict compile test-compile -B
 
-sudo: false
+sudo: required
 
 cache:
   directories:

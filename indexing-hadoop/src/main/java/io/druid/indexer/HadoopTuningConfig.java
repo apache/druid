@@ -21,6 +21,7 @@ package io.druid.indexer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
@@ -193,7 +194,7 @@ public class HadoopTuningConfig implements TuningConfig
     return ignoreInvalidRows;
   }
 
-  @JsonProperty
+  @JsonIgnore // Contains sensitive information that should not be logged
   public Map<String, String> getJobProperties()
   {
     return jobProperties;
