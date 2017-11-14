@@ -193,7 +193,7 @@ public class HadoopTuningConfig implements TuningConfig
     return ignoreInvalidRows;
   }
 
-  @JsonIgnore
+  @JsonIgnore // Contains sensitive information that should not be logged
   public Map<String, String> getJobProperties()
   {
     return jobProperties;
