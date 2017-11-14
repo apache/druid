@@ -232,7 +232,7 @@ public class DatasourcesResourceTest
         inventoryView,
         null,
         null,
-        new AuthConfig(null, null, null),
+        new AuthConfig(null, null),
         authMapper
     );
     Response response = datasourcesResource.getQueryableDataSources("full", null, request);
