@@ -24,12 +24,20 @@ matrix:
         - unset _JAVA_OPTIONS
       script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -B -Pparallel-test -Dmaven.fork.count=2 -pl processing
 
-      # non-processing modules test
+      # server module test
     - sudo: false
       install: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn install -q -ff -DskipTests -B
       before_script:
         - unset _JAVA_OPTIONS
-      script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -B -Pparallel-test -Dmaven.fork.count=2 -pl '!processing'
+      # Server module test is run without the parallel-test option because it's memory sensitive and often fails with that option.
+      script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -B -pl server
+
+      # other modules test
+    - sudo: false
+      install: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn install -q -ff -DskipTests -B
+      before_script:
+        - unset _JAVA_OPTIONS
+      script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -B -Pparallel-test -Dmaven.fork.count=2 -pl '!processing,!server'
 
       # run integration tests
     - sudo: required
