@@ -34,6 +34,7 @@ import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.RetryQueryRunner;
 import io.druid.query.RetryQueryRunnerConfig;
 import io.druid.query.SegmentDescriptor;
+import io.druid.server.initialization.ServerConfig;
 import org.joda.time.Interval;
 
 /**
@@ -45,6 +46,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private final QueryToolChestWarehouse warehouse;
   private final RetryQueryRunnerConfig retryConfig;
   private final ObjectMapper objectMapper;
+  private final ServerConfig serverConfig;
 
   @Inject
   public ClientQuerySegmentWalker(
@@ -52,7 +54,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       CachingClusteredClient baseClient,
       QueryToolChestWarehouse warehouse,
       RetryQueryRunnerConfig retryConfig,
-      ObjectMapper objectMapper
+      ObjectMapper objectMapper,
+      ServerConfig serverConfig
   )
   {
     this.emitter = emitter;
@@ -60,6 +63,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     this.warehouse = warehouse;
     this.retryConfig = retryConfig;
     this.objectMapper = objectMapper;
+    this.serverConfig = serverConfig;
   }
 
   @Override
@@ -86,10 +90,13 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
 
     return new FluentQueryRunnerBuilder<>(toolChest)
         .create(
-            new RetryQueryRunner<>(
-                baseClientRunner,
-                retryConfig,
-                objectMapper
+            new SetAndVerifyContextQueryRunner(
+                serverConfig,
+                new RetryQueryRunner<>(
+                    baseClientRunner,
+                    retryConfig,
+                    objectMapper
+                )
             )
         )
         .applyPreMergeDecoration()

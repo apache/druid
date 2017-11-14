@@ -53,6 +53,10 @@ public class ServerConfig
   @Min(1)
   private long maxScatterGatherBytes = Long.MAX_VALUE;
 
+  @JsonProperty
+  @Min(1)
+  private long maxQueryTimeout = Long.MAX_VALUE;
+
   public int getNumThreads()
   {
     return numThreads;
@@ -83,6 +87,11 @@ public class ServerConfig
     return maxScatterGatherBytes;
   }
 
+  public long getMaxQueryTimeout()
+  {
+    return maxQueryTimeout;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -98,7 +107,8 @@ public class ServerConfig
            enableRequestLimit == that.enableRequestLimit &&
            defaultQueryTimeout == that.defaultQueryTimeout &&
            maxScatterGatherBytes == that.maxScatterGatherBytes &&
-           Objects.equals(maxIdleTime, that.maxIdleTime);
+           Objects.equals(maxIdleTime, that.maxIdleTime) &&
+           maxQueryTimeout == that.maxQueryTimeout;
   }
 
   @Override
@@ -110,7 +120,8 @@ public class ServerConfig
         enableRequestLimit,
         maxIdleTime,
         defaultQueryTimeout,
-        maxScatterGatherBytes
+        maxScatterGatherBytes,
+        maxQueryTimeout
     );
   }
 }

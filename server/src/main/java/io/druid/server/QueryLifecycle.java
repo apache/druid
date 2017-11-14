@@ -38,7 +38,6 @@ import io.druid.query.QueryPlus;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.security.Access;
 import io.druid.server.security.AuthenticationResult;
@@ -58,7 +57,7 @@ import java.util.concurrent.TimeUnit;
  *
  * <ol>
  * <li>Initialization ({@link #initialize(Query)})</li>
- * <li>Authorization ({@link #authorize(String, String, HttpServletRequest)}</li>
+ * <li>Authorization ({@link #authorize(HttpServletRequest)}</li>
  * <li>Execution ({@link #execute()}</li>
  * <li>Logging ({@link #emitLogsAndMetrics(Throwable, String, long)}</li>
  * </ol>
@@ -74,7 +73,6 @@ public class QueryLifecycle
   private final GenericQueryMetricsFactory queryMetricsFactory;
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
-  private final ServerConfig serverConfig;
   private final AuthorizerMapper authorizerMapper;
   private final long startMs;
   private final long startNs;
@@ -90,7 +88,6 @@ public class QueryLifecycle
       final GenericQueryMetricsFactory queryMetricsFactory,
       final ServiceEmitter emitter,
       final RequestLogger requestLogger,
-      final ServerConfig serverConfig,
       final AuthorizerMapper authorizerMapper,
       final long startMs,
       final long startNs
@@ -101,7 +98,6 @@ public class QueryLifecycle
     this.queryMetricsFactory = queryMetricsFactory;
     this.emitter = emitter;
     this.requestLogger = requestLogger;
-    this.serverConfig = serverConfig;
     this.authorizerMapper = authorizerMapper;
     this.startMs = startMs;
     this.startNs = startNs;
@@ -171,12 +167,7 @@ public class QueryLifecycle
       queryId = UUID.randomUUID().toString();
     }
 
-    this.queryPlus = QueryPlus.wrap(
-        (Query) DirectDruidClient.withDefaultTimeoutAndMaxScatterGatherBytes(
-            baseQuery.withId(queryId),
-            serverConfig
-        )
-    );
+    this.queryPlus = QueryPlus.wrap(baseQuery.withId(queryId));
     this.toolChest = warehouse.getToolChest(baseQuery);
   }
 
