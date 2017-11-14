@@ -7,7 +7,7 @@ jdk:
 script:
   - mvn test -B && mvn clean -Pstrict compile test-compile -B
 
-sudo: false
+sudo: required
 
 cache:
   directories:
