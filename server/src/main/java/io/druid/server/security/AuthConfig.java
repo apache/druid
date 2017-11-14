@@ -36,20 +36,20 @@ public class AuthConfig
    */
   public static final String DRUID_AUTHORIZATION_CHECKED = "Druid-Authorization-Checked";
 
+  public static final String ALLOW_ALL_NAME = "allowAll";
+
   public AuthConfig()
   {
-    this(null, null, null);
+    this(null, null);
   }
 
   @JsonCreator
   public AuthConfig(
       @JsonProperty("authenticatorChain") List<String> authenticationChain,
-      @JsonProperty("escalatedAuthenticator") String escalatedAuthenticator,
       @JsonProperty("authorizers") List<String> authorizers
   )
   {
     this.authenticatorChain = authenticationChain;
-    this.escalatedAuthenticator = escalatedAuthenticator == null ? "allowAll" : escalatedAuthenticator;
     this.authorizers = authorizers;
   }
 
@@ -57,19 +57,11 @@ public class AuthConfig
   private final List<String> authenticatorChain;
 
   @JsonProperty
-  private final String escalatedAuthenticator;
-
-  @JsonProperty
   private List<String> authorizers;
 
   public List<String> getAuthenticatorChain()
   {
     return authenticatorChain;
-  }
-
-  public String getEscalatedAuthenticator()
-  {
-    return escalatedAuthenticator;
   }
 
   public List<String> getAuthorizers()
@@ -82,7 +74,6 @@ public class AuthConfig
   {
     return "AuthConfig{" +
            "authenticatorChain='" + authenticatorChain + '\'' +
-           ", escalatedAuthenticator='" + escalatedAuthenticator + '\'' +
            ", authorizers='" + authorizers + '\'' +
            '}';
   }
@@ -104,11 +95,6 @@ public class AuthConfig
         : that.getAuthenticatorChain() != null) {
       return false;
     }
-    if (getEscalatedAuthenticator() != null
-        ? !getEscalatedAuthenticator().equals(that.getEscalatedAuthenticator())
-        : that.getEscalatedAuthenticator() != null) {
-      return false;
-    }
     return getAuthorizers() != null ? getAuthorizers().equals(that.getAuthorizers()) : that.getAuthorizers() == null;
 
   }
@@ -117,7 +103,6 @@ public class AuthConfig
   public int hashCode()
   {
     int result = getAuthenticatorChain() != null ? getAuthenticatorChain().hashCode() : 0;
-    result = 31 * result + (getEscalatedAuthenticator() != null ? getEscalatedAuthenticator().hashCode() : 0);
     result = 31 * result + (getAuthorizers() != null ? getAuthorizers().hashCode() : 0);
     return result;
   }

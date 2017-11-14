@@ -247,13 +247,13 @@ public class QueryResourceTest
             new DefaultGenericQueryMetricsFactory(jsonMapper),
             new NoopServiceEmitter(),
             testRequestLogger,
-            new AuthConfig(null, null, null),
+            new AuthConfig(null, null),
             authMapper
         ),
         jsonMapper,
         jsonMapper,
         queryManager,
-        new AuthConfig(null, null, null),
+        new AuthConfig(null, null),
         authMapper,
         new DefaultGenericQueryMetricsFactory(jsonMapper)
     );
@@ -354,13 +354,13 @@ public class QueryResourceTest
             new DefaultGenericQueryMetricsFactory(jsonMapper),
             new NoopServiceEmitter(),
             testRequestLogger,
-            new AuthConfig(null, null, null),
+            new AuthConfig(null, null),
             authMapper
         ),
         jsonMapper,
         jsonMapper,
         queryManager,
-        new AuthConfig(null, null, null),
+        new AuthConfig(null, null),
         authMapper,
         new DefaultGenericQueryMetricsFactory(jsonMapper)
     );
@@ -475,13 +475,13 @@ public class QueryResourceTest
             new DefaultGenericQueryMetricsFactory(jsonMapper),
             new NoopServiceEmitter(),
             testRequestLogger,
-            new AuthConfig(null, null, null),
+            new AuthConfig(null, null),
             authMapper
         ),
         jsonMapper,
         jsonMapper,
         queryManager,
-        new AuthConfig(null, null, null),
+        new AuthConfig(null, null),
         authMapper,
         new DefaultGenericQueryMetricsFactory(jsonMapper)
     );
