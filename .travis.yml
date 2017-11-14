@@ -13,12 +13,16 @@ matrix:
   include:
       # strict compilation
     - sudo: false
+      env:
+        - NAME="strict compilation"
       install: true
       # Strict compilation requires more than 2 GB
       script: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn clean -Pstrict -pl '!benchmarks' compile test-compile -B
 
       # processing module test
     - sudo: false
+      env:
+        - NAME="processing module test"
       install: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn install -q -ff -DskipTests -B
       before_script:
         - unset _JAVA_OPTIONS
@@ -26,6 +30,8 @@ matrix:
 
       # server module test
     - sudo: false
+      env:
+        - NAME="server module test"
       install: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn install -q -ff -DskipTests -B
       before_script:
         - unset _JAVA_OPTIONS
@@ -34,6 +40,8 @@ matrix:
 
       # other modules test
     - sudo: false
+      env:
+        - NAME="other modules test"
       install: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn install -q -ff -DskipTests -B
       before_script:
         - unset _JAVA_OPTIONS
@@ -44,6 +52,7 @@ matrix:
       services:
         - docker
       env:
+        - NAME="integration test"
         - DOCKER_IP=172.17.0.1
       install:
         # Only errors will be shown with the -q option. This is to avoid generating too many logs which make travis build failed.
