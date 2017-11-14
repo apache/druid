@@ -91,7 +91,7 @@ public class AuthorizerMapperModule implements DruidModule
       Map<String, Authorizer> authorizerMap = Maps.newHashMap();
       List<String> authorizers = authConfig.getAuthorizers();
 
-      validateProperties(authorizers);
+      validateAuthorizers(authorizers);
 
       // Default is allow all
       if (authorizers == null) {
@@ -133,7 +133,7 @@ public class AuthorizerMapperModule implements DruidModule
     }
   }
 
-  private static void validateProperties(List<String> authorizers)
+  private static void validateAuthorizers(List<String> authorizers)
   {
     if (authorizers == null) {
       return;

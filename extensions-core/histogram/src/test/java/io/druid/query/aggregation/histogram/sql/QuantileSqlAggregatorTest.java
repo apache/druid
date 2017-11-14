@@ -43,7 +43,7 @@ import io.druid.segment.TestHelper;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
-import io.druid.server.security.AllowAllEscalator;
+import io.druid.server.security.NoopEscalator;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.filtration.Filtration;
@@ -138,7 +138,7 @@ public class QuantileSqlAggregatorTest
         plannerConfig,
         new AuthConfig(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        new AllowAllEscalator(),
+        new NoopEscalator(),
         CalciteTests.getJsonMapper()
     );
   }

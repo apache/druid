@@ -23,9 +23,9 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.metamx.http.client.HttpClient;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = AllowAllEscalator.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = NoopEscalator.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "allowAll", value = AllowAllEscalator.class),
+    @JsonSubTypes.Type(name = "noop", value = NoopEscalator.class),
 })
 /**
  * This interface provides methods needed for escalating internal system requests with priveleged authentication

@@ -21,7 +21,7 @@ package io.druid.server.security;
 
 import com.metamx.http.client.HttpClient;
 
-public class AllowAllEscalator implements Escalator
+public class NoopEscalator implements Escalator
 {
   @Override
   public HttpClient createEscalatedClient(HttpClient baseClient)

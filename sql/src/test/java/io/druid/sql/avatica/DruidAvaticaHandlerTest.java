@@ -41,7 +41,7 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.DruidNode;
-import io.druid.server.security.AllowAllEscalator;
+import io.druid.server.security.NoopEscalator;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthTestUtils;
 import io.druid.server.security.AuthenticatorMapper;
@@ -723,7 +723,7 @@ public class DruidAvaticaHandlerTest
             plannerConfig,
             new AuthConfig(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            new AllowAllEscalator(),
+            new NoopEscalator(),
             CalciteTests.getJsonMapper()
         ),
         smallFrameConfig,

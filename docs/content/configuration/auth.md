@@ -7,7 +7,7 @@ layout: doc_page
 |Property|Type|Description|Default|Required|
 |--------|-----------|--------|--------|--------|
 |`druid.auth.authenticationChain`|JSON List of Strings|List of Authenticator type names|["allowAll"]|no|
-|`druid.escalator.type`|String|Type of the Escalator that should be used for internal Druid communications. This Escalator must have the same type as an Authenticator in `druid.auth.authenticationChain`.|"allowAll"|no|
+|`druid.escalator.type`|String|Type of the Escalator that should be used for internal Druid communications. This Escalator must have the same type as an Authenticator in `druid.auth.authenticationChain`.|"noop"|no|
 |`druid.auth.authorizers`|JSON List of Strings|List of Authorizer type names |["allowAll"]|no|
 
 ## Enabling Authentication/Authorization
@@ -36,9 +36,9 @@ This built-in Authenticator authenticates all requests, and always directs them 
 ## Escalator
 The `druid.escalator.type` property determines what authentication scheme should be used for internal Druid cluster communications (such as when a broker node communicates with historical nodes for query processing).
 
-The Escalator chosen for this property must have the same type as an Authenticator in `druid.auth.authenticationChain. Authenticator extension implementors must also provide a corresponding Escalator implementation with the same type name if they intend to use a particular authentication scheme for internal Druid communications.
+The Escalator chosen for this property must use an authentication scheme that is supported by an Authenticator in `druid.auth.authenticationChain. Authenticator extension implementors must also provide a corresponding Escalator implementation if they intend to use a particular authentication scheme for internal Druid communications.
 
-### AllowAll Escalator
+### Noop Escalator
 
 This built-in default Escalator is intended for use only with the default AllowAll Authenticator and Authorizer.
 
@@ -67,7 +67,7 @@ When `druid.auth.authenticationChain` is left empty or unspecified, Druid will c
 
 When `druid.auth.authorizers` is left empty or unspecified, Druid will create a single AllowAll Authorizer named "allowAll".
 
-The default value of `druid.escalator.type` is "allowAll" to match the default unsecured Authenticator/Authorizer configurations.
+The default value of `druid.escalator.type` is "noop" to match the default unsecured Authenticator/Authorizer configurations.
 
 ## Authenticator to Authorizer Routing
 

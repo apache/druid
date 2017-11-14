@@ -29,7 +29,7 @@ import java.util.Map;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "allowAll", value = AllowAllAuthenticator.class),
+    @JsonSubTypes.Type(name = AuthConfig.ALLOW_ALL_NAME, value = AllowAllAuthenticator.class),
 })
 /**
  * This interface is essentially a ServletFilterHolder with additional requirements on the getFilter() method contract, plus:

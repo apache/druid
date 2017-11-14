@@ -28,6 +28,7 @@ import com.google.inject.name.Named;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.PolyBind;
 import io.druid.server.security.AllowAllAuthorizer;
+import io.druid.server.security.AuthConfig;
 import io.druid.server.security.Authorizer;
 
 public class AuthorizerModule implements Module
@@ -39,11 +40,11 @@ public class AuthorizerModule implements Module
         binder,
         Key.get(Authorizer.class)
     );
-    authorizerMapBinder.addBinding("allowAll").to(AllowAllAuthorizer.class).in(LazySingleton.class);
+    authorizerMapBinder.addBinding(AuthConfig.ALLOW_ALL_NAME).to(AllowAllAuthorizer.class).in(LazySingleton.class);
   }
 
   @Provides
-  @Named("allowAll")
+  @Named(AuthConfig.ALLOW_ALL_NAME)
   public Authorizer getAuthorizer()
   {
     return new AllowAllAuthorizer();

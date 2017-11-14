@@ -93,11 +93,11 @@ public class AuthenticatorMapperModule implements DruidModule
 
       List<String> authenticators = authConfig.getAuthenticatorChain();
 
-      validateProperties(props, authenticators);
+      validateAuthenticators(authenticators);
 
       // Default configuration is to allow all requests.
       if (authenticators == null) {
-        authenticatorMap.put("allowAll", new AllowAllAuthenticator());
+        authenticatorMap.put(AuthConfig.ALLOW_ALL_NAME, new AllowAllAuthenticator());
         return new AuthenticatorMapper(authenticatorMap);
       }
 
@@ -129,19 +129,10 @@ public class AuthenticatorMapperModule implements DruidModule
     }
   }
 
-  private static void validateProperties(Properties properties, List<String> authenticators)
+  private static void validateAuthenticators(List<String> authenticators)
   {
-    String escalatorType = properties.getProperty("druid.escalator.type");
-    if (escalatorType == null) {
-      escalatorType = "allowAll";
-    }
-
     if (authenticators == null) {
-      if (escalatorType.equals("allowAll")) {
-        return;
-      } else {
-        throw new ISE("Using default unsecured configuration with invalid druid.escalator.type [%s]", escalatorType);
-      }
+      return;
     }
 
     if (authenticators.isEmpty()) {
@@ -155,13 +146,5 @@ public class AuthenticatorMapperModule implements DruidModule
       }
       authenticatorSet.add(authenticator);
     }
-
-    for (String authenticator : authenticators) {
-      String typeProperty = StringUtils.format("druid.auth.authenticator.%s.type", authenticator);
-      if (escalatorType.equals(properties.getProperty(typeProperty))) {
-        return;
-      }
-    }
-    throw new ISE("druid.escalator.type [%s] does not match any configured authenticator's type!", escalatorType);
   }
 }
