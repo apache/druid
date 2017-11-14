@@ -193,7 +193,7 @@ public class HadoopTuningConfig implements TuningConfig
     return ignoreInvalidRows;
   }
 
-  @JsonProperty
+  @JsonIgnore
   public Map<String, String> getJobProperties()
   {
     return jobProperties;
