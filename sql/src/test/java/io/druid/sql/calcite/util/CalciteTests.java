@@ -92,7 +92,6 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.server.QueryLifecycleFactory;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.NoopRequestLogger;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
@@ -409,7 +408,6 @@ public class CalciteTests
         new DefaultGenericQueryMetricsFactory(INJECTOR.getInstance(Key.get(ObjectMapper.class, Json.class))),
         new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
         new NoopRequestLogger(),
-        new ServerConfig(),
         new AuthConfig(),
         TEST_AUTHORIZER_MAPPER
     );

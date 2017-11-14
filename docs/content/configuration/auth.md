@@ -7,7 +7,7 @@ layout: doc_page
 |Property|Type|Description|Default|Required|
 |--------|-----------|--------|--------|--------|
 |`druid.auth.authenticationChain`|JSON List of Strings|List of Authenticator type names|["allowAll"]|no|
-|`druid.escalator.type`|String|Type of the Escalator that should be used for internal Druid communications. This Escalator must have the same type as an Authenticator in `druid.auth.authenticationChain`.|"noop"|no|
+|`druid.escalator.type`|String|Type of the Escalator that should be used for internal Druid communications. This Escalator must use an authentication scheme that is supported by an Authenticator in `druid.auth.authenticationChain`.|"noop"|no|
 |`druid.auth.authorizers`|JSON List of Strings|List of Authorizer type names |["allowAll"]|no|
 
 ## Enabling Authentication/Authorization
