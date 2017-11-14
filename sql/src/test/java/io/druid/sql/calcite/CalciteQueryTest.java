@@ -5790,8 +5790,8 @@ public class CalciteQueryTest
         macroTable,
         plannerConfig,
         new AuthConfig(),
-        CalciteTests.TEST_AUTHENTICATOR_MAPPER,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
+        CalciteTests.TEST_AUTHENTICATOR_ESCALATOR,
         CalciteTests.getJsonMapper()
     );
 

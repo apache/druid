@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Throwables;
-import com.metamx.http.client.HttpClient;
 import io.druid.guice.annotations.Self;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
@@ -34,7 +33,6 @@ import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Authenticator;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
@@ -43,11 +41,6 @@ import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.security.authentication.util.Signer;
 import org.apache.hadoop.security.authentication.util.SignerException;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
-import org.eclipse.jetty.client.api.Authentication;
-import org.eclipse.jetty.client.api.ContentResponse;
-import org.eclipse.jetty.client.api.Request;
-import org.eclipse.jetty.util.Attributes;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
 import sun.security.krb5.EncryptedData;
 import sun.security.krb5.EncryptionKey;
 import sun.security.krb5.internal.APReq;
@@ -79,9 +72,7 @@ import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.security.Principal;
-import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -111,7 +102,6 @@ public class KerberosAuthenticator implements Authenticator
   private final String cookieSignatureSecret;
   private final String authorizerName;
   private LoginContext loginContext;
-
 
   @JsonCreator
   public KerberosAuthenticator(
@@ -438,80 +428,6 @@ public class KerberosAuthenticator implements Authenticator
   public AuthenticationResult authenticateJDBCContext(Map<String, Object> context)
   {
     throw new UnsupportedOperationException("JDBC Kerberos auth not supported yet");
-  }
-
-  @Override
-  public HttpClient createEscalatedClient(HttpClient baseClient)
-  {
-    return new KerberosHttpClient(baseClient, internalClientPrincipal, internalClientKeytab);
-  }
-
-  @Override
-  public org.eclipse.jetty.client.HttpClient createEscalatedJettyClient(org.eclipse.jetty.client.HttpClient baseClient)
-  {
-    baseClient.getAuthenticationStore().addAuthentication(new Authentication()
-    {
-      @Override
-      public boolean matches(String type, URI uri, String realm)
-      {
-        return true;
-      }
-
-      @Override
-      public Result authenticate(
-          final Request request, ContentResponse response, Authentication.HeaderInfo headerInfo, Attributes context
-      )
-      {
-        return new Result()
-        {
-          @Override
-          public URI getURI()
-          {
-            return request.getURI();
-          }
-
-          @Override
-          public void apply(Request request)
-          {
-            try {
-              // No need to set cookies as they are handled by Jetty Http Client itself.
-              URI uri = request.getURI();
-              if (DruidKerberosUtil.needToSendCredentials(baseClient.getCookieStore(), uri)) {
-                log.debug(
-                    "No Auth Cookie found for URI[%s]. Existing Cookies[%s] Authenticating... ",
-                    uri,
-                    baseClient.getCookieStore().getCookies()
-                );
-                final String host = request.getHost();
-                DruidKerberosUtil.authenticateIfRequired(internalClientPrincipal, internalClientKeytab);
-                UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
-                String challenge = currentUser.doAs(new PrivilegedExceptionAction<String>()
-                {
-                  @Override
-                  public String run() throws Exception
-                  {
-                    return DruidKerberosUtil.kerberosChallenge(host);
-                  }
-                });
-                request.getHeaders().add(HttpHeaders.Names.AUTHORIZATION, "Negotiate " + challenge);
-              } else {
-                log.debug("Found Auth Cookie found for URI[%s].", uri);
-              }
-            }
-            catch (Throwable e) {
-              Throwables.propagate(e);
-            }
-          }
-        };
-      }
-    });
-    return baseClient;
-  }
-
-  @Override
-  public AuthenticationResult createEscalatedAuthenticationResult()
-  {
-    return new AuthenticationResult(internalClientPrincipal, authorizerName, null);
   }
 
   private boolean isExcluded(String path)
