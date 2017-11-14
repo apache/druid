@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import io.druid.math.expr.Evals;
 import io.druid.math.expr.Expr;
+import io.druid.math.expr.ExprEval;
 import io.druid.math.expr.Parser;
 import io.druid.query.BitmapResultFactory;
 import io.druid.query.expression.ExprUtils;
@@ -51,7 +52,7 @@ public class ExpressionFilter implements Filter
   @Override
   public ValueMatcher makeMatcher(final ColumnSelectorFactory factory)
   {
-    final ColumnValueSelector selector = ExpressionSelectors.makeColumnValueSelector(factory, expr);
+    final ColumnValueSelector<ExprEval> selector = ExpressionSelectors.makeExprEvalSelector(factory, expr);
     return new ValueMatcher()
     {
       @Override

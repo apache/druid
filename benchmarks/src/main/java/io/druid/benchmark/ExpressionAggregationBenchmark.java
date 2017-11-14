@@ -69,7 +69,7 @@ import java.util.function.Function;
 @Measurement(iterations = 30)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
-public class ExpressionBenchmark
+public class ExpressionAggregationBenchmark
 {
   @Param({"1000000"})
   private int rowsPerSegment;
@@ -101,7 +101,7 @@ public class ExpressionBenchmark
                                                .build();
 
     this.segmentGenerator = new SegmentGenerator();
-    this.index = segmentGenerator.generate(dataSegment, schemaInfo, rowsPerSegment);
+    this.index = segmentGenerator.generate(dataSegment, schemaInfo, Granularities.NONE, rowsPerSegment);
     this.javaScriptAggregatorFactory = new JavaScriptAggregatorFactory(
         "name",
         ImmutableList.of("x", "y"),

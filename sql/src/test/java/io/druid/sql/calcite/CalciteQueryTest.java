@@ -5565,22 +5565,14 @@ public class CalciteQueryTest
                         .setDataSource(CalciteTests.DATASOURCE1)
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setDimensions(
-                            DIMS(
-                                new ExtractionDimensionSpec(
-                                    "__time",
-                                    "d0",
-                                    ValueType.LONG,
-                                    new TimeFormatExtractionFn(
-                                        "Y",
-                                        DateTimeZone.UTC,
-                                        null,
-                                        Granularities.NONE,
-                                        true
-                                    )
-                                )
+                        .setVirtualColumns(
+                            EXPRESSION_VIRTUAL_COLUMN(
+                                "d0:v",
+                                "timestamp_extract(\"__time\",'YEAR','UTC')",
+                                ValueType.LONG
                             )
                         )
+                        .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG)))
                         .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                         .setLimitSpec(
                             new DefaultLimitSpec(
@@ -5619,22 +5611,14 @@ public class CalciteQueryTest
                         .setDataSource(CalciteTests.DATASOURCE1)
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setDimensions(
-                            DIMS(
-                                new ExtractionDimensionSpec(
-                                    "__time",
-                                    "d0",
-                                    ValueType.STRING,
-                                    new TimeFormatExtractionFn(
-                                        "yyyy MM",
-                                        DateTimeZone.UTC,
-                                        null,
-                                        Granularities.NONE,
-                                        true
-                                    )
-                                )
+                        .setVirtualColumns(
+                            EXPRESSION_VIRTUAL_COLUMN(
+                                "d0:v",
+                                "timestamp_format(\"__time\",'yyyy MM','UTC')",
+                                ValueType.STRING
                             )
                         )
+                        .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.STRING)))
                         .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                         .setLimitSpec(
                             new DefaultLimitSpec(
@@ -5671,22 +5655,14 @@ public class CalciteQueryTest
                         .setDataSource(CalciteTests.DATASOURCE1)
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setDimensions(
-                            DIMS(
-                                new ExtractionDimensionSpec(
-                                    "__time",
-                                    "d0",
-                                    ValueType.LONG,
-                                    new TimeFormatExtractionFn(
-                                        "Y",
-                                        DateTimeZone.UTC,
-                                        null,
-                                        Granularities.YEAR,
-                                        true
-                                    )
-                                )
+                        .setVirtualColumns(
+                            EXPRESSION_VIRTUAL_COLUMN(
+                                "d0:v",
+                                "timestamp_extract(timestamp_floor(\"__time\",'P1Y','','UTC'),'YEAR','UTC')",
+                                ValueType.LONG
                             )
                         )
+                        .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG)))
                         .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -5714,22 +5690,14 @@ public class CalciteQueryTest
                         .setDataSource(CalciteTests.DATASOURCE1)
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setDimensions(
-                            DIMS(
-                                new ExtractionDimensionSpec(
-                                    "__time",
-                                    "d0",
-                                    ValueType.LONG,
-                                    new TimeFormatExtractionFn(
-                                        "Y",
-                                        DateTimeZone.forID(LOS_ANGELES),
-                                        null,
-                                        new PeriodGranularity(Period.years(1), null, DateTimeZone.forID(LOS_ANGELES)),
-                                        true
-                                    )
-                                )
+                        .setVirtualColumns(
+                            EXPRESSION_VIRTUAL_COLUMN(
+                                "d0:v",
+                                "timestamp_extract(timestamp_floor(\"__time\",'P1Y','','America/Los_Angeles'),'YEAR','America/Los_Angeles')",
+                                ValueType.LONG
                             )
                         )
+                        .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG)))
                         .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_LOS_ANGELES)
                         .build()

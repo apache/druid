@@ -109,7 +109,7 @@ public class SqlBenchmark
 
     this.segmentGenerator = new SegmentGenerator();
 
-    final QueryableIndex index = segmentGenerator.generate(dataSegment, schemaInfo, rowsPerSegment);
+    final QueryableIndex index = segmentGenerator.generate(dataSegment, schemaInfo, Granularities.NONE, rowsPerSegment);
     final QueryRunnerFactoryConglomerate conglomerate = CalciteTests.queryRunnerFactoryConglomerate();
     final PlannerConfig plannerConfig = new PlannerConfig();
 

@@ -61,7 +61,7 @@ public class SingleScanTimeDimSelector implements DimensionSelector
   @Override
   public IndexedInts getRow()
   {
-    return new SingleIndexedInt(getDimensionValueIndex());
+    return SingleIndexedInt.of(getDimensionValueIndex());
   }
 
   @Override

@@ -583,11 +583,6 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
-      expectedException.expect(UnsupportedOperationException.class);
-      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
-    }
-
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotivex", "rows", 1L, "idx", 135L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "businessx", "rows", 1L, "idx", 118L),
