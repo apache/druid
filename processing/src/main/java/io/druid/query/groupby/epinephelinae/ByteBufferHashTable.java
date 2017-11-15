@@ -119,7 +119,7 @@ public class ByteBufferHashTable
     int nextBuckets = maxBuckets * 2;
     while (true) {
       long nextBucketsSize = (long) nextBuckets * bucketSizeWithHash;
-      if (nextBucketsSize > Integer.MAX_VALUE){
+      if (nextBucketsSize > Integer.MAX_VALUE) {
         break;
       }
       final int nextTableStart = tableStart - nextBuckets * bucketSizeWithHash;
