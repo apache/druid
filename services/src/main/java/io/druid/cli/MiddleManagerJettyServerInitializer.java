@@ -20,6 +20,7 @@
 package io.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Lists;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.servlet.GuiceFilter;
@@ -47,6 +48,10 @@ class MiddleManagerJettyServerInitializer implements JettyServerInitializer
 {
   private static Logger log = new Logger(MiddleManagerJettyServerInitializer.class);
 
+  private static List<String> UNSECURED_PATHS = Lists.newArrayList(
+      "/status/health"
+  );
+
   @Override
   public void initialize(Server server, Injector injector)
   {
@@ -59,6 +64,10 @@ class MiddleManagerJettyServerInitializer implements JettyServerInitializer
 
     List<Authenticator> authenticators = null;
     AuthenticationUtils.addSecuritySanityCheckFilter(root, jsonMapper);
+
+    // perform no-op authorization for these resources
+    AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
+
     authenticators = authenticatorMapper.getAuthenticatorChain();
     AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
 
