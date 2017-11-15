@@ -123,7 +123,7 @@ public class CliOverlord extends ServerRunnable
       "/images/*",
       "/js/*",
       "/druid/indexer/v1/isLeader",
-      "/health"
+      "/status/health"
   );
 
   public CliOverlord()
@@ -341,7 +341,6 @@ public class CliOverlord extends ServerRunnable
 
       // /status should not redirect, so add first
       root.addFilter(GuiceFilter.class, "/status/*", null);
-      root.addFilter(GuiceFilter.class, "/health/*", null);
 
       // redirect anything other than status to the current lead
       root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);

@@ -63,7 +63,7 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
       "/old-console/*",
       "/coordinator/false",
       "/overlord/false",
-      "/health",
+      "/status/health",
       "/druid/coordinator/v1/isLeader"
   );
 
@@ -133,7 +133,6 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
 
     // /status should not redirect, so add first
     root.addFilter(GuiceFilter.class, "/status/*", null);
-    root.addFilter(GuiceFilter.class, "/health/*", null);
 
     // redirect anything other than status to the current lead
     root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);

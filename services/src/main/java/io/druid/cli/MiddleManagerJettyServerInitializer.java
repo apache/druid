@@ -49,7 +49,7 @@ class MiddleManagerJettyServerInitializer implements JettyServerInitializer
   private static Logger log = new Logger(MiddleManagerJettyServerInitializer.class);
 
   private static List<String> UNSECURED_PATHS = Lists.newArrayList(
-      "/health"
+      "/status/health"
   );
 
   @Override

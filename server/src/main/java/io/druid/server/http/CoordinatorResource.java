@@ -62,6 +62,9 @@ public class CoordinatorResource
     return Response.ok(coordinator.getCurrentLeader()).build();
   }
 
+  /**
+   * This is an unsecured endpoint, defined as such in UNSECURED_PATHS in CoordinatorJettyServerInitializer
+   */
   @GET
   @Path("/isLeader")
   @Produces(MediaType.APPLICATION_JSON)

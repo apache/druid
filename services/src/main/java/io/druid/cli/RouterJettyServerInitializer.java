@@ -52,7 +52,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
   private static Logger log = new Logger(RouterJettyServerInitializer.class);
 
   private static List<String> UNSECURED_PATHS = Lists.newArrayList(
-      "/health"
+      "/status/health"
   );
 
   private final AsyncQueryForwardingServlet asyncQueryForwardingServlet;
@@ -112,7 +112,6 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
 
     // Can't use '/*' here because of Guice conflicts with AsyncQueryForwardingServlet path
     root.addFilter(GuiceFilter.class, "/status/*", null);
-    root.addFilter(GuiceFilter.class, "/health/*", null);
     root.addFilter(GuiceFilter.class, "/druid/router/*", null);
 
     final HandlerList handlerList = new HandlerList();
