@@ -24,14 +24,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
-import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import io.druid.guice.annotations.PublicApi;
 import io.druid.jackson.CommaListJoinDeserializer;
@@ -47,6 +45,7 @@ import org.joda.time.Interval;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -58,7 +57,6 @@ public class DataSegment implements Comparable<DataSegment>
   private static final Interner<String> stringInterner = Interners.newWeakInterner();
   private static final Interner<List<String>> dimensionsInterner = Interners.newWeakInterner();
   private static final Interner<List<String>> metricsInterner = Interners.newWeakInterner();
-  private static final Function<String, String> internFun = Interners.asFunction(stringInterner);
   private static final Map<String, Object> PRUNED_LOAD_SPEC = ImmutableMap.of(
       "load spec is pruned, because it's not needed on Brokers, but eats a lot of heap space",
       ""
@@ -186,13 +184,12 @@ public class DataSegment implements Comparable<DataSegment>
     if (list == null) {
       return ImmutableList.of();
     } else {
-      // It's wasteful to transform the list and intern all strings before interning the list as a whole,
-      // but there is no easy way to tweak Guava's Interner to make something with the object to intern before
-      // putting it into internal Interner's hash table.
-      List<String> result = ImmutableList.copyOf(Iterables.transform(
-          Iterables.filter(list, s -> !Strings.isNullOrEmpty(s)),
-          internFun
-      ));
+      List<String> result = list
+          .stream()
+          .filter(s -> !Strings.isNullOrEmpty(s))
+          .map(stringInterner::intern)
+          // TODO replace with ImmutableList.toImmutableList() when updated to Guava 21+
+          .collect(Collectors.collectingAndThen(Collectors.toList(), ImmutableList::copyOf));
       return interner.intern(result);
     }
   }

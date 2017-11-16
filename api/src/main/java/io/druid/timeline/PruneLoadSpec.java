@@ -26,6 +26,12 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * This annnotation is used to inject a boolean parameter into a {@link DataSegment} constructor, which prescribes to
+ * drop deserialized "loadSpec" and don't store it in a field of a {@link DataSegment}. It's very useful on Brokers,
+ * because they store a lot of DataSegments in their heap, and loadSpec takes a lot of space, while it's not used on
+ * Brokers.
+ */
 @Target({ElementType.PARAMETER, ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 @BindingAnnotation
