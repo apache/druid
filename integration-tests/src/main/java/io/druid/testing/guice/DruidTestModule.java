@@ -69,11 +69,14 @@ public class DruidTestModule implements Module
       @EscalatedClient HttpClient delegate
   ) throws Exception
   {
+    return new CredentialedHttpClient(new BasicCredentials("admin", "priest"), delegate);
+    /*
     if (config.getUsername() != null) {
       return new CredentialedHttpClient(new BasicCredentials(config.getUsername(), config.getPassword()), delegate);
     } else {
       return delegate;
     }
+    */
   }
 
   @Provides
