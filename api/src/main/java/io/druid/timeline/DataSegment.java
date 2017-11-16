@@ -93,6 +93,7 @@ public class DataSegment implements Comparable<DataSegment>
   static class PruneLoadSpecHolder
   {
     static final PruneLoadSpecHolder DEFAULT = new PruneLoadSpecHolder();
+
     @Inject(optional = true) @PruneLoadSpec boolean pruneLoadSpec = false;
   }
 
