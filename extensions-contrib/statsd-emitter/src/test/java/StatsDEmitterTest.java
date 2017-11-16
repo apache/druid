@@ -38,7 +38,7 @@ public class StatsDEmitterTest
   {
     StatsDClient client = createMock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, null, null, null),
+        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null),
         new ObjectMapper(),
         client
     );
@@ -57,7 +57,7 @@ public class StatsDEmitterTest
   {
     StatsDClient client = createMock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, null, null, null),
+        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null),
         new ObjectMapper(),
         client
     );
@@ -85,7 +85,7 @@ public class StatsDEmitterTest
   {
     StatsDClient client = createMock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, "#", true, null),
+        new StatsDEmitterConfig("localhost", 8888, null, "#", true, null, null),
         new ObjectMapper(),
         client
     );
@@ -103,6 +103,25 @@ public class StatsDEmitterTest
                      .setDimension("id", "ID")
                      .setDimension("context", "{context}")
                      .build(DateTimes.nowUtc(), "query/time", 10)
+                     .build("broker", "brokerHost1")
+    );
+    verify(client);
+  }
+
+  @Test
+  public void testBlankHolderOptions()
+  {
+    StatsDClient client = createMock(StatsDClient.class);
+    StatsDEmitter emitter = new StatsDEmitter(
+        new StatsDEmitterConfig("localhost", 8888, null, null, true, null, null),
+        new ObjectMapper(),
+        client
+    );
+    client.count("brokerHost1.broker.jvm.gc.count.G1-GC", 1);
+    replay(client);
+    emitter.emit(new ServiceMetricEvent.Builder()
+                     .setDimension("gcName", "G1 GC")
+                     .build(DateTimes.nowUtc(), "jvm/gc/count", 1)
                      .build("broker", "brokerHost1")
     );
     verify(client);
