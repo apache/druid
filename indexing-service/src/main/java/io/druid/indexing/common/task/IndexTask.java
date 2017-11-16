@@ -277,7 +277,7 @@ public class IndexTask extends AbstractTask
                    .filter(entry -> entry.getKey().contains(interval))
                    .map(Entry::getValue)
                    .findFirst()
-                   .orElse(null);
+                   .orElseThrow(() -> new ISE("Cannot find a version for interval[%s]", interval));
   }
 
   private static boolean isGuaranteedRollup(IndexIOConfig ioConfig, IndexTuningConfig tuningConfig)
