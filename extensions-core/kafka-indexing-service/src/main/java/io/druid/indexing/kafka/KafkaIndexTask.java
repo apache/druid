@@ -577,7 +577,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       };
 
       // restart publishing of sequences (if any)
-      mayBePersistAndPublishSequences(committerSupplier);
+      maybePersistAndPublishSequences(committerSupplier);
 
       Set<Integer> assignment = assignPartitionsAndSeekToNext(consumer, topic);
 
@@ -612,7 +612,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           checkAndMaybeThrowException();
 
           if (!ioConfig.isPauseAfterRead()) {
-            mayBePersistAndPublishSequences(committerSupplier);
+            maybePersistAndPublishSequences(committerSupplier);
           }
 
           // The retrying business is because the KafkaConsumer throws OffsetOutOfRangeException if the seeked-to
@@ -1212,7 +1212,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     }
   }
 
-  private void mayBePersistAndPublishSequences(Supplier<Committer> committerSupplier)
+  private void maybePersistAndPublishSequences(Supplier<Committer> committerSupplier)
       throws ExecutionException, InterruptedException
   {
     for (SequenceMetadata sequenceMetadata : sequences) {

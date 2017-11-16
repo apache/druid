@@ -1124,7 +1124,7 @@ public class KafkaSupervisor implements Supervisor
     final TaskGroup taskGroup = taskGroups.get(groupId);
 
     // List<TaskId, Map -> {SequenceId, Checkpoints}>
-    final List<Pair<String, TreeMap<Integer, Map<Integer, Long>>>> taskSequences = new ArrayList<>();
+    final List<Pair<String, TreeMap<Integer, Map<Integer, Long>>>> taskSequences = new CopyOnWriteArrayList<>();
     final List<ListenableFuture<TreeMap<Integer, Map<Integer, Long>>>> futures = new ArrayList<>();
 
     for (String taskId : taskGroup.taskIds()) {
