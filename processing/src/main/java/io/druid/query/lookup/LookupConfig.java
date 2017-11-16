@@ -37,7 +37,7 @@ public class LookupConfig
 
   @Min(1)
   @JsonProperty("numLookupLoadingThreads")
-  private int numLookupLoadingThreads = Runtime.getRuntime().availableProcessors() / 2;
+  private int numLookupLoadingThreads = Math.max(1, Runtime.getRuntime().availableProcessors() / 2);
 
   @Min(1)
   @JsonProperty("coordinatorFetchRetries")
