@@ -34,6 +34,7 @@ import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.SingleDimensionShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -48,7 +49,8 @@ public class DataSegmentTest
 {
   final ObjectMapper mapper = new DefaultObjectMapper();
 
-  public DataSegmentTest()
+  @Before
+  public void setUp()
   {
     InjectableValues.Std injectableValues = new InjectableValues.Std();
     injectableValues.addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT);
