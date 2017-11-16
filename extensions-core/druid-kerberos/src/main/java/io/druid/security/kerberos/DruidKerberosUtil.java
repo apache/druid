@@ -104,6 +104,7 @@ public class DruidKerberosUtil
             || !UserGroupInformation.getCurrentUser().getUserName().equals(internalClientPrincipal)) {
           log.info("trying to authenticate user [%s] with keytab [%s]", internalClientPrincipal, internalClientKeytab);
           UserGroupInformation.loginUserFromKeytab(internalClientPrincipal, internalClientKeytab);
+          return;
         }
         //try to relogin in case the TGT expired
         if (UserGroupInformation.isLoginKeytabBased()) {
