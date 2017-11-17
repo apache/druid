@@ -133,7 +133,10 @@ public class AppenderatorImpl implements Appenderator
 
   private volatile ListeningExecutorService persistExecutor = null;
   private volatile ListeningExecutorService pushExecutor = null;
-  private volatile ListeningExecutorService abandonExecutor = null;
+  // use intermediate executor so that deadlock conditions can be prevented
+  // where persist and push Executor try to put tasks in each other queues
+  // thus creating circular dependency
+  private volatile ListeningExecutorService intermediateTempExecutor = null;
   private volatile long nextFlush;
   private volatile FileLock basePersistDirLock = null;
   private volatile FileChannel basePersistDirLockChannel = null;
@@ -688,8 +691,8 @@ public class AppenderatorImpl implements Appenderator
           "pushExecutor not terminated"
       );
       Preconditions.checkState(
-          abandonExecutor == null || abandonExecutor.awaitTermination(365, TimeUnit.DAYS),
-          "abandonExecutor not terminated"
+          intermediateTempExecutor == null || intermediateTempExecutor.awaitTermination(365, TimeUnit.DAYS),
+          "intermediateTempExecutor not terminated"
       );
     }
     catch (InterruptedException e) {
@@ -735,8 +738,8 @@ public class AppenderatorImpl implements Appenderator
           "persistExecutor not terminated"
       );
       Preconditions.checkState(
-          abandonExecutor == null || abandonExecutor.awaitTermination(365, TimeUnit.DAYS),
-          "abandonExecutor not terminated"
+          intermediateTempExecutor == null || intermediateTempExecutor.awaitTermination(365, TimeUnit.DAYS),
+          "intermediateTempExecutor not terminated"
       );
     }
     catch (InterruptedException e) {
@@ -800,9 +803,9 @@ public class AppenderatorImpl implements Appenderator
           )
       );
     }
-    if (abandonExecutor == null) {
+    if (intermediateTempExecutor == null) {
       // use single threaded executor with SynchronousQueue so that all abandon operations occur sequentially
-      abandonExecutor = MoreExecutors.listeningDecorator(
+      intermediateTempExecutor = MoreExecutors.listeningDecorator(
           Execs.newBlockingSingleThreaded(
               "appenderator_abandon_%d", 0
           )
@@ -818,8 +821,8 @@ public class AppenderatorImpl implements Appenderator
     if (pushExecutor != null) {
       pushExecutor.shutdownNow();
     }
-    if (abandonExecutor != null) {
-      abandonExecutor.shutdownNow();
+    if (intermediateTempExecutor != null) {
+      intermediateTempExecutor.shutdownNow();
     }
   }
 
@@ -1008,7 +1011,24 @@ public class AppenderatorImpl implements Appenderator
 
     // Wait for any outstanding pushes to finish, then abandon the segment inside the persist thread.
     return Futures.transform(
-        pushBarrier(),
+        Futures.transform(
+            pushBarrier(),
+            new Function<Object, Object>()
+            {
+              @Nullable
+              @Override
+              public Object apply(@Nullable Object input)
+              {
+                // do nothing
+                return null;
+              }
+            },
+            // use temp executor so that there persistExecutor and pushExecutor do
+            // not try to put tasks in each other queues which can lead to deadlocks
+            // after the above function is done, intermediateTempExecutor will push the
+            // below function to persistExecutor's queue
+            intermediateTempExecutor
+        ),
         new Function<Object, Object>()
         {
           @Nullable
@@ -1076,7 +1096,9 @@ public class AppenderatorImpl implements Appenderator
             return null;
           }
         },
-        abandonExecutor
+        // use persistExecutor to make sure that all the pending persists completes before
+        // starting to abandon segments
+        persistExecutor
     );
   }
 
