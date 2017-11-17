@@ -68,7 +68,7 @@ public class DoublesSketchComplexMetricSerde extends ComplexMetricSerde
       public Object extractValue(final InputRow inputRow, final String metricName)
       {
         final Object object = inputRow.getRaw(metricName);
-        if (object instanceof String) {
+        if (object instanceof String) { // everything is a string during ingestion
           String objectString = (String) object;
           // Autodetection of the input format: a number or base64 encoded sketch
           // A serialized DoublesSketch, as currently implemented, always has 0 in the first 6 bits.
@@ -84,6 +84,10 @@ public class DoublesSketchComplexMetricSerde extends ComplexMetricSerde
               throw new IAE("Expected a string with a number, received value " + objectString);
             }
           }
+        } else if (object instanceof Number) { // this is for reindexing
+          UpdateDoublesSketch sketch = DoublesSketch.builder().setK(2).build();
+          sketch.update(((Number) object).doubleValue());
+          return sketch;
         }
 
         if (object == null || object instanceof DoublesSketch || object instanceof Memory) {
