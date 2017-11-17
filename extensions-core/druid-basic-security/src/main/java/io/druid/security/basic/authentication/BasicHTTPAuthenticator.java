@@ -170,10 +170,9 @@ public class BasicHTTPAuthenticator implements Authenticator
       if (checkCredentials(user, password)) {
         AuthenticationResult authenticationResult = new AuthenticationResult(user, name, null);
         servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
-        filterChain.doFilter(servletRequest, servletResponse);
-      } else {
-        httpResp.sendError(HttpServletResponse.SC_UNAUTHORIZED);
       }
+
+      filterChain.doFilter(servletRequest, servletResponse);
     }
 
     @Override
