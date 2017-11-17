@@ -82,6 +82,8 @@ public interface IndexerMetadataStorageCoordinator
    * @param interval          interval for which to allocate a segment
    * @param maxVersion        use this version if we have no better version to use. The returned segment identifier may
    *                          have a version lower than this one, but will not have one higher.
+   * @param skipSegmentLineageCheck if false, perform lineage validation using previousSegmentId for this sequence.
+   *                              Should be set to false if replica tasks would index events in same order
    *
    * @return the pending segment identifier, or null if it was impossible to allocate a new segment
    */
@@ -90,7 +92,8 @@ public interface IndexerMetadataStorageCoordinator
       String sequenceName,
       String previousSegmentId,
       Interval interval,
-      String maxVersion
+      String maxVersion,
+      boolean skipSegmentLineageCheck
   ) throws IOException;
 
   /**
