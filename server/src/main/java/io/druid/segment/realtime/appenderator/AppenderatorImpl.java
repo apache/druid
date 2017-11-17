@@ -541,15 +541,8 @@ public class AppenderatorImpl implements Appenderator
    */
   private ListenableFuture<?> pushBarrier()
   {
-    return pushExecutor.submit(
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            // Do nothing
-          }
-        }
+    return intermediateTempExecutor.submit(
+        (Runnable) () -> pushExecutor.submit(() -> {})
     );
   }
 
@@ -1011,24 +1004,7 @@ public class AppenderatorImpl implements Appenderator
 
     // Wait for any outstanding pushes to finish, then abandon the segment inside the persist thread.
     return Futures.transform(
-        Futures.transform(
-            pushBarrier(),
-            new Function<Object, Object>()
-            {
-              @Nullable
-              @Override
-              public Object apply(@Nullable Object input)
-              {
-                // do nothing
-                return null;
-              }
-            },
-            // use temp executor so that there persistExecutor and pushExecutor do
-            // not try to put tasks in each other queues which can lead to deadlocks
-            // after the above function is done, intermediateTempExecutor will push the
-            // below function to persistExecutor's queue
-            intermediateTempExecutor
-        ),
+        pushBarrier(),
         new Function<Object, Object>()
         {
           @Nullable
