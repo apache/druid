@@ -24,6 +24,7 @@ All the configuration parameters for the StatsD emitter are under `druid.emitter
 |`druid.emitter.statsd.separator`|Metric name separator|no|.|  
 |`druid.emitter.statsd.includeHost`|Flag to include the hostname as part of the metric name.|no|false|  
 |`druid.emitter.statsd.dimensionMapPath`|JSON file defining the StatsD type, and desired dimensions for every Druid metric|no|Default mapping provided. See below.|  
+|`druid.emitter.statsd.blankHolder`|The blank character replacement as statsD does not support path with blank character|no|"-"|  
 
 ### Druid to StatsD Event Converter
 
