@@ -44,7 +44,7 @@ Compacting Segments
 Each run, the Druid coordinator compacts small segments abutting each other.
 It first finds the segments to compact together based on the [segment search policy](#segment-search-policy).
 Once it finds some segments, it launches a [compact task](../ingestion/tasks.html#compaction-task) to compact those segments.
-The maximum number of running compact tasks is `max(sum of worker capacity * compactionTaskSlotRatio, 1)`. TODO: link config doc
+The maximum number of running compact tasks is `max(sum of worker capacity * compactionTaskSlotRatio, 1)`. (See [Dynamic Configuration](../configuration/coordinator.html#dynamic-configuration) for `compactionTaskSlotRatio`.)
  
 Compact tasks might fail due to some reasons.
 
@@ -54,7 +54,7 @@ Compact tasks might fail due to some reasons.
 Once a compact task fails, the coordinator simply finds the segments for the interval of the failed task again, and launches a new compact task in the next run.
 
 To use this feature, you need to set some configurations for dataSources you want to compact.
-TODO: Please see config doc for details.
+Please see [Compaction Config](../configuration/coordinator.html#compaction-config) for details.
 
 ### Segment Search Policy
 
@@ -64,11 +64,11 @@ This policy searches the segments of _all dataSources_ in inverse order of their
 For example, let me assume there are 3 dataSources (`ds1`, `ds2`, `ds3`) and 5 segments (`seg_ds1_2017-10-01_2017-10-02`, `seg_ds1_2017-11-01_2017-11-02`, `seg_ds2_2017-08-01_2017-08-02`, `seg_ds3_2017-07-01_2017-07-02`, `seg_ds3_2017-12-01_2017-12-02`) for those dataSources.
 The segment name indicates its dataSource and interval. The search result of newestSegmentFirstPolicy is [`seg_ds3_2017-12-01_2017-12-02`, `seg_ds1_2017-11-01_2017-11-02`, `seg_ds1_2017-10-01_2017-10-02`, `seg_ds2_2017-08-01_2017-08-02`, `seg_ds3_2017-07-01_2017-07-02`]. 
 
-Every run, this policy starts searching from the (very latest interval - skipOffset(TODO: link config)).
+Every run, this policy starts searching from the (very latest interval - [skipOffsetFromLatest](../configuration/coordinator.html#compaction-config)).
 This is to handle the late segments ingested to realtime dataSources.
 
 <div class="note caution">
-This policy currenlty cannot handle the situation when a shard consists of a lot of small segments, thereby its total size exceeds the targetCompactionSizebytes(TODO: link config).
+This policy currenlty cannot handle the situation when a shard consists of a lot of small segments, thereby its total size exceeds the <a href="../configuration/coordinator.html#compaction-config">targetCompactionSizebytes</a>.
 If it finds such shards, it simply skips them.
 </div>
 
