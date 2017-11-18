@@ -167,6 +167,7 @@ over the connection time zone.
 |`EXTRACT(<unit> FROM timestamp_expr)`|Extracts a time part from expr, returning it as a number. Unit can be EPOCH, SECOND, MINUTE, HOUR, DAY (day of month), DOW (day of week), DOY (day of year), WEEK (week of year), MONTH, QUARTER, or YEAR. Units must be provided unquoted, like `EXTRACT(HOUR FROM __time)`.|
 |`FLOOR(timestamp_expr TO <unit>)`|Rounds down a timestamp, returning it as a new timestamp. Unit can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
 |`CEIL(timestamp_expr TO <unit>)`|Rounds up a timestamp, returning it as a new timestamp. Unit can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
+|`TIMESTAMPADD(<unit>, <count>, <timestamp>)`|Equivalent to `timestamp + count * INTERVAL '1' UNIT`.|
 |`timestamp_expr { + \| - } <interval_expr>`|Add or subtract an amount of time from a timestamp. interval_expr can include interval literals like `INTERVAL '2' HOUR`, and may include interval arithmetic as well. This operator treats days as uniformly 86400 seconds long, and does not take into account daylight savings time. To account for daylight savings time, use TIME_SHIFT instead.|
 
 ### Comparison operators
@@ -332,18 +333,25 @@ of configuration.
 ### JSON over HTTP
 
 You can make Druid SQL queries using JSON over HTTP by posting to the endpoint `/druid/v2/sql/`. The request should
-be a JSON object with a "query" field, like `{"query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar'"}`. You can
-use _curl_ to send these queries from the command-line:
+be a JSON object with a "query" field, like `{"query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar'"}`.
+
+Results are available in two formats: "object" (the default; a JSON array of JSON objects), and "array" (a JSON array
+of JSON arrays). In "object" form, each row's field names will match the column names from your SQL query. In "array"
+form, each row's values are returned in the order specified in your SQL query.
+
+You can use _curl_ to send SQL queries from the command-line:
 
 ```bash
 $ cat query.json
-{"query":"SELECT COUNT(*) FROM data_source"}
+{"query":"SELECT COUNT(*) AS TheCount FROM data_source"}
 
 $ curl -XPOST -H'Content-Type: application/json' http://BROKER:8082/druid/v2/sql/ -d @query.json
-[{"EXPR$0":24433}]
+[{"TheCount":24433}]
 ```
 
-You can also provide [connection context parameters](#connection-context) by adding a "context" map, like:
+Metadata is available over the HTTP API by querying the ["INFORMATION_SCHEMA" tables](#retrieving-metadata).
+
+Finally, you can also provide [connection context parameters](#connection-context) by adding a "context" map, like:
 
 ```json
 {
@@ -353,8 +361,6 @@ You can also provide [connection context parameters](#connection-context) by add
   }
 }
 ```
-
-Metadata is available over the HTTP API by querying the ["INFORMATION_SCHEMA" tables](#retrieving-metadata).
 
 ### JDBC
 
@@ -404,14 +410,14 @@ Druid SQL supports setting connection parameters on the client. The parameters i
 All other context parameters you provide will be attached to Druid queries and can affect how they run. See
 [Query context](query-context.html) for details on the possible options.
 
+Connection context can be specified as JDBC connection properties or as a "context" object in the JSON API.
+
 |Parameter|Description|Default value|
 |---------|-----------|-------------|
 |`sqlTimeZone`|Sets the time zone for this connection, which will affect how time functions and timestamp literals behave. Should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|UTC|
 |`useApproximateCountDistinct`|Whether to use an approximate cardinalty algorithm for `COUNT(DISTINCT foo)`.|druid.sql.planner.useApproximateCountDistinct on the broker|
 |`useApproximateTopN`|Whether to use approximate [TopN queries](topnquery.html) when a SQL query could be expressed as such. If false, exact [GroupBy queries](groupbyquery.html) will be used instead.|druid.sql.planner.useApproximateTopN on the broker|
 |`useFallback`|Whether to evaluate operations on the broker when they cannot be expressed as Druid queries. This option is not recommended for production since it can generate unscalable query plans. If false, SQL queries that cannot be translated to Druid queries will fail.|druid.sql.planner.useFallback on the broker|
-
-Connection context can be specified as JDBC connection properties or as a "context" object in the JSON API.
 
 ### Retrieving metadata
 

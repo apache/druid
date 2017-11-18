@@ -93,7 +93,7 @@ public class KafkaTuningConfigTest
     Assert.assertEquals(100, config.getMaxRowsInMemory());
     Assert.assertEquals(100, config.getMaxRowsPerSegment());
     Assert.assertEquals(new Period("PT1H"), config.getIntermediatePersistPeriod());
-    Assert.assertEquals(100, config.getMaxPendingPersists());
+    Assert.assertEquals(0, config.getMaxPendingPersists());
     Assert.assertEquals(true, config.isReportParseExceptions());
     Assert.assertEquals(100, config.getHandoffConditionTimeout());
   }
@@ -119,7 +119,7 @@ public class KafkaTuningConfigTest
     Assert.assertEquals(2, copy.getMaxRowsPerSegment());
     Assert.assertEquals(new Period("PT3S"), copy.getIntermediatePersistPeriod());
     Assert.assertEquals(new File("/tmp/xxx"), copy.getBasePersistDirectory());
-    Assert.assertEquals(4, copy.getMaxPendingPersists());
+    Assert.assertEquals(0, copy.getMaxPendingPersists());
     Assert.assertEquals(new IndexSpec(), copy.getIndexSpec());
     Assert.assertEquals(true, copy.isReportParseExceptions());
     Assert.assertEquals(5L, copy.getHandoffConditionTimeout());

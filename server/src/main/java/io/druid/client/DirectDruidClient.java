@@ -63,7 +63,6 @@ import io.druid.query.QueryWatcher;
 import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.Result;
 import io.druid.query.aggregation.MetricManipulatorFns;
-import io.druid.server.initialization.ServerConfig;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferInputStream;
 import org.jboss.netty.handler.codec.http.HttpChunk;
@@ -115,20 +114,6 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
   private final AtomicInteger openConnections;
   private final boolean isSmile;
-
-  public static <T, QueryType extends Query<T>> QueryType withDefaultTimeoutAndMaxScatterGatherBytes(
-      final QueryType query,
-      ServerConfig serverConfig
-  )
-  {
-    return (QueryType) QueryContexts.withMaxScatterGatherBytes(
-        QueryContexts.withDefaultTimeout(
-            (Query) query,
-            serverConfig.getDefaultQueryTimeout()
-        ),
-        serverConfig.getMaxScatterGatherBytes()
-    );
-  }
 
   /**
    * Removes the magical fields added by {@link #makeResponseContextForQuery(Query, long)}.

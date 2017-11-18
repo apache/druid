@@ -41,7 +41,6 @@ import java.util.Map;
 /**
  */
 @Path("/druid/coordinator/v1")
-@ResourceFilters(StateResourceFilter.class)
 public class CoordinatorResource
 {
   private final DruidCoordinator coordinator;
@@ -56,12 +55,16 @@ public class CoordinatorResource
 
   @GET
   @Path("/leader")
+  @ResourceFilters(StateResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
   public Response getLeader()
   {
     return Response.ok(coordinator.getCurrentLeader()).build();
   }
 
+  /**
+   * This is an unsecured endpoint, defined as such in UNSECURED_PATHS in CoordinatorJettyServerInitializer
+   */
   @GET
   @Path("/isLeader")
   @Produces(MediaType.APPLICATION_JSON)
@@ -78,6 +81,7 @@ public class CoordinatorResource
 
   @GET
   @Path("/loadstatus")
+  @ResourceFilters(StateResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
   public Response getLoadStatus(
       @QueryParam("simple") String simple,
@@ -96,6 +100,7 @@ public class CoordinatorResource
 
   @GET
   @Path("/loadqueue")
+  @ResourceFilters(StateResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
   public Response getLoadQueue(
       @QueryParam("simple") String simple,

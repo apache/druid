@@ -205,7 +205,7 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn<St
         @Override
         public IndexedInts getRow()
         {
-          return new SingleIndexedInt(getRowValue());
+          return SingleIndexedInt.of(getRowValue());
         }
 
         public int getRowValue()
@@ -216,7 +216,7 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn<St
         @Override
         public IndexedInts getRow(int offset)
         {
-          return new SingleIndexedInt(getRowValue(offset));
+          return SingleIndexedInt.of(getRowValue(offset));
         }
 
         @Override

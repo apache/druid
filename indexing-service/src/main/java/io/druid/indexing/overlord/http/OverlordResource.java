@@ -179,9 +179,11 @@ public class OverlordResource
     return Response.ok(taskMaster.getCurrentLeader()).build();
   }
 
+  /**
+   * This is an unsecured endpoint, defined as such in UNSECURED_PATHS in CliOverlord
+   */
   @GET
   @Path("/isLeader")
-  @ResourceFilters(StateResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
   public Response isLeader()
   {

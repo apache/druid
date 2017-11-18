@@ -164,7 +164,9 @@ public class Expressions
       }
     } else if (kind == SqlKind.LITERAL) {
       // Translate literal.
-      if (SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName)) {
+      if (RexLiteral.isNullLiteral(rexNode)) {
+        return DruidExpression.fromExpression(DruidExpression.nullLiteral());
+      } else if (SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName)) {
         return DruidExpression.fromExpression(DruidExpression.numberLiteral((Number) RexLiteral.value(rexNode)));
       } else if (SqlTypeFamily.INTERVAL_DAY_TIME == sqlTypeName.getFamily()) {
         // Calcite represents DAY-TIME intervals in milliseconds.

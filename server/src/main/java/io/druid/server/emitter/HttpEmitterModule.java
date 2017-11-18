@@ -36,6 +36,7 @@ import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.JdkSslContext;
+import io.netty.util.HashedWheelTimer;
 import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.DefaultAsyncHttpClient;
 import org.asynchttpclient.DefaultAsyncHttpClientConfig;
@@ -71,11 +72,13 @@ public class HttpEmitterModule implements Module
 
   static AsyncHttpClient createAsyncHttpClient(
       String nameFormat,
+      String timerThreadNameFormat,
       @Nullable SSLContext sslContext
   )
   {
     final DefaultAsyncHttpClientConfig.Builder builder = new DefaultAsyncHttpClientConfig.Builder()
-        .setThreadFactory(Execs.makeThreadFactory(nameFormat));
+        .setThreadFactory(Execs.makeThreadFactory(nameFormat))
+        .setNettyTimer(new HashedWheelTimer(Execs.makeThreadFactory(timerThreadNameFormat)));
     if (sslContext != null) {
       builder.setSslContext(new JdkSslContext(sslContext, true, ClientAuth.NONE));
     }
@@ -95,7 +98,11 @@ public class HttpEmitterModule implements Module
     return new HttpPostEmitter(
         config.get(),
         lifecycle.addCloseableInstance(
-            createAsyncHttpClient("HttpPostEmitter-AsyncHttpClient-%d", sslContext)
+            createAsyncHttpClient(
+                "HttpPostEmitter-AsyncHttpClient-%d",
+                "HttpPostEmitter-AsyncHttpClient-Timer-%d",
+                sslContext
+            )
         ),
         jsonMapper
     );

@@ -34,7 +34,6 @@ import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.FullResponseHandler;
 import com.metamx.http.client.response.FullResponseHolder;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.indexing.common.RetryPolicy;
 import io.druid.indexing.common.RetryPolicyConfig;
 import io.druid.indexing.common.RetryPolicyFactory;
@@ -45,6 +44,7 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.segment.realtime.firehose.ChatHandlerResource;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -58,6 +58,7 @@ import java.io.IOException;
 import java.net.Socket;
 import java.net.URI;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.Callable;
 
 public class KafkaIndexTaskClient
@@ -84,6 +85,7 @@ public class KafkaIndexTaskClient
   private static final EmittingLogger log = new EmittingLogger(KafkaIndexTaskClient.class);
   private static final String BASE_PATH = "/druid/worker/v1/chat";
   private static final int TASK_MISMATCH_RETRY_DELAY_SECONDS = 5;
+  private static final TreeMap EMPTY_TREE_MAP = new TreeMap();
 
   private final HttpClient httpClient;
   private final ObjectMapper jsonMapper;
@@ -270,6 +272,33 @@ public class KafkaIndexTaskClient
     }
   }
 
+  public TreeMap<Integer, Map<Integer, Long>> getCheckpoints(final String id, final boolean retry)
+  {
+    log.debug("GetCheckpoints task[%s] retry[%s]", id, retry);
+    try {
+      final FullResponseHolder response = submitRequest(id, HttpMethod.GET, "checkpoints", null, retry);
+      return jsonMapper.readValue(response.getContent(), new TypeReference<TreeMap<Integer, TreeMap<Integer, Long>>>()
+      {
+      });
+    }
+    catch (NoTaskLocationException e) {
+      return EMPTY_TREE_MAP;
+    }
+    catch (IOException e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  public ListenableFuture<TreeMap<Integer, Map<Integer, Long>>> getCheckpointsAsync(
+      final String id,
+      final boolean retry
+  )
+  {
+    return executorService.submit(
+        () -> getCheckpoints(id, retry)
+    );
+  }
+
   public Map<Integer, Long> getEndOffsets(final String id)
   {
     log.debug("GetEndOffsets task[%s]", id);
@@ -288,21 +317,21 @@ public class KafkaIndexTaskClient
     }
   }
 
-  public boolean setEndOffsets(final String id, final Map<Integer, Long> endOffsets)
+  public boolean setEndOffsets(
+      final String id,
+      final Map<Integer, Long> endOffsets,
+      final boolean resume,
+      final boolean finalize
+  )
   {
-    return setEndOffsets(id, endOffsets, false);
-  }
-
-  public boolean setEndOffsets(final String id, final Map<Integer, Long> endOffsets, final boolean resume)
-  {
-    log.debug("SetEndOffsets task[%s] endOffsets[%s] resume[%s]", id, endOffsets, resume);
+    log.debug("SetEndOffsets task[%s] endOffsets[%s] resume[%s] finalize[%s]", id, endOffsets, resume, finalize);
 
     try {
       final FullResponseHolder response = submitRequest(
           id,
           HttpMethod.POST,
           "offsets/end",
-          resume ? "resume=true" : null,
+          StringUtils.format("resume=%s&finish=%s", resume, finalize),
           jsonMapper.writeValueAsBytes(endOffsets),
           true
       );
@@ -419,13 +448,8 @@ public class KafkaIndexTaskClient
     );
   }
 
-  public ListenableFuture<Boolean> setEndOffsetsAsync(final String id, final Map<Integer, Long> endOffsets)
-  {
-    return setEndOffsetsAsync(id, endOffsets, false);
-  }
-
   public ListenableFuture<Boolean> setEndOffsetsAsync(
-      final String id, final Map<Integer, Long> endOffsets, final boolean resume
+      final String id, final Map<Integer, Long> endOffsets, final boolean resume, final boolean finalize
   )
   {
     return executorService.submit(
@@ -434,7 +458,7 @@ public class KafkaIndexTaskClient
           @Override
           public Boolean call() throws Exception
           {
-            return setEndOffsets(id, endOffsets, resume);
+            return setEndOffsets(id, endOffsets, resume, finalize);
           }
         }
     );
@@ -483,7 +507,10 @@ public class KafkaIndexTaskClient
 
       Optional<TaskStatus> status = taskInfoProvider.getTaskStatus(id);
       if (!status.isPresent() || !status.get().isRunnable()) {
-        throw new TaskNotRunnableException(StringUtils.format("Aborting request because task [%s] is not runnable", id));
+        throw new TaskNotRunnableException(StringUtils.format(
+            "Aborting request because task [%s] is not runnable",
+            id
+        ));
       }
 
       String host = location.getHost();

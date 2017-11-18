@@ -7,7 +7,7 @@ layout: doc_page
 |Property|Type|Description|Default|Required|
 |--------|-----------|--------|--------|--------|
 |`druid.auth.authenticationChain`|JSON List of Strings|List of Authenticator type names|["allowAll"]|no|
-|`druid.auth.escalatedAuthenticator`|String|Type of the Authenticator that should be used for internal Druid communications. This Authenticator must be present in `druid.auth.authenticationChain`.|"allowAll"|no|
+|`druid.escalator.type`|String|Type of the Escalator that should be used for internal Druid communications. This Escalator must use an authentication scheme that is supported by an Authenticator in `druid.auth.authenticationChain`.|"noop"|no|
 |`druid.auth.authorizers`|JSON List of Strings|List of Authorizer type names |["allowAll"]|no|
 
 ## Enabling Authentication/Authorization
@@ -33,10 +33,14 @@ Druid includes a built-in Authenticator, used for the default unsecured configur
 
 This built-in Authenticator authenticates all requests, and always directs them to an Authorizer named "allowAll". It is not intended to be used for anything other than the default unsecured configuration.
 
-## Internal Authenticator
-The `druid.auth.escalatedAuthenticator` property determines what authentication scheme should be used for internal Druid cluster communications (such as when a broker node communicates with historical nodes for query processing).
+## Escalator
+The `druid.escalator.type` property determines what authentication scheme should be used for internal Druid cluster communications (such as when a broker node communicates with historical nodes for query processing).
 
-The Authenticator chosen for this property must also be present in `druid.auth.authenticationChain`.
+The Escalator chosen for this property must use an authentication scheme that is supported by an Authenticator in `druid.auth.authenticationChain. Authenticator extension implementors must also provide a corresponding Escalator implementation if they intend to use a particular authentication scheme for internal Druid communications.
+
+### Noop Escalator
+
+This built-in default Escalator is intended for use only with the default AllowAll Authenticator and Authorizer.
 
 ## Authorizers
 Authorization decisions are handled by an Authorizer. The `druid.auth.authorizers` property determines what Authorizer implementations will be active.
@@ -63,7 +67,7 @@ When `druid.auth.authenticationChain` is left empty or unspecified, Druid will c
 
 When `druid.auth.authorizers` is left empty or unspecified, Druid will create a single AllowAll Authorizer named "allowAll".
 
-The default value of `druid.auth.escalatedAuthenticator` is "allowAll" to match the default unsecured Authenticator/Authorizer configurations.
+The default value of `druid.escalator.type` is "noop" to match the default unsecured Authenticator/Authorizer configurations.
 
 ## Authenticator to Authorizer Routing
 
@@ -77,15 +81,17 @@ Internal requests between Druid nodes (non-user initiated communications) need t
 
 These requests should be run as an "internal system user", an identity that represents the Druid cluster itself, with full access permissions.
 
-The details of how the internal system user is defined is left to Authorizer and Authenticator implementations.
+The details of how the internal system user is defined is left to extension implementations.
 
 ### Authorizer Internal System User Handling
 
 Authorizers implementations must recognize and authorize an identity for the "internal system user", with full access permissions.
 
-### Authenticator Internal System User Handling
+### Authenticator and Escalator Internal System User Handling
 
-Authenticators must implement three methods related to the internal system user:
+An Authenticator implementation that is intended to support internal Druid communications must recognize credentials for the "internal system user", as provided by a corresponding Escalator implementation.
+
+An Escalator must implement three methods related to the internal system user:
 
 ```java
   public HttpClient createEscalatedClient(HttpClient baseClient);
@@ -100,3 +106,15 @@ Authenticators must implement three methods related to the internal system user:
 `createEscalatedJettyClient` is similar to `createEscalatedClient`, except that it operates on a Jetty HttpClient.
 
 `createEscalatedAuthenticationResult` returns an AuthenticationResult containing the identity of the "internal system user".
+
+## Reserved Name Configuration Property
+
+For extension implementers, please note that the following configuration properties are reserved for the names of Authenticators and Authorizers:
+
+```
+druid.auth.authenticator.<authenticator-name>.name=<authenticator-name>
+druid.auth.authorizer.<authorizer-name>.name=<authorizer-name>
+
+```
+
+These properties provide the authenticator and authorizer names to the implementations as @JsonProperty parameters, potentially useful when multiple authenticators or authorizers of the same type are configured.

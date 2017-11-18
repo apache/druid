@@ -17,27 +17,22 @@
  * under the License.
  */
 
-package io.druid.server.security;
+package io.druid.sql.calcite.http;
 
-import com.metamx.http.client.HttpClient;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
+import io.druid.segment.TestHelper;
+import io.druid.sql.http.SqlQuery;
+import org.junit.Assert;
+import org.junit.Test;
 
-/**
- * Singleton utility object that creates escalated HttpClients using a configuration-specified Authenticator's
- * getEscalatedClient() method.
- */
-public class AuthenticatorHttpClientWrapper
+public class SqlQueryTest
 {
-  private Authenticator escalatingAuthenticator;
-
-  public AuthenticatorHttpClientWrapper(
-      final Authenticator escalatingAuthenticator
-  )
+  @Test
+  public void testSerde() throws Exception
   {
-    this.escalatingAuthenticator = escalatingAuthenticator;
-  }
-
-  public HttpClient getEscalatedClient(HttpClient baseClient)
-  {
-    return escalatingAuthenticator.createEscalatedClient(baseClient);
+    final ObjectMapper jsonMapper = TestHelper.getJsonMapper();
+    final SqlQuery query = new SqlQuery("SELECT 1", SqlQuery.ResultFormat.ARRAY, ImmutableMap.of("useCache", false));
+    Assert.assertEquals(query, jsonMapper.readValue(jsonMapper.writeValueAsString(query), SqlQuery.class));
   }
 }

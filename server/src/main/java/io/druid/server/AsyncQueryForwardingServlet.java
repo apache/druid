@@ -44,8 +44,7 @@ import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.router.QueryHostFinder;
 import io.druid.server.router.Router;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.Authenticator;
-import io.druid.server.security.AuthenticatorMapper;
+import io.druid.server.security.Escalator;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.client.api.Response;
@@ -114,7 +113,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
   private final GenericQueryMetricsFactory queryMetricsFactory;
-  private final Authenticator escalatingAuthenticator;
+  private final Escalator escalator;
 
   private HttpClient broadcastClient;
 
@@ -129,7 +128,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       ServiceEmitter emitter,
       RequestLogger requestLogger,
       GenericQueryMetricsFactory queryMetricsFactory,
-      AuthenticatorMapper authenticatorMapper
+      Escalator escalator
   )
   {
     this.warehouse = warehouse;
@@ -141,7 +140,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.queryMetricsFactory = queryMetricsFactory;
-    this.escalatingAuthenticator = authenticatorMapper.getEscalatingAuthenticator();
+    this.escalator = escalator;
   }
 
   @Override
@@ -349,7 +348,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   @Override
   protected HttpClient newHttpClient()
   {
-    return escalatingAuthenticator.createEscalatedJettyClient(httpClientProvider.get());
+    return escalator.createEscalatedJettyClient(httpClientProvider.get());
   }
 
   @Override

@@ -66,6 +66,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
   private final Granularity preferredSegmentGranularity;
   private final String sequenceName;
   private final String previousSegmentId;
+  private final boolean skipSegmentLineageCheck;
 
   public SegmentAllocateAction(
       @JsonProperty("dataSource") String dataSource,
@@ -73,7 +74,8 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
       @JsonProperty("queryGranularity") Granularity queryGranularity,
       @JsonProperty("preferredSegmentGranularity") Granularity preferredSegmentGranularity,
       @JsonProperty("sequenceName") String sequenceName,
-      @JsonProperty("previousSegmentId") String previousSegmentId
+      @JsonProperty("previousSegmentId") String previousSegmentId,
+      @JsonProperty("skipSegmentLineageCheck") boolean skipSegmentLineageCheck
   )
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
@@ -85,6 +87,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
     );
     this.sequenceName = Preconditions.checkNotNull(sequenceName, "sequenceName");
     this.previousSegmentId = previousSegmentId;
+    this.skipSegmentLineageCheck = skipSegmentLineageCheck;
   }
 
   @JsonProperty
@@ -123,6 +126,12 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
     return previousSegmentId;
   }
 
+  @JsonProperty
+  public boolean isSkipSegmentLineageCheck()
+  {
+    return skipSegmentLineageCheck;
+  }
+
   @Override
   public TypeReference<SegmentIdentifier> getReturnTypeReference()
   {
@@ -157,12 +166,13 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
       );
 
       final SegmentIdentifier identifier = usedSegmentsForRow.isEmpty() ?
-                                           tryAllocateFirstSegment(toolbox, task, rowInterval) :
+                                           tryAllocateFirstSegment(toolbox, task, rowInterval, skipSegmentLineageCheck) :
                                            tryAllocateSubsequentSegment(
                                                toolbox,
                                                task,
                                                rowInterval,
-                                               usedSegmentsForRow.iterator().next()
+                                               usedSegmentsForRow.iterator().next(),
+                                               skipSegmentLineageCheck
                                            );
       if (identifier != null) {
         return identifier;
@@ -205,7 +215,8 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
   private SegmentIdentifier tryAllocateFirstSegment(
       TaskActionToolbox toolbox,
       Task task,
-      Interval rowInterval
+      Interval rowInterval,
+      boolean skipSegmentLineageCheck
   ) throws IOException
   {
     // No existing segments for this row, but there might still be nearby ones that conflict with our preferred
@@ -216,7 +227,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
                                                    .collect(Collectors.toList());
     for (Interval tryInterval : tryIntervals) {
       if (tryInterval.contains(rowInterval)) {
-        final SegmentIdentifier identifier = tryAllocate(toolbox, task, tryInterval, rowInterval, false);
+        final SegmentIdentifier identifier = tryAllocate(toolbox, task, tryInterval, rowInterval, false, skipSegmentLineageCheck);
         if (identifier != null) {
           return identifier;
         }
@@ -229,7 +240,8 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
       TaskActionToolbox toolbox,
       Task task,
       Interval rowInterval,
-      DataSegment usedSegment
+      DataSegment usedSegment,
+      boolean skipSegmentLineageCheck
   ) throws IOException
   {
     // Existing segment(s) exist for this row; use the interval of the first one.
@@ -239,7 +251,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
     } else {
       // If segment allocation failed here, it is highly likely an unrecoverable error. We log here for easier
       // debugging.
-      return tryAllocate(toolbox, task, usedSegment.getInterval(), rowInterval, true);
+      return tryAllocate(toolbox, task, usedSegment.getInterval(), rowInterval, true, skipSegmentLineageCheck);
     }
   }
 
@@ -248,7 +260,8 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
       Task task,
       Interval tryInterval,
       Interval rowInterval,
-      boolean logOnFail
+      boolean logOnFail,
+      boolean skipSegmentLineageCheck
   ) throws IOException
   {
     log.debug(
@@ -268,7 +281,8 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
           sequenceName,
           previousSegmentId,
           tryInterval,
-          lockResult.getTaskLock().getVersion()
+          lockResult.getTaskLock().getVersion(),
+          skipSegmentLineageCheck
       );
       if (identifier != null) {
         return identifier;
@@ -316,6 +330,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
            ", preferredSegmentGranularity=" + preferredSegmentGranularity +
            ", sequenceName='" + sequenceName + '\'' +
            ", previousSegmentId='" + previousSegmentId + '\'' +
+           ", skipSegmentLineageCheck='" + skipSegmentLineageCheck + '\'' +
            '}';
   }
 }

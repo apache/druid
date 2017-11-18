@@ -19,16 +19,10 @@
 
 package io.druid.sql.calcite.expression.builtin;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import io.druid.java.util.common.granularity.Granularity;
-import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.sql.calcite.expression.DruidExpression;
 import io.druid.sql.calcite.expression.Expressions;
-import io.druid.sql.calcite.expression.ExtractionFns;
 import io.druid.sql.calcite.expression.OperatorConversions;
-import io.druid.sql.calcite.expression.SimpleExtraction;
 import io.druid.sql.calcite.expression.SqlOperatorConversion;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
@@ -53,33 +47,6 @@ public class TimeFormatOperatorConversion implements SqlOperatorConversion
       .returnType(SqlTypeName.VARCHAR)
       .functionCategory(SqlFunctionCategory.TIMEDATE)
       .build();
-
-  public static SimpleExtraction applyTimestampFormat(
-      final SimpleExtraction simpleExtraction,
-      final String pattern,
-      final DateTimeZone timeZone
-  )
-  {
-    Preconditions.checkNotNull(simpleExtraction, "simpleExtraction");
-    Preconditions.checkNotNull(pattern, "pattern");
-    Preconditions.checkNotNull(timeZone, "timeZone");
-
-    final ExtractionFn baseExtractionFn = simpleExtraction.getExtractionFn();
-
-    if (baseExtractionFn instanceof TimeFormatExtractionFn) {
-      final TimeFormatExtractionFn baseTimeFormatFn = (TimeFormatExtractionFn) baseExtractionFn;
-      final Granularity queryGranularity = ExtractionFns.toQueryGranularity(baseTimeFormatFn);
-      if (queryGranularity != null) {
-        // Combine EXTRACT(X FROM FLOOR(Y TO Z)) into a single extractionFn.
-        return SimpleExtraction.of(
-            simpleExtraction.getColumn(),
-            new TimeFormatExtractionFn(pattern, timeZone, null, queryGranularity, true)
-        );
-      }
-    }
-
-    return simpleExtraction.cascade(new TimeFormatExtractionFn(pattern, timeZone, null, null, true));
-  }
 
   @Override
   public SqlOperator calciteOperator()
@@ -108,16 +75,13 @@ public class TimeFormatOperatorConversion implements SqlOperatorConversion
                                   ? DateTimeZone.forID(RexLiteral.stringValue(call.getOperands().get(2)))
                                   : plannerContext.getTimeZone();
 
-    return timeExpression.map(
-        simpleExtraction -> applyTimestampFormat(simpleExtraction, pattern, timeZone),
-        expression -> DruidExpression.functionCall(
-            "timestamp_format",
-            ImmutableList.of(
-                expression,
-                DruidExpression.stringLiteral(pattern),
-                DruidExpression.stringLiteral(timeZone.getID())
-            ).stream().map(DruidExpression::fromExpression).collect(Collectors.toList())
-        )
+    return DruidExpression.fromFunctionCall(
+        "timestamp_format",
+        ImmutableList.of(
+            timeExpression.getExpression(),
+            DruidExpression.stringLiteral(pattern),
+            DruidExpression.stringLiteral(timeZone.getID())
+        ).stream().map(DruidExpression::fromExpression).collect(Collectors.toList())
     );
   }
 }

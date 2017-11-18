@@ -21,23 +21,99 @@ package io.druid.sql.http;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import io.druid.java.util.common.StringUtils;
 
+import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.Map;
+import java.util.Objects;
 
 public class SqlQuery
 {
+  public enum ResultFormat
+  {
+    ARRAY {
+      @Override
+      public void writeResultStart(final JsonGenerator jsonGenerator) throws IOException
+      {
+        jsonGenerator.writeStartArray();
+      }
+
+      @Override
+      public void writeResultField(
+          final JsonGenerator jsonGenerator,
+          final String name,
+          final Object value
+      ) throws IOException
+      {
+        jsonGenerator.writeObject(value);
+      }
+
+      @Override
+      public void writeResultEnd(final JsonGenerator jsonGenerator) throws IOException
+      {
+        jsonGenerator.writeEndArray();
+      }
+    },
+
+    OBJECT {
+      @Override
+      public void writeResultStart(final JsonGenerator jsonGenerator) throws IOException
+      {
+        jsonGenerator.writeStartObject();
+      }
+
+      @Override
+      public void writeResultField(
+          final JsonGenerator jsonGenerator,
+          final String name,
+          final Object value
+      ) throws IOException
+      {
+        jsonGenerator.writeFieldName(name);
+        jsonGenerator.writeObject(value);
+      }
+
+      @Override
+      public void writeResultEnd(final JsonGenerator jsonGenerator) throws IOException
+      {
+        jsonGenerator.writeEndObject();
+      }
+    };
+
+    public abstract void writeResultStart(JsonGenerator jsonGenerator) throws IOException;
+
+    public abstract void writeResultField(JsonGenerator jsonGenerator, String name, Object value)
+        throws IOException;
+
+    public abstract void writeResultEnd(JsonGenerator jsonGenerator) throws IOException;
+
+    @JsonCreator
+    public static ResultFormat fromString(@Nullable final String name)
+    {
+      if (name == null) {
+        return null;
+      }
+      return valueOf(StringUtils.toUpperCase(name));
+    }
+  }
+
   private final String query;
+  private final ResultFormat resultFormat;
   private final Map<String, Object> context;
 
   @JsonCreator
   public SqlQuery(
       @JsonProperty("query") final String query,
+      @JsonProperty("resultFormat") final ResultFormat resultFormat,
       @JsonProperty("context") final Map<String, Object> context
   )
   {
     this.query = Preconditions.checkNotNull(query, "query");
+    this.resultFormat = resultFormat == null ? ResultFormat.OBJECT : resultFormat;
     this.context = context == null ? ImmutableMap.<String, Object>of() : context;
   }
 
@@ -45,6 +121,12 @@ public class SqlQuery
   public String getQuery()
   {
     return query;
+  }
+
+  @JsonProperty
+  public ResultFormat getResultFormat()
+  {
+    return resultFormat;
   }
 
   @JsonProperty
@@ -62,21 +144,16 @@ public class SqlQuery
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     final SqlQuery sqlQuery = (SqlQuery) o;
-
-    if (query != null ? !query.equals(sqlQuery.query) : sqlQuery.query != null) {
-      return false;
-    }
-    return context != null ? context.equals(sqlQuery.context) : sqlQuery.context == null;
+    return Objects.equals(query, sqlQuery.query) &&
+           resultFormat == sqlQuery.resultFormat &&
+           Objects.equals(context, sqlQuery.context);
   }
 
   @Override
   public int hashCode()
   {
-    int result = query != null ? query.hashCode() : 0;
-    result = 31 * result + (context != null ? context.hashCode() : 0);
-    return result;
+    return Objects.hash(query, resultFormat, context);
   }
 
   @Override
@@ -84,6 +161,7 @@ public class SqlQuery
   {
     return "SqlQuery{" +
            "query='" + query + '\'' +
+           ", resultFormat=" + resultFormat +
            ", context=" + context +
            '}';
   }
