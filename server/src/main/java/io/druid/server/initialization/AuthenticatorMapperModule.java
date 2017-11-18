@@ -41,9 +41,11 @@ import io.druid.server.security.AuthenticatorMapper;
 import io.druid.server.security.AllowAllAuthenticator;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 public class AuthenticatorMapperModule implements DruidModule
 {
@@ -91,14 +93,12 @@ public class AuthenticatorMapperModule implements DruidModule
 
       List<String> authenticators = authConfig.getAuthenticatorChain();
 
+      validateAuthenticators(authenticators);
+
       // Default configuration is to allow all requests.
       if (authenticators == null) {
-        authenticatorMap.put("allowAll", new AllowAllAuthenticator());
-        return new AuthenticatorMapper(authenticatorMap, "allowAll");
-      }
-
-      if (authenticators.isEmpty()) {
-        throw new IAE("Must have at least one Authenticator configured.");
+        authenticatorMap.put(AuthConfig.ALLOW_ALL_NAME, new AllowAllAuthenticator());
+        return new AuthenticatorMapper(authenticatorMap);
       }
 
       for (String authenticatorName : authenticators) {
@@ -108,7 +108,14 @@ public class AuthenticatorMapperModule implements DruidModule
             Authenticator.class
         );
 
-        authenticatorProvider.inject(props, configurator);
+        String nameProperty = StringUtils.format("druid.auth.authenticator.%s.name", authenticatorName);
+        Properties adjustedProps = new Properties(props);
+        if (adjustedProps.containsKey(nameProperty)) {
+          throw new IAE("Name property [%s] is reserved.", nameProperty);
+        } else {
+          adjustedProps.put(nameProperty, authenticatorName);
+        }
+        authenticatorProvider.inject(adjustedProps, configurator);
 
         Supplier<Authenticator> authenticatorSupplier = authenticatorProvider.get();
         if (authenticatorSupplier == null) {
@@ -118,7 +125,26 @@ public class AuthenticatorMapperModule implements DruidModule
         authenticatorMap.put(authenticatorName, authenticator);
       }
 
-      return new AuthenticatorMapper(authenticatorMap, authConfig.getEscalatedAuthenticator());
+      return new AuthenticatorMapper(authenticatorMap);
+    }
+  }
+
+  private static void validateAuthenticators(List<String> authenticators)
+  {
+    if (authenticators == null) {
+      return;
+    }
+
+    if (authenticators.isEmpty()) {
+      throw new IAE("Must have at least one Authenticator configured.");
+    }
+
+    Set<String> authenticatorSet = new HashSet<>();
+    for (String authenticator : authenticators) {
+      if (authenticatorSet.contains(authenticator)) {
+        throw new ISE("Cannot have multiple authenticators with the same name: [%s]", authenticator);
+      }
+      authenticatorSet.add(authenticator);
     }
   }
 }

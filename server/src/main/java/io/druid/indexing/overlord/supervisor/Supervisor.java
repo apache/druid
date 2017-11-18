@@ -21,6 +21,8 @@ package io.druid.indexing.overlord.supervisor;
 
 import io.druid.indexing.overlord.DataSourceMetadata;
 
+import javax.annotation.Nullable;
+
 public interface Supervisor
 {
   void start();
@@ -36,4 +38,20 @@ public interface Supervisor
   SupervisorReport getStatus();
 
   void reset(DataSourceMetadata dataSourceMetadata);
+
+  /**
+   * The definition of checkpoint is not very strict as currently it does not affect data or control path
+   * On this call Supervisor can potentially checkpoint data processed so far to some durable storage
+   * for example - Kafka Supervisor uses this to merge and handoff segments containing at least the data
+   * represented by dataSourceMetadata
+   *
+   * @param sequenceName       unique Identifier to figure out for which sequence to do check pointing
+   * @param previousCheckPoint DataSourceMetadata check pointed in previous call
+   * @param currentCheckPoint  current DataSourceMetadata to be check pointed
+   */
+  void checkpoint(
+      @Nullable String sequenceName,
+      @Nullable DataSourceMetadata previousCheckPoint,
+      @Nullable DataSourceMetadata currentCheckPoint
+  );
 }

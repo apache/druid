@@ -190,7 +190,7 @@ public class CompressedVSizeIntsIndexedWriterTest
         Longs.BYTES * 10000
     );
     CompressedVSizeIntsIndexedWriter writer = new CompressedVSizeIntsIndexedWriter(
-        ioPeon, "test", vals.length > 0 ? Ints.max(vals) : 0, chunkSize, byteOrder, compressionStrategy,
+        vals.length > 0 ? Ints.max(vals) : 0, chunkSize, byteOrder, compressionStrategy,
         genericIndexed
     );
     writer.open();

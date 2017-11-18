@@ -185,11 +185,6 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     return new TopNQueryBuilder(this).aggregators(aggregatorSpecs).build();
   }
 
-  public TopNQuery withPostAggregatorSpecs(List<PostAggregator> postAggregatorSpecs)
-  {
-    return new TopNQueryBuilder(this).postAggregators(postAggregatorSpecs).build();
-  }
-
   @Override
   public Query<Result<TopNResultValue>> withDataSource(DataSource dataSource)
   {

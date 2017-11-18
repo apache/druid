@@ -71,7 +71,6 @@ public class WrappedBitSetBitmap extends WrappedImmutableBitSetBitmap implements
     }
   }
 
-  @Override
   public void and(MutableBitmap mutableBitmap)
   {
     if (mutableBitmap instanceof WrappedBitSetBitmap) {
@@ -86,22 +85,6 @@ public class WrappedBitSetBitmap extends WrappedImmutableBitSetBitmap implements
     }
   }
 
-  @Override
-  public void xor(MutableBitmap mutableBitmap)
-  {
-    if (mutableBitmap instanceof WrappedBitSetBitmap) {
-      WrappedBitSetBitmap bitSet = (WrappedBitSetBitmap) mutableBitmap;
-      this.bitmap.xor(bitSet.bitmap);
-    } else {
-      throw new IAE(
-          "Unknown class type: %s  expected %s",
-          mutableBitmap.getClass().getCanonicalName(),
-          WrappedBitSetBitmap.class.getCanonicalName()
-      );
-    }
-  }
-
-  @Override
   public void andNot(MutableBitmap mutableBitmap)
   {
     if (mutableBitmap instanceof WrappedBitSetBitmap) {
@@ -135,7 +118,6 @@ public class WrappedBitSetBitmap extends WrappedImmutableBitSetBitmap implements
     this.bitmap.clear(entry);
   }
 
-  @Override
   public void serialize(ByteBuffer buffer)
   {
     buffer.put(this.bitmap.toByteArray());

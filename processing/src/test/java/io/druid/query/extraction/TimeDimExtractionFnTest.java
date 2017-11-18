@@ -43,7 +43,6 @@ public class TimeDimExtractionFnTest
   @Test
   public void testEmptyAndNullExtraction()
   {
-    Set<String> testPeriod = Sets.newHashSet();
     ExtractionFn extractionFn = new TimeDimExtractionFn("MM/dd/yyyy", "MM/yyyy");
 
     Assert.assertNull(extractionFn.apply(null));

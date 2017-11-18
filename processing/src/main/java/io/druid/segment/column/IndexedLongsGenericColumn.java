@@ -42,18 +42,6 @@ public class IndexedLongsGenericColumn implements GenericColumn
   }
 
   @Override
-  public ValueType getType()
-  {
-    return ValueType.LONG;
-  }
-
-  @Override
-  public String getStringSingleValueRow(int rowNum)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public ColumnValueSelector makeColumnValueSelector(ReadableOffset offset)
   {
     return column.makeColumnValueSelector(offset);

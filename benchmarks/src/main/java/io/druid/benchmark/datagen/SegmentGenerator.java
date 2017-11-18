@@ -31,6 +31,7 @@ import io.druid.data.input.impl.LongDimensionSchema;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
@@ -71,6 +72,7 @@ public class SegmentGenerator implements Closeable
   public QueryableIndex generate(
       final DataSegment dataSegment,
       final BenchmarkSchemaInfo schemaInfo,
+      final Granularity granularity,
       final int numRows
   )
   {
@@ -109,6 +111,7 @@ public class SegmentGenerator implements Closeable
         .withDimensionsSpec(new DimensionsSpec(dimensions, ImmutableList.of(), ImmutableList.of()))
         .withMetrics(schemaInfo.getAggsArray())
         .withRollup(schemaInfo.isWithRollup())
+        .withQueryGranularity(granularity)
         .build();
 
     final List<InputRow> rows = new ArrayList<>();

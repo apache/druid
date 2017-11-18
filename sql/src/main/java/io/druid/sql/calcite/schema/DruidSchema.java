@@ -50,8 +50,7 @@ import io.druid.segment.column.ValueType;
 import io.druid.server.QueryLifecycleFactory;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.security.AuthenticationResult;
-import io.druid.server.security.Authenticator;
-import io.druid.server.security.AuthenticatorMapper;
+import io.druid.server.security.Escalator;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.table.DruidTable;
 import io.druid.sql.calcite.table.RowSignature;
@@ -117,8 +116,8 @@ public class DruidSchema extends AbstractSchema
   // All segments that need to be refreshed.
   private final TreeSet<DataSegment> segmentsNeedingRefresh = new TreeSet<>(SEGMENT_ORDER);
 
-  // Escalating authenticator, so we can attach an authentication result to queries we generate.
-  private final Authenticator escalatingAuthenticator;
+  // Escalator, so we can attach an authentication result to queries we generate.
+  private final Escalator escalator;
 
   private boolean refreshImmediately = false;
   private long lastRefresh = 0L;
@@ -130,7 +129,7 @@ public class DruidSchema extends AbstractSchema
       final TimelineServerView serverView,
       final PlannerConfig config,
       final ViewManager viewManager,
-      final AuthenticatorMapper authenticatorMapper
+      final Escalator escalator
   )
   {
     this.queryLifecycleFactory = Preconditions.checkNotNull(queryLifecycleFactory, "queryLifecycleFactory");
@@ -139,7 +138,7 @@ public class DruidSchema extends AbstractSchema
     this.viewManager = Preconditions.checkNotNull(viewManager, "viewManager");
     this.cacheExec = ScheduledExecutors.fixed(1, "DruidSchema-Cache-%d");
     this.tables = new ConcurrentHashMap<>();
-    this.escalatingAuthenticator = authenticatorMapper.getEscalatingAuthenticator();
+    this.escalator = escalator;
 
     serverView.registerTimelineCallback(
         MoreExecutors.sameThreadExecutor(),
@@ -410,7 +409,7 @@ public class DruidSchema extends AbstractSchema
     final Sequence<SegmentAnalysis> sequence = runSegmentMetadataQuery(
         queryLifecycleFactory,
         Iterables.limit(segments, MAX_SEGMENTS_PER_QUERY),
-        escalatingAuthenticator.createEscalatedAuthenticationResult()
+        escalator.createEscalatedAuthenticationResult()
     );
 
     Yielder<SegmentAnalysis> yielder = Yielders.each(sequence);

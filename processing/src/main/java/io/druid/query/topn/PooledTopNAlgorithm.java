@@ -311,8 +311,7 @@ public class PooledTopNAlgorithm
   protected long scanAndAggregate(
       final PooledTopNParams params,
       final int[] positions,
-      final BufferAggregator[] theAggregators,
-      final int numProcessed
+      final BufferAggregator[] theAggregators
   )
   {
     for (ScanAndAggregate specializedScanAndAggregate : specializedScanAndAggregateImplementations) {

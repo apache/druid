@@ -29,7 +29,6 @@ import java.io.File;
 public class CloudFilesObject
 {
 
-  private File file;
   private Payload payload;
   private String path;
   private final String region;
@@ -38,7 +37,6 @@ public class CloudFilesObject
   public CloudFilesObject(final String basePath, final File file, final String region, final String container)
   {
     this(region, container);
-    this.file = file;
     ByteSource byteSource = Files.asByteSource(file);
     this.payload = Payloads.newByteSourcePayload(byteSource);
     this.path = CloudFilesUtils.buildCloudFilesPath(basePath, file.getName());
@@ -60,11 +58,6 @@ public class CloudFilesObject
   {
     this.region = region;
     this.container = container;
-  }
-
-  public File getFile()
-  {
-    return file;
   }
 
   public String getRegion()

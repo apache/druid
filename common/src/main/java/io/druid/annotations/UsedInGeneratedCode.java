@@ -17,37 +17,16 @@
  * under the License.
  */
 
-package io.druid.segment.data;
+package io.druid.annotations;
 
-import java.util.AbstractList;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
 /**
+ * Annotation for members, which are used in generated code (e. g. by Antlr), but not in regular code. IntelliJ
+ * inspection "unused declarations" knows about this annotation.
  */
-public class IndexedList<T> extends AbstractList<T>
+@Retention(RetentionPolicy.SOURCE)
+public @interface UsedInGeneratedCode
 {
-  public static <T> IndexedList<T> from(Indexed<T> indexed)
-  {
-    return new IndexedList<T>(indexed);
-  }
-
-  private final Indexed<T> base;
-
-  public IndexedList(
-      Indexed<T> base
-  )
-  {
-    this.base = base;
-  }
-
-  @Override
-  public T get(int index)
-  {
-    return base.get(index);
-  }
-
-  @Override
-  public int size()
-  {
-    return base.size();
-  }
 }

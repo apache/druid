@@ -420,22 +420,13 @@ public class VersionedIntervalTimelineTest
 
   //   1|----|
   //      1|----|
-  @Test
+  @Test(expected = UnsupportedOperationException.class)
   public void testOverlapSameVersionThrowException() throws Exception
   {
     timeline = makeStringIntegerTimeline();
 
     add("2011-01-01/2011-01-10", "1", 1);
-
-    boolean exceptionCaught = false;
-    try {
-      add("2011-01-05/2011-01-15", "1", 3);
-    }
-    catch (UnsupportedOperationException e) {
-      exceptionCaught = true;
-    }
-
-    //Assert.assertTrue("Exception wasn't thrown.", exceptionCaught);
+    add("2011-01-05/2011-01-15", "1", 3);
   }
 
   //   1|----|

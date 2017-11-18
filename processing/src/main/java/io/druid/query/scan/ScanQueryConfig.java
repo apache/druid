@@ -33,6 +33,7 @@ public class ScanQueryConfig
     return legacy;
   }
 
+  @SuppressWarnings("unused") // Used by Jackson deserialization?
   public ScanQueryConfig setLegacy(final boolean legacy)
   {
     this.legacy = legacy;

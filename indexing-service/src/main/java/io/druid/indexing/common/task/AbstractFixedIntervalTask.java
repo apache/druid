@@ -46,24 +46,6 @@ public abstract class AbstractFixedIntervalTask extends AbstractTask
 
   protected AbstractFixedIntervalTask(
       String id,
-      TaskResource taskResource,
-      String dataSource,
-      Interval interval,
-      Map<String, Object> context
-  )
-  {
-    this(
-        id,
-        id,
-        taskResource == null ? new TaskResource(id, 1) : taskResource,
-        dataSource,
-        interval,
-        context
-    );
-  }
-
-  protected AbstractFixedIntervalTask(
-      String id,
       String groupId,
       String dataSource,
       Interval interval,

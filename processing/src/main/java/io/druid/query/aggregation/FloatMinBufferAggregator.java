@@ -40,16 +40,6 @@ public class FloatMinBufferAggregator extends SimpleFloatBufferAggregator
   }
 
   @Override
-  public void putFirst(ByteBuffer buf, int position, float value)
-  {
-    if (!Float.isNaN(value)) {
-      buf.putFloat(position, value);
-    } else {
-      init(buf, position);
-    }
-  }
-
-  @Override
   public void aggregate(ByteBuffer buf, int position, float value)
   {
     buf.putFloat(position, Math.min(buf.getFloat(position), value));

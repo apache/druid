@@ -41,18 +41,6 @@ public class IndexedDoublesGenericColumn implements GenericColumn
   }
 
   @Override
-  public ValueType getType()
-  {
-    return ValueType.DOUBLE;
-  }
-
-  @Override
-  public String getStringSingleValueRow(int rowNum)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public ColumnValueSelector makeColumnValueSelector(ReadableOffset offset)
   {
     return column.makeColumnValueSelector(offset);

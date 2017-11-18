@@ -24,7 +24,6 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
-import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.DimensionHandler;
 import io.druid.segment.DimensionIndexer;
 import io.druid.segment.IndexableAdapter;
@@ -46,7 +45,6 @@ import java.util.Map;
  */
 public class IncrementalIndexAdapter implements IndexableAdapter
 {
-  private static final Logger log = new Logger(IncrementalIndexAdapter.class);
   private final Interval dataInterval;
   private final IncrementalIndex<?> index;
   private final Map<String, DimensionAccessor> accessors;

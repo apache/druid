@@ -17,10 +17,27 @@
  * under the License.
  */
 
-package io.druid.cli;
+package io.druid.server.security;
 
-/**
- */
-public interface CliRunnable extends Runnable
+import com.metamx.http.client.HttpClient;
+
+public class NoopEscalator implements Escalator
 {
+  @Override
+  public HttpClient createEscalatedClient(HttpClient baseClient)
+  {
+    return baseClient;
+  }
+
+  @Override
+  public org.eclipse.jetty.client.HttpClient createEscalatedJettyClient(org.eclipse.jetty.client.HttpClient baseClient)
+  {
+    return baseClient;
+  }
+
+  @Override
+  public AuthenticationResult createEscalatedAuthenticationResult()
+  {
+    return AllowAllAuthenticator.ALLOW_ALL_RESULT;
+  }
 }

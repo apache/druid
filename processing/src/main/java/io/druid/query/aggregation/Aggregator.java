@@ -37,6 +37,9 @@ import java.io.Closeable;
 public interface Aggregator extends Closeable
 {
   void aggregate();
+  /** @deprecated unused, to be removed in Druid 0.12 (or hopefully the whole Aggregator class is removed) */
+  @Deprecated
+  @SuppressWarnings("unused")
   void reset();
   @Nullable
   Object get();

@@ -198,11 +198,6 @@ public class IncrementalIndexTest
     );
   }
 
-  public static AggregatorFactory[] getDefaultAggregatorFactories()
-  {
-    return defaultAggregatorFactories;
-  }
-
   public static AggregatorFactory[] getDefaultCombiningAggregatorFactories()
   {
     return defaultCombiningAggregatorFactories;
@@ -283,7 +278,7 @@ public class IncrementalIndexTest
     return new MapBasedInputRow(timestamp, dimensionList, builder.build());
   }
 
-  private static MapBasedInputRow getLongRow(long timestamp, int rowID, int dimensionCount)
+  private static MapBasedInputRow getLongRow(long timestamp, int dimensionCount)
   {
     List<String> dimensionList = new ArrayList<String>(dimensionCount);
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
@@ -441,11 +436,11 @@ public class IncrementalIndexTest
 
     //ingesting same data twice to have some merging happening
     for (int i = 0; i < rows; i++) {
-      index.add(getLongRow(timestamp + i, i, dimensionCount));
+      index.add(getLongRow(timestamp + i, dimensionCount));
     }
 
     for (int i = 0; i < rows; i++) {
-      index.add(getLongRow(timestamp + i, i, dimensionCount));
+      index.add(getLongRow(timestamp + i, dimensionCount));
     }
 
     //run a timeseries query on the index and verify results
@@ -604,7 +599,7 @@ public class IncrementalIndexTest
                   currentlyRunning.incrementAndGet();
                   try {
                     for (int i = 0; i < elementsPerThread; i++) {
-                      index.add(getLongRow(timestamp + i, i, dimensionCount));
+                      index.add(getLongRow(timestamp + i, dimensionCount));
                       someoneRan.incrementAndGet();
                     }
                   }

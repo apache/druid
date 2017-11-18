@@ -299,7 +299,7 @@ public class CompressionFactory
     } else if (encodingStrategy == LongEncodingStrategy.LONGS) {
       if (compressionStrategy == CompressedObjectStrategy.CompressionStrategy.NONE) {
         return new EntireLayoutLongSupplierSerializer(
-            ioPeon, filenameBase, order, new LongsLongEncodingWriter(order)
+            ioPeon, filenameBase, new LongsLongEncodingWriter(order)
         );
       } else {
         return new BlockLayoutLongSupplierSerializer(

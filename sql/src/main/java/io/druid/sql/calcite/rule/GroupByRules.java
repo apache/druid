@@ -32,8 +32,6 @@ import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.type.SqlTypeName;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -63,8 +61,6 @@ public class GroupByRules
   )
   {
     final DimFilter filter;
-    final SqlKind kind = call.getAggregation().getKind();
-    final SqlTypeName outputType = call.getType().getSqlTypeName();
 
     if (call.filterArg >= 0) {
       // AGG(xxx) FILTER(WHERE yyy)

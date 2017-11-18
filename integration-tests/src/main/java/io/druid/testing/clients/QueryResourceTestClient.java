@@ -69,11 +69,6 @@ public class QueryResourceTestClient
     );
   }
 
-  public List<Map<String, Object>> query(Query query)
-  {
-    return query(getBrokerURL(), query);
-  }
-
   public List<Map<String, Object>> query(String url, Query query)
   {
     try {

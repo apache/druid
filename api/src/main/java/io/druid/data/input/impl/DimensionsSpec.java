@@ -162,6 +162,7 @@ public class DimensionsSpec
     );
   }
 
+  @PublicApi
   public DimensionSchema getSchema(String dimension)
   {
     return dimensionSchemaMap.get(dimension);
@@ -172,6 +173,7 @@ public class DimensionsSpec
     return !(dimensions == null || dimensions.isEmpty());
   }
 
+  @PublicApi
   public DimensionsSpec withDimensions(List<DimensionSchema> dims)
   {
     return new DimensionsSpec(dims, ImmutableList.copyOf(dimensionExclusions), null);

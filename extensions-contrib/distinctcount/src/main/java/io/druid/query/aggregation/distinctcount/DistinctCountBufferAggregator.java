@@ -51,7 +51,7 @@ public class DistinctCountBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    MutableBitmap mutableBitmap = getMutableBitmap(buf, position);
+    MutableBitmap mutableBitmap = getMutableBitmap(position);
     IndexedInts row = selector.getRow();
     for (int i = 0; i < row.size(); i++) {
       int index = row.get(i);
@@ -60,7 +60,7 @@ public class DistinctCountBufferAggregator implements BufferAggregator
     buf.putLong(position, mutableBitmap.size());
   }
 
-  private MutableBitmap getMutableBitmap(ByteBuffer buf, int position)
+  private MutableBitmap getMutableBitmap(int position)
   {
     MutableBitmap mutableBitmap = mutableBitmapCollection.get(position);
     if (mutableBitmap == null) {

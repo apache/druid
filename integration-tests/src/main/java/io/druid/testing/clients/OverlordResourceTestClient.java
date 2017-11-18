@@ -30,11 +30,10 @@ import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.indexing.common.TaskStatus;
-import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.RetryUtils;
-import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.guice.TestClient;
@@ -75,16 +74,6 @@ public class OverlordResourceTestClient
         "%s/druid/indexer/v1/",
         indexer
     );
-  }
-
-  public String submitTask(Task task)
-  {
-    try {
-      return submitTask(this.jsonMapper.writeValueAsString(task));
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
   }
 
   public String submitTask(final String task)
@@ -180,26 +169,6 @@ public class OverlordResourceTestClient
           response.getContent(), new TypeReference<List<TaskResponseObject>>()
           {
           }
-      );
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-  }
-
-  public Map<String, String> shutDownTask(String taskID)
-  {
-    try {
-      StatusResponseHolder response = makeRequest(
-          HttpMethod.POST,
-          StringUtils.format(
-              "%stask/%s/shutdown", getIndexerURL(),
-              URLEncoder.encode(taskID, "UTF-8")
-          )
-      );
-      LOG.info("Shutdown Task %s response %s", taskID, response.getContent());
-      return jsonMapper.readValue(
-          response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_STRING
       );
     }
     catch (Exception e) {

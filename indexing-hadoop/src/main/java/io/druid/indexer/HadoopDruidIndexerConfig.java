@@ -52,6 +52,7 @@ import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.IndexIO;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.granularity.GranularitySpec;
@@ -93,7 +94,7 @@ public class HadoopDruidIndexerConfig
   public static final Joiner TAB_JOINER = Joiner.on("\t");
   public static final ObjectMapper JSON_MAPPER;
   public static final IndexIO INDEX_IO;
-  public static final IndexMergerV9 INDEX_MERGER_V9;
+  public static final IndexMerger INDEX_MERGER_V9;
   public static final HadoopKerberosConfig HADOOP_KERBEROS_CONFIG;
   public static final DataSegmentPusher DATA_SEGMENT_PUSHER;
   private static final String DEFAULT_WORKING_PATH = "/tmp/druid-indexing";
@@ -308,12 +309,6 @@ public class HadoopDruidIndexerConfig
   public boolean isIgnoreInvalidRows()
   {
     return schema.getTuningConfig().isIgnoreInvalidRows();
-  }
-
-  public void setVersion(String version)
-  {
-    this.schema = schema.withTuningConfig(schema.getTuningConfig().withVersion(version));
-    this.pathSpec = JSON_MAPPER.convertValue(schema.getIOConfig().getPathSpec(), PathSpec.class);
   }
 
   public void setShardSpecs(Map<Long, List<HadoopyShardSpec>> shardSpecs)

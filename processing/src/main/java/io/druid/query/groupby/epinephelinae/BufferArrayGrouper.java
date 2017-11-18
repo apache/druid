@@ -137,7 +137,7 @@ public class BufferArrayGrouper implements IntGrouper
   }
 
   @Override
-  public AggregateResult aggregate(int key, int dimIndex)
+  public AggregateResult aggregateKeyHash(int dimIndex)
   {
     Preconditions.checkArgument(
         dimIndex >= 0 && dimIndex < cardinalityWithMissingValue,

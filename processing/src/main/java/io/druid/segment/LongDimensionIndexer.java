@@ -23,7 +23,6 @@ import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.TimeAndDimsHolder;
@@ -33,11 +32,6 @@ import java.util.List;
 
 public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 {
-  @Override
-  public ValueType getValueType()
-  {
-    return ValueType.LONG;
-  }
 
   @Override
   public Long processRowValsToUnsortedEncodedKeyComponent(Object dimValues)
@@ -47,12 +41,6 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
     }
 
     return DimensionHandlerUtils.convertObjectToLong(dimValues);
-  }
-
-  @Override
-  public Long getSortedEncodedValueFromUnsorted(Long unsortedIntermediateValue)
-  {
-    return unsortedIntermediateValue;
   }
 
   @Override
@@ -107,7 +95,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
       @Override
       public long getLong()
       {
-        final Object[] dims = currEntry.getKey().getDims();
+        final Object[] dims = currEntry.get().getDims();
 
         if (dimIndex >= dims.length) {
           return 0L;
@@ -121,7 +109,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
       @Override
       public Long getObject()
       {
-        final Object[] dims = currEntry.getKey().getDims();
+        final Object[] dims = currEntry.get().getDims();
 
         if (dimIndex >= dims.length) {
           return null;

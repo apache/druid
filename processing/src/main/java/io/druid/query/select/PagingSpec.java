@@ -60,7 +60,6 @@ public class PagingSpec
   private final Map<String, Integer> pagingIdentifiers;
   private final int threshold;
   private final boolean fromNext;
-  private final SelectQueryConfig config;
 
   @JsonCreator
   public PagingSpec(
@@ -72,7 +71,6 @@ public class PagingSpec
   {
     this.pagingIdentifiers = pagingIdentifiers == null ? Maps.<String, Integer>newHashMap() : pagingIdentifiers;
     this.threshold = threshold;
-    this.config = config;
 
     boolean defaultFromNext = config.getEnableFromNextDefault();
     this.fromNext = fromNext == null ? defaultFromNext : fromNext;

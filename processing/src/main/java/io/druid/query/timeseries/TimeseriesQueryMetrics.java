@@ -19,16 +19,20 @@
 
 package io.druid.query.timeseries;
 
+import io.druid.guice.annotations.ExtensionPoint;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.query.QueryMetrics;
 
 /**
  * Specialization of {@link QueryMetrics} for {@link TimeseriesQuery}.
  */
+@ExtensionPoint
 public interface TimeseriesQueryMetrics extends QueryMetrics<TimeseriesQuery>
 {
   /**
    * Sets the number of metrics of the given timeseries query as dimension.
    */
+  @PublicApi
   void numMetrics(TimeseriesQuery query);
 
   /**
@@ -36,10 +40,12 @@ public interface TimeseriesQueryMetrics extends QueryMetrics<TimeseriesQuery>
    * "complex" metric is a metric of not long or double type, but it could be redefined in the implementation of this
    * method.
    */
+  @PublicApi
   void numComplexMetrics(TimeseriesQuery query);
 
   /**
    * Sets the granularity of {@link TimeseriesQuery#getGranularity()} of the given query as dimension.
    */
+  @PublicApi
   void granularity(TimeseriesQuery query);
 }

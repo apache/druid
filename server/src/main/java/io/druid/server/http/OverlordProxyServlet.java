@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import io.druid.client.indexing.IndexingService;
 import io.druid.discovery.DruidLeaderClient;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.server.security.AuthConfig;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.proxy.ProxyServlet;
@@ -57,13 +58,13 @@ public class OverlordProxyServlet extends ProxyServlet
         throw new ISE("Can't find Overlord leader.");
       }
 
-      return new URI(
-          request.getScheme(),
-          overlordLeader,
-          request.getRequestURI(),
-          request.getQueryString(),
-          null
-      ).toString();
+      String location = StringUtils.format("%s%s", overlordLeader, request.getRequestURI());
+
+      if (request.getQueryString() != null) {
+        location = StringUtils.format("%s?%s", location, request.getQueryString());
+      }
+
+      return new URI(location).toString();
     }
     catch (URISyntaxException e) {
       throw Throwables.propagate(e);

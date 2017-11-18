@@ -38,13 +38,6 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
   private static final int SUM_OFFSET = Longs.BYTES;
   private static final int NVARIANCE_OFFSET = SUM_OFFSET + Doubles.BYTES;
 
-  protected final String name;
-
-  public VarianceBufferAggregator(String name)
-  {
-    this.name = name;
-  }
-
   @Override
   public void init(final ByteBuffer buf, final int position)
   {
@@ -90,9 +83,8 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
   {
     private final BaseFloatColumnValueSelector selector;
 
-    public FloatVarianceAggregator(String name, BaseFloatColumnValueSelector selector)
+    public FloatVarianceAggregator(BaseFloatColumnValueSelector selector)
     {
-      super(name);
       this.selector = selector;
     }
 
@@ -122,9 +114,8 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
   {
     private final BaseLongColumnValueSelector selector;
 
-    public LongVarianceAggregator(String name, BaseLongColumnValueSelector selector)
+    public LongVarianceAggregator(BaseLongColumnValueSelector selector)
     {
-      super(name);
       this.selector = selector;
     }
 
@@ -154,9 +145,8 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
   {
     private final BaseObjectColumnValueSelector selector;
 
-    public ObjectVarianceAggregator(String name, BaseObjectColumnValueSelector selector)
+    public ObjectVarianceAggregator(BaseObjectColumnValueSelector selector)
     {
-      super(name);
       this.selector = selector;
     }
 
