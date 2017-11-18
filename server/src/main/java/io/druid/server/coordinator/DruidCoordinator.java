@@ -65,6 +65,7 @@ import io.druid.server.coordinator.helper.DruidCoordinatorCleanupUnneeded;
 import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
 import io.druid.server.coordinator.helper.DruidCoordinatorLogger;
 import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
+import io.druid.server.coordinator.helper.DruidCoordinatorSegmentCompactor;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentInfoLoader;
 import io.druid.server.coordinator.rules.LoadRule;
 import io.druid.server.coordinator.rules.Rule;
@@ -590,9 +591,13 @@ public class DruidCoordinator
   {
     List<DruidCoordinatorHelper> helpers = Lists.newArrayList();
     helpers.add(new DruidCoordinatorSegmentInfoLoader(DruidCoordinator.this));
+    helpers.add(new DruidCoordinatorSegmentCompactor(indexingServiceClient));
     helpers.addAll(indexingServiceHelpers);
 
-    log.info("Done making indexing service helpers [%s]", helpers);
+    log.info(
+        "Done making indexing service helpers [%s]",
+        helpers.stream().map(helper -> helper.getClass().getCanonicalName()).collect(Collectors.toList())
+    );
     return ImmutableList.copyOf(helpers);
   }
 

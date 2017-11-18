@@ -26,11 +26,12 @@ import io.druid.client.ImmutableDruidDataSource;
 import io.druid.java.util.common.DateTimes;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.timeline.DataSegment;
+import io.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.DateTime;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -43,7 +44,7 @@ public class DruidCoordinatorRuntimeParams
   private final DruidCluster druidCluster;
   private final MetadataRuleManager databaseRuleManager;
   private final SegmentReplicantLookup segmentReplicantLookup;
-  private final Set<ImmutableDruidDataSource> dataSources;
+  private final Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources;
   private final Set<DataSegment> availableSegments;
   private final Map<String, LoadQueuePeon> loadManagementPeons;
   private final ReplicationThrottler replicationManager;
@@ -58,7 +59,7 @@ public class DruidCoordinatorRuntimeParams
       DruidCluster druidCluster,
       MetadataRuleManager databaseRuleManager,
       SegmentReplicantLookup segmentReplicantLookup,
-      Set<ImmutableDruidDataSource> dataSources,
+      Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources,
       Set<DataSegment> availableSegments,
       Map<String, LoadQueuePeon> loadManagementPeons,
       ReplicationThrottler replicationManager,
@@ -104,7 +105,7 @@ public class DruidCoordinatorRuntimeParams
     return segmentReplicantLookup;
   }
 
-  public Set<ImmutableDruidDataSource> getDataSources()
+  public Map<String, VersionedIntervalTimeline<String, DataSegment>> getDataSources()
   {
     return dataSources;
   }
@@ -203,7 +204,7 @@ public class DruidCoordinatorRuntimeParams
     private DruidCluster druidCluster;
     private MetadataRuleManager databaseRuleManager;
     private SegmentReplicantLookup segmentReplicantLookup;
-    private final Set<ImmutableDruidDataSource> dataSources;
+    private Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources;
     private final Set<DataSegment> availableSegments;
     private final Map<String, LoadQueuePeon> loadManagementPeons;
     private ReplicationThrottler replicationManager;
@@ -219,7 +220,7 @@ public class DruidCoordinatorRuntimeParams
       this.druidCluster = null;
       this.databaseRuleManager = null;
       this.segmentReplicantLookup = null;
-      this.dataSources = new HashSet<>();
+      this.dataSources = new HashMap<>();
       this.availableSegments = new TreeSet<>(DruidCoordinator.SEGMENT_COMPARATOR);
       this.loadManagementPeons = Maps.newHashMap();
       this.replicationManager = null;
@@ -234,7 +235,7 @@ public class DruidCoordinatorRuntimeParams
         DruidCluster cluster,
         MetadataRuleManager databaseRuleManager,
         SegmentReplicantLookup segmentReplicantLookup,
-        Set<ImmutableDruidDataSource> dataSources,
+        Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources,
         Set<DataSegment> availableSegments,
         Map<String, LoadQueuePeon> loadManagementPeons,
         ReplicationThrottler replicationManager,
@@ -303,9 +304,30 @@ public class DruidCoordinatorRuntimeParams
       return this;
     }
 
+    public Builder withDatasources(Map<String, VersionedIntervalTimeline<String, DataSegment>> sources)
+    {
+      this.dataSources = sources;
+      return this;
+    }
+
     public Builder withDatasources(Collection<ImmutableDruidDataSource> dataSourcesCollection)
     {
-      dataSources.addAll(Collections.unmodifiableCollection(dataSourcesCollection));
+      dataSourcesCollection.stream().forEach(
+          dataSource -> {
+            VersionedIntervalTimeline<String, DataSegment> timeline = dataSources.computeIfAbsent(
+                dataSource.getName(),
+                k -> new VersionedIntervalTimeline<>(String.CASE_INSENSITIVE_ORDER)
+            );
+
+            dataSource.getSegments().forEach(
+                segment -> timeline.add(
+                    segment.getInterval(),
+                    segment.getVersion(),
+                    segment.getShardSpec().createChunk(segment)
+                )
+            );
+          }
+      );
       return this;
     }
 

@@ -183,7 +183,9 @@ public class CoordinatorDynamicConfigTest
 
     Assert.assertEquals(
         current,
-        new CoordinatorDynamicConfig.Builder(null, null, null, null, null, null, null, null, null, null, null).build(current)
+        new CoordinatorDynamicConfig
+            .Builder(null, null, null, null, null, null, null, null, null, null, null, null, null)
+            .build(current)
     );
   }
 

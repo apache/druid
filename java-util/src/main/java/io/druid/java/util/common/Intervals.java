@@ -38,6 +38,11 @@ public final class Intervals
     return new Interval(interval, ISOChronology.getInstanceUTC());
   }
 
+  public static boolean isEmpty(Interval interval)
+  {
+    return interval.getStart().equals(interval.getEnd());
+  }
+
   private Intervals()
   {
   }

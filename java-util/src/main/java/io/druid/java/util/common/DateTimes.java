@@ -77,6 +77,17 @@ public final class DateTimes
     return new DateTime(instant, ISOChronology.getInstanceUTC());
   }
 
+  public static DateTime of(
+      int year,
+      int monthOfYear,
+      int dayOfMonth,
+      int hourOfDay,
+      int minuteOfHour
+  )
+  {
+    return new DateTime(year, monthOfYear, dayOfMonth, hourOfDay, minuteOfHour, ISOChronology.getInstanceUTC());
+  }
+
   public static DateTime nowUtc()
   {
     return DateTime.now(ISOChronology.getInstanceUTC());
