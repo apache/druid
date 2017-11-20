@@ -49,6 +49,7 @@ public class HybridCacheTest
     System.setProperty(prefix + ".type", "hybrid");
     System.setProperty(prefix + ".l1.type", "local");
     System.setProperty(prefix + ".l2.type", "memcached");
+    System.setProperty(prefix + ".useL2", "false");
     System.setProperty(prefix + ".l2.hosts", "localhost:11711");
 
     final Injector injector = Initialization.makeInjectorWithModules(
@@ -74,6 +75,8 @@ public class HybridCacheTest
     Assert.assertNotNull(cache);
 
     Assert.assertFalse(cache.isLocal());
+    Assert.assertFalse(((HybridCacheProvider) cacheProvider).getUseL2());
+    Assert.assertTrue(((HybridCacheProvider) cacheProvider).getPopulateL2());
     Assert.assertEquals(LocalCacheProvider.class, ((HybridCacheProvider) cacheProvider).level1.getClass());
     Assert.assertEquals(MemcachedCacheProvider.class, ((HybridCacheProvider) cacheProvider).level2.getClass());
   }
@@ -83,7 +86,7 @@ public class HybridCacheTest
   {
     final MapCache l1 = new MapCache(new ByteCountingLRUMap(1024 * 1024));
     final MapCache l2 = new MapCache(new ByteCountingLRUMap(1024 * 1024));
-    HybridCache cache = new HybridCache(l1, l2);
+    HybridCache cache = new HybridCache(new HybridCacheConfig(), l1, l2);
 
     final Cache.NamedKey key1 = new Cache.NamedKey("a", HI);
     final Cache.NamedKey key2 = new Cache.NamedKey("b", HI);
