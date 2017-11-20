@@ -23,6 +23,8 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import io.druid.java.util.common.IAE;
+import io.druid.query.dimension.ArrayCacheIntFunction;
+import io.druid.query.dimension.LruCacheIntFunction;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -32,6 +34,7 @@ import io.druid.segment.filter.BooleanValueMatcher;
 import javax.annotation.Nullable;
 import java.util.BitSet;
 import java.util.Objects;
+import java.util.function.IntFunction;
 
 public final class DimensionSelectorUtils
 {
@@ -268,6 +271,41 @@ public final class DimensionSelectorUtils
       return constantSelector(value);
     } else {
       return constantSelector(extractionFn.apply(value));
+    }
+  }
+
+  /**
+   * Return "function" possibly decorated with array or LRU based caching. The function had better be operating on
+   * ids from the "selector" you pass, or else unexpected behavior will occur.
+   *
+   * @param selector  a dimension selector
+   * @param function  a function that receives ids from "selector"
+   * @param numRows   number of rows in the storage backing this selector, or
+   *                  {@link ColumnSelectorFactory#ROWS_UNKNOWN} if unknown
+   * @param cacheSize maximum cache size
+   */
+  public static <T> IntFunction<T> cacheIfPossible(
+      final DimensionSelector selector,
+      final IntFunction<T> function,
+      final int numRows,
+      final int cacheSize
+  )
+  {
+    if (selector.getValueCardinality() == DimensionSelector.CARDINALITY_UNKNOWN
+        || !selector.nameLookupPossibleInAdvance()) {
+      // Caching is not possible, oh well.
+      return function;
+    } else if (selector.getValueCardinality() <= cacheSize) {
+      // Use an array cache when possible.
+      return new ArrayCacheIntFunction<>(function, selector.getValueCardinality());
+    } else if (numRows != ColumnSelectorFactory.ROWS_UNKNOWN && selector.getValueCardinality() <= numRows / 10 * 9) {
+      // LRU cache has noticeable overhead and is only worth it for dimensions with some repeating values. So only use
+      // it if dimension cardinality is < 90% of row count. Note that internally the LRU cache also has a mechanism for
+      // disabling itself if it is getting poor hit rates.
+      return new LruCacheIntFunction<>(function, cacheSize);
+    } else {
+      // Caching is possible, but we choose not to do it, since cardinality is too high.
+      return function;
     }
   }
 }

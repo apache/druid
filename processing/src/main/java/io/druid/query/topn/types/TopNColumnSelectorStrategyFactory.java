@@ -29,7 +29,7 @@ public class TopNColumnSelectorStrategyFactory implements ColumnSelectorStrategy
 {
   @Override
   public TopNColumnSelectorStrategy makeColumnSelectorStrategy(
-      ColumnCapabilities capabilities, ColumnValueSelector selector
+      ColumnCapabilities capabilities, ColumnValueSelector selector, int numRows
   )
   {
     ValueType type = capabilities.getType();

@@ -237,7 +237,7 @@ public class GroupByQueryEngineV2
   {
     @Override
     public GroupByColumnSelectorStrategy makeColumnSelectorStrategy(
-        ColumnCapabilities capabilities, ColumnValueSelector selector
+        ColumnCapabilities capabilities, ColumnValueSelector selector, int numRows
     )
     {
       ValueType type = capabilities.getType();

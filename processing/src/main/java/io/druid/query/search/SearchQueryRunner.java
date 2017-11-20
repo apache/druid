@@ -71,7 +71,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
   {
     @Override
     public SearchColumnSelectorStrategy makeColumnSelectorStrategy(
-        ColumnCapabilities capabilities, ColumnValueSelector selector
+        ColumnCapabilities capabilities, ColumnValueSelector selector, int numRows
     )
     {
       ValueType type = capabilities.getType();

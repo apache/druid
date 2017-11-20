@@ -22,6 +22,7 @@ package io.druid.query.aggregation.cardinality.types;
 import io.druid.java.util.common.IAE;
 import io.druid.query.dimension.ColumnSelectorStrategyFactory;
 import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.DimensionSelector;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 
@@ -30,19 +31,21 @@ public class CardinalityAggregatorColumnSelectorStrategyFactory
 {
   @Override
   public CardinalityAggregatorColumnSelectorStrategy makeColumnSelectorStrategy(
-      ColumnCapabilities capabilities, ColumnValueSelector selector
+      ColumnCapabilities capabilities,
+      ColumnValueSelector selector,
+      int numRows
   )
   {
     ValueType type = capabilities.getType();
     switch (type) {
       case STRING:
-        return new StringCardinalityAggregatorColumnSelectorStrategy();
+        return new StringCardinalityAggregatorColumnSelectorStrategy((DimensionSelector) selector, numRows);
       case LONG:
-        return new LongCardinalityAggregatorColumnSelectorStrategy();
+        return new LongCardinalityAggregatorColumnSelectorStrategy(selector);
       case FLOAT:
-        return new FloatCardinalityAggregatorColumnSelectorStrategy();
+        return new FloatCardinalityAggregatorColumnSelectorStrategy(selector);
       case DOUBLE:
-        return new DoubleCardinalityAggregatorColumnSelectorStrategy();
+        return new DoubleCardinalityAggregatorColumnSelectorStrategy(selector);
       default:
         throw new IAE("Cannot create query type helper from invalid type [%s]", type);
     }

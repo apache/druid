@@ -145,4 +145,10 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory
 
     return index.getCapabilities(columnName);
   }
+
+  @Override
+  public int getNumRows()
+  {
+    return index.size();
+  }
 }

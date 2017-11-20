@@ -148,4 +148,10 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
 
     return QueryableIndexStorageAdapter.getColumnCapabilites(index, columnName);
   }
+
+  @Override
+  public int getNumRows()
+  {
+    return index.getNumRows();
+  }
 }

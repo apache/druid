@@ -20,7 +20,6 @@
 package io.druid.segment.virtual;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
 import io.druid.java.util.common.ISE;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprEval;
@@ -28,10 +27,11 @@ import io.druid.math.expr.Parser;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DimensionSelectorUtils;
 import io.druid.segment.data.IndexedInts;
-import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
 
 import javax.annotation.Nullable;
+import java.util.function.IntFunction;
 
 /**
  * Like {@link ExpressionColumnValueSelector}, but caches results for the first CACHE_SIZE dictionary IDs of
@@ -39,17 +39,19 @@ import javax.annotation.Nullable;
  */
 public class SingleStringInputCachingExpressionColumnValueSelector implements ColumnValueSelector<ExprEval>
 {
-  private static final int CACHE_SIZE = 1000;
+  // Number of entries to cache. Each one is a primitive + overhead, so 12500 entries occupies about 250KB
+  private static final int CACHE_SIZE = 12500;
 
   private final DimensionSelector selector;
   private final Expr expression;
-  private final Expr.ObjectBinding bindings;
-  private final ExprEval[] arrayEvalCache;
-  private final LruEvalCache lruEvalCache;
+  private final SingleInputBindings bindings = new SingleInputBindings();
+  private final IntFunction<ExprEval> singleValueEvalCache;
+  private ExprEval nullEval = null;
 
   public SingleStringInputCachingExpressionColumnValueSelector(
       final DimensionSelector selector,
-      final Expr expression
+      final Expr expression,
+      final int numRows
   )
   {
     // Verify expression has just one binding.
@@ -60,18 +62,15 @@ public class SingleStringInputCachingExpressionColumnValueSelector implements Co
     this.selector = Preconditions.checkNotNull(selector, "selector");
     this.expression = Preconditions.checkNotNull(expression, "expression");
 
-    final Supplier<Object> inputSupplier = ExpressionSelectors.supplierFromDimensionSelector(selector);
-    this.bindings = name -> inputSupplier.get();
-
-    if (selector.getValueCardinality() == DimensionSelector.CARDINALITY_UNKNOWN) {
-      throw new ISE("Selector must have a dictionary");
-    } else if (selector.getValueCardinality() <= CACHE_SIZE) {
-      arrayEvalCache = new ExprEval[selector.getValueCardinality()];
-      lruEvalCache = null;
-    } else {
-      arrayEvalCache = null;
-      lruEvalCache = new LruEvalCache(expression, bindings);
-    }
+    this.singleValueEvalCache = DimensionSelectorUtils.cacheIfPossible(
+        selector,
+        id -> {
+          bindings.set(selector.lookupName(id));
+          return expression.eval(bindings);
+        },
+        numRows,
+        CACHE_SIZE
+    );
   }
 
   @Override
@@ -79,6 +78,7 @@ public class SingleStringInputCachingExpressionColumnValueSelector implements Co
   {
     inspector.visit("selector", selector);
     inspector.visit("expression", expression);
+    inspector.visit("singleValueEvalCache", singleValueEvalCache);
   }
 
   @Override
@@ -117,48 +117,15 @@ public class SingleStringInputCachingExpressionColumnValueSelector implements Co
     final IndexedInts row = selector.getRow();
 
     if (row.size() == 1) {
-      final int id = row.get(0);
-
-      if (arrayEvalCache != null) {
-        if (arrayEvalCache[id] == null) {
-          arrayEvalCache[id] = expression.eval(bindings);
-        }
-        return arrayEvalCache[id];
-      } else {
-        assert lruEvalCache != null;
-        return lruEvalCache.compute(id);
-      }
-    }
-
-    return expression.eval(bindings);
-  }
-
-  public static class LruEvalCache
-  {
-    private final Expr expression;
-    private final Expr.ObjectBinding bindings;
-    private final Int2ObjectLinkedOpenHashMap<ExprEval> m = new Int2ObjectLinkedOpenHashMap<>(CACHE_SIZE);
-
-    public LruEvalCache(final Expr expression, final Expr.ObjectBinding bindings)
-    {
-      this.expression = expression;
-      this.bindings = bindings;
-    }
-
-    public ExprEval compute(final int id)
-    {
-      ExprEval value = m.getAndMoveToFirst(id);
-
-      if (value == null) {
-        value = expression.eval(bindings);
-        m.putAndMoveToFirst(id, value);
-
-        if (m.size() > CACHE_SIZE) {
-          m.removeLast();
-        }
+      return singleValueEvalCache.apply(row.get(0));
+    } else {
+      // Tread non-singly-valued rows as nulls, just like ExpressionSelectors.supplierFromDimensionSelector.
+      if (nullEval == null) {
+        bindings.set(null);
+        nullEval = expression.eval(bindings);
       }
 
-      return value;
+      return nullEval;
     }
   }
 }

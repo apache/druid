@@ -42,7 +42,7 @@ public class ValueMatcherColumnSelectorStrategyFactory
 
   @Override
   public ValueMatcherColumnSelectorStrategy makeColumnSelectorStrategy(
-      ColumnCapabilities capabilities, ColumnValueSelector selector
+      ColumnCapabilities capabilities, ColumnValueSelector selector, int numRows
   )
   {
     ValueType type = capabilities.getType();

@@ -24,17 +24,23 @@ import io.druid.hll.HyperLogLogCollector;
 import io.druid.query.aggregation.cardinality.CardinalityAggregator;
 import io.druid.segment.BaseFloatColumnValueSelector;
 
-public class FloatCardinalityAggregatorColumnSelectorStrategy
-    implements CardinalityAggregatorColumnSelectorStrategy<BaseFloatColumnValueSelector>
+public class FloatCardinalityAggregatorColumnSelectorStrategy implements CardinalityAggregatorColumnSelectorStrategy
 {
+  private final BaseFloatColumnValueSelector selector;
+
+  public FloatCardinalityAggregatorColumnSelectorStrategy(final BaseFloatColumnValueSelector selector)
+  {
+    this.selector = selector;
+  }
+
   @Override
-  public void hashRow(BaseFloatColumnValueSelector selector, Hasher hasher)
+  public void hashRow(Hasher hasher)
   {
     hasher.putFloat(selector.getFloat());
   }
 
   @Override
-  public void hashValues(BaseFloatColumnValueSelector selector, HyperLogLogCollector collector)
+  public void hashValues(HyperLogLogCollector collector)
   {
     collector.add(CardinalityAggregator.hashFn.hashInt(Float.floatToIntBits(selector.getFloat())).asBytes());
   }

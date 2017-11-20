@@ -24,5 +24,9 @@ import io.druid.segment.column.ColumnCapabilities;
 
 public interface ColumnSelectorStrategyFactory<ColumnSelectorStrategyClass extends ColumnSelectorStrategy>
 {
-  ColumnSelectorStrategyClass makeColumnSelectorStrategy(ColumnCapabilities capabilities, ColumnValueSelector selector);
+  ColumnSelectorStrategyClass makeColumnSelectorStrategy(
+      ColumnCapabilities capabilities,
+      ColumnValueSelector selector,
+      int numRows
+  );
 }

@@ -22,6 +22,7 @@ package io.druid.segment.virtual;
 import com.google.common.base.Supplier;
 import io.druid.common.guava.SettableSupplier;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.TestObjectColumnSelector;
@@ -37,7 +38,8 @@ public class ExpressionColumnValueSelectorTest
   {
     final SettableSupplier<String> settableSupplier = new SettableSupplier<>();
     final Supplier<Object> supplier = ExpressionSelectors.supplierFromDimensionSelector(
-        dimensionSelectorFromSupplier(settableSupplier)
+        dimensionSelectorFromSupplier(settableSupplier),
+        ColumnSelectorFactory.ROWS_UNKNOWN
     );
 
     Assert.assertNotNull(supplier);

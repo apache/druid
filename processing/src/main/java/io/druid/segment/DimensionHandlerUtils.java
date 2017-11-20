@@ -147,6 +147,7 @@ public final class DimensionHandlerUtils
   )
   {
     int dimCount = dimensionSpecs.size();
+    int numRows = columnSelectorFactory.getNumRows();
     ColumnSelectorPlus<ColumnSelectorStrategyClass>[] dims = new ColumnSelectorPlus[dimCount];
     for (int i = 0; i < dimCount; i++) {
       final DimensionSpec dimSpec = dimensionSpecs.get(i);
@@ -159,7 +160,8 @@ public final class DimensionHandlerUtils
           strategyFactory,
           dimSpec,
           columnSelectorFactory.getColumnCapabilities(dimSpec.getDimension()),
-          selector
+          selector,
+          numRows
       );
       final ColumnSelectorPlus<ColumnSelectorStrategyClass> selectorPlus = new ColumnSelectorPlus<>(
           dimName,
@@ -230,11 +232,12 @@ public final class DimensionHandlerUtils
       ColumnSelectorStrategyFactory<ColumnSelectorStrategyClass> strategyFactory,
       DimensionSpec dimSpec,
       ColumnCapabilities capabilities,
-      ColumnValueSelector selector
+      ColumnValueSelector selector,
+      int numRows
   )
   {
     capabilities = getEffectiveCapabilities(dimSpec, capabilities);
-    return strategyFactory.makeColumnSelectorStrategy(capabilities, selector);
+    return strategyFactory.makeColumnSelectorStrategy(capabilities, selector, numRows);
   }
 
   @Nullable

@@ -31,6 +31,8 @@ import javax.annotation.Nullable;
 @PublicApi
 public interface ColumnSelectorFactory
 {
+  int ROWS_UNKNOWN = -1;
+
   DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec);
 
   /**
@@ -50,4 +52,13 @@ public interface ColumnSelectorFactory
    */
   @Nullable
   ColumnCapabilities getColumnCapabilities(String column);
+
+  /**
+   * Returns the number of rows in the backing store for this column selector factory, or ROWS_UNKNOWN if unknown.
+   * Note that this number may change over time, e.g. for a realtime index.
+   */
+  default int getNumRows()
+  {
+    return ROWS_UNKNOWN;
+  }
 }

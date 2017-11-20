@@ -23,22 +23,19 @@ import com.google.common.hash.Hasher;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.query.dimension.ColumnSelectorStrategy;
 
-public interface CardinalityAggregatorColumnSelectorStrategy<ValueSelectorType> extends ColumnSelectorStrategy
+public interface CardinalityAggregatorColumnSelectorStrategy extends ColumnSelectorStrategy
 {
   /***
    * Retrieve the current row from dimSelector and add the row values to the hasher.
    *
-   * @param dimSelector Dimension value selector
    * @param hasher Hasher used for cardinality aggregator calculations
    */
-  void hashRow(ValueSelectorType dimSelector, Hasher hasher);
-
+  void hashRow(Hasher hasher);
 
   /**
    * Retrieve the current row from dimSelector and add the row values to HyperLogLogCollector.
    *
-   * @param dimSelector Dimension value selector
    * @param collector HLL collector used for cardinality aggregator calculations
    */
-  void hashValues(ValueSelectorType dimSelector, HyperLogLogCollector collector);
+  void hashValues(HyperLogLogCollector collector);
 }

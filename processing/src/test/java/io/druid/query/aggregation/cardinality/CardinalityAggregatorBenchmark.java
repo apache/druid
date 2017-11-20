@@ -33,6 +33,7 @@ import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorColumnS
 import io.druid.query.aggregation.cardinality.types.StringCardinalityAggregatorColumnSelectorStrategy;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 
 import java.nio.ByteBuffer;
@@ -89,7 +90,7 @@ public class CardinalityAggregatorBenchmark extends SimpleBenchmark
     final ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy> dimInfo1 = new ColumnSelectorPlus(
         dimSpec1.getDimension(),
         dimSpec1.getOutputName(),
-        new StringCardinalityAggregatorColumnSelectorStrategy(),
+        new StringCardinalityAggregatorColumnSelectorStrategy(dim1, ColumnSelectorFactory.ROWS_UNKNOWN),
         dim1
     );
 

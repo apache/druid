@@ -50,7 +50,7 @@ public class CardinalityAggregator implements Aggregator
       }
 
       ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy> selectorPlus = selectorPluses[k];
-      selectorPlus.getColumnSelectorStrategy().hashRow(selectorPlus.getSelector(), hasher);
+      selectorPlus.getColumnSelectorStrategy().hashRow(hasher);
     }
     collector.add(hasher.hash().asBytes());
   }
@@ -61,7 +61,7 @@ public class CardinalityAggregator implements Aggregator
   )
   {
     for (final ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy> selectorPlus : selectorPluses) {
-      selectorPlus.getColumnSelectorStrategy().hashValues(selectorPlus.getSelector(), collector);
+      selectorPlus.getColumnSelectorStrategy().hashValues(collector);
     }
   }
 
@@ -75,7 +75,7 @@ public class CardinalityAggregator implements Aggregator
       boolean byRow
   )
   {
-    this(name, selectorPlusList.toArray(new ColumnSelectorPlus[] {}), byRow);
+    this(name, selectorPlusList.toArray(new ColumnSelectorPlus[]{}), byRow);
   }
 
   CardinalityAggregator(

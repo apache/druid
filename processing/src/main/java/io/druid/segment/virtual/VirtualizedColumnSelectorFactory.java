@@ -73,4 +73,10 @@ public class VirtualizedColumnSelectorFactory implements ColumnSelectorFactory
       return baseFactory.getColumnCapabilities(columnName);
     }
   }
+
+  @Override
+  public int getNumRows()
+  {
+    return baseFactory.getNumRows();
+  }
 }

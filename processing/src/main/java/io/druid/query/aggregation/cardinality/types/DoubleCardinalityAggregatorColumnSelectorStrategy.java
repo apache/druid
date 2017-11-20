@@ -25,18 +25,24 @@ import io.druid.query.aggregation.cardinality.CardinalityAggregator;
 import io.druid.segment.BaseDoubleColumnValueSelector;
 
 
-public class DoubleCardinalityAggregatorColumnSelectorStrategy
-    implements CardinalityAggregatorColumnSelectorStrategy<BaseDoubleColumnValueSelector>
+public class DoubleCardinalityAggregatorColumnSelectorStrategy implements CardinalityAggregatorColumnSelectorStrategy
 {
-  @Override
-  public void hashRow(BaseDoubleColumnValueSelector dimSelector, Hasher hasher)
+  private final BaseDoubleColumnValueSelector selector;
+
+  public DoubleCardinalityAggregatorColumnSelectorStrategy(final BaseDoubleColumnValueSelector selector)
   {
-    hasher.putDouble(dimSelector.getDouble());
+    this.selector = selector;
   }
 
   @Override
-  public void hashValues(BaseDoubleColumnValueSelector dimSelector, HyperLogLogCollector collector)
+  public void hashRow(Hasher hasher)
   {
-    collector.add(CardinalityAggregator.hashFn.hashLong(Double.doubleToLongBits(dimSelector.getDouble())).asBytes());
+    hasher.putDouble(selector.getDouble());
+  }
+
+  @Override
+  public void hashValues(HyperLogLogCollector collector)
+  {
+    collector.add(CardinalityAggregator.hashFn.hashLong(Double.doubleToLongBits(selector.getDouble())).asBytes());
   }
 }

@@ -48,9 +48,15 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.function.IntFunction;
 
 public class ExpressionSelectors
 {
+  // Number of values to cache per input. Expected entry size is the length of strings from a dimension selector.
+  // Size this relatively small, being conservative with memory. With relatively long 1KB strings, this will use 500KB
+  // per input column. More common case should be < 100KB.
+  private static final int DIMENSION_SUPPLIER_CACHE_SIZE = 500;
+
   private ExpressionSelectors()
   {
     // No instantiation.
@@ -141,7 +147,8 @@ public class ExpressionSelectors
         // Optimization for expressions that hit one string column and nothing else.
         return new SingleStringInputCachingExpressionColumnValueSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(column, column, ValueType.STRING)),
-            expression
+            expression,
+            columnSelectorFactory.getNumRows()
         );
       }
     }
@@ -244,7 +251,8 @@ public class ExpressionSelectors
         supplier = columnSelectorFactory.makeColumnValueSelector(columnName)::getDouble;
       } else if (nativeType == ValueType.STRING) {
         supplier = supplierFromDimensionSelector(
-            columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName))
+            columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName)),
+            columnSelectorFactory.getNumRows()
         );
       } else if (nativeType == null) {
         // Unknown ValueType. Try making an Object selector and see if that gives us anything useful.
@@ -278,14 +286,22 @@ public class ExpressionSelectors
 
   @VisibleForTesting
   @Nonnull
-  static Supplier<Object> supplierFromDimensionSelector(final DimensionSelector selector)
+  static Supplier<Object> supplierFromDimensionSelector(final DimensionSelector selector, final int numRows)
   {
     Preconditions.checkNotNull(selector, "selector");
+
+    final IntFunction<String> lookup = DimensionSelectorUtils.cacheIfPossible(
+        selector,
+        selector::lookupName,
+        numRows,
+        DIMENSION_SUPPLIER_CACHE_SIZE
+    );
+
     return () -> {
       final IndexedInts row = selector.getRow();
 
       if (row.size() == 1) {
-        return selector.lookupName(row.get(0));
+        return lookup.apply(row.get(0));
       } else {
         // Can't handle non-singly-valued rows in expressions.
         // Treat them as nulls until we think of something better to do.

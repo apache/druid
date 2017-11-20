@@ -44,6 +44,7 @@ import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.extraction.RegexDimExtractionFn;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.DimensionSelectorUtils;
 import io.druid.segment.IdLookup;
@@ -168,7 +169,7 @@ public class CardinalityAggregatorTest
     @Override
     public int getValueCardinality()
     {
-      return 1;
+      return lookup.size();
     }
 
     @Override
@@ -318,12 +319,12 @@ public class CardinalityAggregatorTest
         new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
             dimSpec1.getDimension(),
             dimSpec1.getOutputName(),
-            new StringCardinalityAggregatorColumnSelectorStrategy(), dim1
+            new StringCardinalityAggregatorColumnSelectorStrategy(dim1, ColumnSelectorFactory.ROWS_UNKNOWN), dim1
         ),
         new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
             dimSpec2.getDimension(),
             dimSpec2.getOutputName(),
-            new StringCardinalityAggregatorColumnSelectorStrategy(), dim2
+            new StringCardinalityAggregatorColumnSelectorStrategy(dim2, ColumnSelectorFactory.ROWS_UNKNOWN), dim2
         )
     );
 
@@ -374,12 +375,19 @@ public class CardinalityAggregatorTest
         new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
             dimSpec1.getDimension(),
             dimSpec1.getOutputName(),
-            new StringCardinalityAggregatorColumnSelectorStrategy(), dim1WithExtraction
+            new StringCardinalityAggregatorColumnSelectorStrategy(
+                dim1WithExtraction,
+                ColumnSelectorFactory.ROWS_UNKNOWN
+            ),
+            dim1WithExtraction
         ),
         new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
             dimSpec1.getDimension(),
             dimSpec1.getOutputName(),
-            new StringCardinalityAggregatorColumnSelectorStrategy(), dim2WithExtraction
+            new StringCardinalityAggregatorColumnSelectorStrategy(
+                dim2WithExtraction,
+                ColumnSelectorFactory.ROWS_UNKNOWN
+            ), dim2WithExtraction
         )
     );
 
@@ -395,12 +403,14 @@ public class CardinalityAggregatorTest
         new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
             dimSpec1.getDimension(),
             dimSpec1.getOutputName(),
-            new StringCardinalityAggregatorColumnSelectorStrategy(), dim1ConstantVal
+            new StringCardinalityAggregatorColumnSelectorStrategy(dim1ConstantVal, ColumnSelectorFactory.ROWS_UNKNOWN),
+            dim1ConstantVal
         ),
         new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
             dimSpec1.getDimension(),
             dimSpec1.getOutputName(),
-            new StringCardinalityAggregatorColumnSelectorStrategy(), dim2ConstantVal
+            new StringCardinalityAggregatorColumnSelectorStrategy(dim2ConstantVal, ColumnSelectorFactory.ROWS_UNKNOWN),
+            dim2ConstantVal
         )
     );
 
@@ -443,7 +453,7 @@ public class CardinalityAggregatorTest
   public void testBufferAggregateRows() throws Exception
   {
     CardinalityBufferAggregator agg = new CardinalityBufferAggregator(
-        dimInfoList.toArray(new ColumnSelectorPlus[] {}),
+        dimInfoList.toArray(new ColumnSelectorPlus[]{}),
         true
     );
 
@@ -465,7 +475,7 @@ public class CardinalityAggregatorTest
   public void testBufferAggregateValues() throws Exception
   {
     CardinalityBufferAggregator agg = new CardinalityBufferAggregator(
-        dimInfoList.toArray(new ColumnSelectorPlus[] {}),
+        dimInfoList.toArray(new ColumnSelectorPlus[]{}),
         false
     );
 
@@ -492,14 +502,14 @@ public class CardinalityAggregatorTest
         new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
             dimSpec1.getDimension(),
             dimSpec1.getOutputName(),
-            new StringCardinalityAggregatorColumnSelectorStrategy(), dim1
+            new StringCardinalityAggregatorColumnSelectorStrategy(dim1, ColumnSelectorFactory.ROWS_UNKNOWN), dim1
         )
     );
     List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> dimInfo2 = Lists.newArrayList(
         new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
             dimSpec1.getDimension(),
             dimSpec1.getOutputName(),
-            new StringCardinalityAggregatorColumnSelectorStrategy(), dim2
+            new StringCardinalityAggregatorColumnSelectorStrategy(dim2, ColumnSelectorFactory.ROWS_UNKNOWN), dim2
         )
     );
 
@@ -538,14 +548,14 @@ public class CardinalityAggregatorTest
         new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
             dimSpec1.getDimension(),
             dimSpec1.getOutputName(),
-            new StringCardinalityAggregatorColumnSelectorStrategy(), dim1
+            new StringCardinalityAggregatorColumnSelectorStrategy(dim1, ColumnSelectorFactory.ROWS_UNKNOWN), dim1
         )
     );
     List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> dimInfo2 = Lists.newArrayList(
         new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
             dimSpec1.getDimension(),
             dimSpec1.getOutputName(),
-            new StringCardinalityAggregatorColumnSelectorStrategy(), dim2
+            new StringCardinalityAggregatorColumnSelectorStrategy(dim2, ColumnSelectorFactory.ROWS_UNKNOWN), dim2
         )
     );
 

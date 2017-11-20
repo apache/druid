@@ -24,18 +24,24 @@ import io.druid.hll.HyperLogLogCollector;
 import io.druid.query.aggregation.cardinality.CardinalityAggregator;
 import io.druid.segment.BaseLongColumnValueSelector;
 
-public class LongCardinalityAggregatorColumnSelectorStrategy
-    implements CardinalityAggregatorColumnSelectorStrategy<BaseLongColumnValueSelector>
+public class LongCardinalityAggregatorColumnSelectorStrategy implements CardinalityAggregatorColumnSelectorStrategy
 {
-  @Override
-  public void hashRow(BaseLongColumnValueSelector dimSelector, Hasher hasher)
+  private BaseLongColumnValueSelector selector;
+
+  public LongCardinalityAggregatorColumnSelectorStrategy(final BaseLongColumnValueSelector selector)
   {
-    hasher.putLong(dimSelector.getLong());
+    this.selector = selector;
   }
 
   @Override
-  public void hashValues(BaseLongColumnValueSelector dimSelector, HyperLogLogCollector collector)
+  public void hashRow(Hasher hasher)
   {
-    collector.add(CardinalityAggregator.hashFn.hashLong(dimSelector.getLong()).asBytes());
+    hasher.putLong(selector.getLong());
+  }
+
+  @Override
+  public void hashValues(HyperLogLogCollector collector)
+  {
+    collector.add(CardinalityAggregator.hashFn.hashLong(selector.getLong()).asBytes());
   }
 }
