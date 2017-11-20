@@ -21,10 +21,10 @@ package io.druid.client;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.client.cache.Cache;
+import io.druid.client.cache.CachePopulator;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.ForegroundCachePopulator;
 import io.druid.client.cache.MapCache;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
@@ -76,7 +76,7 @@ public class CachingClusteredClientFunctionalityTest
     timeline = new VersionedIntervalTimeline<>(Ordering.<String>natural());
     serverView = EasyMock.createNiceMock(TimelineServerView.class);
     cache = MapCache.create(100000);
-    client = makeClient(MoreExecutors.sameThreadExecutor());
+    client = makeClient(new ForegroundCachePopulator(CachingClusteredClientTest.jsonMapper, -1));
   }
 
   @Test
@@ -200,13 +200,13 @@ public class CachingClusteredClientFunctionalityTest
     ));
   }
 
-  protected CachingClusteredClient makeClient(final ListeningExecutorService backgroundExecutorService)
+  protected CachingClusteredClient makeClient(final CachePopulator cachePopulator)
   {
-    return makeClient(backgroundExecutorService, cache, 10);
+    return makeClient(cachePopulator, cache, 10);
   }
 
   protected CachingClusteredClient makeClient(
-      final ListeningExecutorService backgroundExecutorService,
+      final CachePopulator cachePopulator,
       final Cache cache,
       final int mergeLimit
   )
@@ -246,7 +246,7 @@ public class CachingClusteredClientFunctionalityTest
         },
         cache,
         CachingClusteredClientTest.jsonMapper,
-        backgroundExecutorService,
+        cachePopulator,
         new CacheConfig()
         {
           @Override

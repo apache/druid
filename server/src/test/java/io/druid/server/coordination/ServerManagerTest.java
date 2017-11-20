@@ -26,9 +26,9 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.ForegroundCachePopulator;
 import io.druid.client.cache.LocalCacheProvider;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.IAE;
@@ -55,8 +55,8 @@ import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
 import io.druid.query.aggregation.MetricManipulationFn;
-import io.druid.query.search.SearchResultValue;
 import io.druid.query.search.SearchQuery;
+import io.druid.query.search.SearchResultValue;
 import io.druid.segment.AbstractSegment;
 import io.druid.segment.IndexIO;
 import io.druid.segment.QueryableIndex;
@@ -152,7 +152,7 @@ public class ServerManagerTest
         },
         new NoopServiceEmitter(),
         serverManagerExec,
-        MoreExecutors.sameThreadExecutor(),
+        new ForegroundCachePopulator(new DefaultObjectMapper(), -1),
         new DefaultObjectMapper(),
         new LocalCacheProvider().get(),
         new CacheConfig(),

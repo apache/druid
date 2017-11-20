@@ -19,9 +19,6 @@
 
 package io.druid.client;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.java.util.common.StringUtils;
@@ -31,8 +28,6 @@ import io.druid.query.QueryContexts;
 import io.druid.query.SegmentDescriptor;
 import org.joda.time.Interval;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public class CacheUtil
@@ -55,23 +50,6 @@ public class CacheUtil
         .putInt(descriptor.getPartitionNumber())
         .put(queryCacheKey).array()
     );
-  }
-
-  public static void populate(Cache cache, ObjectMapper mapper, Cache.NamedKey key, Iterable<Object> results)
-  {
-    try {
-      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-      try (JsonGenerator gen = mapper.getFactory().createGenerator(bytes)) {
-        for (Object result : results) {
-          gen.writeObject(result);
-        }
-      }
-
-      cache.put(key, bytes.toByteArray());
-    }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
-    }
   }
 
   public static <T> boolean useCacheOnBrokers(

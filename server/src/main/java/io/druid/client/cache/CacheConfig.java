@@ -20,10 +20,10 @@
 package io.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
 import io.druid.query.Query;
 
 import javax.validation.constraints.Min;
-import java.util.Arrays;
 import java.util.List;
 
 public class CacheConfig
@@ -46,7 +46,10 @@ public class CacheConfig
   private int cacheBulkMergeLimit = Integer.MAX_VALUE;
 
   @JsonProperty
-  private List<String> unCacheable = Arrays.asList(Query.GROUP_BY, Query.SELECT);
+  private int maxEntrySize = -1;
+
+  @JsonProperty
+  private List<String> unCacheable = ImmutableList.of(Query.GROUP_BY, Query.SELECT);
 
   public boolean isPopulateCache()
   {
@@ -66,6 +69,11 @@ public class CacheConfig
   public int getCacheBulkMergeLimit()
   {
     return cacheBulkMergeLimit;
+  }
+
+  public int getMaxEntrySize()
+  {
+    return maxEntrySize;
   }
 
   public boolean isQueryCacheable(Query query)

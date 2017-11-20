@@ -17,21 +17,18 @@
  * under the License.
  */
 
-package io.druid.guice.annotations;
+package io.druid.client.cache;
 
-import com.google.inject.BindingAnnotation;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.query.CacheStrategy;
+import io.druid.query.Query;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
-/**
- *
- */
-@BindingAnnotation
-@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
-@Retention(RetentionPolicy.RUNTIME)
-public @interface BackgroundCaching
+public interface CachePopulator
 {
+  <T, CacheType, QueryType extends Query<T>> Sequence<T> wrap(
+      Sequence<T> sequence,
+      CacheStrategy<T, CacheType, QueryType> cacheStrategy,
+      Cache cache,
+      Cache.NamedKey cacheKey
+  );
 }

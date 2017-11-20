@@ -19,21 +19,26 @@
 
 package io.druid.client;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.client.cache.BackgroundCachePopulator;
 import io.druid.client.cache.Cache;
+import io.druid.client.cache.CachePopulator;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.CacheStats;
+import io.druid.client.cache.ForegroundCachePopulator;
 import io.druid.client.cache.MapCache;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.SequenceWrapper;
@@ -63,6 +68,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -72,8 +78,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -100,14 +104,21 @@ public class CachingQueryRunnerTest
       DateTimes.of("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
   };
 
-  private ExecutorService backgroundExecutorService;
+  private ObjectMapper objectMapper;
+  private CachePopulator cachePopulator;
 
   public CachingQueryRunnerTest(int numBackgroundThreads)
   {
+    objectMapper = new DefaultObjectMapper();
+
     if (numBackgroundThreads > 0) {
-      backgroundExecutorService = Executors.newFixedThreadPool(numBackgroundThreads);
+      cachePopulator = new BackgroundCachePopulator(
+          Execs.multiThreaded(numBackgroundThreads, "CachingQueryRunnerTest-%d"),
+          objectMapper,
+          -1
+      );
     } else {
-      backgroundExecutorService = MoreExecutors.sameThreadExecutor();
+      cachePopulator = new ForegroundCachePopulator(objectMapper, -1);
     }
   }
 
@@ -276,7 +287,7 @@ public class CachingQueryRunnerTest
             return resultSeq;
           }
         },
-        backgroundExecutorService,
+        cachePopulator,
         new CacheConfig()
         {
           @Override
@@ -347,12 +358,7 @@ public class CachingQueryRunnerTest
     );
 
     Cache cache = MapCache.create(1024 * 1024);
-    CacheUtil.populate(
-        cache,
-        objectMapper,
-        cacheKey,
-        Iterables.transform(expectedResults, cacheStrategy.prepareForCache())
-    );
+    cache.put(cacheKey, toByteArray(Iterables.transform(expectedResults, cacheStrategy.prepareForCache())));
 
     CachingQueryRunner runner = new CachingQueryRunner(
         segmentIdentifier,
@@ -369,7 +375,7 @@ public class CachingQueryRunnerTest
             return Sequences.empty();
           }
         },
-        backgroundExecutorService,
+        cachePopulator,
         new CacheConfig()
         {
           @Override
@@ -434,6 +440,19 @@ public class CachingQueryRunnerTest
       retVal.add(new Result<>(timestamp, new TopNResultValue(values)));
     }
     return retVal;
+  }
+
+  private <T> byte[] toByteArray(final Iterable<T> results) throws IOException
+  {
+    final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+
+    try (JsonGenerator gen = objectMapper.getFactory().createGenerator(bytes)) {
+      for (T result : results) {
+        gen.writeObject(result);
+      }
+    }
+
+    return bytes.toByteArray();
   }
 
   private static class AssertingClosable implements Closeable

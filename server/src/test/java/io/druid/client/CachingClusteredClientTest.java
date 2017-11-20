@@ -44,8 +44,11 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
+import io.druid.client.cache.BackgroundCachePopulator;
 import io.druid.client.cache.Cache;
+import io.druid.client.cache.CachePopulator;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.ForegroundCachePopulator;
 import io.druid.client.cache.MapCache;
 import io.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import io.druid.client.selector.QueryableDruidServer;
@@ -103,11 +106,11 @@ import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
 import io.druid.query.groupby.strategy.GroupByStrategySelector;
 import io.druid.query.ordering.StringComparators;
-import io.druid.query.search.SearchQueryQueryToolChest;
-import io.druid.query.search.SearchResultValue;
 import io.druid.query.search.SearchHit;
 import io.druid.query.search.SearchQuery;
 import io.druid.query.search.SearchQueryConfig;
+import io.druid.query.search.SearchQueryQueryToolChest;
+import io.druid.query.search.SearchResultValue;
 import io.druid.query.select.EventHolder;
 import io.druid.query.select.PagingSpec;
 import io.druid.query.select.SelectQuery;
@@ -332,7 +335,7 @@ public class CachingClusteredClientTest
     timeline = new VersionedIntervalTimeline<>(Ordering.<String>natural());
     serverView = EasyMock.createNiceMock(TimelineServerView.class);
     cache = MapCache.create(100000);
-    client = makeClient(MoreExecutors.sameThreadExecutor());
+    client = makeClient(new ForegroundCachePopulator(jsonMapper, -1));
 
     servers = new DruidServer[]{
         new DruidServer("test1", "test1", null, 10, ServerType.HISTORICAL, "bye", 0),
@@ -424,7 +427,7 @@ public class CachingClusteredClientTest
       }
     };
 
-    client = makeClient(randomizingExecutorService);
+    client = makeClient(new BackgroundCachePopulator(randomizingExecutorService, jsonMapper, -1));
 
     // callback to be run every time a query run is complete, to ensure all background
     // caching tasks are executed, and cache is populated before we move onto the next query
@@ -581,7 +584,7 @@ public class CachingClusteredClientTest
             .andReturn(ImmutableMap.<Cache.NamedKey, byte[]>of())
             .once();
     EasyMock.replay(cache);
-    client = makeClient(MoreExecutors.sameThreadExecutor(), cache, limit);
+    client = makeClient(new ForegroundCachePopulator(jsonMapper, -1), cache, limit);
     final DruidServer lastServer = servers[random.nextInt(servers.length)];
     final DataSegment dataSegment = EasyMock.createNiceMock(DataSegment.class);
     EasyMock.expect(dataSegment.getIdentifier()).andReturn(DATA_SOURCE).anyTimes();
@@ -606,7 +609,7 @@ public class CachingClusteredClientTest
             .andReturn(ImmutableMap.<Cache.NamedKey, byte[]>of())
             .once();
     EasyMock.replay(cache);
-    client = makeClient(MoreExecutors.sameThreadExecutor(), cache, 0);
+    client = makeClient(new ForegroundCachePopulator(jsonMapper, -1), cache, 0);
     getDefaultQueryRunner().run(QueryPlus.wrap(query), context);
     EasyMock.verify(cache);
     EasyMock.verify(dataSegment);
@@ -2663,13 +2666,13 @@ public class CachingClusteredClientTest
     EasyMock.reset(mocks);
   }
 
-  protected CachingClusteredClient makeClient(final ListeningExecutorService backgroundExecutorService)
+  protected CachingClusteredClient makeClient(final CachePopulator cachePopulator)
   {
-    return makeClient(backgroundExecutorService, cache, 10);
+    return makeClient(cachePopulator, cache, 10);
   }
 
   protected CachingClusteredClient makeClient(
-      final ListeningExecutorService backgroundExecutorService,
+      final CachePopulator cachePopulator,
       final Cache cache,
       final int mergeLimit
   )
@@ -2709,7 +2712,7 @@ public class CachingClusteredClientTest
         },
         cache,
         jsonMapper,
-        backgroundExecutorService,
+        cachePopulator,
         new CacheConfig()
         {
           @Override

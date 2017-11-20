@@ -19,22 +19,25 @@
 
 package io.druid.guice;
 
-import com.google.common.util.concurrent.MoreExecutors;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.ProvisionException;
+import io.druid.client.cache.BackgroundCachePopulator;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.CachePopulator;
+import io.druid.client.cache.ForegroundCachePopulator;
 import io.druid.collections.BlockingPool;
 import io.druid.collections.DefaultBlockingPool;
 import io.druid.collections.NonBlockingPool;
 import io.druid.collections.StupidPool;
 import io.druid.common.utils.VMUtils;
-import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Merging;
 import io.druid.guice.annotations.Processing;
+import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.ExecutorServiceConfig;
 import io.druid.java.util.common.lifecycle.Lifecycle;
@@ -64,14 +67,11 @@ public class DruidProcessingModule implements Module
   }
 
   @Provides
-  @BackgroundCaching
   @LazySingleton
-  public ExecutorService getBackgroundExecutorService(
-      CacheConfig cacheConfig
-  )
+  public CachePopulator getCachePopulator(@Smile ObjectMapper smileMapper, CacheConfig cacheConfig)
   {
     if (cacheConfig.getNumBackgroundThreads() > 0) {
-      return Executors.newFixedThreadPool(
+      final ExecutorService exec = Executors.newFixedThreadPool(
           cacheConfig.getNumBackgroundThreads(),
           new ThreadFactoryBuilder()
               .setNameFormat("background-cacher-%d")
@@ -79,8 +79,10 @@ public class DruidProcessingModule implements Module
               .setPriority(Thread.MIN_PRIORITY)
               .build()
       );
+
+      return new BackgroundCachePopulator(exec, smileMapper, cacheConfig.getMaxEntrySize());
     } else {
-      return MoreExecutors.sameThreadExecutor();
+      return new ForegroundCachePopulator(smileMapper, cacheConfig.getMaxEntrySize());
     }
   }
 

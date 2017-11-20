@@ -27,8 +27,8 @@ import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.CachingQueryRunner;
 import io.druid.client.cache.Cache;
+import io.druid.client.cache.CachePopulator;
 import io.druid.client.cache.CacheConfig;
-import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.guice.annotations.Processing;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.ISE;
@@ -76,7 +76,7 @@ public class ServerManager implements QuerySegmentWalker
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final ServiceEmitter emitter;
   private final ExecutorService exec;
-  private final ExecutorService cachingExec;
+  private final CachePopulator cachePopulator;
   private final Cache cache;
   private final ObjectMapper objectMapper;
   private final CacheConfig cacheConfig;
@@ -88,7 +88,7 @@ public class ServerManager implements QuerySegmentWalker
       QueryRunnerFactoryConglomerate conglomerate,
       ServiceEmitter emitter,
       @Processing ExecutorService exec,
-      @BackgroundCaching ExecutorService cachingExec,
+      CachePopulator cachePopulator,
       @Smile ObjectMapper objectMapper,
       Cache cache,
       CacheConfig cacheConfig,
@@ -100,7 +100,7 @@ public class ServerManager implements QuerySegmentWalker
     this.emitter = emitter;
 
     this.exec = exec;
-    this.cachingExec = cachingExec;
+    this.cachePopulator = cachePopulator;
     this.cache = cache;
     this.objectMapper = objectMapper;
 
@@ -303,7 +303,7 @@ public class ServerManager implements QuerySegmentWalker
                                 QueryMetrics::reportSegmentTime,
                                 queryMetrics -> queryMetrics.segment(segmentId)
                             ),
-                            cachingExec,
+                            cachePopulator,
                             cacheConfig
                         )
                     ),

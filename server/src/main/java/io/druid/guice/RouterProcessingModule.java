@@ -22,16 +22,14 @@ package io.druid.guice;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import io.druid.client.cache.CacheConfig;
 import io.druid.collections.BlockingPool;
 import io.druid.collections.DummyBlockingPool;
 import io.druid.collections.DummyNonBlockingPool;
 import io.druid.collections.NonBlockingPool;
-import io.druid.java.util.common.concurrent.Execs;
-import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Merging;
 import io.druid.guice.annotations.Processing;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.concurrent.ExecutorServiceConfig;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.DruidProcessingConfig;
@@ -56,20 +54,6 @@ public class RouterProcessingModule implements Module
   {
     binder.bind(ExecutorServiceConfig.class).to(DruidProcessingConfig.class);
     MetricsModule.register(binder, ExecutorServiceMonitor.class);
-  }
-
-  @Provides
-  @BackgroundCaching
-  @LazySingleton
-  public ExecutorService getBackgroundExecutorService(CacheConfig cacheConfig)
-  {
-    if (cacheConfig.getNumBackgroundThreads() > 0) {
-      log.error(
-          "numBackgroundThreads[%d] configured, that is ignored on Router",
-          cacheConfig.getNumBackgroundThreads()
-      );
-    }
-    return Execs.dummy();
   }
 
   @Provides

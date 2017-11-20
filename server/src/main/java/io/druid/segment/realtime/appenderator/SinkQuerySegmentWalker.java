@@ -29,6 +29,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.CachingQueryRunner;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.ForegroundCachePopulator;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.CloseQuietly;
@@ -235,7 +236,11 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                                                             cache,
                                                             toolChest,
                                                             baseRunner,
-                                                            MoreExecutors.sameThreadExecutor(),
+                                                            // Always populate in foreground regardless of config
+                                                            new ForegroundCachePopulator(
+                                                                objectMapper,
+                                                                cacheConfig.getMaxEntrySize()
+                                                            ),
                                                             cacheConfig
                                                         );
                                                       } else {

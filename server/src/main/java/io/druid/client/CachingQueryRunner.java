@@ -24,18 +24,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.SettableFuture;
 import io.druid.client.cache.Cache;
+import io.druid.client.cache.CachePopulator;
 import io.druid.client.cache.CacheConfig;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.java.util.common.logger.Logger;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Query;
 import io.druid.query.QueryPlus;
@@ -44,23 +38,19 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.SegmentDescriptor;
 
 import java.io.IOException;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 
 public class CachingQueryRunner<T> implements QueryRunner<T>
 {
-  private static final Logger log = new Logger(CachingQueryRunner.class);
   private final String segmentIdentifier;
   private final SegmentDescriptor segmentDescriptor;
   private final QueryRunner<T> base;
   private final QueryToolChest toolChest;
   private final Cache cache;
   private final ObjectMapper mapper;
+  private final CachePopulator cachePopulator;
   private final CacheConfig cacheConfig;
-  private final ListeningExecutorService backgroundExecutorService;
 
   public CachingQueryRunner(
       String segmentIdentifier,
@@ -69,7 +59,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
       Cache cache,
       QueryToolChest toolchest,
       QueryRunner<T> base,
-      ExecutorService backgroundExecutorService,
+      CachePopulator cachePopulator,
       CacheConfig cacheConfig
   )
   {
@@ -79,7 +69,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
     this.toolChest = toolchest;
     this.cache = cache;
     this.mapper = mapper;
-    this.backgroundExecutorService = MoreExecutors.listeningDecorator(backgroundExecutorService);
+    this.cachePopulator = cachePopulator;
     this.cacheConfig = cacheConfig;
   }
 
@@ -141,56 +131,8 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
       }
     }
 
-    final Collection<ListenableFuture<?>> cacheFutures = Collections.synchronizedList(Lists.<ListenableFuture<?>>newLinkedList());
     if (populateCache) {
-      final Function cacheFn = strategy.prepareForCache();
-
-      return Sequences.withEffect(
-          Sequences.map(
-              base.run(queryPlus, responseContext),
-              new Function<T, T>()
-              {
-                @Override
-                public T apply(final T input)
-                {
-                  final SettableFuture<Object> future = SettableFuture.create();
-                  cacheFutures.add(future);
-                  backgroundExecutorService.submit(
-                      new Runnable()
-                      {
-                        @Override
-                        public void run()
-                        {
-                          try {
-                            future.set(cacheFn.apply(input));
-                          }
-                          catch (Exception e) {
-                            // if there is exception, should setException to quit the caching processing
-                            future.setException(e);
-                          }
-                        }
-                      }
-                  );
-                  return input;
-                }
-              }
-          ),
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              try {
-                CacheUtil.populate(cache, mapper, key, Futures.allAsList(cacheFutures).get());
-              }
-              catch (Exception e) {
-                log.error(e, "Error while getting future for cache task");
-                throw Throwables.propagate(e);
-              }
-            }
-          },
-          backgroundExecutorService
-      );
+      return cachePopulator.wrap(base.run(queryPlus, responseContext), strategy, cache, key);
     } else {
       return base.run(queryPlus, responseContext);
     }
