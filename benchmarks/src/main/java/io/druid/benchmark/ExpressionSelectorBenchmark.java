@@ -125,6 +125,80 @@ public class ExpressionSelectorBenchmark
   }
 
   @Benchmark
+  public void timeFormatUsingExpression(Blackhole blackhole) throws Exception
+  {
+    final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).makeCursors(
+        null,
+        index.getDataInterval(),
+        VirtualColumns.create(
+            ImmutableList.of(
+                new ExpressionVirtualColumn(
+                    "v",
+                    "timestamp_format(__time, 'yyyy-MM-dd')",
+                    ValueType.LONG,
+                    TestExprMacroTable.INSTANCE
+                )
+            )
+        ),
+        Granularities.ALL,
+        false,
+        null
+    );
+
+    final List<?> results = Sequences.toList(
+        Sequences.map(
+            cursors,
+            cursor -> {
+              final DimensionSelector selector = cursor.getColumnSelectorFactory().makeDimensionSelector(
+                  new DefaultDimensionSpec("v", "v", ValueType.STRING)
+              );
+              consumeDimension(cursor, selector, blackhole);
+              return null;
+            }
+        ),
+        new ArrayList<>()
+    );
+
+    blackhole.consume(results);
+  }
+
+  @Benchmark
+  public void timeFormatUsingExtractionFn(Blackhole blackhole) throws Exception
+  {
+    final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).makeCursors(
+        null,
+        index.getDataInterval(),
+        VirtualColumns.EMPTY,
+        Granularities.ALL,
+        false,
+        null
+    );
+
+    final List<?> results = Sequences.toList(
+        Sequences.map(
+            cursors,
+            cursor -> {
+              final DimensionSelector selector = cursor
+                  .getColumnSelectorFactory()
+                  .makeDimensionSelector(
+                      new ExtractionDimensionSpec(
+                          Column.TIME_COLUMN_NAME,
+                          "v",
+                          new TimeFormatExtractionFn("yyyy-MM-dd", null, null, null, false)
+                      )
+                  );
+
+              consumeDimension(cursor, selector, blackhole);
+              return null;
+            }
+        ),
+        new ArrayList<>()
+    );
+
+    blackhole.consume(results);
+  }
+
+  @Benchmark
   public void timeFloorUsingExpression(Blackhole blackhole) throws Exception
   {
     final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).makeCursors(

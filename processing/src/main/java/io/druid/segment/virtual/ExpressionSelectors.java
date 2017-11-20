@@ -176,9 +176,16 @@ public class ExpressionSelectors
       final String column = Iterables.getOnlyElement(columns);
       final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(column);
 
-      if (capabilities != null
-          && capabilities.getType() == ValueType.STRING
-          && capabilities.isDictionaryEncoded()) {
+      if (column.equals(Column.TIME_COLUMN_NAME)) {
+        // Optimization for expressions that hit the __time column and nothing else.
+        // May be worth applying this optimization to all long columns?
+        return new SingleLongInputCachingExpressionDimensionSelector(
+            columnSelectorFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
+            expression
+        );
+      } else if (capabilities != null
+                 && capabilities.getType() == ValueType.STRING
+                 && capabilities.isDictionaryEncoded()) {
         // Optimization for dimension selectors that wrap a single underlying string column.
         return new SingleStringInputDimensionSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(column, column, ValueType.STRING)),
