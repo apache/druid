@@ -60,12 +60,12 @@ import io.druid.guice.http.HttpClientModule;
 import io.druid.guice.security.AuthenticatorModule;
 import io.druid.guice.security.AuthorizerModule;
 import io.druid.guice.security.DruidAuthModule;
+import io.druid.guice.security.EscalatorModule;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
 import io.druid.segment.writeout.SegmentWriteOutMediumModule;
 import io.druid.server.emitter.EmitterModule;
-import io.druid.server.initialization.AuthenticatorHttpClientWrapperModule;
 import io.druid.server.initialization.AuthenticatorMapperModule;
 import io.druid.server.initialization.AuthorizerMapperModule;
 import io.druid.server.initialization.jetty.JettyServerModule;
@@ -380,7 +380,7 @@ public class Initialization
         new JavaScriptModule(),
         new AuthenticatorModule(),
         new AuthenticatorMapperModule(),
-        new AuthenticatorHttpClientWrapperModule(),
+        new EscalatorModule(),
         new AuthorizerModule(),
         new AuthorizerMapperModule(),
         new StartupLoggingModule()

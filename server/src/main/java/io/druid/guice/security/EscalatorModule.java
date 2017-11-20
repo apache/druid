@@ -17,27 +17,18 @@
  * under the License.
  */
 
-package io.druid.server.security;
+package io.druid.guice.security;
 
-import com.metamx.http.client.HttpClient;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import io.druid.guice.JsonConfigProvider;
+import io.druid.server.security.Escalator;
 
-/**
- * Singleton utility object that creates escalated HttpClients using a configuration-specified Authenticator's
- * getEscalatedClient() method.
- */
-public class AuthenticatorHttpClientWrapper
+public class EscalatorModule implements Module
 {
-  private Authenticator escalatingAuthenticator;
-
-  public AuthenticatorHttpClientWrapper(
-      final Authenticator escalatingAuthenticator
-  )
+  @Override
+  public void configure(Binder binder)
   {
-    this.escalatingAuthenticator = escalatingAuthenticator;
-  }
-
-  public HttpClient getEscalatedClient(HttpClient baseClient)
-  {
-    return escalatingAuthenticator.createEscalatedClient(baseClient);
+    JsonConfigProvider.bind(binder, "druid.escalator", Escalator.class);
   }
 }

@@ -32,9 +32,11 @@ import com.metamx.emitter.core.HttpPostEmitter;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.JdkSslContext;
+import io.netty.util.HashedWheelTimer;
 import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.DefaultAsyncHttpClient;
 import org.asynchttpclient.DefaultAsyncHttpClientConfig;
@@ -68,6 +70,21 @@ public class HttpEmitterModule implements Module
     binder.bind(SSLContext.class).toProvider(Providers.of(context)).in(LazySingleton.class);
   }
 
+  static AsyncHttpClient createAsyncHttpClient(
+      String nameFormat,
+      String timerThreadNameFormat,
+      @Nullable SSLContext sslContext
+  )
+  {
+    final DefaultAsyncHttpClientConfig.Builder builder = new DefaultAsyncHttpClientConfig.Builder()
+        .setThreadFactory(Execs.makeThreadFactory(nameFormat))
+        .setNettyTimer(new HashedWheelTimer(Execs.makeThreadFactory(timerThreadNameFormat)));
+    if (sslContext != null) {
+      builder.setSslContext(new JdkSslContext(sslContext, true, ClientAuth.NONE));
+    }
+    return new DefaultAsyncHttpClient(builder.build());
+  }
+
   @Provides
   @ManageLifecycle
   @Named("http")
@@ -78,13 +95,16 @@ public class HttpEmitterModule implements Module
       ObjectMapper jsonMapper
   )
   {
-    final DefaultAsyncHttpClientConfig.Builder builder = new DefaultAsyncHttpClientConfig.Builder();
-    if (sslContext != null) {
-      builder.setSslContext(new JdkSslContext(sslContext, true, ClientAuth.NONE));
-    }
-    final AsyncHttpClient client = new DefaultAsyncHttpClient(builder.build());
-    lifecycle.addCloseableInstance(client);
-
-    return new HttpPostEmitter(config.get(), client, jsonMapper);
+    return new HttpPostEmitter(
+        config.get(),
+        lifecycle.addCloseableInstance(
+            createAsyncHttpClient(
+                "HttpPostEmitter-AsyncHttpClient-%d",
+                "HttpPostEmitter-AsyncHttpClient-Timer-%d",
+                sslContext
+            )
+        ),
+        jsonMapper
+    );
   }
 }

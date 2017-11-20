@@ -68,11 +68,6 @@ public class ByteBufferIntList
     return buffer.getInt(index * Ints.BYTES);
   }
 
-  public int getNumElements()
-  {
-    return numElements;
-  }
-
   public void reset()
   {
     numElements = 0;

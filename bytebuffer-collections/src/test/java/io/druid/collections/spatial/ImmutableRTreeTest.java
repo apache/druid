@@ -362,7 +362,6 @@ public class ImmutableRTreeTest
   public void testSearchWithSplit4()
   {
     BitmapFactory bf = new ConciseBitmapFactory();
-    //RTree tree = new RTree(2, new QuadraticGutmanSplitStrategy(0, 100, bf), bf);
     RTree tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50, bf), bf);
     Random rand = new Random();
 
@@ -545,7 +544,7 @@ public class ImmutableRTreeTest
     }
   }
 
-  //@Test
+  @SuppressWarnings("unused") // TODO rewrite to JMH and move to the benchmarks project
   public void showBenchmarks()
   {
     final int start = 1;
@@ -594,7 +593,7 @@ public class ImmutableRTreeTest
     }
   }
 
-  //@Test
+  @SuppressWarnings("unused") // TODO rewrite to JMH and move to the benchmarks project
   public void showBenchmarksBoundWithLimits()
   {
     //final int start = 1;

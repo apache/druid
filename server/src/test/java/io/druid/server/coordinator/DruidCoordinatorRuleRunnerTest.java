@@ -363,7 +363,7 @@ public class DruidCoordinatorRuleRunnerTest
         0
     );
     for (DataSegment availableSegment : availableSegments) {
-      normServer.addDataSegment(availableSegment.getIdentifier(), availableSegment);
+      normServer.addDataSegment(availableSegment);
     }
 
     DruidCluster druidCluster = new DruidCluster(
@@ -583,7 +583,7 @@ public class DruidCoordinatorRuleRunnerTest
         0
     );
     for (DataSegment segment : availableSegments) {
-      server.addDataSegment(segment.getIdentifier(), segment);
+      server.addDataSegment(segment);
     }
 
     DruidCluster druidCluster = new DruidCluster(
@@ -653,7 +653,7 @@ public class DruidCoordinatorRuleRunnerTest
         "normal",
         0
     );
-    server1.addDataSegment(availableSegments.get(0).getIdentifier(), availableSegments.get(0));
+    server1.addDataSegment(availableSegments.get(0));
 
     DruidServer server2 = new DruidServer(
         "serverNorm2",
@@ -665,7 +665,7 @@ public class DruidCoordinatorRuleRunnerTest
         0
     );
     for (DataSegment segment : availableSegments) {
-      server2.addDataSegment(segment.getIdentifier(), segment);
+      server2.addDataSegment(segment);
     }
 
     DruidCluster druidCluster = new DruidCluster(
@@ -742,7 +742,7 @@ public class DruidCoordinatorRuleRunnerTest
         "hot",
         0
     );
-    server1.addDataSegment(availableSegments.get(0).getIdentifier(), availableSegments.get(0));
+    server1.addDataSegment(availableSegments.get(0));
     DruidServer server2 = new DruidServer(
         "serverNorm2",
         "hostNorm2",
@@ -753,7 +753,7 @@ public class DruidCoordinatorRuleRunnerTest
         0
     );
     for (DataSegment segment : availableSegments) {
-      server2.addDataSegment(segment.getIdentifier(), segment);
+      server2.addDataSegment(segment);
     }
 
     DruidCluster druidCluster = new DruidCluster(
@@ -841,7 +841,7 @@ public class DruidCoordinatorRuleRunnerTest
         0
     );
     for (DataSegment segment : availableSegments) {
-      server2.addDataSegment(segment.getIdentifier(), segment);
+      server2.addDataSegment(segment);
     }
     DruidCluster druidCluster = new DruidCluster(
         null,
@@ -913,7 +913,7 @@ public class DruidCoordinatorRuleRunnerTest
         "normal",
         0
     );
-    server1.addDataSegment(availableSegments.get(0).getIdentifier(), availableSegments.get(0));
+    server1.addDataSegment(availableSegments.get(0));
     DruidServer server2 = new DruidServer(
         "serverNorm2",
         "hostNorm2",
@@ -923,7 +923,7 @@ public class DruidCoordinatorRuleRunnerTest
         "normal",
         0
     );
-    server2.addDataSegment(availableSegments.get(1).getIdentifier(), availableSegments.get(1));
+    server2.addDataSegment(availableSegments.get(1));
     DruidServer server3 = new DruidServer(
         "serverNorm3",
         "hostNorm3",
@@ -933,8 +933,8 @@ public class DruidCoordinatorRuleRunnerTest
         "normal",
         0
     );
-    server3.addDataSegment(availableSegments.get(1).getIdentifier(), availableSegments.get(1));
-    server3.addDataSegment(availableSegments.get(2).getIdentifier(), availableSegments.get(2));
+    server3.addDataSegment(availableSegments.get(1));
+    server3.addDataSegment(availableSegments.get(2));
 
     mockPeon.dropSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
@@ -1248,7 +1248,7 @@ public class DruidCoordinatorRuleRunnerTest
         0
     );
     for (DataSegment availableSegment : longerAvailableSegments) {
-      server1.addDataSegment(availableSegment.getIdentifier(), availableSegment);
+      server1.addDataSegment(availableSegment);
     }
     DruidServer server2 = new DruidServer(
         "serverNorm2",
@@ -1260,7 +1260,7 @@ public class DruidCoordinatorRuleRunnerTest
         0
     );
     for (DataSegment availableSegment : longerAvailableSegments) {
-      server2.addDataSegment(availableSegment.getIdentifier(), availableSegment);
+      server2.addDataSegment(availableSegment);
     }
 
     DruidCluster druidCluster = new DruidCluster(

@@ -34,7 +34,6 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.column.ValueType;
 import io.druid.segment.data.ArrayBasedIndexedInts;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
@@ -162,11 +161,6 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       }
     }
 
-    public int size()
-    {
-      return sortedVals.size();
-    }
-
     public int getUnsortedIdFromSortedId(int index)
     {
       return indexToId[index];
@@ -191,12 +185,6 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   {
     this.dimLookup = new DimensionDictionary();
     this.multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
-  }
-
-  @Override
-  public ValueType getValueType()
-  {
-    return ValueType.STRING;
   }
 
   @Override
@@ -254,7 +242,6 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     return encodedDimensionValues;
   }
 
-  @Override
   public Integer getSortedEncodedValueFromUnsorted(Integer unsortedIntermediateValue)
   {
     return sortedLookup().getSortedIdFromUnsortedId(unsortedIntermediateValue);
@@ -384,7 +371,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       @Override
       public IndexedInts getRow()
       {
-        final Object[] dims = currEntry.getKey().getDims();
+        final Object[] dims = currEntry.get().getDims();
 
         int[] indices;
         if (dimIndex < dims.length) {
@@ -407,7 +394,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
             rowSize = 1;
           } else {
             // doesn't contain nullId, then empty array is used
-            // Choose to use ArrayBasedIndexedInts later, instead of EmptyIndexedInts, for monomorphism
+            // Choose to use ArrayBasedIndexedInts later, instead of special "empty" IndexedInts, for monomorphism
             row = IntArrays.EMPTY_ARRAY;
             rowSize = 0;
           }
@@ -432,7 +419,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
               @Override
               public boolean matches()
               {
-                Object[] dims = currEntry.getKey().getDims();
+                Object[] dims = currEntry.get().getDims();
                 if (dimIndex >= dims.length) {
                   return value == null;
                 }
@@ -475,7 +462,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
           @Override
           public boolean matches()
           {
-            Object[] dims = currEntry.getKey().getDims();
+            Object[] dims = currEntry.get().getDims();
             if (dimIndex >= dims.length) {
               return matchNull;
             }
@@ -546,7 +533,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       @Override
       public Object getObject()
       {
-        IncrementalIndex.TimeAndDims key = currEntry.getKey();
+        IncrementalIndex.TimeAndDims key = currEntry.get();
         if (key == null) {
           return null;
         }

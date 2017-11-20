@@ -70,7 +70,7 @@ public class OverlordRedirectInfoTest
   {
     EasyMock.expect(taskMaster.getCurrentLeader()).andReturn(null).anyTimes();
     EasyMock.replay(taskMaster);
-    URL url = redirectInfo.getRedirectURL("http", "query", "/request");
+    URL url = redirectInfo.getRedirectURL("query", "/request");
     Assert.assertNull(url);
     EasyMock.verify(taskMaster);
   }
@@ -80,7 +80,7 @@ public class OverlordRedirectInfoTest
   {
     EasyMock.expect(taskMaster.getCurrentLeader()).andReturn("").anyTimes();
     EasyMock.replay(taskMaster);
-    URL url = redirectInfo.getRedirectURL("http", "query", "/request");
+    URL url = redirectInfo.getRedirectURL("query", "/request");
     Assert.assertNull(url);
     EasyMock.verify(taskMaster);
   }
@@ -88,12 +88,12 @@ public class OverlordRedirectInfoTest
   @Test
   public void testGetRedirectURL()
   {
-    String host = "localhost";
+    String host = "http://localhost";
     String query = "foo=bar&x=y";
     String request = "/request";
     EasyMock.expect(taskMaster.getCurrentLeader()).andReturn(host).anyTimes();
     EasyMock.replay(taskMaster);
-    URL url = redirectInfo.getRedirectURL("http", query, request);
+    URL url = redirectInfo.getRedirectURL(query, request);
     Assert.assertEquals("http://localhost/request?foo=bar&x=y", url.toString());
     EasyMock.verify(taskMaster);
   }
@@ -101,7 +101,7 @@ public class OverlordRedirectInfoTest
   @Test
   public void testGetRedirectURLWithEncodedCharacter() throws UnsupportedEncodingException
   {
-    String host = "localhost";
+    String host = "http://localhost";
     String request = "/druid/indexer/v1/task/" + URLEncoder.encode(
         "index_hadoop_datasource_2017-07-12T07:43:01.495Z",
         "UTF-8"
@@ -109,7 +109,7 @@ public class OverlordRedirectInfoTest
 
     EasyMock.expect(taskMaster.getCurrentLeader()).andReturn(host).anyTimes();
     EasyMock.replay(taskMaster);
-    URL url = redirectInfo.getRedirectURL("http", null, request);
+    URL url = redirectInfo.getRedirectURL(null, request);
     Assert.assertEquals(
         "http://localhost/druid/indexer/v1/task/index_hadoop_datasource_2017-07-12T07%3A43%3A01.495Z/status",
         url.toString()

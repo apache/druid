@@ -109,11 +109,6 @@ public class SelectQuerySpecTest
         + "\"metrics\":[\"index\"],"
         + "\"virtualColumns\":[],";
 
-    String withNull =
-        baseQueryJson
-        + "\"pagingSpec\":{\"pagingIdentifiers\":{},\"threshold\":3,\"fromNext\":null},"
-        + "\"context\":null}";
-
     String withFalse =
         baseQueryJson
         + "\"pagingSpec\":{\"pagingIdentifiers\":{},\"threshold\":3,\"fromNext\":false},"

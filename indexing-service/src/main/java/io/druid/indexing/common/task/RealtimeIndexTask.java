@@ -214,7 +214,7 @@ public class RealtimeIndexTask extends AbstractTask
     // It would be nice to get the PlumberSchool in the constructor.  Although that will need jackson injectables for
     // stuff like the ServerView, which seems kind of odd?  Perhaps revisit this when Guice has been introduced.
 
-    final SegmentPublisher segmentPublisher = new TaskActionSegmentPublisher(this, toolbox);
+    final SegmentPublisher segmentPublisher = new TaskActionSegmentPublisher(toolbox);
 
     // NOTE: We talk to the coordinator in various places in the plumber and we could be more robust to issues
     // with the coordinator.  Right now, we'll block/throw in whatever thread triggered the coordinator behavior,
@@ -558,12 +558,10 @@ public class RealtimeIndexTask extends AbstractTask
 
   public static class TaskActionSegmentPublisher implements SegmentPublisher
   {
-    final Task task;
     final TaskToolbox taskToolbox;
 
-    public TaskActionSegmentPublisher(Task task, TaskToolbox taskToolbox)
+    public TaskActionSegmentPublisher(TaskToolbox taskToolbox)
     {
-      this.task = task;
       this.taskToolbox = taskToolbox;
     }
 

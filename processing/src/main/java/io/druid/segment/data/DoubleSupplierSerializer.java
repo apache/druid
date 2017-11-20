@@ -26,6 +26,5 @@ import java.io.IOException;
 public interface DoubleSupplierSerializer extends Serializer
 {
   void open() throws IOException;
-  int size();
   void add(double value) throws IOException;
 }

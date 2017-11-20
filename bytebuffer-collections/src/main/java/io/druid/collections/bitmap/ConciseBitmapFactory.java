@@ -133,12 +133,6 @@ public class ConciseBitmapFactory implements BitmapFactory
   }
 
   @Override
-  public ImmutableBitmap complement(ImmutableBitmap b)
-  {
-    return new WrappedImmutableConciseBitmap(ImmutableConciseSet.complement(((WrappedImmutableConciseBitmap) b).getBitmap()));
-  }
-
-  @Override
   public ImmutableBitmap complement(ImmutableBitmap b, int length)
   {
     return new WrappedImmutableConciseBitmap(

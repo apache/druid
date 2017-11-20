@@ -809,14 +809,6 @@ public class JobHelper
       }
 
       @Override
-      public void progressSection(String section, String message)
-      {
-        log.info("Progress message for section [%s] : [%s]", section, message);
-        context.progress();
-        context.setStatus(StringUtils.format("PROGRESS [%s]", section));
-      }
-
-      @Override
       public void stopSection(String section)
       {
         context.progress();

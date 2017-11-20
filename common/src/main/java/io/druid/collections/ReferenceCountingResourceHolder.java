@@ -45,6 +45,10 @@ public class ReferenceCountingResourceHolder<T> implements ResourceHolder<T>
   private final Closeable closer;
   private final AtomicInteger refCount = new AtomicInteger(1);
   private final AtomicBoolean closed = new AtomicBoolean(false);
+  /**
+   * The point of Cleaner is to be referenced. Action is performed when it becomes unreachable, so it doesn't need
+   * to be used directly.
+   */
   @SuppressWarnings("unused")
   private final Cleaner cleaner;
 

@@ -17,36 +17,24 @@
  * under the License.
  */
 
-package io.druid.common.guava;
+package io.druid.segment.virtual;
 
-import com.google.common.io.OutputSupplier;
+import io.druid.math.expr.Expr;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import javax.annotation.Nullable;
 
-/**
-*/
-public class FileOutputSupplier implements OutputSupplier<OutputStream>
+public class SingleInputBindings implements Expr.ObjectBinding
 {
-  private final File file;
-  private final boolean append;
-
-  public FileOutputSupplier(File file, boolean append)
-  {
-    this.file = file;
-    this.append = append;
-  }
+  private Object value;
 
   @Override
-  public OutputStream getOutput() throws IOException
+  public Object get(final String name)
   {
-    return new FileOutputStream(file, append);
+    return value;
   }
 
-  public File getFile()
+  public void set(@Nullable final Object value)
   {
-    return file;
+    this.value = value;
   }
 }

@@ -37,11 +37,10 @@ import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.CloseableIterator;
-import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntSortedSet;
@@ -223,6 +222,7 @@ public interface IndexMerger
       IndexSpec indexSpec
   ) throws IOException;
 
+  // Faster than IndexMaker
   File convert(File inDir, File outDir, IndexSpec indexSpec) throws IOException;
 
   File convert(
@@ -310,7 +310,6 @@ public interface IndexMerger
     private final Iterable<Rowboat> index;
     private final List<String> convertedDims;
     private final int indexNumber;
-    private final List<ColumnCapabilitiesImpl> dimCapabilities;
     private final List<DimensionMerger> mergers;
 
 
@@ -318,20 +317,13 @@ public interface IndexMerger
         Iterable<Rowboat> index,
         List<String> convertedDims,
         int indexNumber,
-        final List<ColumnCapabilitiesImpl> dimCapabilities,
         final List<DimensionMerger> mergers
     )
     {
       this.index = index;
       this.convertedDims = convertedDims;
       this.indexNumber = indexNumber;
-      this.dimCapabilities = dimCapabilities;
       this.mergers = mergers;
-    }
-
-    public Iterable<Rowboat> getIndex()
-    {
-      return index;
     }
 
     @Override

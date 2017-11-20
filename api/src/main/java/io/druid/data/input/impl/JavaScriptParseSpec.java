@@ -86,8 +86,4 @@ public class JavaScriptParseSpec extends ParseSpec
     return new JavaScriptParseSpec(getTimestampSpec(), spec, function, config);
   }
 
-  public ParseSpec withFunction(String fn)
-  {
-    return new JavaScriptParseSpec(getTimestampSpec(), getDimensionsSpec(), fn, config);
-  }
 }

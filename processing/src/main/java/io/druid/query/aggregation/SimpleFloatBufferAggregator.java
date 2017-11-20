@@ -34,19 +34,6 @@ public abstract class SimpleFloatBufferAggregator implements BufferAggregator
     this.selector = selector;
   }
 
-  public BaseFloatColumnValueSelector getSelector()
-  {
-    return selector;
-  }
-
-  /**
-   * Faster equivalent to
-   * aggregator.init(buf, position);
-   * aggregator.aggregate(buf, position, value);
-   */
-  @CalledFromHotLoop
-  public abstract void putFirst(ByteBuffer buf, int position, float value);
-
   @CalledFromHotLoop
   public abstract void aggregate(ByteBuffer buf, int position, float value);
 

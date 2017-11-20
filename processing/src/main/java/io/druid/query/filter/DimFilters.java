@@ -61,28 +61,6 @@ public class DimFilters
     return new NotDimFilter(filter);
   }
 
-  public static RegexDimFilter regex(String dimension, String pattern)
-  {
-    return new RegexDimFilter(dimension, pattern, null);
-  }
-
-  public static DimFilter dimEquals(final String dimension, String... values)
-  {
-    return or(
-        Lists.transform(
-            Arrays.asList(values),
-            new Function<String, DimFilter>()
-            {
-              @Override
-              public DimFilter apply(String input)
-              {
-                return dimEquals(dimension, input);
-              }
-            }
-        )
-    );
-  }
-
   public static List<DimFilter> optimize(List<DimFilter> filters)
   {
     return filterNulls(

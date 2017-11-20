@@ -81,7 +81,7 @@ public class IncrementalIndexRowTypeBenchmark
     aggs = ingestAggregatorFactories.toArray(new AggregatorFactory[0]);
   }
 
-  private MapBasedInputRow getLongRow(long timestamp, int rowID, int dimensionCount)
+  private MapBasedInputRow getLongRow(long timestamp, int dimensionCount)
   {
     List<String> dimensionList = new ArrayList<String>(dimensionCount);
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
@@ -93,7 +93,7 @@ public class IncrementalIndexRowTypeBenchmark
     return new MapBasedInputRow(timestamp, dimensionList, builder.build());
   }
 
-  private MapBasedInputRow getFloatRow(long timestamp, int rowID, int dimensionCount)
+  private MapBasedInputRow getFloatRow(long timestamp, int dimensionCount)
   {
     List<String> dimensionList = new ArrayList<String>(dimensionCount);
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
@@ -105,7 +105,7 @@ public class IncrementalIndexRowTypeBenchmark
     return new MapBasedInputRow(timestamp, dimensionList, builder.build());
   }
 
-  private MapBasedInputRow getStringRow(long timestamp, int rowID, int dimensionCount)
+  private MapBasedInputRow getStringRow(long timestamp, int dimensionCount)
   {
     List<String> dimensionList = new ArrayList<String>(dimensionCount);
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
@@ -133,15 +133,15 @@ public class IncrementalIndexRowTypeBenchmark
     rng = new Random(9999);
 
     for (int i = 0; i < maxRows; i++) {
-      longRows.add(getLongRow(0, i, dimensionCount));
+      longRows.add(getLongRow(0, dimensionCount));
     }
 
     for (int i = 0; i < maxRows; i++) {
-      floatRows.add(getFloatRow(0, i, dimensionCount));
+      floatRows.add(getFloatRow(0, dimensionCount));
     }
 
     for (int i = 0; i < maxRows; i++) {
-      stringRows.add(getStringRow(0, i, dimensionCount));
+      stringRows.add(getStringRow(0, dimensionCount));
     }
   }
 

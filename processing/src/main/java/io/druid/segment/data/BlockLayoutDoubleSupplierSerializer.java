@@ -21,9 +21,9 @@ package io.druid.segment.data;
 
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.CompressedPools;
 import io.druid.segment.serde.MetaSerdeHelper;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -68,12 +68,6 @@ public class BlockLayoutDoubleSupplierSerializer implements DoubleSupplierSerial
   public void open() throws IOException
   {
     flattener.open();
-  }
-
-  @Override
-  public int size()
-  {
-    return numInserted;
   }
 
   @Override

@@ -45,8 +45,6 @@ import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedWriter;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.segment.writeout.SegmentWriteOutMedium;
-import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
@@ -66,6 +64,8 @@ import io.druid.segment.serde.ComplexMetrics;
 import io.druid.segment.serde.DoubleGenericColumnPartSerde;
 import io.druid.segment.serde.FloatGenericColumnPartSerde;
 import io.druid.segment.serde.LongGenericColumnPartSerde;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntSortedSet;
@@ -193,7 +193,6 @@ public class IndexMergerV9 implements IndexMerger
           mergedDimensions,
           mergedMetrics,
           rowMergerFn,
-          dimCapabilities,
           handlers,
           mergers
       );
@@ -217,7 +216,7 @@ public class IndexMergerV9 implements IndexMerger
 
       for (int i = 0; i < mergedDimensions.size(); i++) {
         DimensionMergerV9 merger = (DimensionMergerV9) mergers.get(i);
-        merger.writeIndexes(rowNumConversions, closer);
+        merger.writeIndexes(rowNumConversions);
         if (merger.canSkip()) {
           continue;
         }
@@ -968,7 +967,6 @@ public class IndexMergerV9 implements IndexMerger
       final List<String> mergedDimensions,
       final List<String> mergedMetrics,
       Function<ArrayList<Iterable<Rowboat>>, Iterable<Rowboat>> rowMergerFn,
-      final List<ColumnCapabilitiesImpl> dimCapabilities,
       final DimensionHandler[] handlers,
       final List<DimensionMerger> mergers
   )
@@ -1028,7 +1026,7 @@ public class IndexMergerV9 implements IndexMerger
       }
       boats.add(
           new MMappedIndexRowIterable(
-              target, mergedDimensions, i, dimCapabilities, mergers
+              target, mergedDimensions, i, mergers
           )
       );
     }

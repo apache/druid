@@ -146,7 +146,7 @@ public class RowSignature
    */
   public RelDataType getRelDataType(final RelDataTypeFactory typeFactory)
   {
-    final RelDataTypeFactory.FieldInfoBuilder builder = typeFactory.builder();
+    final RelDataTypeFactory.Builder builder = typeFactory.builder();
     for (final String columnName : columnNames) {
       final ValueType columnType = getColumnType(columnName);
       final RelDataType type;
@@ -177,7 +177,10 @@ public class RowSignature
             break;
           case COMPLEX:
             // Loses information about exactly what kind of complex column this is.
-            type = typeFactory.createSqlType(SqlTypeName.OTHER);
+            type = typeFactory.createTypeWithNullability(
+                typeFactory.createSqlType(SqlTypeName.OTHER),
+                true
+            );
             break;
           default:
             throw new ISE("WTF?! valueType[%s] not translatable?", columnType);

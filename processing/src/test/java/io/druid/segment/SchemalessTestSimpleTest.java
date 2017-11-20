@@ -90,8 +90,6 @@ public class SchemalessTestSimpleTest
 
   final String dataSource = "testing";
   final Granularity allGran = Granularities.ALL;
-  final String dimensionValue = "dimension";
-  final String valueValue = "value";
   final String marketDimension = "market";
   final String qualityDimension = "quality";
   final String placementDimension = "placement";
@@ -140,7 +138,7 @@ public class SchemalessTestSimpleTest
                                           )
                                       )
                                   )
-                                  .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+                                  .postAggregators(addRowsIndexConstant)
                                   .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
@@ -166,6 +164,7 @@ public class SchemalessTestSimpleTest
 
   //  @Test TODO: Handling of null values is inconsistent right now, need to make it all consistent and re-enable test
   // TODO: Complain to Eric when you see this.  It shouldn't be like this...
+  @SuppressWarnings("unused")
   public void testFullOnTopN()
   {
     TopNQuery query = new TopNQueryBuilder()

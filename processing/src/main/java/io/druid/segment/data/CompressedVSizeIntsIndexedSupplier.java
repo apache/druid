@@ -110,11 +110,6 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     return maxIntsInBufferForBytes(VSizeIndexedInts.getNumBytesForMax(maxValue));
   }
 
-  public int size()
-  {
-    return totalSize;
-  }
-
   @Override
   public IndexedInts get()
   {

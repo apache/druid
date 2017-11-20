@@ -24,9 +24,9 @@ import io.druid.common.utils.ByteUtils;
 import io.druid.io.Channels;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.segment.writeout.HeapByteBufferWriteOutBytes;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.serde.MetaSerdeHelper;
+import io.druid.segment.writeout.HeapByteBufferWriteOutBytes;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntLists;
@@ -144,13 +144,6 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
     ByteBuffer toWrite = buffer.slice();
     toWrite.limit(toWrite.limit() - (Ints.BYTES - numBytes));
     out.write(toWrite);
-  }
-
-  public byte[] getBytes()
-  {
-    byte[] bytes = new byte[buffer.remaining()];
-    buffer.asReadOnlyBuffer().get(bytes);
-    return bytes;
   }
 
   @Override

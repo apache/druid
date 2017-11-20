@@ -56,7 +56,7 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
   private final GenericIndexed<ResourceHolder<ByteBuffer>> baseIntBuffers;
   private final CompressionStrategy compression;
 
-  CompressedIntsIndexedSupplier(
+  private CompressedIntsIndexedSupplier(
       int totalSize,
       int sizePer,
       GenericIndexed<ResourceHolder<ByteBuffer>> baseIntBuffers,
@@ -67,11 +67,6 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
     this.sizePer = sizePer;
     this.baseIntBuffers = baseIntBuffers;
     this.compression = compression;
-  }
-
-  public int size()
-  {
-    return totalSize;
   }
 
   @Override

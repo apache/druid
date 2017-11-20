@@ -27,12 +27,14 @@ import io.druid.data.input.InputRow;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.ColumnSelectorFactory;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -324,9 +326,13 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       selectors.clear();
     }
 
-    RuntimeException ex = null;
-    for (ResourceHolder<ByteBuffer> buffHolder : aggBuffers) {
-      buffHolder.close();
+    Closer c = Closer.create();
+    aggBuffers.forEach(c::register);
+    try {
+      c.close();
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
     }
     aggBuffers.clear();
   }

@@ -92,7 +92,6 @@ public class FilteredAggregatorTest
       public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
       {
         final String dimensionName = dimensionSpec.getDimension();
-        final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
 
         if (dimensionName.equals("dim")) {
           return dimensionSpec.decorate(
@@ -102,9 +101,9 @@ public class FilteredAggregatorTest
                 public IndexedInts getRow()
                 {
                   if (selector.getIndex() % 3 == 2) {
-                    return new SingleIndexedInt(1);
+                    return SingleIndexedInt.of(1);
                   } else {
-                    return new SingleIndexedInt(0);
+                    return SingleIndexedInt.of(0);
                   }
                 }
 

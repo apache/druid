@@ -20,9 +20,9 @@
 package io.druid.segment.data;
 
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.segment.writeout.WriteOutBytes;
-import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.serde.MetaSerdeHelper;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
+import io.druid.segment.writeout.WriteOutBytes;
 
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
@@ -41,7 +41,10 @@ public class EntireLayoutLongSupplierSerializer implements LongSupplierSerialize
 
   private int numInserted = 0;
 
-  EntireLayoutLongSupplierSerializer(SegmentWriteOutMedium segmentWriteOutMedium, CompressionFactory.LongEncodingWriter writer)
+  EntireLayoutLongSupplierSerializer(
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      CompressionFactory.LongEncodingWriter writer
+  )
   {
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.writer = writer;

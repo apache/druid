@@ -90,6 +90,7 @@ public class LookupCoordinatorResource
   }
 
   @GET
+  @Path("/config")
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
   public Response getTiers(
       @DefaultValue("false") @QueryParam("discover") boolean discover
@@ -113,6 +114,7 @@ public class LookupCoordinatorResource
   }
 
   @POST
+  @Path("/config")
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
   @Consumes({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
   public Response updateAllLookups(
@@ -148,7 +150,7 @@ public class LookupCoordinatorResource
 
   @DELETE
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
-  @Path("/{tier}/{lookup}")
+  @Path("/config/{tier}/{lookup}")
   public Response deleteLookup(
       @PathParam("tier") String tier,
       @PathParam("lookup") String lookup,
@@ -184,7 +186,7 @@ public class LookupCoordinatorResource
 
   @POST
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
-  @Path("/{tier}/{lookup}")
+  @Path("/config/{tier}/{lookup}")
   public Response createOrUpdateLookup(
       @PathParam("tier") String tier,
       @PathParam("lookup") String lookup,
@@ -234,7 +236,7 @@ public class LookupCoordinatorResource
 
   @GET
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
-  @Path("/{tier}/{lookup}")
+  @Path("/config/{tier}/{lookup}")
   public Response getSpecificLookup(
       @PathParam("tier") String tier,
       @PathParam("lookup") String lookup
@@ -267,7 +269,7 @@ public class LookupCoordinatorResource
 
   @GET
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
-  @Path("/{tier}")
+  @Path("/config/{tier}")
   public Response getSpecificTier(
       @PathParam("tier") String tier,
       @DefaultValue("false") @QueryParam("detailed") boolean detailed

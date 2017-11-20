@@ -20,9 +20,9 @@
 package io.druid.segment.data;
 
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.segment.writeout.WriteOutBytes;
-import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.serde.MetaSerdeHelper;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
+import io.druid.segment.writeout.WriteOutBytes;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -55,12 +55,6 @@ public class EntireLayoutDoubleSupplierSerializer implements DoubleSupplierSeria
   public void open() throws IOException
   {
     valuesOut = segmentWriteOutMedium.makeWriteOutBytes();
-  }
-
-  @Override
-  public int size()
-  {
-    return numInserted;
   }
 
   @Override

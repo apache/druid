@@ -193,11 +193,6 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     return analysisTypes.contains(AnalysisType.ROLLUP);
   }
 
-  public boolean hasMinMax()
-  {
-    return analysisTypes.contains(AnalysisType.MINMAX);
-  }
-
   public byte[] getAnalysisTypesCacheKey()
   {
     int size = 1;

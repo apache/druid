@@ -60,6 +60,14 @@
     <inspection_tool class="MavenModelInspection" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="MismatchedArrayReadWrite" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="MismatchedStringBuilderQueryUpdate" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="MissingOverrideAnnotation" enabled="true" level="WARNING" enabled_by_default="true">
+      <scope name="NonGeneratedFiles" level="ERROR" enabled="true">
+        <option name="ignoreObjectMethods" value="false" />
+        <option name="ignoreAnonymousClassMethods" value="false" />
+      </scope>
+      <option name="ignoreObjectMethods" value="false" />
+      <option name="ignoreAnonymousClassMethods" value="false" />
+    </inspection_tool>
     <inspection_tool class="MisspelledEquals" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="NewStringBufferWithCharArgument" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="NonShortCircuitBoolean" enabled="true" level="ERROR" enabled_by_default="true" />
@@ -125,8 +133,38 @@
       <option name="ignoreInModuleStatements" value="true" />
     </inspection_tool>
     <inspection_tool class="UnnecessaryInterfaceModifier" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="UnusedCatchParameter" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="m_ignoreCatchBlocksWithComments" value="false" />
+      <option name="m_ignoreTestCases" value="false" />
+    </inspection_tool>
+    <inspection_tool class="UnusedImport" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="UnusedLibrary" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="UseOfPropertiesAsHashtable" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="VariableNotUsedInsideIf" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="XmlHighlighting" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="unused" enabled="true" level="WARNING" enabled_by_default="true">
+      <scope name="UnusedInspectionsScope" level="ERROR" enabled="true">
+        <option name="LOCAL_VARIABLE" value="true" />
+        <option name="FIELD" value="true" />
+        <option name="METHOD" value="true" />
+        <option name="CLASS" value="true" />
+        <option name="PARAMETER" value="true" />
+        <option name="REPORT_PARAMETER_FOR_PUBLIC_METHODS" value="true" />
+        <option name="ADD_MAINS_TO_ENTRIES" value="true" />
+        <option name="ADD_APPLET_TO_ENTRIES" value="true" />
+        <option name="ADD_SERVLET_TO_ENTRIES" value="true" />
+        <option name="ADD_NONJAVA_TO_ENTRIES" value="true" />
+      </scope>
+      <option name="LOCAL_VARIABLE" value="true" />
+      <option name="FIELD" value="true" />
+      <option name="METHOD" value="true" />
+      <option name="CLASS" value="true" />
+      <option name="PARAMETER" value="true" />
+      <option name="REPORT_PARAMETER_FOR_PUBLIC_METHODS" value="true" />
+      <option name="ADD_MAINS_TO_ENTRIES" value="true" />
+      <option name="ADD_APPLET_TO_ENTRIES" value="true" />
+      <option name="ADD_SERVLET_TO_ENTRIES" value="true" />
+      <option name="ADD_NONJAVA_TO_ENTRIES" value="true" />
+    </inspection_tool>
   </profile>
 </component>

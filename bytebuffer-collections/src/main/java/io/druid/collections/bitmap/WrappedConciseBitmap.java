@@ -24,8 +24,6 @@ import io.druid.extendedset.intset.ConciseSet;
 import io.druid.extendedset.intset.ImmutableConciseSet;
 import org.roaringbitmap.IntIterator;
 
-import java.nio.ByteBuffer;
-
 public class WrappedConciseBitmap implements MutableBitmap
 {
   /**
@@ -63,12 +61,6 @@ public class WrappedConciseBitmap implements MutableBitmap
   }
 
   @Override
-  public int compareTo(ImmutableBitmap other)
-  {
-    return bitmap.compareTo(((WrappedConciseBitmap) other).getBitmap());
-  }
-
-  @Override
   public void clear()
   {
     bitmap.clear();
@@ -80,30 +72,6 @@ public class WrappedConciseBitmap implements MutableBitmap
     WrappedConciseBitmap other = (WrappedConciseBitmap) mutableBitmap;
     ConciseSet unwrappedOtherBitmap = other.bitmap;
     bitmap.addAll(unwrappedOtherBitmap);
-  }
-
-  @Override
-  public void and(MutableBitmap mutableBitmap)
-  {
-    WrappedConciseBitmap other = (WrappedConciseBitmap) mutableBitmap;
-    ConciseSet unwrappedOtherBitmap = other.bitmap;
-    bitmap = bitmap.intersection(unwrappedOtherBitmap);
-  }
-
-  @Override
-  public void xor(MutableBitmap mutableBitmap)
-  {
-    WrappedConciseBitmap other = (WrappedConciseBitmap) mutableBitmap;
-    ConciseSet unwrappedOtherBitmap = other.bitmap;
-    bitmap = bitmap.symmetricDifference(unwrappedOtherBitmap);
-  }
-
-  @Override
-  public void andNot(MutableBitmap mutableBitmap)
-  {
-    WrappedConciseBitmap other = (WrappedConciseBitmap) mutableBitmap;
-    ConciseSet unwrappedOtherBitmap = other.bitmap;
-    bitmap = bitmap.difference(unwrappedOtherBitmap);
   }
 
   @Override
@@ -122,12 +90,6 @@ public class WrappedConciseBitmap implements MutableBitmap
   public int size()
   {
     return bitmap.size();
-  }
-
-  @Override
-  public void serialize(ByteBuffer buffer)
-  {
-    buffer.put(toBytes());
   }
 
   @Override
@@ -155,27 +117,11 @@ public class WrappedConciseBitmap implements MutableBitmap
   }
 
   @Override
-  public ImmutableBitmap union(ImmutableBitmap otherBitmap)
-  {
-    WrappedConciseBitmap other = (WrappedConciseBitmap) otherBitmap;
-    ConciseSet unwrappedOtherBitmap = other.bitmap;
-    return new WrappedConciseBitmap(bitmap.clone().union(unwrappedOtherBitmap));
-  }
-
-  @Override
   public ImmutableBitmap intersection(ImmutableBitmap otherBitmap)
   {
     WrappedConciseBitmap other = (WrappedConciseBitmap) otherBitmap;
     ConciseSet unwrappedOtherBitmap = other.bitmap;
     return new WrappedConciseBitmap(bitmap.clone().intersection(unwrappedOtherBitmap));
-  }
-
-  @Override
-  public ImmutableBitmap difference(ImmutableBitmap otherBitmap)
-  {
-    WrappedConciseBitmap other = (WrappedConciseBitmap) otherBitmap;
-    ConciseSet unwrappedOtherBitmap = other.bitmap;
-    return new WrappedConciseBitmap(bitmap.clone().difference(unwrappedOtherBitmap));
   }
 
   @Override

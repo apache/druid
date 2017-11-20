@@ -99,8 +99,7 @@ public class CompressedVSizeIndexedSupplierTest
     final byte[] bytes = baos.toByteArray();
     Assert.assertEquals(indexedSupplier.getSerializedSize(), bytes.length);
     WritableSupplier<IndexedMultivalue<IndexedInts>> deserializedIndexed = fromByteBuffer(
-        ByteBuffer.wrap(bytes),
-        ByteOrder.nativeOrder()
+        ByteBuffer.wrap(bytes)
     );
 
     assertSame(vals, deserializedIndexed.get());
@@ -143,7 +142,7 @@ public class CompressedVSizeIndexedSupplierTest
     }
   }
 
-  protected WritableSupplier<IndexedMultivalue<IndexedInts>> fromByteBuffer(ByteBuffer buffer, ByteOrder order)
+  protected WritableSupplier<IndexedMultivalue<IndexedInts>> fromByteBuffer(ByteBuffer buffer)
   {
     return CompressedVSizeIndexedSupplier.fromByteBuffer(
         buffer,

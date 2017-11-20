@@ -259,6 +259,8 @@ public class HadoopConverterTask extends ConvertSegmentTask
     }
   }
 
+  /** Called indirectly in {@link ConverterSubTask#run(TaskToolbox)}. */
+  @SuppressWarnings("unused")
   public static class JobInvoker
   {
     public static String runTask(String[] input)

@@ -44,6 +44,7 @@ public class SubstringDimExtractionFnTest
   @Test (expected = IllegalArgumentException.class)
   public void testZeroLength()
   {
+    @SuppressWarnings("unused") // expected exception
     ExtractionFn extractionFnNoLength = new SubstringDimExtractionFn(1, 0);
   }
 

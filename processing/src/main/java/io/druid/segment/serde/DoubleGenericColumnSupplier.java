@@ -22,14 +22,14 @@ package io.druid.segment.serde;
 import com.google.common.base.Supplier;
 import io.druid.segment.column.GenericColumn;
 import io.druid.segment.column.IndexedDoublesGenericColumn;
-import io.druid.segment.data.CompressedDoublesIndexedSupplier;
+import io.druid.segment.data.IndexedDoubles;
 
 
 public class DoubleGenericColumnSupplier implements Supplier<GenericColumn>
 {
-  private final CompressedDoublesIndexedSupplier column;
+  private final Supplier<IndexedDoubles> column;
 
-  public DoubleGenericColumnSupplier(CompressedDoublesIndexedSupplier column)
+  public DoubleGenericColumnSupplier(Supplier<IndexedDoubles> column)
   {
     this.column = column;
   }

@@ -120,8 +120,17 @@ public class ExprMacroTest
   public void testTimestampParse()
   {
     assertExpr("timestamp_parse(tstr)", DateTimes.of("2000-02-03T04:05:06").getMillis());
-    assertExpr("timestamp_parse(tstr_sql)", null);
+    assertExpr("timestamp_parse(tstr_sql)", DateTimes.of("2000-02-03T04:05:06").getMillis());
+    assertExpr(
+        "timestamp_parse(tstr_sql,'','America/Los_Angeles')",
+        DateTimes.of("2000-02-03T04:05:06-08:00").getMillis()
+    );
+    assertExpr("timestamp_parse('2000-02-03')", DateTimes.of("2000-02-03").getMillis());
+    assertExpr("timestamp_parse('2000-02')", DateTimes.of("2000-02-01").getMillis());
+    assertExpr("timestamp_parse('')", null);
+    assertExpr("timestamp_parse('z2000')", null);
     assertExpr("timestamp_parse(tstr_sql,'yyyy-MM-dd HH:mm:ss')", DateTimes.of("2000-02-03T04:05:06").getMillis());
+    assertExpr("timestamp_parse('02/03/2000','MM/dd/yyyy')", DateTimes.of("2000-02-03").getMillis());
     assertExpr(
         "timestamp_parse(tstr_sql,'yyyy-MM-dd HH:mm:ss','America/Los_Angeles')",
         DateTimes.of("2000-02-03T04:05:06-08:00").getMillis()

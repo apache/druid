@@ -23,12 +23,10 @@ import io.druid.java.util.common.StringUtils;
 
 public class EntryExistsException extends Exception
 {
-  private final String entryId;
 
   public EntryExistsException(String entryId, Throwable t)
   {
     super(StringUtils.format("Entry already exists: %s", entryId), t);
-    this.entryId = entryId;
   }
 
   public EntryExistsException(String entryId)
@@ -36,8 +34,4 @@ public class EntryExistsException extends Exception
     this(entryId, null);
   }
 
-  public String getEntryId()
-  {
-    return entryId;
-  }
 }

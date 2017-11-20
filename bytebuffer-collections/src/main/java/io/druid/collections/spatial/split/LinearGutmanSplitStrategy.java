@@ -107,12 +107,10 @@ public class LinearGutmanSplitStrategy extends GutmanSplitStrategy
    * Algorithm LinearPickNext. PickNext simply choose any of the remaining entries.
    *
    * @param nodes  - remaining nodes
-   * @param groups - the left and right groups
-   *
    * @return - the optimal selected node
    */
   @Override
-  public Node pickNext(List<Node> nodes, Node[] groups)
+  public Node pickNext(List<Node> nodes)
   {
     return nodes.remove(0);
   }

@@ -30,9 +30,7 @@ import io.druid.collections.spatial.RTree;
 import io.druid.collections.spatial.split.LinearGutmanSplitStrategy;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
@@ -45,12 +43,13 @@ import io.druid.segment.data.CompressedVSizeIntsIndexedWriter;
 import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.GenericIndexedWriter;
+import io.druid.segment.data.ImmutableRTreeObjectStrategy;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedIntsWriter;
-import io.druid.segment.data.IndexedRTree;
 import io.druid.segment.data.VSizeIndexedIntsWriter;
 import io.druid.segment.data.VSizeIndexedWriter;
 import io.druid.segment.serde.DictionaryEncodedColumnPartSerde;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import it.unimi.dsi.fastutil.ints.IntIterable;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
@@ -271,7 +270,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
   }
 
   @Override
-  public void writeIndexes(List<IntBuffer> segmentRowNumConversions, Closer closer) throws IOException
+  public void writeIndexes(List<IntBuffer> segmentRowNumConversions) throws IOException
   {
     long dimStartTime = System.currentTimeMillis();
     final BitmapSerdeFactory bitmapSerdeFactory = indexSpec.getBitmapSerdeFactory();
@@ -283,6 +282,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
         indexSpec.getBitmapSerdeFactory().getObjectStrategy()
     );
     bitmapWriter.open();
+    bitmapWriter.setObjectsNotSorted();
 
     BitmapFactory bitmapFactory = bitmapSerdeFactory.getBitmapFactory();
 
@@ -291,7 +291,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     if (hasSpatial) {
       spatialWriter = new ByteBufferWriter<>(
           segmentWriteOutMedium,
-          new IndexedRTree.ImmutableRTreeObjectStrategy(bitmapFactory)
+          new ImmutableRTreeObjectStrategy(bitmapFactory)
       );
       spatialWriter.open();
       tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50, bitmapFactory), bitmapFactory);
@@ -515,11 +515,6 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     {
       this.baseValues = baseValues;
       this.conversionBuffer = conversionBuffer;
-    }
-
-    public int size()
-    {
-      return baseValues.size();
     }
 
     @Nonnull

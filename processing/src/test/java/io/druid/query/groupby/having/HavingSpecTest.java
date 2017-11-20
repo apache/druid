@@ -101,6 +101,7 @@ public class HavingSpecTest
         "value", 1.3
     );
     ObjectMapper mapper = new DefaultObjectMapper();
+    @SuppressWarnings("unused") // expected exception
     HavingSpec spec = mapper.convertValue(greaterMap, HavingSpec.class);
 
   }

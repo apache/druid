@@ -25,27 +25,19 @@ import io.druid.java.util.common.IAE;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-public class CompressedDoublesIndexedSupplier implements Supplier<IndexedDoubles>
+public class CompressedDoublesIndexedSupplier
 {
   public static final byte LZF_VERSION = 0x1;
   public static final byte VERSION = 0x2;
 
-  private final int totalSize;
-  private final Supplier<IndexedDoubles> supplier;
-
-  public CompressedDoublesIndexedSupplier(int totalSize, Supplier<IndexedDoubles> supplier)
+  private CompressedDoublesIndexedSupplier()
   {
-    this.totalSize = totalSize;
-    this.supplier = supplier;
   }
 
-  @Override
-  public IndexedDoubles get()
-  {
-    return supplier.get();
-  }
-
-  public static CompressedDoublesIndexedSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
+  public static Supplier<IndexedDoubles> fromByteBuffer(
+      ByteBuffer buffer,
+      ByteOrder order
+  )
   {
     byte versionFromBuffer = buffer.get();
 
@@ -57,23 +49,14 @@ public class CompressedDoublesIndexedSupplier implements Supplier<IndexedDoubles
         byte compressionId = buffer.get();
         compression = CompressionStrategy.forId(compressionId);
       }
-      Supplier<IndexedDoubles> supplier = CompressionFactory.getDoubleSupplier(
+      return CompressionFactory.getDoubleSupplier(
           totalSize,
           sizePer,
           buffer.asReadOnlyBuffer(),
           order,
           compression
       );
-      return new CompressedDoublesIndexedSupplier(
-          totalSize,
-          supplier
-      );
     }
     throw new IAE("Unknown version[%s]", versionFromBuffer);
-  }
-
-  public int size()
-  {
-    return totalSize;
   }
 }

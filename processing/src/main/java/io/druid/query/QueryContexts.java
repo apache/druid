@@ -132,6 +132,23 @@ public class QueryContexts
     }
   }
 
+  public static <T> Query<T> verifyMaxQueryTimeout(Query<T> query, long maxQueryTimeout)
+  {
+    long timeout = getTimeout(query);
+    if (timeout > maxQueryTimeout) {
+      throw new IAE(
+          "configured [%s = %s] is more than enforced limit of maxQueryTimeout [%s].",
+          TIMEOUT_KEY,
+          timeout,
+          maxQueryTimeout
+      );
+    } else {
+      return query;
+    }
+  }
+
+
+
   public static <T> long getMaxScatterGatherBytes(Query<T> query)
   {
     return parseLong(query, MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);

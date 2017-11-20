@@ -19,8 +19,6 @@
 
 package io.druid.segment;
 
-import io.druid.java.util.common.io.Closer;
-
 import java.io.IOException;
 import java.nio.IntBuffer;
 import java.util.List;
@@ -133,10 +131,9 @@ public interface DimensionMerger<EncodedKeyComponentType>
    * The IntBuffer for segment A would have a mapping of 24 -> 99.
    *
    * @param segmentRowNumConversions A list of row number conversion IntBuffer objects.
-   * @param closer Add Closeables for resource cleanup to this Closer if needed
    * @throws IOException
    */
-  void writeIndexes(List<IntBuffer> segmentRowNumConversions, Closer closer) throws IOException;
+  void writeIndexes(List<IntBuffer> segmentRowNumConversions) throws IOException;
 
 
   /**

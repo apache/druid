@@ -53,12 +53,18 @@ public abstract class DimensionSchema
 
   // main druid and druid-api should really use the same ValueType enum.
   // merge them when druid-api is merged back into the main repo
+
+  /**
+   * Should be the same as {@code io.druid.segment.column.ValueType}.
+   * TODO merge them when druid-api is merged back into the main repo
+   */
   public enum ValueType
   {
     FLOAT,
     LONG,
     STRING,
     DOUBLE,
+    @SuppressWarnings("unused") // used in io.druid.segment.column.ValueType
     COMPLEX;
 
     @JsonValue

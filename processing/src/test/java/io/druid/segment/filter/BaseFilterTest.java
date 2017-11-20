@@ -97,7 +97,6 @@ public abstract class BaseFilterTest
   protected final IndexBuilder indexBuilder;
   protected final Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher;
   protected StorageAdapter adapter;
-  protected Closeable closeable;
   protected boolean cnf;
   protected boolean optimize;
   protected final String testName;
@@ -152,7 +151,6 @@ public abstract class BaseFilterTest
     }
 
     this.adapter = pair.lhs;
-    this.closeable = pair.rhs;
 
   }
 

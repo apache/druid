@@ -21,9 +21,9 @@ package io.druid.segment.data;
 
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.IndexIO;
 import io.druid.segment.serde.MetaSerdeHelper;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

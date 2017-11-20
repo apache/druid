@@ -22,9 +22,7 @@ package io.druid.segment;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import io.druid.segment.data.CompressedDoublesIndexedSupplier;
 import io.druid.segment.data.CompressedFloatsIndexedSupplier;
-import io.druid.segment.data.CompressedLongsIndexedSupplier;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.ObjectStrategy;
@@ -60,14 +58,8 @@ public class MetricHolder
     MetricHolder holder = new MetricHolder(metricName, typeName);
 
     switch (holder.type) {
-      case LONG:
-        holder.longType = CompressedLongsIndexedSupplier.fromByteBuffer(buf, ByteOrder.nativeOrder(), mapper);
-        break;
       case FLOAT:
         holder.floatType = CompressedFloatsIndexedSupplier.fromByteBuffer(buf, ByteOrder.nativeOrder());
-        break;
-      case DOUBLE:
-        holder.doubleType = CompressedDoublesIndexedSupplier.fromByteBuffer(buf, ByteOrder.nativeOrder());
         break;
       case COMPLEX:
         if (strategy != null) {
@@ -82,6 +74,9 @@ public class MetricHolder
           holder.complexType = GenericIndexed.read(buf, serdeForType.getObjectStrategy());
         }
         break;
+      case LONG:
+      case DOUBLE:
+        throw new ISE("Unsupported type[%s]", holder.type);
     }
 
     return holder;
@@ -111,9 +106,7 @@ public class MetricHolder
     }
   }
 
-  CompressedLongsIndexedSupplier longType = null;
   CompressedFloatsIndexedSupplier floatType = null;
-  CompressedDoublesIndexedSupplier doubleType = null;
   Indexed complexType = null;
 
   private MetricHolder(

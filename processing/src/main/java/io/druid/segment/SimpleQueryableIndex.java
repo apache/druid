@@ -28,6 +28,7 @@ import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.Indexed;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Map;
 
@@ -96,6 +97,7 @@ public class SimpleQueryableIndex implements QueryableIndex
     return bitmapFactory;
   }
 
+  @Nullable
   @Override
   public Column getColumn(String columnName)
   {

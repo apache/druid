@@ -35,6 +35,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.client.DruidDataSource;
+import io.druid.client.ImmutableDruidDataSource;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.guice.ManageLifecycle;
 import io.druid.java.util.common.DateTimes;
@@ -63,6 +64,7 @@ import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
 import org.skife.jdbi.v2.util.ByteArrayMapper;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -74,6 +76,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -369,15 +372,21 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   }
 
   @Override
-  public DruidDataSource getInventoryValue(String key)
+  @Nullable
+  public ImmutableDruidDataSource getInventoryValue(String key)
   {
-    return dataSourcesRef.get().get(key);
+    final DruidDataSource dataSource = dataSourcesRef.get().get(key);
+    return dataSource == null ? null : dataSource.toImmutableDruidDataSource();
   }
 
   @Override
-  public Collection<DruidDataSource> getInventory()
+  public Collection<ImmutableDruidDataSource> getInventory()
   {
-    return dataSourcesRef.get().values();
+    return dataSourcesRef.get()
+                         .values()
+                         .stream()
+                         .map(DruidDataSource::toImmutableDruidDataSource)
+                         .collect(Collectors.toList());
   }
 
   @Override
@@ -495,7 +504,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
         }
 
         if (!dataSource.getSegments().contains(segment)) {
-          dataSource.addSegment(segment.getIdentifier(), segment);
+          dataSource.addSegment(segment);
         }
       }
 

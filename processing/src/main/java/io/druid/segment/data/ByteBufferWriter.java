@@ -22,9 +22,9 @@ package io.druid.segment.data;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.segment.writeout.WriteOutBytes;
-import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.serde.Serializer;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
+import io.druid.segment.writeout.WriteOutBytes;
 
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;

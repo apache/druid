@@ -39,7 +39,6 @@ import java.util.Random;
 @RunWith(Parameterized.class)
 public class TopNSequenceTest
 {
-  private static final long SEED = 2L;
   private static final Ordering<String> ASC = Ordering.natural();
   private static final Ordering<String> DESC = Ordering.natural().reverse();
 

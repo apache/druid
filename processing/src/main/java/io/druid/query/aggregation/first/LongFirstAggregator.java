@@ -28,18 +28,12 @@ public class LongFirstAggregator implements Aggregator
 
   private final BaseLongColumnValueSelector valueSelector;
   private final BaseLongColumnValueSelector timeSelector;
-  private final String name;
 
   protected long firstTime;
   protected long firstValue;
 
-  public LongFirstAggregator(
-      String name,
-      BaseLongColumnValueSelector timeSelector,
-      BaseLongColumnValueSelector valueSelector
-  )
+  public LongFirstAggregator(BaseLongColumnValueSelector timeSelector, BaseLongColumnValueSelector valueSelector)
   {
-    this.name = name;
     this.valueSelector = valueSelector;
     this.timeSelector = timeSelector;
 

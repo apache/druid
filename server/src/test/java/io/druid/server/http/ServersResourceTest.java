@@ -51,7 +51,7 @@ public class ServersResourceTest
                                      .version("v0")
                                      .size(1L)
                                      .build();
-    dummyServer.addDataSegment(segment.getIdentifier(), segment);
+    dummyServer.addDataSegment(segment);
 
     CoordinatorServerView inventoryView = EasyMock.createMock(CoordinatorServerView.class);
     EasyMock.expect(inventoryView.getInventory()).andReturn(ImmutableList.of(dummyServer)).anyTimes();

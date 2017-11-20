@@ -47,6 +47,7 @@ import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.IndexerZkConfig;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import org.apache.curator.framework.CuratorFramework;
@@ -194,7 +195,8 @@ public class WorkerTaskMonitorTest
             ),
             taskConfig,
             new NoopServiceEmitter(),
-            DUMMY_NODE
+            DUMMY_NODE,
+            new ServerConfig()
         )
     );
   }

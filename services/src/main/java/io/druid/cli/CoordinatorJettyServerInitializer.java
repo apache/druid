@@ -62,7 +62,9 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
       "/fonts/*",
       "/old-console/*",
       "/coordinator/false",
-      "/overlord/false"
+      "/overlord/false",
+      "/status/health",
+      "/druid/coordinator/v1/isLeader"
   );
 
   private static Logger log = new Logger(CoordinatorJettyServerInitializer.class);
@@ -112,13 +114,15 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
 
     List<Authenticator> authenticators = null;
     AuthenticationUtils.addSecuritySanityCheckFilter(root, jsonMapper);
+
+    // perform no-op authorization for these resources
+    AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
+
     authenticators = authenticatorMapper.getAuthenticatorChain();
     AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
 
     JettyServerInitUtils.addExtensionFilters(root, injector);
 
-    // perform no-op authorization for these static resources
-    AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
 
     // Check that requests were authorized before sending responses
     AuthenticationUtils.addPreResponseAuthorizationCheckFilter(

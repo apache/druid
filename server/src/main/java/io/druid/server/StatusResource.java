@@ -38,14 +38,26 @@ import java.util.List;
 /**
  */
 @Path("/status")
-@ResourceFilters(StateResourceFilter.class)
 public class StatusResource
 {
   @GET
+  @ResourceFilters(StateResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
   public Status doGet()
   {
     return new Status(Initialization.getLoadedImplementations(DruidModule.class));
+  }
+
+  /**
+   * This is an unsecured endpoint, defined as such in UNSECURED_PATHS in the service initiailization files
+   * (e.g. CliOverlord, CoordinatorJettyServerInitializer)
+   */
+  @GET
+  @Path("/health")
+  @Produces(MediaType.APPLICATION_JSON)
+  public boolean getHealth()
+  {
+    return true;
   }
 
   public static class Status

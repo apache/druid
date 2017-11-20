@@ -27,7 +27,6 @@ class SimpleColumn implements Column
 {
   private final ColumnCapabilities capabilities;
   private final Supplier<DictionaryEncodedColumn> dictionaryEncodedColumn;
-  private final Supplier<RunLengthColumn> runLengthColumn;
   private final Supplier<GenericColumn> genericColumn;
   private final Supplier<ComplexColumn> complexColumn;
   private final Supplier<BitmapIndex> bitmapIndex;
@@ -36,7 +35,6 @@ class SimpleColumn implements Column
   SimpleColumn(
       ColumnCapabilities capabilities,
       Supplier<DictionaryEncodedColumn> dictionaryEncodedColumn,
-      Supplier<RunLengthColumn> runLengthColumn,
       Supplier<GenericColumn> genericColumn,
       Supplier<ComplexColumn> complexColumn,
       Supplier<BitmapIndex> bitmapIndex,
@@ -45,7 +43,6 @@ class SimpleColumn implements Column
   {
     this.capabilities = capabilities;
     this.dictionaryEncodedColumn = dictionaryEncodedColumn;
-    this.runLengthColumn = runLengthColumn;
     this.genericColumn = genericColumn;
     this.complexColumn = complexColumn;
     this.bitmapIndex = bitmapIndex;
@@ -70,12 +67,6 @@ class SimpleColumn implements Column
   public DictionaryEncodedColumn getDictionaryEncoding()
   {
     return dictionaryEncodedColumn == null ? null : dictionaryEncodedColumn.get();
-  }
-
-  @Override
-  public RunLengthColumn getRunLengthColumn()
-  {
-    return runLengthColumn == null ? null : runLengthColumn.get();
   }
 
   @Override

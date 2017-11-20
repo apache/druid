@@ -32,8 +32,7 @@ import io.druid.guice.annotations.EscalatedClient;
 import io.druid.guice.annotations.EscalatedGlobal;
 import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.StringUtils;
-import io.druid.server.security.Authenticator;
-import io.druid.server.security.AuthenticatorMapper;
+import io.druid.server.security.Escalator;
 
 import java.lang.annotation.Annotation;
 import java.util.Set;
@@ -106,7 +105,7 @@ public class HttpClientModule implements Module
   public static class HttpClientProvider extends AbstractHttpClientProvider<HttpClient>
   {
     private boolean isEscalated;
-    private Authenticator escalatingAuthenticator;
+    private Escalator escalator;
 
     public HttpClientProvider(boolean isEscalated)
     {
@@ -126,9 +125,9 @@ public class HttpClientModule implements Module
     }
 
     @Inject
-    public void inject(AuthenticatorMapper authenticatorMapper)
+    public void inject(Escalator escalator)
     {
-      this.escalatingAuthenticator = authenticatorMapper.getEscalatingAuthenticator();
+      this.escalator = escalator;
     }
 
     @Override
@@ -155,7 +154,7 @@ public class HttpClientModule implements Module
       );
 
       if (isEscalated) {
-        return escalatingAuthenticator.createEscalatedClient(client);
+        return escalator.createEscalatedClient(client);
       } else {
         return client;
       }

@@ -34,7 +34,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.common.guava.ThreadRenamingRunnable;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.Rows;
@@ -42,6 +41,7 @@ import io.druid.indexer.hadoop.SegmentInputRow;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.BaseProgressIndicator;
@@ -274,7 +274,6 @@ public class IndexGeneratorJob implements Jobby
     @Override
     protected void innerMap(
         InputRow inputRow,
-        Object value,
         Context context,
         boolean reportParseExceptions
     ) throws IOException, InterruptedException
@@ -585,7 +584,7 @@ public class IndexGeneratorJob implements Jobby
                   }
                   catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                    throw new RejectedExecutionException("Got Interrupted while adding to the Queue");
+                    throw new RejectedExecutionException("Got Interrupted while adding to the Queue", e);
                   }
                 }
               }
@@ -794,6 +793,7 @@ public class IndexGeneratorJob implements Jobby
   {
     private long invalidRowCount = 0;
 
+    @SuppressWarnings("unused") // Unused now, but useful in theory, probably needs to be exposed to users.
     public long getInvalidRowCount()
     {
       return invalidRowCount;

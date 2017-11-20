@@ -54,6 +54,8 @@ import io.druid.query.spec.SpecificSegmentQueryRunner;
 import io.druid.query.spec.SpecificSegmentSpec;
 import io.druid.segment.ReferenceCountingSegment;
 import io.druid.server.SegmentManager;
+import io.druid.server.SetAndVerifyContextQueryRunner;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
@@ -79,6 +81,7 @@ public class ServerManager implements QuerySegmentWalker
   private final ObjectMapper objectMapper;
   private final CacheConfig cacheConfig;
   private final SegmentManager segmentManager;
+  private final ServerConfig serverConfig;
 
   @Inject
   public ServerManager(
@@ -89,7 +92,8 @@ public class ServerManager implements QuerySegmentWalker
       @Smile ObjectMapper objectMapper,
       Cache cache,
       CacheConfig cacheConfig,
-      SegmentManager segmentManager
+      SegmentManager segmentManager,
+      ServerConfig serverConfig
   )
   {
     this.conglomerate = conglomerate;
@@ -102,6 +106,7 @@ public class ServerManager implements QuerySegmentWalker
 
     this.cacheConfig = cacheConfig;
     this.segmentManager = segmentManager;
+    this.serverConfig = serverConfig;
   }
 
   @Override
@@ -275,40 +280,43 @@ public class ServerManager implements QuerySegmentWalker
   {
     SpecificSegmentSpec segmentSpec = new SpecificSegmentSpec(segmentDescriptor);
     String segmentId = adapter.getIdentifier();
-    return CPUTimeMetricQueryRunner.safeBuild(
-        new SpecificSegmentQueryRunner<T>(
-            new MetricsEmittingQueryRunner<T>(
-                emitter,
-                toolChest,
-                new BySegmentQueryRunner<T>(
-                    segmentId,
-                    adapter.getDataInterval().getStart(),
-                    new CachingQueryRunner<T>(
+    return new SetAndVerifyContextQueryRunner(
+        serverConfig,
+        CPUTimeMetricQueryRunner.safeBuild(
+            new SpecificSegmentQueryRunner<T>(
+                new MetricsEmittingQueryRunner<T>(
+                    emitter,
+                    toolChest,
+                    new BySegmentQueryRunner<T>(
                         segmentId,
-                        segmentDescriptor,
-                        objectMapper,
-                        cache,
-                        toolChest,
-                        new MetricsEmittingQueryRunner<T>(
-                            emitter,
+                        adapter.getDataInterval().getStart(),
+                        new CachingQueryRunner<T>(
+                            segmentId,
+                            segmentDescriptor,
+                            objectMapper,
+                            cache,
                             toolChest,
-                            new ReferenceCountingSegmentQueryRunner<T>(factory, adapter, segmentDescriptor),
-                            QueryMetrics::reportSegmentTime,
-                            queryMetrics -> queryMetrics.segment(segmentId)
-                        ),
-                        cachingExec,
-                        cacheConfig
-                    )
-                ),
-                QueryMetrics::reportSegmentAndCacheTime,
-                queryMetrics -> queryMetrics.segment(segmentId)
-            ).withWaitMeasuredFromNow(),
-            segmentSpec
-        ),
-        toolChest,
-        emitter,
-        cpuTimeAccumulator,
-        false
+                            new MetricsEmittingQueryRunner<T>(
+                                emitter,
+                                toolChest,
+                                new ReferenceCountingSegmentQueryRunner<T>(factory, adapter, segmentDescriptor),
+                                QueryMetrics::reportSegmentTime,
+                                queryMetrics -> queryMetrics.segment(segmentId)
+                            ),
+                            cachingExec,
+                            cacheConfig
+                        )
+                    ),
+                    QueryMetrics::reportSegmentAndCacheTime,
+                    queryMetrics -> queryMetrics.segment(segmentId)
+                ).withWaitMeasuredFromNow(),
+                segmentSpec
+            ),
+            toolChest,
+            emitter,
+            cpuTimeAccumulator,
+            false
+        )
     );
   }
 }

@@ -33,10 +33,9 @@ public class OverlordProxyServletTest
   public void testRewriteURI()
   {
     DruidLeaderClient druidLeaderClient = EasyMock.createMock(DruidLeaderClient.class);
-    EasyMock.expect(druidLeaderClient.findCurrentLeader()).andReturn("overlord:port");
+    EasyMock.expect(druidLeaderClient.findCurrentLeader()).andReturn("https://overlord:port");
 
     HttpServletRequest request = EasyMock.createMock(HttpServletRequest.class);
-    EasyMock.expect(request.getScheme()).andReturn("https").anyTimes();
     EasyMock.expect(request.getQueryString()).andReturn("param1=test&param2=test2").anyTimes();
     EasyMock.expect(request.getRequestURI()).andReturn("/druid/overlord/worker").anyTimes();
 
