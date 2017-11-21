@@ -203,7 +203,10 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
   {
     if (other.getName().equals(this.getName()) && other instanceof DoublesSketchAggregatorFactory) {
-      return new DoublesSketchMergeAggregatorFactory(name, k);
+      // DoublesUnion supports inputs with different k.
+      // The result will have effective k between the specified k and the minimum k from all input sketches
+      // to achieve higher accuracy as much as possible.
+      return new DoublesSketchMergeAggregatorFactory(name, Math.max(k, ((DoublesSketchAggregatorFactory) other).k));
     } else {
       throw new AggregatorFactoryNotMergeableException(this, other);
     }
