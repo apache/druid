@@ -236,6 +236,8 @@ public class Announcer
                 @Override
                 public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception
                 {
+                  // NOTE: ZooKeeper does not guarantee that we will get every event, and thus PathChildrenCache doesn't
+                  // as well. If one of the below events are missed, Announcer might not work properly.
                   log.debug("Path[%s] got event[%s]", parentPath, event);
                   switch (event.getType()) {
                     case CHILD_REMOVED:
