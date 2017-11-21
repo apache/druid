@@ -101,4 +101,50 @@ public class TaskActionPreconditionsTest
     Assert.assertEquals(3, locks.size());
     Assert.assertTrue(TaskActionPreconditions.isLockCoversSegments(task, lockbox, segments));
   }
+
+  @Test
+  public void testCheckLargeLockCoversSegments() throws Exception
+  {
+    final List<Interval> intervals = ImmutableList.of(
+        Intervals.of("2017-01-01/2017-01-04")
+    );
+
+    final Map<Interval, TaskLock> locks = intervals.stream().collect(
+        Collectors.toMap(
+            Function.identity(),
+            interval -> {
+              final TaskLock lock = lockbox.tryLock(TaskLockType.EXCLUSIVE, task, interval).getTaskLock();
+              Assert.assertNotNull(lock);
+              return lock;
+            }
+        )
+    );
+
+    Assert.assertEquals(1, locks.size());
+    Assert.assertTrue(TaskActionPreconditions.isLockCoversSegments(task, lockbox, segments));
+  }
+
+  @Test
+  public void testCheckLockCoversSegmentsWithOverlappedIntervals() throws Exception
+  {
+    final List<Interval> lockIntervals = ImmutableList.of(
+        Intervals.of("2016-12-31/2017-01-01"),
+        Intervals.of("2017-01-01/2017-01-02"),
+        Intervals.of("2017-01-02/2017-01-03")
+    );
+
+    final Map<Interval, TaskLock> locks = lockIntervals.stream().collect(
+        Collectors.toMap(
+            Function.identity(),
+            interval -> {
+              final TaskLock lock = lockbox.tryLock(TaskLockType.EXCLUSIVE, task, interval).getTaskLock();
+              Assert.assertNotNull(lock);
+              return lock;
+            }
+        )
+    );
+
+    Assert.assertEquals(3, locks.size());
+    Assert.assertFalse(TaskActionPreconditions.isLockCoversSegments(task, lockbox, segments));
+  }
 }

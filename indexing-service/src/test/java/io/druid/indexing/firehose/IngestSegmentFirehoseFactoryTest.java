@@ -30,7 +30,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 import com.google.inject.Binder;
-import com.google.inject.Guice;
 import com.google.inject.Module;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.data.input.InputRow;
@@ -51,8 +50,11 @@ import io.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
+import io.druid.indexing.common.task.NoopTask;
+import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.TaskLockbox;
+import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.supervisor.SupervisorManager;
 import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.Intervals;
@@ -71,8 +73,6 @@ import io.druid.segment.TestHelper;
 import io.druid.segment.column.Column;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.transform.ExpressionTransform;
-import io.druid.segment.transform.TransformSpec;
 import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentMover;
@@ -85,6 +85,8 @@ import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.segment.realtime.firehose.IngestSegmentFirehose;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
+import io.druid.segment.transform.ExpressionTransform;
+import io.druid.segment.transform.TransformSpec;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
@@ -124,24 +126,30 @@ public class IngestSegmentFirehoseFactoryTest
   private static final ObjectMapper MAPPER;
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
+  private static final TaskStorage TASK_STORAGE;
+  private static final TaskLockbox TASK_LOCKBOX;
+  private static final Task TASK;
 
   static {
     TestUtils testUtils = new TestUtils();
     MAPPER = setupInjectablesInObjectMapper(TestHelper.getJsonMapper());
     INDEX_MERGER_V9 = testUtils.getTestIndexMergerV9();
     INDEX_IO = testUtils.getTestIndexIO();
-  }
-
-  @Parameterized.Parameters(name = "{1}")
-  public static Collection<Object[]> constructorFeeder() throws IOException
-  {
-    final IndexSpec indexSpec = new IndexSpec();
-
-    final HeapMemoryTaskStorage ts = new HeapMemoryTaskStorage(
+    TASK_STORAGE = new HeapMemoryTaskStorage(
         new TaskStorageConfig(null)
         {
         }
     );
+    TASK_LOCKBOX = new TaskLockbox(TASK_STORAGE);
+    TASK = NoopTask.create();
+    TASK_LOCKBOX.add(TASK);
+  }
+
+  @Parameterized.Parameters(name = "{0}")
+  public static Collection<Object[]> constructorFeeder() throws IOException
+  {
+    final IndexSpec indexSpec = new IndexSpec();
+
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(JodaUtils.MIN_INSTANT)
         .withDimensionsSpec(ROW_PARSER)
@@ -164,7 +172,6 @@ public class IngestSegmentFirehoseFactoryTest
     }
     INDEX_MERGER_V9.persist(index, persistDir, indexSpec);
 
-    final TaskLockbox tl = new TaskLockbox(ts);
     final IndexerSQLMetadataStorageCoordinator mdc = new IndexerSQLMetadataStorageCoordinator(null, null, null)
     {
       final private Set<DataSegment> published = Sets.newHashSet();
@@ -208,8 +215,8 @@ public class IngestSegmentFirehoseFactoryTest
       }
     };
     final LocalTaskActionClientFactory tac = new LocalTaskActionClientFactory(
-        ts,
-        new TaskActionToolbox(tl, mdc, newMockEmitter(), EasyMock.createMock(SupervisorManager.class))
+        TASK_STORAGE,
+        new TaskActionToolbox(TASK_LOCKBOX, mdc, newMockEmitter(), EasyMock.createMock(SupervisorManager.class))
     );
     SegmentHandoffNotifierFactory notifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
     EasyMock.replay(notifierFactory);
@@ -330,32 +337,24 @@ public class IngestSegmentFirehoseFactoryTest
             null,
             ImmutableList.of(METRIC_LONG_NAME, METRIC_FLOAT_NAME)
         )) {
+          final IngestSegmentFirehoseFactory factory = new IngestSegmentFirehoseFactory(
+              TASK.getDataSource(),
+              Intervals.ETERNITY,
+              new SelectorDimFilter(DIM_NAME, DIM_VALUE, null),
+              dim_names,
+              metric_names,
+              INDEX_IO
+          );
+          factory.setTaskToolbox(taskToolboxFactory.build(TASK));
           values.add(
               new Object[]{
-                  new IngestSegmentFirehoseFactory(
-                      DATA_SOURCE_NAME,
-                      Intervals.ETERNITY,
-                      new SelectorDimFilter(DIM_NAME, DIM_VALUE, null),
-                      dim_names,
-                      metric_names,
-                      Guice.createInjector(
-                          new Module()
-                          {
-                            @Override
-                            public void configure(Binder binder)
-                            {
-                              binder.bind(TaskToolboxFactory.class).toInstance(taskToolboxFactory);
-                            }
-                          }
-                      ),
-                      INDEX_IO
-                  ),
                   StringUtils.format(
                       "DimNames[%s]MetricNames[%s]ParserDimNames[%s]",
                       dim_names == null ? "null" : "dims",
                       metric_names == null ? "null" : "metrics",
                       parser == ROW_PARSER ? "dims" : "null"
                   ),
+                  factory,
                   parser
               }
           );
@@ -400,8 +399,8 @@ public class IngestSegmentFirehoseFactoryTest
   }
 
   public IngestSegmentFirehoseFactoryTest(
-      IngestSegmentFirehoseFactory factory,
       String testName,
+      IngestSegmentFirehoseFactory factory,
       InputRowParser rowParser
   )
   {
@@ -478,7 +477,7 @@ public class IngestSegmentFirehoseFactoryTest
   }
 
   @BeforeClass
-  public static void setUpStatic() throws IOException
+  public static void setUpStatic() throws IOException, InterruptedException
   {
     for (int i = 0; i < MAX_SHARD_NUMBER; ++i) {
       segmentSet.add(buildSegment(i));
@@ -512,7 +511,7 @@ public class IngestSegmentFirehoseFactoryTest
   @Test
   public void sanityTest()
   {
-    Assert.assertEquals(DATA_SOURCE_NAME, factory.getDataSource());
+    Assert.assertEquals(TASK.getDataSource(), factory.getDataSource());
     if (factory.getDimensions() != null) {
       Assert.assertArrayEquals(new String[]{DIM_NAME}, factory.getDimensions().toArray());
     }
