@@ -119,21 +119,12 @@ public class DoublesSketchMergeBufferAggregator implements BufferAggregator
 
   private WritableMemory getMemory(final ByteBuffer buffer)
   {
-    WritableMemory mem = memCache.get(buffer);
-    if (mem == null) {
-      mem = WritableMemory.wrap(buffer);
-      memCache.put(buffer, mem);
-    }
-    return mem;
+    return memCache.computeIfAbsent(buffer, buf -> WritableMemory.wrap(buf));
   }
 
   private void putUnion(final ByteBuffer buffer, final int position, final DoublesUnion union)
   {
-    Int2ObjectMap<DoublesUnion> map = unions.get(buffer);
-    if (map == null) {
-      map = new Int2ObjectOpenHashMap<>();
-      unions.put(buffer, map);
-    }
+    Int2ObjectMap<DoublesUnion> map = unions.computeIfAbsent(buffer, buf -> new Int2ObjectOpenHashMap<>());
     map.put(position, union);
   }
 

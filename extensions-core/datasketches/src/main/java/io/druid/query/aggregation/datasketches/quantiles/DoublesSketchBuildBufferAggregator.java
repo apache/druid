@@ -113,21 +113,12 @@ public class DoublesSketchBuildBufferAggregator implements BufferAggregator
 
   private WritableMemory getMemory(final ByteBuffer buffer)
   {
-    WritableMemory mem = memCache.get(buffer);
-    if (mem == null) {
-      mem = WritableMemory.wrap(buffer);
-      memCache.put(buffer, mem);
-    }
-    return mem;
+    return memCache.computeIfAbsent(buffer, buf -> WritableMemory.wrap(buf));
   }
 
   private void putSketch(final ByteBuffer buffer, final int position, final UpdateDoublesSketch sketch)
   {
-    Int2ObjectMap<UpdateDoublesSketch> map = sketches.get(buffer);
-    if (map == null) {
-      map = new Int2ObjectOpenHashMap<>();
-      sketches.put(buffer, map);
-    }
+    Int2ObjectMap<UpdateDoublesSketch> map = sketches.computeIfAbsent(buffer, buf -> new Int2ObjectOpenHashMap<>());
     map.put(position, sketch);
   }
 

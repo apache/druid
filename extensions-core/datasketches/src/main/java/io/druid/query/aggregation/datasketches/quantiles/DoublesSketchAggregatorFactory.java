@@ -39,6 +39,7 @@ import io.druid.segment.column.ValueType;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 public class DoublesSketchAggregatorFactory extends AggregatorFactory
 {
@@ -73,7 +74,7 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
     }
     this.fieldName = fieldName;
     this.k = k == null ? DEFAULT_K : k;
-    Util.checkIfPowerOf2(this.k, "size");
+    Util.checkIfPowerOf2(this.k, "k");
     this.cacheTypeId = cacheTypeId;
   }
 
@@ -235,6 +236,9 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
       return false;
     }
     final DoublesSketchAggregatorFactory that = (DoublesSketchAggregatorFactory) o;
+    if (!name.equals(that.name)) {
+      return false;
+    }
     if (!fieldName.equals(that.fieldName)) {
       return false;
     }
@@ -247,11 +251,7 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   @Override
   public int hashCode()
   {
-    int result = name.hashCode();
-    result = 31 * result + fieldName.hashCode();
-    result = 31 * result + Integer.hashCode(k);
-    result = 31 * result + Byte.hashCode(cacheTypeId);
-    return result;
+    return Objects.hash(name, fieldName, k); // no need to use cacheTypeId here
   }
 
   @Override

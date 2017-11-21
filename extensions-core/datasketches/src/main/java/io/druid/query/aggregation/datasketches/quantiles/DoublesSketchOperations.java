@@ -25,6 +25,8 @@ import com.google.common.base.Charsets;
 import com.yahoo.memory.Memory;
 import com.yahoo.sketches.quantiles.DoublesSketch;
 
+import io.druid.java.util.common.ISE;
+
 public class DoublesSketchOperations
 {
 
@@ -39,7 +41,7 @@ public class DoublesSketchOperations
     } else if (serializedSketch instanceof DoublesSketch) {
       return (DoublesSketch) serializedSketch;
     }
-    throw new IllegalStateException(
+    throw new ISE(
         "Object is not of a type that can be deserialized to a quantiles DoublsSketch: "
             + serializedSketch.getClass());
   }

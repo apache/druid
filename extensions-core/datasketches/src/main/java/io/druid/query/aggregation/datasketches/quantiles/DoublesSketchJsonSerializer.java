@@ -22,7 +22,6 @@ package io.druid.query.aggregation.datasketches.quantiles;
 import java.io.IOException;
 
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.yahoo.sketches.quantiles.DoublesSketch;
@@ -32,7 +31,7 @@ public class DoublesSketchJsonSerializer extends JsonSerializer<DoublesSketch>
 
   @Override
   public void serialize(final DoublesSketch sketch, final JsonGenerator generator, final SerializerProvider provider)
-      throws IOException, JsonProcessingException
+      throws IOException
   {
     generator.writeBinary(sketch.toByteArray(true));
   }

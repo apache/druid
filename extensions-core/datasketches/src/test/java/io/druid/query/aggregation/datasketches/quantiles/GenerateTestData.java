@@ -30,6 +30,7 @@ import org.apache.commons.codec.binary.Base64;
 
 import com.yahoo.sketches.quantiles.UpdateDoublesSketch;
 
+// This is used for generating test data for DoublesSketchAggregatorTest
 public class GenerateTestData
 {
 

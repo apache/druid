@@ -58,6 +58,8 @@ public class DoublesSketchComplexMetricSerde extends ComplexMetricSerde
   {
     return new ComplexMetricExtractor()
     {
+      private static final int MIN_K = 2; // package one input value into the smallest sketch
+
       @Override
       public Class<?> extractedClass()
       {
@@ -76,7 +78,7 @@ public class DoublesSketchComplexMetricSerde extends ComplexMetricSerde
           if (Character.isDigit((objectString).charAt(0))) {
             try {
               Double doubleValue = Double.parseDouble(objectString);
-              UpdateDoublesSketch sketch = DoublesSketch.builder().setK(2).build();
+              UpdateDoublesSketch sketch = DoublesSketch.builder().setK(MIN_K).build();
               sketch.update(doubleValue);
               return sketch;
             }
@@ -85,7 +87,7 @@ public class DoublesSketchComplexMetricSerde extends ComplexMetricSerde
             }
           }
         } else if (object instanceof Number) { // this is for reindexing
-          UpdateDoublesSketch sketch = DoublesSketch.builder().setK(2).build();
+          UpdateDoublesSketch sketch = DoublesSketch.builder().setK(MIN_K).build();
           sketch.update(((Number) object).doubleValue());
           return sketch;
         }
