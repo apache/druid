@@ -46,14 +46,14 @@ public class ServerDiscoveryFactory
   public ServerDiscoverySelector createSelector(String serviceName)
   {
     if (serviceName == null) {
-      return new ServerDiscoverySelector(new NoopServiceProvider());
+      return new ServerDiscoverySelector(new NoopServiceProvider(), serviceName);
     }
 
     final ServiceProvider serviceProvider = serviceDiscovery
         .serviceProviderBuilder()
         .serviceName(CuratorServiceUtils.makeCanonicalServiceName(serviceName))
         .build();
-    return new ServerDiscoverySelector(serviceProvider);
+    return new ServerDiscoverySelector(serviceProvider, serviceName);
   }
 
   private static class NoopServiceProvider<T> implements ServiceProvider<T>

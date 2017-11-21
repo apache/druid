@@ -30,9 +30,9 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.server.security.Access;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticationResult;
-import io.druid.server.security.AuthenticatorMapper;
 import io.druid.server.security.AuthorizationUtils;
 import io.druid.server.security.AuthorizerMapper;
+import io.druid.server.security.Escalator;
 import io.druid.server.security.ForbiddenException;
 import io.druid.sql.calcite.rel.DruidConvention;
 import io.druid.sql.calcite.rel.DruidRel;
@@ -71,29 +71,25 @@ public class DruidPlanner implements Closeable
 {
   private final Planner planner;
   private final PlannerContext plannerContext;
-  private final AuthConfig authConfig;
   private final AuthorizerMapper authorizerMapper;
-  private final AuthenticatorMapper authenticatorMapper;
+  private final Escalator escalator;
 
   public DruidPlanner(
       final Planner planner,
       final PlannerContext plannerContext,
-      final AuthConfig authConfig,
       final AuthorizerMapper authorizerMapper,
-      final AuthenticatorMapper authenticatorMapper
+      final Escalator escalator
   )
   {
     this.planner = planner;
     this.plannerContext = plannerContext;
-    this.authConfig = authConfig;
     this.authorizerMapper = authorizerMapper;
-    this.authenticatorMapper = authenticatorMapper;
+    this.escalator = escalator;
   }
 
   public PlannerResult plan(final String sql) throws SqlParseException, ValidationException, RelConversionException
   {
-    AuthenticationResult authenticationResult = authenticatorMapper.getEscalatingAuthenticator()
-                                                                   .createEscalatedAuthenticationResult();
+    AuthenticationResult authenticationResult = escalator.createEscalatedAuthenticationResult();
     return plan(sql, null, authenticationResult);
   }
 

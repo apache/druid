@@ -66,6 +66,7 @@ import io.druid.segment.StorageAdapter;
 import io.druid.segment.loading.SegmentLoader;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.server.SegmentManager;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -155,7 +156,8 @@ public class ServerManagerTest
         new DefaultObjectMapper(),
         new LocalCacheProvider().get(),
         new CacheConfig(),
-        segmentManager
+        segmentManager,
+        new ServerConfig()
     );
 
     loadQueryable("test", "1", Intervals.of("P1d/2011-04-01"));

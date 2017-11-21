@@ -24,7 +24,6 @@ import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.TimeAndDimsHolder;
@@ -39,12 +38,6 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   public static final Comparator LONG_COMPARATOR = Comparators.<Long>naturalNullsFirst();
 
   @Override
-  public ValueType getValueType()
-  {
-    return ValueType.LONG;
-  }
-
-  @Override
   public Long processRowValsToUnsortedEncodedKeyComponent(Object dimValues)
   {
     if (dimValues instanceof List) {
@@ -52,12 +45,6 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
     }
 
     return DimensionHandlerUtils.convertObjectToLong(dimValues);
-  }
-
-  @Override
-  public Long getSortedEncodedValueFromUnsorted(Long unsortedIntermediateValue)
-  {
-    return unsortedIntermediateValue;
   }
 
   @Override
@@ -112,7 +99,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
       @Override
       public long getLong()
       {
-        final Object[] dims = currEntry.getKey().getDims();
+        final Object[] dims = currEntry.get().getDims();
 
         if (dimIndex >= dims.length || dims[dimIndex] == null) {
           return 0;
@@ -124,7 +111,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
       @Override
       public boolean isNull()
       {
-        final Object[] dims = currEntry.getKey().getDims();
+        final Object[] dims = currEntry.get().getDims();
         return dimIndex >= dims.length || dims[dimIndex] == null;
       }
 
@@ -133,7 +120,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
       @Override
       public Long getObject()
       {
-        final Object[] dims = currEntry.getKey().getDims();
+        final Object[] dims = currEntry.get().getDims();
 
         if (dimIndex >= dims.length) {
           return null;

@@ -17,36 +17,34 @@
  * under the License.
  */
 
-package io.druid.common.guava;
+package io.druid.client.cache;
 
-import com.google.common.io.OutputSupplier;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-
-/**
-*/
-public class FileOutputSupplier implements OutputSupplier<OutputStream>
+public class HybridCacheConfig
 {
-  private final File file;
-  private final boolean append;
+  @JsonProperty
+  private boolean useL2 = true;
 
-  public FileOutputSupplier(File file, boolean append)
+  @JsonProperty
+  private boolean populateL2 = true;
+
+  public boolean getUseL2()
   {
-    this.file = file;
-    this.append = append;
+    return useL2;
+  }
+
+  public boolean getPopulateL2()
+  {
+    return populateL2;
   }
 
   @Override
-  public OutputStream getOutput() throws IOException
+  public String toString()
   {
-    return new FileOutputStream(file, append);
-  }
-
-  public File getFile()
-  {
-    return file;
+    return "HybridCacheConfig{" +
+           "useL2=" + useL2 +
+           ", populateL2=" + populateL2 +
+           '}';
   }
 }

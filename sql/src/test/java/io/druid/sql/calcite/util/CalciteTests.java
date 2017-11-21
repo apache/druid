@@ -92,17 +92,18 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.server.QueryLifecycleFactory;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.NoopRequestLogger;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AllowAllAuthenticator;
+import io.druid.server.security.NoopEscalator;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
+import io.druid.server.security.Escalator;
 import io.druid.server.security.Resource;
 import io.druid.server.security.ResourceType;
 import io.druid.sql.calcite.expression.SqlOperatorConversion;
@@ -165,34 +166,38 @@ public class CalciteTests
   static {
     final Map<String, Authenticator> defaultMap = Maps.newHashMap();
     defaultMap.put(
-        "allowAll",
-        new AllowAllAuthenticator()
-        {
+        AuthConfig.ALLOW_ALL_NAME,
+        new AllowAllAuthenticator() {
           @Override
           public AuthenticationResult authenticateJDBCContext(Map<String, Object> context)
           {
-            return new AuthenticationResult((String) context.get("user"), "allowAll", null);
-          }
-
-          @Override
-          public AuthenticationResult createEscalatedAuthenticationResult()
-          {
-            return new AuthenticationResult(TEST_SUPERUSER_NAME, "allowAll", null);
+            return new AuthenticationResult((String) context.get("user"), AuthConfig.ALLOW_ALL_NAME, null);
           }
         }
     );
-    TEST_AUTHENTICATOR_MAPPER = new AuthenticatorMapper(defaultMap, "allowAll");
+    TEST_AUTHENTICATOR_MAPPER = new AuthenticatorMapper(defaultMap);
+  }
+  public static final Escalator TEST_AUTHENTICATOR_ESCALATOR;
+  static {
+    TEST_AUTHENTICATOR_ESCALATOR = new NoopEscalator() {
+
+      @Override
+      public AuthenticationResult createEscalatedAuthenticationResult()
+      {
+        return SUPER_USER_AUTH_RESULT;
+      }
+    };
   }
 
   public static final AuthenticationResult REGULAR_USER_AUTH_RESULT = new AuthenticationResult(
-      "allowAll",
-      "allowAll",
+      AuthConfig.ALLOW_ALL_NAME,
+      AuthConfig.ALLOW_ALL_NAME,
       null
   );
 
   public static final AuthenticationResult SUPER_USER_AUTH_RESULT = new AuthenticationResult(
       TEST_SUPERUSER_NAME,
-      "allowAll",
+      AuthConfig.ALLOW_ALL_NAME,
       null
   );
 
@@ -254,7 +259,7 @@ public class CalciteTests
                       QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
                       SELECT_CONFIG_SUPPLIER
                   ),
-                  new SelectQueryEngine(SELECT_CONFIG_SUPPLIER),
+                  new SelectQueryEngine(),
                   QueryRunnerTestHelper.NOOP_QUERYWATCHER
               )
           )
@@ -405,7 +410,6 @@ public class CalciteTests
         new DefaultGenericQueryMetricsFactory(INJECTOR.getInstance(Key.get(ObjectMapper.class, Json.class))),
         new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
         new NoopRequestLogger(),
-        new ServerConfig(),
         new AuthConfig(),
         TEST_AUTHORIZER_MAPPER
     );
@@ -507,7 +511,7 @@ public class CalciteTests
         new TestServerInventoryView(walker.getSegments()),
         plannerConfig,
         viewManager,
-        TEST_AUTHENTICATOR_MAPPER
+        TEST_AUTHENTICATOR_ESCALATOR
     );
 
     schema.start();

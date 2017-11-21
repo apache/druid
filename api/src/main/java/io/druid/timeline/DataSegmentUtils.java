@@ -111,7 +111,7 @@ public class DataSegmentUtils
     return segmentDesc.withInterval(newInterval).toString();
   }
 
-  static class SegmentIdentifierParts
+  public static class SegmentIdentifierParts
   {
     private final String dataSource;
     private final Interval interval;
@@ -126,6 +126,7 @@ public class DataSegmentUtils
       this.trail = trail;
     }
 
+    @PublicApi
     public String getDataSource()
     {
       return dataSource;
@@ -136,6 +137,7 @@ public class DataSegmentUtils
       return interval;
     }
 
+    @PublicApi
     public String getVersion()
     {
       return version;

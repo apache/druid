@@ -70,8 +70,7 @@ public class TimeSeriesUnionQueryRunnerTest
                 new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
                 new TimeseriesQueryEngine(),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
-            ),
-            QueryRunnerTestHelper.unionDataSource
+            )
         ),
         // descending?
         Arrays.asList(false, true)

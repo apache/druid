@@ -25,7 +25,6 @@ import com.google.common.base.Predicates;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.java.util.common.logger.Logger;
 import io.druid.query.filter.Filter;
 import io.druid.segment.Cursor;
 import io.druid.segment.StorageAdapter;
@@ -40,7 +39,6 @@ import java.util.Map;
  */
 public class QueryRunnerHelper
 {
-  private static final Logger log = new Logger(QueryRunnerHelper.class);
 
   public static <T> Sequence<Result<T>> makeCursorBasedQuery(
       final StorageAdapter adapter,

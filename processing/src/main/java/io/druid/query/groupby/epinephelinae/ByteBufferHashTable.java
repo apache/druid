@@ -118,6 +118,10 @@ public class ByteBufferHashTable
     tableStart = tableArenaSize - maxBuckets * bucketSizeWithHash;
     int nextBuckets = maxBuckets * 2;
     while (true) {
+      long nextBucketsSize = (long) nextBuckets * bucketSizeWithHash;
+      if (nextBucketsSize > Integer.MAX_VALUE) {
+        break;
+      }
       final int nextTableStart = tableStart - nextBuckets * bucketSizeWithHash;
       if (nextTableStart > tableArenaSize / 2) {
         tableStart = nextTableStart;

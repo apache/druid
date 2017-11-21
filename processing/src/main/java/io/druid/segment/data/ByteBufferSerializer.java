@@ -19,12 +19,9 @@
 
 package io.druid.segment.data;
 
-import com.google.common.primitives.Ints;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.WritableByteChannel;
 
 /**
  */
@@ -45,15 +42,4 @@ public class ByteBufferSerializer<T>
     return strategy.fromByteBuffer(bufferToUse, size);
   }
 
-  public static <T> void writeToChannel(@Nullable T obj, ObjectStrategy<T> strategy, WritableByteChannel channel)
-      throws IOException
-  {
-    byte[] toWrite = strategy.toBytes(obj);
-    // For null byte array write -1 as size. 0 size will denote empty byte array.
-    int size = toWrite == null ? -1 : toWrite.length;
-    channel.write(ByteBuffer.allocate(Ints.BYTES).putInt(0, size));
-    if (size > 0) {
-      channel.write(ByteBuffer.wrap(toWrite));
-    }
-  }
 }

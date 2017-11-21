@@ -130,11 +130,6 @@ public class ImmutableNode
     return numDims;
   }
 
-  public int getNumChildren()
-  {
-    return numChildren;
-  }
-
   public boolean isLeaf()
   {
     return isLeaf;

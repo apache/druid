@@ -488,10 +488,7 @@ public class ExpressionsTest
             inputRef("t"),
             rexBuilder.makeLiteral("QUARTER")
         ),
-        DruidExpression.of(
-            null,
-            "timestamp_extract(\"t\",'QUARTER','UTC')"
-        ),
+        DruidExpression.fromExpression("timestamp_extract(\"t\",'QUARTER','UTC')"),
         1L
     );
 
@@ -502,13 +499,7 @@ public class ExpressionsTest
             rexBuilder.makeLiteral("DAY"),
             rexBuilder.makeLiteral("America/Los_Angeles")
         ),
-        DruidExpression.of(
-            SimpleExtraction.of(
-                "t",
-                new TimeFormatExtractionFn("d", LOS_ANGELES, null, Granularities.NONE, true)
-            ),
-            "timestamp_extract(\"t\",'DAY','America/Los_Angeles')"
-        ),
+        DruidExpression.fromExpression("timestamp_extract(\"t\",'DAY','America/Los_Angeles')"),
         2L
     );
   }
@@ -641,13 +632,7 @@ public class ExpressionsTest
             inputRef("t"),
             rexBuilder.makeLiteral("yyyy-MM-dd HH:mm:ss")
         ),
-        DruidExpression.of(
-            SimpleExtraction.of(
-                "t",
-                new TimeFormatExtractionFn("yyyy-MM-dd HH:mm:ss", DateTimeZone.UTC, null, Granularities.NONE, true)
-            ),
-            "timestamp_format(\"t\",'yyyy-MM-dd HH:mm:ss','UTC')"
-        ),
+        DruidExpression.fromExpression("timestamp_format(\"t\",'yyyy-MM-dd HH:mm:ss','UTC')"),
         "2000-02-03 04:05:06"
     );
 
@@ -658,19 +643,7 @@ public class ExpressionsTest
             rexBuilder.makeLiteral("yyyy-MM-dd HH:mm:ss"),
             rexBuilder.makeLiteral("America/Los_Angeles")
         ),
-        DruidExpression.of(
-            SimpleExtraction.of(
-                "t",
-                new TimeFormatExtractionFn(
-                    "yyyy-MM-dd HH:mm:ss",
-                    LOS_ANGELES,
-                    null,
-                    Granularities.NONE,
-                    true
-                )
-            ),
-            "timestamp_format(\"t\",'yyyy-MM-dd HH:mm:ss','America/Los_Angeles')"
-        ),
+        DruidExpression.fromExpression("timestamp_format(\"t\",'yyyy-MM-dd HH:mm:ss','America/Los_Angeles')"),
         "2000-02-02 20:05:06"
     );
   }
@@ -684,10 +657,7 @@ public class ExpressionsTest
             rexBuilder.makeFlag(TimeUnitRange.QUARTER),
             inputRef("t")
         ),
-        DruidExpression.of(
-            null,
-            "timestamp_extract(\"t\",'QUARTER','UTC')"
-        ),
+        DruidExpression.fromExpression("timestamp_extract(\"t\",'QUARTER','UTC')"),
         1L
     );
 
@@ -697,13 +667,7 @@ public class ExpressionsTest
             rexBuilder.makeFlag(TimeUnitRange.DAY),
             inputRef("t")
         ),
-        DruidExpression.of(
-            SimpleExtraction.of(
-                "t",
-                new TimeFormatExtractionFn("d", DateTimeZone.UTC, null, Granularities.NONE, true)
-            ),
-            "timestamp_extract(\"t\",'DAY','UTC')"
-        ),
+        DruidExpression.fromExpression("timestamp_extract(\"t\",'DAY','UTC')"),
         3L
     );
   }
@@ -730,7 +694,7 @@ public class ExpressionsTest
         ),
         DruidExpression.of(
             null,
-            "timestamp_parse(\"tstr\",'yyyy-MM-dd HH:mm:ss','UTC')"
+            "timestamp_parse(\"tstr\",null,'UTC')"
         ),
         DateTimes.of("2000-02-03T04:05:06Z").getMillis()
     );
@@ -790,9 +754,7 @@ public class ExpressionsTest
             inputRef("dstr")
         ),
         DruidExpression.fromExpression(
-            "timestamp_floor(timestamp_parse(\"dstr\",'yyyy-MM-dd','UTC'),'P1D',"
-            + DruidExpression.nullLiteral()
-            + ",'UTC')"
+            "timestamp_floor(timestamp_parse(\"dstr\",null,'UTC'),'P1D',null,'UTC')"
         ),
         DateTimes.of("2000-02-03").getMillis()
     );
@@ -810,9 +772,7 @@ public class ExpressionsTest
             )
         ),
         DruidExpression.fromExpression(
-            "timestamp_format(timestamp_floor(\"t\",'P1D',"
-            + DruidExpression.nullLiteral()
-            + ",'UTC'),'yyyy-MM-dd','UTC')"
+            "timestamp_format(timestamp_floor(\"t\",'P1D',null,'UTC'),'yyyy-MM-dd','UTC')"
         ),
         "2000-02-03"
     );

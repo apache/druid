@@ -35,5 +35,4 @@ public interface ColumnCapabilities
 
   boolean hasMultipleValues();
 
-  ColumnCapabilitiesImpl merge(ColumnCapabilities other);
 }

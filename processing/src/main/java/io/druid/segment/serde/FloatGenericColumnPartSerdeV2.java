@@ -157,7 +157,7 @@ public class FloatGenericColumnPartSerdeV2 implements ColumnPartSerde
       }
       builder.setType(ValueType.FLOAT)
              .setHasMultipleValues(false)
-             .setGenericColumn(new FloatGenericColumnSupplier(column, byteOrder, bitmap));
+             .setGenericColumn(new FloatGenericColumnSupplier(column, bitmap));
 
     };
   }

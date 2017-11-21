@@ -41,19 +41,16 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
   private static final EmittingLogger log = new EmittingLogger(RetryQueryRunner.class);
 
   private final QueryRunner<T> baseRunner;
-  private final QueryToolChest<T, Query<T>> toolChest;
   private final RetryQueryRunnerConfig config;
   private final ObjectMapper jsonMapper;
 
   public RetryQueryRunner(
       QueryRunner<T> baseRunner,
-      QueryToolChest<T, Query<T>> toolChest,
       RetryQueryRunnerConfig config,
       ObjectMapper jsonMapper
   )
   {
     this.baseRunner = baseRunner;
-    this.toolChest = toolChest;
     this.config = config;
     this.jsonMapper = jsonMapper;
   }

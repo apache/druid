@@ -25,6 +25,7 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.segment.NullHandlingHelper;
 import io.druid.server.security.AllowAllAuthenticator;
+import io.druid.server.security.NoopEscalator;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.planner.Calcites;
@@ -76,8 +77,8 @@ public class DruidStatementTest
         macroTable,
         plannerConfig,
         new AuthConfig(),
-        AuthTestUtils.TEST_AUTHENTICATOR_MAPPER,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        new NoopEscalator(),
         CalciteTests.getJsonMapper()
     );
   }

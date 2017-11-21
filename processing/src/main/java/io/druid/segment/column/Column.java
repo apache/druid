@@ -40,8 +40,6 @@ public interface Column
 
   DictionaryEncodedColumn getDictionaryEncoding();
 
-  RunLengthColumn getRunLengthColumn();
-
   GenericColumn getGenericColumn();
 
   ComplexColumn getComplexColumn();

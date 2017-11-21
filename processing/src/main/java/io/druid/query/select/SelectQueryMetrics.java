@@ -25,6 +25,10 @@ public interface SelectQueryMetrics extends QueryMetrics<SelectQuery>
 {
   /**
    * Sets the granularity of {@link SelectQuery#getGranularity()} of the given query as dimension.
+   *
+   * This method is going to be used in "full" metrics impl,
+   * see https://github.com/druid-io/druid/pull/4570#issuecomment-319458229
    */
+  @SuppressWarnings("unused")
   void granularity(SelectQuery query);
 }

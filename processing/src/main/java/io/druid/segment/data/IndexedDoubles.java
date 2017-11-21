@@ -33,8 +33,6 @@ public interface IndexedDoubles extends Closeable
 
   double get(int index);
 
-  void fill(int index, double[] toFill);
-
   @Override
   void close();
 

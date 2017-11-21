@@ -58,8 +58,6 @@ public class CompressedVSizeIntsIndexedWriter extends SingleValueIndexedIntsWrit
   )
   {
     this(
-        ioPeon,
-        filenameBase,
         maxValue,
         chunkFactor,
         byteOrder,
@@ -77,8 +75,6 @@ public class CompressedVSizeIntsIndexedWriter extends SingleValueIndexedIntsWrit
   }
 
   public CompressedVSizeIntsIndexedWriter(
-      final IOPeon ioPeon,
-      final String filenameBase,
       final int maxValue,
       final int chunkFactor,
       final ByteOrder byteOrder,

@@ -43,10 +43,13 @@ import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
-import io.druid.query.filter.DimFilter;
-import io.druid.query.search.SearchResultValue;
+import io.druid.query.filter.AndDimFilter;
+import io.druid.query.filter.NotDimFilter;
+import io.druid.query.filter.OrDimFilter;
+import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.search.SearchHit;
 import io.druid.query.search.SearchQuery;
+import io.druid.query.search.SearchResultValue;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
@@ -82,8 +85,6 @@ public class AppendTest
 
   final String dataSource = "testing";
   final Granularity allGran = Granularities.ALL;
-  final String dimensionValue = "dimension";
-  final String valueValue = "value";
   final String marketDimension = "market";
   final String qualityDimension = "quality";
   final String placementDimension = "placement";
@@ -572,7 +573,7 @@ public class AppendTest
                                           )
                                       )
                                   )
-                                  .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+                                  .postAggregators(addRowsIndexConstant)
                                   .build();
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment3);
     HashMap<String, Object> context = new HashMap<String, Object>();
@@ -596,7 +597,7 @@ public class AppendTest
                          )
                      )
                  )
-                 .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+                 .postAggregators(addRowsIndexConstant)
                  .build();
   }
 
@@ -607,19 +608,10 @@ public class AppendTest
                  .granularity(allGran)
                  .intervals(fullOnInterval)
                  .filters(
-                     Druids.newOrDimFilterBuilder()
-                           .fields(
-                               Arrays.<DimFilter>asList(
-                                   Druids.newSelectorDimFilterBuilder()
-                                         .dimension(marketDimension)
-                                         .value("spot")
-                                         .build(),
-                                   Druids.newSelectorDimFilterBuilder()
-                                         .dimension(marketDimension)
-                                         .value("total_market")
-                                         .build()
-                               )
-                           ).build()
+                     new OrDimFilter(
+                         new SelectorDimFilter(marketDimension, "spot", null),
+                         new SelectorDimFilter(marketDimension, "total_market", null)
+                     )
                  )
                  .aggregators(
                      Lists.<AggregatorFactory>newArrayList(
@@ -632,7 +624,7 @@ public class AppendTest
                          )
                      )
                  )
-                 .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+                 .postAggregators(addRowsIndexConstant)
                  .build();
   }
 
@@ -669,19 +661,10 @@ public class AppendTest
         .metric(indexMetric)
         .threshold(3)
         .filters(
-            Druids.newAndDimFilterBuilder()
-                  .fields(
-                      Arrays.<DimFilter>asList(
-                          Druids.newSelectorDimFilterBuilder()
-                                .dimension(marketDimension)
-                                .value("spot")
-                                .build(),
-                          Druids.newSelectorDimFilterBuilder()
-                                .dimension(placementDimension)
-                                .value("preferred")
-                                .build()
-                      )
-                  ).build()
+            new AndDimFilter(
+                new SelectorDimFilter(marketDimension, "spot", null),
+                new SelectorDimFilter(placementDimension, "preferred", null)
+            )
         )
         .intervals(fullOnInterval)
         .aggregators(
@@ -713,15 +696,7 @@ public class AppendTest
   {
     return Druids.newSearchQueryBuilder()
                  .dataSource(dataSource)
-                 .filters(
-                     Druids.newNotDimFilterBuilder()
-                           .field(
-                               Druids.newSelectorDimFilterBuilder()
-                                     .dimension(marketDimension)
-                                     .value("spot")
-                                     .build()
-                           ).build()
-                 )
+                 .filters(new NotDimFilter(new SelectorDimFilter(marketDimension, "spot", null)))
                  .granularity(allGran)
                  .intervals(fullOnInterval)
                  .query("a")

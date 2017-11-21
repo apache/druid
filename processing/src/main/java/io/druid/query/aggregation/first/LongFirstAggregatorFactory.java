@@ -73,7 +73,6 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
   {
     BaseLongColumnValueSelector longColumnSelector = metricFactory.makeColumnValueSelector(fieldName);
     return NullHandlingHelper.getNullableAggregator(new LongFirstAggregator(
-        name,
         metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
         longColumnSelector
     ), longColumnSelector);
@@ -123,7 +122,7 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
       public Aggregator factorize(ColumnSelectorFactory metricFactory)
       {
         final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
-        return NullHandlingHelper.getNullableAggregator(new LongFirstAggregator(name, null, null)
+        return NullHandlingHelper.getNullableAggregator(new LongFirstAggregator(null, null)
         {
           @Override
           public void aggregate()

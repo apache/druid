@@ -99,10 +99,22 @@ public class DruidKerberosUtil
       conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
       UserGroupInformation.setConfiguration(conf);
       try {
+        //login for the first time.
         if (UserGroupInformation.getCurrentUser().hasKerberosCredentials() == false
             || !UserGroupInformation.getCurrentUser().getUserName().equals(internalClientPrincipal)) {
           log.info("trying to authenticate user [%s] with keytab [%s]", internalClientPrincipal, internalClientKeytab);
           UserGroupInformation.loginUserFromKeytab(internalClientPrincipal, internalClientKeytab);
+          return;
+        }
+        //try to relogin in case the TGT expired
+        if (UserGroupInformation.isLoginKeytabBased()) {
+          log.info("Re-Login from key tab [%s] with principal [%s]", internalClientKeytab, internalClientPrincipal);
+          UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
+          return;
+        } else if (UserGroupInformation.isLoginTicketBased()) {
+          log.info("Re-Login from Ticket cache");
+          UserGroupInformation.getLoginUser().reloginFromTicketCache();
+          return;
         }
       }
       catch (IOException e) {

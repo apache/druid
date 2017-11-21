@@ -249,11 +249,6 @@ public class TaskToolbox
     }
   }
 
-  public File getTaskWorkDir()
-  {
-    return taskWorkDir;
-  }
-
   public IndexIO getIndexIO()
   {
     return indexIO;

@@ -75,15 +75,13 @@ public class DruidClusterTest
       new ImmutableDruidDataSource(
           "src1",
           ImmutableMap.of(),
-          ImmutableMap.of(),
-          ImmutableSet.of()
+          ImmutableMap.of()
       ),
       "src2",
       new ImmutableDruidDataSource(
           "src2",
           ImmutableMap.of(),
-          ImmutableMap.of(),
-          ImmutableSet.of()
+          ImmutableMap.of()
       )
   );
 

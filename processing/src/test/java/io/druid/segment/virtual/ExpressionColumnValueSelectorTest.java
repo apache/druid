@@ -24,28 +24,27 @@ import io.druid.common.guava.SettableSupplier;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.TestObjectColumnSelector;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.List;
 
-public class ExpressionObjectSelectorTest
+public class ExpressionColumnValueSelectorTest
 {
   @Test
   public void testSupplierFromDimensionSelector()
   {
     final SettableSupplier<String> settableSupplier = new SettableSupplier<>();
-    final Supplier<Object> supplier = ExpressionObjectSelector.supplierFromDimensionSelector(
+    final Supplier<Object> supplier = ExpressionSelectors.supplierFromDimensionSelector(
         dimensionSelectorFromSupplier(settableSupplier)
     );
 
     Assert.assertNotNull(supplier);
-    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? "" : null, supplier.get());
+    Assert.assertEquals(null, supplier.get());
 
     settableSupplier.set(null);
-    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? "" : null, supplier.get());
+    Assert.assertEquals(null, supplier.get());
 
     settableSupplier.set("1234");
     Assert.assertEquals("1234", supplier.get());
@@ -55,12 +54,12 @@ public class ExpressionObjectSelectorTest
   public void testSupplierFromObjectSelectorObject()
   {
     final SettableSupplier<Object> settableSupplier = new SettableSupplier<>();
-    final Supplier<Object> supplier = ExpressionObjectSelector.supplierFromObjectSelector(
+    final Supplier<Object> supplier = ExpressionSelectors.supplierFromObjectSelector(
         objectSelectorFromSupplier(settableSupplier, Object.class)
     );
 
     Assert.assertNotNull(supplier);
-    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? "" : null, supplier.get());
+    Assert.assertEquals(null, supplier.get());
 
     settableSupplier.set(1.1f);
     Assert.assertEquals(1.1f, supplier.get());
@@ -79,7 +78,7 @@ public class ExpressionObjectSelectorTest
   public void testSupplierFromObjectSelectorNumber()
   {
     final SettableSupplier<Number> settableSupplier = new SettableSupplier<>();
-    final Supplier<Object> supplier = ExpressionObjectSelector.supplierFromObjectSelector(
+    final Supplier<Object> supplier = ExpressionSelectors.supplierFromObjectSelector(
         objectSelectorFromSupplier(settableSupplier, Number.class)
     );
 
@@ -97,7 +96,7 @@ public class ExpressionObjectSelectorTest
   public void testSupplierFromObjectSelectorString()
   {
     final SettableSupplier<String> settableSupplier = new SettableSupplier<>();
-    final Supplier<Object> supplier = ExpressionObjectSelector.supplierFromObjectSelector(
+    final Supplier<Object> supplier = ExpressionSelectors.supplierFromObjectSelector(
         objectSelectorFromSupplier(settableSupplier, String.class)
     );
 
@@ -115,7 +114,7 @@ public class ExpressionObjectSelectorTest
   public void testSupplierFromObjectSelectorList()
   {
     final SettableSupplier<List> settableSupplier = new SettableSupplier<>();
-    final Supplier<Object> supplier = ExpressionObjectSelector.supplierFromObjectSelector(
+    final Supplier<Object> supplier = ExpressionSelectors.supplierFromObjectSelector(
         objectSelectorFromSupplier(settableSupplier, List.class)
     );
 

@@ -27,7 +27,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
-import io.druid.client.DruidDataSource;
+import io.druid.client.ImmutableDruidDataSource;
 import io.druid.data.input.impl.DelimitedParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
@@ -263,7 +263,7 @@ public class HadoopConverterJobTest
       Thread.sleep(10);
     }
     manager.poll();
-    final DruidDataSource druidDataSource = manager.getInventoryValue(DATASOURCE);
+    final ImmutableDruidDataSource druidDataSource = manager.getInventoryValue(DATASOURCE);
     manager.stop();
     return Lists.newArrayList(druidDataSource.getSegments());
   }

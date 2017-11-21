@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="EntryPointsManager">
+    <list size="12">
+      <item index="0" class="java.lang.String" itemvalue="com.fasterxml.jackson.annotation.JsonCreator" />
+      <item index="1" class="java.lang.String" itemvalue="com.fasterxml.jackson.annotation.JsonProperty" />
+      <item index="2" class="java.lang.String" itemvalue="com.fasterxml.jackson.annotation.JsonValue" />
+      <item index="3" class="java.lang.String" itemvalue="com.google.inject.Inject" />
+      <item index="4" class="java.lang.String" itemvalue="com.google.inject.Provides" />
+      <item index="5" class="java.lang.String" itemvalue="io.druid.annotations.UsedInGeneratedCode" />
+      <item index="6" class="java.lang.String" itemvalue="io.druid.guice.annotations.ExtensionPoint" />
+      <item index="7" class="java.lang.String" itemvalue="io.druid.guice.annotations.PublicApi" />
+      <item index="8" class="java.lang.String" itemvalue="io.druid.java.util.common.lifecycle.LifecycleStart" />
+      <item index="9" class="java.lang.String" itemvalue="io.druid.java.util.common.lifecycle.LifecycleStop" />
+      <item index="10" class="java.lang.String" itemvalue="javax.inject.Inject" />
+      <item index="11" class="java.lang.String" itemvalue="org.openjdk.jmh.annotations.Benchmark" />
+    </list>
+    <writeAnnotations>
+      <writeAnnotation name="com.fasterxml.jackson.annotation.JacksonInject" />
+      <writeAnnotation name="com.fasterxml.jackson.annotation.JsonProperty" />
+      <writeAnnotation name="com.google.caliper.Param" />
+      <writeAnnotation name="io.airlift.airline.Option" />
+      <writeAnnotation name="org.openjdk.jmh.annotations.Param" />
+    </writeAnnotations>
+  </component>
+  <component name="MavenProjectsManager">
+    <option name="originalFiles">
+      <list>
+        <option value="$PROJECT_DIR$/pom.xml" />
+      </list>
+    </option>
+  </component>
+  <component name="NullableNotNullManager">
+    <option name="myDefaultNullable" value="javax.annotation.Nullable" />
+    <option name="myDefaultNotNull" value="org.jetbrains.annotations.NotNull" />
+    <option name="myNullables">
+      <value>
+        <list size="6">
+          <item index="0" class="java.lang.String" itemvalue="org.jetbrains.annotations.Nullable" />
+          <item index="1" class="java.lang.String" itemvalue="javax.annotation.Nullable" />
+          <item index="2" class="java.lang.String" itemvalue="javax.annotation.CheckForNull" />
+          <item index="3" class="java.lang.String" itemvalue="org.springframework.lang.Nullable" />
+          <item index="4" class="java.lang.String" itemvalue="edu.umd.cs.findbugs.annotations.Nullable" />
+          <item index="5" class="java.lang.String" itemvalue="android.support.annotation.Nullable" />
+        </list>
+      </value>
+    </option>
+    <option name="myNotNulls">
+      <value>
+        <list size="4">
+          <item index="0" class="java.lang.String" itemvalue="org.jetbrains.annotations.NotNull" />
+          <item index="1" class="java.lang.String" itemvalue="javax.annotation.Nonnull" />
+          <item index="2" class="java.lang.String" itemvalue="edu.umd.cs.findbugs.annotations.NonNull" />
+          <item index="3" class="java.lang.String" itemvalue="android.support.annotation.NonNull" />
+        </list>
+      </value>
+    </option>
+  </component>
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_1_8" default="false" project-jdk-name="1.8" project-jdk-type="JavaSDK">
+    <output url="file://$PROJECT_DIR$/classes" />
+  </component>
+</project>

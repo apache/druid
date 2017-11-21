@@ -36,8 +36,6 @@ import io.druid.segment.VirtualColumns;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
-import org.apache.hadoop.io.ArrayWritable;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 
 import javax.annotation.Nullable;
@@ -269,18 +267,5 @@ public class InputRowSerde
       throw new IAE("Unknown type[%s]", type);
     }
     return serde;
-  }
-}
-
-class StringArrayWritable extends ArrayWritable
-{
-  public StringArrayWritable()
-  {
-    super(Text.class);
-  }
-
-  public StringArrayWritable(Text[] strs)
-  {
-    super(Text.class, strs);
   }
 }

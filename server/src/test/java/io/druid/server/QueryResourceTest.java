@@ -42,7 +42,6 @@ import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.Result;
 import io.druid.query.SegmentDescriptor;
 import io.druid.query.timeboundary.TimeBoundaryResultValue;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.TestRequestLogger;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.security.Access;
@@ -56,7 +55,6 @@ import io.druid.server.security.ForbiddenException;
 import io.druid.server.security.Resource;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
-import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -84,21 +82,6 @@ public class QueryResourceTest
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
   private static final AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null);
 
-
-  public static final ServerConfig serverConfig = new ServerConfig()
-  {
-    @Override
-    public int getNumThreads()
-    {
-      return 1;
-    }
-
-    @Override
-    public Period getMaxIdleTime()
-    {
-      return Period.seconds(1);
-    }
-  };
   private final HttpServletRequest testServletRequest = EasyMock.createMock(HttpServletRequest.class);
   public static final QuerySegmentWalker testSegmentWalker = new QuerySegmentWalker()
   {
@@ -154,7 +137,6 @@ public class QueryResourceTest
             new DefaultGenericQueryMetricsFactory(jsonMapper),
             new NoopServiceEmitter(),
             testRequestLogger,
-            serverConfig,
             new AuthConfig(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER
         ),
@@ -265,14 +247,13 @@ public class QueryResourceTest
             new DefaultGenericQueryMetricsFactory(jsonMapper),
             new NoopServiceEmitter(),
             testRequestLogger,
-            serverConfig,
-            new AuthConfig(null, null, null),
+            new AuthConfig(null, null),
             authMapper
         ),
         jsonMapper,
         jsonMapper,
         queryManager,
-        new AuthConfig(null, null, null),
+        new AuthConfig(null, null),
         authMapper,
         new DefaultGenericQueryMetricsFactory(jsonMapper)
     );
@@ -373,14 +354,13 @@ public class QueryResourceTest
             new DefaultGenericQueryMetricsFactory(jsonMapper),
             new NoopServiceEmitter(),
             testRequestLogger,
-            serverConfig,
-            new AuthConfig(null, null, null),
+            new AuthConfig(null, null),
             authMapper
         ),
         jsonMapper,
         jsonMapper,
         queryManager,
-        new AuthConfig(null, null, null),
+        new AuthConfig(null, null),
         authMapper,
         new DefaultGenericQueryMetricsFactory(jsonMapper)
     );
@@ -495,14 +475,13 @@ public class QueryResourceTest
             new DefaultGenericQueryMetricsFactory(jsonMapper),
             new NoopServiceEmitter(),
             testRequestLogger,
-            serverConfig,
-            new AuthConfig(null, null, null),
+            new AuthConfig(null, null),
             authMapper
         ),
         jsonMapper,
         jsonMapper,
         queryManager,
-        new AuthConfig(null, null, null),
+        new AuthConfig(null, null),
         authMapper,
         new DefaultGenericQueryMetricsFactory(jsonMapper)
     );

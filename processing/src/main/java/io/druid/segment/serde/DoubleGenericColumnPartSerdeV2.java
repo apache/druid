@@ -22,6 +22,7 @@ package io.druid.segment.serde;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Supplier;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.DoubleColumnSerializer;
@@ -30,6 +31,7 @@ import io.druid.segment.data.BitmapSerde;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.ByteBufferSerializer;
 import io.druid.segment.data.CompressedDoublesIndexedSupplier;
+import io.druid.segment.data.IndexedDoubles;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -90,7 +92,7 @@ public class DoubleGenericColumnPartSerdeV2 implements ColumnPartSerde
     return (buffer, builder, columnConfig) -> {
       int offset = buffer.getInt();
       int initialPos = buffer.position();
-      final CompressedDoublesIndexedSupplier column = CompressedDoublesIndexedSupplier.fromByteBuffer(
+      final Supplier<IndexedDoubles> column = CompressedDoublesIndexedSupplier.fromByteBuffer(
           buffer,
           byteOrder,
           builder.getFileMapper()

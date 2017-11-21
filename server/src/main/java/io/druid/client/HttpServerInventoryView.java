@@ -24,7 +24,6 @@ import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.FutureCallback;
@@ -67,6 +66,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -78,6 +78,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 /**
  * This class uses CuratorInventoryManager to listen for queryable server membership which serve segments(e.g. Historicals).
@@ -294,18 +295,12 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   }
 
   @Override
-  public Iterable<DruidServer> getInventory()
+  public Collection<DruidServer> getInventory()
   {
-    return Iterables.transform(
-        servers.values(), new Function<DruidServerHolder, DruidServer>()
-        {
-          @Override
-          public DruidServer apply(DruidServerHolder input)
-          {
-            return input.druidServer;
-          }
-        }
-    );
+    return servers.values()
+                  .stream()
+                  .map(serverHolder -> serverHolder.druidServer)
+                  .collect(Collectors.toList());
   }
 
   private void runSegmentCallbacks(
@@ -657,7 +652,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     {
       if (finalPredicate.apply(Pair.of(druidServer.getMetadata(), segment))) {
         if (druidServer.getSegment(segment.getIdentifier()) == null) {
-          druidServer.addDataSegment(segment.getIdentifier(), segment);
+          druidServer.addDataSegment(segment);
           runSegmentCallbacks(
               new Function<SegmentCallback, CallbackAction>()
               {

@@ -124,7 +124,7 @@ public class IntermediateLongSupplierSerializer implements LongSupplierSerialize
 
     if (compression == CompressedObjectStrategy.CompressionStrategy.NONE) {
       delegate = new EntireLayoutLongSupplierSerializer(
-          ioPeon, filenameBase, order, writer
+          ioPeon, filenameBase, writer
       );
     } else {
       delegate = new BlockLayoutLongSupplierSerializer(

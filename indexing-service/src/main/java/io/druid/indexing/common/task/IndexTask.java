@@ -277,7 +277,7 @@ public class IndexTask extends AbstractTask
                    .filter(entry -> entry.getKey().contains(interval))
                    .map(Entry::getValue)
                    .findFirst()
-                   .orElse(null);
+                   .orElseThrow(() -> new ISE("Cannot find a version for interval[%s]", interval));
   }
 
   private static boolean isGuaranteedRollup(IndexIOConfig ioConfig, IndexTuningConfig tuningConfig)
@@ -622,7 +622,7 @@ public class IndexTask extends AbstractTask
         }
       }
 
-      segmentAllocator = (row, sequenceName, previousSegmentId) -> lookup.get(sequenceName);
+      segmentAllocator = (row, sequenceName, previousSegmentId, skipSegmentLineageCheck) -> lookup.get(sequenceName);
     } else if (ioConfig.isAppendToExisting()) {
       // Append mode: Allocate segments as needed using Overlord APIs.
       segmentAllocator = new ActionBasedSegmentAllocator(toolbox.getTaskActionClient(), dataSchema);
@@ -630,7 +630,7 @@ public class IndexTask extends AbstractTask
       // Overwrite mode, non-guaranteed rollup: We can make up our own segment ids but we don't know them in advance.
       final Map<Interval, AtomicInteger> counters = new HashMap<>();
 
-      segmentAllocator = (row, sequenceName, previousSegmentId) -> {
+      segmentAllocator = (row, sequenceName, previousSegmentId, skipSegmentLineageCheck) -> {
         final DateTime timestamp = row.getTimestamp();
         Optional<Interval> maybeInterval = granularitySpec.bucketInterval(timestamp);
         if (!maybeInterval.isPresent()) {

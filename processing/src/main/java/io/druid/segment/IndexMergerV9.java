@@ -202,12 +202,7 @@ public class IndexMergerV9 implements IndexMerger
       /************* Setup Dim Conversions **************/
       progress.progress();
       startTime = System.currentTimeMillis();
-      final ArrayList<Map<String, IntBuffer>> dimConversions = Lists.newArrayListWithCapacity(adapters.size());
-      final ArrayList<Boolean> dimensionSkipFlag = Lists.newArrayListWithCapacity(mergedDimensions.size());
-      final ArrayList<Boolean> convertMissingDimsFlags = Lists.newArrayListWithCapacity(mergedDimensions.size());
-      writeDimValueAndSetupDimConversion(
-          adapters, progress, mergedDimensions, mergers
-      );
+      writeDimValueAndSetupDimConversion(adapters, progress, mergedDimensions, mergers);
       log.info("Completed dim conversions in %,d millis.", System.currentTimeMillis() - startTime);
 
       /************* Walk through data sets, merge them, and write merged columns *************/
@@ -217,7 +212,6 @@ public class IndexMergerV9 implements IndexMerger
           mergedDimensions,
           mergedMetrics,
           rowMergerFn,
-          dimCapabilities,
           handlers,
           mergers
       );
@@ -247,7 +241,7 @@ public class IndexMergerV9 implements IndexMerger
 
       for (int i = 0; i < mergedDimensions.size(); i++) {
         DimensionMergerV9 merger = (DimensionMergerV9) mergers.get(i);
-        merger.writeIndexes(rowNumConversions, closer);
+        merger.writeIndexes(rowNumConversions);
         if (merger.canSkip()) {
           continue;
         }
@@ -763,7 +757,6 @@ public class IndexMergerV9 implements IndexMerger
     return merge(indexes, rollup, metricAggs, outDir, indexSpec, new BaseProgressIndicator());
   }
 
-  @Override
   public File merge(
       List<IndexableAdapter> indexes,
       final boolean rollup,
@@ -920,7 +913,6 @@ public class IndexMergerV9 implements IndexMerger
     return append(indexes, aggregators, outDir, indexSpec, new BaseProgressIndicator());
   }
 
-  @Override
   public File append(
       List<IndexableAdapter> indexes,
       AggregatorFactory[] aggregators,
@@ -1000,7 +992,6 @@ public class IndexMergerV9 implements IndexMerger
       final List<String> mergedDimensions,
       final List<String> mergedMetrics,
       Function<ArrayList<Iterable<Rowboat>>, Iterable<Rowboat>> rowMergerFn,
-      final List<ColumnCapabilitiesImpl> dimCapabilities,
       final DimensionHandler[] handlers,
       final List<DimensionMerger> mergers
   )
@@ -1060,7 +1051,7 @@ public class IndexMergerV9 implements IndexMerger
       }
       boats.add(
           new MMappedIndexRowIterable(
-              target, mergedDimensions, i, dimCapabilities, mergers
+              target, mergedDimensions, i, mergers
           )
       );
     }

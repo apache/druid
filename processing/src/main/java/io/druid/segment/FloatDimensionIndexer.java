@@ -24,7 +24,6 @@ import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.TimeAndDimsHolder;
@@ -36,13 +35,8 @@ import java.util.Objects;
 
 public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Float>
 {
-  public static final Comparator FLOAT_COMPARATOR = Comparators.<Float>naturalNullsFirst();
 
-  @Override
-  public ValueType getValueType()
-  {
-    return ValueType.FLOAT;
-  }
+  public static final Comparator FLOAT_COMPARATOR = Comparators.<Float>naturalNullsFirst();
 
   @Override
   public Float processRowValsToUnsortedEncodedKeyComponent(Object dimValues)
@@ -52,12 +46,6 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
     }
 
     return DimensionHandlerUtils.convertObjectToFloat(dimValues);
-  }
-
-  @Override
-  public Float getSortedEncodedValueFromUnsorted(Float unsortedIntermediateValue)
-  {
-    return unsortedIntermediateValue;
   }
 
   @Override
@@ -112,7 +100,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
       @Override
       public float getFloat()
       {
-        final Object[] dims = currEntry.getKey().getDims();
+        final Object[] dims = currEntry.get().getDims();
 
         if (dimIndex >= dims.length || dims[dimIndex] == null) {
           return 0.0f;
@@ -124,7 +112,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
       @Override
       public boolean isNull()
       {
-        final Object[] dims = currEntry.getKey().getDims();
+        final Object[] dims = currEntry.get().getDims();
         return dimIndex >= dims.length || dims[dimIndex] == null;
       }
 
@@ -133,7 +121,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
       @Override
       public Float getObject()
       {
-        final Object[] dims = currEntry.getKey().getDims();
+        final Object[] dims = currEntry.get().getDims();
 
         if (dimIndex >= dims.length) {
           return null;

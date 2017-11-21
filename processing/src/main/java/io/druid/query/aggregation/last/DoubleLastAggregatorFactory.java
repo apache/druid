@@ -73,7 +73,6 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
   {
     BaseDoubleColumnValueSelector doubleColumnSelector = metricFactory.makeColumnValueSelector(fieldName);
     return NullHandlingHelper.getNullableAggregator(new DoubleLastAggregator(
-        name,
         metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
         doubleColumnSelector
     ), doubleColumnSelector);
@@ -123,7 +122,7 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
       public Aggregator factorize(ColumnSelectorFactory metricFactory)
       {
         final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
-        return NullHandlingHelper.getNullableAggregator(new DoubleLastAggregator(name, null, null)
+        return NullHandlingHelper.getNullableAggregator(new DoubleLastAggregator(null, null)
         {
           @Override
           public void aggregate()

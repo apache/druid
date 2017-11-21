@@ -19,7 +19,6 @@
 
 package io.druid.server.security;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import io.druid.guice.ManageLifecycle;
 
@@ -30,25 +29,12 @@ import java.util.Map;
 public class AuthenticatorMapper
 {
   private Map<String, Authenticator> authenticatorMap;
-  private Authenticator escalatingAuthenticator;
 
   public AuthenticatorMapper(
-      Map<String, Authenticator> authenticatorMap,
-      String escalatingAuthenticatorName
+      Map<String, Authenticator> authenticatorMap
   )
   {
     this.authenticatorMap = authenticatorMap;
-    this.escalatingAuthenticator = authenticatorMap.get(escalatingAuthenticatorName);
-    Preconditions.checkNotNull(
-        escalatingAuthenticator,
-        "Could not find escalating authenticator with name: %s",
-        escalatingAuthenticatorName
-    );
-  }
-
-  public Authenticator getEscalatingAuthenticator()
-  {
-    return escalatingAuthenticator;
   }
 
   public List<Authenticator> getAuthenticatorChain()

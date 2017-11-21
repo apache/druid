@@ -50,9 +50,4 @@ public class TestDoubleColumnSelectorImpl extends TestDoubleColumnSelector
     ++index;
   }
 
-  public int getIndex()
-  {
-    return index;
-  }
-
 }

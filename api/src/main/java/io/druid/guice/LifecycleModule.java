@@ -75,28 +75,6 @@ public class LifecycleModule implements Module
    * is less error-prone.
    *
    * @param clazz, the class to instantiate
-   * @param annotation The annotation instance to register with Guice, usually a Named annotation
-   * @return this, for chaining.
-   */
-  public static void register(Binder binder, Class<?> clazz, Annotation annotation)
-  {
-    registerKey(binder, Key.get(clazz, annotation));
-  }
-
-  /**
-   * Registers a class/annotation combination to instantiate eagerly.  Classes mentioned here will be pulled out of
-   * the injector with an injector.getInstance() call when the lifecycle is created.
-   *
-   * Eagerly loaded classes will *not* be automatically added to the Lifecycle unless they are bound to the proper
-   * scope.  That is, they are generally eagerly loaded because the loading operation will produce some beneficial
-   * side-effect even if nothing actually directly depends on the instance.
-   *
-   * This mechanism exists to allow the {@link Lifecycle} to be the primary entry point from the injector, not to
-   * auto-register things with the {@link Lifecycle}.  It is also possible to just bind things eagerly with Guice,
-   * it is not clear which is actually the best approach.  This is more explicit, but eager bindings inside of modules
-   * is less error-prone.
-   *
-   * @param clazz, the class to instantiate
    * @param annotation The annotation class to register with Guice
    * @return this, for chaining
    */

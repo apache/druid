@@ -28,11 +28,6 @@ public interface GenericColumn extends BaseColumn, HotLoopCallee
 {
   int length();
 
-  ValueType getType();
-
-  @CalledFromHotLoop
-  String getStringSingleValueRow(int rowNum);
-
   @CalledFromHotLoop
   float getFloatSingleValueRow(int rowNum);
 

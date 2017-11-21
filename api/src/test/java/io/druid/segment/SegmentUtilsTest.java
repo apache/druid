@@ -40,7 +40,6 @@ public class SegmentUtilsTest
   public void testVersionBin() throws Exception
   {
     File dir = tempFolder.newFolder();
-    byte[] bytes = Ints.toByteArray(9);
     FileUtils.writeByteArrayToFile(new File(dir, "version.bin"), Ints.toByteArray(9));
     Assert.assertEquals(9, SegmentUtils.getVersionFromDir(dir));
   }

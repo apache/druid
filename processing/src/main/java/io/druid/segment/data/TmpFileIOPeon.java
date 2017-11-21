@@ -86,11 +86,6 @@ public class TmpFileIOPeon implements IOPeon
     createdFiles.clear();
   }
 
-  public boolean isOverwriteAllowed()
-  {
-    return allowOverwrite;
-  }
-
   @Override
   public File getFile(String filename)
   {

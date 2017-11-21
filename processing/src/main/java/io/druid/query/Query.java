@@ -74,7 +74,7 @@ public interface Query<T>
 
   String getType();
 
-  QueryRunner<T> getRunner(QuerySegmentWalker walker, Map<String, Object> context);
+  QueryRunner<T> getRunner(QuerySegmentWalker walker);
 
   List<Interval> getIntervals();
 

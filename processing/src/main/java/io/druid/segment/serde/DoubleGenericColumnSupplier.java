@@ -23,16 +23,16 @@ import com.google.common.base.Supplier;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.segment.column.GenericColumn;
 import io.druid.segment.column.IndexedDoublesGenericColumn;
-import io.druid.segment.data.CompressedDoublesIndexedSupplier;
+import io.druid.segment.data.IndexedDoubles;
 
 
 public class DoubleGenericColumnSupplier implements Supplier<GenericColumn>
 {
-  private final CompressedDoublesIndexedSupplier column;
+  private final Supplier<IndexedDoubles> column;
   private final ImmutableBitmap nullValueBitmap;
 
   public DoubleGenericColumnSupplier(
-      CompressedDoublesIndexedSupplier column,
+      Supplier<IndexedDoubles> column,
       ImmutableBitmap nullValueBitmap
   )
   {

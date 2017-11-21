@@ -17,42 +17,22 @@
  * under the License.
  */
 
-package io.druid.segment.data;
+package io.druid.sql.calcite.http;
 
-import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
+import io.druid.segment.TestHelper;
+import io.druid.sql.http.SqlQuery;
+import org.junit.Assert;
+import org.junit.Test;
 
-import java.io.IOException;
-
-/**
- */
-public class EmptyIndexedInts implements IndexedInts
+public class SqlQueryTest
 {
-  public static final EmptyIndexedInts EMPTY_INDEXED_INTS = new EmptyIndexedInts();
-
-  private EmptyIndexedInts()
+  @Test
+  public void testSerde() throws Exception
   {
-  }
-
-  @Override
-  public int size()
-  {
-    return 0;
-  }
-
-  @Override
-  public int get(int index)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public void close() throws IOException
-  {
-  }
-
-  @Override
-  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-  {
-    // nothing to inspect
+    final ObjectMapper jsonMapper = TestHelper.getJsonMapper();
+    final SqlQuery query = new SqlQuery("SELECT 1", SqlQuery.ResultFormat.ARRAY, ImmutableMap.of("useCache", false));
+    Assert.assertEquals(query, jsonMapper.readValue(jsonMapper.writeValueAsString(query), SqlQuery.class));
   }
 }

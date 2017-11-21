@@ -25,11 +25,29 @@ import java.io.IOException;
 
 public final class SingleIndexedInt implements IndexedInts
 {
+  private static final int CACHE_SIZE = 128;
+  private static final SingleIndexedInt[] CACHE = new SingleIndexedInt[CACHE_SIZE];
+
+  static {
+    for (int i = 0; i < CACHE_SIZE; i++) {
+      CACHE[i] = new SingleIndexedInt(i);
+    }
+  }
+
   private final int value;
 
-  public SingleIndexedInt(int value)
+  private SingleIndexedInt(int value)
   {
     this.value = value;
+  }
+
+  public static SingleIndexedInt of(int value)
+  {
+    if (value >= 0 && value < CACHE_SIZE) {
+      return CACHE[value];
+    } else {
+      return new SingleIndexedInt(value);
+    }
   }
 
   @Override

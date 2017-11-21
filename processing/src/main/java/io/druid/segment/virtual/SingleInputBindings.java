@@ -17,15 +17,24 @@
  * under the License.
  */
 
-package io.druid.query;
+package io.druid.segment.virtual;
 
-/**
-*/
-public class NoopQueryRunnerFactoryConglomerate implements QueryRunnerFactoryConglomerate
+import io.druid.math.expr.Expr;
+
+import javax.annotation.Nullable;
+
+public class SingleInputBindings implements Expr.ObjectBinding
 {
+  private Object value;
+
   @Override
-  public <T, QueryType extends Query<T>> QueryRunnerFactory<T, QueryType> findFactory(QueryType query)
+  public Object get(final String name)
   {
-    throw new UnsupportedOperationException();
+    return value;
+  }
+
+  public void set(@Nullable final Object value)
+  {
+    this.value = value;
   }
 }

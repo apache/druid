@@ -74,7 +74,7 @@ public abstract class AbstractIndexerTest
     // realtime tasks can get stuck waiting for handoff. https://github.com/druid-io/druid/issues/1729
     waitForAllTasksToComplete();
     Interval interval = Intervals.of(start + "/" + end);
-    coordinator.unloadSegmentsForDataSource(dataSource, interval);
+    coordinator.unloadSegmentsForDataSource(dataSource);
     RetryUtil.retryUntilFalse(
         new Callable<Boolean>()
         {

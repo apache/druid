@@ -128,7 +128,7 @@ public class FloatColumnSerializer implements GenericColumnSerializer
     channel.write(ByteBuffer.wrap(Ints.toByteArray((int) writer.getSerializedSize())));
     writer.writeToChannel(channel, smoosher);
     if (!nullRowsBitmap.isEmpty()) {
-      nullValueBitmapWriter.writeToChannel(channel, smoosher);
+      nullValueBitmapWriter.writeToChannel(channel);
     }
   }
 

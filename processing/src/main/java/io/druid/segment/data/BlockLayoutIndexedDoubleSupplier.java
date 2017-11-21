@@ -22,7 +22,6 @@ package io.druid.segment.data;
 import com.google.common.base.Supplier;
 import com.google.common.primitives.Doubles;
 import io.druid.collections.ResourceHolder;
-import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 
@@ -99,22 +98,6 @@ public class BlockLayoutIndexedDoubleSupplier implements Supplier<IndexedDoubles
       buffer = holder.get();
       doubleBuffer = buffer.asDoubleBuffer();
       currIndex = bufferNum;
-    }
-
-    @Override
-    public void fill(int index, double[] toFill)
-    {
-      if (totalSize - index < toFill.length) {
-        throw new IndexOutOfBoundsException(
-            StringUtils.format(
-                "Cannot fill array of size[%,d] at index[%,d].  Max size[%,d]", toFill.length, index, totalSize
-            )
-        );
-      }
-      for (int i = 0; i < toFill.length; i++) {
-        toFill[i] = get(index + i);
-      }
-
     }
 
     @Override

@@ -26,10 +26,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import io.druid.java.util.common.StringUtils;
-import io.druid.query.Druids;
 import io.druid.segment.filter.AndFilter;
 import io.druid.segment.filter.Filters;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -50,6 +50,11 @@ public class AndDimFilter implements DimFilter
     this.fields = fields;
   }
 
+  public AndDimFilter(DimFilter... fields)
+  {
+    this(Arrays.asList(fields));
+  }
+
   @JsonProperty
   public List<DimFilter> getFields()
   {
@@ -66,7 +71,7 @@ public class AndDimFilter implements DimFilter
   public DimFilter optimize()
   {
     List<DimFilter> elements = DimFilters.optimize(fields);
-    return elements.size() == 1 ? elements.get(0) : Druids.newAndDimFilterBuilder().fields(elements).build();
+    return elements.size() == 1 ? elements.get(0) : new AndDimFilter(elements);
   }
 
   @Override

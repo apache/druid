@@ -131,6 +131,11 @@ public class GenericIndexedWriter<T> implements Closeable
     valuesOut = new CountingOutputStream(ioPeon.makeOutputStream(makeFilename("values")));
   }
 
+  public void setObjectsNotSorted()
+  {
+    objectsSorted = false;
+  }
+
   public void write(T objectToWrite) throws IOException
   {
     if (objectsSorted && prevObject != null && strategy.compare(prevObject, objectToWrite) >= 0) {

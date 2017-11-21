@@ -41,6 +41,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * TODO rewrite to use JMH and move to the benchmarks project
+ */
 public class TopNBinaryFnBenchmark extends SimpleBenchmark
 {
   @Param({"1", "5", "10", "15"})
@@ -125,6 +128,7 @@ public class TopNBinaryFnBenchmark extends SimpleBenchmark
     );
   }
 
+  @SuppressWarnings("unused") // Supposedly called by Caliper
   public void timeMerge(int nReps)
   {
     for (int i = 0; i < nReps; i++) {

@@ -19,6 +19,7 @@
 
 package io.druid.firehose.azure;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.validation.constraints.NotNull;
@@ -35,11 +36,8 @@ public class AzureBlob
   @NotNull
   private String path = null;
 
-  public AzureBlob()
-  {
-  }
-
-  public AzureBlob(String container, String path)
+  @JsonCreator
+  public AzureBlob(@JsonProperty("container") String container, @JsonProperty("path") String path)
   {
     this.container = container;
     this.path = path;

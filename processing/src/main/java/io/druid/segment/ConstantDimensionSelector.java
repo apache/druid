@@ -51,12 +51,6 @@ public class ConstantDimensionSelector implements SingleValueHistoricalDimension
   }
 
   @Override
-  public int getRowValue()
-  {
-    return 0;
-  }
-
-  @Override
   public int getRowValue(int offset)
   {
     return 0;

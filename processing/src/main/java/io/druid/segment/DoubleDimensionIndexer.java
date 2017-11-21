@@ -24,7 +24,6 @@ import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.TimeAndDimsHolder;
@@ -39,24 +38,12 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
   public static final Comparator DOUBLE_COMPARATOR = Comparators.<Double>naturalNullsFirst();
 
   @Override
-  public ValueType getValueType()
-  {
-    return ValueType.DOUBLE;
-  }
-
-  @Override
   public Double processRowValsToUnsortedEncodedKeyComponent(Object dimValues)
   {
     if (dimValues instanceof List) {
       throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
     }
     return DimensionHandlerUtils.convertObjectToDouble(dimValues);
-  }
-
-  @Override
-  public Double getSortedEncodedValueFromUnsorted(Double unsortedIntermediateValue)
-  {
-    return unsortedIntermediateValue;
   }
 
   @Override
@@ -115,14 +102,14 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
         if (NullHandlingHelper.useDefaultValuesForNull()) {
           return false;
         }
-        final Object[] dims = currEntry.getKey().getDims();
+        final Object[] dims = currEntry.get().getDims();
         return dimIndex >= dims.length || dims[dimIndex] == null;
       }
 
       @Override
       public double getDouble()
       {
-        final Object[] dims = currEntry.getKey().getDims();
+        final Object[] dims = currEntry.get().getDims();
 
         if (dimIndex >= dims.length || dims[dimIndex] == null) {
           return 0.0;
@@ -135,7 +122,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
       @Override
       public Double getObject()
       {
-        final Object[] dims = currEntry.getKey().getDims();
+        final Object[] dims = currEntry.get().getDims();
 
         if (dimIndex >= dims.length) {
           return null;

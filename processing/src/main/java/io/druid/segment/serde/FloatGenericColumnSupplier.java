@@ -25,24 +25,19 @@ import io.druid.segment.column.GenericColumn;
 import io.druid.segment.column.IndexedFloatsGenericColumn;
 import io.druid.segment.data.CompressedFloatsIndexedSupplier;
 
-import java.nio.ByteOrder;
-
 /**
 */
 public class FloatGenericColumnSupplier implements Supplier<GenericColumn>
 {
   private final CompressedFloatsIndexedSupplier column;
-  private final ByteOrder byteOrder;
   private final ImmutableBitmap nullValueBitmap;
 
   public FloatGenericColumnSupplier(
       CompressedFloatsIndexedSupplier column,
-      ByteOrder byteOrder,
       ImmutableBitmap nullValueBitmap
   )
   {
     this.column = column;
-    this.byteOrder = byteOrder;
     this.nullValueBitmap = nullValueBitmap;
   }
 

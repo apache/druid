@@ -80,10 +80,8 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-
     ColumnValueSelector columnValueSelector = metricFactory.makeColumnValueSelector(fieldName);
     return NullHandlingHelper.getNullableAggregator(new DoubleFirstAggregator(
-        name,
         metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
         columnValueSelector
     ), columnValueSelector);
@@ -133,7 +131,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
       public Aggregator factorize(ColumnSelectorFactory metricFactory)
       {
         final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
-        return NullHandlingHelper.getNullableAggregator(new DoubleFirstAggregator(name, null, null)
+        return NullHandlingHelper.getNullableAggregator(new DoubleFirstAggregator(null, null)
         {
           @Override
           public void aggregate()

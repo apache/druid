@@ -80,7 +80,6 @@ public class FloatFirstAggregatorFactory extends AggregatorFactory
   {
     ColumnValueSelector columnValueSelector = metricFactory.makeColumnValueSelector(fieldName);
     return NullHandlingHelper.getNullableAggregator(new FloatFirstAggregator(
-        name,
         metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
         columnValueSelector
     ), columnValueSelector);
@@ -130,7 +129,7 @@ public class FloatFirstAggregatorFactory extends AggregatorFactory
       public Aggregator factorize(ColumnSelectorFactory metricFactory)
       {
         final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
-        return NullHandlingHelper.getNullableAggregator(new FloatFirstAggregator(name, null, null)
+        return NullHandlingHelper.getNullableAggregator(new FloatFirstAggregator(null, null)
         {
           @Override
           public void aggregate()

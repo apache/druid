@@ -20,9 +20,6 @@
 package io.druid.segment;
 
 import com.google.common.base.Throwables;
-import io.druid.java.util.common.io.Closer;
-import io.druid.java.util.common.logger.Logger;
-import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.CompressedObjectStrategy;
@@ -30,38 +27,27 @@ import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.IOPeon;
 import io.druid.segment.serde.LongGenericColumnPartSerdeV2;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.IntBuffer;
 import java.util.List;
 
 public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
 {
-  private static final Logger log = new Logger(LongDimensionMergerV9.class);
 
   protected String dimensionName;
-  protected ProgressIndicator progress;
   protected final IndexSpec indexSpec;
-  protected ColumnCapabilities capabilities;
-  protected final File outDir;
   protected IOPeon ioPeon;
   protected LongColumnSerializer serializer;
 
   public LongDimensionMergerV9(
       String dimensionName,
       IndexSpec indexSpec,
-      File outDir,
-      IOPeon ioPeon,
-      ColumnCapabilities capabilities,
-      ProgressIndicator progress
+      IOPeon ioPeon
   )
   {
     this.dimensionName = dimensionName;
     this.indexSpec = indexSpec;
-    this.capabilities = capabilities;
-    this.outDir = outDir;
     this.ioPeon = ioPeon;
-    this.progress = progress;
 
     try {
       setupEncodedValueWriter();
@@ -104,7 +90,7 @@ public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
   }
 
   @Override
-  public void writeIndexes(List<IntBuffer> segmentRowNumConversions, Closer closer) throws IOException
+  public void writeIndexes(List<IntBuffer> segmentRowNumConversions) throws IOException
   {
     // longs have no indices to write
   }

@@ -48,12 +48,6 @@ public class BaseProgressIndicator implements ProgressIndicator
   }
 
   @Override
-  public void progressSection(String section, String message)
-  {
-    // do nothing
-  }
-
-  @Override
   public void stopSection(String section)
   {
     // do nothing

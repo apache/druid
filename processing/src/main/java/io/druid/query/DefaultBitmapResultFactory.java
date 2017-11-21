@@ -32,12 +32,6 @@ public final class DefaultBitmapResultFactory implements BitmapResultFactory<Imm
   }
 
   @Override
-  public ImmutableBitmap wrapUnknown(ImmutableBitmap bitmap)
-  {
-    return bitmap;
-  }
-
-  @Override
   public ImmutableBitmap wrapDimensionValue(ImmutableBitmap bitmap)
   {
     return bitmap;

@@ -100,12 +100,6 @@ public class Point extends Node
   }
 
   @Override
-  public boolean contains(Node other)
-  {
-    return false;
-  }
-
-  @Override
   public boolean enclose()
   {
     return false;

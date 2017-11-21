@@ -20,7 +20,6 @@
 package io.druid.segment.data;
 
 
-import com.google.common.io.ByteSink;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 
 import java.io.Closeable;
@@ -30,9 +29,7 @@ import java.nio.channels.WritableByteChannel;
 public interface DoubleSupplierSerializer extends Closeable
 {
   void open() throws IOException;
-  int size();
   void add(double value) throws IOException;
-  void closeAndConsolidate(ByteSink consolidatedOut) throws IOException;
   long getSerializedSize();
   void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException;
 }

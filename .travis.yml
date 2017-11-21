@@ -13,45 +13,87 @@ matrix:
   include:
       # strict compilation
     - sudo: false
+      env:
+        - NAME="strict compilation"
       install: true
       # Strict compilation requires more than 2 GB
       script: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn clean -Pstrict -pl '!benchmarks' compile test-compile -B
 
       # processing module test
     - sudo: false
+      env:
+        - NAME="processing module test"
       install: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn install -q -ff -DskipTests -B
       before_script:
         - unset _JAVA_OPTIONS
       script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -B -Pparallel-test -Dmaven.fork.count=2 -pl processing
 
-      # non-processing modules test
+      # server module test
     - sudo: false
+      env:
+        - NAME="server module test"
       install: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn install -q -ff -DskipTests -B
       before_script:
         - unset _JAVA_OPTIONS
-      script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -B -Pparallel-test -Dmaven.fork.count=2 -pl '!processing'
+      # Server module test is run without the parallel-test option because it's memory sensitive and often fails with that option.
+      script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -B -pl server
+
+      # other modules test
+    - sudo: false
+      env:
+        - NAME="other modules test"
+      install: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn install -q -ff -DskipTests -B
+      before_script:
+        - unset _JAVA_OPTIONS
+
+      script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -B -Pparallel-test -Dmaven.fork.count=2 -pl '!processing,!server'
+
       # processing module test with SQL Compatible Null Handling
     - sudo: false
+      env:
+        - NAME="processing module test"
       install: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn install -q -ff -DskipTests -B
       before_script:
         - unset _JAVA_OPTIONS
-      script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -B -Pparallel-test -Dmaven.fork.count=2 -Ddruid.generic.useDefaultValueForNull=false -pl processing
+      script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -B -Pparallel-test -Dmaven.fork.count=2 -pl processing
 
-      # non-processing modules test with SQL Compatible Null Handling
+      # server module test with SQL Compatible Null Handling
     - sudo: false
+      env:
+        - NAME="server module test"
+      install: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn install -Ddruid.generic.useDefaultValueForNull=false -q -ff -DskipTests -B
+      before_script:
+        - unset _JAVA_OPTIONS
+      # Server module test is run without the parallel-test option because it's memory sensitive and often fails with that option.
+      script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -Ddruid.generic.useDefaultValueForNull=false -B -pl server
+
+      # other modules test with SQL Compatible Null Handling
+    - sudo: false
+      env:
+        - NAME="other modules test"
       install: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn install -q -ff -DskipTests -B
       before_script:
         - unset _JAVA_OPTIONS
-      script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -B -Pparallel-test -Dmaven.fork.count=2 -Ddruid.generic.useDefaultValueForNull=false -pl '!processing'
+
+      script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -Ddruid.generic.useDefaultValueForNull=false -B -Pparallel-test -Dmaven.fork.count=2 -pl '!processing,!server'
 
       # run integration tests
     - sudo: required
       services:
         - docker
       env:
+        - NAME="integration test"
         - DOCKER_IP=172.17.0.1
       install:
         # Only errors will be shown with the -q option. This is to avoid generating too many logs which make travis build failed.
         - mvn install -q -ff -DskipTests -B
       script:
         - $TRAVIS_BUILD_DIR/ci/travis_script_integration.sh
+      after_failure:
+        - for v in ~/shared/logs/*.log ; do
+          echo $v logtail ======================== ; tail -100 $v ;
+          done
+        - for v in broker middlemanager overlord router coordinator historical ; do
+          echo $v dmesg ======================== ;
+          docker exec -it druid-$v sh -c 'dmesg | tail -3' ;
+          done

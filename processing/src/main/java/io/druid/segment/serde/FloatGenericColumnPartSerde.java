@@ -128,7 +128,6 @@ public class FloatGenericColumnPartSerde implements ColumnPartSerde
                .setHasMultipleValues(false)
                .setGenericColumn(new FloatGenericColumnSupplier(
                    column,
-                   byteOrder,
                    IndexIO.LEGACY_FACTORY.getBitmapFactory()
                                          .makeEmptyImmutableBitmap()
                ));
