@@ -30,7 +30,6 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.inject.Injector;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -96,7 +95,6 @@ public class CompactionTask extends AbstractTask
   private final List<DataSegment> segments;
   private final DimensionsSpec dimensionsSpec;
   private final IndexTuningConfig tuningConfig;
-  private final Injector injector;
   private final ObjectMapper jsonMapper;
   @JsonIgnore
   private final SegmentProvider segmentProvider;
@@ -114,7 +112,6 @@ public class CompactionTask extends AbstractTask
       @Nullable @JsonProperty("dimensions") final DimensionsSpec dimensionsSpec,
       @Nullable @JsonProperty("tuningConfig") final IndexTuningConfig tuningConfig,
       @Nullable @JsonProperty("context") final Map<String, Object> context,
-      @JacksonInject Injector injector,
       @JacksonInject ObjectMapper jsonMapper
   )
   {
@@ -126,7 +123,6 @@ public class CompactionTask extends AbstractTask
     this.segments = segments;
     this.dimensionsSpec = dimensionsSpec;
     this.tuningConfig = tuningConfig;
-    this.injector = injector;
     this.jsonMapper = jsonMapper;
     this.segmentProvider = segments == null ? new SegmentProvider(dataSource, interval) : new SegmentProvider(segments);
   }
@@ -190,7 +186,6 @@ public class CompactionTask extends AbstractTask
           segmentProvider,
           dimensionsSpec,
           tuningConfig,
-          injector,
           jsonMapper
       );
 
@@ -220,7 +215,6 @@ public class CompactionTask extends AbstractTask
       SegmentProvider segmentProvider,
       DimensionsSpec dimensionsSpec,
       IndexTuningConfig tuningConfig,
-      Injector injector,
       ObjectMapper jsonMapper
   ) throws IOException, SegmentLoadingException
   {
@@ -254,7 +248,6 @@ public class CompactionTask extends AbstractTask
                 // set dimensions and metrics names to make sure that the generated dataSchema is used for the firehose
                 dataSchema.getParser().getParseSpec().getDimensionsSpec().getDimensionNames(),
                 Arrays.stream(dataSchema.getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toList()),
-                injector,
                 toolbox.getIndexIO()
             ),
             false
@@ -484,7 +477,7 @@ public class CompactionTask extends AbstractTask
         Collections.sort(segments);
         Preconditions.checkState(
             usedSegments.equals(segments),
-            "Specified segments[%s] are different from the currently used segments[%s]",
+            "Specified segments[%s] are different from the current used segments[%s]",
             segments,
             usedSegments
         );
