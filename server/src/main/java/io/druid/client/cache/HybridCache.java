@@ -22,49 +22,70 @@ package io.druid.client.cache;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.common.logger.Logger;
 
+import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class HybridCache implements Cache
 {
+  private static final Logger log = new Logger(HybridCache.class);
+
+  private final HybridCacheConfig config;
   private final Cache level1;
   private final Cache level2;
 
   private final AtomicLong hitCount = new AtomicLong(0);
   private final AtomicLong missCount = new AtomicLong(0);
 
-  public HybridCache(Cache level1, Cache level2)
+  public HybridCache(HybridCacheConfig config, Cache level1, Cache level2)
   {
+    this.config = config;
+    log.info("Config: %s", config);
     this.level1 = level1;
     this.level2 = level2;
   }
 
+  @Nullable
   @Override
   public byte[] get(NamedKey key)
   {
     byte[] res = level1.get(key);
     if (res == null) {
-      res = level2.get(key);
+      res = getL2(key);
       if (res != null) {
         level1.put(key, res);
-        hitCount.incrementAndGet();
-        return res;
       }
-      missCount.incrementAndGet();
     }
     if (res != null) {
       hitCount.incrementAndGet();
+      return res;
+    } else {
+      missCount.incrementAndGet();
+      return null;
     }
-    return res;
+  }
+
+  @Nullable
+  private byte[] getL2(NamedKey key)
+  {
+    if (config.getUseL2()) {
+      return level2.get(key);
+    } else {
+      return null;
+    }
   }
 
   @Override
   public void put(NamedKey key, byte[] value)
   {
     level1.put(key, value);
-    level2.put(key, value);
+    if (config.getPopulateL2()) {
+      level2.put(key, value);
+    }
   }
 
   @Override
@@ -77,7 +98,7 @@ public class HybridCache implements Cache
     remaining = Sets.difference(remaining, res.keySet());
 
     if (!remaining.isEmpty()) {
-      Map<NamedKey, byte[]> res2 = level2.getBulk(remaining);
+      Map<NamedKey, byte[]> res2 = getBulkL2(remaining);
       for (Map.Entry<NamedKey, byte[]> entry : res2.entrySet()) {
         level1.put(entry.getKey(), entry.getValue());
       }
@@ -92,6 +113,15 @@ public class HybridCache implements Cache
       }
     }
     return res;
+  }
+
+  private Map<NamedKey, byte[]> getBulkL2(Iterable<NamedKey> keys)
+  {
+    if (config.getUseL2()) {
+      return level2.getBulk(keys);
+    } else {
+      return Collections.emptyMap();
+    }
   }
 
   @Override

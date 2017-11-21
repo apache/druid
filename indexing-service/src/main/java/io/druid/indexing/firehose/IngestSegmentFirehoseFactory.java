@@ -30,23 +30,20 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.inject.Injector;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.indexing.common.TaskToolbox;
-import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
-import io.druid.indexing.common.task.NoopTask;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.filter.DimFilter;
 import io.druid.segment.IndexIO;
 import io.druid.segment.QueryableIndexStorageAdapter;
-import io.druid.segment.transform.TransformSpec;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.realtime.firehose.IngestSegmentFirehose;
 import io.druid.segment.realtime.firehose.WindowedStorageAdapter;
+import io.druid.segment.transform.TransformSpec;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
@@ -70,7 +67,6 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
   private final DimFilter dimFilter;
   private final List<String> dimensions;
   private final List<String> metrics;
-  private final Injector injector;
   private final IndexIO indexIO;
   private TaskToolbox taskToolbox;
 
@@ -81,7 +77,6 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
       @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("dimensions") List<String> dimensions,
       @JsonProperty("metrics") List<String> metrics,
-      @JacksonInject Injector injector,
       @JacksonInject IndexIO indexIO
   )
   {
@@ -92,7 +87,6 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
     this.dimFilter = dimFilter;
     this.dimensions = dimensions;
     this.metrics = metrics;
-    this.injector = injector;
     this.indexIO = Preconditions.checkNotNull(indexIO, "null IndexIO");
   }
 
@@ -136,12 +130,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
   {
     log.info("Connecting firehose: dataSource[%s], interval[%s]", dataSource, interval);
 
-    if (taskToolbox == null) {
-      // Noop Task is just used to create the toolbox and list segments.
-      taskToolbox = injector.getInstance(TaskToolboxFactory.class).build(
-          new NoopTask("reingest", 0, 0, null, null, null)
-      );
-    }
+    Preconditions.checkNotNull(taskToolbox, "taskToolbox is not set");
 
     try {
       final List<DataSegment> usedSegments = taskToolbox

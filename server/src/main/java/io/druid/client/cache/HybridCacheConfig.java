@@ -17,27 +17,34 @@
  * under the License.
  */
 
-package io.druid.segment.realtime.appenderator;
+package io.druid.client.cache;
 
-import io.druid.data.input.InputRow;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.io.IOException;
-
-public interface SegmentAllocator
+public class HybridCacheConfig
 {
-  /**
-   * Allocates a new segment for a given timestamp.
-   *
-   * @param row               the event which triggered this allocation request
-   * @param sequenceName      sequenceName for this allocation
-   * @param previousSegmentId segment identifier returned on the previous call to allocate for your sequenceName
-   *
-   * @return the pending segment identifier, or null if it was impossible to allocate a new segment
-   */
-  SegmentIdentifier allocate(
-      InputRow row,
-      String sequenceName,
-      String previousSegmentId,
-      boolean skipSegmentLineageCheck
-  ) throws IOException;
+  @JsonProperty
+  private boolean useL2 = true;
+
+  @JsonProperty
+  private boolean populateL2 = true;
+
+  public boolean getUseL2()
+  {
+    return useL2;
+  }
+
+  public boolean getPopulateL2()
+  {
+    return populateL2;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "HybridCacheConfig{" +
+           "useL2=" + useL2 +
+           ", populateL2=" + populateL2 +
+           '}';
+  }
 }

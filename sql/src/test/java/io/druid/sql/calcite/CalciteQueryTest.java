@@ -5429,6 +5429,54 @@ public class CalciteQueryTest
   }
 
   @Test
+  public void testTimeseriesUsingTimeFloorWithTimestampAdd() throws Exception
+  {
+    testQuery(
+        "SELECT SUM(cnt), gran FROM (\n"
+        + "  SELECT TIME_FLOOR(TIMESTAMPADD(DAY, -1, __time), 'P1M') AS gran,\n"
+        + "  cnt FROM druid.foo\n"
+        + ") AS x\n"
+        + "GROUP BY gran\n"
+        + "ORDER BY gran",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            EXPRESSION_VIRTUAL_COLUMN(
+                                "d0:v",
+                                "timestamp_floor((\"__time\" + -86400000),'P1M','','UTC')",
+                                ValueType.LONG
+                            )
+                        )
+                        .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG)))
+                        .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(
+                            new DefaultLimitSpec(
+                                ImmutableList.of(
+                                    new OrderByColumnSpec(
+                                        "d0",
+                                        OrderByColumnSpec.Direction.ASCENDING,
+                                        StringComparators.NUMERIC
+                                    )
+                                ),
+                                Integer.MAX_VALUE
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L, T("1999-12-01")},
+            new Object[]{2L, T("2000-01-01")},
+            new Object[]{1L, T("2000-12-01")},
+            new Object[]{2L, T("2001-01-01")}
+        )
+    );
+  }
+
+  @Test
   public void testTimeseriesUsingTimeFloorWithOrigin() throws Exception
   {
     testQuery(

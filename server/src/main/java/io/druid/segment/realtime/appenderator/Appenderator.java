@@ -104,7 +104,7 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * Drop all in-memory and on-disk data, and forget any previously-remembered commit metadata. This could be useful if,
    * for some reason, rows have been added that we do not actually want to hand off. Blocks until all data has been
    * cleared. This may take some time, since all pending persists must finish first.
-   *
+   * <p>
    * The add, clear, persist, persistAll, and push methods should all be called from the same thread to keep the
    * metadata committed by Committer in sync.
    */
@@ -135,7 +135,7 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    *
    * @param identifiers segment identifiers to be persisted
    * @param committer   a committer associated with all data that has been added to segments of the given identifiers so
-   *                   far
+   *                    far
    *
    * @return future that resolves when all pending data to segments of the identifiers has been persisted, contains
    * commit metadata for this persist
@@ -178,9 +178,18 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
   ListenableFuture<SegmentsAndMetadata> push(Collection<SegmentIdentifier> identifiers, Committer committer);
 
   /**
-   * Stop any currently-running processing and clean up after ourselves. This will not remove any on-disk persisted
-   * data, but it will drop any data that has not yet been persisted.
+   * Stop any currently-running processing and clean up after ourselves. This allows currently running persists and pushes
+   * to finish. This will not remove any on-disk persisted data, but it will drop any data that has not yet been persisted.
    */
   @Override
   void close();
+
+  /**
+   * Stop all processing, abandoning current pushes, currently running persist may be allowed to finish if they persist
+   * critical metadata otherwise shutdown immediately. This will not remove any on-disk persisted data,
+   * but it will drop any data that has not yet been persisted.
+   * Since this does not wait for pushes to finish, implementations have to make sure if any push is still happening
+   * in background thread then it does not cause any problems.
+   */
+  void closeNow();
 }
