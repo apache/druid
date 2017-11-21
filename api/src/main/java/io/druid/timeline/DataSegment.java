@@ -42,6 +42,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -98,6 +99,7 @@ public class DataSegment implements Comparable<DataSegment>
   private final String dataSource;
   private final Interval interval;
   private final String version;
+  @Nullable
   private final Map<String, Object> loadSpec;
   private final List<String> dimensions;
   private final List<String> metrics;
@@ -137,10 +139,16 @@ public class DataSegment implements Comparable<DataSegment>
       @JsonProperty("interval") Interval interval,
       @JsonProperty("version") String version,
       // use `Map` *NOT* `LoadSpec` because we want to do lazy materialization to prevent dependency pollution
-      @JsonProperty("loadSpec") Map<String, Object> loadSpec,
-      @JsonProperty("dimensions") @JsonDeserialize(using = CommaListJoinDeserializer.class) List<String> dimensions,
-      @JsonProperty("metrics") @JsonDeserialize(using = CommaListJoinDeserializer.class) List<String> metrics,
-      @JsonProperty("shardSpec") ShardSpec shardSpec,
+      @JsonProperty("loadSpec") @Nullable Map<String, Object> loadSpec,
+      @JsonProperty("dimensions")
+      @JsonDeserialize(using = CommaListJoinDeserializer.class)
+      @Nullable
+          List<String> dimensions,
+      @JsonProperty("metrics")
+      @JsonDeserialize(using = CommaListJoinDeserializer.class)
+      @Nullable
+          List<String> metrics,
+      @JsonProperty("shardSpec") @Nullable ShardSpec shardSpec,
       @JsonProperty("binaryVersion") Integer binaryVersion,
       @JsonProperty("size") long size,
       @JacksonInject PruneLoadSpecHolder pruneLoadSpecHolder
@@ -169,8 +177,12 @@ public class DataSegment implements Comparable<DataSegment>
     );
   }
 
-  private Map<String, Object> prepareLoadSpec(Map<String, Object> loadSpec)
+  @Nullable
+  private Map<String, Object> prepareLoadSpec(@Nullable Map<String, Object> loadSpec)
   {
+    if (loadSpec == null) {
+      return null;
+    }
     // Load spec is just of 3 entries on average; HashMap/LinkedHashMap consumes much more memory than ArrayMap
     Map<String, Object> result = new Object2ObjectArrayMap<>(loadSpec.size());
     for (Map.Entry<String, Object> e : loadSpec.entrySet()) {
@@ -179,7 +191,7 @@ public class DataSegment implements Comparable<DataSegment>
     return result;
   }
 
-  private List<String> prepareDimensionsOrMetrics(List<String> list, Interner<List<String>> interner)
+  private List<String> prepareDimensionsOrMetrics(@Nullable List<String> list, Interner<List<String>> interner)
   {
     if (list == null) {
       return ImmutableList.of();
@@ -211,6 +223,7 @@ public class DataSegment implements Comparable<DataSegment>
     return interval;
   }
 
+  @Nullable
   @JsonProperty
   public Map<String, Object> getLoadSpec()
   {
