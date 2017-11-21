@@ -189,7 +189,8 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
         new DoublesSketchAggregatorFactory(
             fieldName,
             fieldName,
-            k));
+            k)
+        );
   }
 
   @Override
