@@ -76,16 +76,25 @@ public class TestHelper
     return INDEX_IO;
   }
 
+  /** static inner class for lazy, but thread-safe evaluation of {@link #JSON_MAPPER}. */
+  private static class LazyJsonMapperHolder
+  {
+    private static final ObjectMapper JSON_MAPPER;
+    static {
+      final ObjectMapper mapper = new DefaultObjectMapper();
+      mapper.setInjectableValues(
+          new InjectableValues.Std()
+              .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
+              .addValue(ObjectMapper.class.getName(), mapper)
+              .addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT)
+      );
+      JSON_MAPPER = mapper;
+    }
+  }
+
   public static ObjectMapper getJsonMapper()
   {
-    final ObjectMapper mapper = new DefaultObjectMapper();
-    mapper.setInjectableValues(
-        new InjectableValues.Std()
-            .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
-            .addValue(ObjectMapper.class.getName(), mapper)
-            .addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT)
-    );
-    return mapper;
+    return LazyJsonMapperHolder.JSON_MAPPER;
   }
 
   public static ObjectMapper getSmileMapper()

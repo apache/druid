@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Stopwatch;
-import io.druid.TestUtil;
 import io.druid.guice.ServerModule;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
@@ -45,7 +44,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class TestUtils
 {
-  private static final Logger log = new Logger(TestUtil.class);
+  private static final Logger log = new Logger(TestUtils.class);
 
   private final ObjectMapper jsonMapper;
   private final IndexMergerV9 indexMergerV9;

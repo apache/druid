@@ -27,12 +27,12 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.HttpResponseHandler;
-import io.druid.TestUtil;
 import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscovery;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.RE;
 import io.druid.java.util.common.concurrent.Execs;
+import io.druid.segment.TestHelper;
 import io.druid.server.coordination.DataSegmentChangeRequest;
 import io.druid.server.coordination.SegmentLoadDropHandler;
 import io.druid.timeline.DataSegment;
@@ -82,7 +82,7 @@ public class HttpLoadQueuePeonTest
 
     HttpLoadQueuePeon httpLoadQueuePeon = new HttpLoadQueuePeon(
         "http://dummy:4000",
-        TestUtil.MAPPER,
+        TestHelper.getJsonMapper(),
         new TestHttpClient(),
         new TestDruidCoordinatorConfig(null, null, null, null, null, null, 10, null, false, false, Duration.ZERO) {
           @Override
@@ -190,7 +190,7 @@ public class HttpLoadQueuePeonTest
       httpResponse.setContent(ChannelBuffers.buffer(0));
       httpResponseHandler.handleResponse(httpResponse);
       try {
-        List<DataSegmentChangeRequest> changeRequests = TestUtil.MAPPER.readValue(
+        List<DataSegmentChangeRequest> changeRequests = TestHelper.getJsonMapper().readValue(
             request.getContent().array(), new TypeReference<List<DataSegmentChangeRequest>>() {}
         );
 
@@ -198,8 +198,14 @@ public class HttpLoadQueuePeonTest
         for (DataSegmentChangeRequest cr : changeRequests) {
           statuses.add(new SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus(cr, SegmentLoadDropHandler.Status.SUCCESS));
         }
-        return (ListenableFuture) Futures.immediateFuture(new ByteArrayInputStream(TestUtil.MAPPER.writerWithType(
-            HttpLoadQueuePeon.RESPONSE_ENTITY_TYPE_REF).writeValueAsBytes(statuses)));
+        return (ListenableFuture) Futures.immediateFuture(
+            new ByteArrayInputStream(
+                TestHelper
+                    .getJsonMapper()
+                    .writerWithType(HttpLoadQueuePeon.RESPONSE_ENTITY_TYPE_REF)
+                    .writeValueAsBytes(statuses)
+            )
+        );
       }
       catch (Exception ex) {
         throw new RE(ex, "Unexpected exception.");
