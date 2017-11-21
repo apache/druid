@@ -68,6 +68,7 @@ public class NoopTask extends AbstractTask
   @JsonCreator
   public NoopTask(
       @JsonProperty("id") String id,
+      @JsonProperty("dataSource") String dataSource,
       @JsonProperty("runTime") long runTime,
       @JsonProperty("isReadyTime") long isReadyTime,
       @JsonProperty("isReadyResult") String isReadyResult,
@@ -77,7 +78,7 @@ public class NoopTask extends AbstractTask
   {
     super(
         id == null ? StringUtils.format("noop_%s_%s", DateTimes.nowUtc(), UUID.randomUUID().toString()) : id,
-        "none",
+        dataSource == null ? "none" : dataSource,
         context
     );
 
@@ -152,18 +153,24 @@ public class NoopTask extends AbstractTask
 
   public static NoopTask create()
   {
-    return new NoopTask(null, 0, 0, null, null, null);
+    return new NoopTask(null, null, 0, 0, null, null, null);
+  }
+
+  @VisibleForTesting
+  public static NoopTask create(String dataSource)
+  {
+    return new NoopTask(null, dataSource, 0, 0, null, null, null);
   }
 
   @VisibleForTesting
   public static NoopTask create(int priority)
   {
-    return new NoopTask(null, 0, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, priority));
+    return new NoopTask(null, null, 0, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, priority));
   }
 
   @VisibleForTesting
   public static NoopTask create(String id, int priority)
   {
-    return new NoopTask(id, 0, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, priority));
+    return new NoopTask(id, null, 0, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, priority));
   }
 }
