@@ -34,6 +34,7 @@ import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.column.ColumnConfig;
+import io.druid.timeline.DataSegment;
 import org.junit.Assert;
 
 import java.util.Iterator;
@@ -82,6 +83,7 @@ public class TestHelper
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
             .addValue(ObjectMapper.class.getName(), mapper)
+            .addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT)
     );
     return mapper;
   }
