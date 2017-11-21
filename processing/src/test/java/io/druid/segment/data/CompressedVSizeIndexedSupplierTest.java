@@ -146,8 +146,7 @@ public class CompressedVSizeIndexedSupplierTest
   {
     return CompressedVSizeIndexedSupplier.fromByteBuffer(
         buffer,
-        ByteOrder.nativeOrder(),
-        null
+        ByteOrder.nativeOrder()
     );
   }
 }

@@ -29,7 +29,6 @@ import io.druid.collections.ResourceHolder;
 import io.druid.java.util.common.ByteBufferUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.Closer;
-import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.CompressedPools;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4SafeDecompressor;
@@ -106,8 +105,6 @@ public enum CompressionStrategy
     }
   };
   public static final CompressionStrategy DEFAULT_COMPRESSION_STRATEGY = LZ4;
-
-  private static final Logger log = new Logger(CompressionStrategy.class);
 
   final byte id;
 

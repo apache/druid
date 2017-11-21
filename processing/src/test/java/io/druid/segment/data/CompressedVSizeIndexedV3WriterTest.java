@@ -147,8 +147,7 @@ public class CompressedVSizeIndexedV3WriterTest
       // read from ByteBuffer and check values
       CompressedVSizeIndexedV3Supplier supplierFromByteBuffer = CompressedVSizeIndexedV3Supplier.fromByteBuffer(
           ByteBuffer.wrap(IOUtils.toByteArray(writeOutBytes.asInputStream())),
-          byteOrder,
-          null
+          byteOrder
       );
 
       try (final IndexedMultivalue<IndexedInts> indexedMultivalue = supplierFromByteBuffer.get()) {
@@ -272,8 +271,7 @@ public class CompressedVSizeIndexedV3WriterTest
 
       CompressedVSizeIndexedV3Supplier supplierFromByteBuffer = CompressedVSizeIndexedV3Supplier.fromByteBuffer(
           mapper.mapFile("test"),
-          byteOrder,
-          mapper
+          byteOrder
       );
       IndexedMultivalue<IndexedInts> indexedMultivalue = supplierFromByteBuffer.get();
       assertEquals(indexedMultivalue.size(), vals.size());

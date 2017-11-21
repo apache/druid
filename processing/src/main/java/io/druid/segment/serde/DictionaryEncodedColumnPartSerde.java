@@ -28,7 +28,6 @@ import io.druid.collections.spatial.ImmutableRTree;
 import io.druid.io.Channels;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.segment.CompressedVSizeIndexedSupplier;
 import io.druid.segment.CompressedVSizeIndexedV3Supplier;
 import io.druid.segment.column.ColumnBuilder;
@@ -296,7 +295,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
         final WritableSupplier<IndexedMultivalue<IndexedInts>> rMultiValuedColumn;
 
         if (hasMultipleValues) {
-          rMultiValuedColumn = readMultiValuedColumn(rVersion, buffer, rFlags, builder.getFileMapper());
+          rMultiValuedColumn = readMultiValuedColumn(rVersion, buffer, rFlags);
           rSingleValuedColumn = null;
         } else {
           rSingleValuedColumn = readSingleValuedColumn(rVersion, buffer);
@@ -346,7 +345,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       }
 
       private WritableSupplier<IndexedMultivalue<IndexedInts>> readMultiValuedColumn(
-          VERSION version, ByteBuffer buffer, int flags, SmooshedFileMapper fileMapper
+          VERSION version, ByteBuffer buffer, int flags
       )
       {
         switch (version) {
@@ -355,9 +354,9 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
           }
           case COMPRESSED: {
             if (Feature.MULTI_VALUE.isSet(flags)) {
-              return CompressedVSizeIndexedSupplier.fromByteBuffer(buffer, byteOrder, fileMapper);
+              return CompressedVSizeIndexedSupplier.fromByteBuffer(buffer, byteOrder);
             } else if (Feature.MULTI_VALUE_V3.isSet(flags)) {
-              return CompressedVSizeIndexedV3Supplier.fromByteBuffer(buffer, byteOrder, fileMapper);
+              return CompressedVSizeIndexedV3Supplier.fromByteBuffer(buffer, byteOrder);
             } else {
               throw new IAE("Unrecognized multi-value flag[%d]", flags);
             }

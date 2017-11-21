@@ -101,8 +101,7 @@ public class LongGenericColumnPartSerde implements ColumnPartSerde
       {
         final CompressedLongsIndexedSupplier column = CompressedLongsIndexedSupplier.fromByteBuffer(
             buffer,
-            byteOrder,
-            builder.getFileMapper()
+            byteOrder
         );
         builder.setType(ValueType.LONG)
                .setHasMultipleValues(false)

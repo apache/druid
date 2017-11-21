@@ -83,8 +83,7 @@ public class CompressedVSizeIndexedV3SupplierTest extends CompressedVSizeIndexed
   {
     return CompressedVSizeIndexedV3Supplier.fromByteBuffer(
         buffer,
-        ByteOrder.nativeOrder(),
-        null
+        ByteOrder.nativeOrder()
     );
   }
 }

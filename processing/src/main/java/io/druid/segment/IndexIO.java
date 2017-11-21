@@ -349,8 +349,7 @@ public class IndexIO
 
       CompressedLongsIndexedSupplier timestamps = CompressedLongsIndexedSupplier.fromByteBuffer(
           smooshedFiles.mapFile(makeTimeFile(inDir, BYTE_ORDER).getName()),
-          BYTE_ORDER,
-          smooshedFiles
+          BYTE_ORDER
       );
 
       Map<String, MetricHolder> metrics = Maps.newLinkedHashMap();

@@ -66,12 +66,6 @@ public class DeltaLongEncodingReader implements CompressionFactory.LongEncodingR
   }
 
   @Override
-  public int getNumBytes(int values)
-  {
-    return VSizeLongSerde.getSerializedSize(bitsPerValue, values);
-  }
-
-  @Override
   public CompressionFactory.LongEncodingReader duplicate()
   {
     return new DeltaLongEncodingReader(buffer.duplicate(), base, bitsPerValue);

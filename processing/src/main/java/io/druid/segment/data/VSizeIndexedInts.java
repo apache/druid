@@ -29,7 +29,6 @@ import io.druid.segment.serde.MetaSerdeHelper;
 import io.druid.segment.writeout.HeapByteBufferWriteOutBytes;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
-import it.unimi.dsi.fastutil.ints.IntLists;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -54,11 +53,6 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
   public static VSizeIndexedInts fromArray(int[] array, int maxValue)
   {
     return fromList(IntArrayList.wrap(array), maxValue);
-  }
-
-  public static VSizeIndexedInts empty()
-  {
-    return fromList(IntLists.EMPTY_LIST, 0);
   }
 
   public static VSizeIndexedInts fromList(IntList list, int maxValue)

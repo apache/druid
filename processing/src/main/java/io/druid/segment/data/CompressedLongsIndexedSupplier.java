@@ -23,7 +23,6 @@ import com.google.common.base.Supplier;
 import io.druid.io.Channels;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.segment.serde.MetaSerdeHelper;
 import io.druid.segment.serde.Serializer;
 
@@ -98,11 +97,7 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>, S
     Channels.writeFully(channel, buffer.asReadOnlyBuffer());
   }
 
-  public static CompressedLongsIndexedSupplier fromByteBuffer(
-      ByteBuffer buffer,
-      ByteOrder order,
-      SmooshedFileMapper fileMapper
-  )
+  public static CompressedLongsIndexedSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
   {
     byte versionFromBuffer = buffer.get();
 

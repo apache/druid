@@ -21,7 +21,6 @@ package io.druid.segment.data;
 
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.segment.IndexIO;
 import io.druid.segment.serde.MetaSerdeHelper;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 
@@ -42,21 +41,6 @@ public class CompressedIntsIndexedWriter extends SingleValueIndexedIntsWriter
       .writeInt(x -> x.numInserted)
       .writeInt(x -> x.chunkFactor)
       .writeByte(x -> x.compression.getId());
-
-  public static CompressedIntsIndexedWriter create(
-      final SegmentWriteOutMedium segmentWriteOutMedium,
-      final String filenameBase,
-      final CompressionStrategy compression
-  )
-  {
-    return new CompressedIntsIndexedWriter(
-        segmentWriteOutMedium,
-        filenameBase,
-        CompressedIntsIndexedSupplier.MAX_INTS_IN_BUFFER,
-        IndexIO.BYTE_ORDER,
-        compression
-    );
-  }
 
   private final int chunkFactor;
   private final CompressionStrategy compression;

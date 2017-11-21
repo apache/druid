@@ -283,8 +283,6 @@ public class CompressionFactory
 
     long read(int index);
 
-    int getNumBytes(int values);
-
     LongEncodingReader duplicate();
   }
 

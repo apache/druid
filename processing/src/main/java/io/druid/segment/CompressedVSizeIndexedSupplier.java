@@ -24,7 +24,6 @@ import io.druid.io.Channels;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.CompressedVSizeIntsIndexedSupplier;
 import io.druid.segment.data.CompressionStrategy;
@@ -82,7 +81,7 @@ public class CompressedVSizeIndexedSupplier implements WritableSupplier<IndexedM
     valueSupplier.writeTo(channel, smoosher);
   }
 
-  public static CompressedVSizeIndexedSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order, SmooshedFileMapper fileMapper)
+  public static CompressedVSizeIndexedSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
   {
     byte versionFromBuffer = buffer.get();
 

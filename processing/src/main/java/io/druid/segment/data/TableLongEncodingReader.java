@@ -72,12 +72,6 @@ public class TableLongEncodingReader implements CompressionFactory.LongEncodingR
   }
 
   @Override
-  public int getNumBytes(int values)
-  {
-    return VSizeLongSerde.getSerializedSize(bitsPerValue, values);
-  }
-
-  @Override
   public CompressionFactory.LongEncodingReader duplicate()
   {
     return new TableLongEncodingReader(buffer.duplicate(), table, bitsPerValue);
