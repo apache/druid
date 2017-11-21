@@ -31,12 +31,18 @@ class SegmentCompactorUtil
 {
   private static final Period LOOKUP_PERIOD = new Period("P1D");
   private static final Duration LOOKUP_DURATION = LOOKUP_PERIOD.toStandardDuration();
-  // Allow compaction of segments if totalSize(segments) <= remainingBytes * COMPACTION_SIZE_ADJUST_RATIO
-  private static final double COMPACTION_SIZE_ADJUST_RATIO = 1.1;
+  // Allow compaction of segments if totalSize(segments) <= remainingBytes * ALLOWED_MARGIN_OF_COMPACTION_SIZE
+  private static final double ALLOWED_MARGIN_OF_COMPACTION_SIZE = .1;
 
-  static boolean isCompactable(long remainingBytes, long currentTotalBytes, long additionalBytes)
+  static boolean isCompactible(long remainingBytes, long currentTotalBytes, long additionalBytes)
   {
-    return remainingBytes * COMPACTION_SIZE_ADJUST_RATIO >= currentTotalBytes + additionalBytes;
+    return remainingBytes * (1 + ALLOWED_MARGIN_OF_COMPACTION_SIZE) >= currentTotalBytes + additionalBytes;
+  }
+
+  static boolean isProperCompactionSize(long targetCompactionSizeBytes, long totalBytesOfSegmentsToCompact)
+  {
+    return targetCompactionSizeBytes * (1 - ALLOWED_MARGIN_OF_COMPACTION_SIZE) <= totalBytesOfSegmentsToCompact &&
+           targetCompactionSizeBytes * (1 + ALLOWED_MARGIN_OF_COMPACTION_SIZE) >= totalBytesOfSegmentsToCompact;
   }
 
   /**

@@ -230,6 +230,34 @@ public class DruidCoordinatorSegmentCompactorTest
         Assert.assertEquals("version", segment.getVersion());
       }
     }
+
+    // Emulating realtime dataSource
+    final String dataSource = DATA_SOURCE_PREFIX + 0;
+    addMoreData(dataSource, 9);
+
+    CoordinatorStats stats = runCompactor(compactor);
+    Assert.assertEquals(
+        0,
+        stats.getGlobalStat(DruidCoordinatorSegmentCompactor.COMPACT_TASK_COUNT)
+    );
+
+    addMoreData(dataSource, 10);
+
+    stats = runCompactor(compactor);
+    Assert.assertEquals(
+        1,
+        stats.getGlobalStat(DruidCoordinatorSegmentCompactor.COMPACT_TASK_COUNT)
+    );
+  }
+
+  private CoordinatorStats runCompactor(DruidCoordinatorSegmentCompactor compactor)
+  {
+    DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
+        .newBuilder()
+        .withDatasources(dataSources)
+        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withCompactionConfigs(compactionConfigs).build())
+        .build();
+    return compactor.run(params).getCoordinatorStats();
   }
 
   private void assertCompactSegments(
@@ -241,13 +269,7 @@ public class DruidCoordinatorSegmentCompactorTest
   )
   {
     for (int i = 0; i < 3; i++) {
-      DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
-          .newBuilder()
-          .withDatasources(dataSources)
-          .withDynamicConfigs(CoordinatorDynamicConfig.builder().withCompactionConfigs(compactionConfigs).build())
-          .build();
-
-      final CoordinatorStats stats = compactor.run(params).getCoordinatorStats();
+      final CoordinatorStats stats = runCompactor(compactor);
       Assert.assertEquals(
           expectedCompactTaskCount,
           stats.getGlobalStat(DruidCoordinatorSegmentCompactor.COMPACT_TASK_COUNT)
@@ -286,6 +308,18 @@ public class DruidCoordinatorSegmentCompactorTest
       DataSegment segment = chunks.get(0).getObject();
       Assert.assertEquals(interval, segment.getInterval());
       Assert.assertEquals(expectedVersionSupplier.get(), segment.getVersion());
+    }
+  }
+
+  private void addMoreData(String dataSource, int day)
+  {
+    for (int i = 0; i < 2; i++) {
+      final DataSegment newSegment = createSegment(dataSource, day, i);
+      dataSources.get(dataSource).add(
+          newSegment.getInterval(),
+          newSegment.getVersion(),
+          newSegment.getShardSpec().createChunk(newSegment)
+      );
     }
   }
 }

@@ -34,6 +34,7 @@ import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
@@ -58,6 +59,7 @@ public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
   private Map<String, CoordinatorCompactionConfig> compactionConfigs;
   private Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources;
   private Map<String, Interval> intervalsToFind;
+  private Map<String, DateTime> searchEndDates;
   private PriorityQueue<QueueEntry> queue = new PriorityQueue<>(
       (o1, o2) -> Comparators.intervalsByStartThenEnd().compare(o2.interval, o1.interval)
   );
@@ -71,6 +73,7 @@ public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
     this.compactionConfigs = compactionConfigs;
     this.dataSources = dataSources;
     this.intervalsToFind = new HashMap<>(dataSources.size());
+    this.searchEndDates = new HashMap<>(dataSources.size());
     this.queue.clear();
 
     for (Entry<String, VersionedIntervalTimeline<String, DataSegment>> entry : dataSources.entrySet()) {
@@ -81,7 +84,11 @@ public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
       log.info("Resetting dataSource[%s]", dataSource);
 
       if (config != null && !timeline.isEmpty()) {
-        intervalsToFind.put(dataSource, findInitialSearchInterval(timeline, config.getSkipOffsetFromLatest()));
+        final Interval searchInterval = findInitialSearchInterval(timeline, config.getSkipOffsetFromLatest());
+        intervalsToFind.put(dataSource, searchInterval);
+        if (config.getSkipOffsetFromLatest().toStandardDuration().getMillis() > 0) {
+          searchEndDates.put(dataSource, searchInterval.getEnd());
+        }
       }
     }
 
@@ -106,11 +113,11 @@ public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
     Preconditions.checkNotNull(skipOffset, "skipOffset");
     final TimelineObjectHolder<String, DataSegment> first = Preconditions.checkNotNull(timeline.first(), "first");
     final TimelineObjectHolder<String, DataSegment> last = Preconditions.checkNotNull(timeline.last(), "last");
-    final List<TimelineObjectHolder<String, DataSegment>> holdersInSkipOffset = timeline.lookup(
+    final List<TimelineObjectHolder<String, DataSegment>> holdersInSkipRange = timeline.lookup(
         new Interval(skipOffset, last.getInterval().getEnd())
     );
-    if (holdersInSkipOffset.size() > 0) {
-      final List<PartitionChunk<DataSegment>> chunks = Lists.newArrayList(holdersInSkipOffset.get(0).getObject());
+    if (holdersInSkipRange.size() > 0) {
+      final List<PartitionChunk<DataSegment>> chunks = Lists.newArrayList(holdersInSkipRange.get(0).getObject());
       if (chunks.size() > 0) {
         return new Interval(
             first.getInterval().getStart(),
@@ -180,6 +187,8 @@ public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
     if (intervalToFind == null) {
       throw new ISE("Cannot find intervals to find for dataSource[%s]", dataSourceName);
     }
+    // searchEnd can be null if skipOffsetFromLatest is not set for dataSource
+    final DateTime searchEnd = searchEndDates.get(dataSourceName);
 
     final List<DataSegment> segmentsToCompact = new ArrayList<>();
     long remainingBytesToCompact = config.getTargetCompactionSizeBytes();
@@ -187,7 +196,9 @@ public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
       final Pair<Interval, SegmentsToCompact> pair = findSegmentsToCompact(
           timeline,
           intervalToFind,
-          remainingBytesToCompact
+          searchEnd,
+          remainingBytesToCompact,
+          config.getTargetCompactionSizeBytes()
       );
       if (pair.rhs.getSegments().isEmpty()) {
         break;
@@ -205,12 +216,14 @@ public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
 
   private static Pair<Interval, SegmentsToCompact> findSegmentsToCompact(
       final VersionedIntervalTimeline<String, DataSegment> timeline,
-      final Interval intervalToFind,
-      final long remainingBytes
+      final Interval intervalToSearch,
+      @Nullable final DateTime searchEnd,
+      final long remainingBytes,
+      final long targetCompactionSizeBytes
   )
   {
     final List<DataSegment> segmentsToCompact = new ArrayList<>();
-    Interval searchInterval = intervalToFind;
+    Interval searchInterval = intervalToSearch;
     long totalSegmentsToCompactBytes = 0;
 
     // Finds segments to compact together while iterating intervalToFind from latest to oldest
@@ -233,13 +246,21 @@ public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
         }
 
         // Addition of the segments of a partition should be atomic.
-        if (SegmentCompactorUtil.isCompactable(remainingBytes, totalSegmentsToCompactBytes, partitionBytes)) {
+        if (SegmentCompactorUtil.isCompactible(remainingBytes, totalSegmentsToCompactBytes, partitionBytes)) {
           chunks.forEach(chunk -> segmentsToCompact.add(chunk.getObject()));
           totalSegmentsToCompactBytes += partitionBytes;
         } else {
           if (segmentsToCompact.size() > 1) {
             // We found some segmens to compact and cannot add more. End here.
-            return Pair.of(searchInterval, new SegmentsToCompact(segmentsToCompact, totalSegmentsToCompactBytes));
+            return returnIfCompactibleSize(
+                segmentsToCompact,
+                totalSegmentsToCompactBytes,
+                timeline,
+                searchInterval,
+                searchEnd,
+                remainingBytes,
+                targetCompactionSizeBytes
+            );
           } else if (segmentsToCompact.size() == 1) {
             // We found a segment which is smaller than remainingBytes but too large to compact with other
             // segments. Skip this one.
@@ -270,11 +291,42 @@ public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
     if (segmentsToCompact.size() == 0 || segmentsToCompact.size() == 1) {
       if (Intervals.isEmpty(searchInterval)) {
         // We found nothing to compact. End here.
-        return Pair.of(intervalToFind, new SegmentsToCompact(ImmutableList.of(), 0));
+        return Pair.of(intervalToSearch, new SegmentsToCompact(ImmutableList.of(), 0));
       } else {
         // We found only 1 segment. Further find segments for the remaining interval.
-        return findSegmentsToCompact(timeline, searchInterval, remainingBytes);
+        return findSegmentsToCompact(timeline, searchInterval, searchEnd, remainingBytes, targetCompactionSizeBytes);
       }
+    }
+
+    return returnIfCompactibleSize(
+        segmentsToCompact,
+        totalSegmentsToCompactBytes,
+        timeline,
+        searchInterval,
+        searchEnd,
+        remainingBytes,
+        targetCompactionSizeBytes
+    );
+  }
+
+  private static Pair<Interval, SegmentsToCompact> returnIfCompactibleSize(
+      final List<DataSegment> segmentsToCompact,
+      final long totalSegmentsToCompactBytes,
+      final VersionedIntervalTimeline<String, DataSegment> timeline,
+      final Interval searchInterval,
+      @Nullable final DateTime searchEnd,
+      final long remainingBytes,
+      final long targetCompactionSizeBytes
+  )
+  {
+    // Check we have enough segments to compact. For realtime dataSources, we can expect more data can be added in the
+    // future, so we skip compaction for segments in this run if their size is not sufficiently large.
+    // To enable this feature, skipOffsetFromLatest should be set.
+    final DataSegment lastSegment = segmentsToCompact.get(segmentsToCompact.size() - 1);
+    if (searchEnd != null &&
+        lastSegment.getInterval().getEnd().equals(searchEnd) &&
+        !SegmentCompactorUtil.isProperCompactionSize(targetCompactionSizeBytes, totalSegmentsToCompactBytes)) {
+      return findSegmentsToCompact(timeline, searchInterval, searchEnd, remainingBytes, targetCompactionSizeBytes);
     }
 
     return Pair.of(searchInterval, new SegmentsToCompact(segmentsToCompact, totalSegmentsToCompactBytes));

@@ -130,7 +130,7 @@ http://<COORDINATOR_IP>:<PORT>/druid/coordinator/v1/config/history?count=<n>
 |`dataSource`|dataSource name to be compacted.|yes|
 |`taskPriority`|[Priority](../ingestion/tasks.html#task-priorities) of compact task.|no (default = 25)|
 |`targetCompactionSizeBytes`|The target segment size of compaction. The actual size of a compact segment might be slightly larger or smaller than this value.|no (default = 838860800)|
-|`skipOffsetFromLatest`|The offset for searching segments to be compacted.|no (default = "P1D")|
+|`skipOffsetFromLatest`|The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources. |no (default = "P1D")|
 |`tuningConfig`|Tuning config for compact tasks. See below [Compact Task TuningConfig](#compact-task-tuningconfig).|no|
 |`taskContext`|[Task context](../ingestion/tasks.html#task-context) for compact tasks.|no|
 
