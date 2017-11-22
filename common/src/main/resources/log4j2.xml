@@ -26,5 +26,8 @@
     <Root level="info">
       <AppenderRef ref="Console"/>
     </Root>
+    <Logger level="debug" name="io.druid.indexer" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
   </Loggers>
 </Configuration>
