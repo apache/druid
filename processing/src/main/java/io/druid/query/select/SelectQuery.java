@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
@@ -66,7 +67,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
   {
     super(dataSource, querySegmentSpec, descending, context);
     this.dimFilter = dimFilter;
-    this.granularity = granularity;
+    this.granularity = granularity == null ? Granularities.ALL : granularity;
     this.dimensions = dimensions;
     this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.metrics = metrics;
