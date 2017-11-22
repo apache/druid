@@ -24,6 +24,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.CachingClusteredClient;
+import io.druid.client.cache.Cache;
+import io.druid.client.cache.CacheConfig;
+import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.query.FluentQueryRunnerBuilder;
 import io.druid.query.PostProcessingOperator;
 import io.druid.query.Query;
@@ -31,11 +34,14 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
+import io.druid.query.ResultLevelCachingQueryRunner;
 import io.druid.query.RetryQueryRunner;
 import io.druid.query.RetryQueryRunnerConfig;
 import io.druid.query.SegmentDescriptor;
 import io.druid.server.initialization.ServerConfig;
 import org.joda.time.Interval;
+
+import java.util.concurrent.ExecutorService;
 
 /**
  */
@@ -47,6 +53,10 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private final RetryQueryRunnerConfig retryConfig;
   private final ObjectMapper objectMapper;
   private final ServerConfig serverConfig;
+  private final ExecutorService cachingExec;
+  private final Cache cache;
+  private final CacheConfig cacheConfig;
+
 
   @Inject
   public ClientQuerySegmentWalker(
@@ -55,7 +65,10 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       QueryToolChestWarehouse warehouse,
       RetryQueryRunnerConfig retryConfig,
       ObjectMapper objectMapper,
-      ServerConfig serverConfig
+      ServerConfig serverConfig,
+      @BackgroundCaching ExecutorService cachingExec,
+      Cache cache,
+      CacheConfig cacheConfig
   )
   {
     this.emitter = emitter;
@@ -64,6 +77,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     this.retryConfig = retryConfig;
     this.objectMapper = objectMapper;
     this.serverConfig = serverConfig;
+    this.cachingExec = cachingExec;
+    this.cache = cache;
+    this.cacheConfig = cacheConfig;
   }
 
   @Override
@@ -88,22 +104,30 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         }
     );
 
-    return new FluentQueryRunnerBuilder<>(toolChest)
-        .create(
-            new SetAndVerifyContextQueryRunner(
-                serverConfig,
-                new RetryQueryRunner<>(
-                    baseClientRunner,
-                    retryConfig,
-                    objectMapper
+    return new ResultLevelCachingQueryRunner<>(
+        new FluentQueryRunnerBuilder<>(toolChest)
+            .create(
+                new SetAndVerifyContextQueryRunner(
+                    serverConfig,
+                    new RetryQueryRunner<>(
+                        baseClientRunner,
+                        retryConfig,
+                        objectMapper
+                    )
                 )
             )
-        )
-        .applyPreMergeDecoration()
-        .mergeResults()
-        .applyPostMergeDecoration()
-        .emitCPUTimeMetric(emitter)
-        .postProcess(postProcessing);
+            .applyPreMergeDecoration()
+            .mergeResults()
+            .applyPostMergeDecoration()
+            .emitCPUTimeMetric(emitter)
+            .postProcess(postProcessing),
+        toolChest,
+        query,
+        objectMapper,
+        cachingExec,
+        cache,
+        cacheConfig
+    );
   }
 
 

@@ -55,7 +55,6 @@ import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.LazySequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.java.util.common.guava.SequenceWrapper;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Query;
@@ -217,8 +216,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
     private final CacheStrategy<T, Object, Query<T>> strategy;
     private final boolean useCache;
     private final boolean populateCache;
-    private final boolean useResultCache;
-    private final boolean populateResultCache;
     private final boolean isBySegment;
     private final int uncoveredIntervalsLimit;
     private final Query<T> downstreamQuery;
@@ -234,8 +231,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
       this.useCache = CacheUtil.useCacheOnBrokers(query, strategy, cacheConfig);
       this.populateCache = CacheUtil.populateCacheOnBrokers(query, strategy, cacheConfig);
-      this.useResultCache = CacheUtil.useResultLevelCacheOnBrokers(query, strategy, cacheConfig);
-      this.populateResultCache = CacheUtil.populateResultLevelCacheOnBrokers(query, strategy, cacheConfig);
       this.isBySegment = QueryContexts.isBySegment(query);
       // Note that enabling this leads to putting uncovered intervals information in the response headers
       // and might blow up in some cases https://github.com/druid-io/druid/issues/2108
@@ -260,8 +255,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
     Sequence<T> run(final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter)
     {
-      @Nullable
-      TimelineLookup<String, ServerSelector> timeline = serverView.getTimeline(query.getDataSource());
+      @Nullable TimelineLookup<String, ServerSelector> timeline = serverView.getTimeline(query.getDataSource());
       if (timeline == null) {
         return Sequences.empty();
       }
@@ -271,67 +265,36 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
 
       final Set<ServerToSegment> segments = computeSegmentsToQuery(timeline);
-      @Nullable
-      final byte[] queryCacheKey = computeQueryCacheKey();
-      String queryKeyFromEtag;
-      if (useResultCache) {
-        log.debug("Result level caching has been enabled.");
-        queryKeyFromEtag = computeCurrentEtag(segments, queryCacheKey);
-      } else {
-        queryKeyFromEtag = null;
+      @Nullable final byte[] queryCacheKey = computeQueryCacheKey();
+
+      if (responseContext.containsKey("resultLevelCacheEnabled")) {
+        @Nullable final String prevResultCacheKeyFromEtag = (String) responseContext.get("prevResultSetIdentifier");
+        @Nullable final String newResultCacheKeyFromEtag = computeCurrentEtag(segments, queryCacheKey);
+        responseContext.remove("resultLevelCacheEnabled");
+        responseContext.put("currentResultSetIdentifier", newResultCacheKeyFromEtag);
+        if (newResultCacheKeyFromEtag != null && newResultCacheKeyFromEtag.equals(prevResultCacheKeyFromEtag)) {
+          return Sequences.empty();
+        }
       }
 
-      final String queryResultKey = queryKeyFromEtag;
       if (query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH) != null) {
-        @Nullable
-        final String prevEtag = (String) query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH);
-        @Nullable
-        final String currentEtag = computeCurrentEtag(segments, queryCacheKey);
+        @Nullable final String prevEtag = (String) query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH);
+        @Nullable final String currentEtag = computeCurrentEtag(segments, queryCacheKey);
         if (currentEtag != null && currentEtag.equals(prevEtag)) {
           return Sequences.empty();
         }
       }
-      @Nullable
-      final byte[] cachedResultSet = fetchFromResultLevelCache(queryResultKey);
-      if (cachedResultSet != null) {
-        log.debug("Fetching entire result set from cache");
-        return fetchSequenceFromResultLevelCache(cachedResultSet);
-      }
 
       final List<Pair<Interval, byte[]>> alreadyCachedResults = pruneSegmentsWithCachedResults(queryCacheKey, segments);
       final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer = groupSegmentsByServer(segments);
-
-      return Sequences.wrap(new LazySequence<>(() -> {
-        List<Sequence<T>> sequencesByInterval = new ArrayList<>(alreadyCachedResults.size()
-                                                                + segmentsByServer.size());
+      return new LazySequence<>(() -> {
+        List<Sequence<T>> sequencesByInterval = new ArrayList<>(alreadyCachedResults.size() + segmentsByServer.size());
         addSequencesFromCache(sequencesByInterval, alreadyCachedResults);
         addSequencesFromServer(sequencesByInterval, segmentsByServer);
         return Sequences
             .simple(sequencesByInterval)
             .flatMerge(seq -> seq, query.getResultOrdering());
-      }).map(r -> cacheResultEntry(r, queryResultKey)), new SequenceWrapper()
-      {
-        @Override
-        public void after(boolean isDone, Throwable thrown) throws Exception
-        {
-          final CachePopulator cachePopulator =
-              getResultCachePopulator(queryResultKey);
-          if (cachePopulator != null) {
-            cachePopulator.populate();
-          }
-        }
       });
-    }
-
-    private T cacheResultEntry(T result, String queryResultKey)
-    {
-      final Function<T, Object> cacheFn = strategy.prepareForCache();
-      final CachePopulator resultCachePopulator =
-          getResultCachePopulator(queryResultKey);
-      if (resultCachePopulator != null) {
-        resultCachePopulator.cacheFutures.add(backgroundExecutorService.submit(() -> cacheFn.apply(result)));
-      }
-      return result;
     }
 
     private Set<ServerToSegment> computeSegmentsToQuery(TimelineLookup<String, ServerSelector> timeline)
@@ -408,7 +371,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     @Nullable
     private byte[] computeQueryCacheKey()
     {
-      if ((populateCache || useCache || populateResultCache) // implies strategy != null
+      if ((populateCache || useCache) // implies strategy != null
           && !isBySegment) { // explicit bySegment queries are never cached
         assert strategy != null;
         return strategy.computeCacheKey(query);
@@ -423,7 +386,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
       Hasher hasher = Hashing.sha1().newHasher();
       boolean hasOnlyHistoricalSegments = true;
       for (ServerToSegment p : segments) {
-        log.info(p.getServer().pick().getServer().getType().toString());
         if (!p.getServer().pick().getServer().segmentReplicatable()) {
           hasOnlyHistoricalSegments = false;
           break;
@@ -472,21 +434,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
       return alreadyCachedResults;
     }
 
-    private byte[] fetchFromResultLevelCache(
-        final String queryCacheKey
-    )
-    {
-      if (queryCacheKey == null) {
-        return null;
-      }
-      Cache.NamedKey queryKey = CacheUtil.computeResultLevelCacheKey(queryCacheKey);
-      final byte[] cachedValue = computeResultLevelCacheValue(queryKey);
-      if (cachedValue == null && populateResultCache) {
-        addResultCachePopulator(queryKey, queryCacheKey);
-      }
-      return cachedValue;
-    }
-
     private Map<ServerToSegment, Cache.NamedKey> computePerSegmentCacheKeys(
         Set<ServerToSegment> segments,
         byte[] queryCacheKey
@@ -514,15 +461,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
     }
 
-    private byte[] computeResultLevelCacheValue(Cache.NamedKey resultCacheKey)
-    {
-      if (useResultCache) {
-        return cache.get(resultCacheKey);
-      } else {
-        return null;
-      }
-    }
-
     private void addCachePopulator(
         Cache.NamedKey segmentCacheKey,
         String segmentIdentifier,
@@ -535,27 +473,10 @@ public class CachingClusteredClient implements QuerySegmentWalker
       );
     }
 
-    private void addResultCachePopulator(
-        Cache.NamedKey queryCacheKey,
-        String queryCacheKeyStr
-    )
-    {
-      cachePopulatorMap.put(
-          queryCacheKeyStr,
-          new CachePopulator(cache, objectMapper, queryCacheKey)
-      );
-    }
-
     @Nullable
     private CachePopulator getCachePopulator(String segmentId, Interval segmentInterval)
     {
       return cachePopulatorMap.get(StringUtils.format("%s_%s", segmentId, segmentInterval));
-    }
-
-    @Nullable
-    private CachePopulator getResultCachePopulator(String queryCacheKey)
-    {
-      return cachePopulatorMap.get(queryCacheKey);
     }
 
     private SortedMap<DruidServer, List<SegmentDescriptor>> groupSegmentsByServer(Set<ServerToSegment> segments)
@@ -647,35 +568,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
         }
         listOfSequences.add(serverResults);
       });
-    }
-
-    private Sequence<T> fetchSequenceFromResultLevelCache(
-        final byte[] cachedResult
-    )
-    {
-      if (strategy == null) {
-        return null;
-      }
-      final Function<Object, T> pullFromCacheFunction = strategy.pullFromCache();
-      final TypeReference<Object> cacheObjectClazz = strategy.getCacheObjectClazz();
-      Sequence<Object> cachedSequence = Sequences.simple(() -> {
-        try {
-          if (cachedResult.length == 0) {
-            return Iterators.emptyIterator();
-          }
-
-          return objectMapper.readValues(
-              objectMapper.getFactory().createParser(cachedResult),
-              cacheObjectClazz
-          );
-        }
-        catch (IOException e) {
-          log.error("Exception while parsing cached results");
-          return null;
-        }
-      }
-      );
-      return Sequences.map(cachedSequence, pullFromCacheFunction);
     }
 
     @SuppressWarnings("unchecked")
@@ -784,7 +676,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
             @Override
             public void onSuccess(List<Object> cacheData)
             {
-              CacheUtil.populate(cache, mapper, key, cacheData, cacheConfig.getResultLevelCacheLimit());
+              CacheUtil.populate(cache, mapper, key, cacheData);
               // Help out GC by making sure all references are gone
               cacheFutures.clear();
             }
