@@ -23,6 +23,7 @@ import com.google.common.hash.Hasher;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.query.aggregation.cardinality.CardinalityAggregator;
 import io.druid.segment.BaseLongColumnValueSelector;
+import io.druid.segment.NullHandlingHelper;
 
 public class LongCardinalityAggregatorColumnSelectorStrategy
     implements CardinalityAggregatorColumnSelectorStrategy<BaseLongColumnValueSelector>
@@ -30,12 +31,16 @@ public class LongCardinalityAggregatorColumnSelectorStrategy
   @Override
   public void hashRow(BaseLongColumnValueSelector dimSelector, Hasher hasher)
   {
-    hasher.putLong(dimSelector.getLong());
+    if (NullHandlingHelper.useDefaultValuesForNull() || !dimSelector.isNull()) {
+      hasher.putLong(dimSelector.getLong());
+    }
   }
 
   @Override
   public void hashValues(BaseLongColumnValueSelector dimSelector, HyperLogLogCollector collector)
   {
-    collector.add(CardinalityAggregator.hashFn.hashLong(dimSelector.getLong()).asBytes());
+    if (NullHandlingHelper.useDefaultValuesForNull() || !dimSelector.isNull()) {
+      collector.add(CardinalityAggregator.hashFn.hashLong(dimSelector.getLong()).asBytes());
+    }
   }
 }

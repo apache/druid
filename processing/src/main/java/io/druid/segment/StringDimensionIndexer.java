@@ -57,7 +57,7 @@ import java.util.function.Function;
 
 public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], String>
 {
-  private static final Function<Object, String> STRING_TRANSFORMER = o -> o != null
+  private static final Function<Object, String> EMPTY_TO_NULL_IF_NEEDED = o -> o != null
                                                                           ? NullHandlingHelper.emptyToNullIfNeeded(o.toString())
                                                                           : null;
 
@@ -87,8 +87,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
         if (value == null) {
           return idForNull;
         }
-        final int id = valueToId.getInt(value);
-        return id < 0 ? ABSENT_VALUE_ID : id;
+        return valueToId.getInt(value);
       }
     }
 
@@ -235,11 +234,11 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
         dimLookup.add(null);
         encodedDimensionValues = EMPTY_INT_ARRAY;
       } else if (dimValuesList.size() == 1) {
-        encodedDimensionValues = new int[]{dimLookup.add(STRING_TRANSFORMER.apply(dimValuesList.get(0)))};
+        encodedDimensionValues = new int[]{dimLookup.add(EMPTY_TO_NULL_IF_NEEDED.apply(dimValuesList.get(0)))};
       } else {
         final String[] dimensionValues = new String[dimValuesList.size()];
         for (int i = 0; i < dimValuesList.size(); i++) {
-          dimensionValues[i] = STRING_TRANSFORMER.apply(dimValuesList.get(i));
+          dimensionValues[i] = EMPTY_TO_NULL_IF_NEEDED.apply(dimValuesList.get(i));
         }
         if (multiValueHandling.needSorting()) {
           // Sort multival row by their unencoded values first.
@@ -264,7 +263,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
         encodedDimensionValues = pos == retVal.length ? retVal : Arrays.copyOf(retVal, pos);
       }
     } else {
-      encodedDimensionValues = new int[]{dimLookup.add(STRING_TRANSFORMER.apply(dimValues))};
+      encodedDimensionValues = new int[]{dimLookup.add(EMPTY_TO_NULL_IF_NEEDED.apply(dimValues))};
     }
 
     // If dictionary size has changed, the sorted lookup is no longer valid.

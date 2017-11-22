@@ -42,7 +42,8 @@ public class NullHandlingHelper
 
   // INSTANCE is injected using static injection to avoid adding JacksonInject annotations all over the code.
   // See NullHandlingModule for details.
-  // The default system property is supposed to be used only in tests.
+  // It does not take effect in all unit tests since we don't use Guice Injection.
+  // For tests default system property is supposed to be used only in tests
   @Inject
   private static NullValueHandlingConfig INSTANCE = new NullValueHandlingConfig(
       Boolean.valueOf(System.getProperty(NULL_HANDLING_CONFIG_STRING, "true"))

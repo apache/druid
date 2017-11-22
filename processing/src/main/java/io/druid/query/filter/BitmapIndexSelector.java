@@ -30,16 +30,10 @@ import io.druid.segment.data.Indexed;
 public interface BitmapIndexSelector
 {
   Indexed<String> getDimensionValues(String dimension);
-
   boolean hasMultipleValues(String dimension);
-
   int getNumRows();
-
   BitmapFactory getBitmapFactory();
-
   BitmapIndex getBitmapIndex(String dimension);
-
   ImmutableBitmap getBitmapIndex(String dimension, String value);
-
   ImmutableRTree getSpatialIndex(String dimension);
 }

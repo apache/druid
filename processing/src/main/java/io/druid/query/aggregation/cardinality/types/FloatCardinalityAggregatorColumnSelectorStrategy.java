@@ -23,6 +23,7 @@ import com.google.common.hash.Hasher;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.query.aggregation.cardinality.CardinalityAggregator;
 import io.druid.segment.BaseFloatColumnValueSelector;
+import io.druid.segment.NullHandlingHelper;
 
 public class FloatCardinalityAggregatorColumnSelectorStrategy
     implements CardinalityAggregatorColumnSelectorStrategy<BaseFloatColumnValueSelector>
@@ -30,12 +31,16 @@ public class FloatCardinalityAggregatorColumnSelectorStrategy
   @Override
   public void hashRow(BaseFloatColumnValueSelector selector, Hasher hasher)
   {
-    hasher.putFloat(selector.getFloat());
+    if (NullHandlingHelper.useDefaultValuesForNull() || !selector.isNull()) {
+      hasher.putFloat(selector.getFloat());
+    }
   }
 
   @Override
   public void hashValues(BaseFloatColumnValueSelector selector, HyperLogLogCollector collector)
   {
-    collector.add(CardinalityAggregator.hashFn.hashInt(Float.floatToIntBits(selector.getFloat())).asBytes());
+    if (NullHandlingHelper.useDefaultValuesForNull() || !selector.isNull()) {
+      collector.add(CardinalityAggregator.hashFn.hashInt(Float.floatToIntBits(selector.getFloat())).asBytes());
+    }
   }
 }

@@ -990,7 +990,7 @@ interface Function
           return ExprEval.of(arg.substring(index));
         }
       } else {
-        // If starting index of substring is greater then the lengh of string, the result will be a zero length string.
+        // If starting index of substring is greater then the length of string, the result will be a zero length string.
         // e.g. 'select substring("abc", 4,5) as c;' will return an empty string
         return ExprEval.of(NullHandlingExpressionHelper.nullToEmptyIfNeeded((String) null));
       }

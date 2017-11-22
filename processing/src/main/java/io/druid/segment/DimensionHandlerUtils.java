@@ -296,7 +296,7 @@ public final class DimensionHandlerUtils
       return ((Number) valObj).doubleValue();
     } else if (valObj instanceof String) {
       Double doubleVal = Doubles.tryParse((String) valObj);
-      return NullHandlingHelper.nullToZeroIfNeeded(doubleVal);
+      return doubleVal;
     } else {
       throw new ParseException("Unknown type[%s]", valObj.getClass());
     }

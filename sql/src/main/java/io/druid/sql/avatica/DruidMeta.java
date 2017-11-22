@@ -183,8 +183,7 @@ public class DruidMeta extends MetaImpl
     if (authenticationResult == null) {
       throw new ForbiddenException("Authentication failed.");
     }
-    final Signature signature = druidStatement.prepare(plannerFactory, sql, maxRowCount, authenticationResult)
-                                              .getSignature();
+    final Signature signature = druidStatement.prepare(plannerFactory, sql, maxRowCount, authenticationResult).getSignature();
     final Frame firstFrame = druidStatement.execute()
                                            .nextFrame(
                                                DruidStatement.START_OFFSET,

@@ -103,7 +103,7 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
   @Override
   public void writeIndexes(List<IntBuffer> segmentRowNumConversions) throws IOException
   {
-    // doubless have no indices to write
+    // doubles have no indices to write
   }
 
   @Override
