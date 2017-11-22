@@ -20,7 +20,6 @@
 package io.druid.server.coordinator.helper;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.client.indexing.ClientCompactQueryTuningConfig;
@@ -51,6 +50,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 public class DruidCoordinatorSegmentCompactorTest
 {
@@ -187,6 +187,7 @@ public class DruidCoordinatorSegmentCompactorTest
     final Supplier<String> expectedVersionSupplier = new Supplier<String>()
     {
       private int i = 0;
+
       @Override
       public String get()
       {

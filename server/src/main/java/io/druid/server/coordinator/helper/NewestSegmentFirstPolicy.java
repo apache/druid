@@ -86,7 +86,7 @@ public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
       if (config != null && !timeline.isEmpty()) {
         final Interval searchInterval = findInitialSearchInterval(timeline, config.getSkipOffsetFromLatest());
         intervalsToFind.put(dataSource, searchInterval);
-        if (config.getSkipOffsetFromLatest().toStandardDuration().getMillis() > 0) {
+        if (!isZero(config.getSkipOffsetFromLatest())) {
           searchEndDates.put(dataSource, searchInterval.getEnd());
         }
       }
@@ -104,6 +104,18 @@ public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
     }
   }
 
+  private static boolean isZero(Period period)
+  {
+    return period.getYears() == 0 &&
+           period.getMonths() == 0 &&
+           period.getWeeks() == 0 &&
+           period.getDays() == 0 &&
+           period.getHours() == 0 &&
+           period.getMinutes() == 0 &&
+           period.getSeconds() == 0 &&
+           period.getMillis() == 0;
+  }
+
   private static Interval findInitialSearchInterval(
       VersionedIntervalTimeline<String, DataSegment> timeline,
       Period skipOffset
@@ -117,12 +129,10 @@ public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
         new Interval(skipOffset, last.getInterval().getEnd())
     );
     if (holdersInSkipRange.size() > 0) {
+      // holdersInSkipRange is sorted in time
       final List<PartitionChunk<DataSegment>> chunks = Lists.newArrayList(holdersInSkipRange.get(0).getObject());
       if (chunks.size() > 0) {
-        return new Interval(
-            first.getInterval().getStart(),
-            last.getInterval().getEnd().minus(chunks.get(0).getObject().getInterval().toDuration())
-        );
+        return new Interval(first.getInterval().getStart(), chunks.get(0).getObject().getInterval().getStart());
       }
     }
 
