@@ -36,6 +36,7 @@ import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthorizerMapper;
+import io.druid.timeline.DataSegment;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -79,6 +80,7 @@ public class TestUtils
             .addValue(ChatHandlerProvider.class, new NoopChatHandlerProvider())
             .addValue(AuthConfig.class, new AuthConfig())
             .addValue(AuthorizerMapper.class, null)
+            .addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT)
     );
   }
 

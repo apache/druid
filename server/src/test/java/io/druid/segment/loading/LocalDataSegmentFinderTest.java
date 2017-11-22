@@ -47,60 +47,45 @@ public class LocalDataSegmentFinderTest
   private static final ObjectMapper mapper = TestHelper.getJsonMapper();
   private static final String DESCRIPTOR_JSON = "descriptor.json";
   private static final String INDEX_ZIP = "index.zip";
-  private static final DataSegment SEGMENT_1 = DataSegment.builder()
-                                                          .dataSource("wikipedia")
-                                                          .interval(
-                                                              Intervals.of(
-                                                                  "2013-08-31T00:00:00.000Z/2013-09-01T00:00:00.000Z"
-                                                              )
-                                                          )
-                                                          .version("2015-10-21T22:07:57.074Z")
-                                                          .loadSpec(
-                                                              ImmutableMap.<String, Object>of(
-                                                                  "type",
-                                                                  "local",
-                                                                  "path",
-                                                                  "/tmp/somewhere/index.zip"
-                                                              )
-                                                          )
-                                                          .dimensions(ImmutableList.of("language", "page"))
-                                                          .metrics(ImmutableList.of("count"))
-                                                          .build();
+  private static final DataSegment SEGMENT_1 = DataSegment
+      .builder()
+      .dataSource("wikipedia")
+      .interval(Intervals.of("2013-08-31T00:00:00.000Z/2013-09-01T00:00:00.000Z"))
+      .version("2015-10-21T22:07:57.074Z")
+      .loadSpec(
+          ImmutableMap.<String, Object>of(
+              "type",
+              "local",
+              "path",
+              "/tmp/somewhere/index.zip"
+          )
+      )
+      .dimensions(ImmutableList.of("language", "page"))
+      .metrics(ImmutableList.of("count"))
+      .build();
 
-  private static final DataSegment SEGMENT_2 = DataSegment.builder(SEGMENT_1)
-                                                          .interval(
-                                                              Intervals.of(
-                                                                  "2013-09-01T00:00:00.000Z/2013-09-02T00:00:00.000Z"
-                                                              )
-                                                          )
-                                                          .build();
+  private static final DataSegment SEGMENT_2 = DataSegment
+      .builder(SEGMENT_1)
+      .interval(Intervals.of("2013-09-01T00:00:00.000Z/2013-09-02T00:00:00.000Z"))
+      .build();
 
-  private static final DataSegment SEGMENT_3 = DataSegment.builder(SEGMENT_1)
-                                                          .interval(
-                                                              Intervals.of(
-                                                                  "2013-09-02T00:00:00.000Z/2013-09-03T00:00:00.000Z"
-                                                              )
-                                                          )
-                                                          .version("2015-10-22T22:07:57.074Z")
-                                                          .build();
+  private static final DataSegment SEGMENT_3 = DataSegment
+      .builder(SEGMENT_1)
+      .interval(Intervals.of("2013-09-02T00:00:00.000Z/2013-09-03T00:00:00.000Z"))
+      .version("2015-10-22T22:07:57.074Z")
+      .build();
 
-  private static final DataSegment SEGMENT_4_0 = DataSegment.builder(SEGMENT_1)
-                                                            .interval(
-                                                                Intervals.of(
-                                                                    "2013-09-02T00:00:00.000Z/2013-09-03T00:00:00.000Z"
-                                                                )
-                                                            )
-                                                            .shardSpec(new NumberedShardSpec(0, 2))
-                                                            .build();
+  private static final DataSegment SEGMENT_4_0 = DataSegment
+      .builder(SEGMENT_1)
+      .interval(Intervals.of("2013-09-02T00:00:00.000Z/2013-09-03T00:00:00.000Z"))
+      .shardSpec(new NumberedShardSpec(0, 2))
+      .build();
 
-  private static final DataSegment SEGMENT_4_1 = DataSegment.builder(SEGMENT_1)
-                                                            .interval(
-                                                                Intervals.of(
-                                                                    "2013-09-02T00:00:00.000Z/2013-09-03T00:00:00.000Z"
-                                                                )
-                                                            )
-                                                            .shardSpec(new NumberedShardSpec(1, 2))
-                                                            .build();
+  private static final DataSegment SEGMENT_4_1 = DataSegment
+      .builder(SEGMENT_1)
+      .interval(Intervals.of("2013-09-02T00:00:00.000Z/2013-09-03T00:00:00.000Z"))
+      .shardSpec(new NumberedShardSpec(1, 2))
+      .build();
 
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
