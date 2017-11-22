@@ -68,7 +68,7 @@ public class DefaultLimitSpecTest
   @Test
   public void testSerde() throws Exception
   {
-    ObjectMapper mapper = TestHelper.getJsonMapper();
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
 
     //defaults
     String json = "{\"type\": \"default\"}";

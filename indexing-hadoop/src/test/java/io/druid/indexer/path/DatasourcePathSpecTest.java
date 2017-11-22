@@ -179,7 +179,7 @@ public class DatasourcePathSpecTest
   {
     HadoopDruidIndexerConfig hadoopIndexerConfig = makeHadoopDruidIndexerConfig();
 
-    ObjectMapper mapper = TestHelper.getJsonMapper();
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
 
     DatasourcePathSpec pathSpec = new DatasourcePathSpec(
         mapper,

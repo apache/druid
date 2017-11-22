@@ -52,7 +52,7 @@ public class DefaultTopNQueryMetricsTest
   {
     CachingEmitter cachingEmitter = new CachingEmitter();
     ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
-    DefaultTopNQueryMetrics queryMetrics = new DefaultTopNQueryMetrics(TestHelper.getJsonMapper());
+    DefaultTopNQueryMetrics queryMetrics = new DefaultTopNQueryMetrics(TestHelper.makeJsonMapper());
     TopNQuery query = new TopNQueryBuilder()
         .dataSource("xx")
         .granularity(Granularities.ALL)
@@ -102,7 +102,7 @@ public class DefaultTopNQueryMetricsTest
   {
     CachingEmitter cachingEmitter = new CachingEmitter();
     ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
-    DefaultTopNQueryMetrics queryMetrics = new DefaultTopNQueryMetrics(TestHelper.getJsonMapper());
+    DefaultTopNQueryMetrics queryMetrics = new DefaultTopNQueryMetrics(TestHelper.makeJsonMapper());
     DefaultQueryMetricsTest.testQueryMetricsDefaultMetricNamesAndUnits(cachingEmitter, serviceEmitter, queryMetrics);
   }
 }

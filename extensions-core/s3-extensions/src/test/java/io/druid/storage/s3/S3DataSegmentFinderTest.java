@@ -59,7 +59,7 @@ import java.util.Set;
 
 public class S3DataSegmentFinderTest
 {
-  private static final ObjectMapper mapper = TestHelper.getJsonMapper();
+  private static final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
   private static final DataSegment SEGMENT_1 = DataSegment
       .builder()

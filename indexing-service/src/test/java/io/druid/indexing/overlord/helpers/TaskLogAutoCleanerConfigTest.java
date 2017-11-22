@@ -38,7 +38,7 @@ public class TaskLogAutoCleanerConfigTest
                   + "  \"durationToRetain\": 30\n"
                   + "}";
 
-    ObjectMapper mapper = TestHelper.getJsonMapper();
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
 
     TaskLogAutoCleanerConfig config = mapper.readValue(
         mapper.writeValueAsString(
@@ -60,7 +60,7 @@ public class TaskLogAutoCleanerConfigTest
   {
     String json = "{}";
 
-    ObjectMapper mapper = TestHelper.getJsonMapper();
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
 
     TaskLogAutoCleanerConfig config = mapper.readValue(
         mapper.writeValueAsString(

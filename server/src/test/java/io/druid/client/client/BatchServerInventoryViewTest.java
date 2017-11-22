@@ -114,7 +114,7 @@ public class BatchServerInventoryViewTest
     cf.blockUntilConnected();
     cf.create().creatingParentsIfNeeded().forPath(testBasePath);
 
-    jsonMapper = TestHelper.getJsonMapper();
+    jsonMapper = TestHelper.makeJsonMapper();
 
     announcer = new Announcer(
         cf,

@@ -76,7 +76,7 @@ public class BrokerServerViewTest extends CuratorTestBase
 
   public BrokerServerViewTest()
   {
-    jsonMapper = TestHelper.getJsonMapper();
+    jsonMapper = TestHelper.makeJsonMapper();
     zkPathsConfig = new ZkPathsConfig();
   }
 

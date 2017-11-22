@@ -63,7 +63,7 @@ public class SegmentLoadDropHandlerTest
 
   private static final Logger log = new Logger(ZkCoordinatorTest.class);
 
-  private final ObjectMapper jsonMapper = TestHelper.getJsonMapper();
+  private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
   private final DruidServerMetadata me = new DruidServerMetadata(
       "dummyServer",
       "dummyHost",

@@ -54,7 +54,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
 {
   private static final String LOAD_QUEUE_PATH = "/druid/loadqueue/localhost:1234";
 
-  private final ObjectMapper jsonMapper = TestHelper.getJsonMapper();
+  private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
   private LoadQueuePeon loadQueuePeon;
   private PathChildrenCache loadQueueCache;

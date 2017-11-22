@@ -34,7 +34,7 @@ import java.io.IOException;
 
 public class WindowedDataSegmentTest
 {
-  private static final ObjectMapper MAPPER = TestHelper.getJsonMapper();
+  private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
   private static final DataSegment SEGMENT = new DataSegment(
       "test1",
       Intervals.of("2000/3000"),

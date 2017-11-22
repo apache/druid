@@ -66,7 +66,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
 
   public CoordinatorServerViewTest()
   {
-    jsonMapper = TestHelper.getJsonMapper();
+    jsonMapper = TestHelper.makeJsonMapper();
     zkPathsConfig = new ZkPathsConfig();
     inventoryPath = zkPathsConfig.getLiveSegmentsPath();
   }

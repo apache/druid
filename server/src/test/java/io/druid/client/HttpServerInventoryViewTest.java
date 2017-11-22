@@ -70,7 +70,7 @@ public class HttpServerInventoryViewTest
   @Test(timeout = 10000)
   public void testSimple() throws Exception
   {
-    ObjectMapper jsonMapper = TestHelper.getJsonMapper();
+    ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);

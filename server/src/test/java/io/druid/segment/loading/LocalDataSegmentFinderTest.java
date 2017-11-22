@@ -44,7 +44,7 @@ import java.util.Set;
 public class LocalDataSegmentFinderTest
 {
 
-  private static final ObjectMapper mapper = TestHelper.getJsonMapper();
+  private static final ObjectMapper mapper = TestHelper.makeJsonMapper();
   private static final String DESCRIPTOR_JSON = "descriptor.json";
   private static final String INDEX_ZIP = "index.zip";
   private static final DataSegment SEGMENT_1 = DataSegment

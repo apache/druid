@@ -114,7 +114,7 @@ public class FireDepartmentTest
                 TestHelper.getTestIndexIO(),
                 MapCache.create(0),
                 NO_CACHE_CONFIG,
-                TestHelper.getJsonMapper()
+                TestHelper.makeJsonMapper()
 
             ),
             null

@@ -66,7 +66,7 @@ public class LocalDataSegmentPusherTest
   {
     config = new LocalDataSegmentPusherConfig();
     config.storageDirectory = temporaryFolder.newFolder();
-    localDataSegmentPusher = new LocalDataSegmentPusher(config, TestHelper.getJsonMapper());
+    localDataSegmentPusher = new LocalDataSegmentPusher(config, TestHelper.makeJsonMapper());
     dataSegmentFiles = temporaryFolder.newFolder();
     Files.asByteSink(new File(dataSegmentFiles, "version.bin")).write(Ints.toByteArray(0x9));
   }

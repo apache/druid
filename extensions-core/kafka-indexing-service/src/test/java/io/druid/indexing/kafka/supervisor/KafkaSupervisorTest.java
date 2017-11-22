@@ -112,7 +112,7 @@ import static org.easymock.EasyMock.reset;
 @RunWith(Parameterized.class)
 public class KafkaSupervisorTest extends EasyMockSupport
 {
-  private static final ObjectMapper objectMapper = TestHelper.getJsonMapper();
+  private static final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
   private static final String TOPIC_PREFIX = "testTopic";
   private static final String DATASOURCE = "testDS";
   private static final int NUM_PARTITIONS = 3;

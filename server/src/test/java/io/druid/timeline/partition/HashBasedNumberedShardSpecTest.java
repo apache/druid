@@ -28,7 +28,6 @@ import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
-import io.druid.segment.TestHelper;
 import io.druid.server.ServerTestHelper;
 import org.joda.time.DateTime;
 import org.junit.Assert;
@@ -82,9 +81,9 @@ public class HashBasedNumberedShardSpecTest
   public void testPartitionChunks()
   {
     final List<ShardSpec> specs = ImmutableList.<ShardSpec>of(
-        new HashBasedNumberedShardSpec(0, 3, null, TestHelper.getJsonMapper()),
-        new HashBasedNumberedShardSpec(1, 3, null, TestHelper.getJsonMapper()),
-        new HashBasedNumberedShardSpec(2, 3, null, TestHelper.getJsonMapper())
+        new HashBasedNumberedShardSpec(0, 3, null, ServerTestHelper.MAPPER),
+        new HashBasedNumberedShardSpec(1, 3, null, ServerTestHelper.MAPPER),
+        new HashBasedNumberedShardSpec(2, 3, null, ServerTestHelper.MAPPER)
     );
 
     final List<PartitionChunk<String>> chunks = Lists.transform(
@@ -148,7 +147,7 @@ public class HashBasedNumberedShardSpecTest
         1,
         2,
         ImmutableList.of("visitor_id"),
-        TestHelper.getJsonMapper()
+        ServerTestHelper.MAPPER
     );
     final DateTime time = DateTimes.nowUtc();
     final InputRow inputRow = new MapBasedInputRow(
@@ -162,7 +161,7 @@ public class HashBasedNumberedShardSpecTest
         1,
         2,
         null,
-        TestHelper.getJsonMapper()
+        ServerTestHelper.MAPPER
     );
     Assert.assertEquals(ImmutableList.of(
         time.getMillis(),
@@ -192,7 +191,7 @@ public class HashBasedNumberedShardSpecTest
         int partitions
     )
     {
-      super(partitionNum, partitions, null, TestHelper.getJsonMapper());
+      super(partitionNum, partitions, null, ServerTestHelper.MAPPER);
     }
 
     @Override

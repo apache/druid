@@ -35,7 +35,7 @@ import java.io.IOException;
 
 public class ImmutableSegmentLoadInfoTest
 {
-  private final ObjectMapper mapper = TestHelper.getJsonMapper();
+  private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
   @Test
   public void testSerde() throws IOException

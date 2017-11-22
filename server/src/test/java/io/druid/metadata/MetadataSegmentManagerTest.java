@@ -48,7 +48,7 @@ public class MetadataSegmentManagerTest
 
   private SQLMetadataSegmentManager manager;
   private SQLMetadataSegmentPublisher publisher;
-  private final ObjectMapper jsonMapper = TestHelper.getJsonMapper();
+  private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
   private final DataSegment segment1 = new DataSegment(
       "wikipedia",

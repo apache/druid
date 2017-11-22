@@ -136,7 +136,7 @@ public class AggregationTestHelper
       TemporaryFolder tempFolder
   )
   {
-    ObjectMapper mapper = TestHelper.getJsonMapper();
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
     GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(mapper, config);
 
     IndexIO indexIO = new IndexIO(
@@ -167,7 +167,7 @@ public class AggregationTestHelper
       TemporaryFolder tempFolder
   )
   {
-    ObjectMapper mapper = TestHelper.getJsonMapper();
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
     mapper.setInjectableValues(
         new InjectableValues.Std().addValue(
             SelectQueryConfig.class,
@@ -178,14 +178,14 @@ public class AggregationTestHelper
     Supplier<SelectQueryConfig> configSupplier = Suppliers.ofInstance(new SelectQueryConfig(true));
 
     SelectQueryQueryToolChest toolchest = new SelectQueryQueryToolChest(
-        TestHelper.getJsonMapper(),
+        TestHelper.makeJsonMapper(),
         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
         configSupplier
     );
 
     SelectQueryRunnerFactory factory = new SelectQueryRunnerFactory(
         new SelectQueryQueryToolChest(
-            TestHelper.getJsonMapper(),
+            TestHelper.makeJsonMapper(),
             QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
             configSupplier
         ),
@@ -222,7 +222,7 @@ public class AggregationTestHelper
       TemporaryFolder tempFolder
   )
   {
-    ObjectMapper mapper = TestHelper.getJsonMapper();
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
 
     TimeseriesQueryQueryToolChest toolchest = new TimeseriesQueryQueryToolChest(
         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
@@ -262,7 +262,7 @@ public class AggregationTestHelper
       TemporaryFolder tempFolder
   )
   {
-    ObjectMapper mapper = TestHelper.getJsonMapper();
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
 
     TopNQueryQueryToolChest toolchest = new TopNQueryQueryToolChest(
         new TopNQueryConfig(),

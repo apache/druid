@@ -51,7 +51,7 @@ public class TestHelper
   private static final IndexIO INDEX_IO;
 
   static {
-    final ObjectMapper jsonMapper = getJsonMapper();
+    final ObjectMapper jsonMapper = makeJsonMapper();
     INDEX_IO = new IndexIO(
         jsonMapper,
         new ColumnConfig()
@@ -76,25 +76,16 @@ public class TestHelper
     return INDEX_IO;
   }
 
-  /** static inner class for lazy, but thread-safe evaluation of {@link #JSON_MAPPER}. */
-  private static class LazyJsonMapperHolder
+  public static ObjectMapper makeJsonMapper()
   {
-    private static final ObjectMapper JSON_MAPPER;
-    static {
-      final ObjectMapper mapper = new DefaultObjectMapper();
-      mapper.setInjectableValues(
-          new InjectableValues.Std()
-              .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
-              .addValue(ObjectMapper.class.getName(), mapper)
-              .addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT)
-      );
-      JSON_MAPPER = mapper;
-    }
-  }
-
-  public static ObjectMapper getJsonMapper()
-  {
-    return LazyJsonMapperHolder.JSON_MAPPER;
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
+            .addValue(ObjectMapper.class.getName(), mapper)
+            .addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT)
+    );
+    return mapper;
   }
 
   public static ObjectMapper getSmileMapper()

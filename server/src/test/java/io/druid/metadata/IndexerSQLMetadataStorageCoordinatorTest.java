@@ -53,7 +53,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
-  private final ObjectMapper mapper = TestHelper.getJsonMapper();
+  private final ObjectMapper mapper = TestHelper.makeJsonMapper();
   private final DataSegment defaultSegment = new DataSegment(
       "fooDataSource",
       Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),

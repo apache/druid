@@ -33,7 +33,7 @@ import java.util.List;
  */
 public class SegmentListUsedActionSerdeTest
 {
-  private static final ObjectMapper MAPPER = TestHelper.getJsonMapper();
+  private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
 
   @Test
   public void testSingleIntervalSerde() throws Exception
