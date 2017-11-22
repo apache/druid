@@ -39,6 +39,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -105,6 +106,7 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
@@ -725,7 +727,25 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                   }
                 }
                 if (isPersistRequired) {
-                  driver.persist(committerSupplier.get());
+                  Futures.addCallback(
+                      driver.persistAsync(committerSupplier.get()),
+                      new FutureCallback<Object>()
+                      {
+                        @Override
+                        public void onSuccess(@Nullable Object result)
+                        {
+                          log.info("Persist completed with metadata [%s]", result);
+                        }
+
+                        @Override
+                        public void onFailure(Throwable t)
+                        {
+                          log.error("Persist failed, dying");
+                          throwableAtomicReference.set(t);
+                        }
+                      }
+                  );
+
                 }
               }
               catch (ParseException e) {

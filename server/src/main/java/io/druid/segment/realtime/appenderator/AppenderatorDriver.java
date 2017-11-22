@@ -61,6 +61,7 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -337,6 +338,22 @@ public class AppenderatorDriver implements Closeable
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
+  }
+
+  /**
+   * Persist all data indexed through this driver so far. Returns a future of persisted commitMetadata.
+   * <p>
+   * Should be called after all data has been added through {@link #add(InputRow, String, Supplier, boolean, boolean)}.
+   *
+   * @param committer committer representing all data that has been added so far
+   *
+   * @return future containing commitMetadata persisted
+   */
+  public ListenableFuture<Object> persistAsync(final Committer committer)
+      throws InterruptedException, ExecutionException
+  {
+    log.info("Persisting data asynchronously");
+    return appenderator.persistAll(wrapCommitter(committer));
   }
 
   /**
