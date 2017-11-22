@@ -29,6 +29,7 @@ import io.druid.data.input.Row;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.segment.TestHelper;
+import io.druid.server.ServerTestHelper;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
@@ -42,13 +43,13 @@ public class HashBasedNumberedShardSpecTest
   public void testSerdeRoundTrip() throws Exception
   {
 
-    final ShardSpec spec = TestHelper.getJsonMapper().readValue(
-        TestHelper.getJsonMapper().writeValueAsBytes(
+    final ShardSpec spec = ServerTestHelper.MAPPER.readValue(
+        ServerTestHelper.MAPPER.writeValueAsBytes(
             new HashBasedNumberedShardSpec(
                 1,
                 2,
                 ImmutableList.of("visitor_id"),
-                TestHelper.getJsonMapper()
+                ServerTestHelper.MAPPER
             )
         ),
         ShardSpec.class
@@ -61,14 +62,14 @@ public class HashBasedNumberedShardSpecTest
   @Test
   public void testSerdeBackwardsCompat() throws Exception
   {
-    final ShardSpec spec = TestHelper.getJsonMapper().readValue(
+    final ShardSpec spec = ServerTestHelper.MAPPER.readValue(
         "{\"type\": \"hashed\", \"partitions\": 2, \"partitionNum\": 1}",
         ShardSpec.class
     );
     Assert.assertEquals(1, spec.getPartitionNum());
     Assert.assertEquals(2, ((HashBasedNumberedShardSpec) spec).getPartitions());
 
-    final ShardSpec specWithPartitionDimensions = TestHelper.getJsonMapper().readValue(
+    final ShardSpec specWithPartitionDimensions = ServerTestHelper.MAPPER.readValue(
         "{\"type\": \"hashed\", \"partitions\": 2, \"partitionNum\": 1, \"partitionDimensions\":[\"visitor_id\"]}",
         ShardSpec.class
     );

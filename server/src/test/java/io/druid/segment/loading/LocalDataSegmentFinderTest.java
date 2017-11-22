@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Intervals;
 import io.druid.segment.TestHelper;
 import io.druid.timeline.DataSegment;
@@ -234,19 +233,5 @@ public class LocalDataSegmentFinderTest
 
     final LocalDataSegmentFinder localDataSegmentFinder = new LocalDataSegmentFinder(mapper);
     localDataSegmentFinder.findSegments(dataSourceDir.getAbsolutePath(), false);
-  }
-
-  @Test(expected = SegmentLoadingException.class)
-  public void testFindSegmentsFail2() throws SegmentLoadingException
-  {
-    // will fail to desierialize descriptor.json because DefaultObjectMapper doesn't recognize NumberedShardSpec
-    final LocalDataSegmentFinder localDataSegmentFinder = new LocalDataSegmentFinder(new DefaultObjectMapper());
-    try {
-      localDataSegmentFinder.findSegments(dataSourceDir.getAbsolutePath(), false);
-    }
-    catch (SegmentLoadingException e) {
-      Assert.assertTrue(e.getCause() instanceof IOException);
-      throw e;
-    }
   }
 }

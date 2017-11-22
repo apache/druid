@@ -87,7 +87,7 @@ public class BatchDeltaIngestionTest
     INDEX_IO = HadoopDruidIndexerConfig.INDEX_IO;
 
     try {
-      SEGMENT = new DefaultObjectMapper()
+      SEGMENT = MAPPER
           .readValue(
               BatchDeltaIngestionTest.class.getClassLoader().getResource("test-segment/descriptor.json"),
               DataSegment.class
