@@ -47,6 +47,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.PriorityQueue;
+import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 /**
@@ -125,21 +126,27 @@ public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
     Preconditions.checkNotNull(skipOffset, "skipOffset");
     final TimelineObjectHolder<String, DataSegment> first = Preconditions.checkNotNull(timeline.first(), "first");
     final TimelineObjectHolder<String, DataSegment> last = Preconditions.checkNotNull(timeline.last(), "last");
-    final List<TimelineObjectHolder<String, DataSegment>> holdersInSkipRange = timeline.lookup(
-        new Interval(skipOffset, last.getInterval().getEnd())
+
+    final Interval skipInterval = new Interval(skipOffset, last.getInterval().getEnd());
+
+    final List<TimelineObjectHolder<String, DataSegment>> holders = timeline.lookup(
+        new Interval(first.getInterval().getStart(), last.getInterval().getEnd().minus(skipOffset))
     );
-    if (holdersInSkipRange.size() > 0) {
-      // holdersInSkipRange is sorted in time
-      final List<PartitionChunk<DataSegment>> chunks = Lists.newArrayList(holdersInSkipRange.get(0).getObject());
-      if (chunks.size() > 0) {
-        return new Interval(first.getInterval().getStart(), chunks.get(0).getObject().getInterval().getStart());
+
+    final List<DataSegment> segments = holders
+        .stream()
+        .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
+        .map(PartitionChunk::getObject)
+        .collect(Collectors.toList());
+
+    for (int i = segments.size() - 1; i >= 0; i--) {
+      final DataSegment segment = segments.get(i);
+      if (!segment.getInterval().overlaps(skipInterval)) {
+        return new Interval(first.getInterval().getStart(), segment.getInterval().getEnd());
       }
     }
 
-    return new Interval(
-        first.getInterval().getStart(),
-        last.getInterval().getEnd().minus(skipOffset)
-    );
+    return new Interval(first.getInterval().getStart(), first.getInterval().getStart());
   }
 
   @Nullable
