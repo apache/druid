@@ -45,7 +45,7 @@ public class GenericRecordAsMap implements Map<String, Object>
     @Override
     public String apply(Object input)
     {
-      if(input instanceof GenericRecord) {
+      if (input instanceof GenericRecord) {
         return String.valueOf(((GenericRecord) input).get(0));
       }
       return String.valueOf(input);
