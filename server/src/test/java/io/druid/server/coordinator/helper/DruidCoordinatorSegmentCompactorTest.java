@@ -147,14 +147,18 @@ public class DruidCoordinatorSegmentCompactorTest
 
       for (int j = 0; j < 4; j++) {
         for (int k = 0; k < 2; k++) {
-          final DataSegment segment = createSegment(dataSource, j, k);
+          DataSegment segment = createSegment(dataSource, j, true, k);
+          timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
+          segment = createSegment(dataSource, j, false, k);
           timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
         }
       }
 
-      for (int j = 6; j < 9; j++) {
+      for (int j = 7; j < 9; j++) {
         for (int k = 0; k < 2; k++) {
-          final DataSegment segment = createSegment(dataSource, j, k);
+          DataSegment segment = createSegment(dataSource, j, true, k);
+          timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
+          segment = createSegment(dataSource, j, false, k);
           timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
         }
       }
@@ -163,12 +167,27 @@ public class DruidCoordinatorSegmentCompactorTest
     }
   }
 
-  private static DataSegment createSegment(String dataSource, int startDay, int partition)
+  private static DataSegment createSegment(String dataSource, int startDay, boolean beforeNoon, int partition)
   {
     final ShardSpec shardSpec = new NumberedShardSpec(2, partition);
+    final Interval interval = beforeNoon ?
+                              Intervals.of(
+                                  StringUtils.format(
+                                      "2017-01-%02dT00:00:00/2017-01-%02dT12:00:00",
+                                      startDay + 1,
+                                      startDay + 1
+                                  )
+                              ) :
+                              Intervals.of(
+                                  StringUtils.format(
+                                      "2017-01-%02dT12:00:00/2017-01-%02dT00:00:00",
+                                      startDay + 1,
+                                      startDay + 2
+                                  )
+                              );
     return new DataSegment(
         dataSource,
-        Intervals.of(StringUtils.format("2017-01-%02d/2017-01-%02d", startDay + 1, startDay + 2)),
+        interval,
         "version",
         null,
         ImmutableList.of(),
@@ -195,22 +214,32 @@ public class DruidCoordinatorSegmentCompactorTest
       }
     };
     int expectedCompactTaskCount = 1;
-    int expectedRemainingSegments = 8;
-    int endDay = 9;
+    int expectedRemainingSegments = 18;
 
+    // compact for 2017-01-08T12:00:00.000Z/2017-01-09T12:00:00.000Z
     assertCompactSegments(
         compactor,
-        endDay,
+        Intervals.of(StringUtils.format("2017-01-%02dT12:00:00/2017-01-%02dT12:00:00", 8, 9)),
         expectedRemainingSegments,
         expectedCompactTaskCount,
         expectedVersionSupplier
     );
 
-    for (endDay = 5; endDay > 2; endDay -= 2) {
+    // compact for 2017-01-07T12:00:00.000Z/2017-01-08T12:00:00.000Z
+    expectedRemainingSegments -= 4;
+    assertCompactSegments(
+        compactor,
+        Intervals.of(StringUtils.format("2017-01-%02dT12:00:00/2017-01-%02dT12:00:00", 4, 8)),
+        expectedRemainingSegments,
+        expectedCompactTaskCount,
+        expectedVersionSupplier
+    );
+
+    for (int endDay = 4; endDay > 1; endDay -= 1) {
       expectedRemainingSegments -= 4;
       assertCompactSegments(
           compactor,
-          endDay,
+          Intervals.of(StringUtils.format("2017-01-%02dT12:00:00/2017-01-%02dT12:00:00", endDay - 1, endDay)),
           expectedRemainingSegments,
           expectedCompactTaskCount,
           expectedVersionSupplier
@@ -220,15 +249,17 @@ public class DruidCoordinatorSegmentCompactorTest
     // Segments of the latest interval should not be compacted
     for (int i = 0; i < 3; i++) {
       final String dataSource = DATA_SOURCE_PREFIX + i;
-      final Interval interval = Intervals.of(StringUtils.format("2017-01-09/2017-01-10"));
+      final Interval interval = Intervals.of(StringUtils.format("2017-01-09T12:00:00/2017-01-10"));
       List<TimelineObjectHolder<String, DataSegment>> holders = dataSources.get(dataSource).lookup(interval);
       Assert.assertEquals(1, holders.size());
-      List<PartitionChunk<DataSegment>> chunks = Lists.newArrayList(holders.get(0).getObject());
-      Assert.assertEquals(2, chunks.size());
-      for (PartitionChunk<DataSegment> chunk : chunks) {
-        DataSegment segment = chunk.getObject();
-        Assert.assertEquals(interval, segment.getInterval());
-        Assert.assertEquals("version", segment.getVersion());
+      for (TimelineObjectHolder<String, DataSegment> holder : holders) {
+        List<PartitionChunk<DataSegment>> chunks = Lists.newArrayList(holder.getObject());
+        Assert.assertEquals(2, chunks.size());
+        for (PartitionChunk<DataSegment> chunk : chunks) {
+          DataSegment segment = chunk.getObject();
+          Assert.assertEquals(interval, segment.getInterval());
+          Assert.assertEquals("version", segment.getVersion());
+        }
       }
     }
 
@@ -238,7 +269,7 @@ public class DruidCoordinatorSegmentCompactorTest
 
     CoordinatorStats stats = runCompactor(compactor);
     Assert.assertEquals(
-        0,
+        1,
         stats.getGlobalStat(DruidCoordinatorSegmentCompactor.COMPACT_TASK_COUNT)
     );
 
@@ -263,7 +294,7 @@ public class DruidCoordinatorSegmentCompactorTest
 
   private void assertCompactSegments(
       DruidCoordinatorSegmentCompactor compactor,
-      int endDay,
+      Interval expectedInterval,
       int expectedRemainingSegments,
       int expectedCompactTaskCount,
       Supplier<String> expectedVersionSupplier
@@ -301,13 +332,12 @@ public class DruidCoordinatorSegmentCompactorTest
 
     for (int i = 0; i < 3; i++) {
       final String dataSource = DATA_SOURCE_PREFIX + i;
-      final Interval interval = Intervals.of(StringUtils.format("2017-01-%02d/2017-01-%02d", endDay - 2, endDay));
-      List<TimelineObjectHolder<String, DataSegment>> holders = dataSources.get(dataSource).lookup(interval);
+      List<TimelineObjectHolder<String, DataSegment>> holders = dataSources.get(dataSource).lookup(expectedInterval);
       Assert.assertEquals(1, holders.size());
       List<PartitionChunk<DataSegment>> chunks = Lists.newArrayList(holders.get(0).getObject());
       Assert.assertEquals(1, chunks.size());
       DataSegment segment = chunks.get(0).getObject();
-      Assert.assertEquals(interval, segment.getInterval());
+      Assert.assertEquals(expectedInterval, segment.getInterval());
       Assert.assertEquals(expectedVersionSupplier.get(), segment.getVersion());
     }
   }
@@ -315,7 +345,13 @@ public class DruidCoordinatorSegmentCompactorTest
   private void addMoreData(String dataSource, int day)
   {
     for (int i = 0; i < 2; i++) {
-      final DataSegment newSegment = createSegment(dataSource, day, i);
+      DataSegment newSegment = createSegment(dataSource, day, true, i);
+      dataSources.get(dataSource).add(
+          newSegment.getInterval(),
+          newSegment.getVersion(),
+          newSegment.getShardSpec().createChunk(newSegment)
+      );
+      newSegment = createSegment(dataSource, day, false, i);
       dataSources.get(dataSource).add(
           newSegment.getInterval(),
           newSegment.getVersion(),

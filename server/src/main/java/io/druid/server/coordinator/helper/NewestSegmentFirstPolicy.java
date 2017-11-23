@@ -137,16 +137,17 @@ public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
         .stream()
         .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
         .map(PartitionChunk::getObject)
+        .filter(segment -> !segment.getInterval().overlaps(skipInterval))
         .collect(Collectors.toList());
 
-    for (int i = segments.size() - 1; i >= 0; i--) {
-      final DataSegment segment = segments.get(i);
-      if (!segment.getInterval().overlaps(skipInterval)) {
-        return new Interval(first.getInterval().getStart(), segment.getInterval().getEnd());
-      }
+    if (segments.isEmpty()) {
+      return new Interval(first.getInterval().getStart(), first.getInterval().getStart());
+    } else {
+      return new Interval(
+          segments.get(0).getInterval().getStart(),
+          segments.get(segments.size() - 1).getInterval().getEnd()
+      );
     }
-
-    return new Interval(first.getInterval().getStart(), first.getInterval().getStart());
   }
 
   @Nullable
@@ -255,10 +256,15 @@ public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
         continue;
       }
 
-      for (TimelineObjectHolder<String, DataSegment> holder : holders) {
+      for (int i = holders.size() - 1; i >= 0; i--) {
+        final TimelineObjectHolder<String, DataSegment> holder = holders.get(i);
         final List<PartitionChunk<DataSegment>> chunks = Lists.newArrayList(holder.getObject().iterator());
         final long partitionBytes = chunks.stream().mapToLong(chunk -> chunk.getObject().getSize()).sum();
         if (chunks.size() == 0 || partitionBytes == 0) {
+          continue;
+        }
+
+        if (!intervalToSearch.contains(chunks.get(0).getObject().getInterval())) {
           continue;
         }
 
@@ -285,16 +291,20 @@ public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
             chunks.forEach(chunk -> segmentsToCompact.add(chunk.getObject()));
             totalSegmentsToCompactBytes = partitionBytes;
           } else {
-            // TODO: this should be changed to compact many segments into a few segments
-            final DataSegment segment = chunks.get(0).getObject();
-            log.warn(
-                "shardSize[%d] for dataSource[%s] and interval [%s] is larger than remainingBytes[%d]."
-                + " Contitnue to the next shard",
-                partitionBytes,
-                segment.getDataSource(),
-                segment.getInterval(),
-                remainingBytes
-            );
+            if (targetCompactionSizeBytes < partitionBytes) {
+              // TODO: this should be changed to compact many segments into a few segments
+              final DataSegment segment = chunks.get(0).getObject();
+              log.warn(
+                  "shardSize[%d] for dataSource[%s] and interval [%s] is larger than remainingBytes[%d]."
+                  + " Contitnue to the next shard",
+                  partitionBytes,
+                  segment.getDataSource(),
+                  segment.getInterval(),
+                  remainingBytes
+              );
+            } else {
+              return Pair.of(intervalToSearch, new SegmentsToCompact(ImmutableList.of(), 0));
+            }
           }
         }
 
