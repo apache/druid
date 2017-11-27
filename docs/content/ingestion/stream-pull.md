@@ -12,8 +12,7 @@ the [stream push method](stream-push.html).
 Another option is *stream pull*. With this approach, a Druid Realtime Node ingests data from a
 [Firehose](../ingestion/firehose.html) connected to the data you want to
 read. The Druid quickstart and tutorials do not include information about how to set up standalone realtime nodes, but 
-they can be used in place for Tranquility server and the indexing service. Please note that Realtime nodes have very properties than 
-the indexing service.
+they can be used in place for Tranquility server and the indexing service. Please note that Realtime nodes have different properties and roles than the indexing service.
 
 ## Realtime Node Ingestion
 
