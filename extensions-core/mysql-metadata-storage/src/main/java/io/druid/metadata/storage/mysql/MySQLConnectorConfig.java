@@ -52,6 +52,9 @@ public class MySQLConnectorConfig
   @JsonProperty
   private List<String> enabledTLSProtocols;
 
+  @JsonProperty
+  private boolean verifyServerCertificate = true;
+
   public boolean isUseSSL()
   {
     return useSSL;
@@ -95,6 +98,11 @@ public class MySQLConnectorConfig
   public List<String> getEnabledTLSProtocols()
   {
     return enabledTLSProtocols;
+  }
+
+  public boolean isVerifyServerCertificate()
+  {
+    return verifyServerCertificate;
   }
 
   @Override

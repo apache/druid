@@ -67,25 +67,27 @@ public class MySQLConnector extends SQLMetadataConnector
     if (connectorConfig.isUseSSL()) {
       log.info("SSL is enabled on this MySQL connection. ");
 
-      // Server certificate verification is enabled by default
-      datasource.addConnectionProperty("verifyServerCertificate", String.valueOf(true));
-      if (connectorConfig.getTrustCertificateKeyStoreUrl() != null) {
-        datasource.addConnectionProperty(
-            "trustCertificateKeyStoreUrl",
-            new File(connectorConfig.getTrustCertificateKeyStoreUrl()).toURI().toString()
-        );
-      }
-      if (connectorConfig.getTrustCertificateKeyStoreType() != null) {
-        datasource.addConnectionProperty(
-            "trustCertificateKeyStoreType",
-            connectorConfig.getTrustCertificateKeyStoreType()
-        );
-      }
-      if (connectorConfig.getTrustCertificateKeyStorePassword() != null) {
-        datasource.addConnectionProperty(
-            "trustCertificateKeyStorePassword",
-            connectorConfig.getTrustCertificateKeyStorePassword()
-        );
+      datasource.addConnectionProperty("verifyServerCertificate", String.valueOf(connectorConfig.isVerifyServerCertificate()));
+      if (connectorConfig.isVerifyServerCertificate()) {
+        log.info("Server certificate verification is enabled. ");
+        if (connectorConfig.getTrustCertificateKeyStoreUrl() != null) {
+          datasource.addConnectionProperty(
+              "trustCertificateKeyStoreUrl",
+              new File(connectorConfig.getTrustCertificateKeyStoreUrl()).toURI().toString()
+          );
+        }
+        if (connectorConfig.getTrustCertificateKeyStoreType() != null) {
+          datasource.addConnectionProperty(
+              "trustCertificateKeyStoreType",
+              connectorConfig.getTrustCertificateKeyStoreType()
+          );
+        }
+        if (connectorConfig.getTrustCertificateKeyStorePassword() != null) {
+          datasource.addConnectionProperty(
+              "trustCertificateKeyStorePassword",
+              connectorConfig.getTrustCertificateKeyStorePassword()
+          );
+        }
       }
       if (connectorConfig.getClientCertificateKeyStoreUrl() != null) {
         datasource.addConnectionProperty(
