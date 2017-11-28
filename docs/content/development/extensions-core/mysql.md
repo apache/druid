@@ -58,7 +58,7 @@ Make sure to [include](../../operations/including-extensions.html) `mysql-metada
 ## Encrypting MySQL connections
   This extension provides support for encrypting MySQL connections. To get more information about encrypting MySQL connections using TLS/SSL in general, please refer to this [guide](https://dev.mysql.com/doc/refman/5.7/en/using-encrypted-connections.html).
 
-# Configuration
+## Configuration
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|--------|
