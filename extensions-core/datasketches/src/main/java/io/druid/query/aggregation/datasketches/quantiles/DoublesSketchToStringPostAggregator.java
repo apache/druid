@@ -27,6 +27,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
+import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
@@ -69,19 +70,10 @@ public class DoublesSketchToStringPostAggregator implements PostAggregator
     return sketch.toString();
   }
 
-  // comparing sketch summaries doesn't make much sense, so this comparator
-  // pretends everything is equal
   @Override
   public Comparator<String> getComparator()
   {
-    return new Comparator<String>()
-    {
-      @Override
-      public int compare(String o1, String o2)
-      {
-        return 0;
-      }
-    };
+    throw new IAE("Comparing sketch summaries is not supported");
   }
 
   @Override
@@ -130,7 +122,7 @@ public class DoublesSketchToStringPostAggregator implements PostAggregator
   }
 
   @Override
-  public PostAggregator decorate(Map<String, AggregatorFactory> map)
+  public PostAggregator decorate(final Map<String, AggregatorFactory> map)
   {
     return this;
   }

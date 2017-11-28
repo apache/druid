@@ -28,6 +28,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
+import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
@@ -79,19 +80,10 @@ public class DoublesSketchToQuantilesPostAggregator implements PostAggregator
     return sketch.getQuantiles(fractions);
   }
 
-  // comparing arrays of quantiles doesn't make much sense, so this comparator
-  // pretends everything is equal
   @Override
   public Comparator<double[]> getComparator()
   {
-    return new Comparator<double[]>()
-    {
-      @Override
-      public int compare(double[] o1, double[] o2)
-      {
-        return 0;
-      }
-    };
+    throw new IAE("Comparing arrays of quantiles is not supported");
   }
 
   @Override
@@ -147,7 +139,7 @@ public class DoublesSketchToQuantilesPostAggregator implements PostAggregator
   }
 
   @Override
-  public PostAggregator decorate(Map<String, AggregatorFactory> map)
+  public PostAggregator decorate(final Map<String, AggregatorFactory> map)
   {
     return this;
   }

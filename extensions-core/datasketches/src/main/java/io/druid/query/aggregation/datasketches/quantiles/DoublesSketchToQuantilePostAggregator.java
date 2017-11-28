@@ -85,7 +85,7 @@ public class DoublesSketchToQuantilePostAggregator implements PostAggregator
     return new Comparator<Double>()
     {
       @Override
-      public int compare(Double a, Double b)
+      public int compare(final Double a, final Double b)
       {
         return Doubles.compare(a, b);
       }
@@ -141,7 +141,7 @@ public class DoublesSketchToQuantilePostAggregator implements PostAggregator
   }
 
   @Override
-  public PostAggregator decorate(Map<String, AggregatorFactory> map)
+  public PostAggregator decorate(final Map<String, AggregatorFactory> map)
   {
     return this;
   }

@@ -28,6 +28,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
+import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
@@ -83,18 +84,10 @@ public class DoublesSketchToHistogramPostAggregator implements PostAggregator
     return splitPoints;
   }
 
-  // comparing histograms doesn't make much sense, so this comparator pretends that everything is equal
   @Override
   public Comparator<double[]> getComparator()
   {
-    return new Comparator<double[]>()
-    {
-      @Override
-      public int compare(double[] o1, double[] o2)
-      {
-        return 0;
-      }
-    };
+    throw new IAE("Comparing histograms is not supported");
   }
 
   @Override
@@ -152,7 +145,7 @@ public class DoublesSketchToHistogramPostAggregator implements PostAggregator
   }
 
   @Override
-  public PostAggregator decorate(Map<String, AggregatorFactory> map)
+  public PostAggregator decorate(final Map<String, AggregatorFactory> map)
   {
     return this;
   }
