@@ -36,6 +36,7 @@ public interface CompactionSegmentSearchPolicy
   /**
    * Reset the current states of this policy. This method should be called whenever iterating starts.
    */
+  // TODO: return a dataSegmentIterator
   void reset(
       Map<String, CoordinatorCompactionConfig> compactionConfigs,
       Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources

@@ -19,6 +19,7 @@
 
 package io.druid.server.coordinator.helper;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -138,6 +139,7 @@ public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
         .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
         .map(PartitionChunk::getObject)
         .filter(segment -> !segment.getInterval().overlaps(skipInterval))
+        .sorted((s1, s2) -> Comparators.intervalsByStartThenEnd().compare(s1.getInterval(), s2.getInterval()))
         .collect(Collectors.toList());
 
     if (segments.isEmpty()) {
@@ -232,7 +234,8 @@ public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
     }
   }
 
-  private static Pair<Interval, SegmentsToCompact> findSegmentsToCompact(
+  @VisibleForTesting
+  static Pair<Interval, SegmentsToCompact> findSegmentsToCompact(
       final VersionedIntervalTimeline<String, DataSegment> timeline,
       final Interval intervalToSearch,
       @Nullable final DateTime searchEnd,
@@ -261,10 +264,15 @@ public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
         final List<PartitionChunk<DataSegment>> chunks = Lists.newArrayList(holder.getObject().iterator());
         final long partitionBytes = chunks.stream().mapToLong(chunk -> chunk.getObject().getSize()).sum();
         if (chunks.size() == 0 || partitionBytes == 0) {
+          log.warn("Skip empty shard[%s]", holder);
           continue;
         }
 
         if (!intervalToSearch.contains(chunks.get(0).getObject().getInterval())) {
+          searchInterval = SegmentCompactorUtil.removeIntervalFromEnd(
+              searchInterval,
+              new Interval(chunks.get(0).getObject().getInterval().getStart(), searchInterval.getEnd())
+          );
           continue;
         }
 
@@ -310,7 +318,8 @@ public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
 
         // Update searchInterval
         searchInterval = SegmentCompactorUtil.removeIntervalFromEnd(
-            searchInterval, chunks.get(0).getObject().getInterval()
+            searchInterval,
+            new Interval(chunks.get(0).getObject().getInterval().getStart(), searchInterval.getEnd())
         );
       }
     }
