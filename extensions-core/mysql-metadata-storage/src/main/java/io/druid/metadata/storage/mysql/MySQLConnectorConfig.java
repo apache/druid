@@ -20,6 +20,7 @@
 package io.druid.metadata.storage.mysql;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.metadata.PasswordProvider;
 
 import java.util.List;
 
@@ -34,8 +35,8 @@ public class MySQLConnectorConfig
   @JsonProperty
   private String trustCertificateKeyStoreType;
 
-  @JsonProperty
-  private String trustCertificateKeyStorePassword;
+  @JsonProperty("trustCertificateKeyStorePassword")
+  private PasswordProvider trustCertificateKeyStorePasswordProvider;
 
   @JsonProperty
   private String clientCertificateKeyStoreUrl;
@@ -43,8 +44,8 @@ public class MySQLConnectorConfig
   @JsonProperty
   private String clientCertificateKeyStoreType;
 
-  @JsonProperty
-  private String clientCertificateKeyStorePassword;
+  @JsonProperty("clientCertificateKeyStorePassword")
+  private PasswordProvider clientCertificateKeyStorePasswordProvider;
 
   @JsonProperty
   private List<String> enabledSSLCipherSuites;
@@ -72,7 +73,7 @@ public class MySQLConnectorConfig
 
   public String getTrustCertificateKeyStorePassword()
   {
-    return trustCertificateKeyStorePassword;
+    return trustCertificateKeyStorePasswordProvider == null ? null : trustCertificateKeyStorePasswordProvider.getPassword();
   }
 
   public String getClientCertificateKeyStoreUrl()
@@ -87,7 +88,7 @@ public class MySQLConnectorConfig
 
   public String getClientCertificateKeyStorePassword()
   {
-    return clientCertificateKeyStorePassword;
+    return clientCertificateKeyStorePasswordProvider == null ? null : clientCertificateKeyStorePasswordProvider.getPassword();
   }
 
   public List<String> getEnabledSSLCipherSuites()
