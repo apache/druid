@@ -262,6 +262,10 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       Executor exec, SegmentCallback callback, Predicate<Pair<DruidServerMetadata, DataSegment>> filter
   )
   {
+    if (lifecycleLock.isStarted()) {
+      throw new ISE("Lifecycle has already started.");
+    }
+
     SegmentCallback filteringSegmentCallback = new SingleServerInventoryView.FilteringSegmentCallback(callback, filter);
     segmentCallbacks.put(filteringSegmentCallback, exec);
     segmentPredicates.put(filteringSegmentCallback, filter);
@@ -275,12 +279,20 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   @Override
   public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
   {
+    if (lifecycleLock.isStarted()) {
+      throw new ISE("Lifecycle has already started.");
+    }
+
     serverCallbacks.put(callback, exec);
   }
 
   @Override
   public void registerSegmentCallback(Executor exec, SegmentCallback callback)
   {
+    if (lifecycleLock.isStarted()) {
+      throw new ISE("Lifecycle has already started.");
+    }
+
     segmentCallbacks.put(callback, exec);
   }
 
