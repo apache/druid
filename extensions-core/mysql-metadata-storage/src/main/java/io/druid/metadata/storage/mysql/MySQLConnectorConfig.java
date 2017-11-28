@@ -1,0 +1,113 @@
+/*
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package io.druid.metadata.storage.mysql;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.util.List;
+
+public class MySQLConnectorConfig
+{
+  @JsonProperty
+  private boolean useSSL = false;
+
+  @JsonProperty
+  private String trustCertificateKeyStoreUrl;
+
+  @JsonProperty
+  private String trustCertificateKeyStoreType;
+
+  @JsonProperty
+  private String trustCertificateKeyStorePassword;
+
+  @JsonProperty
+  private String clientCertificateKeyStoreUrl;
+
+  @JsonProperty
+  private String clientCertificateKeyStoreType;
+
+  @JsonProperty
+  private String clientCertificateKeyStorePassword;
+
+  @JsonProperty
+  private List<String> enabledSSLCipherSuites;
+
+  @JsonProperty
+  private List<String> enabledTLSProtocols;
+
+  public boolean isUseSSL()
+  {
+    return useSSL;
+  }
+
+  public String getTrustCertificateKeyStoreUrl()
+  {
+    return trustCertificateKeyStoreUrl;
+  }
+
+  public String getTrustCertificateKeyStoreType()
+  {
+    return trustCertificateKeyStoreType;
+  }
+
+  public String getTrustCertificateKeyStorePassword()
+  {
+    return trustCertificateKeyStorePassword;
+  }
+
+  public String getClientCertificateKeyStoreUrl()
+  {
+    return clientCertificateKeyStoreUrl;
+  }
+
+  public String getClientCertificateKeyStoreType()
+  {
+    return clientCertificateKeyStoreType;
+  }
+
+  public String getClientCertificateKeyStorePassword()
+  {
+    return clientCertificateKeyStorePassword;
+  }
+
+  public List<String> getEnabledSSLCipherSuites()
+  {
+    return enabledSSLCipherSuites;
+  }
+
+  public List<String> getEnabledTLSProtocols()
+  {
+    return enabledTLSProtocols;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "MySQLConnectorConfig{" +
+           "useSSL='" + useSSL + '\'' +
+           ", trustCertificateKeyStoreUrl='" + trustCertificateKeyStoreUrl + '\'' +
+           ", trustCertificateKeyStoreType='" + trustCertificateKeyStoreType + '\'' +
+           ", clientCertificateKeyStoreUrl='" + clientCertificateKeyStoreUrl + '\'' +
+           ", clientCertificateKeyStoreType='" + clientCertificateKeyStoreType + '\'' +
+           ", enabledSSLCipherSuites=" + enabledSSLCipherSuites +
+           ", enabledTLSProtocols=" + enabledTLSProtocols +
+           '}';
+  }
+}
