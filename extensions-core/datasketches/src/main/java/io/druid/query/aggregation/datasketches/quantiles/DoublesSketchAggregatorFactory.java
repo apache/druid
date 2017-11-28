@@ -34,6 +34,7 @@ import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.NilColumnValueSelector;
 import io.druid.segment.column.ValueType;
 
 import java.util.Collections;
@@ -83,14 +84,14 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   {
     if (metricFactory.getColumnCapabilities(fieldName) != null
         && ValueType.isNumeric(metricFactory.getColumnCapabilities(fieldName).getType())) {
-      final ColumnValueSelector<Double> valueSelector = metricFactory.makeColumnValueSelector(fieldName);
-      if (valueSelector == null) {
+      final ColumnValueSelector<Double> selector = metricFactory.makeColumnValueSelector(fieldName);
+      if (selector instanceof NilColumnValueSelector) {
         return new DoublesSketchNoOpAggregator();
       }
-      return new DoublesSketchBuildAggregator(valueSelector, k);
+      return new DoublesSketchBuildAggregator(selector, k);
     }
     final ColumnValueSelector<DoublesSketch> selector = metricFactory.makeColumnValueSelector(fieldName);
-    if (selector == null) {
+    if (selector instanceof NilColumnValueSelector) {
       return new DoublesSketchNoOpAggregator();
     }
     return new DoublesSketchMergeAggregator(selector, k);
@@ -101,21 +102,17 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   {
     if (metricFactory.getColumnCapabilities(fieldName) != null
         && ValueType.isNumeric(metricFactory.getColumnCapabilities(fieldName).getType())) {
-      return getDoubleBufferAggregator(metricFactory.makeColumnValueSelector(fieldName));
+      final ColumnValueSelector<Double> selector = metricFactory.makeColumnValueSelector(fieldName);
+      if (selector instanceof NilColumnValueSelector) {
+        return new DoublesSketchNoOpBufferAggregator();
+      }
+      return new DoublesSketchBuildBufferAggregator(selector, k, getMaxIntermediateSize());
     }
     final ColumnValueSelector<DoublesSketch> selector = metricFactory.makeColumnValueSelector(fieldName);
-    if (selector == null) {
+    if (selector instanceof NilColumnValueSelector) {
       return new DoublesSketchNoOpBufferAggregator();
     }
     return new DoublesSketchMergeBufferAggregator(selector, k, getMaxIntermediateSize());
-  }
-
-  private BufferAggregator getDoubleBufferAggregator(final ColumnValueSelector<Double> selector)
-  {
-    if (selector == null) {
-      return new DoublesSketchNoOpBufferAggregator();
-    }
-    return new DoublesSketchBuildBufferAggregator(selector, k, getMaxIntermediateSize());
   }
 
   @Override

@@ -27,6 +27,7 @@ import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.NilColumnValueSelector;
 
 public class DoublesSketchMergeAggregatorFactory extends DoublesSketchAggregatorFactory
 {
@@ -43,7 +44,7 @@ public class DoublesSketchMergeAggregatorFactory extends DoublesSketchAggregator
   public Aggregator factorize(final ColumnSelectorFactory metricFactory)
   {
     final ColumnValueSelector<DoublesSketch> selector = metricFactory.makeColumnValueSelector(getFieldName());
-    if (selector == null) {
+    if (selector instanceof NilColumnValueSelector) {
       return new DoublesSketchNoOpAggregator();
     }
     return new DoublesSketchMergeAggregator(selector, getK());
@@ -53,7 +54,7 @@ public class DoublesSketchMergeAggregatorFactory extends DoublesSketchAggregator
   public BufferAggregator factorizeBuffered(final ColumnSelectorFactory metricFactory)
   {
     final ColumnValueSelector<DoublesSketch> selector = metricFactory.makeColumnValueSelector(getFieldName());
-    if (selector == null) {
+    if (selector instanceof NilColumnValueSelector) {
       return new DoublesSketchNoOpBufferAggregator();
     }
     return new DoublesSketchMergeBufferAggregator(selector, getK(), getMaxIntermediateSize());
