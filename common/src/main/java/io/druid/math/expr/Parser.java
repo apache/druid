@@ -35,6 +35,7 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
+import javax.annotation.Nullable;
 import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.Map;
@@ -145,6 +146,16 @@ public class Parser
         }
     );
     return Lists.newArrayList(found);
+  }
+
+  @Nullable
+  public static String getIdentifierIfIdentifier(Expr expr)
+  {
+    if (expr instanceof IdentifierExpr) {
+      return expr.toString();
+    } else {
+      return null;
+    }
   }
 
   public static Expr.ObjectBinding withMap(final Map<String, ?> bindings)
