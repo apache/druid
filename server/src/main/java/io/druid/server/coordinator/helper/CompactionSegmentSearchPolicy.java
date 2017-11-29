@@ -22,10 +22,7 @@ package io.druid.server.coordinator.helper;
 import io.druid.server.coordinator.CoordinatorCompactionConfig;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
-import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 
-import javax.annotation.Nullable;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -36,23 +33,8 @@ public interface CompactionSegmentSearchPolicy
   /**
    * Reset the current states of this policy. This method should be called whenever iterating starts.
    */
-  // TODO: return a dataSegmentIterator
-  void reset(
+  CompactionSegmentIterator reset(
       Map<String, CoordinatorCompactionConfig> compactionConfigs,
       Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources
   );
-
-  /**
-   * Return a next batch of segments for compaction.
-   *
-   * @return a list of segments if exist, null otherwise.
-   */
-  @Nullable
-  List<DataSegment> nextSegments();
-
-  /**
-   * Return a map of (dataSource, number of remaining segments) for all dataSources.
-   * This method should consider all segments except the segments returned by {@link #nextSegments()}.
-   */
-  Object2LongOpenHashMap<String> remainingSegments();
 }

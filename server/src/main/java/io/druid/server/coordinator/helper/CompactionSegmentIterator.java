@@ -19,23 +19,17 @@
 
 package io.druid.server.coordinator.helper;
 
-import io.druid.server.coordinator.CoordinatorCompactionConfig;
 import io.druid.timeline.DataSegment;
-import io.druid.timeline.VersionedIntervalTimeline;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 
-import java.util.Map;
+import java.util.Iterator;
+import java.util.List;
 
-/**
- * This policy searches segments for compaction from the newest one to oldest one.
- */
-public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
+public interface CompactionSegmentIterator extends Iterator<List<DataSegment>>
 {
-  @Override
-  public CompactionSegmentIterator reset(
-      Map<String, CoordinatorCompactionConfig> compactionConfigs,
-      Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources
-  )
-  {
-    return new NewestSegmentFirstIterator(compactionConfigs, dataSources);
-  }
+  /**
+   * Return a map of (dataSource, number of remaining segments) for all dataSources.
+   * This method should consider all segments except the segments returned by {@link #nextSegments()}.
+   */
+  Object2LongOpenHashMap<String> remainingSegments();
 }

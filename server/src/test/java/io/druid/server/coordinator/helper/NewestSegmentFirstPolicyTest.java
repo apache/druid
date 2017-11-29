@@ -49,11 +49,11 @@ public class NewestSegmentFirstPolicyTest
   private final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy();
 
   @Test
-  public void testWithLargeOffsetAndSmallSegmentInterval()
+  public void testLargeOffsetAndSmallSegmentInterval()
   {
     final Period segmentPeriod = new Period("PT1H");
-    policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, new Period("P1D"))),
+    final CompactionSegmentIterator iterator = policy.reset(
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, new Period("P2D"))),
         ImmutableMap.of(
             DATA_SOURCE,
             createTimeline(
@@ -64,39 +64,20 @@ public class NewestSegmentFirstPolicyTest
         )
     );
 
-
-    List<DataSegment> segments;
-    Interval lastSegmentInterval = null;
-    Interval expectedSegmentIntervalStart = Intervals.of("2017-11-16T03:00:00/2017-11-16T04:00:00");
-    while ((segments = policy.nextSegments()) != null) {
-      Assert.assertEquals(8, segments.size());
-
-      final List<Interval> expectedIntervals = new ArrayList<>(segments.size());
-      for (int i = 0; i < segments.size(); i++) {
-        if (i > 0 && i % NUM_SEGMENTS_PER_SHARD == 0) {
-          expectedSegmentIntervalStart = new Interval(segmentPeriod, expectedSegmentIntervalStart.getStart());
-        }
-        expectedIntervals.add(expectedSegmentIntervalStart);
-      }
-      expectedSegmentIntervalStart = new Interval(segmentPeriod, expectedSegmentIntervalStart.getStart());
-      expectedIntervals.sort(Comparators.intervalsByStartThenEnd());
-
-      Assert.assertEquals(
-          expectedIntervals,
-          segments.stream().map(DataSegment::getInterval).collect(Collectors.toList())
-      );
-
-      lastSegmentInterval = segments.get(0).getInterval();
-    }
-
-    Assert.assertEquals(Intervals.of("2017-11-14T00:00:00/2017-11-14T01:00:00"), lastSegmentInterval);
+    assertCompactSegmentIntervals(
+        iterator,
+        segmentPeriod,
+        Intervals.of("2017-11-14T00:00:00/2017-11-14T01:00:00"),
+        Intervals.of("2017-11-15T03:00:00/2017-11-15T04:00:00"),
+        true
+    );
   }
 
   @Test
-  public void testWithSmallOffsetAndLargeSegmentInterval()
+  public void testSmallOffsetAndLargeSegmentInterval()
   {
     final Period segmentPeriod = new Period("PT1H");
-    policy.reset(
+    final CompactionSegmentIterator iterator = policy.reset(
         ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, new Period("PT1M"))),
         ImmutableMap.of(
             DATA_SOURCE,
@@ -108,37 +89,19 @@ public class NewestSegmentFirstPolicyTest
         )
     );
 
-    List<DataSegment> segments;
-    Interval expectedSegmentIntervalStart = new Interval("2017-11-17T02:00:00/2017-11-17T03:00:00");
-    final List<Interval> expectedIntervals = new ArrayList<>(8);
-    while ((segments = policy.nextSegments()) != null) {
-      Assert.assertEquals(8, segments.size());
+    assertCompactSegmentIntervals(
+        iterator,
+        segmentPeriod,
+        Intervals.of("2017-11-16T21:00:00/2017-11-16T22:00:00"),
+        Intervals.of("2017-11-17T02:00:00/2017-11-17T03:00:00"),
+        false
+    );
 
-      expectedIntervals.clear();
-      for (int i = 0; i < segments.size(); i++) {
-        if (i > 0 && i % NUM_SEGMENTS_PER_SHARD == 0) {
-          expectedSegmentIntervalStart = new Interval(segmentPeriod, expectedSegmentIntervalStart.getStart());
-        }
-        expectedIntervals.add(expectedSegmentIntervalStart);
-      }
-      expectedSegmentIntervalStart = new Interval(segmentPeriod, expectedSegmentIntervalStart.getStart());
-      expectedIntervals.sort(Comparators.intervalsByStartThenEnd());
-
-      Assert.assertEquals(
-          expectedIntervals,
-          segments.stream().map(DataSegment::getInterval).collect(Collectors.toList())
-      );
-
-      if (expectedSegmentIntervalStart.equals(Intervals.of("2017-11-16T20:00:00/2017-11-16T21:00:00"))) {
-        break;
-      }
-    }
-
-    segments = policy.nextSegments();
+    final List<DataSegment> segments = iterator.next();
     Assert.assertNotNull(segments);
     Assert.assertEquals(8, segments.size());
 
-    expectedIntervals.clear();
+    final List<Interval> expectedIntervals = new ArrayList<>(segments.size());
     for (int i = 0; i < 4; i++) {
       expectedIntervals.add(Intervals.of("2017-11-16T06:00:00/2017-11-16T07:00:00"));
     }
@@ -152,34 +115,89 @@ public class NewestSegmentFirstPolicyTest
         segments.stream().map(DataSegment::getInterval).collect(Collectors.toList())
     );
 
-    Interval lastSegmentInterval = null;
-    expectedSegmentIntervalStart = new Interval("2017-11-16T05:00:00/2017-11-16T06:00:00");
-    while ((segments = policy.nextSegments()) != null) {
-      Assert.assertEquals(8, segments.size());
+    assertCompactSegmentIntervals(
+        iterator,
+        segmentPeriod,
+        Intervals.of("2017-11-14T00:00:00/2017-11-14T01:00:00"),
+        Intervals.of("2017-11-16T05:00:00/2017-11-16T06:00:00"),
+        true
+    );
+  }
 
-      expectedIntervals.clear();
+  @Test
+  public void testLargeGapInData()
+  {
+    final Period segmentPeriod = new Period("PT1H");
+    final CompactionSegmentIterator iterator = policy.reset(
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, new Period("PT1H1M"))),
+        ImmutableMap.of(
+            DATA_SOURCE,
+            createTimeline(
+                segmentPeriod,
+                Intervals.of("2017-11-16T20:00:00/2017-11-17T04:00:00"),
+                // larger gap than SegmentCompactorUtil.LOOKUP_PERIOD (1 day)
+                Intervals.of("2017-11-14T00:00:00/2017-11-15T07:00:00")
+            )
+        )
+    );
+
+    assertCompactSegmentIntervals(
+        iterator,
+        segmentPeriod,
+        Intervals.of("2017-11-16T20:00:00/2017-11-16T21:00:00"),
+        Intervals.of("2017-11-17T01:00:00/2017-11-17T02:00:00"),
+        false
+    );
+
+    assertCompactSegmentIntervals(
+        iterator,
+        segmentPeriod,
+        Intervals.of("2017-11-14T00:00:00/2017-11-14T01:00:00"),
+        Intervals.of("2017-11-15T06:00:00/2017-11-15T07:00:00"),
+        true
+    );
+  }
+
+  private static void assertCompactSegmentIntervals(
+      CompactionSegmentIterator iterator,
+      Period segmentPeriod,
+      Interval from,
+      Interval to,
+      boolean assertLast
+  )
+  {
+    Interval expectedSegmentIntervalStart = to;
+    while (iterator.hasNext()) {
+      final List<DataSegment> segments = iterator.next();
+
+      final List<Interval> expectedIntervals = new ArrayList<>(segments.size());
       for (int i = 0; i < segments.size(); i++) {
         if (i > 0 && i % NUM_SEGMENTS_PER_SHARD == 0) {
           expectedSegmentIntervalStart = new Interval(segmentPeriod, expectedSegmentIntervalStart.getStart());
         }
         expectedIntervals.add(expectedSegmentIntervalStart);
       }
-      expectedSegmentIntervalStart = new Interval(segmentPeriod, expectedSegmentIntervalStart.getStart());
       expectedIntervals.sort(Comparators.intervalsByStartThenEnd());
 
       Assert.assertEquals(
           expectedIntervals,
           segments.stream().map(DataSegment::getInterval).collect(Collectors.toList())
       );
-      lastSegmentInterval = segments.get(0).getInterval();
+
+      if (expectedSegmentIntervalStart.equals(from)) {
+        break;
+      }
+      expectedSegmentIntervalStart = new Interval(segmentPeriod, expectedSegmentIntervalStart.getStart());
     }
 
-    Assert.assertEquals(Intervals.of("2017-11-14T00:00:00/2017-11-14T01:00:00"), lastSegmentInterval);
+    if (assertLast) {
+      Assert.assertFalse(iterator.hasNext());
+    }
   }
 
   private static VersionedIntervalTimeline<String, DataSegment> createTimeline(
       Period segmentPeriod,
-      Interval ... intervals
+      Interval... intervals
   )
   {
     VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(

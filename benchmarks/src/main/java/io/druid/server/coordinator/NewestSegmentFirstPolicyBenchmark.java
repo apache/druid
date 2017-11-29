@@ -21,6 +21,7 @@ package io.druid.server.coordinator;
 
 import com.google.common.collect.ImmutableList;
 import io.druid.java.util.common.DateTimes;
+import io.druid.server.coordinator.helper.CompactionSegmentIterator;
 import io.druid.server.coordinator.helper.CompactionSegmentSearchPolicy;
 import io.druid.server.coordinator.helper.NewestSegmentFirstPolicy;
 import io.druid.timeline.DataSegment;
@@ -133,9 +134,9 @@ public class NewestSegmentFirstPolicyBenchmark
   @Benchmark
   public void measureNewestSegmentFirstPolicy(Blackhole blackhole)
   {
-    policy.reset(compactionConfigs, dataSources);
-    List<DataSegment> segments;
-    for (int i = 0; i < numCompactionTaskSlots && (segments = policy.nextSegments()) != null; i++) {
+    final CompactionSegmentIterator iterator = policy.reset(compactionConfigs, dataSources);
+    for (int i = 0; i < numCompactionTaskSlots && iterator.hasNext(); i++) {
+      final List<DataSegment> segments = iterator.next();
       blackhole.consume(segments);
     }
   }

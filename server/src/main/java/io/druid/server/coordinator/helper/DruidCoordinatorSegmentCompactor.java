@@ -70,7 +70,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
           .stream()
           .collect(Collectors.toMap(CoordinatorCompactionConfig::getDataSource, Function.identity()));
       checkAndClearQueries();
-      policy.reset(compactionConfigs, dataSources);
+      final CompactionSegmentIterator iterator = policy.reset(compactionConfigs, dataSources);
 
       final int compactionTaskCapacity = (int) (indexingServiceClient.getTotalWorkerCapacity() *
                                                 params.getCoordinatorDynamicConfig().getCompactionTaskSlotRatio());
@@ -78,13 +78,12 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
                                                   compactionTaskCapacity - queryIds.size() :
                                                   Math.max(1, compactionTaskCapacity - queryIds.size());
       if (numAvailableCompactionTaskSlots > 0) {
-        stats.accumulate(doRun(compactionConfigs, numAvailableCompactionTaskSlots));
+        stats.accumulate(doRun(compactionConfigs, numAvailableCompactionTaskSlots, iterator));
       } else {
-        stats.accumulate(makeStats(0));
+        stats.accumulate(makeStats(0, iterator));
       }
     } else {
       LOG.info("compactionConfig is empty. Skip.");
-      stats.accumulate(makeStats(0));
     }
 
     return params.buildFromExisting()
@@ -108,14 +107,14 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
 
   private CoordinatorStats doRun(
       Map<String, CoordinatorCompactionConfig> compactionConfigs,
-      int numAvailableCompactionTaskSlots
+      int numAvailableCompactionTaskSlots,
+      CompactionSegmentIterator iterator
   )
   {
     int numSubmittedCompactionTasks = 0;
 
-    List<DataSegment> segmentsToCompact;
-    while ((segmentsToCompact = policy.nextSegments()) != null &&
-           numSubmittedCompactionTasks < numAvailableCompactionTaskSlots) {
+    while (iterator.hasNext() && numSubmittedCompactionTasks < numAvailableCompactionTaskSlots) {
+      final List<DataSegment> segmentsToCompact = iterator.next();
       if (segmentsToCompact.isEmpty()) {
         break;
       }
@@ -147,14 +146,14 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
 
     LOG.info("Running tasks [%d/%d]", numSubmittedCompactionTasks, numAvailableCompactionTaskSlots);
 
-    return makeStats(numSubmittedCompactionTasks);
+    return makeStats(numSubmittedCompactionTasks, iterator);
   }
 
-  private CoordinatorStats makeStats(int numCompactionTasks)
+  private CoordinatorStats makeStats(int numCompactionTasks, CompactionSegmentIterator iterator)
   {
     final CoordinatorStats stats = new CoordinatorStats();
     stats.addToGlobalStat(COMPACT_TASK_COUNT, numCompactionTasks);
-    policy.remainingSegments().object2LongEntrySet().fastForEach(
+    iterator.remainingSegments().object2LongEntrySet().fastForEach(
         entry -> {
           final String dataSource = entry.getKey();
           final long numSegmentsWaitCompact = entry.getLongValue();
