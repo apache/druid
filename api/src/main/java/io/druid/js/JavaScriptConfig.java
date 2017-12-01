@@ -39,10 +39,10 @@ public class JavaScriptConfig
 
   @JsonCreator
   public JavaScriptConfig(
-      @JsonProperty("enabled") Boolean enabled
+      @JsonProperty("enabled") boolean enabled
   )
   {
-    this.enabled = enabled != null && enabled.booleanValue();
+    this.enabled = enabled;
   }
 
   public boolean isEnabled()
