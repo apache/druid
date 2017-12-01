@@ -5605,4 +5605,36 @@ public class TopNQueryRunnerTest
     );
     assertExpectedResults(expectedResults, query);
   }
+
+  /**
+   * Regression test for https://github.com/druid-io/druid/issues/5132
+   */
+  @Test
+  public void testTopNWithNonBitmapFilter()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .filters(new BoundDimFilter(
+            Column.TIME_COLUMN_NAME,
+            "0",
+            String.valueOf(Long.MAX_VALUE),
+            true,
+            true,
+            false,
+            null,
+            StringComparators.NUMERIC
+        ))
+        .dimension(QueryRunnerTestHelper.marketDimension)
+        .metric("count")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.firstToThird)
+        .aggregators(
+            Collections.singletonList(new DoubleSumAggregatorFactory("count", "qualityDouble"))
+        )
+        .build();
+
+    // Don't check results, just the fact that the query could complete
+    Assert.assertNotNull(Sequences.toList(runWithMerge(query), new ArrayList<>()));
+  }
 }
