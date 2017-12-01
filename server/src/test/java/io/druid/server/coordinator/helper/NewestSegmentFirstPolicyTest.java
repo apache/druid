@@ -53,7 +53,7 @@ public class NewestSegmentFirstPolicyTest
   {
     final Period segmentPeriod = new Period("PT1H");
     final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, new Period("P2D"))),
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, 100, new Period("P2D"))),
         ImmutableMap.of(
             DATA_SOURCE,
             createTimeline(
@@ -78,7 +78,7 @@ public class NewestSegmentFirstPolicyTest
   {
     final Period segmentPeriod = new Period("PT1H");
     final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, new Period("PT1M"))),
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, 100, new Period("PT1M"))),
         ImmutableMap.of(
             DATA_SOURCE,
             createTimeline(
@@ -129,7 +129,7 @@ public class NewestSegmentFirstPolicyTest
   {
     final Period segmentPeriod = new Period("PT1H");
     final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, new Period("PT1H1M"))),
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, 100, new Period("PT1H1M"))),
         ImmutableMap.of(
             DATA_SOURCE,
             createTimeline(
@@ -146,6 +146,42 @@ public class NewestSegmentFirstPolicyTest
         segmentPeriod,
         Intervals.of("2017-11-16T20:00:00/2017-11-16T21:00:00"),
         Intervals.of("2017-11-17T01:00:00/2017-11-17T02:00:00"),
+        false
+    );
+
+    assertCompactSegmentIntervals(
+        iterator,
+        segmentPeriod,
+        Intervals.of("2017-11-14T00:00:00/2017-11-14T01:00:00"),
+        Intervals.of("2017-11-15T06:00:00/2017-11-15T07:00:00"),
+        true
+    );
+  }
+
+  @Test
+  public void testSmallNumTargetCompactionSegments()
+  {
+    final Period segmentPeriod = new Period("PT1H");
+    final CompactionSegmentIterator iterator = policy.reset(
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, 5, new Period("PT1H1M"))),
+        ImmutableMap.of(
+            DATA_SOURCE,
+            createTimeline(
+                segmentPeriod,
+                Intervals.of("2017-11-16T20:00:00/2017-11-17T04:00:00"),
+                // larger gap than SegmentCompactorUtil.LOOKUP_PERIOD (1 day)
+                Intervals.of("2017-11-14T00:00:00/2017-11-15T07:00:00")
+            )
+        )
+    );
+
+    assertCompactSegmentIntervals(
+        iterator,
+        segmentPeriod,
+        Intervals.of("2017-11-16T20:00:00/2017-11-16T21:00:00"),
+        // The last interval is not "2017-11-17T01:00:00/2017-11-17T02:00:00". This is because more segments are
+        // expected to be added for that interval. See NewestSegmentFirstIterator.returnIfCompactibleSize().
+        Intervals.of("2017-11-17T00:00:00/2017-11-17T01:00:00"),
         false
     );
 
@@ -250,6 +286,7 @@ public class NewestSegmentFirstPolicyTest
 
   private static CoordinatorCompactionConfig createCompactionConfig(
       long targetCompactionSizeBytes,
+      int numTargetCompactionSegments,
       Period skipOffsetFromLatest
   )
   {
@@ -257,6 +294,7 @@ public class NewestSegmentFirstPolicyTest
         DATA_SOURCE,
         0,
         targetCompactionSizeBytes,
+        numTargetCompactionSegments,
         skipOffsetFromLatest,
         null,
         null

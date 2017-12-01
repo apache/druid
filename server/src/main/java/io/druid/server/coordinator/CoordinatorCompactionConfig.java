@@ -34,11 +34,15 @@ public class CoordinatorCompactionConfig
   // should be synchronized with Tasks.DEFAULT_MERGE_TASK_PRIORITY
   private static final int DEFAULT_COMPACTION_TASK_PRIORITY = 25;
   private static final long DEFAULT_TARGET_COMPACTION_SIZE_BYTES = 800 * 1024 * 1024; // 800MB
+  private static final int DEFAULT_NUM_TARGET_COMPACTION_SEGMENTS = 150;
   private static final Period DEFAULT_SKIP_OFFSET_FROM_LATEST = new Period("P1D");
 
   private final String dataSource;
   private final int taskPriority;
   private final long targetCompactionSizeBytes;
+  // The number of compaction segments is limited because the byte size of a serialized task spec is limited by
+  // RemoteTaskRunnerConfig.maxZnodeBytes.
+  private final int numTargetCompactionSegments;
   private final Period skipOffsetFromLatest;
   private final ClientCompactQueryTuningConfig tuningConfig;
   private final Map<String, Object> taskContext;
@@ -48,6 +52,7 @@ public class CoordinatorCompactionConfig
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("taskPriority") Integer taskPriority,
       @JsonProperty("targetCompactionSizeBytes") Long targetCompactionSizeBytes,
+      @JsonProperty("numTargetCompactionSegments") Integer numTargetCompactionSegments,
       @JsonProperty("skipOffsetFromLatest") Period skipOffsetFromLatest,
       @JsonProperty("tuningConfig") ClientCompactQueryTuningConfig tuningConfig,
       @JsonProperty("taskContext") Map<String, Object> taskContext
@@ -60,9 +65,17 @@ public class CoordinatorCompactionConfig
     this.targetCompactionSizeBytes = targetCompactionSizeBytes == null ?
                                      DEFAULT_TARGET_COMPACTION_SIZE_BYTES :
                                      targetCompactionSizeBytes;
+    this.numTargetCompactionSegments = numTargetCompactionSegments == null ?
+                                       DEFAULT_NUM_TARGET_COMPACTION_SEGMENTS :
+                                       numTargetCompactionSegments;
     this.skipOffsetFromLatest = skipOffsetFromLatest == null ? DEFAULT_SKIP_OFFSET_FROM_LATEST : skipOffsetFromLatest;
     this.tuningConfig = tuningConfig;
     this.taskContext = taskContext;
+
+    Preconditions.checkArgument(
+        this.numTargetCompactionSegments > 1,
+        "numTargetCompactionSegments should be larger than 1"
+    );
   }
 
   @JsonProperty
@@ -81,6 +94,12 @@ public class CoordinatorCompactionConfig
   public long getTargetCompactionSizeBytes()
   {
     return targetCompactionSizeBytes;
+  }
+
+  @JsonProperty
+  public int getNumTargetCompactionSegments()
+  {
+    return numTargetCompactionSegments;
   }
 
   @JsonProperty
@@ -128,6 +147,10 @@ public class CoordinatorCompactionConfig
       return false;
     }
 
+    if (numTargetCompactionSegments != that.numTargetCompactionSegments) {
+      return false;
+    }
+
     if (!skipOffsetFromLatest.equals(that.skipOffsetFromLatest)) {
       return false;
     }
@@ -146,6 +169,7 @@ public class CoordinatorCompactionConfig
         dataSource,
         taskPriority,
         targetCompactionSizeBytes,
+        numTargetCompactionSegments,
         skipOffsetFromLatest,
         tuningConfig,
         taskContext

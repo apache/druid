@@ -130,6 +130,7 @@ public class DruidCoordinatorSegmentCompactorTest
               dataSource,
               0,
               50L,
+              null,
               new Period("PT1H"), // smaller than segment interval
               null,
               null

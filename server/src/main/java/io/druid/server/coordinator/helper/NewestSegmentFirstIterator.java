@@ -171,19 +171,22 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
 
     final List<DataSegment> segmentsToCompact = new ArrayList<>();
     long remainingBytesToCompact = config.getTargetCompactionSizeBytes();
-    while (remainingBytesToCompact > 0) {
+    int numAvailableSegments = config.getNumTargetCompactionSegments();
+    while (remainingBytesToCompact > 0 && numAvailableSegments > 0) {
       final Pair<Interval, SegmentsToCompact> pair = findSegmentsToCompact(
           timeline,
           intervalToFind,
           searchEnd,
           remainingBytesToCompact,
-          config.getTargetCompactionSizeBytes()
+          numAvailableSegments,
+          config
       );
       if (pair.rhs.getSegments().isEmpty()) {
         break;
       }
       segmentsToCompact.addAll(pair.rhs.getSegments());
       remainingBytesToCompact -= pair.rhs.getByteSize();
+      numAvailableSegments -= pair.rhs.getSegments().size();
       intervalToFind = pair.lhs;
     }
 
@@ -198,8 +201,9 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       final VersionedIntervalTimeline<String, DataSegment> timeline,
       final Interval intervalToSearch,
       @Nullable final DateTime searchEnd,
-      final long remainingBytes,
-      final long targetCompactionSizeBytes
+      final long availableBytes,
+      final int numAvailableSegments,
+      final CoordinatorCompactionConfig config
   )
   {
     final List<DataSegment> segmentsToCompact = new ArrayList<>();
@@ -207,7 +211,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     long totalSegmentsToCompactBytes = 0;
 
     // Finds segments to compact together while iterating intervalToFind from latest to oldest
-    while (!Intervals.isEmpty(searchInterval) && totalSegmentsToCompactBytes < remainingBytes) {
+    while (!Intervals.isEmpty(searchInterval) && totalSegmentsToCompactBytes < availableBytes) {
       final Interval lookupInterval = SegmentCompactorUtil.getNextLoopupInterval(searchInterval);
       // holders are sorted by their interval
       final List<TimelineObjectHolder<String, DataSegment>> holders = timeline.lookup(lookupInterval);
@@ -235,8 +239,22 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
           continue;
         }
 
+        // We cannot add more segments to compact together.
+        if (segmentsToCompact.size() + chunks.size() > numAvailableSegments) {
+          return returnIfCompactibleSize(
+              segmentsToCompact,
+              totalSegmentsToCompactBytes,
+              timeline,
+              searchInterval,
+              searchEnd,
+              availableBytes,
+              numAvailableSegments,
+              config
+          );
+        }
+
         // Addition of the segments of a partition should be atomic.
-        if (SegmentCompactorUtil.isCompactible(remainingBytes, totalSegmentsToCompactBytes, partitionBytes)) {
+        if (SegmentCompactorUtil.isCompactible(availableBytes, totalSegmentsToCompactBytes, partitionBytes)) {
           chunks.forEach(chunk -> segmentsToCompact.add(chunk.getObject()));
           totalSegmentsToCompactBytes += partitionBytes;
         } else {
@@ -248,8 +266,9 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
                 timeline,
                 searchInterval,
                 searchEnd,
-                remainingBytes,
-                targetCompactionSizeBytes
+                availableBytes,
+                numAvailableSegments,
+                config
             );
           } else if (segmentsToCompact.size() == 1) {
             // We found a segment which is smaller than remainingBytes but too large to compact with other
@@ -258,7 +277,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
             chunks.forEach(chunk -> segmentsToCompact.add(chunk.getObject()));
             totalSegmentsToCompactBytes = partitionBytes;
           } else {
-            if (targetCompactionSizeBytes < partitionBytes) {
+            if (config.getTargetCompactionSizeBytes() < partitionBytes) {
               // TODO: this should be changed to compact many segments into a few segments
               final DataSegment segment = chunks.get(0).getObject();
               log.warn(
@@ -267,7 +286,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
                   partitionBytes,
                   segment.getDataSource(),
                   segment.getInterval(),
-                  remainingBytes
+                  availableBytes
               );
             } else {
               return Pair.of(intervalToSearch, new SegmentsToCompact(ImmutableList.of(), 0));
@@ -289,7 +308,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         return Pair.of(intervalToSearch, new SegmentsToCompact(ImmutableList.of(), 0));
       } else {
         // We found only 1 segment. Further find segments for the remaining interval.
-        return findSegmentsToCompact(timeline, searchInterval, searchEnd, remainingBytes, targetCompactionSizeBytes);
+        return findSegmentsToCompact(timeline, searchInterval, searchEnd, availableBytes, numAvailableSegments, config);
       }
     }
 
@@ -299,8 +318,9 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         timeline,
         searchInterval,
         searchEnd,
-        remainingBytes,
-        targetCompactionSizeBytes
+        availableBytes,
+        numAvailableSegments,
+        config
     );
   }
 
@@ -310,18 +330,26 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       final VersionedIntervalTimeline<String, DataSegment> timeline,
       final Interval searchInterval,
       @Nullable final DateTime searchEnd,
-      final long remainingBytes,
-      final long targetCompactionSizeBytes
+      final long availableBytes,
+      final int numAvailableSegments,
+      final CoordinatorCompactionConfig config
   )
   {
-    // Check we have enough segments to compact. For realtime dataSources, we can expect more data can be added in the
-    // future, so we skip compaction for segments in this run if their size is not sufficiently large.
-    // To enable this feature, skipOffsetFromLatest should be set.
-    final DataSegment lastSegment = segmentsToCompact.get(segmentsToCompact.size() - 1);
-    if (searchEnd != null &&
-        lastSegment.getInterval().getEnd().equals(searchEnd) &&
-        !SegmentCompactorUtil.isProperCompactionSize(targetCompactionSizeBytes, totalSegmentsToCompactBytes)) {
-      return findSegmentsToCompact(timeline, searchInterval, searchEnd, remainingBytes, targetCompactionSizeBytes);
+    if (segmentsToCompact.size() > 0) {
+      // Check we have enough segments to compact. For realtime dataSources, we can expect more data can be added in the
+      // future, so we skip compaction for segments in this run if their size is not sufficiently large.
+      // To enable this feature, skipOffsetFromLatest should be set (and thus searchEnd should not be null).
+      final DataSegment lastSegment = segmentsToCompact.get(segmentsToCompact.size() - 1);
+      if (searchEnd != null &&
+          lastSegment.getInterval().getEnd().equals(searchEnd) &&
+          !SegmentCompactorUtil.isProperCompactionSize(
+              config.getTargetCompactionSizeBytes(),
+              totalSegmentsToCompactBytes
+          ) &&
+          config.getNumTargetCompactionSegments() > segmentsToCompact.size()) {
+        // Ignore found segments and find again for the remaininig searchInterval.
+        return findSegmentsToCompact(timeline, searchInterval, searchEnd, availableBytes, numAvailableSegments, config);
+      }
     }
 
     return Pair.of(searchInterval, new SegmentsToCompact(segmentsToCompact, totalSegmentsToCompactBytes));

@@ -93,6 +93,7 @@ public class NewestSegmentFirstPolicyBenchmark
               targetCompactionSizeBytes,
               null,
               null,
+              null,
               null
           )
       );
