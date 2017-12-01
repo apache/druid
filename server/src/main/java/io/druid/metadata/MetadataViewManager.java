@@ -19,42 +19,15 @@
 
 package io.druid.metadata;
 
-/**
- */
-public interface MetadataStorageConnector
-{
-  Void insertOrUpdate(
-      String tableName,
-      String keyColumn,
-      String valueColumn,
-      String key,
-      byte[] value
-  ) throws Exception;
+import java.util.Map;
 
-  byte[] lookup(
-      String tableName,
-      String keyColumn,
-      String valueColumn,
-      String key
-  );
+public interface MetadataViewManager {
 
-  void createDataSourceTable();
+    void start();
 
-  void createPendingSegmentsTable();
+    Void insertOrUpdate(String viewName, String viewSql);
 
-  void createSegmentTable();
+    Void remove(String viewName);
 
-  void createRulesTable();
-
-  void createConfigTable();
-
-  void createTaskTables();
-
-  void createAuditTable();
-
-  void createSupervisorsTable();
-
-  void deleteAllRecords(String tableName);
-
-  void createViewsTable();
+    Map<String, String> getAll();
 }

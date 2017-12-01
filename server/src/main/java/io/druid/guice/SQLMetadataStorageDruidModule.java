@@ -37,6 +37,7 @@ import io.druid.metadata.MetadataStorageActionHandlerFactory;
 import io.druid.metadata.MetadataStorageConnector;
 import io.druid.metadata.MetadataStorageProvider;
 import io.druid.metadata.MetadataSupervisorManager;
+import io.druid.metadata.MetadataViewManager;
 import io.druid.metadata.SQLMetadataConnector;
 import io.druid.metadata.SQLMetadataRuleManager;
 import io.druid.metadata.SQLMetadataRuleManagerProvider;
@@ -46,6 +47,7 @@ import io.druid.metadata.SQLMetadataSegmentPublisher;
 import io.druid.metadata.SQLMetadataSegmentPublisherProvider;
 import io.druid.metadata.SQLMetadataStorageActionHandlerFactory;
 import io.druid.metadata.SQLMetadataSupervisorManager;
+import io.druid.metadata.SQLMetadataViewManager;
 import io.druid.server.audit.AuditManagerProvider;
 import io.druid.server.audit.SQLAuditManager;
 import io.druid.server.audit.SQLAuditManagerConfig;
@@ -86,6 +88,7 @@ public class SQLMetadataStorageDruidModule implements Module
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(AuditManager.class), defaultValue);
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(AuditManagerProvider.class), defaultValue);
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataSupervisorManager.class), defaultValue);
+    PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataViewManager.class), defaultValue);
   }
 
   @Override
@@ -151,6 +154,11 @@ public class SQLMetadataStorageDruidModule implements Module
     PolyBind.optionBinder(binder, Key.get(MetadataSupervisorManager.class))
             .addBinding(type)
             .to(SQLMetadataSupervisorManager.class)
+            .in(LazySingleton.class);
+
+    PolyBind.optionBinder(binder, Key.get(MetadataViewManager.class))
+            .addBinding(type)
+            .to(SQLMetadataViewManager.class)
             .in(LazySingleton.class);
   }
 }

@@ -91,6 +91,8 @@ public class PlannerFactory
     this.authorizerMapper = authorizerMapper;
     this.escalator = escalator;
     this.jsonMapper = jsonMapper;
+
+    this.druidSchema.initializeViews(this);
   }
 
   public DruidPlanner createPlanner(final Map<String, Object> queryContext)

@@ -397,6 +397,26 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     );
   }
 
+  public void createViewsTable(final String tableName)
+  {
+    createTable(
+            tableName,
+            ImmutableList.of(
+                    String.format(
+                            "CREATE TABLE %1$s (\n"
+                                    + "  id %2$s NOT NULL,\n"
+                                    + "  view_name VARCHAR(255) NOT NULL,\n"
+                                    + "  view_sql VARCHAR(4096) NOT NULL,\n"
+                                    + "  created_date VARCHAR(255) NOT NULL,\n"
+                                    + "  PRIMARY KEY (id)\n"
+                                    + ")",
+                            tableName, getSerialType(), getPayloadType()
+                    ),
+                    String.format("CREATE INDEX idx_%1$s_spec_id ON %1$s(spec_id)", tableName)
+            )
+    );
+  }
+
   @Override
   public Void insertOrUpdate(
       final String tableName,
@@ -505,6 +525,14 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   {
     if (config.get().isCreateTables()) {
       createSupervisorsTable(tablesConfigSupplier.get().getSupervisorTable());
+    }
+  }
+
+  @Override
+  public void createViewsTable()
+  {
+    if (config.get().isCreateTables()) {
+      createViewsTable(tablesConfigSupplier.get().getViewsTable());
     }
   }
 

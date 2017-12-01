@@ -38,9 +38,10 @@ import io.druid.sql.calcite.expression.builtin.LookupOperatorConversion;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.schema.DruidSchema;
-import io.druid.sql.calcite.view.NoopViewManager;
+import io.druid.sql.calcite.view.MetadataStoredViewManager;
 import io.druid.sql.calcite.view.ViewManager;
 import io.druid.sql.http.SqlResource;
+import io.druid.sql.http.ViewResource;
 
 import java.util.Properties;
 
@@ -66,7 +67,7 @@ public class SqlModule implements Module
       JsonConfigProvider.bind(binder, "druid.sql.planner", PlannerConfig.class);
       JsonConfigProvider.bind(binder, "druid.sql.avatica", AvaticaServerConfig.class);
       LifecycleModule.register(binder, DruidSchema.class);
-      binder.bind(ViewManager.class).to(NoopViewManager.class).in(LazySingleton.class);
+      binder.bind(ViewManager.class).to(MetadataStoredViewManager.class).in(LazySingleton.class);
 
       // Add empty SqlAggregator binder.
       Multibinder.newSetBinder(binder, SqlAggregator.class);
@@ -76,6 +77,7 @@ public class SqlModule implements Module
 
       if (isJsonOverHttpEnabled()) {
         Jerseys.addResource(binder, SqlResource.class);
+        Jerseys.addResource(binder, ViewResource.class);
       }
 
       if (isAvaticaEnabled()) {

@@ -52,9 +52,11 @@ import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Escalator;
 import io.druid.sql.calcite.planner.PlannerConfig;
+import io.druid.sql.calcite.planner.PlannerFactory;
 import io.druid.sql.calcite.table.DruidTable;
 import io.druid.sql.calcite.table.RowSignature;
 import io.druid.sql.calcite.view.DruidViewMacro;
+import io.druid.sql.calcite.view.MetadataStoredViewManager;
 import io.druid.sql.calcite.view.ViewManager;
 import io.druid.timeline.DataSegment;
 import org.apache.calcite.schema.Table;
@@ -290,6 +292,14 @@ public class DruidSchema extends AbstractSchema
   public void awaitInitialization() throws InterruptedException
   {
     initializationLatch.await();
+  }
+
+  public void initializeViews(PlannerFactory factory) {
+    // HACK: Manually inject dependency. Need to discuss with community on how to break the circular
+    // dependency between DruidSchema and PlannerFactory that is currently needed
+    if(viewManager instanceof MetadataStoredViewManager) {
+      ((MetadataStoredViewManager)viewManager).setPlannerFactory(factory);
+    }
   }
 
   @Override

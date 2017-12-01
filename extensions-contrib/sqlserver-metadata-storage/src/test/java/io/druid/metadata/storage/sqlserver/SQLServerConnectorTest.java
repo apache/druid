@@ -49,6 +49,7 @@ public class SQLServerConnectorTest
                 null,
                 null,
                 null,
+                null,
                 null
             )
         )
