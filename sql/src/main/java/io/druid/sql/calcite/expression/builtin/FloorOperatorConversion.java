@@ -73,7 +73,11 @@ public class FloorOperatorConversion implements SqlOperatorConversion
         return null;
       }
 
-      return TimeFloorOperatorConversion.applyTimestampFloor(druidExpression, granularity);
+      return TimeFloorOperatorConversion.applyTimestampFloor(
+          druidExpression,
+          granularity,
+          plannerContext.getExprMacroTable()
+      );
     } else {
       // WTF? FLOOR with 3 arguments?
       return null;
