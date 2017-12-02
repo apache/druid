@@ -110,10 +110,20 @@ public final class FilteredOffset extends Offset
     return baseOffset.getBaseReadableOffset();
   }
 
+  /**
+   * clone() is not supported by FilteredOffset because it's not possible to clone {@link #filterMatcher}, and
+   * while re-creating filterMatcher could be not very cheap for some implementations of {@link Filter}. Although this
+   * approach could be investigated.
+   *
+   * If clone is made possible for FilteredOffset, some improvements could become possible in {@link
+   * io.druid.query.topn.PooledTopNAlgorithm#computeSpecializedScanAndAggregateImplementations}.
+   *
+   * See also https://github.com/druid-io/druid/issues/5132.
+   */
   @Override
   public Offset clone()
   {
-    throw new UnsupportedOperationException("FilteredOffset should not be cloned");
+    throw new UnsupportedOperationException("FilteredOffset could not be cloned");
   }
 
   @Override
