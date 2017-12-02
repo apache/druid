@@ -170,25 +170,17 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     final DateTime searchEnd = searchEndDates.get(dataSourceName);
 
     final List<DataSegment> segmentsToCompact = new ArrayList<>();
-    long remainingBytesToCompact = config.getTargetCompactionSizeBytes();
-    int numAvailableSegments = config.getNumTargetCompactionSegments();
-    while (remainingBytesToCompact > 0 && numAvailableSegments > 0) {
-      final Pair<Interval, SegmentsToCompact> pair = findSegmentsToCompact(
-          timeline,
-          intervalToFind,
-          searchEnd,
-          remainingBytesToCompact,
-          numAvailableSegments,
-          config
-      );
-      if (pair.rhs.getSegments().isEmpty()) {
-        break;
-      }
-      segmentsToCompact.addAll(pair.rhs.getSegments());
-      remainingBytesToCompact -= pair.rhs.getByteSize();
-      numAvailableSegments -= pair.rhs.getSegments().size();
-      intervalToFind = pair.lhs;
-    }
+
+    final Pair<Interval, SegmentsToCompact> pair = findSegmentsToCompact(
+        timeline,
+        intervalToFind,
+        searchEnd,
+        config.getTargetCompactionSizeBytes(),
+        config.getNumTargetCompactionSegments(),
+        config
+    );
+    segmentsToCompact.addAll(pair.rhs.getSegments());
+    intervalToFind = pair.lhs;
 
     intervalsToFind.put(dataSourceName, intervalToFind);
     if (!segmentsToCompact.isEmpty()) {
@@ -281,7 +273,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
               // TODO: this should be changed to compact many segments into a few segments
               final DataSegment segment = chunks.get(0).getObject();
               log.warn(
-                  "shardSize[%d] for dataSource[%s] and interval [%s] is larger than remainingBytes[%d]."
+                  "shardSize[%d] for dataSource[%s] and interval [%s] is larger than availableBytes[%d]."
                   + " Contitnue to the next shard",
                   partitionBytes,
                   segment.getDataSource(),

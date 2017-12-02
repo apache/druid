@@ -19,6 +19,7 @@
 
 package io.druid.server.coordinator.helper;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -43,8 +44,8 @@ import java.util.stream.Collectors;
 public class NewestSegmentFirstPolicyTest
 {
   private static final String DATA_SOURCE = "dataSource";
-  private static final long SEGMENT_SIZE = 1000;
-  private static final int NUM_SEGMENTS_PER_SHARD = 4;
+  private static final long DEFAULT_SEGMENT_SIZE = 1000;
+  private static final int DEFAULT_NUM_SEGMENTS_PER_SHARD = 4;
 
   private final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy();
 
@@ -57,9 +58,8 @@ public class NewestSegmentFirstPolicyTest
         ImmutableMap.of(
             DATA_SOURCE,
             createTimeline(
-                segmentPeriod,
-                Intervals.of("2017-11-16T20:00:00/2017-11-17T04:00:00"),
-                Intervals.of("2017-11-14T00:00:00/2017-11-16T07:00:00")
+                new SegmentGenerateSpec(Intervals.of("2017-11-16T20:00:00/2017-11-17T04:00:00"), segmentPeriod),
+                new SegmentGenerateSpec(Intervals.of("2017-11-14T00:00:00/2017-11-16T07:00:00"), segmentPeriod)
             )
         )
     );
@@ -82,9 +82,8 @@ public class NewestSegmentFirstPolicyTest
         ImmutableMap.of(
             DATA_SOURCE,
             createTimeline(
-                segmentPeriod,
-                Intervals.of("2017-11-16T20:00:00/2017-11-17T04:00:00"),
-                Intervals.of("2017-11-14T00:00:00/2017-11-16T07:00:00")
+                new SegmentGenerateSpec(Intervals.of("2017-11-16T20:00:00/2017-11-17T04:00:00"), segmentPeriod),
+                new SegmentGenerateSpec(Intervals.of("2017-11-14T00:00:00/2017-11-16T07:00:00"), segmentPeriod)
             )
         )
     );
@@ -133,10 +132,9 @@ public class NewestSegmentFirstPolicyTest
         ImmutableMap.of(
             DATA_SOURCE,
             createTimeline(
-                segmentPeriod,
-                Intervals.of("2017-11-16T20:00:00/2017-11-17T04:00:00"),
+                new SegmentGenerateSpec(Intervals.of("2017-11-16T20:00:00/2017-11-17T04:00:00"), segmentPeriod),
                 // larger gap than SegmentCompactorUtil.LOOKUP_PERIOD (1 day)
-                Intervals.of("2017-11-14T00:00:00/2017-11-15T07:00:00")
+                new SegmentGenerateSpec(Intervals.of("2017-11-14T00:00:00/2017-11-15T07:00:00"), segmentPeriod)
             )
         )
     );
@@ -167,10 +165,9 @@ public class NewestSegmentFirstPolicyTest
         ImmutableMap.of(
             DATA_SOURCE,
             createTimeline(
-                segmentPeriod,
-                Intervals.of("2017-11-16T20:00:00/2017-11-17T04:00:00"),
+                new SegmentGenerateSpec(Intervals.of("2017-11-16T20:00:00/2017-11-17T04:00:00"), segmentPeriod),
                 // larger gap than SegmentCompactorUtil.LOOKUP_PERIOD (1 day)
-                Intervals.of("2017-11-14T00:00:00/2017-11-15T07:00:00")
+                new SegmentGenerateSpec(Intervals.of("2017-11-14T00:00:00/2017-11-15T07:00:00"), segmentPeriod)
             )
         )
     );
@@ -194,6 +191,50 @@ public class NewestSegmentFirstPolicyTest
     );
   }
 
+  @Test
+  public void testHugeShard()
+  {
+    final CompactionSegmentIterator iterator = policy.reset(
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, 100, new Period("P1D"))),
+        ImmutableMap.of(
+            DATA_SOURCE,
+            createTimeline(
+                new SegmentGenerateSpec(
+                    Intervals.of("2017-11-17T00:00:00/2017-11-18T03:00:00"),
+                    new Period("PT1H"),
+                    200,
+                    DEFAULT_NUM_SEGMENTS_PER_SHARD
+                ),
+                new SegmentGenerateSpec(
+                    Intervals.of("2017-11-09T00:00:00/2017-11-17T00:00:00"),
+                    new Period("P2D"),
+                    13000, // larger than target compact segment size
+                    1
+                ),
+                new SegmentGenerateSpec(
+                    Intervals.of("2017-11-05T00:00:00/2017-11-09T00:00:00"),
+                    new Period("PT1H"),
+                    200,
+                    DEFAULT_NUM_SEGMENTS_PER_SHARD
+                )
+            )
+        )
+    );
+
+    while (iterator.hasNext()) {
+      final List<DataSegment> segments = iterator.next();
+
+      Interval prevInterval = null;
+      for (DataSegment segment : segments) {
+        if (prevInterval != null && !prevInterval.getStart().equals(segment.getInterval().getStart())) {
+          Assert.assertEquals(prevInterval.getEnd(), segment.getInterval().getStart());
+        }
+
+        prevInterval = segment.getInterval();
+      }
+    }
+  }
+
   private static void assertCompactSegmentIntervals(
       CompactionSegmentIterator iterator,
       Period segmentPeriod,
@@ -208,7 +249,7 @@ public class NewestSegmentFirstPolicyTest
 
       final List<Interval> expectedIntervals = new ArrayList<>(segments.size());
       for (int i = 0; i < segments.size(); i++) {
-        if (i > 0 && i % NUM_SEGMENTS_PER_SHARD == 0) {
+        if (i > 0 && i % DEFAULT_NUM_SEGMENTS_PER_SHARD == 0) {
           expectedSegmentIntervalStart = new Interval(segmentPeriod, expectedSegmentIntervalStart.getStart());
         }
         expectedIntervals.add(expectedSegmentIntervalStart);
@@ -232,8 +273,7 @@ public class NewestSegmentFirstPolicyTest
   }
 
   private static VersionedIntervalTimeline<String, DataSegment> createTimeline(
-      Period segmentPeriod,
-      Interval... intervals
+      SegmentGenerateSpec... specs
   )
   {
     VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(
@@ -242,23 +282,23 @@ public class NewestSegmentFirstPolicyTest
 
     final String version = DateTimes.nowUtc().toString();
 
-    final List<Interval> orderedIntervals = Lists.newArrayList(intervals);
-    orderedIntervals.sort(Comparators.intervalsByStartThenEnd());
-    Collections.reverse(orderedIntervals);
+    final List<SegmentGenerateSpec> orderedSpecs = Lists.newArrayList(specs);
+    orderedSpecs.sort((s1, s2) -> Comparators.intervalsByStartThenEnd().compare(s1.totalInterval, s2.totalInterval));
+    Collections.reverse(orderedSpecs);
 
-    for (Interval interval : orderedIntervals) {
-      Interval remaininInterval = interval;
+    for (SegmentGenerateSpec spec: orderedSpecs) {
+      Interval remaininInterval = spec.totalInterval;
 
       while (!Intervals.isEmpty(remaininInterval)) {
         final Interval segmentInterval;
-        if (remaininInterval.toDuration().isLongerThan(segmentPeriod.toStandardDuration())) {
-          segmentInterval = new Interval(segmentPeriod, remaininInterval.getEnd());
+        if (remaininInterval.toDuration().isLongerThan(spec.segmentPeriod.toStandardDuration())) {
+          segmentInterval = new Interval(spec.segmentPeriod, remaininInterval.getEnd());
         } else {
           segmentInterval = remaininInterval;
         }
 
-        for (int i = 0; i < NUM_SEGMENTS_PER_SHARD; i++) {
-          final ShardSpec shardSpec = new NumberedShardSpec(NUM_SEGMENTS_PER_SHARD, i);
+        for (int i = 0; i < spec.numSegmentsPerShard; i++) {
+          final ShardSpec shardSpec = new NumberedShardSpec(spec.numSegmentsPerShard, i);
           final DataSegment segment = new DataSegment(
               DATA_SOURCE,
               segmentInterval,
@@ -268,7 +308,7 @@ public class NewestSegmentFirstPolicyTest
               ImmutableList.of(),
               shardSpec,
               0,
-              SEGMENT_SIZE
+              spec.segmentSize
           );
           timeline.add(
               segmentInterval,
@@ -299,5 +339,27 @@ public class NewestSegmentFirstPolicyTest
         null,
         null
     );
+  }
+
+  private static class SegmentGenerateSpec
+  {
+    private final Interval totalInterval;
+    private final Period segmentPeriod;
+    private final long segmentSize;
+    private final int numSegmentsPerShard;
+
+    SegmentGenerateSpec(Interval totalInterval, Period segmentPeriod)
+    {
+      this(totalInterval, segmentPeriod, DEFAULT_SEGMENT_SIZE, DEFAULT_NUM_SEGMENTS_PER_SHARD);
+    }
+
+    SegmentGenerateSpec(Interval totalInterval, Period segmentPeriod, long segmentSize, int numSegmentsPerShard)
+    {
+      Preconditions.checkArgument(numSegmentsPerShard >= 1);
+      this.totalInterval = totalInterval;
+      this.segmentPeriod = segmentPeriod;
+      this.segmentSize = segmentSize;
+      this.numSegmentsPerShard = numSegmentsPerShard;
+    }
   }
 }
