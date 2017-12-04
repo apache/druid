@@ -59,7 +59,6 @@ import io.druid.query.extraction.CascadeExtractionFn;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.RegexDimExtractionFn;
 import io.druid.query.extraction.SubstringDimExtractionFn;
-import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
@@ -3312,6 +3311,9 @@ public class CalciteQueryTest
                 .setDataSource(CalciteTests.DATASOURCE1)
                 .setInterval(QSS(Filtration.eternity()))
                 .setGranularity(Granularities.ALL)
+                .setVirtualColumns(
+                    EXPRESSION_VIRTUAL_COLUMN("d0:v", "timestamp_floor(\"cnt\",'P1Y','','UTC')", ValueType.LONG)
+                )
                 .setDimFilter(
                     BOUND(
                         "cnt",
@@ -3323,14 +3325,7 @@ public class CalciteQueryTest
                         StringComparators.NUMERIC
                     )
                 )
-                .setDimensions(DIMS(
-                    new ExtractionDimensionSpec(
-                        "cnt",
-                        "d0",
-                        ValueType.LONG,
-                        new TimeFormatExtractionFn(null, null, null, Granularities.YEAR, true)
-                    )
-                ))
+                .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG)))
                 .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
                 .setContext(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -3827,13 +3822,15 @@ public class CalciteQueryTest
                         )
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            EXPRESSION_VIRTUAL_COLUMN(
+                                "_d0:v",
+                                "timestamp_floor(\"a0\",'PT1H','','UTC')",
+                                ValueType.LONG
+                            )
+                        )
                         .setDimensions(DIMS(
-                            new ExtractionDimensionSpec(
-                                "a0",
-                                "_d0",
-                                ValueType.LONG,
-                                new TimeFormatExtractionFn(null, null, null, Granularities.HOUR, true)
-                            ),
+                            new DefaultDimensionSpec("_d0:v", "_d0", ValueType.LONG),
                             new DefaultDimensionSpec("d0", "_d1", ValueType.STRING)
                         ))
                         .setAggregatorSpecs(AGGS(
@@ -5078,14 +5075,16 @@ public class CalciteQueryTest
                         .setDataSource(CalciteTests.DATASOURCE1)
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            EXPRESSION_VIRTUAL_COLUMN(
+                                "d0:v",
+                                "timestamp_floor(\"__time\",'P1Y','','UTC')",
+                                ValueType.LONG
+                            )
+                        )
                         .setDimensions(
                             DIMS(
-                                new ExtractionDimensionSpec(
-                                    "__time",
-                                    "d0",
-                                    ValueType.LONG,
-                                    new TimeFormatExtractionFn(null, null, null, Granularities.YEAR, true)
-                                ),
+                                new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG),
                                 new DefaultDimensionSpec("dim2", "d1")
                             )
                         )
@@ -5653,6 +5652,32 @@ public class CalciteQueryTest
   }
 
   @Test
+  public void testTimeseriesUsingFloorPlusCastAsDate() throws Exception
+  {
+    testQuery(
+        "SELECT SUM(cnt), dt FROM (\n"
+        + "  SELECT CAST(FLOOR(__time TO QUARTER) AS DATE) AS dt,\n"
+        + "  cnt FROM druid.foo\n"
+        + ") AS x\n"
+        + "GROUP BY dt\n"
+        + "ORDER BY dt",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(new PeriodGranularity(Period.months(3), null, DateTimeZone.UTC))
+                  .aggregators(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3L, D("2000-01-01")},
+            new Object[]{3L, D("2001-01-01")}
+        )
+    );
+  }
+
+  @Test
   public void testTimeseriesDescending() throws Exception
   {
     testQuery(
@@ -5858,16 +5883,14 @@ public class CalciteQueryTest
                         .setDataSource(CalciteTests.DATASOURCE1)
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setDimensions(
-                            DIMS(
-                                new ExtractionDimensionSpec(
-                                    "__time",
-                                    "d0",
-                                    ValueType.LONG,
-                                    new TimeFormatExtractionFn(null, null, null, Granularities.MONTH, true)
-                                )
+                        .setVirtualColumns(
+                            EXPRESSION_VIRTUAL_COLUMN(
+                                "d0:v",
+                                "timestamp_floor(\"__time\",'P1M','','UTC')",
+                                ValueType.LONG
                             )
                         )
+                        .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG)))
                         .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                         .setLimitSpec(
                             new DefaultLimitSpec(
@@ -5906,14 +5929,10 @@ public class CalciteQueryTest
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(QSS(Filtration.eternity()))
                 .granularity(Granularities.ALL)
-                .dimension(
-                    new ExtractionDimensionSpec(
-                        "__time",
-                        "d0",
-                        ValueType.LONG,
-                        new TimeFormatExtractionFn(null, null, null, Granularities.MONTH, true)
-                    )
+                .virtualColumns(
+                    EXPRESSION_VIRTUAL_COLUMN("d0:v", "timestamp_floor(\"__time\",'P1M','','UTC')", ValueType.LONG)
                 )
+                .dimension(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG))
                 .aggregators(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                 .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
                 .threshold(1)
@@ -5943,14 +5962,10 @@ public class CalciteQueryTest
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(QSS(Filtration.eternity()))
                 .granularity(Granularities.ALL)
-                .dimension(
-                    new ExtractionDimensionSpec(
-                        "__time",
-                        "d0",
-                        ValueType.LONG,
-                        new TimeFormatExtractionFn(null, null, null, Granularities.MONTH, true)
-                    )
+                .virtualColumns(
+                    EXPRESSION_VIRTUAL_COLUMN("d0:v", "timestamp_floor(\"__time\",'P1M','','UTC')", ValueType.LONG)
                 )
+                .dimension(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG))
                 .aggregators(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                 .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
                 .threshold(1)
@@ -5976,15 +5991,17 @@ public class CalciteQueryTest
                         .setDataSource(CalciteTests.DATASOURCE1)
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            EXPRESSION_VIRTUAL_COLUMN(
+                                "d1:v",
+                                "timestamp_floor(\"__time\",'P1M','','UTC')",
+                                ValueType.LONG
+                            )
+                        )
                         .setDimensions(
                             DIMS(
                                 new DefaultDimensionSpec("dim2", "d0"),
-                                new ExtractionDimensionSpec(
-                                    "__time",
-                                    "d1",
-                                    ValueType.LONG,
-                                    new TimeFormatExtractionFn(null, null, null, Granularities.MONTH, true)
-                                )
+                                new DefaultDimensionSpec("d1:v", "d1", ValueType.LONG)
                             )
                         )
                         .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
