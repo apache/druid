@@ -113,7 +113,7 @@ public class KafkaEightFirehoseFactory implements FirehoseFactory<InputRowParser
       @Override
       public boolean hasMore()
       {
-        return iter.hasNext() || nextIterator.hasNext();
+        return nextIterator.hasNext() || iter.hasNext();
       }
 
       @Nullable

@@ -26,6 +26,7 @@ import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.java.util.common.collect.Utils;
 
 import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
 import java.util.List;
 
 @ExtensionPoint
@@ -39,8 +40,10 @@ public interface InputRowParser<T>
 {
   /**
    * Parse an input into list of {@link InputRow}. List can contains null for rows that should be thrown away,
-   * or throws {@code ParseException} if the input is unparseable.
+   * or throws {@code ParseException} if the input is unparseable. This method should never return null otherwise
+   * lots of things will break.
    */
+  @NotNull
   default List<InputRow> parseBatch(T input)
   {
     return Utils.nullableListOf(parse(input));

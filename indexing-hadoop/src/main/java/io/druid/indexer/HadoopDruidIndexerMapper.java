@@ -32,7 +32,6 @@ import io.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
 
@@ -95,8 +94,7 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
     }
   }
 
-  @Nullable
-  public static List<InputRow> parseInputRow(Object value, InputRowParser parser)
+  private static List<InputRow> parseInputRow(Object value, InputRowParser parser)
   {
     if (parser instanceof StringInputRowParser && value instanceof Text) {
       //Note: This is to ensure backward compatibility with 0.7.0 and before
@@ -107,7 +105,7 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
       return ImmutableList.of((InputRow) value);
     } else if (value == null) {
       // Pass through nulls so they get thrown away.
-      return Utils.nullableListOf(null);
+      return Utils.nullableListOf((InputRow) null);
     } else {
       return parser.parseBatch(value);
     }

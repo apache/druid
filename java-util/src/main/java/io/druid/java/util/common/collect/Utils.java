@@ -113,6 +113,7 @@ public class Utils
     return retVal;
   }
 
+  @SafeVarargs
   public static <T> List<T> nullableListOf(@Nullable T... elements)
   {
     final List<T> list;

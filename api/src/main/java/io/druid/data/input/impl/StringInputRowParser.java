@@ -23,10 +23,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.collect.Utils;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.java.util.common.parsers.Parser;
 
@@ -77,7 +77,7 @@ public class StringInputRowParser implements ByteBufferInputRowParser
   @Override
   public List<InputRow> parseBatch(ByteBuffer input)
   {
-    return ImmutableList.of(parseMap(buildStringKeyMap(input)));
+    return Utils.nullableListOf(parseMap(buildStringKeyMap(input)));
   }
 
   @JsonProperty
