@@ -22,6 +22,7 @@ package io.druid.query;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -35,11 +36,13 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.SequenceWrapper;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.server.QueryResource;
 
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.Collections;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -88,37 +91,32 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
     if (useResultCache) {
 
       final String cacheKeyStr = StringUtils.fromUtf8(strategy.computeCacheKey(query));
-
-      Map<String, Iterable<Object>> resultMap;
       @Nullable
       final byte[] cachedResultSet = fetchResultsFromResultLevelCache(cacheKeyStr);
+      String existingResultSetId = extractEtagFromResults(cachedResultSet);
 
-      resultMap = extractMapFromResults(cachedResultSet);
-      responseContext.put("resultLevelCacheEnabled", true);
+      responseContext.put(CacheConfig.ENABLE_RESULTLEVEL_CACHE, true);
 
-      if (!resultMap.isEmpty()) {
-        String resultSetIdentifier = resultMap.entrySet().iterator().next().getKey();
-        responseContext.put("prevResultSetIdentifier", resultSetIdentifier);
+      if (existingResultSetId != null) {
+        responseContext.put(QueryResource.EXISTING_RESULT_ID, existingResultSetId);
       }
 
-      @Nullable
-      ResultLevelCachePopulator resultLevelCachePopulator = createResultLevelCachePopulator(
-          cachedResultSet,
-          cacheKeyStr
-      );
       Sequence<T> resultFromClient = baseRunner.run(
           queryPlus,
           responseContext
       );
+      String newResultSetId = (String) responseContext.get(QueryResource.HEADER_ETAG);
 
-      String currentResultSetIdentifier = (String) responseContext.get("currentResultSetIdentifier");
-      String prevResultSetIdentifier = (String) responseContext.get("prevResultSetIdentifier");
-      responseContext.remove("currentResultSetIdentifier");
-      responseContext.remove("prevResultSetIdentifier");
-      if (currentResultSetIdentifier != null && currentResultSetIdentifier.equals(prevResultSetIdentifier)) {
+      @Nullable
+      ResultLevelCachePopulator resultLevelCachePopulator = createResultLevelCachePopulator(
+          cacheKeyStr,
+          newResultSetId
+      );
+
+      responseContext.remove(QueryResource.EXISTING_RESULT_ID);
+      if (newResultSetId != null && newResultSetId.equals(existingResultSetId)) {
         log.info("Return cached result set as there is no change in identifiers for query %s ", query.getId());
-        Iterable<Object> cachedResults = resultMap.entrySet().iterator().next().getValue();
-        return fetchSequenceFromResults(cachedResults, strategy);
+        return deserializeResults(cachedResultSet, strategy, existingResultSetId);
       } else {
         return Sequences.wrap(Sequences.map(
             resultFromClient,
@@ -137,8 +135,9 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
           public void after(boolean isDone, Throwable thrown) throws Exception
           {
             if (resultLevelCachePopulator != null) {
-              // The resultset identifier is cached along with the resultset
-              resultLevelCachePopulator.populateResults(currentResultSetIdentifier);
+              // The resultset identifier and its length is cached along with the resultset
+              resultLevelCachePopulator.populateResults(newResultSetId);
+              log.info("Cache population complete for query %s", query.getId());
             }
           }
         });
@@ -156,7 +155,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       T resultEntry
   )
   {
-    final Function<T, Object> cacheFn = strategy.prepareForCache();
+    final Function<T, Object> cacheFn = strategy.prepareForResultLevelCache();
     if (resultLevelCachePopulator != null) {
       resultLevelCachePopulator.cacheFutures
           .add(backgroundExecutorService.submit(() -> cacheFn.apply(resultEntry)));
@@ -169,49 +168,64 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
   )
   {
     if (useResultCache && queryCacheKey != null) {
-      log.info("Fetching cached result for query: %s", query.getId());
       return cache.get(ResultLevelCacheUtil.computeResultLevelCacheKey(queryCacheKey));
     }
     return null;
   }
 
-  private Map<String, Iterable<Object>> extractMapFromResults(
+  private String extractEtagFromResults(
       final byte[] cachedResult
   )
   {
     if (cachedResult == null) {
-      return Collections.emptyMap();
-    }
-    final TypeReference<Map<String, Iterable<Object>>> cacheObjectClazz = new TypeReference<Map<String, Iterable<Object>>>()
-    {
-    };
-    try {
-      Map<String, Iterable<Object>> res = objectMapper.readValue(
-          cachedResult, cacheObjectClazz
-      );
-      return res;
-    }
-    catch (IOException ioe) {
-      log.error("Error parsing cached result set.");
-      return Collections.emptyMap();
-    }
-  }
-
-  private Sequence<T> fetchSequenceFromResults(
-      Iterable<Object> cachedResult, CacheStrategy strategy
-  )
-  {
-    if (strategy == null) {
       return null;
     }
-    final Function<Object, T> pullFromCacheFunction = strategy.pullFromCache();
-    Sequence<Object> cachedSequence = Sequences.simple(() -> cachedResult.iterator());
+    log.info("Fetching result level cache identifier for query: %s", query.getId());
+    int etagLength = ByteBuffer.wrap(cachedResult, 0, Integer.BYTES).getInt();
+    return StringUtils.fromUtf8(Arrays.copyOfRange(cachedResult, Integer.BYTES, etagLength + Integer.BYTES));
+  }
+
+  private Sequence<T> deserializeResults(
+      final byte[] cachedResult, CacheStrategy strategy, String resultSetId
+  )
+  {
+    if (cachedResult == null) {
+      return null;
+    }
+    final Function<Object, T> pullFromCacheFunction = strategy.pullFromResultLevelCache();
+    final TypeReference<Object> cacheObjectClazz = strategy.getCacheObjectClazz();
+    //Skip the resultsetID and its length bytes
+    byte[] prunedCacheData = Arrays.copyOfRange(
+        cachedResult,
+        Integer.BYTES + resultSetId.length(),
+        cachedResult.length
+    );
+    Sequence<T> cachedSequence = Sequences.simple(() -> {
+      try {
+        if (cachedResult.length == 0) {
+          return Iterators.emptyIterator();
+        }
+
+        return objectMapper.readValues(
+            objectMapper.getFactory().createParser(prunedCacheData),
+            cacheObjectClazz
+        );
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    });
+
     return Sequences.map(cachedSequence, pullFromCacheFunction);
   }
 
-  private ResultLevelCachePopulator createResultLevelCachePopulator(byte[] cachedResultSet, String cacheKeyStr)
+  private ResultLevelCachePopulator createResultLevelCachePopulator(
+      String cacheKeyStr,
+      String resultSetId
+  )
   {
-    if (cachedResultSet == null && populateResultCache) {
+    // Results need to be cached only if all the segments are historical segments
+    if (resultSetId != null && populateResultCache) {
       return new ResultLevelCachePopulator(
           cache,
           objectMapper,
@@ -274,7 +288,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
             @Override
             public void onFailure(Throwable throwable)
             {
-              log.error(throwable, "Result-Level caching failed");
+              log.error(throwable, "Result-Level caching failed!");
             }
           },
           backgroundExecutorService

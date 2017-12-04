@@ -163,8 +163,10 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     {
       private final List<DimensionSpec> dimensionSpecs =
           query.getDimensions() != null ? query.getDimensions() : Collections.<DimensionSpec>emptyList();
-      private final List<String> dimOutputNames = dimensionSpecs.size() > 0 ?
-          Lists.transform(dimensionSpecs, DimensionSpec::getOutputName) : Collections.emptyList();
+      private final List<String> dimOutputNames = dimensionSpecs.size() > 0
+                                                  ?
+                                                  Lists.transform(dimensionSpecs, DimensionSpec::getOutputName)
+                                                  : Collections.emptyList();
 
       @Override
       public boolean isCacheable(SelectQuery query, boolean willMergeRunners)
@@ -176,7 +178,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
       public byte[] computeCacheKey(SelectQuery query)
       {
         final DimFilter dimFilter = query.getDimensionsFilter();
-        final byte[] filterBytes = dimFilter == null ? new byte[]{} : dimFilter.getCacheKey();
+        final byte[] filterBytes = dimFilter == null ? new byte[] {} : dimFilter.getCacheKey();
         final byte[] granularityBytes = query.getGranularity().getCacheKey();
 
         final List<DimensionSpec> dimensionSpecs =
@@ -287,26 +289,36 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
             DateTime timestamp = granularity.toDateTime(((Number) resultIter.next()).longValue());
 
             Map<String, Integer> pageIdentifier = jsonMapper.convertValue(
-                resultIter.next(), new TypeReference<Map<String, Integer>>() {}
-                );
+                resultIter.next(), new TypeReference<Map<String, Integer>>()
+                {
+                }
+            );
             Set<String> dimensionSet = jsonMapper.convertValue(
-                resultIter.next(), new TypeReference<Set<String>>() {}
+                resultIter.next(), new TypeReference<Set<String>>()
+                {
+                }
             );
             Set<String> metricSet = jsonMapper.convertValue(
-                resultIter.next(), new TypeReference<Set<String>>() {}
+                resultIter.next(), new TypeReference<Set<String>>()
+                {
+                }
             );
             List<EventHolder> eventHolders = jsonMapper.convertValue(
-                resultIter.next(), new TypeReference<List<EventHolder>>() {}
-                );
+                resultIter.next(), new TypeReference<List<EventHolder>>()
+                {
+                }
+            );
             // check the condition that outputName of cached result should be updated
             if (resultIter.hasNext()) {
               List<String> cachedOutputNames = (List<String>) resultIter.next();
-              Preconditions.checkArgument(cachedOutputNames.size() == dimOutputNames.size(),
-                  "Cache hit but different number of dimensions??");
+              Preconditions.checkArgument(
+                  cachedOutputNames.size() == dimOutputNames.size(),
+                  "Cache hit but different number of dimensions??"
+              );
               for (int idx = 0; idx < dimOutputNames.size(); idx++) {
                 if (!cachedOutputNames.get(idx).equals(dimOutputNames.get(idx))) {
                   // rename outputName in the EventHolder
-                  for (EventHolder eventHolder: eventHolders) {
+                  for (EventHolder eventHolder : eventHolders) {
                     Object obj = eventHolder.getEvent().remove(cachedOutputNames.get(idx));
                     if (obj != null) {
                       eventHolder.getEvent().put(dimOutputNames.get(idx), obj);
@@ -327,6 +339,18 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
             );
           }
         };
+      }
+
+      @Override
+      public Function<Result<SelectResultValue>, Object> prepareForResultLevelCache()
+      {
+        return prepareForCache();
+      }
+
+      @Override
+      public Function<Object, Result<SelectResultValue>> pullFromResultLevelCache()
+      {
+        return pullFromCache();
       }
     };
   }
@@ -411,7 +435,8 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     if (query.isDescending()) {
       while (it.hasNext()) {
         Interval interval = it.next().getInterval();
-        Map.Entry<Long, Long> ceiling = granularThresholds.ceilingEntry(granularity.bucketStart(interval.getEnd()).getMillis());
+        Map.Entry<Long, Long> ceiling = granularThresholds.ceilingEntry(granularity.bucketStart(interval.getEnd())
+                                                                                   .getMillis());
         if (ceiling == null || interval.getStartMillis() >= ceiling.getValue()) {
           it.remove();
         }
@@ -419,7 +444,8 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     } else {
       while (it.hasNext()) {
         Interval interval = it.next().getInterval();
-        Map.Entry<Long, Long> floor = granularThresholds.floorEntry(granularity.bucketStart(interval.getStart()).getMillis());
+        Map.Entry<Long, Long> floor = granularThresholds.floorEntry(granularity.bucketStart(interval.getStart())
+                                                                               .getMillis());
         if (floor == null || interval.getEndMillis() <= floor.getValue()) {
           it.remove();
         }

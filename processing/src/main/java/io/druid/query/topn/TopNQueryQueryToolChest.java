@@ -293,7 +293,6 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   }
 
 
-
   @Override
   public CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> getCacheStrategy(final TopNQuery query)
   {
@@ -402,6 +401,80 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                 vals.put(postAgg.getName(), postAgg.compute(vals));
               }
 
+              retVal.add(vals);
+            }
+
+            return new Result<>(timestamp, new TopNResultValue(retVal));
+          }
+        };
+      }
+
+      @Override
+      public Function<Result<TopNResultValue>, Object> prepareForResultLevelCache()
+      {
+        return new Function<Result<TopNResultValue>, Object>()
+        {
+          private final String[] aggFactoryNames = extractFactoryName(query.getAggregatorSpecs());
+
+          @Override
+          public Object apply(final Result<TopNResultValue> input)
+          {
+            List<DimensionAndMetricValueExtractor> results = Lists.newArrayList(input.getValue());
+            final List<Object> retVal = Lists.newArrayListWithCapacity(results.size() + 1);
+
+            // make sure to preserve timezone information when caching results
+            retVal.add(input.getTimestamp().getMillis());
+            for (DimensionAndMetricValueExtractor result : results) {
+              List<Object> vals = Lists.newArrayListWithCapacity(aggFactoryNames.length + 2);
+              vals.add(result.getDimensionValue(query.getDimensionSpec().getOutputName()));
+              for (String aggName : aggFactoryNames) {
+                vals.add(result.getMetric(aggName));
+              }
+              // Add post aggregated results
+              for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
+                vals.add(result.getMetric(postAgg.getName()));
+              }
+              retVal.add(vals);
+            }
+            return retVal;
+          }
+        };
+      }
+
+      @Override
+      public Function<Object, Result<TopNResultValue>> pullFromResultLevelCache()
+      {
+        return new Function<Object, Result<TopNResultValue>>()
+        {
+          private final Granularity granularity = query.getGranularity();
+
+          @Override
+          public Result<TopNResultValue> apply(Object input)
+          {
+            List<Object> results = (List<Object>) input;
+            List<Map<String, Object>> retVal = Lists.newArrayListWithCapacity(results.size());
+
+            Iterator<Object> inputIter = results.iterator();
+            DateTime timestamp = granularity.toDateTime(((Number) inputIter.next()).longValue());
+
+            while (inputIter.hasNext()) {
+              List<Object> result = (List<Object>) inputIter.next();
+              Map<String, Object> vals = Maps.newLinkedHashMap();
+
+              Iterator<AggregatorFactory> aggIter = aggs.iterator();
+              Iterator<Object> resultIter = result.iterator();
+              Iterator<PostAggregator> postItr = query.getPostAggregatorSpecs().iterator();
+
+              vals.put(query.getDimensionSpec().getOutputName(), resultIter.next());
+
+              while (aggIter.hasNext() && resultIter.hasNext()) {
+                final AggregatorFactory factory = aggIter.next();
+                vals.put(factory.getName(), factory.deserialize(resultIter.next()));
+              }
+
+              while (postItr.hasNext() && resultIter.hasNext()) {
+                vals.put(postItr.next().getName(), resultIter.next());
+              }
               retVal.add(vals);
             }
 

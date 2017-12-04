@@ -19,6 +19,7 @@
 
 package io.druid.client;
 
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import io.druid.client.cache.Cache;
@@ -29,10 +30,9 @@ import io.druid.query.Query;
 import io.druid.query.QueryContexts;
 
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.Map;
-
+import java.nio.ByteBuffer;
 
 public class ResultLevelCacheUtil
 {
@@ -51,16 +51,23 @@ public class ResultLevelCacheUtil
       Cache.NamedKey key,
       Iterable<Object> results,
       int cacheLimit,
-      String etag
+      String resultSetId
   )
   {
     try {
-      Map<String, Iterable<Object>> vals = Collections.singletonMap(etag, results);
-      byte[] bytes = mapper.writeValueAsBytes(vals);
-      if (cacheLimit > 0 && bytes.length > cacheLimit) {
+      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+      try (JsonGenerator gen = mapper.getFactory().createGenerator(bytes)) {
+        // Save the resultSetId and its length
+        bytes.write(ByteBuffer.allocate(Integer.BYTES).putInt(resultSetId.length()).array());
+        bytes.write(StringUtils.toUtf8(resultSetId));
+        for (Object result : results) {
+          gen.writeObject(result);
+        }
+      }
+      if (cacheLimit > 0 && bytes.size() > cacheLimit) {
         return;
       }
-      cache.put(key, bytes);
+      cache.put(key, bytes.toByteArray());
     }
     catch (IOException e) {
       throw Throwables.propagate(e);

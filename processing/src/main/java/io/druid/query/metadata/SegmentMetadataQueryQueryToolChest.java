@@ -70,7 +70,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   private static final TypeReference<SegmentAnalysis> TYPE_REFERENCE = new TypeReference<SegmentAnalysis>()
   {
   };
-  private static final byte[] SEGMENT_METADATA_CACHE_PREFIX = new byte[]{0x4};
+  private static final byte[] SEGMENT_METADATA_CACHE_PREFIX = new byte[] {0x4};
   private static final Function<SegmentAnalysis, SegmentAnalysis> MERGE_TRANSFORM_FN = new Function<SegmentAnalysis, SegmentAnalysis>()
   {
     @Override
@@ -111,7 +111,8 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
           Map<String, Object> context
       )
       {
-        SegmentMetadataQuery updatedQuery = ((SegmentMetadataQuery) queryPlus.getQuery()).withFinalizedAnalysisTypes(config);
+        SegmentMetadataQuery updatedQuery = ((SegmentMetadataQuery) queryPlus.getQuery()).withFinalizedAnalysisTypes(
+            config);
         QueryPlus<SegmentAnalysis> updatedQueryPlus = queryPlus.withQuery(updatedQuery);
         return new MappedSequence<>(
             CombiningSequence.create(
@@ -221,6 +222,18 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
             return input;
           }
         };
+      }
+
+      @Override
+      public Function<SegmentAnalysis, SegmentAnalysis> prepareForResultLevelCache()
+      {
+        return prepareForCache();
+      }
+
+      @Override
+      public Function<SegmentAnalysis, SegmentAnalysis> pullFromResultLevelCache()
+      {
+        return pullFromCache();
       }
     };
   }

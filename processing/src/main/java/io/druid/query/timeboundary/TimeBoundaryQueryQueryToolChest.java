@@ -203,6 +203,19 @@ public class TimeBoundaryQueryQueryToolChest
           }
         };
       }
+
+      @Override
+      public Function<Result<TimeBoundaryResultValue>, Object> prepareForResultLevelCache()
+      {
+        return prepareForCache();
+      }
+
+      @Override
+      public Function<Object, Result<TimeBoundaryResultValue>> pullFromResultLevelCache()
+      {
+        return pullFromCache();
+      }
+
     };
   }
 }

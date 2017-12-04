@@ -150,8 +150,10 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
     {
       private final List<DimensionSpec> dimensionSpecs =
           query.getDimensions() != null ? query.getDimensions() : Collections.<DimensionSpec>emptyList();
-      private final List<String> dimOutputNames = dimensionSpecs.size() > 0 ?
-          Lists.transform(dimensionSpecs, DimensionSpec::getOutputName) : Collections.emptyList();
+      private final List<String> dimOutputNames = dimensionSpecs.size() > 0
+                                                  ?
+                                                  Lists.transform(dimensionSpecs, DimensionSpec::getOutputName)
+                                                  : Collections.emptyList();
 
       @Override
       public boolean isCacheable(SearchQuery query, boolean willMergeRunners)
@@ -163,7 +165,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
       public byte[] computeCacheKey(SearchQuery query)
       {
         final DimFilter dimFilter = query.getDimensionsFilter();
-        final byte[] filterBytes = dimFilter == null ? new byte[]{} : dimFilter.getCacheKey();
+        final byte[] filterBytes = dimFilter == null ? new byte[] {} : dimFilter.getCacheKey();
         final byte[] querySpecBytes = query.getQuery().getCacheKey();
         final byte[] granularityBytes = query.getGranularity().getCacheKey();
 
@@ -214,8 +216,8 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
           public Object apply(Result<SearchResultValue> input)
           {
             return dimensionSpecs.size() > 0
-                ? Lists.newArrayList(input.getTimestamp().getMillis(), input.getValue(), dimOutputNames)
-                : Lists.newArrayList(input.getTimestamp().getMillis(), input.getValue());
+                   ? Lists.newArrayList(input.getTimestamp().getMillis(), input.getValue(), dimOutputNames)
+                   : Lists.newArrayList(input.getTimestamp().getMillis(), input.getValue());
           }
         };
       }
@@ -234,8 +236,10 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
             final Map<String, String> outputNameMap = Maps.newHashMap();
             if (hasOutputName(result)) {
               List<String> cachedOutputNames = (List) result.get(2);
-              Preconditions.checkArgument(cachedOutputNames.size() == dimOutputNames.size(),
-                  "cache hit, but number of dimensions mismatch");
+              Preconditions.checkArgument(
+                  cachedOutputNames.size() == dimOutputNames.size(),
+                  "cache hit, but number of dimensions mismatch"
+              );
               needsRename = false;
               for (int idx = 0; idx < cachedOutputNames.size(); idx++) {
                 String cachedOutputName = cachedOutputNames.get(idx);
@@ -248,65 +252,77 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
             }
 
             return !needsRename
-                ? new Result<>(
-                    DateTimes.utc(((Number) result.get(0)).longValue()),
-                    new SearchResultValue(
-                        Lists.transform(
-                            (List) result.get(1),
-                            new Function<Object, SearchHit>()
-                            {
-                              @Override
-                              public SearchHit apply(@Nullable Object input)
-                              {
-                                if (input instanceof Map) {
-                                  return new SearchHit(
-                                      (String) ((Map) input).get("dimension"),
-                                      (String) ((Map) input).get("value"),
-                                      (Integer) ((Map) input).get("count")
-                                  );
-                                } else if (input instanceof SearchHit) {
-                                  return (SearchHit) input;
-                                } else {
-                                  throw new IAE("Unknown format [%s]", input.getClass());
-                                }
-                              }
+                   ? new Result<>(
+                DateTimes.utc(((Number) result.get(0)).longValue()),
+                new SearchResultValue(
+                    Lists.transform(
+                        (List) result.get(1),
+                        new Function<Object, SearchHit>()
+                        {
+                          @Override
+                          public SearchHit apply(@Nullable Object input)
+                          {
+                            if (input instanceof Map) {
+                              return new SearchHit(
+                                  (String) ((Map) input).get("dimension"),
+                                  (String) ((Map) input).get("value"),
+                                  (Integer) ((Map) input).get("count")
+                              );
+                            } else if (input instanceof SearchHit) {
+                              return (SearchHit) input;
+                            } else {
+                              throw new IAE("Unknown format [%s]", input.getClass());
                             }
-                        )
+                          }
+                        }
                     )
                 )
-                : new Result<>(
-                    DateTimes.utc(((Number) result.get(0)).longValue()),
-                    new SearchResultValue(
-                        Lists.transform(
-                            (List) result.get(1),
-                            new Function<Object, SearchHit>()
-                            {
-                              @Override
-                              public SearchHit apply(@Nullable Object input)
-                              {
-                                String dim = null;
-                                String val = null;
-                                Integer cnt = null;
-                                if (input instanceof Map) {
-                                  dim = outputNameMap.get((String) ((Map) input).get("dimension"));
-                                  val = (String) ((Map) input).get("value");
-                                  cnt = (Integer) ((Map) input).get("count");
-                                } else if (input instanceof SearchHit) {
-                                  SearchHit cached = (SearchHit) input;
-                                  dim = outputNameMap.get(cached.getDimension());
-                                  val = cached.getValue();
-                                  cnt = cached.getCount();
-                                } else {
-                                  throw new IAE("Unknown format [%s]", input.getClass());
-                                }
-                                return new SearchHit(dim, val, cnt);
-                              }
-                            }
-                        )
-                    )
-                );
+            )
+                   : new Result<>(
+                       DateTimes.utc(((Number) result.get(0)).longValue()),
+                       new SearchResultValue(
+                           Lists.transform(
+                               (List) result.get(1),
+                               new Function<Object, SearchHit>()
+                               {
+                                 @Override
+                                 public SearchHit apply(@Nullable Object input)
+                                 {
+                                   String dim = null;
+                                   String val = null;
+                                   Integer cnt = null;
+                                   if (input instanceof Map) {
+                                     dim = outputNameMap.get((String) ((Map) input).get("dimension"));
+                                     val = (String) ((Map) input).get("value");
+                                     cnt = (Integer) ((Map) input).get("count");
+                                   } else if (input instanceof SearchHit) {
+                                     SearchHit cached = (SearchHit) input;
+                                     dim = outputNameMap.get(cached.getDimension());
+                                     val = cached.getValue();
+                                     cnt = cached.getCount();
+                                   } else {
+                                     throw new IAE("Unknown format [%s]", input.getClass());
+                                   }
+                                   return new SearchHit(dim, val, cnt);
+                                 }
+                               }
+                           )
+                       )
+                   );
           }
         };
+      }
+
+      @Override
+      public Function<Result<SearchResultValue>, Object> prepareForResultLevelCache()
+      {
+        return prepareForCache();
+      }
+
+      @Override
+      public Function<Object, Result<SearchResultValue>> pullFromResultLevelCache()
+      {
+        return pullFromCache();
       }
 
       private boolean hasOutputName(List<Object> cachedEntry)

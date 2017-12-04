@@ -50,6 +50,7 @@ import io.druid.query.SubqueryQueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.MetricManipulatorFns;
+import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
@@ -477,6 +478,87 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
           }
         };
       }
+
+      @Override
+      public Function<Row, Object> prepareForResultLevelCache()
+      {
+        return new Function<Row, Object>()
+        {
+          @Override
+          public Object apply(Row input)
+          {
+            if (input instanceof MapBasedRow) {
+              final MapBasedRow row = (MapBasedRow) input;
+              final List<Object> retVal = Lists.newArrayListWithCapacity(1 + dims.size() + aggs.size());
+              retVal.add(row.getTimestamp().getMillis());
+              Map<String, Object> event = row.getEvent();
+              for (DimensionSpec dim : dims) {
+                retVal.add(event.get(dim.getOutputName()));
+              }
+              for (AggregatorFactory agg : aggs) {
+                retVal.add(event.get(agg.getName()));
+              }
+              // Add postaggregated data to the result
+              for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
+                retVal.add(event.get(postAgg.getName()));
+              }
+              return retVal;
+            }
+
+            throw new ISE("Don't know how to cache input rows of type[%s]", input.getClass());
+          }
+        };
+      }
+
+      @Override
+      public Function<Object, Row> pullFromResultLevelCache()
+      {
+        return new Function<Object, Row>()
+        {
+          private final Granularity granularity = query.getGranularity();
+
+          @Override
+          public Row apply(Object input)
+          {
+            Iterator<Object> results = ((List<Object>) input).iterator();
+
+            DateTime timestamp = granularity.toDateTime(((Number) results.next()).longValue());
+
+            Map<String, Object> event = Maps.newLinkedHashMap();
+            Iterator<DimensionSpec> dimsIter = dims.iterator();
+            while (dimsIter.hasNext() && results.hasNext()) {
+              final DimensionSpec factory = dimsIter.next();
+              event.put(factory.getOutputName(), results.next());
+            }
+
+            Iterator<AggregatorFactory> aggsIter = aggs.iterator();
+            while (aggsIter.hasNext() && results.hasNext()) {
+              final AggregatorFactory factory = aggsIter.next();
+              event.put(factory.getName(), factory.deserialize(results.next()));
+            }
+
+            Iterator<PostAggregator> postItr = query.getPostAggregatorSpecs().iterator();
+            while (postItr.hasNext() && results.hasNext()) {
+              event.put(postItr.next().getName(), results.next());
+            }
+
+            if (dimsIter.hasNext() || aggsIter.hasNext() || results.hasNext()) {
+              throw new ISE(
+                  "Found left over objects while reading from cache!! dimsIter[%s] aggsIter[%s] results[%s]",
+                  dimsIter.hasNext(),
+                  aggsIter.hasNext(),
+                  results.hasNext()
+              );
+            }
+
+            return new MapBasedRow(
+                timestamp,
+                event
+            );
+          }
+        };
+      }
+
     };
   }
 

@@ -224,6 +224,65 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
           }
         };
       }
+
+      @Override
+      public Function<Result<TimeseriesResultValue>, Object> prepareForResultLevelCache()
+      {
+        return new Function<Result<TimeseriesResultValue>, Object>()
+        {
+          @Override
+          public Object apply(final Result<TimeseriesResultValue> input)
+          {
+            TimeseriesResultValue results = input.getValue();
+            final List<Object> retVal = Lists.newArrayListWithCapacity(1 + aggs.size());
+
+            retVal.add(input.getTimestamp().getMillis());
+            for (AggregatorFactory agg : aggs) {
+              retVal.add(results.getMetric(agg.getName()));
+            }
+            for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
+              retVal.add(results.getMetric(postAgg.getName()));
+            }
+
+            return retVal;
+          }
+        };
+      }
+
+      @Override
+      public Function<Object, Result<TimeseriesResultValue>> pullFromResultLevelCache()
+      {
+        return new Function<Object, Result<TimeseriesResultValue>>()
+        {
+          private final Granularity granularity = query.getGranularity();
+
+          @Override
+          public Result<TimeseriesResultValue> apply(@Nullable Object input)
+          {
+            List<Object> results = (List<Object>) input;
+            Map<String, Object> retVal = Maps.newLinkedHashMap();
+
+            Iterator<AggregatorFactory> aggsIter = aggs.iterator();
+            Iterator<Object> resultIter = results.iterator();
+            Iterator<PostAggregator> postItr = query.getPostAggregatorSpecs().iterator();
+
+            DateTime timestamp = granularity.toDateTime(((Number) resultIter.next()).longValue());
+
+            while (aggsIter.hasNext() && resultIter.hasNext()) {
+              final AggregatorFactory factory = aggsIter.next();
+              retVal.put(factory.getName(), factory.deserialize(resultIter.next()));
+            }
+
+            while (postItr.hasNext() && resultIter.hasNext()) {
+              retVal.put(postItr.next().getName(), resultIter.next());
+            }
+            return new Result<TimeseriesResultValue>(
+                timestamp,
+                new TimeseriesResultValue(retVal)
+            );
+          }
+        };
+      }
     };
   }
 
