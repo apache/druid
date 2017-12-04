@@ -81,7 +81,7 @@ public class ExpressionFilterTest extends BaseFilterTest
       ImmutableMap.of("dim0", "7", "dim1", 7L, "dim2", 7.0f, "dim3", "a"),
       ImmutableMap.of("dim0", "8", "dim1", 8L, "dim2", 8.0f, "dim3", 8L),
       ImmutableMap.of("dim0", "9", "dim1", 9L, "dim2", 9.0f, "dim3", 1.234f, "dim4", 1.234f)
-  ).stream().map(PARSER::parse).collect(Collectors.toList());
+  ).stream().map(e -> PARSER.parseBatch(e).get(0)).collect(Collectors.toList());
 
   public ExpressionFilterTest(
       String testName,

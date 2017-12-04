@@ -109,7 +109,7 @@ public class JSONToLowerParser implements Parser<String, Object>
   }
 
   @Override
-  public Map<String, Object> parse(String input)
+  public Map<String, Object> parseToMap(String input)
   {
     try {
       Map<String, Object> map = new LinkedHashMap<>();

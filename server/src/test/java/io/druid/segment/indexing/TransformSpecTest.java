@@ -80,7 +80,7 @@ public class TransformSpecTest
     );
 
     final InputRowParser<Map<String, Object>> parser = transformSpec.decorate(PARSER);
-    final InputRow row = parser.parse(ROW1);
+    final InputRow row = parser.parseBatch(ROW1).get(0);
 
     Assert.assertNotNull(row);
     Assert.assertEquals(DateTimes.of("2000-01-01").getMillis(), row.getTimestampFromEpoch());
@@ -108,7 +108,7 @@ public class TransformSpecTest
     );
 
     final InputRowParser<Map<String, Object>> parser = transformSpec.decorate(PARSER);
-    final InputRow row = parser.parse(ROW1);
+    final InputRow row = parser.parseBatch(ROW1).get(0);
 
     Assert.assertNotNull(row);
     Assert.assertEquals(DateTimes.of("2000-01-01").getMillis(), row.getTimestampFromEpoch());
@@ -139,8 +139,8 @@ public class TransformSpecTest
     );
 
     final InputRowParser<Map<String, Object>> parser = transformSpec.decorate(PARSER);
-    Assert.assertNotNull(parser.parse(ROW1));
-    Assert.assertNull(parser.parse(ROW2));
+    Assert.assertNotNull(parser.parseBatch(ROW1).get(0));
+    Assert.assertNull(parser.parseBatch(ROW2).get(0));
   }
 
   @Test
@@ -154,7 +154,7 @@ public class TransformSpecTest
     );
 
     final InputRowParser<Map<String, Object>> parser = transformSpec.decorate(PARSER);
-    final InputRow row = parser.parse(ROW1);
+    final InputRow row = parser.parseBatch(ROW1).get(0);
 
     Assert.assertNotNull(row);
     Assert.assertEquals(DateTimes.of("1970-01-01T05:00:00Z"), row.getTimestamp());
@@ -172,7 +172,7 @@ public class TransformSpecTest
     );
 
     final InputRowParser<Map<String, Object>> parser = transformSpec.decorate(PARSER);
-    final InputRow row = parser.parse(ROW1);
+    final InputRow row = parser.parseBatch(ROW1).get(0);
 
     Assert.assertNotNull(row);
     Assert.assertEquals(DateTimes.of("2000-01-01T01:00:00Z"), row.getTimestamp());

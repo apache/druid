@@ -129,7 +129,8 @@ public class SinkTest
           {
             return 0;
           }
-        }
+        },
+        false
     );
 
     FireHydrant currHydrant = sink.getCurrHydrant();
@@ -182,7 +183,8 @@ public class SinkTest
           {
             return 0;
           }
-        }
+        },
+        false
     );
 
     Assert.assertEquals(currHydrant, swapHydrant);

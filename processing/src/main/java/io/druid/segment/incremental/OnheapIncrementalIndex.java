@@ -109,7 +109,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       AtomicInteger numEntries,
       TimeAndDims key,
       ThreadLocal<InputRow> rowContainer,
-      Supplier<InputRow> rowSupplier
+      Supplier<InputRow> rowSupplier,
+      boolean skipMaxRowsInMemoryCheck
   ) throws IndexSizeExceededException
   {
     final int priorIndex = facts.getPriorIndex(key);
@@ -128,7 +129,9 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       concurrentSet(rowIndex, aggs);
 
       // Last ditch sanity checks
-      if (numEntries.get() >= maxRowCount && facts.getPriorIndex(key) == TimeAndDims.EMPTY_ROW_INDEX) {
+      if (numEntries.get() >= maxRowCount
+          && facts.getPriorIndex(key) == TimeAndDims.EMPTY_ROW_INDEX
+          && !skipMaxRowsInMemoryCheck) {
         throw new IndexSizeExceededException("Maximum number of rows [%d] reached", maxRowCount);
       }
       final int prev = facts.putIfAbsent(key, rowIndex);
