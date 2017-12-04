@@ -37,6 +37,10 @@ public class StorageLocationConfig
   @Min(1)
   private long maxSize = Long.MAX_VALUE;
 
+  // Negative value means that free space check is disabled.
+  @JsonProperty
+  private float freeSpacePercent = -1.0f;
+
   public File getPath()
   {
     return path;
@@ -56,6 +60,17 @@ public class StorageLocationConfig
   public StorageLocationConfig setMaxSize(long maxSize)
   {
     this.maxSize = maxSize;
+    return this;
+  }
+
+  public float getFreeSpacePercent()
+  {
+    return freeSpacePercent;
+  }
+
+  public StorageLocationConfig setFreeSpacePercent(Float freeSpacePercent)
+  {
+    this.freeSpacePercent = freeSpacePercent;
     return this;
   }
 
