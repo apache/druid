@@ -355,7 +355,7 @@ public class NewestSegmentFirstPolicyTest
         )
     );
 
-   Assert.assertFalse(iterator.hasNext());
+    Assert.assertFalse(iterator.hasNext());
   }
 
   private static void assertCompactSegmentIntervals(
