@@ -146,17 +146,17 @@ public class ThriftInputRowParserTest
     expectedException.expect(CoreMatchers.instanceOf(IllegalStateException.class));
     expectedException.expectMessage("JavaScript is disabled");
 
-    parser.parse(ByteBuffer.allocate(1));
+    parser.parseBatch(ByteBuffer.allocate(1)).get(0);
   }
 
   public void serializationAndTest(ThriftInputRowParser parser, byte[] bytes) throws TException
   {
     ByteBuffer buffer = ByteBuffer.wrap(bytes);
 
-    InputRow row1 = parser.parse(buffer);
+    InputRow row1 = parser.parseBatch(buffer).get(0);
     assertTrue(row1.getDimension("title").get(0).equals("title"));
 
-    InputRow row2 = parser.parse(new BytesWritable(bytes));
+    InputRow row2 = parser.parseBatch(new BytesWritable(bytes)).get(0);
     assertTrue(row2.getDimension("lastName").get(0).equals("last"));
   }
 }

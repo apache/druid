@@ -169,9 +169,9 @@ public class DataSchemaTest
     // Test hack that produces a StringInputRowParser.
     final StringInputRowParser parser = (StringInputRowParser) schema.getParser();
 
-    final InputRow row1bb = parser.parse(
+    final InputRow row1bb = parser.parseBatch(
         ByteBuffer.wrap("{\"time\":\"2000-01-01\",\"dimA\":\"foo\"}".getBytes(Charsets.UTF_8))
-    );
+    ).get(0);
     Assert.assertEquals(DateTimes.of("2000-01-01"), row1bb.getTimestamp());
     Assert.assertEquals("foo", row1bb.getRaw("dimA"));
     Assert.assertEquals("foofoo", row1bb.getRaw("expr"));
@@ -181,9 +181,9 @@ public class DataSchemaTest
     Assert.assertEquals("foo", row1string.getRaw("dimA"));
     Assert.assertEquals("foofoo", row1string.getRaw("expr"));
 
-    final InputRow row2 = parser.parse(
+    final InputRow row2 = parser.parseBatch(
         ByteBuffer.wrap("{\"time\":\"2000-01-01\",\"dimA\":\"x\"}".getBytes(Charsets.UTF_8))
-    );
+    ).get(0);
     Assert.assertNull(row2);
   }
 

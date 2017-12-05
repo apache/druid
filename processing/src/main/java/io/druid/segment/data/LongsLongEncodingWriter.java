@@ -20,6 +20,7 @@
 package io.druid.segment.data;
 
 import com.google.common.primitives.Longs;
+import io.druid.segment.writeout.WriteOutBytes;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -52,7 +53,7 @@ public class LongsLongEncodingWriter implements CompressionFactory.LongEncodingW
   }
 
   @Override
-  public void setOutputStream(OutputStream output)
+  public void setOutputStream(WriteOutBytes output)
   {
     outBuffer = null;
     outStream = output;
@@ -77,9 +78,15 @@ public class LongsLongEncodingWriter implements CompressionFactory.LongEncodingW
   }
 
   @Override
-  public void putMeta(OutputStream metaOut, CompressedObjectStrategy.CompressionStrategy strategy) throws IOException
+  public void putMeta(ByteBuffer metaOut, CompressionStrategy strategy) throws IOException
   {
-    metaOut.write(strategy.getId());
+    metaOut.put(strategy.getId());
+  }
+
+  @Override
+  public int metaSize()
+  {
+    return 1;
   }
 
   @Override

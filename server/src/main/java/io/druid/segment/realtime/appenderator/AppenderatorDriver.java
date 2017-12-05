@@ -39,10 +39,10 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.SegmentDescriptor;
 import io.druid.segment.realtime.FireDepartmentMetrics;
@@ -61,6 +61,7 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -250,31 +251,38 @@ public class AppenderatorDriver implements Closeable
     appenderator.clear();
   }
 
-  /**
-   * Add a row. Must not be called concurrently from multiple threads.
-   *
-   * @param row               the row to add
-   * @param sequenceName      sequenceName for this row's segment
-   * @param committerSupplier supplier of a committer associated with all data that has been added, including this row
-   *
-   * @return segment to which this row was added, or null if segment allocator returned null for this row
-   *
-   * @throws IOException if there is an I/O error while allocating or writing to a segment
-   */
   public AppenderatorDriverAddResult add(
       final InputRow row,
       final String sequenceName,
       final Supplier<Committer> committerSupplier
   ) throws IOException
   {
-    return add(row, sequenceName, committerSupplier, false);
+    return add(row, sequenceName, committerSupplier, false, true);
   }
+
+  /**
+   * Add a row. Must not be called concurrently from multiple threads.
+   *
+   * @param row                      the row to add
+   * @param sequenceName             sequenceName for this row's segment
+   * @param committerSupplier        supplier of a committer associated with all data that has been added, including this row
+   *                                 if {@param allowIncrementalPersists} is set to false then this will not be used
+   * @param skipSegmentLineageCheck  if true, perform lineage validation using previousSegmentId for this sequence.
+   *                                 Should be set to false if replica tasks would index events in same order
+   * @param allowIncrementalPersists whether to allow persist to happen when maxRowsInMemory or intermediate persist period
+   *                                 threshold is hit
+   *
+   * @return {@link AppenderatorDriverAddResult}
+   *
+   * @throws IOException if there is an I/O error while allocating or writing to a segment
+   */
 
   public AppenderatorDriverAddResult add(
       final InputRow row,
       final String sequenceName,
       final Supplier<Committer> committerSupplier,
-      final boolean skipSegmentLineageCheck
+      final boolean skipSegmentLineageCheck,
+      final boolean allowIncrementalPersists
   ) throws IOException
   {
     Preconditions.checkNotNull(row, "row");
@@ -285,8 +293,18 @@ public class AppenderatorDriver implements Closeable
 
     if (identifier != null) {
       try {
-        final int numRowsInMemory = appenderator.add(identifier, row, wrapCommitterSupplier(committerSupplier));
-        return AppenderatorDriverAddResult.ok(identifier, numRowsInMemory, appenderator.getTotalRowCount());
+        final Appenderator.AppenderatorAddResult result = appenderator.add(
+            identifier,
+            row,
+            wrapCommitterSupplier(committerSupplier),
+            allowIncrementalPersists
+        );
+        return AppenderatorDriverAddResult.ok(
+            identifier,
+            result.getNumRowsInSegment(),
+            appenderator.getTotalRowCount(),
+            result.isPersistRequired()
+        );
       }
       catch (SegmentNotWritableException e) {
         throw new ISE(e, "WTF?! Segment[%s] not writable when it should have been.", identifier);
@@ -299,7 +317,7 @@ public class AppenderatorDriver implements Closeable
   /**
    * Persist all data indexed through this driver so far. Blocks until complete.
    * <p>
-   * Should be called after all data has been added through {@link #add(InputRow, String, Supplier)}.
+   * Should be called after all data has been added through {@link #add(InputRow, String, Supplier, boolean, boolean)}.
    *
    * @param committer committer representing all data that has been added so far
    *
@@ -320,6 +338,22 @@ public class AppenderatorDriver implements Closeable
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
+  }
+
+  /**
+   * Persist all data indexed through this driver so far. Returns a future of persisted commitMetadata.
+   * <p>
+   * Should be called after all data has been added through {@link #add(InputRow, String, Supplier, boolean, boolean)}.
+   *
+   * @param committer committer representing all data that has been added so far
+   *
+   * @return future containing commitMetadata persisted
+   */
+  public ListenableFuture<Object> persistAsync(final Committer committer)
+      throws InterruptedException, ExecutionException
+  {
+    log.info("Persisting data asynchronously");
+    return appenderator.persistAll(wrapCommitter(committer));
   }
 
   /**
@@ -440,8 +474,10 @@ public class AppenderatorDriver implements Closeable
   /**
    * Return a segment usable for "timestamp". May return null if no segment can be allocated.
    *
-   * @param row          input row
-   * @param sequenceName sequenceName for potential segment allocation
+   * @param row                     input row
+   * @param sequenceName            sequenceName for potential segment allocation
+   * @param skipSegmentLineageCheck if false, perform lineage validation using previousSegmentId for this sequence.
+   *                                Should be set to false if replica tasks would index events in same order
    *
    * @return identifier, or null
    *
@@ -615,7 +651,7 @@ public class AppenderatorDriver implements Closeable
    * Execute a task in background to publish the given segments.  The task blocks until complete.
    * Retries forever on transient failures, but may exit early on permanent failures.
    * <p>
-   * Should be called after all data has been added through {@link #add(InputRow, String, Supplier)}.
+   * Should be called after all data has been added through {@link #add(InputRow, String, Supplier, boolean, boolean)}.
    *
    * @param publisher        publisher to use for this set of segments
    * @param wrappedCommitter committer representing all data that has been added so far

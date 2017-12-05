@@ -56,12 +56,12 @@ public class NotFilterTest extends BaseFilterTest
   );
 
   private static final List<InputRow> ROWS = ImmutableList.of(
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "0")),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "1")),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "2")),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "3")),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "4")),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "5"))
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "0")).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "1")).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "2")).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "3")).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "4")).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "5")).get(0)
   );
 
   public NotFilterTest(

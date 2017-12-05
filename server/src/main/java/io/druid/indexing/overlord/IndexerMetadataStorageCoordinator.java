@@ -76,14 +76,14 @@ public interface IndexerMetadataStorageCoordinator
    * <p/>
    * Note that a segment sequence may include segments with a variety of different intervals and versions.
    *
-   * @param dataSource        dataSource for which to allocate a segment
-   * @param sequenceName      name of the group of ingestion tasks producing a segment series
-   * @param previousSegmentId previous segment in the series; may be null or empty, meaning this is the first segment
-   * @param interval          interval for which to allocate a segment
-   * @param maxVersion        use this version if we have no better version to use. The returned segment identifier may
-   *                          have a version lower than this one, but will not have one higher.
-   * @param skipSegmentLineageCheck if false, perform lineage validation using previousSegmentId for this sequence.
-   *                              Should be set to false if replica tasks would index events in same order
+   * @param dataSource              dataSource for which to allocate a segment
+   * @param sequenceName            name of the group of ingestion tasks producing a segment series
+   * @param previousSegmentId       previous segment in the series; may be null or empty, meaning this is the first segment
+   * @param interval                interval for which to allocate a segment
+   * @param maxVersion              use this version if we have no better version to use. The returned segment identifier may
+   *                                have a version lower than this one, but will not have one higher.
+   * @param skipSegmentLineageCheck if true, perform lineage validation using previousSegmentId for this sequence.
+   *                                Should be set to false if replica tasks would index events in same order
    *
    * @return the pending segment identifier, or null if it was impossible to allocate a new segment
    */
@@ -126,7 +126,8 @@ public interface IndexerMetadataStorageCoordinator
   /**
    * Removes entry for 'dataSource' from the dataSource metadata table.
    *
-   * @param dataSource  identifier
+   * @param dataSource identifier
+   *
    * @return true if the entry was deleted, false otherwise
    */
   boolean deleteDataSourceMetadata(String dataSource);
@@ -134,8 +135,9 @@ public interface IndexerMetadataStorageCoordinator
   /**
    * Resets dataSourceMetadata entry for 'dataSource' to the one supplied.
    *
-   * @param dataSource  identifier
+   * @param dataSource         identifier
    * @param dataSourceMetadata value to set
+   *
    * @return true if the entry was reset, false otherwise
    */
   boolean resetDataSourceMetadata(String dataSource, DataSourceMetadata dataSourceMetadata) throws IOException;

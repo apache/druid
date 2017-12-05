@@ -27,13 +27,16 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.common.guava.SettableSupplier;
-import io.druid.java.util.common.Intervals;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import io.druid.query.BitmapResultFactory;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -50,12 +53,10 @@ import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.IndexBuilder;
-import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexStorageAdapter;
 import io.druid.segment.StorageAdapter;
-import io.druid.segment.TestHelper;
 import io.druid.segment.VirtualColumn;
 import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.ValueType;
@@ -181,8 +182,9 @@ public abstract class BaseFilterTest
         "roaring", new RoaringBitmapSerdeFactory(true)
     );
 
-    final Map<String, IndexMerger> indexMergers = ImmutableMap.of(
-        "IndexMergerV9", TestHelper.getTestIndexMergerV9()
+    final Map<String, SegmentWriteOutMediumFactory> segmentWriteOutMediumFactories = ImmutableMap.of(
+        "tmpFile segment write-out medium", TmpFileSegmentWriteOutMediumFactory.instance(),
+        "off-heap memory segment write-out medium", OffHeapMemorySegmentWriteOutMediumFactory.instance()
     );
 
     final Map<String, Function<IndexBuilder, Pair<StorageAdapter, Closeable>>> finishers = ImmutableMap.of(
@@ -246,25 +248,23 @@ public abstract class BaseFilterTest
     );
 
     for (Map.Entry<String, BitmapSerdeFactory> bitmapSerdeFactoryEntry : bitmapSerdeFactories.entrySet()) {
-      for (Map.Entry<String, IndexMerger> indexMergerEntry : indexMergers.entrySet()) {
-        for (Map.Entry<String, Function<IndexBuilder, Pair<StorageAdapter, Closeable>>> finisherEntry : finishers.entrySet()) {
+      for (Map.Entry<String, SegmentWriteOutMediumFactory> segmentWriteOutMediumFactoryEntry :
+          segmentWriteOutMediumFactories.entrySet()) {
+        for (Map.Entry<String, Function<IndexBuilder, Pair<StorageAdapter, Closeable>>> finisherEntry :
+            finishers.entrySet()) {
           for (boolean cnf : ImmutableList.of(false, true)) {
             for (boolean optimize : ImmutableList.of(false, true)) {
               final String testName = StringUtils.format(
                   "bitmaps[%s], indexMerger[%s], finisher[%s], optimize[%s]",
                   bitmapSerdeFactoryEntry.getKey(),
-                  indexMergerEntry.getKey(),
+                  segmentWriteOutMediumFactoryEntry.getKey(),
                   finisherEntry.getKey(),
                   optimize
               );
-              final IndexBuilder indexBuilder = IndexBuilder.create()
-                                                            .indexSpec(new IndexSpec(
-                                                                bitmapSerdeFactoryEntry.getValue(),
-                                                                null,
-                                                                null,
-                                                                null
-                                                            ))
-                                                            .indexMerger(indexMergerEntry.getValue());
+              final IndexBuilder indexBuilder = IndexBuilder
+                  .create()
+                  .indexSpec(new IndexSpec(bitmapSerdeFactoryEntry.getValue(), null, null, null))
+                  .segmentWriteOutMediumFactory(segmentWriteOutMediumFactoryEntry.getValue());
 
               constructors.add(new Object[]{testName, indexBuilder, finisherEntry.getValue(), cnf, optimize});
             }

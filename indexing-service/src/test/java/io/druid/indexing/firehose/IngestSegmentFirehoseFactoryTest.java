@@ -164,13 +164,13 @@ public class IngestSegmentFirehoseFactoryTest
         .buildOnheap();
 
     for (Integer i = 0; i < MAX_ROWS; ++i) {
-      index.add(ROW_PARSER.parse(buildRow(i.longValue())));
+      index.add(ROW_PARSER.parseBatch(buildRow(i.longValue())).get(0));
     }
 
     if (!persistDir.mkdirs() && !persistDir.exists()) {
       throw new IOE("Could not create directory at [%s]", persistDir.getAbsolutePath());
     }
-    INDEX_MERGER_V9.persist(index, persistDir, indexSpec);
+    INDEX_MERGER_V9.persist(index, persistDir, indexSpec, null);
 
     final IndexerSQLMetadataStorageCoordinator mdc = new IndexerSQLMetadataStorageCoordinator(null, null, null)
     {

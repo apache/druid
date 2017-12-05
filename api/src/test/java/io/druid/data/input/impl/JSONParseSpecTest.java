@@ -69,7 +69,7 @@ public class JSONParseSpecTest
     expected.put("jq_omg2", null);
 
     final Parser<String, Object> parser = parseSpec.makeParser();
-    final Map<String, Object> parsedRow = parser.parse("{\"bar\":null,\"foo\":\"x\",\"baz\":4,\"o\":{\"mg\":1}}");
+    final Map<String, Object> parsedRow = parser.parseToMap("{\"bar\":null,\"foo\":\"x\",\"baz\":4,\"o\":{\"mg\":1}}");
     Assert.assertNotNull(parsedRow);
     Assert.assertEquals(expected, parsedRow);
     Assert.assertNull(parsedRow.get("bar"));

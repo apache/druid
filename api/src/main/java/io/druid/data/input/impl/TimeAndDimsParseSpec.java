@@ -48,7 +48,7 @@ public class TimeAndDimsParseSpec extends ParseSpec
     return new Parser<String, Object>()
     {
       @Override
-      public Map<String, Object> parse(String input)
+      public Map<String, Object> parseToMap(String input)
       {
         throw new UnsupportedOperationException("not supported");
       }

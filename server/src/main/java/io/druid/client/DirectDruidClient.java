@@ -337,7 +337,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         public ClientResponse<InputStream> done(ClientResponse<InputStream> clientResponse)
         {
           long stopTimeNs = System.nanoTime();
-          long nodeTimeNs = stopTimeNs - responseStartTimeNs;
+          long nodeTimeNs = stopTimeNs - requestStartTimeNs;
           final long nodeTimeMs = TimeUnit.NANOSECONDS.toMillis(nodeTimeNs);
           log.debug(
               "Completed queryId[%s] request to url[%s] with %,d bytes returned in %,d millis [%,f b/s].",

@@ -21,7 +21,6 @@ package io.druid.segment.data;
 
 import com.google.common.base.Supplier;
 import io.druid.java.util.common.IAE;
-import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -29,7 +28,7 @@ import java.nio.ByteOrder;
 public class CompressedDoublesIndexedSupplier
 {
   public static final byte LZF_VERSION = 0x1;
-  public static final byte version = 0x2;
+  public static final byte VERSION = 0x2;
 
   private CompressedDoublesIndexedSupplier()
   {
@@ -37,30 +36,27 @@ public class CompressedDoublesIndexedSupplier
 
   public static Supplier<IndexedDoubles> fromByteBuffer(
       ByteBuffer buffer,
-      ByteOrder order,
-      SmooshedFileMapper mapper
+      ByteOrder order
   )
   {
     byte versionFromBuffer = buffer.get();
 
-    if (versionFromBuffer == LZF_VERSION || versionFromBuffer == version) {
+    if (versionFromBuffer == LZF_VERSION || versionFromBuffer == VERSION) {
       final int totalSize = buffer.getInt();
       final int sizePer = buffer.getInt();
-      CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.LZF;
-      if (versionFromBuffer == version) {
+      CompressionStrategy compression = CompressionStrategy.LZF;
+      if (versionFromBuffer == VERSION) {
         byte compressionId = buffer.get();
-        compression = CompressedObjectStrategy.CompressionStrategy.forId(compressionId);
+        compression = CompressionStrategy.forId(compressionId);
       }
       return CompressionFactory.getDoubleSupplier(
           totalSize,
           sizePer,
           buffer.asReadOnlyBuffer(),
           order,
-          compression,
-          mapper
+          compression
       );
     }
     throw new IAE("Unknown version[%s]", versionFromBuffer);
   }
-
 }

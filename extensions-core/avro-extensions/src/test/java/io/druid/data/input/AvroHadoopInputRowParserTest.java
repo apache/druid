@@ -82,7 +82,7 @@ public class AvroHadoopInputRowParserTest
         jsonMapper.writeValueAsBytes(parser),
         AvroHadoopInputRowParser.class
     );
-    InputRow inputRow = parser2.parse(record);
+    InputRow inputRow = parser2.parseBatch(record).get(0);
     assertInputRowCorrect(inputRow, DIMENSIONS);
   }
 

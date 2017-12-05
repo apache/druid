@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -29,6 +30,9 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import io.druid.query.Druids;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
@@ -58,8 +62,12 @@ import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNQueryBuilder;
 import io.druid.query.topn.TopNResultValue;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -67,11 +75,22 @@ import java.util.Map;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class SchemalessTestFullTest
 {
+  @Parameterized.Parameters
+  public static Collection<?> constructorFeeder() throws IOException
+  {
+    return ImmutableList.of(
+        new Object[] {TmpFileSegmentWriteOutMediumFactory.instance()},
+        new Object[] {OffHeapMemorySegmentWriteOutMediumFactory.instance()}
+    );
+  }
+
   final double UNIQUES_2 = 2.000977198748901d;
   final double UNIQUES_1 = 1.0002442201269182d;
 
+  final SchemalessIndexTest schemalessIndexTest;
   final String dataSource = "testing";
   final Granularity allGran = Granularities.ALL;
   final String marketDimension = "market";
@@ -94,6 +113,11 @@ public class SchemalessTestFullTest
   final QuerySegmentSpec fullOnInterval = new MultipleIntervalSegmentSpec(
       Arrays.asList(Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z"))
   );
+
+  public SchemalessTestFullTest(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
+  {
+    schemalessIndexTest = new SchemalessIndexTest(segmentWriteOutMediumFactory);
+  }
 
   @Test
   public void testCompleteIntersectingSchemas()
@@ -927,7 +951,7 @@ public class SchemalessTestFullTest
 
     runTests(
         new QueryableIndexSegment(
-            null, SchemalessIndexTest.getMergedIncrementalIndex(0, 0)
+            null, schemalessIndexTest.getMergedIncrementalIndex(0, 0)
         ),
         expectedTimeseriesResults,
         expectedFilteredTimeSeriesResults,
@@ -1012,7 +1036,7 @@ public class SchemalessTestFullTest
 
     runTests(
         new QueryableIndexSegment(
-            null, SchemalessIndexTest.getMergedIncrementalIndex(1, 1)
+            null, schemalessIndexTest.getMergedIncrementalIndex(1, 1)
         ),
         expectedTimeseriesResults,
         expectedFilteredTimeSeriesResults,
@@ -1143,7 +1167,7 @@ public class SchemalessTestFullTest
     );
 
     runTests(
-        new QueryableIndexSegment(null, SchemalessIndexTest.getMergedIncrementalIndex(new int[]{6, 7, 8})),
+        new QueryableIndexSegment(null, schemalessIndexTest.getMergedIncrementalIndex(new int[]{6, 7, 8})),
         expectedTimeseriesResults,
         expectedFilteredTimeSeriesResults,
         expectedTopNResults,
@@ -1334,7 +1358,7 @@ public class SchemalessTestFullTest
     );
 
     runTests(
-        new QueryableIndexSegment(null, SchemalessIndexTest.getMergedIncrementalIndexDiffMetrics()),
+        new QueryableIndexSegment(null, schemalessIndexTest.getMergedIncrementalIndexDiffMetrics()),
         expectedTimeseriesResults,
         expectedFilteredTimeSeriesResults,
         expectedTopNResults,
@@ -1359,11 +1383,11 @@ public class SchemalessTestFullTest
             StringUtils.format("Failed: II[%,d, %,d]", index2, index1)
         ),
         new Pair<>(
-            SchemalessIndexTest.getMergedIncrementalIndex(index1, index2),
+            schemalessIndexTest.getMergedIncrementalIndex(index1, index2),
             StringUtils.format("Failed: MII[%,d, %,d]", index1, index2)
         ),
         new Pair<>(
-            SchemalessIndexTest.getMergedIncrementalIndex(index2, index1),
+            schemalessIndexTest.getMergedIncrementalIndex(index2, index1),
             StringUtils.format("Failed: MII[%,d, %,d]", index2, index1)
         )
     );

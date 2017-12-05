@@ -25,7 +25,11 @@ import com.google.common.collect.Lists;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.granularity.Granularity;
+import io.druid.math.expr.Expr;
+import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.ExprType;
+import io.druid.math.expr.Parser;
+import io.druid.query.expression.TimestampFloorExprMacro;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.query.filter.AndDimFilter;
@@ -334,14 +338,55 @@ public class Expressions
         flip = true;
       }
 
+      // Flip operator, maybe.
+      final SqlKind flippedKind;
+
+      if (flip) {
+        switch (kind) {
+          case EQUALS:
+          case NOT_EQUALS:
+            flippedKind = kind;
+            break;
+          case GREATER_THAN:
+            flippedKind = SqlKind.LESS_THAN;
+            break;
+          case GREATER_THAN_OR_EQUAL:
+            flippedKind = SqlKind.LESS_THAN_OR_EQUAL;
+            break;
+          case LESS_THAN:
+            flippedKind = SqlKind.GREATER_THAN;
+            break;
+          case LESS_THAN_OR_EQUAL:
+            flippedKind = SqlKind.GREATER_THAN_OR_EQUAL;
+            break;
+          default:
+            throw new ISE("WTF?! Kind[%s] not expected here", kind);
+        }
+      } else {
+        flippedKind = kind;
+      }
+
       // rhs must be a literal
       if (rhs.getKind() != SqlKind.LITERAL) {
         return null;
       }
 
-      // lhs must be translatable to a SimpleExtraction to be simple-filterable
+      // Translate lhs to a DruidExpression.
       final DruidExpression lhsExpression = toDruidExpression(plannerContext, rowSignature, lhs);
-      if (lhsExpression == null || !lhsExpression.isSimpleExtraction()) {
+      if (lhsExpression == null) {
+        return null;
+      }
+
+      // Special handling for filters on FLOOR(__time TO granularity).
+      final Granularity queryGranularity = toQueryGranularity(lhsExpression, plannerContext.getExprMacroTable());
+      if (queryGranularity != null) {
+        // lhs is FLOOR(__time TO granularity); rhs must be a timestamp
+        final long rhsMillis = Calcites.calciteDateTimeLiteralToJoda(rhs, plannerContext.getTimeZone()).getMillis();
+        return buildTimeFloorFilter(Column.TIME_COLUMN_NAME, queryGranularity, flippedKind, rhsMillis);
+      }
+
+      // In the general case, lhs must be translatable to a SimpleExtraction to be simple-filterable.
+      if (!lhsExpression.isSimpleExtraction()) {
         return null;
       }
 
@@ -364,28 +409,29 @@ public class Expressions
           // Create a BoundRefKey that strips the extractionFn and compares __time as a number.
           final BoundRefKey boundRefKey = new BoundRefKey(column, null, StringComparators.NUMERIC);
 
-          if (kind == SqlKind.EQUALS) {
-            return rhsAligned
-                   ? Bounds.interval(boundRefKey, rhsInterval)
-                   : Filtration.matchNothing();
-          } else if (kind == SqlKind.NOT_EQUALS) {
-            return rhsAligned
-                   ? new NotDimFilter(Bounds.interval(boundRefKey, rhsInterval))
-                   : Filtration.matchEverything();
-          } else if ((!flip && kind == SqlKind.GREATER_THAN) || (flip && kind == SqlKind.LESS_THAN)) {
-            return Bounds.greaterThanOrEqualTo(boundRefKey, String.valueOf(rhsInterval.getEndMillis()));
-          } else if ((!flip && kind == SqlKind.GREATER_THAN_OR_EQUAL) || (flip && kind == SqlKind.LESS_THAN_OR_EQUAL)) {
-            return rhsAligned
-                   ? Bounds.greaterThanOrEqualTo(boundRefKey, String.valueOf(rhsInterval.getStartMillis()))
-                   : Bounds.greaterThanOrEqualTo(boundRefKey, String.valueOf(rhsInterval.getEndMillis()));
-          } else if ((!flip && kind == SqlKind.LESS_THAN) || (flip && kind == SqlKind.GREATER_THAN)) {
-            return rhsAligned
-                   ? Bounds.lessThan(boundRefKey, String.valueOf(rhsInterval.getStartMillis()))
-                   : Bounds.lessThan(boundRefKey, String.valueOf(rhsInterval.getEndMillis()));
-          } else if ((!flip && kind == SqlKind.LESS_THAN_OR_EQUAL) || (flip && kind == SqlKind.GREATER_THAN_OR_EQUAL)) {
-            return Bounds.lessThan(boundRefKey, String.valueOf(rhsInterval.getEndMillis()));
-          } else {
-            throw new IllegalStateException("WTF?! Shouldn't have got here...");
+          switch (flippedKind) {
+            case EQUALS:
+              return rhsAligned
+                     ? Bounds.interval(boundRefKey, rhsInterval)
+                     : Filtration.matchNothing();
+            case NOT_EQUALS:
+              return rhsAligned
+                     ? new NotDimFilter(Bounds.interval(boundRefKey, rhsInterval))
+                     : Filtration.matchEverything();
+            case GREATER_THAN:
+              return Bounds.greaterThanOrEqualTo(boundRefKey, String.valueOf(rhsInterval.getEndMillis()));
+            case GREATER_THAN_OR_EQUAL:
+              return rhsAligned
+                     ? Bounds.greaterThanOrEqualTo(boundRefKey, String.valueOf(rhsInterval.getStartMillis()))
+                     : Bounds.greaterThanOrEqualTo(boundRefKey, String.valueOf(rhsInterval.getEndMillis()));
+            case LESS_THAN:
+              return rhsAligned
+                     ? Bounds.lessThan(boundRefKey, String.valueOf(rhsInterval.getStartMillis()))
+                     : Bounds.lessThan(boundRefKey, String.valueOf(rhsInterval.getEndMillis()));
+            case LESS_THAN_OR_EQUAL:
+              return Bounds.lessThan(boundRefKey, String.valueOf(rhsInterval.getEndMillis()));
+            default:
+              throw new IllegalStateException("WTF?! Shouldn't have got here...");
           }
         }
       }
@@ -414,20 +460,27 @@ public class Expressions
       final DimFilter filter;
 
       // Always use BoundDimFilters, to simplify filter optimization later (it helps to remember the comparator).
-      if (kind == SqlKind.EQUALS) {
-        filter = Bounds.equalTo(boundRefKey, val);
-      } else if (kind == SqlKind.NOT_EQUALS) {
-        filter = new NotDimFilter(Bounds.equalTo(boundRefKey, val));
-      } else if ((!flip && kind == SqlKind.GREATER_THAN) || (flip && kind == SqlKind.LESS_THAN)) {
-        filter = Bounds.greaterThan(boundRefKey, val);
-      } else if ((!flip && kind == SqlKind.GREATER_THAN_OR_EQUAL) || (flip && kind == SqlKind.LESS_THAN_OR_EQUAL)) {
-        filter = Bounds.greaterThanOrEqualTo(boundRefKey, val);
-      } else if ((!flip && kind == SqlKind.LESS_THAN) || (flip && kind == SqlKind.GREATER_THAN)) {
-        filter = Bounds.lessThan(boundRefKey, val);
-      } else if ((!flip && kind == SqlKind.LESS_THAN_OR_EQUAL) || (flip && kind == SqlKind.GREATER_THAN_OR_EQUAL)) {
-        filter = Bounds.lessThanOrEqualTo(boundRefKey, val);
-      } else {
-        throw new IllegalStateException("WTF?! Shouldn't have got here...");
+      switch (flippedKind) {
+        case EQUALS:
+          filter = Bounds.equalTo(boundRefKey, val);
+          break;
+        case NOT_EQUALS:
+          filter = new NotDimFilter(Bounds.equalTo(boundRefKey, val));
+          break;
+        case GREATER_THAN:
+          filter = Bounds.greaterThan(boundRefKey, val);
+          break;
+        case GREATER_THAN_OR_EQUAL:
+          filter = Bounds.greaterThanOrEqualTo(boundRefKey, val);
+          break;
+        case LESS_THAN:
+          filter = Bounds.lessThan(boundRefKey, val);
+          break;
+        case LESS_THAN_OR_EQUAL:
+          filter = Bounds.lessThanOrEqualTo(boundRefKey, val);
+          break;
+        default:
+          throw new IllegalStateException("WTF?! Shouldn't have got here...");
       }
 
       return filter;
@@ -481,5 +534,87 @@ public class Expressions
     return druidExpression == null
            ? null
            : new ExpressionDimFilter(druidExpression.getExpression(), plannerContext.getExprMacroTable());
+  }
+
+  /**
+   * Converts an expression to a Granularity, if possible. This is possible if, and only if, the expression
+   * is a timestamp_floor function on the __time column with literal parameters for period, origin, and timeZone.
+   *
+   * @return granularity or null if not possible
+   */
+  @Nullable
+  public static Granularity toQueryGranularity(final DruidExpression expression, final ExprMacroTable macroTable)
+  {
+    final TimestampFloorExprMacro.TimestampFloorExpr expr = asTimestampFloorExpr(expression, macroTable);
+
+    if (expr == null) {
+      return null;
+    }
+
+    final Expr arg = expr.getArg();
+    final Granularity granularity = expr.getGranularity();
+
+    if (Column.TIME_COLUMN_NAME.equals(Parser.getIdentifierIfIdentifier(arg))) {
+      return granularity;
+    } else {
+      return null;
+    }
+  }
+
+  @Nullable
+  public static TimestampFloorExprMacro.TimestampFloorExpr asTimestampFloorExpr(
+      final DruidExpression expression,
+      final ExprMacroTable macroTable
+  )
+  {
+    final Expr expr = Parser.parse(expression.getExpression(), macroTable);
+
+    if (expr instanceof TimestampFloorExprMacro.TimestampFloorExpr) {
+      return (TimestampFloorExprMacro.TimestampFloorExpr) expr;
+    } else {
+      return null;
+    }
+  }
+
+  /**
+   * Build a filter for an expression like FLOOR(column TO granularity) [operator] rhsMillis
+   */
+  private static DimFilter buildTimeFloorFilter(
+      final String column,
+      final Granularity granularity,
+      final SqlKind operatorKind,
+      final long rhsMillis
+  )
+  {
+    final BoundRefKey boundRefKey = new BoundRefKey(column, null, StringComparators.NUMERIC);
+    final Interval rhsInterval = granularity.bucket(DateTimes.utc(rhsMillis));
+
+    // Is rhs aligned on granularity boundaries?
+    final boolean rhsAligned = rhsInterval.getStartMillis() == rhsMillis;
+
+    switch (operatorKind) {
+      case EQUALS:
+        return rhsAligned
+               ? Bounds.interval(boundRefKey, rhsInterval)
+               : Filtration.matchNothing();
+      case NOT_EQUALS:
+        return rhsAligned
+               ? new NotDimFilter(Bounds.interval(boundRefKey, rhsInterval))
+               : Filtration.matchEverything();
+      case GREATER_THAN:
+        return Bounds.greaterThanOrEqualTo(boundRefKey, String.valueOf(rhsInterval.getEndMillis()));
+      case GREATER_THAN_OR_EQUAL:
+        return rhsAligned
+               ? Bounds.greaterThanOrEqualTo(boundRefKey, String.valueOf(rhsInterval.getStartMillis()))
+               : Bounds.greaterThanOrEqualTo(boundRefKey, String.valueOf(rhsInterval.getEndMillis()));
+      case LESS_THAN:
+        return rhsAligned
+               ? Bounds.lessThan(boundRefKey, String.valueOf(rhsInterval.getStartMillis()))
+               : Bounds.lessThan(boundRefKey, String.valueOf(rhsInterval.getEndMillis()));
+      case LESS_THAN_OR_EQUAL:
+        return Bounds.lessThan(boundRefKey, String.valueOf(rhsInterval.getEndMillis()));
+      default:
+        throw new IllegalStateException("WTF?! Shouldn't have got here...");
+    }
   }
 }
