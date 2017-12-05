@@ -221,8 +221,10 @@ public class NewestSegmentFirstPolicyTest
         )
     );
 
+    Interval lastInterval = null;
     while (iterator.hasNext()) {
       final List<DataSegment> segments = iterator.next();
+      lastInterval = segments.get(0).getInterval();
 
       Interval prevInterval = null;
       for (DataSegment segment : segments) {
@@ -233,6 +235,64 @@ public class NewestSegmentFirstPolicyTest
         prevInterval = segment.getInterval();
       }
     }
+
+    Assert.assertNotNull(lastInterval);
+    Assert.assertEquals(Intervals.of("2017-11-05T00:00:00/2017-11-05T01:00:00"), lastInterval);
+  }
+
+  @Test
+  public void testManySegmentsPerShard()
+  {
+    final CompactionSegmentIterator iterator = policy.reset(
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(800000, 100, new Period("P1D"))),
+        ImmutableMap.of(
+            DATA_SOURCE,
+            createTimeline(
+                new SegmentGenerateSpec(
+                    Intervals.of("2017-12-04T01:00:00/2017-12-05T03:00:00"),
+                    new Period("PT1H"),
+                    375,
+                    80
+                ),
+                new SegmentGenerateSpec(
+                    Intervals.of("2017-12-04T00:00:00/2017-12-04T01:00:00"),
+                    new Period("PT1H"),
+                    200,
+                    150
+                ),
+                new SegmentGenerateSpec(
+                    Intervals.of("2017-12-03T18:00:00/2017-12-04T00:00:00"),
+                    new Period("PT6H"),
+                    200000,
+                    1
+                ),
+                new SegmentGenerateSpec(
+                    Intervals.of("2017-12-03T11:00:00/2017-12-03T18:00:00"),
+                    new Period("PT1H"),
+                    375,
+                    80
+                )
+            )
+        )
+    );
+
+    Interval lastInterval = null;
+    while (iterator.hasNext()) {
+      final List<DataSegment> segments = iterator.next();
+      lastInterval = segments.get(0).getInterval();
+
+      Interval prevInterval = null;
+      for (DataSegment segment : segments) {
+        if (prevInterval != null && !prevInterval.getStart().equals(segment.getInterval().getStart())) {
+          Assert.assertEquals(prevInterval.getEnd(), segment.getInterval().getStart());
+        }
+
+        prevInterval = segment.getInterval();
+      }
+    }
+
+    Assert.assertNotNull(lastInterval);
+    Assert.assertEquals(Intervals.of("2017-12-03T11:00:00/2017-12-03T12:00:00"), lastInterval);
   }
 
   private static void assertCompactSegmentIntervals(

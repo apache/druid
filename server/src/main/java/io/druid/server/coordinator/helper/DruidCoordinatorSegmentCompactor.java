@@ -78,7 +78,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
                                                   compactionTaskCapacity - queryIds.size() :
                                                   Math.max(1, compactionTaskCapacity - queryIds.size());
       if (numAvailableCompactionTaskSlots > 0) {
-        stats.accumulate(doRun(compactionConfigs, numAvailableCompactionTaskSlots, iterator));
+        stats.accumulate(doRun(compactionConfigs, numAvailableCompactionTaskSlots, compactionTaskCapacity, iterator));
       } else {
         stats.accumulate(makeStats(0, iterator));
       }
@@ -108,6 +108,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
   private CoordinatorStats doRun(
       Map<String, CoordinatorCompactionConfig> compactionConfigs,
       int numAvailableCompactionTaskSlots,
+      int totalCompactionTaskSlots,
       CompactionSegmentIterator iterator
   )
   {
@@ -115,9 +116,6 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
 
     while (iterator.hasNext() && numSubmittedCompactionTasks < numAvailableCompactionTaskSlots) {
       final List<DataSegment> segmentsToCompact = iterator.next();
-      if (segmentsToCompact.isEmpty()) {
-        break;
-      }
 
       final String dataSourceName = segmentsToCompact.get(0).getDataSource();
 
@@ -144,7 +142,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
       }
     }
 
-    LOG.info("Running tasks [%d/%d]", numSubmittedCompactionTasks, numAvailableCompactionTaskSlots);
+    LOG.info("Running tasks [%d/%d]", numSubmittedCompactionTasks, totalCompactionTaskSlots);
 
     return makeStats(numSubmittedCompactionTasks, iterator);
   }
