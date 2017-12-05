@@ -56,9 +56,9 @@ public class DataSegment implements Comparable<DataSegment>
 {
   public static String delimiter = "_";
   private final Integer binaryVersion;
-  private static final Interner<String> stringInterner = Interners.newWeakInterner();
-  private static final Interner<List<String>> dimensionsInterner = Interners.newWeakInterner();
-  private static final Interner<List<String>> metricsInterner = Interners.newWeakInterner();
+  private static final Interner<String> STRING_INTERNER = Interners.newWeakInterner();
+  private static final Interner<List<String>> DIMENSIONS_INTERNER = Interners.newWeakInterner();
+  private static final Interner<List<String>> METRICS_INTERNER = Interners.newWeakInterner();
   private static final Map<String, Object> PRUNED_LOAD_SPEC = ImmutableMap.of(
       "load spec is pruned, because it's not needed on Brokers, but eats a lot of heap space",
       ""
@@ -159,14 +159,14 @@ public class DataSegment implements Comparable<DataSegment>
   {
     // dataSource, dimensions & metrics are stored as canonical string values to decrease memory required for storing
     // large numbers of segments.
-    this.dataSource = stringInterner.intern(dataSource);
+    this.dataSource = STRING_INTERNER.intern(dataSource);
     this.interval = interval;
     this.loadSpec = pruneLoadSpecHolder.pruneLoadSpec ? PRUNED_LOAD_SPEC : prepareLoadSpec(loadSpec);
     this.version = version;
     // Deduplicating dimensions and metrics lists as a whole because they are very likely the same for the same
     // dataSource
-    this.dimensions = prepareDimensionsOrMetrics(dimensions, dimensionsInterner);
-    this.metrics = prepareDimensionsOrMetrics(metrics, metricsInterner);
+    this.dimensions = prepareDimensionsOrMetrics(dimensions, DIMENSIONS_INTERNER);
+    this.metrics = prepareDimensionsOrMetrics(metrics, METRICS_INTERNER);
     this.shardSpec = (shardSpec == null) ? NoneShardSpec.instance() : shardSpec;
     this.binaryVersion = binaryVersion;
     this.size = size;
@@ -189,7 +189,7 @@ public class DataSegment implements Comparable<DataSegment>
     // Load spec is just of 3 entries on average; HashMap/LinkedHashMap consumes much more memory than ArrayMap
     Map<String, Object> result = new Object2ObjectArrayMap<>(loadSpec.size());
     for (Map.Entry<String, Object> e : loadSpec.entrySet()) {
-      result.put(stringInterner.intern(e.getKey()), e.getValue());
+      result.put(STRING_INTERNER.intern(e.getKey()), e.getValue());
     }
     return result;
   }
@@ -202,7 +202,7 @@ public class DataSegment implements Comparable<DataSegment>
       List<String> result = list
           .stream()
           .filter(s -> !Strings.isNullOrEmpty(s))
-          .map(stringInterner::intern)
+          .map(STRING_INTERNER::intern)
           // TODO replace with ImmutableList.toImmutableList() when updated to Guava 21+
           .collect(Collectors.collectingAndThen(Collectors.toList(), ImmutableList::copyOf));
       return interner.intern(result);
