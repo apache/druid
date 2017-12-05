@@ -295,6 +295,69 @@ public class NewestSegmentFirstPolicyTest
     Assert.assertEquals(Intervals.of("2017-12-03T11:00:00/2017-12-03T12:00:00"), lastInterval);
   }
 
+  @Test
+  public void testManySegmentsPerShard2()
+  {
+    final CompactionSegmentIterator iterator = policy.reset(
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(800000, 100, new Period("P1D"))),
+        ImmutableMap.of(
+            DATA_SOURCE,
+            createTimeline(
+                new SegmentGenerateSpec(
+                    Intervals.of("2017-12-04T11:00:00/2017-12-05T05:00:00"),
+                    new Period("PT1H"),
+                    200,
+                    150
+                ),
+                new SegmentGenerateSpec(
+                    Intervals.of("2017-12-04T06:00:00/2017-12-04T11:00:00"),
+                    new Period("PT1H"),
+                    375,
+                    80
+                ),
+                new SegmentGenerateSpec(
+                    Intervals.of("2017-12-03T18:00:00/2017-12-04T06:00:00"),
+                    new Period("PT12H"),
+                    257000,
+                    1
+                ),
+                new SegmentGenerateSpec(
+                    Intervals.of("2017-12-03T11:00:00/2017-12-03T18:00:00"),
+                    new Period("PT1H"),
+                    200,
+                    150
+                ),
+                new SegmentGenerateSpec(
+                    Intervals.of("2017-12-02T19:00:00/2017-12-03T11:00:00"),
+                    new Period("PT16H"),
+                    257000,
+                    1
+                ),
+                new SegmentGenerateSpec(
+                    Intervals.of("2017-12-02T11:00:00/2017-12-02T19:00:00"),
+                    new Period("PT1H"),
+                    200,
+                    150
+                ),
+                new SegmentGenerateSpec(
+                    Intervals.of("2017-12-01T18:00:00/2017-12-02T11:00:00"),
+                    new Period("PT17H"),
+                    257000,
+                    1
+                ),
+                new SegmentGenerateSpec(
+                    Intervals.of("2017-12-01T09:00:00/2017-12-01T18:00:00"),
+                    new Period("PT1H"),
+                    200,
+                    150
+                )
+            )
+        )
+    );
+
+   Assert.assertFalse(iterator.hasNext());
+  }
+
   private static void assertCompactSegmentIntervals(
       CompactionSegmentIterator iterator,
       Period segmentPeriod,

@@ -243,39 +243,47 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
                 searchEnd,
                 config
             );
-          } else if (segmentsToCompact.size() == 1) {
-            // We found a segment which is smaller than remainingBytes but too large to compact with other
-            // segments. Skip this one.
-            searchInterval = SegmentCompactorUtil.removeIntervalFromEnd(
-                searchInterval,
-                new Interval(chunks.get(chunks.size() - 1).getObject().getInterval().getEnd(), searchInterval.getEnd())
-            );
-            return findSegmentsToCompact(timeline, searchInterval, searchEnd, config);
           } else {
-            if (config.getTargetCompactionSizeBytes() < partitionBytes) {
+            // Discard segments found so far because we can't compact it anyway.
+            segmentsToCompact.clear();
+
+            if (!SegmentCompactorUtil.isCompactible(targetCompactionSize, 0, partitionBytes)) {
               // TODO: this should be changed to compact many segments into a few segments
               final DataSegment segment = chunks.get(0).getObject();
               log.warn(
                   "shardSize[%d] for dataSource[%s] and interval[%s] is larger than targetCompactionSize[%d]."
-                  + " Contitnue to the next shard",
+                  + " Contitnue to the next shard.",
                   partitionBytes,
                   segment.getDataSource(),
                   segment.getInterval(),
                   targetCompactionSize
               );
             } else if (numTargetSegments < chunks.size()) {
-              // TODO: this should be changed to compact many segments into a few segments
               final DataSegment segment = chunks.get(0).getObject();
               log.warn(
                   "The number of segments[%d] for dataSource[%s] and interval[%s] is larger than "
-                  + "numTargetCompactSegments[%d]. Contitnue to the next shard",
+                  + "numTargetCompactSegments[%d]. If you see lots of shards are being skipped due to too many "
+                  + "segments, consider increasing 'numTargetCompactionSegments' and "
+                  + "'druid.indexer.runner.maxZnodeBytes'. Contitnue to the next shard.",
                   chunks.size(),
                   segment.getDataSource(),
                   segment.getInterval(),
                   numTargetSegments
               );
             } else {
-              return Pair.of(intervalToSearch, new SegmentsToCompact(ImmutableList.of(), 0));
+              if (segmentsToCompact.size() == 1) {
+                // We found a segment which is smaller than targetCompactionSize but too large to compact with other
+                // segments. Skip this one.
+                chunks.forEach(chunk -> segmentsToCompact.add(chunk.getObject()));
+                totalSegmentsToCompactBytes = partitionBytes;
+              } else {
+                throw new ISE(
+                    "Cannot compact segments[%s]. shardBytes[%s], numSegments[%s]",
+                    chunks.stream().map(PartitionChunk::getObject).collect(Collectors.toList()),
+                    partitionBytes,
+                    chunks.size()
+                );
+              }
             }
           }
         }
