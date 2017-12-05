@@ -74,6 +74,14 @@ public class AggregatorUtil
   public static final byte TIMESTAMP_CACHE_TYPE_ID = 0x19;
   public static final byte VARIANCE_CACHE_TYPE_ID = 0x1A;
 
+  // Quantiles sketch aggregator
+  public static final byte QUANTILES_DOUBLES_SKETCH_BUILD_CACHE_TYPE_ID = 0x1B;
+  public static final byte QUANTILES_DOUBLES_SKETCH_MERGE_CACHE_TYPE_ID = 0x1C;
+  public static final byte QUANTILES_DOUBLES_SKETCH_TO_HISTOGRAM_CACHE_TYPE_ID = 0x1D;
+  public static final byte QUANTILES_DOUBLES_SKETCH_TO_QUANTILE_CACHE_TYPE_ID = 0x1E;
+  public static final byte QUANTILES_DOUBLES_SKETCH_TO_QUANTILES_CACHE_TYPE_ID = 0x1F;
+  public static final byte QUANTILES_DOUBLES_SKETCH_TO_STRING_CACHE_TYPE_ID = 0x20;
+
   /**
    * returns the list of dependent postAggregators that should be calculated in order to calculate given postAgg
    *
