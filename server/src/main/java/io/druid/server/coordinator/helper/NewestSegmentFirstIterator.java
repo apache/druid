@@ -248,7 +248,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
             // segments. Skip this one.
             searchInterval = SegmentCompactorUtil.removeIntervalFromEnd(
                 searchInterval,
-                new Interval(chunks.get(0).getObject().getInterval().getStart(), searchInterval.getEnd())
+                new Interval(chunks.get(chunks.size() - 1).getObject().getInterval().getEnd(), searchInterval.getEnd())
             );
             return findSegmentsToCompact(timeline, searchInterval, searchEnd, config);
           } else {
