@@ -408,7 +408,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   @Override
   public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
-    // for backwards compatibility, should be remove from versions greater than 0.11.1
+    // for backwards compatibility, should be remove from versions greater than 0.12.x
     if (useLegacy) {
       return runLegacy(toolbox);
     }
@@ -1478,7 +1478,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       final boolean finish // this field is only for internal purposes, shouldn't be usually set by users
   ) throws InterruptedException
   {
-    // for backwards compatibility, should be removed from versions greater than 0.11.1
+    // for backwards compatibility, should be removed from versions greater than 0.12.x
     if (useLegacy) {
       return setEndOffsetsLegacy(offsets, resume);
     }
