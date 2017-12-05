@@ -245,6 +245,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
             );
           } else {
             // Discard segments found so far because we can't compact it anyway.
+            final int numSegmentsToCompact = segmentsToCompact.size();
             segmentsToCompact.clear();
 
             if (!SegmentCompactorUtil.isCompactible(targetCompactionSize, 0, partitionBytes)) {
@@ -271,7 +272,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
                   numTargetSegments
               );
             } else {
-              if (segmentsToCompact.size() == 1) {
+              if (numSegmentsToCompact == 1) {
                 // We found a segment which is smaller than targetCompactionSize but too large to compact with other
                 // segments. Skip this one.
                 chunks.forEach(chunk -> segmentsToCompact.add(chunk.getObject()));
