@@ -29,6 +29,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.math.expr.ExprMacroTable;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.query.Result;
 import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.timeseries.TimeseriesResultValue;
@@ -46,13 +47,18 @@ import java.util.stream.IntStream;
  */
 public class TestHelper
 {
-  private static final IndexMergerV9 INDEX_MERGER_V9;
-  private static final IndexIO INDEX_IO;
+  private static final ObjectMapper JSON_MAPPER = getJsonMapper();
 
-  static {
-    final ObjectMapper jsonMapper = getJsonMapper();
-    INDEX_IO = new IndexIO(
-        jsonMapper,
+  public static IndexMergerV9 getTestIndexMergerV9(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
+  {
+    return new IndexMergerV9(JSON_MAPPER, getTestIndexIO(segmentWriteOutMediumFactory), segmentWriteOutMediumFactory);
+  }
+
+  public static IndexIO getTestIndexIO(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
+  {
+    return new IndexIO(
+        JSON_MAPPER,
+        segmentWriteOutMediumFactory,
         new ColumnConfig()
         {
           @Override
@@ -62,17 +68,6 @@ public class TestHelper
           }
         }
     );
-    INDEX_MERGER_V9 = new IndexMergerV9(jsonMapper, INDEX_IO);
-  }
-
-  public static IndexMergerV9 getTestIndexMergerV9()
-  {
-    return INDEX_MERGER_V9;
-  }
-
-  public static IndexIO getTestIndexIO()
-  {
-    return INDEX_IO;
   }
 
   public static ObjectMapper getJsonMapper()

@@ -21,18 +21,14 @@ package io.druid.segment.serde;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.FloatColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.CompressedFloatsIndexedSupplier;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.channels.WritableByteChannel;
 
 /**
  */
@@ -47,7 +43,7 @@ public class FloatGenericColumnPartSerde implements ColumnPartSerde
   }
 
   private final ByteOrder byteOrder;
-  private Serializer serializer;
+  private final Serializer serializer;
 
   private FloatGenericColumnPartSerde(ByteOrder byteOrder, Serializer serializer)
   {
@@ -85,23 +81,7 @@ public class FloatGenericColumnPartSerde implements ColumnPartSerde
 
     public FloatGenericColumnPartSerde build()
     {
-      return new FloatGenericColumnPartSerde(
-          byteOrder,
-          new Serializer()
-          {
-            @Override
-            public long numBytes()
-            {
-              return delegate.getSerializedSize();
-            }
-
-            @Override
-            public void write(WritableByteChannel channel, FileSmoosher fileSmoosher) throws IOException
-            {
-              delegate.writeToChannel(channel, fileSmoosher);
-            }
-          }
-      );
+      return new FloatGenericColumnPartSerde(byteOrder, delegate);
     }
   }
 
@@ -121,8 +101,7 @@ public class FloatGenericColumnPartSerde implements ColumnPartSerde
       {
         final CompressedFloatsIndexedSupplier column = CompressedFloatsIndexedSupplier.fromByteBuffer(
             buffer,
-            byteOrder,
-            builder.getFileMapper()
+            byteOrder
         );
         builder.setType(ValueType.FLOAT)
                .setHasMultipleValues(false)

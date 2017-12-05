@@ -17,41 +17,36 @@
  * under the License.
  */
 
-package io.druid.segment.data;
+package io.druid.segment.writeout;
 
-import java.nio.Buffer;
+import io.druid.java.util.common.ByteBufferUtils;
+
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
-public abstract class FixedSizeCompressedObjectStrategy<T extends Buffer> extends CompressedObjectStrategy<T>
+final class DirectByteBufferWriteOutBytes extends ByteBufferWriteOutBytes
 {
-  private final int sizePer;
+  private boolean open = true;
 
-  protected FixedSizeCompressedObjectStrategy(
-      ByteOrder order,
-      BufferConverter<T> converter,
-      CompressionStrategy compression,
-      int sizePer
-  )
+  @Override
+  protected ByteBuffer allocateBuffer()
   {
-    super(order, converter, compression);
-    this.sizePer = sizePer;
-  }
-
-  public int getSize()
-  {
-    return sizePer;
+    return ByteBuffer.allocateDirect(BUFFER_SIZE);
   }
 
   @Override
-  protected ByteBuffer bufferFor(T val)
+  public boolean isOpen()
   {
-    return ByteBuffer.allocate(converter.sizeOf(getSize())).order(order);
+    return open;
   }
 
-  @Override
-  protected void decompress(ByteBuffer buffer, int numBytes, ByteBuffer buf)
+  void free()
   {
-    decompressor.decompress(buffer, numBytes, buf, converter.sizeOf(getSize()));
+    open = false;
+    buffers.forEach(ByteBufferUtils::free);
+    buffers.clear();
+    headBufferIndex = -1;
+    headBuffer = null;
+    size = 0;
+    capacity = 0;
   }
 }

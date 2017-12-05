@@ -213,6 +213,7 @@ public class RealtimeManagerTest
         0,
         null,
         null,
+        null,
         null
     );
     plumber = new TestPlumber(new Sink(
@@ -271,6 +272,7 @@ public class RealtimeManagerTest
         0,
         null,
         null,
+        null,
         null
     );
 
@@ -287,6 +289,7 @@ public class RealtimeManagerTest
         null,
         0,
         0,
+        null,
         null,
         null,
         null

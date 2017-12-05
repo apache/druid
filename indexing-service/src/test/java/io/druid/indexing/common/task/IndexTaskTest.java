@@ -1147,6 +1147,7 @@ public class IndexTaskTest
         forceExtendableShardSpecs,
         forceGuaranteedRollup,
         reportParseException,
+        null,
         null
     );
   }

@@ -22,6 +22,7 @@ package io.druid.segment.data;
 import com.google.common.collect.Ordering;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.spatial.ImmutableRTree;
+import it.unimi.dsi.fastutil.bytes.ByteArrays;
 
 import java.nio.ByteBuffer;
 
@@ -71,7 +72,7 @@ public class ImmutableRTreeObjectStrategy implements ObjectStrategy<ImmutableRTr
   public byte[] toBytes(ImmutableRTree val)
   {
     if (val == null || val.size() == 0) {
-      return new byte[]{};
+      return ByteArrays.EMPTY_ARRAY;
     }
     return val.toBytes();
   }

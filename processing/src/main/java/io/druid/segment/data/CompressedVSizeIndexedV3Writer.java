@@ -17,46 +17,46 @@
  * under the License.
  */
 
-/**
- * Streams array of integers out in the binary format described by CompressedVSizeIndexedV3Supplier
- */
+
 package io.druid.segment.data;
 
-import io.druid.java.util.common.StringUtils;
+import io.druid.io.Channels;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.CompressedVSizeIndexedV3Supplier;
 import io.druid.segment.IndexIO;
+import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntLists;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
-import java.util.ArrayList;
-import java.util.List;
 
+/**
+ * Streams array of integers out in the binary format described by CompressedVSizeIndexedV3Supplier
+ */
 public class CompressedVSizeIndexedV3Writer extends MultiValueIndexedIntsWriter
 {
   private static final byte VERSION = CompressedVSizeIndexedV3Supplier.VERSION;
 
-  private static final List<Integer> EMPTY_LIST = new ArrayList<>();
-
   public static CompressedVSizeIndexedV3Writer create(
-      final IOPeon ioPeon,
+      final SegmentWriteOutMedium segmentWriteOutMedium,
       final String filenameBase,
       final int maxValue,
-      final CompressedObjectStrategy.CompressionStrategy compression
+      final CompressionStrategy compression
   )
   {
     return new CompressedVSizeIndexedV3Writer(
         new CompressedIntsIndexedWriter(
-            ioPeon,
-            StringUtils.format("%s.offsets", filenameBase),
+            segmentWriteOutMedium,
+            filenameBase,
             CompressedIntsIndexedSupplier.MAX_INTS_IN_BUFFER,
             IndexIO.BYTE_ORDER,
             compression
         ),
         new CompressedVSizeIntsIndexedWriter(
-            ioPeon,
-            StringUtils.format("%s.values", filenameBase),
+            segmentWriteOutMedium,
+            filenameBase,
             maxValue,
             CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(maxValue),
             IndexIO.BYTE_ORDER,
@@ -68,8 +68,9 @@ public class CompressedVSizeIndexedV3Writer extends MultiValueIndexedIntsWriter
   private final CompressedIntsIndexedWriter offsetWriter;
   private final CompressedVSizeIntsIndexedWriter valueWriter;
   private int offset;
+  private boolean lastOffsetWritten = false;
 
-  public CompressedVSizeIndexedV3Writer(
+  CompressedVSizeIndexedV3Writer(
       CompressedIntsIndexedWriter offsetWriter,
       CompressedVSizeIntsIndexedWriter valueWriter
   )
@@ -87,43 +88,42 @@ public class CompressedVSizeIndexedV3Writer extends MultiValueIndexedIntsWriter
   }
 
   @Override
-  protected void addValues(List<Integer> vals) throws IOException
+  protected void addValues(IntList vals) throws IOException
   {
+    if (lastOffsetWritten) {
+      throw new IllegalStateException("written out already");
+    }
     if (vals == null) {
-      vals = EMPTY_LIST;
+      vals = IntLists.EMPTY_LIST;
     }
     offsetWriter.add(offset);
-    for (Integer val : vals) {
-      valueWriter.add(val);
+    for (int i = 0; i < vals.size(); i++) {
+      valueWriter.add(vals.getInt(i));
     }
     offset += vals.size();
   }
 
   @Override
-  public void close() throws IOException
+  public long getSerializedSize() throws IOException
   {
-    try {
+    writeLastOffset();
+    return 1 + offsetWriter.getSerializedSize() + valueWriter.getSerializedSize();
+  }
+
+  @Override
+  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  {
+    writeLastOffset();
+    Channels.writeFully(channel, ByteBuffer.wrap(new byte[]{VERSION}));
+    offsetWriter.writeTo(channel, smoosher);
+    valueWriter.writeTo(channel, smoosher);
+  }
+
+  private void writeLastOffset() throws IOException
+  {
+    if (!lastOffsetWritten) {
       offsetWriter.add(offset);
+      lastOffsetWritten = true;
     }
-    finally {
-      offsetWriter.close();
-      valueWriter.close();
-    }
-  }
-
-  @Override
-  public long getSerializedSize()
-  {
-    return 1 +   // version
-           offsetWriter.getSerializedSize() +
-           valueWriter.getSerializedSize();
-  }
-
-  @Override
-  public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
-  {
-    channel.write(ByteBuffer.wrap(new byte[]{VERSION}));
-    offsetWriter.writeToChannel(channel, smoosher);
-    valueWriter.writeToChannel(channel, smoosher);
   }
 }

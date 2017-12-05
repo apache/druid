@@ -34,6 +34,7 @@ import io.druid.segment.column.Column;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.data.IncrementalIndexTest;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -64,8 +65,8 @@ public class IndexMergerNullHandlingTest
   @Before
   public void setUp()
   {
-    indexMerger = TestHelper.getTestIndexMergerV9();
-    indexIO = TestHelper.getTestIndexIO();
+    indexMerger = TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance());
+    indexIO = TestHelper.getTestIndexIO(OffHeapMemorySegmentWriteOutMediumFactory.instance());
     indexSpec = new IndexSpec();
   }
 
@@ -109,7 +110,7 @@ public class IndexMergerNullHandlingTest
       }
 
       final File tempDir = temporaryFolder.newFolder();
-      try (QueryableIndex index = indexIO.loadIndex(indexMerger.persist(toPersist, tempDir, indexSpec))) {
+      try (QueryableIndex index = indexIO.loadIndex(indexMerger.persist(toPersist, tempDir, indexSpec, null))) {
         final Column column = index.getColumn("d");
 
         if (subsetList.stream().allMatch(nullFlavors::contains)) {

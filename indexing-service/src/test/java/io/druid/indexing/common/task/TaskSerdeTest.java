@@ -35,12 +35,13 @@ import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
+import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.segment.IndexSpec;
-import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
+import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
@@ -189,7 +190,7 @@ public class TaskSerdeTest
                 jsonMapper
             ),
             new IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
-            new IndexTuningConfig(10000, 10, null, 9999, null, indexSpec, 3, true, true, false, null, null)
+            new IndexTuningConfig(10000, 10, null, 9999, null, indexSpec, 3, true, true, false, null, null, null)
         ),
         null
     );
@@ -252,7 +253,7 @@ public class TaskSerdeTest
                 jsonMapper
             ),
             new IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
-            new IndexTuningConfig(10000, 10, null, null, null, indexSpec, 3, true, true, false, null, null)
+            new IndexTuningConfig(10000, 10, null, null, null, indexSpec, 3, true, true, false, null, null, null)
         ),
         null
     );
@@ -298,6 +299,7 @@ public class TaskSerdeTest
         true,
         indexSpec,
         true,
+        null,
         null
     );
 
@@ -347,6 +349,7 @@ public class TaskSerdeTest
         true,
         indexSpec,
         true,
+        null,
         null
     );
 
@@ -414,6 +417,7 @@ public class TaskSerdeTest
         null,
         false,
         true,
+        TmpFileSegmentWriteOutMediumFactory.instance(),
         null
     );
 
@@ -429,7 +433,8 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
     Assert.assertEquals(task.getInterval(), task2.getInterval());
-    Assert.assertEquals(task.getSegment(), task.getSegment());
+    Assert.assertEquals(task.getSegment(), task2.getSegment());
+    Assert.assertEquals(task.getSegmentWriteOutMediumFactory(), task2.getSegmentWriteOutMediumFactory());
   }
 
   @Test
@@ -441,6 +446,7 @@ public class TaskSerdeTest
         indexSpec,
         false,
         true,
+        null,
         null
     );
 
@@ -502,6 +508,7 @@ public class TaskSerdeTest
                 0,
                 0,
                 true,
+                null,
                 null,
                 null
             )
@@ -567,6 +574,7 @@ public class TaskSerdeTest
         ),
         indexSpec,
         true,
+        null,
         null
     );
 
@@ -665,6 +673,7 @@ public class TaskSerdeTest
         indexSpec,
         false,
         true,
+        TmpFileSegmentWriteOutMediumFactory.instance(),
         null
     );
     final String json = jsonMapper.writeValueAsString(task);
@@ -686,41 +695,43 @@ public class TaskSerdeTest
         0,
         12345L
     );
-    final ConvertSegmentTask convertSegmentTaskOriginal = ConvertSegmentTask.create(
+    final ConvertSegmentTask originalTask = ConvertSegmentTask.create(
         segment,
         new IndexSpec(
             new RoaringBitmapSerdeFactory(null),
-            CompressedObjectStrategy.CompressionStrategy.LZF,
-            CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED,
+            CompressionStrategy.LZF,
+            CompressionStrategy.UNCOMPRESSED,
             CompressionFactory.LongEncodingStrategy.LONGS
         ),
         false,
         true,
+        TmpFileSegmentWriteOutMediumFactory.instance(),
         null
     );
-    final String json = jsonMapper.writeValueAsString(convertSegmentTaskOriginal);
+    final String json = jsonMapper.writeValueAsString(originalTask);
     final Task task = jsonMapper.readValue(json, Task.class);
     Assert.assertTrue(task instanceof ConvertSegmentTask);
     final ConvertSegmentTask convertSegmentTask = (ConvertSegmentTask) task;
-    Assert.assertEquals(convertSegmentTaskOriginal.getDataSource(), convertSegmentTask.getDataSource());
-    Assert.assertEquals(convertSegmentTaskOriginal.getInterval(), convertSegmentTask.getInterval());
+    Assert.assertEquals(originalTask.getDataSource(), convertSegmentTask.getDataSource());
+    Assert.assertEquals(originalTask.getInterval(), convertSegmentTask.getInterval());
     Assert.assertEquals(
-        convertSegmentTaskOriginal.getIndexSpec().getBitmapSerdeFactory().getClass().getCanonicalName(),
+        originalTask.getIndexSpec().getBitmapSerdeFactory().getClass().getCanonicalName(),
         convertSegmentTask.getIndexSpec()
                           .getBitmapSerdeFactory()
                           .getClass()
                           .getCanonicalName()
     );
     Assert.assertEquals(
-        convertSegmentTaskOriginal.getIndexSpec().getDimensionCompression(),
+        originalTask.getIndexSpec().getDimensionCompression(),
         convertSegmentTask.getIndexSpec().getDimensionCompression()
     );
     Assert.assertEquals(
-        convertSegmentTaskOriginal.getIndexSpec().getMetricCompression(),
+        originalTask.getIndexSpec().getMetricCompression(),
         convertSegmentTask.getIndexSpec().getMetricCompression()
     );
     Assert.assertEquals(false, convertSegmentTask.isForce());
     Assert.assertEquals(segment, convertSegmentTask.getSegment());
+    Assert.assertEquals(originalTask.getSegmentWriteOutMediumFactory(), convertSegmentTask.getSegmentWriteOutMediumFactory());
   }
 
   @Test

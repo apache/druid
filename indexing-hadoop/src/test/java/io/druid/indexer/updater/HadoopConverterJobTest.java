@@ -56,8 +56,8 @@ import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.TestIndex;
-import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
+import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -293,8 +293,8 @@ public class HadoopConverterJobTest
             DATASOURCE,
             interval,
             new IndexSpec(new RoaringBitmapSerdeFactory(null),
-                          CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED,
-                          CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED,
+                          CompressionStrategy.UNCOMPRESSED,
+                          CompressionStrategy.UNCOMPRESSED,
                           CompressionFactory.LongEncodingStrategy.LONGS),
             oldSemgments,
             true,
@@ -399,8 +399,8 @@ public class HadoopConverterJobTest
             DATASOURCE,
             interval,
             new IndexSpec(new RoaringBitmapSerdeFactory(null),
-                          CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED,
-                          CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED,
+                          CompressionStrategy.UNCOMPRESSED,
+                          CompressionStrategy.UNCOMPRESSED,
                           CompressionFactory.LongEncodingStrategy.LONGS),
             oldSemgments,
             true,

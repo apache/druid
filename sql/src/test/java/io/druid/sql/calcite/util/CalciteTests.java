@@ -44,6 +44,7 @@ import io.druid.data.input.impl.TimestampSpec;
 import io.druid.guice.ExpressionModule;
 import io.druid.guice.annotations.Json;
 import io.druid.math.expr.ExprMacroTable;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.query.DefaultGenericQueryMetricsFactory;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.DruidProcessingConfig;
@@ -420,26 +421,29 @@ public class CalciteTests
 
   public static SpecificSegmentsQuerySegmentWalker createMockWalker(final File tmpDir)
   {
-    final QueryableIndex index1 = IndexBuilder.create()
-                                              .tmpDir(new File(tmpDir, "1"))
-                                              .indexMerger(TestHelper.getTestIndexMergerV9())
-                                              .schema(INDEX_SCHEMA)
-                                              .rows(ROWS1)
-                                              .buildMMappedIndex();
+    final QueryableIndex index1 = IndexBuilder
+        .create()
+        .tmpDir(new File(tmpDir, "1"))
+        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+        .schema(INDEX_SCHEMA)
+        .rows(ROWS1)
+        .buildMMappedIndex();
 
-    final QueryableIndex index2 = IndexBuilder.create()
-                                              .tmpDir(new File(tmpDir, "2"))
-                                              .indexMerger(TestHelper.getTestIndexMergerV9())
-                                              .schema(INDEX_SCHEMA)
-                                              .rows(ROWS2)
-                                              .buildMMappedIndex();
+    final QueryableIndex index2 = IndexBuilder
+        .create()
+        .tmpDir(new File(tmpDir, "2"))
+        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+        .schema(INDEX_SCHEMA)
+        .rows(ROWS2)
+        .buildMMappedIndex();
 
-    final QueryableIndex forbiddenIndex = IndexBuilder.create()
-                                                      .tmpDir(new File(tmpDir, "forbidden"))
-                                                      .indexMerger(TestHelper.getTestIndexMergerV9())
-                                                      .schema(INDEX_SCHEMA)
-                                                      .rows(FORBIDDEN_ROWS)
-                                                      .buildMMappedIndex();
+    final QueryableIndex forbiddenIndex = IndexBuilder
+        .create()
+        .tmpDir(new File(tmpDir, "forbidden"))
+        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+        .schema(INDEX_SCHEMA)
+        .rows(FORBIDDEN_ROWS)
+        .buildMMappedIndex();
 
     return new SpecificSegmentsQuerySegmentWalker(queryRunnerFactoryConglomerate()).add(
         DataSegment.builder()

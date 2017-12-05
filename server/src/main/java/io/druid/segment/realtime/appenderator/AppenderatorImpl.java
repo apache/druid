@@ -620,7 +620,8 @@ public class AppenderatorImpl implements Appenderator
             schema.getGranularitySpec().isRollup(),
             schema.getAggregators(),
             mergedTarget,
-            tuningConfig.getIndexSpec()
+            tuningConfig.getIndexSpec(),
+            tuningConfig.getSegmentWriteOutMediumFactory()
         );
       }
       catch (Throwable t) {
@@ -1151,7 +1152,8 @@ public class AppenderatorImpl implements Appenderator
             indexToPersist.getIndex(),
             identifier.getInterval(),
             new File(persistDir, String.valueOf(indexToPersist.getCount())),
-            indexSpec
+            indexSpec,
+            tuningConfig.getSegmentWriteOutMediumFactory()
         );
 
         indexToPersist.swapSegment(
