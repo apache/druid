@@ -78,7 +78,8 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
                                                   compactionTaskCapacity - queryIds.size() :
                                                   Math.max(1, compactionTaskCapacity - queryIds.size());
       if (numAvailableCompactionTaskSlots > 0) {
-        stats.accumulate(doRun(compactionConfigs, numAvailableCompactionTaskSlots, compactionTaskCapacity, iterator));
+        stats.accumulate(doRun(compactionConfigs, numAvailableCompactionTaskSlots, iterator));
+        LOG.info("Running tasks [%d/%d]", queryIds.size(), compactionTaskCapacity);
       } else {
         stats.accumulate(makeStats(0, iterator));
       }
@@ -108,7 +109,6 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
   private CoordinatorStats doRun(
       Map<String, CoordinatorCompactionConfig> compactionConfigs,
       int numAvailableCompactionTaskSlots,
-      int totalCompactionTaskSlots,
       CompactionSegmentIterator iterator
   )
   {
@@ -141,8 +141,6 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
         throw new ISE("Failed to find segments for dataSource[%s]", dataSourceName);
       }
     }
-
-    LOG.info("Running tasks [%d/%d]", numSubmittedCompactionTasks, totalCompactionTaskSlots);
 
     return makeStats(numSubmittedCompactionTasks, iterator);
   }
