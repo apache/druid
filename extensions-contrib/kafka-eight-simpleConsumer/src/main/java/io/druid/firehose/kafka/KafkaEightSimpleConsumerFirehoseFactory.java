@@ -141,7 +141,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
       }
       log.info("Loaded offset map[%s]", offsetMap);
     } else {
-      log.makeAlert("Unable to cast lastCommit to Map for feed [%s]", feed);
+      log.makeAlert("Unable to cast lastCommit to Map for feed [%s]", feed).emit();
     }
     return offsetMap;
   }
