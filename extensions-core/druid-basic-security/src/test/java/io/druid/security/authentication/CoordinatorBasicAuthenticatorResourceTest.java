@@ -92,6 +92,7 @@ public class CoordinatorBasicAuthenticatorResourceTest
             new BasicHTTPAuthenticator(
                 null,
                 AUTHENTICATOR_NAME,
+                "test",
                 "druid",
                 "druid",
                 null,
@@ -101,6 +102,7 @@ public class CoordinatorBasicAuthenticatorResourceTest
             new BasicHTTPAuthenticator(
                 null,
                 AUTHENTICATOR_NAME2,
+                "test",
                 "druid",
                 "druid",
                 null,

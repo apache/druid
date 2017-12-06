@@ -82,6 +82,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
                 new BasicHTTPAuthenticator(
                     null,
                     "test",
+                    "test",
                     null,
                     null,
                     null,
@@ -181,6 +182,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
                             "test",
                             new BasicHTTPAuthenticator(
                                 null,
+                                "test",
                                 "test",
                                 null,
                                 null,

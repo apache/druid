@@ -54,12 +54,14 @@ public class BasicHTTPAuthenticator implements Authenticator
 {
   private final Provider<BasicAuthenticatorCacheManager> cacheManager;
   private final String name;
+  private final String authorizerName;
   private final BasicAuthDBConfig dbConfig;
 
   @JsonCreator
   public BasicHTTPAuthenticator(
       @JacksonInject Provider<BasicAuthenticatorCacheManager> cacheManager,
       @JsonProperty("name") String name,
+      @JsonProperty("authorizerName") String authorizerName,
       @JsonProperty("initialAdminPassword") String initialAdminPassword,
       @JsonProperty("initialInternalClientPassword") String initialInternalClientPassword,
       @JsonProperty("enableCacheNotifications") Boolean enableCacheNotifications,
@@ -67,6 +69,7 @@ public class BasicHTTPAuthenticator implements Authenticator
   )
   {
     this.name = name;
+    this.authorizerName = authorizerName;
     this.dbConfig = new BasicAuthDBConfig(
         initialAdminPassword,
         initialInternalClientPassword,
@@ -168,7 +171,7 @@ public class BasicHTTPAuthenticator implements Authenticator
       char[] password = splits[1].toCharArray();
 
       if (checkCredentials(user, password)) {
-        AuthenticationResult authenticationResult = new AuthenticationResult(user, name, null);
+        AuthenticationResult authenticationResult = new AuthenticationResult(user, authorizerName, null);
         servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
       }
 
