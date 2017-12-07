@@ -111,10 +111,11 @@ public class MySQLConnectorConfig
   {
     return "MySQLConnectorConfig{" +
            "useSSL='" + useSSL + '\'' +
-           ", trustCertificateKeyStoreUrl='" + trustCertificateKeyStoreUrl + '\'' +
-           ", trustCertificateKeyStoreType='" + trustCertificateKeyStoreType + '\'' +
            ", clientCertificateKeyStoreUrl='" + clientCertificateKeyStoreUrl + '\'' +
            ", clientCertificateKeyStoreType='" + clientCertificateKeyStoreType + '\'' +
+           ", verifyServerCertificate='" + verifyServerCertificate + '\'' +
+           ", trustCertificateKeyStoreUrl='" + trustCertificateKeyStoreUrl + '\'' +
+           ", trustCertificateKeyStoreType='" + trustCertificateKeyStoreType + '\'' +
            ", enabledSSLCipherSuites=" + enabledSSLCipherSuites +
            ", enabledTLSProtocols=" + enabledTLSProtocols +
            '}';
