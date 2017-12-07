@@ -134,6 +134,12 @@
             <artifactId>hadoop-hdfs</artifactId>
             <version>${hadoop.compile.version}</version>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.avro</groupId>
+                    <artifactId>avro</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>io.druid</groupId>
