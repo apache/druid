@@ -20,10 +20,8 @@
 package io.druid.segment.data;
 
 import com.google.common.base.Supplier;
-import com.google.common.primitives.Doubles;
 import io.druid.collections.ResourceHolder;
 import io.druid.java.util.common.guava.CloseQuietly;
-import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -41,18 +39,13 @@ public class BlockLayoutIndexedDoubleSupplier implements Supplier<IndexedDoubles
       int sizePer,
       ByteBuffer fromBuffer,
       ByteOrder byteOrder,
-      CompressedObjectStrategy.CompressionStrategy strategy,
-      SmooshedFileMapper fileMapper
+      CompressionStrategy strategy
   )
   {
 
     baseDoubleBuffers = GenericIndexed.read(
         fromBuffer,
-        VSizeCompressedObjectStrategy.getBufferForOrder(byteOrder,
-                                                        strategy,
-                                                        sizePer * Doubles.BYTES
-        ),
-        fileMapper
+        new DecompressingByteBufferObjectStrategy(byteOrder, strategy)
     );
 
     this.totalSize = totalSize;

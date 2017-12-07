@@ -94,8 +94,7 @@ public class DoubleGenericColumnPartSerdeV2 implements ColumnPartSerde
       int initialPos = buffer.position();
       final Supplier<IndexedDoubles> column = CompressedDoublesIndexedSupplier.fromByteBuffer(
           buffer,
-          byteOrder,
-          builder.getFileMapper()
+          byteOrder
       );
 
       buffer.position(initialPos + offset);
@@ -148,15 +147,15 @@ public class DoubleGenericColumnPartSerdeV2 implements ColumnPartSerde
           new Serializer()
           {
             @Override
-            public long numBytes()
+            public long getSerializedSize() throws IOException
             {
               return delegate.getSerializedSize();
             }
 
             @Override
-            public void write(WritableByteChannel channel, FileSmoosher fileSmoosher) throws IOException
+            public void writeTo(WritableByteChannel channel, FileSmoosher fileSmoosher) throws IOException
             {
-              delegate.writeToChannel(channel, fileSmoosher);
+              delegate.writeTo(channel, fileSmoosher);
             }
           }
       );

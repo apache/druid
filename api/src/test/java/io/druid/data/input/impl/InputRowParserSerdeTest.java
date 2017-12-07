@@ -60,9 +60,9 @@ public class InputRowParserSerdeTest
         jsonMapper.writeValueAsBytes(parser),
         ByteBufferInputRowParser.class
     );
-    final InputRow parsed = parser2.parse(
+    final InputRow parsed = parser2.parseBatch(
         ByteBuffer.wrap(StringUtils.toUtf8("{\"foo\":\"x\",\"bar\":\"y\",\"qux\":\"z\",\"timestamp\":\"2000\"}"))
-    );
+    ).get(0);
     Assert.assertEquals(ImmutableList.of("foo", "bar"), parsed.getDimensions());
     Assert.assertEquals(ImmutableList.of("x"), parsed.getDimension("foo"));
     Assert.assertEquals(ImmutableList.of("y"), parsed.getDimension("bar"));
@@ -101,14 +101,14 @@ public class InputRowParserSerdeTest
         jsonMapper.writeValueAsBytes(parser),
         MapInputRowParser.class
     );
-    final InputRow parsed = parser2.parse(
+    final InputRow parsed = parser2.parseBatch(
         ImmutableMap.<String, Object>of(
             "foo", "x",
             "bar", "y",
             "qux", "z",
             "timeposix", "1"
         )
-    );
+    ).get(0);
     Assert.assertEquals(ImmutableList.of("foo", "bar"), parsed.getDimensions());
     Assert.assertEquals(ImmutableList.of("x"), parsed.getDimension("foo"));
     Assert.assertEquals(ImmutableList.of("y"), parsed.getDimension("bar"));
@@ -130,7 +130,7 @@ public class InputRowParserSerdeTest
         jsonMapper.writeValueAsBytes(parser),
         MapInputRowParser.class
     );
-    final InputRow parsed = parser2.parse(
+    final InputRow parsed = parser2.parseBatch(
         ImmutableMap.<String, Object>of(
             "timemillis", 1412705931123L,
             "toobig", 123E64,
@@ -138,7 +138,7 @@ public class InputRowParserSerdeTest
             "long", 123456789000L,
             "values", Lists.newArrayList(1412705931123L, 123.456, 123E45, "hello")
         )
-    );
+    ).get(0);
     Assert.assertEquals(ImmutableList.of("foo", "values"), parsed.getDimensions());
     Assert.assertEquals(ImmutableList.of(), parsed.getDimension("foo"));
     Assert.assertEquals(
@@ -170,11 +170,11 @@ public class InputRowParserSerdeTest
         ByteBufferInputRowParser.class
     );
 
-    final InputRow parsed = parser2.parse(
+    final InputRow parsed = parser2.parseBatch(
         ByteBuffer.wrap(
             "{\"foo\":\"x\",\"bar\":\"y\",\"qux\":\"z\",\"timestamp\":\"3000\"}".getBytes(charset)
         )
-    );
+    ).get(0);
 
     return parsed;
   }

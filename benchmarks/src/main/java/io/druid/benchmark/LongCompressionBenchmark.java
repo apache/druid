@@ -75,7 +75,7 @@ public class LongCompressionBenchmark
     File compFile = new File(dir, file + "-" + strategy + "-" + format);
     rand = new Random();
     ByteBuffer buffer = Files.map(compFile);
-    supplier = CompressedLongsIndexedSupplier.fromByteBuffer(buffer, ByteOrder.nativeOrder(), null);
+    supplier = CompressedLongsIndexedSupplier.fromByteBuffer(buffer, ByteOrder.nativeOrder());
   }
 
   @Benchmark

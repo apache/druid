@@ -213,9 +213,9 @@ public class UriExtractionNamespace implements ExtractionNamespace
     }
 
     @Override
-    public Map<String, String> parse(String input)
+    public Map<String, String> parseToMap(String input)
     {
-      final Map<String, Object> inner = delegate.parse(input);
+      final Map<String, Object> inner = delegate.parseToMap(input);
       final String k = Preconditions.checkNotNull(
           inner.get(key),
           "Key column [%s] missing data in line [%s]",
@@ -612,7 +612,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
       parser = new Parser<String, String>()
       {
         @Override
-        public Map<String, String> parse(String input)
+        public Map<String, String> parseToMap(String input)
         {
           try {
             return jsonFactory.createParser(input).readValueAs(JacksonUtils.TYPE_REFERENCE_MAP_STRING_STRING);

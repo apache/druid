@@ -19,14 +19,12 @@
 
 package io.druid.segment.data;
 
-import com.google.common.primitives.Ints;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
-import java.util.List;
 
 /**
  */
@@ -52,7 +50,7 @@ public class VSizeIndexedIntsTest
     VSizeIndexedInts ints = VSizeIndexedInts.fromArray(array);
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    ints.writeToChannel(Channels.newChannel(baos));
+    ints.writeTo(Channels.newChannel(baos), null);
 
     final byte[] bytes = baos.toByteArray();
     Assert.assertEquals(ints.getSerializedSize(), bytes.length);
@@ -63,17 +61,5 @@ public class VSizeIndexedIntsTest
     for (int i = 0; i < array.length; i++) {
       Assert.assertEquals(array[i], deserialized.get(i));
     }
-  }
-
-  @Test
-  public void testGetBytesNoPaddingfromList() throws Exception
-  {
-    final int[] array = {1, 2, 4, 5, 6, 8, 9, 10};
-    List<Integer> list = Ints.asList(array);
-    int maxValue = Ints.max(array);
-    VSizeIndexedInts ints = VSizeIndexedInts.fromList(list, maxValue);
-    byte[] bytes1 = ints.getBytesNoPadding();
-    byte[] bytes2 = VSizeIndexedInts.getBytesNoPaddingFromList(list, maxValue);
-    Assert.assertArrayEquals(bytes1, bytes2);
   }
 }

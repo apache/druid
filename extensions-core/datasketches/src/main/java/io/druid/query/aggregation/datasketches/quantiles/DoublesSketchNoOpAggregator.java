@@ -17,41 +17,44 @@
  * under the License.
  */
 
-package io.druid.segment.data;
+package io.druid.query.aggregation.datasketches.quantiles;
 
-import java.nio.Buffer;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
+import io.druid.query.aggregation.Aggregator;
 
-public abstract class FixedSizeCompressedObjectStrategy<T extends Buffer> extends CompressedObjectStrategy<T>
+public class DoublesSketchNoOpAggregator implements Aggregator
 {
-  private final int sizePer;
 
-  protected FixedSizeCompressedObjectStrategy(
-      ByteOrder order,
-      BufferConverter<T> converter,
-      CompressionStrategy compression,
-      int sizePer
-  )
+  @Override
+  public Object get()
   {
-    super(order, converter, compression);
-    this.sizePer = sizePer;
-  }
-
-  public int getSize()
-  {
-    return sizePer;
+    return DoublesSketchOperations.EMPTY_SKETCH;
   }
 
   @Override
-  protected ByteBuffer bufferFor(T val)
+  public void aggregate()
   {
-    return ByteBuffer.allocate(converter.sizeOf(getSize())).order(order);
   }
 
   @Override
-  protected void decompress(ByteBuffer buffer, int numBytes, ByteBuffer buf)
+  public void reset()
   {
-    decompressor.decompress(buffer, numBytes, buf, converter.sizeOf(getSize()));
   }
+
+  @Override
+  public void close()
+  {
+  }
+
+  @Override
+  public float getFloat()
+  {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @Override
+  public long getLong()
+  {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
 }

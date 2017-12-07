@@ -22,6 +22,7 @@ package io.druid.firehose.kafka;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
 import com.metamx.common.parsers.ParseException;
@@ -37,6 +38,7 @@ import io.druid.java.util.common.StringUtils;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -139,7 +141,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
       }
       log.info("Loaded offset map[%s]", offsetMap);
     } else {
-      log.makeAlert("Unable to cast lastCommit to Map for feed [%s]", feed);
+      log.makeAlert("Unable to cast lastCommit to Map for feed [%s]", feed).emit();
     }
     return offsetMap;
   }
@@ -175,6 +177,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
       private volatile boolean stopped;
       private volatile BytesMessageWithOffset msg = null;
       private volatile InputRow row = null;
+      private volatile Iterator<InputRow> nextIterator = Iterators.emptyIterator();
 
       {
         lastOffsetPartitions = Maps.newHashMap();
@@ -202,14 +205,18 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
         try {
           row = null;
           while (row == null) {
-            if (msg != null) {
-              lastOffsetPartitions.put(msg.getPartition(), msg.offset());
+            if (!nextIterator.hasNext()) {
+              if (msg != null) {
+                lastOffsetPartitions.put(msg.getPartition(), msg.offset());
+              }
+              msg = messageQueue.take();
+              final byte[] message = msg.message();
+              nextIterator = message == null
+                             ? Iterators.emptyIterator()
+                             : firehoseParser.parseBatch(ByteBuffer.wrap(message)).iterator();
+              continue;
             }
-
-            msg = messageQueue.take();
-
-            final byte[] message = msg.message();
-            row = message == null ? null : firehoseParser.parse(ByteBuffer.wrap(message));
+            row = nextIterator.next();
           }
         }
         catch (InterruptedException e) {

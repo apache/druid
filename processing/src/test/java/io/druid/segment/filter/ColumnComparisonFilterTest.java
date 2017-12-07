@@ -66,16 +66,16 @@ public class ColumnComparisonFilterTest extends BaseFilterTest
   );
 
   private static final List<InputRow> ROWS = ImmutableList.of(
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "0", "dim1", "", "dim2", ImmutableList.of("1", "2"))),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "1", "dim2", ImmutableList.of())),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "2", "dim1", "2", "dim2", ImmutableList.of(""))),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "3", "dim1", "1", "dim2", ImmutableList.of("3"))),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "4", "dim1", "1", "dim2", ImmutableList.of("4", "5"))),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "5", "dim1", "5", "dim2", ImmutableList.of("4", "5"))),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "6", "dim1", "1")),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "7", "dim1", "a")),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "8", "dim1", 8L)),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "9", "dim1", 1.234f, "dim2", 1.234f))
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "0", "dim1", "", "dim2", ImmutableList.of("1", "2"))).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "1", "dim1", "10", "dim2", ImmutableList.of())).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "2", "dim1", "2", "dim2", ImmutableList.of(""))).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "3", "dim1", "1", "dim2", ImmutableList.of("3"))).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "4", "dim1", "1", "dim2", ImmutableList.of("4", "5"))).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "5", "dim1", "5", "dim2", ImmutableList.of("4", "5"))).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "6", "dim1", "1")).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "7", "dim1", "a")).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "8", "dim1", 8L)).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "9", "dim1", 1.234f, "dim2", 1.234f)).get(0)
   );
 
   public ColumnComparisonFilterTest(
@@ -109,7 +109,7 @@ public class ColumnComparisonFilterTest extends BaseFilterTest
     assertFilterMatches(new ColumnComparisonDimFilter(ImmutableList.<DimensionSpec>of(
         DefaultDimensionSpec.of("dim1"),
         DefaultDimensionSpec.of("dim2")
-    )), ImmutableList.<String>of("1", "5", "9"));
+    )), ImmutableList.<String>of("5", "9"));
     assertFilterMatches(new ColumnComparisonDimFilter(ImmutableList.<DimensionSpec>of(
         DefaultDimensionSpec.of("dim0"),
         DefaultDimensionSpec.of("dim1"),
@@ -128,7 +128,7 @@ public class ColumnComparisonFilterTest extends BaseFilterTest
       assertFilterMatches(new ColumnComparisonDimFilter(ImmutableList.<DimensionSpec>of(
           DefaultDimensionSpec.of("dim1"),
           DefaultDimensionSpec.of("dim6")
-      )), ImmutableList.<String>of("0", "1"));
+      )), ImmutableList.<String>of("0"));
 
       assertFilterMatches(new ColumnComparisonDimFilter(ImmutableList.<DimensionSpec>of(
           DefaultDimensionSpec.of("dim2"),
@@ -138,7 +138,7 @@ public class ColumnComparisonFilterTest extends BaseFilterTest
       assertFilterMatches(new ColumnComparisonDimFilter(ImmutableList.<DimensionSpec>of(
           DefaultDimensionSpec.of("dim1"),
           DefaultDimensionSpec.of("dim6")
-      )), ImmutableList.<String>of("1"));
+      )), ImmutableList.<String>of());
 
       assertFilterMatches(new ColumnComparisonDimFilter(ImmutableList.<DimensionSpec>of(
           DefaultDimensionSpec.of("dim2"),

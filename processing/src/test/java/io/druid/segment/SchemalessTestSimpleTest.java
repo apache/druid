@@ -26,6 +26,7 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.query.Druids;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
@@ -60,6 +61,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -73,27 +75,17 @@ public class SchemalessTestSimpleTest
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
   {
-    final IncrementalIndex incrementalIndex = SchemalessIndexTest.getIncrementalIndex();
-    final QueryableIndex persistedIncrementalIndex = TestIndex.persistRealtimeAndLoadMMapped(incrementalIndex);
-    final QueryableIndex mergedIncrementalIndex = SchemalessIndexTest.getMergedIncrementalIndex();
-
-    return Arrays.asList(
-        new Object[][]{
-            {
-                new IncrementalIndexSegment(incrementalIndex, null)
-            },
-            {
-                new QueryableIndexSegment(
-                    null, persistedIncrementalIndex
-                )
-            },
-            {
-                new QueryableIndexSegment(
-                    null, mergedIncrementalIndex
-                )
-            }
-        }
-    );
+    List<Object[]> argumentArrays = new ArrayList<>();
+    for (SegmentWriteOutMediumFactory segmentWriteOutMediumFactory : SegmentWriteOutMediumFactory.builtInFactories()) {
+      SchemalessIndexTest schemalessIndexTest = new SchemalessIndexTest(segmentWriteOutMediumFactory);
+      final IncrementalIndex incrementalIndex = SchemalessIndexTest.getIncrementalIndex();
+      final QueryableIndex persistedIncrementalIndex = TestIndex.persistRealtimeAndLoadMMapped(incrementalIndex);
+      final QueryableIndex mergedIncrementalIndex = schemalessIndexTest.getMergedIncrementalIndex();
+      argumentArrays.add(new Object[] {new IncrementalIndexSegment(incrementalIndex, null)});
+      argumentArrays.add(new Object[] {new QueryableIndexSegment(null, persistedIncrementalIndex)});
+      argumentArrays.add(new Object[] {new QueryableIndexSegment(null, mergedIncrementalIndex)});
+    }
+    return argumentArrays;
   }
 
   final String dataSource = "testing";

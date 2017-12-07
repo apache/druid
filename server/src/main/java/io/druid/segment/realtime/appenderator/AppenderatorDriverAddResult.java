@@ -25,38 +25,43 @@ import io.druid.data.input.InputRow;
 import javax.annotation.Nullable;
 
 /**
- * Result of {@link AppenderatorDriver#add(InputRow, String, Supplier)}.  It contains the identifier of the
- * segment which the InputRow is added to and the number of rows in that segment.
+ * Result of {@link AppenderatorDriver#add(InputRow, String, Supplier, boolean)}.  It contains the identifier of the
+ * segment which the InputRow is added to, the number of rows in that segment and if persist is required because either
+ * maxRowsInMemory or intermediate persist period threshold is hit.
  */
 public class AppenderatorDriverAddResult
 {
   private final SegmentIdentifier segmentIdentifier;
   private final int numRowsInSegment;
   private final long totalNumRowsInAppenderator;
+  private final boolean isPersistRequired;
 
   public static AppenderatorDriverAddResult ok(
       SegmentIdentifier segmentIdentifier,
       int numRowsInSegment,
-      long totalNumRowsInAppenderator
+      long totalNumRowsInAppenderator,
+      boolean isPersistRequired
   )
   {
-    return new AppenderatorDriverAddResult(segmentIdentifier, numRowsInSegment, totalNumRowsInAppenderator);
+    return new AppenderatorDriverAddResult(segmentIdentifier, numRowsInSegment, totalNumRowsInAppenderator, isPersistRequired);
   }
 
   public static AppenderatorDriverAddResult fail()
   {
-    return new AppenderatorDriverAddResult(null, 0, 0);
+    return new AppenderatorDriverAddResult(null, 0, 0, false);
   }
 
   private AppenderatorDriverAddResult(
       @Nullable SegmentIdentifier segmentIdentifier,
       int numRowsInSegment,
-      long totalNumRowsInAppenderator
+      long totalNumRowsInAppenderator,
+      boolean isPersistRequired
   )
   {
     this.segmentIdentifier = segmentIdentifier;
     this.numRowsInSegment = numRowsInSegment;
     this.totalNumRowsInAppenderator = totalNumRowsInAppenderator;
+    this.isPersistRequired = isPersistRequired;
   }
 
   public boolean isOk()
@@ -77,5 +82,10 @@ public class AppenderatorDriverAddResult
   public long getTotalNumRowsInAppenderator()
   {
     return totalNumRowsInAppenderator;
+  }
+
+  public boolean isPersistRequired()
+  {
+    return isPersistRequired;
   }
 }

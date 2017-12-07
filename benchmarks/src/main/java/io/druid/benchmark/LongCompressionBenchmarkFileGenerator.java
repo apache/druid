@@ -20,24 +20,20 @@
 package io.druid.benchmark;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.io.ByteSink;
 import io.druid.benchmark.datagen.BenchmarkColumnSchema;
 import io.druid.benchmark.datagen.BenchmarkColumnValueGenerator;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
+import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.LongSupplierSerializer;
-import io.druid.segment.data.TmpFileIOPeon;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.Writer;
 import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
@@ -51,9 +47,10 @@ public class LongCompressionBenchmarkFileGenerator
 {
   private static final Logger log = new Logger(LongCompressionBenchmarkFileGenerator.class);
   public static final int ROW_NUM = 5000000;
-  public static final List<CompressedObjectStrategy.CompressionStrategy> compressions =
-      ImmutableList.of(CompressedObjectStrategy.CompressionStrategy.LZ4,
-                       CompressedObjectStrategy.CompressionStrategy.NONE);
+  public static final List<CompressionStrategy> compressions =
+      ImmutableList.of(
+          CompressionStrategy.LZ4,
+          CompressionStrategy.NONE);
   public static final List<CompressionFactory.LongEncodingStrategy> encodings =
       ImmutableList.of(CompressionFactory.LongEncodingStrategy.AUTO, CompressionFactory.LongEncodingStrategy.LONGS);
 
@@ -134,7 +131,7 @@ public class LongCompressionBenchmarkFileGenerator
 
     // create compressed files using all combinations of CompressionStrategy and LongEncoding provided
     for (Map.Entry<String, BenchmarkColumnValueGenerator> entry : generators.entrySet()) {
-      for (CompressedObjectStrategy.CompressionStrategy compression : compressions) {
+      for (CompressionStrategy compression : compressions) {
         for (CompressionFactory.LongEncodingStrategy encoding : encodings) {
           String name = entry.getKey() + "-" + compression.toString() + "-" + encoding.toString();
           log.info("%s: ", name);
@@ -142,42 +139,24 @@ public class LongCompressionBenchmarkFileGenerator
           compFile.delete();
           File dataFile = new File(dir, entry.getKey());
 
-          TmpFileIOPeon iopeon = new TmpFileIOPeon(true);
           LongSupplierSerializer writer = CompressionFactory.getLongSerializer(
-              iopeon,
+              new OffHeapMemorySegmentWriteOutMedium(),
               "long",
               ByteOrder.nativeOrder(),
               encoding,
               compression
           );
-          BufferedReader br = Files.newBufferedReader(dataFile.toPath(), StandardCharsets.UTF_8);
-
-          try (FileChannel output = FileChannel.open(
-              compFile.toPath(),
-              StandardOpenOption.CREATE_NEW,
-              StandardOpenOption.WRITE
-          )) {
+          try (
+              BufferedReader br = Files.newBufferedReader(dataFile.toPath(), StandardCharsets.UTF_8);
+              FileChannel output =
+                  FileChannel.open(compFile.toPath(), StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)
+          ) {
             writer.open();
             String line;
             while ((line = br.readLine()) != null) {
               writer.add(Long.parseLong(line));
             }
-            final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            writer.closeAndConsolidate(
-                new ByteSink()
-                {
-                  @Override
-                  public OutputStream openStream() throws IOException
-                  {
-                    return baos;
-                  }
-                }
-            );
-            output.write(ByteBuffer.wrap(baos.toByteArray()));
-          }
-          finally {
-            iopeon.close();
-            br.close();
+            writer.writeTo(output, null);
           }
           log.info("%d", compFile.length() / 1024);
         }

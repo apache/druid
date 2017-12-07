@@ -17,21 +17,36 @@
  * under the License.
  */
 
-package io.druid.segment.data;
+package io.druid.segment.writeout;
 
-import java.io.Closeable;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import io.druid.java.util.common.ByteBufferUtils;
 
-/**
- */
-public interface IOPeon extends Closeable
+import java.nio.ByteBuffer;
+
+final class DirectByteBufferWriteOutBytes extends ByteBufferWriteOutBytes
 {
-  OutputStream makeOutputStream(String filename) throws IOException;
+  private boolean open = true;
 
-  InputStream makeInputStream(String filename) throws IOException;
+  @Override
+  protected ByteBuffer allocateBuffer()
+  {
+    return ByteBuffer.allocateDirect(BUFFER_SIZE);
+  }
 
-  File getFile(String filename);
+  @Override
+  public boolean isOpen()
+  {
+    return open;
+  }
+
+  void free()
+  {
+    open = false;
+    buffers.forEach(ByteBufferUtils::free);
+    buffers.clear();
+    headBufferIndex = -1;
+    headBuffer = null;
+    size = 0;
+    capacity = 0;
+  }
 }

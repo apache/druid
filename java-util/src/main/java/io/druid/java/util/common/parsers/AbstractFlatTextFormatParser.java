@@ -127,7 +127,7 @@ public abstract class AbstractFlatTextFormatParser implements Parser<String, Obj
   }
 
   @Override
-  public Map<String, Object> parse(final String input)
+  public Map<String, Object> parseToMap(final String input)
   {
     if (!supportSkipHeaderRows && (hasHeaderRow || maxSkipHeaderRows > 0)) {
       throw new UnsupportedOperationException("hasHeaderRow or maxSkipHeaderRows is not supported. "

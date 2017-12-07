@@ -115,15 +115,15 @@ public class FloatGenericColumnPartSerdeV2 implements ColumnPartSerde
           new Serializer()
           {
             @Override
-            public long numBytes()
+            public long getSerializedSize() throws IOException
             {
               return delegate.getSerializedSize();
             }
 
             @Override
-            public void write(WritableByteChannel channel, FileSmoosher fileSmoosher) throws IOException
+            public void writeTo(WritableByteChannel channel, FileSmoosher fileSmoosher) throws IOException
             {
-              delegate.writeToChannel(channel, fileSmoosher);
+              delegate.writeTo(channel, fileSmoosher);
             }
           }
       );
@@ -145,8 +145,7 @@ public class FloatGenericColumnPartSerdeV2 implements ColumnPartSerde
       int initialPos = buffer.position();
       final CompressedFloatsIndexedSupplier column = CompressedFloatsIndexedSupplier.fromByteBuffer(
           buffer,
-          byteOrder,
-          builder.getFileMapper()
+          byteOrder
       );
       buffer.position(initialPos + offset);
       final ImmutableBitmap bitmap;

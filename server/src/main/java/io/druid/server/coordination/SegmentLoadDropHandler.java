@@ -376,12 +376,13 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
         if (failedSegments.size() > 0) {
           log.makeAlert("%,d errors seen while loading segments", failedSegments.size())
-             .addData("failedSegments", failedSegments);
+             .addData("failedSegments", failedSegments)
+             .emit();
         }
       }
       catch (InterruptedException e) {
         Thread.currentThread().interrupt();
-        log.makeAlert(e, "LoadingInterrupted");
+        log.makeAlert(e, "LoadingInterrupted").emit();
       }
 
       backgroundSegmentAnnouncer.finishAnnouncing();

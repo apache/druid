@@ -114,15 +114,15 @@ public class LongGenericColumnPartSerdeV2 implements ColumnPartSerde
           new Serializer()
           {
             @Override
-            public long numBytes()
+            public long getSerializedSize() throws IOException
             {
               return delegate.getSerializedSize();
             }
 
             @Override
-            public void write(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+            public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
             {
-              delegate.writeToChannel(channel, smoosher);
+              delegate.writeTo(channel, smoosher);
             }
           }
       );
@@ -143,8 +143,7 @@ public class LongGenericColumnPartSerdeV2 implements ColumnPartSerde
       int initialPos = buffer.position();
       final CompressedLongsIndexedSupplier column = CompressedLongsIndexedSupplier.fromByteBuffer(
           buffer,
-          byteOrder,
-          builder.getFileMapper()
+          byteOrder
       );
       buffer.position(initialPos + offset);
       final ImmutableBitmap bitmap;

@@ -64,6 +64,7 @@ import io.druid.guice.security.EscalatorModule;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
+import io.druid.segment.writeout.SegmentWriteOutMediumModule;
 import io.druid.server.emitter.EmitterModule;
 import io.druid.server.initialization.AuthenticatorMapperModule;
 import io.druid.server.initialization.AuthorizerMapperModule;
@@ -360,6 +361,7 @@ public class Initialization
         new AnnouncerModule(),
         new AWSModule(),
         new MetricsModule(),
+        new SegmentWriteOutMediumModule(),
         new ServerModule(),
         new DruidProcessingConfigModule(),
         new StorageNodeModule(),

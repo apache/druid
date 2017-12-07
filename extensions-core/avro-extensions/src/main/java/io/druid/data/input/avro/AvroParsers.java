@@ -27,6 +27,8 @@ import io.druid.java.util.common.parsers.ObjectFlattener;
 import io.druid.java.util.common.parsers.ObjectFlatteners;
 import org.apache.avro.generic.GenericRecord;
 
+import java.util.List;
+
 public class AvroParsers
 {
   private AvroParsers()
@@ -50,12 +52,12 @@ public class AvroParsers
     return ObjectFlatteners.create(flattenSpec, new AvroFlattenerMaker(fromPigAvroStorage, binaryAsString));
   }
 
-  public static InputRow parseGenericRecord(
+  public static List<InputRow> parseGenericRecord(
       GenericRecord record,
       ParseSpec parseSpec,
       ObjectFlattener<GenericRecord> avroFlattener
   )
   {
-    return new MapInputRowParser(parseSpec).parse(avroFlattener.flatten(record));
+    return new MapInputRowParser(parseSpec).parseBatch(avroFlattener.flatten(record));
   }
 }
