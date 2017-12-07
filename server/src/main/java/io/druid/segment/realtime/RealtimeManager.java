@@ -362,7 +362,8 @@ public class RealtimeManager implements QuerySegmentWalker
         }
         catch (Exception e) {
           log.makeAlert(e, "Unknown exception, Ignoring and continuing.")
-             .addData("inputRow", inputRow);
+             .addData("inputRow", inputRow)
+             .emit();
         }
 
         try {
