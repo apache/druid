@@ -1,2 +1,3 @@
 io.druid.query.aggregation.datasketches.theta.SketchModule
 io.druid.query.aggregation.datasketches.theta.oldapi.OldApiSketchModule
+io.druid.query.aggregation.datasketches.quantiles.DoublesSketchModule

@@ -24,10 +24,10 @@ import com.google.common.hash.HashFunction;
 import com.metamx.common.StringUtils;
 import io.druid.data.input.InputRow;
 import io.druid.hll.HyperLogLogCollector;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.GenericIndexed;
-import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.ObjectStrategy;
 
 import java.nio.ByteBuffer;
@@ -152,10 +152,10 @@ public class HyperUniquesSerdeForTest extends ComplexMetricSerde
   }
 
   @Override
-  public GenericColumnSerializer getSerializer(IOPeon peon, String metric)
+  public GenericColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String metric)
   {
     return LargeColumnSupportedComplexColumnSerializer.createWithColumnSize(
-        peon,
+        segmentWriteOutMedium,
         metric,
         this.getObjectStrategy(),
         Integer.MAX_VALUE

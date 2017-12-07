@@ -21,15 +21,14 @@ package io.druid.segment;
 
 import com.google.common.primitives.Ints;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.DictionaryEncodedColumn;
-import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 
 import java.io.Closeable;
-import java.io.File;
 import java.lang.reflect.Array;
 import java.util.Arrays;
 
@@ -199,13 +198,12 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   @Override
   public DimensionMergerV9 makeMerger(
       IndexSpec indexSpec,
-      File outDir,
-      IOPeon ioPeon,
+      SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress
   )
   {
-    return new StringDimensionMergerV9(dimensionName, indexSpec, outDir, ioPeon, capabilities, progress);
+    return new StringDimensionMergerV9(dimensionName, indexSpec, segmentWriteOutMedium, capabilities, progress);
   }
 
 }

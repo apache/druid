@@ -38,7 +38,7 @@
     <dependency>
       <groupId>com.yahoo.datasketches</groupId>
       <artifactId>sketches-core</artifactId>
-      <version>0.10.1</version>
+      <version>0.10.3</version>
     </dependency>
     <dependency>
       <groupId>io.druid</groupId>

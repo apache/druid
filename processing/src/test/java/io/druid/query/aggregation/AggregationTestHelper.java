@@ -35,6 +35,7 @@ import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.collections.StupidPool;
+import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.StringInputRowParser;
@@ -45,6 +46,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.Yielder;
 import io.druid.java.util.common.guava.YieldingAccumulator;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryPlus;
@@ -141,6 +143,7 @@ public class AggregationTestHelper
 
     IndexIO indexIO = new IndexIO(
         mapper,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -153,7 +156,7 @@ public class AggregationTestHelper
 
     return new AggregationTestHelper(
         mapper,
-        new IndexMergerV9(mapper, indexIO),
+        new IndexMergerV9(mapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance()),
         indexIO,
         factory.getToolchest(),
         factory,
@@ -196,6 +199,7 @@ public class AggregationTestHelper
 
     IndexIO indexIO = new IndexIO(
         mapper,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -208,7 +212,7 @@ public class AggregationTestHelper
 
     return new AggregationTestHelper(
         mapper,
-        new IndexMergerV9(mapper, indexIO),
+        new IndexMergerV9(mapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance()),
         indexIO,
         toolchest,
         factory,
@@ -236,6 +240,7 @@ public class AggregationTestHelper
 
     IndexIO indexIO = new IndexIO(
         mapper,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -248,7 +253,7 @@ public class AggregationTestHelper
 
     return new AggregationTestHelper(
         mapper,
-        new IndexMergerV9(mapper, indexIO),
+        new IndexMergerV9(mapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance()),
         indexIO,
         toolchest,
         factory,
@@ -287,6 +292,7 @@ public class AggregationTestHelper
 
     IndexIO indexIO = new IndexIO(
         mapper,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -299,7 +305,7 @@ public class AggregationTestHelper
 
     return new AggregationTestHelper(
         mapper,
-        new IndexMergerV9(mapper, indexIO),
+        new IndexMergerV9(mapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance()),
         indexIO,
         toolchest,
         factory,
@@ -428,7 +434,7 @@ public class AggregationTestHelper
         if (!index.canAppendRow()) {
           File tmp = tempFolder.newFolder();
           toMerge.add(tmp);
-          indexMerger.persist(index, tmp, new IndexSpec());
+          indexMerger.persist(index, tmp, new IndexSpec(), null);
           index.close();
           index = new IncrementalIndex.Builder()
               .setIndexSchema(
@@ -447,26 +453,26 @@ public class AggregationTestHelper
           //InputRowsParser<String>
           index.add(((StringInputRowParser) parser).parse((String) row));
         } else {
-          index.add(parser.parse(row));
+          index.add(((List<InputRow>) parser.parseBatch(row)).get(0));
         }
       }
 
       if (toMerge.size() > 0) {
         File tmp = tempFolder.newFolder();
         toMerge.add(tmp);
-        indexMerger.persist(index, tmp, new IndexSpec());
+        indexMerger.persist(index, tmp, new IndexSpec(), null);
 
         List<QueryableIndex> indexes = new ArrayList<>(toMerge.size());
         for (File file : toMerge) {
           indexes.add(indexIO.loadIndex(file));
         }
-        indexMerger.mergeQueryableIndex(indexes, true, metrics, outDir, new IndexSpec());
+        indexMerger.mergeQueryableIndex(indexes, true, metrics, outDir, new IndexSpec(), null);
 
         for (QueryableIndex qi : indexes) {
           qi.close();
         }
       } else {
-        indexMerger.persist(index, outDir, new IndexSpec());
+        indexMerger.persist(index, outDir, new IndexSpec(), null);
       }
     }
     finally {

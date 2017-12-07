@@ -441,7 +441,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       AtomicInteger numEntries,
       TimeAndDims key,
       ThreadLocal<InputRow> rowContainer,
-      Supplier<InputRow> rowSupplier
+      Supplier<InputRow> rowSupplier,
+      boolean skipMaxRowsInMemoryCheck
   ) throws IndexSizeExceededException;
 
   public abstract int getLastRowIndex();
@@ -494,6 +495,11 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
    */
   public int add(InputRow row) throws IndexSizeExceededException
   {
+    return add(row, false);
+  }
+
+  public int add(InputRow row, boolean skipMaxRowsInMemoryCheck) throws IndexSizeExceededException
+  {
     TimeAndDims key = toTimeAndDims(row);
     final int rv = addToFacts(
         metrics,
@@ -503,14 +509,15 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         numEntries,
         key,
         in,
-        rowSupplier
+        rowSupplier,
+        skipMaxRowsInMemoryCheck
     );
     updateMaxIngestedTime(row.getTimestamp());
     return rv;
   }
 
   @VisibleForTesting
-  TimeAndDims toTimeAndDims(InputRow row) throws IndexSizeExceededException
+  TimeAndDims toTimeAndDims(InputRow row)
   {
     row = formatRow(row);
     if (row.getTimestampFromEpoch() < minTimestamp) {

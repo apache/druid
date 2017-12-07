@@ -64,12 +64,12 @@ public class InvalidFilteringTest extends BaseFilterTest
       )
   );
 
-  private static final InputRow row0 = PARSER.parse(ImmutableMap.<String, Object>of("ts", 1L, "dim0", "1", "dim1", "", "dim2", ImmutableList.of("a", "b")));
-  private static final InputRow row1 = PARSER.parse(ImmutableMap.<String, Object>of("ts", 2L, "dim0", "2", "dim1", "10", "dim2", ImmutableList.of()));
-  private static final InputRow row2 = PARSER.parse(ImmutableMap.<String, Object>of("ts", 3L, "dim0", "3", "dim1", "2", "dim2", ImmutableList.of("")));
-  private static final InputRow row3 = PARSER.parse(ImmutableMap.<String, Object>of("ts", 4L, "dim0", "4", "dim1", "1", "dim2", ImmutableList.of("a")));
-  private static final InputRow row4 = PARSER.parse(ImmutableMap.<String, Object>of("ts", 5L, "dim0", "5", "dim1", "def", "dim2", ImmutableList.of("c")));
-  private static final InputRow row5 = PARSER.parse(ImmutableMap.<String, Object>of("ts", 6L, "dim0", "6", "dim1", "abc"));
+  private static final InputRow row0 = PARSER.parseBatch(ImmutableMap.<String, Object>of("ts", 1L, "dim0", "1", "dim1", "", "dim2", ImmutableList.of("a", "b"))).get(0);
+  private static final InputRow row1 = PARSER.parseBatch(ImmutableMap.<String, Object>of("ts", 2L, "dim0", "2", "dim1", "10", "dim2", ImmutableList.of())).get(0);
+  private static final InputRow row2 = PARSER.parseBatch(ImmutableMap.<String, Object>of("ts", 3L, "dim0", "3", "dim1", "2", "dim2", ImmutableList.of(""))).get(0);
+  private static final InputRow row3 = PARSER.parseBatch(ImmutableMap.<String, Object>of("ts", 4L, "dim0", "4", "dim1", "1", "dim2", ImmutableList.of("a"))).get(0);
+  private static final InputRow row4 = PARSER.parseBatch(ImmutableMap.<String, Object>of("ts", 5L, "dim0", "5", "dim1", "def", "dim2", ImmutableList.of("c"))).get(0);
+  private static final InputRow row5 = PARSER.parseBatch(ImmutableMap.<String, Object>of("ts", 6L, "dim0", "6", "dim1", "abc")).get(0);
 
   private static final List<InputRow> ROWS = ImmutableList.of(
       row0,

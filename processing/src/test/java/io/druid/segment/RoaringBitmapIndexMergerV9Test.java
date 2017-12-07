@@ -19,8 +19,9 @@
 
 package io.druid.segment;
 
-import io.druid.segment.data.CompressedObjectStrategy.CompressionStrategy;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.segment.data.CompressionFactory.LongEncodingStrategy;
+import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -31,10 +32,17 @@ public class RoaringBitmapIndexMergerV9Test extends IndexMergerTestBase
   public RoaringBitmapIndexMergerV9Test(
       CompressionStrategy compressionStrategy,
       CompressionStrategy dimCompressionStrategy,
-      LongEncodingStrategy longEncodingStrategy
+      LongEncodingStrategy longEncodingStrategy,
+      SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   )
   {
-    super(new RoaringBitmapSerdeFactory(null), compressionStrategy, dimCompressionStrategy, longEncodingStrategy);
-    indexMerger = TestHelper.getTestIndexMergerV9();
+    super(
+        new RoaringBitmapSerdeFactory(null),
+        compressionStrategy,
+        dimCompressionStrategy,
+        longEncodingStrategy,
+        segmentWriteOutMediumFactory
+    );
+    indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
   }
 }

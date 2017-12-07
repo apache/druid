@@ -175,7 +175,8 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         AtomicInteger numEntries,
         TimeAndDims key,
         ThreadLocal<InputRow> rowContainer,
-        Supplier<InputRow> rowSupplier
+        Supplier<InputRow> rowSupplier,
+        boolean skipMaxRowsInMemoryCheck // ignore for benchmark
     ) throws IndexSizeExceededException
     {
 

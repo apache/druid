@@ -57,7 +57,10 @@ public class DruidParquetInputTest
     // field not read, should return null
     assertEquals(data.get("added"), null);
     assertEquals(data.get("page"), new Utf8("Gypsy Danger"));
-    assertEquals(config.getParser().parse(data).getDimension("page").get(0), "Gypsy Danger");
+    assertEquals(
+        ((List<InputRow>) config.getParser().parseBatch(data)).get(0).getDimension("page").get(0),
+        "Gypsy Danger"
+    );
   }
 
   @Test
@@ -70,7 +73,7 @@ public class DruidParquetInputTest
     config.intoConfiguration(job);
     GenericRecord data = getFirstRecord(job, ((StaticPathSpec) config.getPathSpec()).getPaths());
 
-    InputRow row = config.getParser().parse(data);
+    InputRow row = ((List<InputRow>) config.getParser().parseBatch(data)).get(0);
 
     // without binaryAsString: true, the value would something like "[104, 101, 121, 32, 116, 104, 105, 115, 32, 105, 115, 3.... ]"
     assertEquals(row.getDimension("field").get(0), "hey this is &é(-è_çà)=^$ù*! Ω^^");
@@ -133,7 +136,7 @@ public class DruidParquetInputTest
       while (reader.nextKeyValue()) {
         reader.nextKeyValue();
         GenericRecord data = (GenericRecord) reader.getCurrentValue();
-        records.add(parser.parse(data));
+        records.add(((List<InputRow>) parser.parseBatch(data)).get(0));
       }
 
       return records;

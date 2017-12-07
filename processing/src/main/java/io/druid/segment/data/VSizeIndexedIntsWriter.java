@@ -19,16 +19,15 @@
 
 package io.druid.segment.data;
 
-import com.google.common.io.ByteStreams;
-import com.google.common.io.CountingOutputStream;
 import com.google.common.primitives.Ints;
-import io.druid.java.util.common.StringUtils;
+import io.druid.common.utils.ByteUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
+import io.druid.segment.writeout.WriteOutBytes;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
+import io.druid.segment.serde.MetaSerdeHelper;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
 /**
@@ -38,61 +37,61 @@ public class VSizeIndexedIntsWriter extends SingleValueIndexedIntsWriter
 {
   private static final byte VERSION = VSizeIndexedInts.VERSION;
 
-  private final IOPeon ioPeon;
-  private final String valueFileName;
+  private static final MetaSerdeHelper<VSizeIndexedIntsWriter> metaSerdeHelper = MetaSerdeHelper
+      .firstWriteByte((VSizeIndexedIntsWriter x) -> VERSION)
+      .writeByte(x -> ByteUtils.checkedCast(x.numBytes))
+      .writeInt(x -> Ints.checkedCast(x.valuesOut.size()));
+
+  private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final int numBytes;
 
-  private CountingOutputStream valuesOut = null;
   private final ByteBuffer helperBuffer = ByteBuffer.allocate(Ints.BYTES);
+  private WriteOutBytes valuesOut = null;
+  private boolean bufPaddingWritten = false;
 
-  public VSizeIndexedIntsWriter(
-      final IOPeon ioPeon,
-      final String filenameBase,
-      final int maxValue
-  )
+  public VSizeIndexedIntsWriter(final SegmentWriteOutMedium segmentWriteOutMedium, final int maxValue)
   {
-    this.ioPeon = ioPeon;
-    this.valueFileName = StringUtils.format("%s.values", filenameBase);
+    this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.numBytes = VSizeIndexedInts.getNumBytesForMax(maxValue);
   }
 
   @Override
   public void open() throws IOException
   {
-    valuesOut = new CountingOutputStream(ioPeon.makeOutputStream(valueFileName));
+    valuesOut = segmentWriteOutMedium.makeWriteOutBytes();
   }
 
   @Override
   protected void addValue(int val) throws IOException
   {
+    if (bufPaddingWritten) {
+      throw new IllegalStateException("written out already");
+    }
     helperBuffer.putInt(0, val);
     valuesOut.write(helperBuffer.array(), Ints.BYTES - numBytes, numBytes);
   }
 
   @Override
-  public void close() throws IOException
+  public long getSerializedSize() throws IOException
   {
-    byte[] bufPadding = new byte[4 - numBytes];
-    valuesOut.write(bufPadding);
-    valuesOut.close();
+    writeBufPadding();
+    return metaSerdeHelper.size(this) + valuesOut.size();
   }
 
   @Override
-  public long getSerializedSize()
+  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    return 2 +       // version and numBytes
-           4 +       // dataLen
-           valuesOut.getCount();
+    writeBufPadding();
+    metaSerdeHelper.writeTo(channel, this);
+    valuesOut.writeTo(channel);
   }
 
-  @Override
-  public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  private void writeBufPadding() throws IOException
   {
-    long numBytesWritten = valuesOut.getCount();
-    channel.write(ByteBuffer.wrap(new byte[]{VERSION, (byte) numBytes}));
-    channel.write(ByteBuffer.wrap(Ints.toByteArray((int) numBytesWritten)));
-    try (final ReadableByteChannel from = Channels.newChannel(ioPeon.makeInputStream(valueFileName))) {
-      ByteStreams.copy(from, channel);
+    if (!bufPaddingWritten) {
+      byte[] bufPadding = new byte[Ints.BYTES - numBytes];
+      valuesOut.write(bufPadding);
+      bufPaddingWritten = true;
     }
   }
 }

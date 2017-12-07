@@ -880,7 +880,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
               task.getId(),
               elapsed,
               config.getTaskAssignmentTimeout()
-          );
+          ).emit();
           taskComplete(taskRunnerWorkItem, theZkWorker, TaskStatus.failure(task.getId()));
           break;
         }

@@ -31,10 +31,11 @@ import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.UOE;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.CountAggregatorFactory;
-import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
+import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
@@ -66,8 +67,8 @@ public class IndexIOTest
   private static Interval DEFAULT_INTERVAL = Intervals.of("1970-01-01/2000-01-01");
   private static final IndexSpec INDEX_SPEC = IndexMergerTestBase.makeIndexSpec(
       new ConciseBitmapSerdeFactory(),
-      CompressedObjectStrategy.CompressionStrategy.LZ4,
-      CompressedObjectStrategy.CompressionStrategy.LZ4,
+      CompressionStrategy.LZ4,
+      CompressionStrategy.LZ4,
       CompressionFactory.LongEncodingStrategy.LONGS
   );
 
@@ -328,7 +329,7 @@ public class IndexIOTest
   {
     Exception ex = null;
     try {
-      TestHelper.getTestIndexIO().validateTwoSegments(adapter1, adapter2);
+      TestHelper.getTestIndexIO(OffHeapMemorySegmentWriteOutMediumFactory.instance()).validateTwoSegments(adapter1, adapter2);
     }
     catch (Exception e) {
       ex = e;

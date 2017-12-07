@@ -23,8 +23,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterators;
 import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.collect.Utils;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.java.util.common.parsers.Parser;
 
@@ -34,6 +36,7 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CoderResult;
 import java.nio.charset.CodingErrorAction;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -72,9 +75,9 @@ public class StringInputRowParser implements ByteBufferInputRowParser
   }
 
   @Override
-  public InputRow parse(ByteBuffer input)
+  public List<InputRow> parseBatch(ByteBuffer input)
   {
-    return parseMap(buildStringKeyMap(input));
+    return Utils.nullableListOf(parseMap(buildStringKeyMap(input)));
   }
 
   @JsonProperty
@@ -149,7 +152,7 @@ public class StringInputRowParser implements ByteBufferInputRowParser
   private Map<String, Object> parseString(@Nullable String inputString)
   {
     initializeParser();
-    return parser.parse(inputString);
+    return parser.parseToMap(inputString);
   }
 
   @Nullable
@@ -159,6 +162,6 @@ public class StringInputRowParser implements ByteBufferInputRowParser
     if (theMap == null) {
       return null;
     }
-    return mapParser.parse(theMap);
+    return Iterators.getOnlyElement(mapParser.parseBatch(theMap).iterator());
   }
 }

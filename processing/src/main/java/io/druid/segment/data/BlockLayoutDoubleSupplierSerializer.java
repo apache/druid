@@ -19,52 +19,49 @@
 
 package io.druid.segment.data;
 
-import com.google.common.io.ByteStreams;
-import com.google.common.io.CountingOutputStream;
-import com.google.common.primitives.Doubles;
-import com.google.common.primitives.Ints;
-import io.druid.collections.ResourceHolder;
-import io.druid.collections.StupidResourceHolder;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.CompressedPools;
+import io.druid.segment.serde.MetaSerdeHelper;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.IOException;
-import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.DoubleBuffer;
-import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 
 
 public class BlockLayoutDoubleSupplierSerializer implements DoubleSupplierSerializer
 {
-  private final IOPeon ioPeon;
-  private final int sizePer;
-  private final GenericIndexedWriter<ResourceHolder<DoubleBuffer>> flattener;
-  private final CompressedObjectStrategy.CompressionStrategy compression;
-  private final String metaFile;
+  private static final MetaSerdeHelper<BlockLayoutDoubleSupplierSerializer> metaSerdeHelper = MetaSerdeHelper
+      .firstWriteByte((BlockLayoutDoubleSupplierSerializer x) -> CompressedDoublesIndexedSupplier.VERSION)
+      .writeInt(x -> x.numInserted)
+      .writeInt(x -> CompressedPools.BUFFER_SIZE / Double.BYTES)
+      .writeByte(x -> x.compression.getId());
 
-  private long metaCount = 0;
+  private final GenericIndexedWriter<ByteBuffer> flattener;
+  private final CompressionStrategy compression;
+
   private int numInserted = 0;
-  private DoubleBuffer endBuffer;
+  private ByteBuffer endBuffer;
 
-  public BlockLayoutDoubleSupplierSerializer(
-      IOPeon ioPeon,
+  BlockLayoutDoubleSupplierSerializer(
+      SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
-      ByteOrder order,
-      CompressedObjectStrategy.CompressionStrategy compression
+      ByteOrder byteOrder,
+      CompressionStrategy compression
   )
   {
-    this.ioPeon = ioPeon;
-    this.sizePer = CompressedPools.BUFFER_SIZE / Doubles.BYTES;
-    this.flattener = new GenericIndexedWriter<>(
-        ioPeon, filenameBase, CompressedDoubleBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)
+    this.flattener = GenericIndexedWriter.ofCompressedByteBuffers(
+        segmentWriteOutMedium,
+        filenameBase,
+        compression,
+        CompressedPools.BUFFER_SIZE
     );
-    this.metaFile = filenameBase + ".format";
     this.compression = compression;
-
-    endBuffer = DoubleBuffer.allocate(sizePer);
-    endBuffer.mark();
+    CompressionStrategy.Compressor compressor = compression.getCompressor();
+    Closer closer = segmentWriteOutMedium.getCloser();
+    this.endBuffer = compressor.allocateInBuffer(CompressedPools.BUFFER_SIZE, closer).order(byteOrder);
   }
 
   @Override
@@ -76,48 +73,42 @@ public class BlockLayoutDoubleSupplierSerializer implements DoubleSupplierSerial
   @Override
   public void add(double value) throws IOException
   {
+    if (endBuffer == null) {
+      throw new IllegalStateException("written out already");
+    }
     if (!endBuffer.hasRemaining()) {
       endBuffer.rewind();
-      flattener.write(StupidResourceHolder.create(endBuffer));
-      endBuffer = DoubleBuffer.allocate(sizePer);
-      endBuffer.mark();
+      flattener.write(endBuffer);
+      endBuffer.clear();
     }
 
-    endBuffer.put(value);
+    endBuffer.putDouble(value);
     ++numInserted;
   }
 
   @Override
-  public long getSerializedSize()
+  public long getSerializedSize() throws IOException
   {
-    return metaCount + flattener.getSerializedSize();
+    writeEndBuffer();
+    return metaSerdeHelper.size(this) + flattener.getSerializedSize();
   }
 
   @Override
-  public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    try (InputStream meta = ioPeon.makeInputStream(metaFile)) {
-      ByteStreams.copy(Channels.newChannel(meta), channel);
-      flattener.writeToChannel(channel, smoosher);
-    }
+    writeEndBuffer();
+    metaSerdeHelper.writeTo(channel, this);
+    flattener.writeTo(channel, smoosher);
   }
 
-  @Override
-  public void close() throws IOException
+  private void writeEndBuffer() throws IOException
   {
-    endBuffer.limit(endBuffer.position());
-    endBuffer.rewind();
-    flattener.write(StupidResourceHolder.create(endBuffer));
-    endBuffer = null;
-    flattener.close();
-
-    try (CountingOutputStream metaOut = new CountingOutputStream(ioPeon.makeOutputStream(metaFile))) {
-      metaOut.write(CompressedDoublesIndexedSupplier.version);
-      metaOut.write(Ints.toByteArray(numInserted));
-      metaOut.write(Ints.toByteArray(sizePer));
-      metaOut.write(compression.getId());
-      metaOut.close();
-      metaCount = metaOut.getCount();
+    if (endBuffer != null) {
+      endBuffer.flip();
+      if (endBuffer.remaining() > 0) {
+        flattener.write(endBuffer);
+      }
+      endBuffer = null;
     }
   }
 }

@@ -43,7 +43,7 @@ public interface Parser<K, V>
    * @throws ParseException if the String cannot be parsed
    */
   @Nullable
-  Map<K, V> parse(String input);
+  Map<K, V> parseToMap(String input);
 
   /**
    * Set the fieldNames that you expect to see in parsed Maps. Deprecated; Parsers should not, in general, be

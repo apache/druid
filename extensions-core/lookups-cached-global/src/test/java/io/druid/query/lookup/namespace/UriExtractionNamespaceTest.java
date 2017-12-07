@@ -87,7 +87,7 @@ public class UriExtractionNamespaceTest
             "col3"
         ), "col2", "col3"
     );
-    Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parse("A,B,C"));
+    Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parseToMap("A,B,C"));
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -100,7 +100,7 @@ public class UriExtractionNamespaceTest
             "col3"
         ), "col2", "col3ADFSDF"
     );
-    Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parse("A,B,C"));
+    Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parseToMap("A,B,C"));
   }
 
   @Test(expected = NullPointerException.class)
@@ -113,7 +113,7 @@ public class UriExtractionNamespaceTest
             "col3"
         ), "col2", "col3"
     );
-    Map<String, String> map = parser.getParser().parse("A");
+    Map<String, String> map = parser.getParser().parseToMap("A");
   }
 
   @Test
@@ -125,7 +125,7 @@ public class UriExtractionNamespaceTest
         null, "col2",
         "col3"
     );
-    Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parse("A|B|C"));
+    Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parseToMap("A|B|C"));
   }
 
   @Test
@@ -137,7 +137,7 @@ public class UriExtractionNamespaceTest
         "\\u0002", "col2",
         "col3"
     );
-    Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parse("A\\u0001B\\u0001C"));
+    Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parseToMap("A\\u0001B\\u0001C"));
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -149,8 +149,8 @@ public class UriExtractionNamespaceTest
         null, "col2",
         "col3"
     );
-    Map<String, String> map = parser.getParser().parse("A,B,C");
-    Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parse("A,B,C"));
+    Map<String, String> map = parser.getParser().parseToMap("A,B,C");
+    Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parseToMap("A,B,C"));
   }
 
 
@@ -163,8 +163,8 @@ public class UriExtractionNamespaceTest
         null, "col2",
         "col3"
     );
-    Map<String, String> map = parser.getParser().parse("A");
-    Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parse("A,B,C"));
+    Map<String, String> map = parser.getParser().parseToMap("A");
+    Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parseToMap("A,B,C"));
   }
 
   @Test
@@ -180,7 +180,7 @@ public class UriExtractionNamespaceTest
     Assert.assertEquals(
         ImmutableMap.of("B", "C"),
         parser.getParser()
-              .parse(
+              .parseToMap(
                   StringUtils.format(
                       "{\"%s\":\"B\", \"%s\":\"C\", \"FOO\":\"BAR\"}",
                       keyField,
@@ -204,7 +204,7 @@ public class UriExtractionNamespaceTest
     Assert.assertEquals(
         ImmutableMap.of("B", "C"),
         parser.getParser()
-              .parse(
+              .parseToMap(
                   StringUtils.format(
                       "{\"%sDFSDFDS\":\"B\", \"%s\":\"C\", \"FOO\":\"BAR\"}",
                       keyField,
@@ -227,7 +227,7 @@ public class UriExtractionNamespaceTest
     Assert.assertEquals(
         ImmutableMap.of("B", "C"),
         parser.getParser()
-              .parse(
+              .parseToMap(
                   StringUtils.format(
                       "{\"%sDFSDFDS\":\"B\", \"%s\":\"C\", \"FOO\":\"BAR\"}",
                       keyField,
@@ -250,7 +250,7 @@ public class UriExtractionNamespaceTest
     Assert.assertEquals(
         ImmutableMap.of("B", "C"),
         parser.getParser()
-              .parse(
+              .parseToMap(
                   StringUtils.format(
                       "{\"%sDFSDFDS\":\"B\", \"%s\":\"C\", \"FOO\":\"BAR\"}",
                       keyField,
@@ -273,7 +273,7 @@ public class UriExtractionNamespaceTest
     Assert.assertEquals(
         ImmutableMap.of("B", "C"),
         parser.getParser()
-              .parse(
+              .parseToMap(
                   StringUtils.format(
                       "{\"%sDFSDFDS\":\"B\", \"%s\":\"C\", \"FOO\":\"BAR\"}",
                       keyField,
@@ -289,7 +289,7 @@ public class UriExtractionNamespaceTest
     UriExtractionNamespace.ObjectMapperFlatDataParser parser = new UriExtractionNamespace.ObjectMapperFlatDataParser(
         registerTypes(new ObjectMapper())
     );
-    Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parse("{\"B\":\"C\"}"));
+    Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parseToMap("{\"B\":\"C\"}"));
   }
 
   @Test
@@ -398,7 +398,7 @@ public class UriExtractionNamespaceTest
         "num string value",
         ImmutableMap.of("B", nString),
         parser.getParser()
-              .parse(
+              .parseToMap(
                   StringUtils.format(
                       "{\"%s\":\"B\", \"%s\":\"%d\", \"FOO\":\"BAR\"}",
                       keyField,
@@ -411,7 +411,7 @@ public class UriExtractionNamespaceTest
         "num string key",
         ImmutableMap.of(nString, "C"),
         parser.getParser()
-              .parse(
+              .parseToMap(
                   StringUtils.format(
                       "{\"%s\":\"%d\", \"%s\":\"C\", \"FOO\":\"BAR\"}",
                       keyField,
@@ -424,7 +424,7 @@ public class UriExtractionNamespaceTest
         "num value",
         ImmutableMap.of("B", nString),
         parser.getParser()
-              .parse(
+              .parseToMap(
                   StringUtils.format(
                       "{\"%s\":\"B\", \"%s\":%d, \"FOO\":\"BAR\"}",
                       keyField,
@@ -437,7 +437,7 @@ public class UriExtractionNamespaceTest
         "num key",
         ImmutableMap.of(nString, "C"),
         parser.getParser()
-              .parse(
+              .parseToMap(
                   StringUtils.format(
                       "{\"%s\":%d, \"%s\":\"C\", \"FOO\":\"BAR\"}",
                       keyField,
@@ -458,7 +458,7 @@ public class UriExtractionNamespaceTest
     final String nString = StringUtils.format("%d", n);
     Assert.assertEquals(
         ImmutableMap.of("key", nString),
-        parser.getParser().parse(StringUtils.format("{\"key\":%d}", n))
+        parser.getParser().parseToMap(StringUtils.format("{\"key\":%d}", n))
     );
   }
 }

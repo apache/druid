@@ -84,7 +84,7 @@ public class RegexParser implements Parser<String, Object>
   }
 
   @Override
-  public Map<String, Object> parse(String input)
+  public Map<String, Object> parseToMap(String input)
   {
     try {
       final Matcher matcher = compiled.matcher(input);

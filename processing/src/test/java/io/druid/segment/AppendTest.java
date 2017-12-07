@@ -27,6 +27,7 @@ import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.query.Druids;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
@@ -113,10 +114,11 @@ public class AppendTest
   @Before
   public void setUp() throws Exception
   {
+    SchemalessIndexTest schemalessIndexTest = new SchemalessIndexTest(OffHeapMemorySegmentWriteOutMediumFactory.instance());
     // (1, 2) cover overlapping segments of the form
     // |------|
     //     |--------|
-    QueryableIndex appendedIndex = SchemalessIndexTest.getAppendedIncrementalIndex(
+    QueryableIndex appendedIndex = schemalessIndexTest.getAppendedIncrementalIndex(
         Arrays.asList(
             new Pair<String, AggregatorFactory[]>("append.json.1", METRIC_AGGS_NO_UNIQ),
             new Pair<String, AggregatorFactory[]>("append.json.2", METRIC_AGGS)
@@ -131,7 +133,7 @@ public class AppendTest
     // (3, 4) cover overlapping segments of the form
     // |------------|
     //     |-----|
-    QueryableIndex append2 = SchemalessIndexTest.getAppendedIncrementalIndex(
+    QueryableIndex append2 = schemalessIndexTest.getAppendedIncrementalIndex(
         Arrays.asList(
             new Pair<String, AggregatorFactory[]>("append.json.3", METRIC_AGGS_NO_UNIQ),
             new Pair<String, AggregatorFactory[]>("append.json.4", METRIC_AGGS)
@@ -147,7 +149,7 @@ public class AppendTest
     // |-------------|
     //   |---|
     //          |---|
-    QueryableIndex append3 = SchemalessIndexTest.getAppendedIncrementalIndex(
+    QueryableIndex append3 = schemalessIndexTest.getAppendedIncrementalIndex(
         Arrays.asList(
             new Pair<String, AggregatorFactory[]>("append.json.5", METRIC_AGGS),
             new Pair<String, AggregatorFactory[]>("append.json.6", METRIC_AGGS),

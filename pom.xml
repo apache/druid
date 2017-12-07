@@ -227,7 +227,7 @@
             <dependency>
                 <groupId>com.ning</groupId>
                 <artifactId>compress-lzf</artifactId>
-                <version>1.0.3</version>
+                <version>1.0.4</version>
             </dependency>
             <dependency>
                 <groupId>io.airlift</groupId>
@@ -709,6 +709,8 @@
                 <artifactId>asm-commons</artifactId>
                 <version>5.2</version>
             </dependency>
+
+            <!-- Test Scope -->
             <dependency>
                 <groupId>org.codehaus.jackson</groupId>
                 <artifactId>jackson-core-asl</artifactId>

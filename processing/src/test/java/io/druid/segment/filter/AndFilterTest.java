@@ -58,12 +58,12 @@ public class AndFilterTest extends BaseFilterTest
   );
 
   private static final List<InputRow> ROWS = ImmutableList.of(
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "0", "dim1", "0")),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "1", "dim1", "0")),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "2", "dim1", "0")),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "3", "dim1", "0")),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "4", "dim1", "0")),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "5", "dim1", "0"))
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "0", "dim1", "0")).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "1", "dim1", "0")).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "2", "dim1", "0")).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "3", "dim1", "0")).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "4", "dim1", "0")).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "5", "dim1", "0")).get(0)
   );
 
   public AndFilterTest(
