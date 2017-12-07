@@ -35,6 +35,7 @@ import io.druid.segment.IndexMergerV9;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.segment.realtime.firehose.NoopChatHandlerProvider;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthorizerMapper;
 
@@ -56,6 +57,7 @@ public class TestUtils
     this.jsonMapper = new DefaultObjectMapper();
     indexIO = new IndexIO(
         jsonMapper,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -65,7 +67,7 @@ public class TestUtils
           }
         }
     );
-    indexMergerV9 = new IndexMergerV9(jsonMapper, indexIO);
+    indexMergerV9 = new IndexMergerV9(jsonMapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
 
     final List<? extends Module> list = new ServerModule().getJacksonModules();
     for (Module module : list) {

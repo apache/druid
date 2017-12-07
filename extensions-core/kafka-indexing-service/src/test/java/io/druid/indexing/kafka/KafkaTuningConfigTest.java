@@ -111,6 +111,7 @@ public class KafkaTuningConfigTest
         true,
         true,
         5L,
+        null,
         null
     );
     KafkaTuningConfig copy = KafkaTuningConfig.copyOf(original);

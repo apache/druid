@@ -41,6 +41,7 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -50,8 +51,8 @@ import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.SimpleDictionaryEncodedColumn;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.BitmapValues;
-import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
+import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.IncrementalIndexTest;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
@@ -81,22 +82,22 @@ import java.util.Map;
 
 public class IndexMergerTestBase
 {
-  private final static IndexIO INDEX_IO = TestHelper.getTestIndexIO();
 
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   protected IndexMerger indexMerger;
 
-  @Parameterized.Parameters(name = "{index}: metric compression={0}, dimension compression={1}, long encoding={2}")
+  @Parameterized.Parameters(name = "{index}: metric compression={0}, dimension compression={1}, long encoding={2}, segment write-out medium={3}")
   public static Collection<Object[]> data()
   {
     return Collections2.transform(
         Sets.cartesianProduct(
             ImmutableList.of(
-                EnumSet.allOf(CompressedObjectStrategy.CompressionStrategy.class),
-                ImmutableSet.copyOf(CompressedObjectStrategy.CompressionStrategy.noNoneValues()),
-                EnumSet.allOf(CompressionFactory.LongEncodingStrategy.class)
+                EnumSet.allOf(CompressionStrategy.class),
+                ImmutableSet.copyOf(CompressionStrategy.noNoneValues()),
+                EnumSet.allOf(CompressionFactory.LongEncodingStrategy.class),
+                SegmentWriteOutMediumFactory.builtInFactories()
             )
         ), new Function<List<?>, Object[]>()
         {
@@ -112,8 +113,8 @@ public class IndexMergerTestBase
 
   static IndexSpec makeIndexSpec(
       BitmapSerdeFactory bitmapSerdeFactory,
-      CompressedObjectStrategy.CompressionStrategy compressionStrategy,
-      CompressedObjectStrategy.CompressionStrategy dimCompressionStrategy,
+      CompressionStrategy compressionStrategy,
+      CompressionStrategy dimCompressionStrategy,
       CompressionFactory.LongEncodingStrategy longEncodingStrategy
   )
   {
@@ -130,17 +131,26 @@ public class IndexMergerTestBase
   }
 
   private final IndexSpec indexSpec;
+  private final IndexIO indexIO;
+
   @Rule
   public final CloserRule closer = new CloserRule(false);
 
   protected IndexMergerTestBase(
       BitmapSerdeFactory bitmapSerdeFactory,
-      CompressedObjectStrategy.CompressionStrategy compressionStrategy,
-      CompressedObjectStrategy.CompressionStrategy dimCompressionStrategy,
-      CompressionFactory.LongEncodingStrategy longEncodingStrategy
+      CompressionStrategy compressionStrategy,
+      CompressionStrategy dimCompressionStrategy,
+      CompressionFactory.LongEncodingStrategy longEncodingStrategy,
+      SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   )
   {
-    this.indexSpec = makeIndexSpec(bitmapSerdeFactory, compressionStrategy, dimCompressionStrategy, longEncodingStrategy);
+    this.indexSpec = makeIndexSpec(
+        bitmapSerdeFactory,
+        compressionStrategy,
+        dimCompressionStrategy,
+        longEncodingStrategy
+    );
+    this.indexIO = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory);
   }
 
   @Test
@@ -153,11 +163,12 @@ public class IndexMergerTestBase
 
     final File tempDir = temporaryFolder.newFolder();
     QueryableIndex index = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersist,
                 tempDir,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
@@ -200,11 +211,12 @@ public class IndexMergerTestBase
 
     final File tempDir = temporaryFolder.newFolder();
     QueryableIndex index = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersist,
                 tempDir,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
@@ -242,11 +254,12 @@ public class IndexMergerTestBase
 
     final File tempDir = temporaryFolder.newFolder();
     QueryableIndex index = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersist,
                 tempDir,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
@@ -302,11 +315,12 @@ public class IndexMergerTestBase
     final File mergedDir = temporaryFolder.newFolder();
 
     QueryableIndex index1 = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersist1,
                 tempDir1,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
@@ -316,11 +330,12 @@ public class IndexMergerTestBase
     Assert.assertEquals(3, index1.getColumnNames().size());
 
     QueryableIndex index2 = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersist2,
                 tempDir2,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
@@ -333,13 +348,14 @@ public class IndexMergerTestBase
         new CountAggregatorFactory("count")
     };
     QueryableIndex merged = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.mergeQueryableIndex(
                 Arrays.asList(index1, index2),
                 true,
                 mergedAggregators,
                 mergedDir,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
@@ -391,31 +407,34 @@ public class IndexMergerTestBase
     );
 
     final QueryableIndex index1 = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersist1,
                 tmpDir1,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
     final QueryableIndex index2 = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersist2,
                 tmpDir2,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
     final QueryableIndex merged = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.mergeQueryableIndex(
                 Arrays.asList(index1, index2),
                 true,
                 new AggregatorFactory[]{},
                 tmpDir3,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
@@ -451,11 +470,12 @@ public class IndexMergerTestBase
     );
 
     QueryableIndex index1 = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersist1,
                 tempDir1,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
@@ -463,7 +483,7 @@ public class IndexMergerTestBase
 
     final IndexableAdapter queryableAdapter = new QueryableIndexIndexableAdapter(index1);
 
-    INDEX_IO.validateTwoSegments(incrementalAdapter, queryableAdapter);
+    indexIO.validateTwoSegments(incrementalAdapter, queryableAdapter);
 
     Assert.assertEquals(2, index1.getColumn(Column.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
@@ -471,13 +491,14 @@ public class IndexMergerTestBase
 
 
     QueryableIndex merged = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.mergeQueryableIndex(
                 ImmutableList.of(index1),
                 true,
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 mergedDir,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
@@ -486,7 +507,7 @@ public class IndexMergerTestBase
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(merged.getAvailableDimensions()));
     Assert.assertEquals(3, merged.getColumnNames().size());
 
-    INDEX_IO.validateTwoSegments(tempDir1, mergedDir);
+    indexIO.validateTwoSegments(tempDir1, mergedDir);
 
     assertDimCompression(index1, indexSpec.getDimensionCompression());
     assertDimCompression(merged, indexSpec.getDimensionCompression());
@@ -509,15 +530,11 @@ public class IndexMergerTestBase
     );
 
     QueryableIndex index1 = closer.closeLater(
-        INDEX_IO.loadIndex(
-            indexMerger.append(
-                ImmutableList.<IndexableAdapter>of(incrementalAdapter), null, tempDir1, indexSpec
-            )
-        )
+        indexIO.loadIndex(indexMerger.append(ImmutableList.of(incrementalAdapter), null, tempDir1, indexSpec, null))
     );
     final IndexableAdapter queryableAdapter = new QueryableIndexIndexableAdapter(index1);
 
-    INDEX_IO.validateTwoSegments(incrementalAdapter, queryableAdapter);
+    indexIO.validateTwoSegments(incrementalAdapter, queryableAdapter);
 
     Assert.assertEquals(2, index1.getColumn(Column.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
@@ -530,13 +547,14 @@ public class IndexMergerTestBase
 
     AggregatorFactory[] mergedAggregators = new AggregatorFactory[]{new CountAggregatorFactory("count")};
     QueryableIndex merged = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.mergeQueryableIndex(
                 ImmutableList.of(index1),
                 true,
                 mergedAggregators,
                 mergedDir,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
@@ -545,7 +563,7 @@ public class IndexMergerTestBase
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(merged.getAvailableDimensions()));
     Assert.assertEquals(3, merged.getColumnNames().size());
 
-    INDEX_IO.validateTwoSegments(tempDir1, mergedDir);
+    indexIO.validateTwoSegments(tempDir1, mergedDir);
 
     assertDimCompression(index1, indexSpec.getDimensionCompression());
     assertDimCompression(merged, indexSpec.getDimensionCompression());
@@ -573,11 +591,12 @@ public class IndexMergerTestBase
     );
 
     QueryableIndex index1 = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersist1,
                 tempDir1,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
@@ -585,7 +604,7 @@ public class IndexMergerTestBase
 
     final IndexableAdapter queryableAdapter = new QueryableIndexIndexableAdapter(index1);
 
-    INDEX_IO.validateTwoSegments(incrementalAdapter, queryableAdapter);
+    indexIO.validateTwoSegments(incrementalAdapter, queryableAdapter);
 
     Assert.assertEquals(2, index1.getColumn(Column.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
@@ -593,12 +612,12 @@ public class IndexMergerTestBase
 
     IndexSpec newSpec = new IndexSpec(
         indexSpec.getBitmapSerdeFactory(),
-        CompressedObjectStrategy.CompressionStrategy.LZ4.equals(indexSpec.getDimensionCompression()) ?
-        CompressedObjectStrategy.CompressionStrategy.LZF :
-        CompressedObjectStrategy.CompressionStrategy.LZ4,
-        CompressedObjectStrategy.CompressionStrategy.LZ4.equals(indexSpec.getDimensionCompression()) ?
-        CompressedObjectStrategy.CompressionStrategy.LZF :
-        CompressedObjectStrategy.CompressionStrategy.LZ4,
+        CompressionStrategy.LZ4.equals(indexSpec.getDimensionCompression()) ?
+        CompressionStrategy.LZF :
+        CompressionStrategy.LZ4,
+        CompressionStrategy.LZ4.equals(indexSpec.getDimensionCompression()) ?
+        CompressionStrategy.LZF :
+        CompressionStrategy.LZ4,
         CompressionFactory.LongEncodingStrategy.LONGS.equals(indexSpec.getLongEncoding()) ?
         CompressionFactory.LongEncodingStrategy.AUTO :
         CompressionFactory.LongEncodingStrategy.LONGS
@@ -606,13 +625,14 @@ public class IndexMergerTestBase
 
     AggregatorFactory[] mergedAggregators = new AggregatorFactory[]{new CountAggregatorFactory("count")};
     QueryableIndex merged = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.mergeQueryableIndex(
                 ImmutableList.of(index1),
                 true,
                 mergedAggregators,
                 mergedDir,
-                newSpec
+                newSpec,
+                null
             )
         )
     );
@@ -621,7 +641,7 @@ public class IndexMergerTestBase
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(merged.getAvailableDimensions()));
     Assert.assertEquals(3, merged.getColumnNames().size());
 
-    INDEX_IO.validateTwoSegments(tempDir1, mergedDir);
+    indexIO.validateTwoSegments(tempDir1, mergedDir);
 
     assertDimCompression(index1, indexSpec.getDimensionCompression());
     assertDimCompression(merged, newSpec.getDimensionCompression());
@@ -653,12 +673,12 @@ public class IndexMergerTestBase
     );
 
     QueryableIndex index1 = closer.closeLater(
-        INDEX_IO.loadIndex(indexMerger.persist(toPersist1, tempDir1, indexSpec))
+        indexIO.loadIndex(indexMerger.persist(toPersist1, tempDir1, indexSpec, null))
     );
 
     final IndexableAdapter queryableAdapter = new QueryableIndexIndexableAdapter(index1);
 
-    INDEX_IO.validateTwoSegments(incrementalAdapter, queryableAdapter);
+    indexIO.validateTwoSegments(incrementalAdapter, queryableAdapter);
 
     Assert.assertEquals(2, index1.getColumn(Column.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
@@ -666,7 +686,7 @@ public class IndexMergerTestBase
 
 
     QueryableIndex converted = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.convert(
                 tempDir1,
                 convertDir,
@@ -679,7 +699,7 @@ public class IndexMergerTestBase
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(converted.getAvailableDimensions()));
     Assert.assertEquals(4, converted.getColumnNames().size());
 
-    INDEX_IO.validateTwoSegments(tempDir1, convertDir);
+    indexIO.validateTwoSegments(tempDir1, convertDir);
 
     assertDimCompression(index1, indexSpec.getDimensionCompression());
     assertDimCompression(converted, indexSpec.getDimensionCompression());
@@ -716,11 +736,12 @@ public class IndexMergerTestBase
     );
 
     QueryableIndex index1 = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersist1,
                 tempDir1,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
@@ -728,7 +749,7 @@ public class IndexMergerTestBase
 
     final IndexableAdapter queryableAdapter = new QueryableIndexIndexableAdapter(index1);
 
-    INDEX_IO.validateTwoSegments(incrementalAdapter, queryableAdapter);
+    indexIO.validateTwoSegments(incrementalAdapter, queryableAdapter);
 
     Assert.assertEquals(2, index1.getColumn(Column.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
@@ -737,19 +758,19 @@ public class IndexMergerTestBase
 
     IndexSpec newSpec = new IndexSpec(
         indexSpec.getBitmapSerdeFactory(),
-        CompressedObjectStrategy.CompressionStrategy.LZ4.equals(indexSpec.getDimensionCompression()) ?
-        CompressedObjectStrategy.CompressionStrategy.LZF :
-        CompressedObjectStrategy.CompressionStrategy.LZ4,
-        CompressedObjectStrategy.CompressionStrategy.LZ4.equals(indexSpec.getDimensionCompression()) ?
-        CompressedObjectStrategy.CompressionStrategy.LZF :
-        CompressedObjectStrategy.CompressionStrategy.LZ4,
+        CompressionStrategy.LZ4.equals(indexSpec.getDimensionCompression()) ?
+        CompressionStrategy.LZF :
+        CompressionStrategy.LZ4,
+        CompressionStrategy.LZ4.equals(indexSpec.getDimensionCompression()) ?
+        CompressionStrategy.LZF :
+        CompressionStrategy.LZ4,
         CompressionFactory.LongEncodingStrategy.LONGS.equals(indexSpec.getLongEncoding()) ?
         CompressionFactory.LongEncodingStrategy.AUTO :
         CompressionFactory.LongEncodingStrategy.LONGS
     );
 
     QueryableIndex converted = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.convert(
                 tempDir1,
                 convertDir,
@@ -762,7 +783,7 @@ public class IndexMergerTestBase
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(converted.getAvailableDimensions()));
     Assert.assertEquals(4, converted.getColumnNames().size());
 
-    INDEX_IO.validateTwoSegments(tempDir1, convertDir);
+    indexIO.validateTwoSegments(tempDir1, convertDir);
 
     assertDimCompression(index1, indexSpec.getDimensionCompression());
     assertDimCompression(converted, newSpec.getDimensionCompression());
@@ -773,11 +794,11 @@ public class IndexMergerTestBase
     );
   }
 
-  private void assertDimCompression(QueryableIndex index, CompressedObjectStrategy.CompressionStrategy expectedStrategy)
+  private void assertDimCompression(QueryableIndex index, CompressionStrategy expectedStrategy)
       throws Exception
   {
     // Java voodoo
-    if (expectedStrategy == null || expectedStrategy == CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED) {
+    if (expectedStrategy == null || expectedStrategy == CompressionStrategy.UNCOMPRESSED) {
       return;
     }
 
@@ -823,44 +844,48 @@ public class IndexMergerTestBase
     final File tmpDirMerged = temporaryFolder.newFolder();
 
     QueryableIndex index1 = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersist1,
                 tmpDir,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
 
     QueryableIndex index2 = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersist2,
                 tmpDir2,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
 
     QueryableIndex index3 = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersist3,
                 tmpDir3,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
 
 
     final QueryableIndex merged = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.mergeQueryableIndex(
                 Arrays.asList(index1, index2, index3),
                 true,
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 tmpDirMerged,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
@@ -931,43 +956,47 @@ public class IndexMergerTestBase
     final File tmpDirMerged = temporaryFolder.newFolder();
 
     QueryableIndex index1 = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersist1,
                 tmpDir,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
 
     QueryableIndex index2 = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersist2,
                 tmpDir2,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
 
     QueryableIndex index3 = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersist3,
                 tmpDir3,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
 
     final QueryableIndex merged = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.mergeQueryableIndex(
                 Arrays.asList(index1, index2, index3),
                 true,
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 tmpDirMerged,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
@@ -1012,55 +1041,60 @@ public class IndexMergerTestBase
     final File tmpDirMerged = temporaryFolder.newFolder();
 
     QueryableIndex indexA = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersistA,
                 tmpDirA,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
 
     QueryableIndex indexB = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersistB,
                 tmpDirB,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
 
     QueryableIndex indexB2 = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersistB2,
                 tmpDirB2,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
 
     final QueryableIndex merged = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.mergeQueryableIndex(
                 Arrays.asList(indexA, indexB),
                 true,
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 tmpDirMerged,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
 
     final QueryableIndex merged2 = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.mergeQueryableIndex(
                 Arrays.asList(indexA, indexB2),
                 true,
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 tmpDirMerged,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
@@ -1180,33 +1214,36 @@ public class IndexMergerTestBase
     final File tmpDirMerged = temporaryFolder.newFolder();
 
     QueryableIndex indexA = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersistA,
                 tmpDirA,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
 
     QueryableIndex indexB = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersistB,
                 tmpDirB,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
 
     final QueryableIndex merged = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.mergeQueryableIndex(
                 Arrays.asList(indexA, indexB),
                 true,
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 tmpDirMerged,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
@@ -1322,33 +1359,36 @@ public class IndexMergerTestBase
     final File tmpDirMerged = temporaryFolder.newFolder();
 
     QueryableIndex indexA = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersistA,
                 tmpDirA,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
 
     QueryableIndex indexB = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersistB,
                 tmpDirB,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
 
     final QueryableIndex merged = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.mergeQueryableIndex(
                 Arrays.asList(indexA, indexB),
                 true,
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 tmpDirMerged,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
@@ -1463,33 +1503,36 @@ public class IndexMergerTestBase
     final File tmpDirMerged = temporaryFolder.newFolder();
 
     QueryableIndex indexA = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersistA,
                 tmpDirA,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
 
     QueryableIndex indexB = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersistB,
                 tmpDirB,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
 
     final QueryableIndex merged = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.mergeQueryableIndex(
                 Arrays.asList(indexA, indexB),
                 false,
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 tmpDirMerged,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
@@ -1574,75 +1617,82 @@ public class IndexMergerTestBase
     final File tmpDirMerged2 = temporaryFolder.newFolder();
 
     QueryableIndex indexA = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersistA,
                 tmpDirA,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
 
     QueryableIndex indexB = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersistB,
                 tmpDirB,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
 
     QueryableIndex indexBA = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersistBA,
                 tmpDirBA,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
 
     QueryableIndex indexBA2 = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersistBA2,
                 tmpDirBA2,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
 
     QueryableIndex indexC = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersistC,
                 tmpDirC,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
 
     final QueryableIndex merged = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.mergeQueryableIndex(
                 Arrays.asList(indexA, indexB, indexBA, indexBA2),
                 true,
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 tmpDirMerged,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
 
     final QueryableIndex merged2 = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.mergeQueryableIndex(
                 Arrays.asList(indexA, indexB, indexBA, indexC),
                 true,
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 tmpDirMerged2,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
@@ -1819,7 +1869,7 @@ public class IndexMergerTestBase
         tmpDirMerged,
         indexSpec
     );
-    final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(closer.closeLater(INDEX_IO.loadIndex(
+    final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(closer.closeLater(indexIO.loadIndex(
         merged)));
     Assert.assertEquals(ImmutableSet.of("A", "C"), ImmutableSet.copyOf(adapter.getAvailableMetrics()));
 
@@ -1890,7 +1940,7 @@ public class IndexMergerTestBase
         tmpDirMerged,
         indexSpec
     );
-    final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(closer.closeLater(INDEX_IO.loadIndex(
+    final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(closer.closeLater(indexIO.loadIndex(
         merged)));
     Assert.assertEquals(ImmutableSet.of("A", "C"), ImmutableSet.copyOf(adapter.getAvailableMetrics()));
 
@@ -1955,7 +2005,7 @@ public class IndexMergerTestBase
     );
 
     // Since D was not present in any of the indices, it is not present in the output
-    final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(closer.closeLater(INDEX_IO.loadIndex(
+    final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(closer.closeLater(indexIO.loadIndex(
         merged)));
     Assert.assertEquals(ImmutableSet.of("A", "B", "C"), ImmutableSet.copyOf(adapter.getAvailableMetrics()));
 
@@ -1997,7 +2047,7 @@ public class IndexMergerTestBase
         tmpDirMerged,
         indexSpec
     );
-    final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(closer.closeLater(INDEX_IO.loadIndex(
+    final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(closer.closeLater(indexIO.loadIndex(
         merged)));
     Assert.assertEquals(ImmutableSet.of("A", "B", "C"), ImmutableSet.copyOf(adapter.getAvailableMetrics()));
   }
@@ -2013,33 +2063,36 @@ public class IndexMergerTestBase
     final File tmpDirMerged = temporaryFolder.newFolder();
 
     QueryableIndex index1 = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersist1,
                 tmpDir,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
 
     QueryableIndex index2 = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 toPersist2,
                 tmpDir2,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
 
     final QueryableIndex merged = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.mergeQueryableIndex(
                 Arrays.asList(index1, index2),
                 true,
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 tmpDirMerged,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
@@ -2144,11 +2197,12 @@ public class IndexMergerTestBase
 
     final File tempDir = temporaryFolder.newFolder();
     QueryableIndex index = closer.closeLater(
-        INDEX_IO.loadIndex(
+        indexIO.loadIndex(
             indexMerger.persist(
                 index1,
                 tempDir,
-                indexSpec
+                indexSpec,
+                null
             )
         )
     );
@@ -2289,7 +2343,8 @@ public class IndexMergerTestBase
       indexMerger.persist(
           toPersist,
           tempDir,
-          indexSpec
+          indexSpec,
+          null
       );
     }
     finally {
@@ -2408,6 +2463,6 @@ public class IndexMergerTestBase
     }
 
     final File tempDir = temporaryFolder.newFolder();
-    return closer.closeLater(INDEX_IO.loadIndex(indexMerger.persist(toPersist, tempDir, indexSpec)));
+    return closer.closeLater(indexIO.loadIndex(indexMerger.persist(toPersist, tempDir, indexSpec, null)));
   }
 }

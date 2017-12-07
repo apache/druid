@@ -17,19 +17,23 @@
  * under the License.
  */
 
-package io.druid.segment.data;
+package io.druid.io;
 
-import java.io.Closeable;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.WritableByteChannel;
 
-/**
- */
-public interface IOPeon extends Closeable
+public final class Channels
 {
-  OutputStream makeOutputStream(String filename) throws IOException;
-  InputStream makeInputStream(String filename) throws IOException;
-  File getFile(String filename);
+
+  public static void writeFully(WritableByteChannel channel, ByteBuffer src) throws IOException
+  {
+    while (src.remaining() > 0) {
+      channel.write(src);
+    }
+  }
+
+  private Channels()
+  {
+  }
 }

@@ -20,6 +20,7 @@ package io.druid.data.input.parquet;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
@@ -77,7 +78,7 @@ public class ParquetHadoopInputRowParser implements InputRowParser<GenericRecord
    * imitate avro extension {@link io.druid.data.input.avro.AvroParsers#parseGenericRecord(GenericRecord, ParseSpec, ObjectFlattener)}
    */
   @Override
-  public InputRow parse(GenericRecord record)
+  public List<InputRow> parseBatch(GenericRecord record)
   {
     // Map the record to a map
     GenericRecordAsMap genericRecordAsMap = new GenericRecordAsMap(record, binaryAsString);
@@ -97,7 +98,7 @@ public class ParquetHadoopInputRowParser implements InputRowParser<GenericRecord
       dateTime = timestampSpec.extractTimestamp(genericRecordAsMap);
     }
 
-    return new MapBasedInputRow(dateTime, dimensions, genericRecordAsMap);
+    return ImmutableList.of(new MapBasedInputRow(dateTime, dimensions, genericRecordAsMap));
   }
 
   @JsonProperty

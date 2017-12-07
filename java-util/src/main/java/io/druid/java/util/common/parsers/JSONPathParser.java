@@ -67,7 +67,7 @@ public class JSONPathParser implements Parser<String, Object>
    * @return A map of field names and values
    */
   @Override
-  public Map<String, Object> parse(String input)
+  public Map<String, Object> parseToMap(String input)
   {
     try {
       JsonNode document = mapper.readValue(input, JsonNode.class);

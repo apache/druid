@@ -74,7 +74,7 @@ public class JavaScriptParser implements Parser<String, Object>
   }
 
   @Override
-  public Map<String, Object> parse(String input)
+  public Map<String, Object> parseToMap(String input)
   {
     try {
       final Object compiled = fn.apply(input);

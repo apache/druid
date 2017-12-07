@@ -199,10 +199,11 @@ public class AppenderatorImpl implements Appenderator
   }
 
   @Override
-  public int add(
+  public AppenderatorAddResult add(
       final SegmentIdentifier identifier,
       final InputRow row,
-      final Supplier<Committer> committerSupplier
+      final Supplier<Committer> committerSupplier,
+      final boolean allowIncrementalPersists
   ) throws IndexSizeExceededException, SegmentNotWritableException
   {
     if (!identifier.getDataSource().equals(schema.getDataSource())) {
@@ -219,7 +220,7 @@ public class AppenderatorImpl implements Appenderator
     final int sinkRowsInMemoryAfterAdd;
 
     try {
-      sinkRowsInMemoryAfterAdd = sink.add(row);
+      sinkRowsInMemoryAfterAdd = sink.add(row, !allowIncrementalPersists);
     }
     catch (IndexSizeExceededException e) {
       // Uh oh, we can't do anything about this! We can't persist (commit metadata would be out of sync) and we
@@ -237,14 +238,19 @@ public class AppenderatorImpl implements Appenderator
     rowsCurrentlyInMemory.addAndGet(numAddedRows);
     totalRows.addAndGet(numAddedRows);
 
+    boolean isPersistRequired = false;
     if (!sink.canAppendRow()
         || System.currentTimeMillis() > nextFlush
         || rowsCurrentlyInMemory.get() >= tuningConfig.getMaxRowsInMemory()) {
-      // persistAll clears rowsCurrentlyInMemory, no need to update it.
-      persistAll(committerSupplier.get());
+      if (allowIncrementalPersists) {
+        // persistAll clears rowsCurrentlyInMemory, no need to update it.
+        persistAll(committerSupplier.get());
+      } else {
+        isPersistRequired = true;
+      }
     }
 
-    return sink.getNumRows();
+    return new AppenderatorAddResult(identifier, sink.getNumRows(), isPersistRequired);
   }
 
   @Override
@@ -614,7 +620,8 @@ public class AppenderatorImpl implements Appenderator
             schema.getGranularitySpec().isRollup(),
             schema.getAggregators(),
             mergedTarget,
-            tuningConfig.getIndexSpec()
+            tuningConfig.getIndexSpec(),
+            tuningConfig.getSegmentWriteOutMediumFactory()
         );
       }
       catch (Throwable t) {
@@ -1145,7 +1152,8 @@ public class AppenderatorImpl implements Appenderator
             indexToPersist.getIndex(),
             identifier.getInterval(),
             new File(persistDir, String.valueOf(indexToPersist.getCount())),
-            indexSpec
+            indexSpec,
+            tuningConfig.getSegmentWriteOutMediumFactory()
         );
 
         indexToPersist.swapSegment(

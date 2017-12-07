@@ -28,9 +28,6 @@ package io.druid.segment;
  */
 public interface LongColumnSelector extends ColumnValueSelector<Long>
 {
-  @Override
-  long getLong();
-
   /**
    * @deprecated This method is marked as deprecated in LongColumnSelector to minimize the probability of accidential
    * calling. "Polymorphism" of LongColumnSelector should be used only when operating on {@link ColumnValueSelector}

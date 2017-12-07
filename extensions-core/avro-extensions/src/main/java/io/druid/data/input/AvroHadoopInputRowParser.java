@@ -26,6 +26,8 @@ import io.druid.data.input.impl.ParseSpec;
 import io.druid.java.util.common.parsers.ObjectFlattener;
 import org.apache.avro.generic.GenericRecord;
 
+import java.util.List;
+
 public class AvroHadoopInputRowParser implements InputRowParser<GenericRecord>
 {
   private final ParseSpec parseSpec;
@@ -44,7 +46,7 @@ public class AvroHadoopInputRowParser implements InputRowParser<GenericRecord>
   }
 
   @Override
-  public InputRow parse(GenericRecord record)
+  public List<InputRow> parseBatch(GenericRecord record)
   {
     return AvroParsers.parseGenericRecord(record, parseSpec, avroFlattener);
   }

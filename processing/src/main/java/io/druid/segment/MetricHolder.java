@@ -40,7 +40,6 @@ public class MetricHolder
   private static final byte[] version = new byte[]{0x0};
   private static final SerializerUtils serializerUtils = new SerializerUtils();
 
-
   public static MetricHolder fromByteBuffer(ByteBuffer buf, SmooshedFileMapper mapper) throws IOException
   {
     return fromByteBuffer(buf, null, mapper);
@@ -60,7 +59,7 @@ public class MetricHolder
 
     switch (holder.type) {
       case FLOAT:
-        holder.floatType = CompressedFloatsIndexedSupplier.fromByteBuffer(buf, ByteOrder.nativeOrder(), mapper);
+        holder.floatType = CompressedFloatsIndexedSupplier.fromByteBuffer(buf, ByteOrder.nativeOrder());
         break;
       case COMPLEX:
         if (strategy != null) {

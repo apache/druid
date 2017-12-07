@@ -54,6 +54,16 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
   Object startJob();
 
   /**
+   * Same as {@link #add(SegmentIdentifier, InputRow, Supplier, boolean)}, with allowIncrementalPersists set to true
+   */
+  default AppenderatorAddResult add(SegmentIdentifier identifier, InputRow row, Supplier<Committer> committerSupplier)
+      throws IndexSizeExceededException, SegmentNotWritableException
+  {
+    return add(identifier, row, committerSupplier, true);
+  }
+
+
+  /**
    * Add a row. Must not be called concurrently from multiple threads.
    * <p>
    * If no pending segment exists for the provided identifier, a new one will be created.
@@ -65,16 +75,28 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * The add, clear, persist, persistAll, and push methods should all be called from the same thread to keep the
    * metadata committed by Committer in sync.
    *
-   * @param identifier        the segment into which this row should be added
-   * @param row               the row to add
-   * @param committerSupplier supplier of a committer associated with all data that has been added, including this row
+   * @param identifier               the segment into which this row should be added
+   * @param row                      the row to add
+   * @param committerSupplier        supplier of a committer associated with all data that has been added, including this row
+   *                                 if {@param allowIncrementalPersists} is set to false then this will not be used as no
+   *                                 persist will be done automatically
+   * @param allowIncrementalPersists indicate whether automatic persist should be performed or not if required.
+   *                                 If this flag is set to false then the return value should have
+   *                                 {@link AppenderatorAddResult#isPersistRequired} set to true if persist was skipped
+   *                                 because of this flag and it is assumed that the responsibility of calling
+   *                                 {@link #persistAll(Committer)} is on the caller.
    *
-   * @return positive number indicating how many summarized rows exist in this segment so far
+   * @return {@link AppenderatorAddResult}
    *
    * @throws IndexSizeExceededException  if this row cannot be added because it is too large
    * @throws SegmentNotWritableException if the requested segment is known, but has been closed
    */
-  int add(SegmentIdentifier identifier, InputRow row, Supplier<Committer> committerSupplier)
+  AppenderatorAddResult add(
+      SegmentIdentifier identifier,
+      InputRow row,
+      Supplier<Committer> committerSupplier,
+      boolean allowIncrementalPersists
+  )
       throws IndexSizeExceededException, SegmentNotWritableException;
 
   /**
@@ -192,4 +214,39 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * in background thread then it does not cause any problems.
    */
   void closeNow();
+
+  /**
+   * Result of {@link Appenderator#add(SegmentIdentifier, InputRow, Supplier, boolean)} containing following information
+   * - SegmentIdentifier - identifier of segment to which rows are being added
+   * - int - positive number indicating how many summarized rows exist in this segment so far and
+   * - boolean - true if {@param allowIncrementalPersists} is set to false and persist is required; false otherwise
+   */
+  class AppenderatorAddResult
+  {
+    private final SegmentIdentifier segmentIdentifier;
+    private final int numRowsInSegment;
+    private final boolean isPersistRequired;
+
+    AppenderatorAddResult(SegmentIdentifier identifier, int numRowsInSegment, boolean isPersistRequired)
+    {
+      this.segmentIdentifier = identifier;
+      this.numRowsInSegment = numRowsInSegment;
+      this.isPersistRequired = isPersistRequired;
+    }
+
+    SegmentIdentifier getSegmentIdentifier()
+    {
+      return segmentIdentifier;
+    }
+
+    int getNumRowsInSegment()
+    {
+      return numRowsInSegment;
+    }
+
+    boolean isPersistRequired()
+    {
+      return isPersistRequired;
+    }
+  }
 }

@@ -91,7 +91,7 @@ public class FlattenJSONBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public Map<String, Object> baseline(final Blackhole blackhole)
   {
-    Map<String, Object> parsed = flatParser.parse(flatInputs.get(flatCounter));
+    Map<String, Object> parsed = flatParser.parseToMap(flatInputs.get(flatCounter));
     for (String s : parsed.keySet()) {
       blackhole.consume(parsed.get(s));
     }
@@ -104,7 +104,7 @@ public class FlattenJSONBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public Map<String, Object> flatten(final Blackhole blackhole)
   {
-    Map<String, Object> parsed = nestedParser.parse(nestedInputs.get(nestedCounter));
+    Map<String, Object> parsed = nestedParser.parseToMap(nestedInputs.get(nestedCounter));
     for (String s : parsed.keySet()) {
       blackhole.consume(parsed.get(s));
     }
@@ -117,7 +117,7 @@ public class FlattenJSONBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public Map<String, Object> jqflatten(final Blackhole blackhole)
   {
-    Map<String, Object> parsed = jqParser.parse(jqInputs.get(jqCounter));
+    Map<String, Object> parsed = jqParser.parseToMap(jqInputs.get(jqCounter));
     for (String s : parsed.keySet()) {
       blackhole.consume(parsed.get(s));
     }
@@ -130,7 +130,7 @@ public class FlattenJSONBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public Map<String, Object> preflattenNestedParser(final Blackhole blackhole)
   {
-    Map<String, Object> parsed = fieldDiscoveryParser.parse(flatInputs.get(nestedCounter));
+    Map<String, Object> parsed = fieldDiscoveryParser.parseToMap(flatInputs.get(nestedCounter));
     for (String s : parsed.keySet()) {
       blackhole.consume(parsed.get(s));
     }
@@ -143,7 +143,7 @@ public class FlattenJSONBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public Map<String, Object> forcedRootPaths(final Blackhole blackhole)
   {
-    Map<String, Object> parsed = forcedPathParser.parse(flatInputs.get(nestedCounter));
+    Map<String, Object> parsed = forcedPathParser.parseToMap(flatInputs.get(nestedCounter));
     for (String s : parsed.keySet()) {
       blackhole.consume(parsed.get(s));
     }

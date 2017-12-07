@@ -304,12 +304,13 @@ public class AppenderatorDriverFailTest
     }
 
     @Override
-    public int add(
-        SegmentIdentifier identifier, InputRow row, Supplier<Committer> committerSupplier
+    public AppenderatorAddResult add(
+        SegmentIdentifier identifier, InputRow row, Supplier<Committer> committerSupplier, boolean allowIncrementalPersists
     ) throws IndexSizeExceededException, SegmentNotWritableException
     {
       rows.computeIfAbsent(identifier, k -> new ArrayList<>()).add(row);
-      return ++numRows;
+      numRows++;
+      return new AppenderatorAddResult(identifier, numRows, false);
     }
 
     @Override

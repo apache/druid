@@ -40,9 +40,9 @@ public class FlattenJSONBenchmarkUtilTest
     Parser nestedParser = eventGen.getNestedParser();
     Parser jqParser = eventGen.getJqParser();
 
-    Map<String, Object> event = flatParser.parse(newEvent);
-    Map<String, Object> event2 = nestedParser.parse(newEvent2);
-    Map<String, Object> event3 = jqParser.parse(newEvent2);  // reuse the same event as "nested"
+    Map<String, Object> event = flatParser.parseToMap(newEvent);
+    Map<String, Object> event2 = nestedParser.parseToMap(newEvent2);
+    Map<String, Object> event3 = jqParser.parseToMap(newEvent2);  // reuse the same event as "nested"
 
     checkEvent1(event);
     checkEvent2(event2);
