@@ -27,12 +27,12 @@ import io.druid.java.util.common.IAE;
 import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.GenericIndexed;
-import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.ObjectStrategy;
 import io.druid.segment.serde.ComplexColumnPartSupplier;
 import io.druid.segment.serde.ComplexMetricExtractor;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.LargeColumnSupportedComplexColumnSerializer;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.nio.ByteBuffer;
 
@@ -109,9 +109,9 @@ public class DoublesSketchComplexMetricSerde extends ComplexMetricSerde
 
   // support large columns
   @Override
-  public GenericColumnSerializer getSerializer(IOPeon peon, String column)
+  public GenericColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
   {
-    return LargeColumnSupportedComplexColumnSerializer.create(peon, column, this.getObjectStrategy());
+    return LargeColumnSupportedComplexColumnSerializer.create(segmentWriteOutMedium, column, this.getObjectStrategy());
   }
 
 }

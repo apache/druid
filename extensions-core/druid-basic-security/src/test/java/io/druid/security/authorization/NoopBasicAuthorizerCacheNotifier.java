@@ -17,23 +17,15 @@
  * under the License.
  */
 
-package io.druid.security.basic;
+package io.druid.security.authorization;
 
-import io.druid.java.util.common.StringUtils;
+import io.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheNotifier;
 
-/**
- * Throw this for invalid resource accesses in the druid-basic-security extension that are likely a result of user error
- * (e.g., entry not found, duplicate entries).
- */
-public class BasicSecurityDBResourceException extends IllegalArgumentException
+public class NoopBasicAuthorizerCacheNotifier implements BasicAuthorizerCacheNotifier
 {
-  public BasicSecurityDBResourceException(String formatText, Object... arguments)
+  @Override
+  public void addUpdate(String authorizerPrefix, byte[] userAndRoleMap)
   {
-    super(StringUtils.nonStrictFormat(formatText, arguments));
-  }
 
-  public BasicSecurityDBResourceException(Throwable t, String formatText, Object... arguments)
-  {
-    super(StringUtils.nonStrictFormat(formatText, arguments), t);
   }
 }

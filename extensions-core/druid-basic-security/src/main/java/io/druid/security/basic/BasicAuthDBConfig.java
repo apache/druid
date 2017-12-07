@@ -27,18 +27,21 @@ public class BasicAuthDBConfig
   private final String initialInternalClientPassword;
   private final boolean enableCacheNotifications;
   private final long cacheNotificationTimeout;
+  private final int iterations;
 
   public BasicAuthDBConfig(
       final String initialAdminPassword,
       final String initialInternalClientPassword,
       final Boolean enableCacheNotifications,
-      final Long cacheNotificationTimeout
+      final Long cacheNotificationTimeout,
+      final int iterations
   )
   {
     this.initialAdminPassword = initialAdminPassword;
     this.initialInternalClientPassword = initialInternalClientPassword;
     this.enableCacheNotifications = enableCacheNotifications;
     this.cacheNotificationTimeout = cacheNotificationTimeout;
+    this.iterations = iterations;
   }
 
   public String getInitialAdminPassword()
@@ -59,5 +62,10 @@ public class BasicAuthDBConfig
   public long getCacheNotificationTimeout()
   {
     return cacheNotificationTimeout;
+  }
+
+  public int getIterations()
+  {
+    return iterations;
   }
 }

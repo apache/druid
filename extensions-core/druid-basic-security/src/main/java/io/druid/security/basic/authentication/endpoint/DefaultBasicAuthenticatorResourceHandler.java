@@ -26,10 +26,12 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import io.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheManager;
+import io.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
 
 import javax.ws.rs.core.Response;
+import java.util.HashMap;
 import java.util.Map;
 
 public class DefaultBasicAuthenticatorResourceHandler implements BasicAuthenticatorResourceHandler
@@ -86,13 +88,23 @@ public class DefaultBasicAuthenticatorResourceHandler implements BasicAuthentica
   }
 
   @Override
-  public Response updateUserCredentials(String authenticatorName, String userName, String password)
+  public Response updateUserCredentials(
+      String authenticatorName,
+      String userName,
+      BasicAuthenticatorCredentialUpdate update
+  )
   {
     return NOT_FOUND_RESPONSE;
   }
 
   @Override
   public Response getCachedSerializedUserMap(String authenticatorName)
+  {
+    return NOT_FOUND_RESPONSE;
+  }
+
+  @Override
+  public Response refreshAll()
   {
     return NOT_FOUND_RESPONSE;
   }
@@ -114,5 +126,17 @@ public class DefaultBasicAuthenticatorResourceHandler implements BasicAuthentica
 
     cacheManager.handleAuthenticatorUpdate(authenticatorName, serializedUserMap);
     return Response.ok().build();
+  }
+
+  @Override
+  public Response getLoadStatus()
+  {
+    Map<String, Boolean> loadStatus = new HashMap<>();
+    authenticatorMap.forEach(
+        (authenticatorName, authenticator) -> {
+          loadStatus.put(authenticatorName, cacheManager.getUserMap(authenticatorName) != null);
+        }
+    );
+    return Response.ok(loadStatus).build();
   }
 }

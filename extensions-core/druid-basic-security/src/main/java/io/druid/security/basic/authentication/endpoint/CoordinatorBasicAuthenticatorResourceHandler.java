@@ -19,27 +19,30 @@
 
 package io.druid.security.basic.authentication.endpoint;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.logger.Logger;
+import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.BasicSecurityDBResourceException;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import io.druid.security.basic.authentication.db.updater.BasicAuthenticatorMetadataStorageUpdater;
+import io.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import io.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
 
 import javax.ws.rs.core.Response;
+import java.util.HashMap;
 import java.util.Map;
 
 public class CoordinatorBasicAuthenticatorResourceHandler implements BasicAuthenticatorResourceHandler
 {
-  private static final Logger log = new Logger(CoordinatorBasicAuthenticatorResourceHandler.class);
-
   private final BasicAuthenticatorMetadataStorageUpdater storageUpdater;
   private final Map<String, BasicHTTPAuthenticator> authenticatorMap;
+  private final ObjectMapper objectMapper;
 
   @Inject
   public CoordinatorBasicAuthenticatorResourceHandler(
@@ -48,6 +51,7 @@ public class CoordinatorBasicAuthenticatorResourceHandler implements BasicAuthen
   )
   {
     this.storageUpdater = storageUpdater;
+    this.objectMapper = new ObjectMapper(new SmileFactory());
 
     this.authenticatorMap = Maps.newHashMap();
     for (Map.Entry<String, Authenticator> authenticatorEntry : authenticatorMapper.getAuthenticatorMap().entrySet()) {
@@ -72,7 +76,8 @@ public class CoordinatorBasicAuthenticatorResourceHandler implements BasicAuthen
       return makeResponseForAuthenticatorNotFound(authenticatorName);
     }
 
-    Map<String, BasicAuthenticatorUser> userMap = storageUpdater.deserializeUserMap(
+    Map<String, BasicAuthenticatorUser> userMap = BasicAuthUtils.deserializeAuthenticatorUserMap(
+        objectMapper,
         storageUpdater.getCurrentUserMapBytes(authenticatorName)
     );
 
@@ -87,7 +92,8 @@ public class CoordinatorBasicAuthenticatorResourceHandler implements BasicAuthen
       return makeResponseForAuthenticatorNotFound(authenticatorName);
     }
 
-    Map<String, BasicAuthenticatorUser> userMap = storageUpdater.deserializeUserMap(
+    Map<String, BasicAuthenticatorUser> userMap = BasicAuthUtils.deserializeAuthenticatorUserMap(
+        objectMapper,
         storageUpdater.getCurrentUserMapBytes(authenticatorName)
     );
 
@@ -138,7 +144,7 @@ public class CoordinatorBasicAuthenticatorResourceHandler implements BasicAuthen
   }
 
   @Override
-  public Response updateUserCredentials(String authenticatorName, String userName, String password)
+  public Response updateUserCredentials(String authenticatorName, String userName, BasicAuthenticatorCredentialUpdate update)
   {
     final BasicHTTPAuthenticator authenticator = authenticatorMap.get(authenticatorName);
     if (authenticator == null) {
@@ -146,7 +152,7 @@ public class CoordinatorBasicAuthenticatorResourceHandler implements BasicAuthen
     }
 
     try {
-      storageUpdater.setUserCredentials(authenticatorName, userName, password.toCharArray());
+      storageUpdater.setUserCredentials(authenticatorName, userName, update);
       return Response.ok().build();
     }
     catch (BasicSecurityDBResourceException cfe) {
@@ -166,9 +172,28 @@ public class CoordinatorBasicAuthenticatorResourceHandler implements BasicAuthen
   }
 
   @Override
+  public Response refreshAll()
+  {
+    storageUpdater.refreshAllNotification();
+    return Response.ok().build();
+  }
+
+  @Override
   public Response authenticatorUpdateListener(String authenticatorName, byte[] serializedUserMap)
   {
     return Response.status(Response.Status.NOT_FOUND).build();
+  }
+
+  @Override
+  public Response getLoadStatus()
+  {
+    Map<String, Boolean> loadStatus = new HashMap<>();
+    authenticatorMap.forEach(
+        (authenticatorName, authenticator) -> {
+          loadStatus.put(authenticatorName, storageUpdater.getCachedUserMap(authenticatorName) != null);
+        }
+    );
+    return Response.ok(loadStatus).build();
   }
 
   private static Response makeResponseForAuthenticatorNotFound(String authenticatorName)

@@ -57,10 +57,46 @@ public class BasicAuthorizerResource
   /**
    * @param req HTTP request
    *
+   * @return Load status of authenticator DB caches
+   */
+  @GET
+  @Path("/loadStatus")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response getLoadStatus(
+      @Context HttpServletRequest req
+  )
+  {
+    return resourceHandler.getLoadStatus();
+  }
+
+  /**
+   * @param req HTTP request
+   *
+   * Sends an "update" notification to all services with the current user/role database state,
+   * causing them to refresh their DB cache state.
+   */
+  @GET
+  @Path("/refreshAll")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response refreshAll(
+      @Context HttpServletRequest req
+  )
+  {
+    return resourceHandler.refreshAll();
+  }
+
+
+  /**
+   * @param req HTTP request
+   *
    * @return List of all users
    */
   @GET
-  @Path("/{authorizerName}/users")
+  @Path("/db/{authorizerName}/users")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
@@ -79,7 +115,7 @@ public class BasicAuthorizerResource
    * @return Name, roles, and permissions of the user with userName, 400 error response if user doesn't exist
    */
   @GET
-  @Path("/{authorizerName}/users/{userName}")
+  @Path("/db/{authorizerName}/users/{userName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
@@ -102,7 +138,7 @@ public class BasicAuthorizerResource
    * @return OK response, or 400 error response if user already exists
    */
   @POST
-  @Path("/{authorizerName}/users/{userName}")
+  @Path("/db/{authorizerName}/users/{userName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
@@ -124,7 +160,7 @@ public class BasicAuthorizerResource
    * @return OK response, or 400 error response if user doesn't exist
    */
   @DELETE
-  @Path("/{authorizerName}/users/{userName}")
+  @Path("/db/{authorizerName}/users/{userName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
@@ -143,7 +179,7 @@ public class BasicAuthorizerResource
    * @return List of all roles
    */
   @GET
-  @Path("/{authorizerName}/roles")
+  @Path("/db/{authorizerName}/roles")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
@@ -164,7 +200,7 @@ public class BasicAuthorizerResource
    * @return Role name, users with role, and permissions of role. 400 error if role doesn't exist.
    */
   @GET
-  @Path("/{authorizerName}/roles/{roleName}")
+  @Path("/db/{authorizerName}/roles/{roleName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
@@ -187,7 +223,7 @@ public class BasicAuthorizerResource
    * @return OK response, 400 error if role already exists
    */
   @POST
-  @Path("/{authorizerName}/roles/{roleName}")
+  @Path("/db/{authorizerName}/roles/{roleName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
@@ -209,7 +245,7 @@ public class BasicAuthorizerResource
    * @return OK response, 400 error if role doesn't exist.
    */
   @DELETE
-  @Path("/{authorizerName}/roles/{roleName}")
+  @Path("/db/{authorizerName}/roles/{roleName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
@@ -232,7 +268,7 @@ public class BasicAuthorizerResource
    * @return OK response. 400 error if user/role don't exist, or if user already has the role
    */
   @POST
-  @Path("/{authorizerName}/users/{userName}/roles/{roleName}")
+  @Path("/db/{authorizerName}/users/{userName}/roles/{roleName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
@@ -256,7 +292,7 @@ public class BasicAuthorizerResource
    * @return OK response. 400 error if user/role don't exist, or if user does not have the role.
    */
   @DELETE
-  @Path("/{authorizerName}/users/{userName}/roles/{roleName}")
+  @Path("/db/{authorizerName}/users/{userName}/roles/{roleName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
@@ -280,7 +316,7 @@ public class BasicAuthorizerResource
    * @return OK response. 400 error if role doesn't exist.
    */
   @POST
-  @Path("/{authorizerName}/roles/{roleName}/permissions")
+  @Path("/db/{authorizerName}/roles/{roleName}/permissions")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
@@ -300,7 +336,7 @@ public class BasicAuthorizerResource
    * @return serialized user map
    */
   @GET
-  @Path("/{authorizerName}/cachedSerializedUserMap")
+  @Path("/db/{authorizerName}/cachedSerializedUserMap")
   @Produces(SmileMediaTypes.APPLICATION_JACKSON_SMILE)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)

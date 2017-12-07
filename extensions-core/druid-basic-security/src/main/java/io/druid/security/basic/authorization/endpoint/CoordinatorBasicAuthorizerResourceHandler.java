@@ -26,6 +26,7 @@ import com.google.inject.Inject;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.BasicSecurityDBResourceException;
 import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
 import io.druid.security.basic.authorization.db.updater.BasicAuthorizerMetadataStorageUpdater;
@@ -39,6 +40,7 @@ import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.ResourceAction;
 
 import javax.ws.rs.core.Response;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -83,7 +85,8 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
       return makeResponseForAuthorizerNotFound(authorizerName);
     }
 
-    Map<String, BasicAuthorizerUser> userMap = storageUpdater.deserializeUserMap(
+    Map<String, BasicAuthorizerUser> userMap = BasicAuthUtils.deserializeAuthorizerUserMap(
+        objectMapper,
         storageUpdater.getCurrentUserMapBytes(authorizerName)
     );
     return Response.ok(userMap.keySet()).build();
@@ -146,7 +149,8 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
       return makeResponseForAuthorizerNotFound(authorizerName);
     }
 
-    Map<String, BasicAuthorizerRole> roleMap = storageUpdater.deserializeRoleMap(
+    Map<String, BasicAuthorizerRole> roleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
+        objectMapper,
         storageUpdater.getCurrentRoleMapBytes(authorizerName)
     );
 
@@ -272,9 +276,28 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
   }
 
   @Override
+  public Response refreshAll()
+  {
+    storageUpdater.refreshAllNotification();
+    return Response.ok().build();
+  }
+
+  @Override
   public Response authorizerUpdateListener(String authorizerName, byte[] serializedUserAndRoleMap)
   {
     return Response.status(Response.Status.NOT_FOUND).build();
+  }
+
+  @Override
+  public Response getLoadStatus()
+  {
+    Map<String, Boolean> loadStatus = new HashMap<>();
+    authorizerMap.forEach(
+        (authorizerName, authorizer) -> {
+          loadStatus.put(authorizerName, storageUpdater.getCachedUserMap(authorizerName) != null);
+        }
+    );
+    return Response.ok(loadStatus).build();
   }
 
   private static Response makeResponseForAuthorizerNotFound(String authorizerName)
@@ -298,7 +321,8 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
 
   private Response getUserSimple(String authorizerName, String userName)
   {
-    Map<String, BasicAuthorizerUser> userMap = storageUpdater.deserializeUserMap(
+    Map<String, BasicAuthorizerUser> userMap = BasicAuthUtils.deserializeAuthorizerUserMap(
+        objectMapper,
         storageUpdater.getCurrentUserMapBytes(authorizerName)
     );
 
@@ -316,11 +340,13 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
 
   private Response getUserFull(String authorizerName, String userName)
   {
-    Map<String, BasicAuthorizerUser> userMap = storageUpdater.deserializeUserMap(
+    Map<String, BasicAuthorizerUser> userMap = BasicAuthUtils.deserializeAuthorizerUserMap(
+        objectMapper,
         storageUpdater.getCurrentUserMapBytes(authorizerName)
     );
 
-    Map<String, BasicAuthorizerRole> roleMap = storageUpdater.deserializeRoleMap(
+    Map<String, BasicAuthorizerRole> roleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
+        objectMapper,
         storageUpdater.getCurrentRoleMapBytes(authorizerName)
     );
 
@@ -350,7 +376,8 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
 
   private Response getRoleSimple(String authorizerName, String roleName)
   {
-    Map<String, BasicAuthorizerRole> roleMap = storageUpdater.deserializeRoleMap(
+    Map<String, BasicAuthorizerRole> roleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
+        objectMapper,
         storageUpdater.getCurrentRoleMapBytes(authorizerName)
     );
 
@@ -368,11 +395,13 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
 
   private Response getRoleFull(String authorizerName, String roleName)
   {
-    Map<String, BasicAuthorizerRole> roleMap = storageUpdater.deserializeRoleMap(
+    Map<String, BasicAuthorizerRole> roleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
+        objectMapper,
         storageUpdater.getCurrentRoleMapBytes(authorizerName)
     );
 
-    Map<String, BasicAuthorizerUser> userMap = storageUpdater.deserializeUserMap(
+    Map<String, BasicAuthorizerUser> userMap = BasicAuthUtils.deserializeAuthorizerUserMap(
+        objectMapper,
         storageUpdater.getCurrentUserMapBytes(authorizerName)
     );
 

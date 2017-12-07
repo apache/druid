@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.guice.LazySingleton;
 import io.druid.security.basic.BasicSecurityResourceFilter;
+import io.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -54,10 +55,45 @@ public class BasicAuthenticatorResource
   /**
    * @param req HTTP request
    *
+   * @return Load status of authenticator DB caches
+   */
+  @GET
+  @Path("/loadStatus")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response getLoadStatus(
+      @Context HttpServletRequest req
+  )
+  {
+    return handler.getLoadStatus();
+  }
+
+  /**
+   * @param req HTTP request
+   *
+   * Sends an "update" notification to all services with the current user database state,
+   * causing them to refresh their DB cache state.
+   */
+  @GET
+  @Path("/refreshAll")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response refreshAll(
+      @Context HttpServletRequest req
+  )
+  {
+    return handler.refreshAll();
+  }
+
+  /**
+   * @param req HTTP request
+   *
    * @return List of all users
    */
   @GET
-  @Path("/{authenticatorName}/users")
+  @Path("/db/{authenticatorName}/users")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
@@ -76,7 +112,7 @@ public class BasicAuthenticatorResource
    * @return Name and credentials of the user with userName, 400 error response if user doesn't exist
    */
   @GET
-  @Path("/{authenticatorName}/users/{userName}")
+  @Path("/db/{authenticatorName}/users/{userName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
@@ -98,7 +134,7 @@ public class BasicAuthenticatorResource
    * @return OK response, or 400 error response if user already exists
    */
   @POST
-  @Path("/{authenticatorName}/users/{userName}")
+  @Path("/db/{authenticatorName}/users/{userName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
@@ -120,7 +156,7 @@ public class BasicAuthenticatorResource
    * @return OK response, or 400 error response if user doesn't exist
    */
   @DELETE
-  @Path("/{authenticatorName}/users/{userName}")
+  @Path("/db/{authenticatorName}/users/{userName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
@@ -143,7 +179,7 @@ public class BasicAuthenticatorResource
    * @return OK response, 400 error if user doesn't exist
    */
   @POST
-  @Path("/{authenticatorName}/users/{userName}/credentials")
+  @Path("/db/{authenticatorName}/users/{userName}/credentials")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
@@ -151,10 +187,10 @@ public class BasicAuthenticatorResource
       @Context HttpServletRequest req,
       @PathParam("authenticatorName") final String authenticatorName,
       @PathParam("userName") String userName,
-      String password
+      BasicAuthenticatorCredentialUpdate update
   )
   {
-    return handler.updateUserCredentials(authenticatorName, userName, password);
+    return handler.updateUserCredentials(authenticatorName, userName, update);
   }
 
   /**
@@ -163,7 +199,7 @@ public class BasicAuthenticatorResource
    * @return serialized user map
    */
   @GET
-  @Path("/{authenticatorName}/cachedSerializedUserMap")
+  @Path("/db/{authenticatorName}/cachedSerializedUserMap")
   @Produces(SmileMediaTypes.APPLICATION_JACKSON_SMILE)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)

@@ -19,7 +19,16 @@
 
 package io.druid.security.basic.authorization.db.cache;
 
+/**
+ * Sends a notification to druid services, containing updated authorizer user/role map state.
+ */
 public interface BasicAuthorizerCacheNotifier
 {
+  /**
+   * Send the user map state contained in updatedUserMap to all non-coordinator Druid services
+   *
+   * @param authorizerPrefix Name of authorizer being updated
+   * @param userAndRoleMap User/role map state
+   */
   void addUpdate(String authorizerPrefix, byte[] userAndRoleMap);
 }

@@ -26,6 +26,7 @@ public class BasicAuthCommonCacheConfig
 {
   private static final long DEFAULT_POLLING_PERIOD = 60000;
   private static final long DEFAULT_MAX_RANDOM_DELAY = DEFAULT_POLLING_PERIOD / 10;
+  private static final int DEFAULT_MAX_SYNC_RETRIES = 10;
 
   @JsonProperty
   private final long pollingPeriod;
@@ -33,14 +34,24 @@ public class BasicAuthCommonCacheConfig
   @JsonProperty
   private final long maxRandomDelay;
 
+  @JsonProperty
+  private final String cacheDirectory;
+
+  @JsonProperty
+  private final int maxSyncRetries;
+
   @JsonCreator
   public BasicAuthCommonCacheConfig(
       @JsonProperty("pollingPeriod") Long pollingPeriod,
-      @JsonProperty("maxRandomDelay") Long maxRandomDelay
+      @JsonProperty("maxRandomDelay") Long maxRandomDelay,
+      @JsonProperty("cacheDirectory") String cacheDirectory,
+      @JsonProperty("maxSyncRetries") Integer maxSyncRetries
   )
   {
     this.pollingPeriod = pollingPeriod == null ? DEFAULT_POLLING_PERIOD : pollingPeriod;
     this.maxRandomDelay = maxRandomDelay == null ? DEFAULT_MAX_RANDOM_DELAY : maxRandomDelay;
+    this.cacheDirectory = cacheDirectory;
+    this.maxSyncRetries = maxSyncRetries == null ? DEFAULT_MAX_SYNC_RETRIES : maxSyncRetries;
   }
 
   @JsonProperty
@@ -53,5 +64,17 @@ public class BasicAuthCommonCacheConfig
   public long getMaxRandomDelay()
   {
     return maxRandomDelay;
+  }
+
+  @JsonProperty
+  public String getCacheDirectory()
+  {
+    return cacheDirectory;
+  }
+
+  @JsonProperty
+  public int getMaxSyncRetries()
+  {
+    return maxSyncRetries;
   }
 }

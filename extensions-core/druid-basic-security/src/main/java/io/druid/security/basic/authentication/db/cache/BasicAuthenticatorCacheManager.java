@@ -23,9 +23,25 @@ import io.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 
 import java.util.Map;
 
+/**
+ * This class is reponsible for maintaining a cache of the authenticator database state. The BasicHTTPAuthenticator
+ * uses an injected BasicAuthenticatorCacheManager to make its authentication decisions.
+ */
 public interface BasicAuthenticatorCacheManager
 {
+  /**
+   * Update this cache manager's local state with fresh information pushed by the coordinator.
+   *
+   * @param authenticatorPrefix The name of the authenticator this update applies to.
+   * @param serializedUserMap The updated, serialized user map
+   */
   void handleAuthenticatorUpdate(String authenticatorPrefix, byte[] serializedUserMap);
 
+  /**
+   * Return the cache manager's local view of the user map for the authenticator named `authenticatorPrefix`.
+   *
+   * @param authenticatorPrefix The name of the authenticator
+   * @return User map
+   */
   Map<String, BasicAuthenticatorUser> getUserMap(String authenticatorPrefix);
 }

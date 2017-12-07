@@ -21,6 +21,7 @@ package io.druid.security.basic.authentication.db.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.io.Files;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.metamx.emitter.EmittingLogger;
@@ -36,18 +37,20 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.security.basic.BasicAuthCommonCacheConfig;
+import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import io.druid.security.basic.authentication.BytesFullResponseHandler;
 import io.druid.security.basic.authentication.BytesFullResponseHolder;
-import io.druid.security.basic.BasicAuthCommonCacheConfig;
-import io.druid.security.basic.authentication.db.updater.CoordinatorBasicAuthenticatorMetadataStorageUpdater;
 import io.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
 
-import java.io.IOException;
+import javax.annotation.Nullable;
+import java.io.File;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -56,10 +59,13 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Cache manager for non-coordinator services that polls the coordinator for authentication database state.
+ */
 @ManageLifecycle
-public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticatorCacheManager
+public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAuthenticatorCacheManager
 {
-  private static final EmittingLogger LOG = new EmittingLogger(DefaultBasicAuthenticatorCacheManager.class);
+  private static final EmittingLogger LOG = new EmittingLogger(CoordinatorPollingBasicAuthenticatorCacheManager.class);
 
   private final ConcurrentHashMap<String, Map<String, BasicAuthenticatorUser>> cachedUserMaps;
   private final Set<String> authenticatorPrefixes;
@@ -68,17 +74,17 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
   private final LifecycleLock lifecycleLock = new LifecycleLock();
   private final DruidLeaderClient druidLeaderClient;
   private final BasicAuthCommonCacheConfig commonCacheConfig;
-
-  private volatile ScheduledExecutorService exec;
+  private final ScheduledExecutorService exec;
 
   @Inject
-  public DefaultBasicAuthenticatorCacheManager(
+  public CoordinatorPollingBasicAuthenticatorCacheManager(
       Injector injector,
       BasicAuthCommonCacheConfig commonCacheConfig,
       @Smile ObjectMapper objectMapper,
       @Coordinator DruidLeaderClient druidLeaderClient
   )
   {
+    this.exec = Execs.scheduledSingleThreaded("BasicAuthenticatorCacheManager-Exec--%d");
     this.injector = injector;
     this.commonCacheConfig = commonCacheConfig;
     this.objectMapper = objectMapper;
@@ -99,14 +105,16 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
     try {
       initUserMaps();
 
-      this.exec = Execs.scheduledSingleThreaded("BasicAuthenticatorCacheManager-Exec--%d");
-
       ScheduledExecutors.scheduleWithFixedDelay(
           exec,
           new Duration(commonCacheConfig.getPollingPeriod()),
           new Duration(commonCacheConfig.getPollingPeriod()),
           () -> {
             try {
+              long randomDelay = ThreadLocalRandom.current().nextLong(0, commonCacheConfig.getMaxRandomDelay());
+              LOG.debug("Inserting random polling delay of [%s] ms", randomDelay);
+              Thread.sleep(randomDelay);
+
               LOG.debug("Scheduled cache poll is running");
               for (String authenticatorPrefix : authenticatorPrefixes) {
                 Map<String, BasicAuthenticatorUser> userMap = fetchUserMapFromCoordinator(authenticatorPrefix, false);
@@ -115,10 +123,6 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
                 }
               }
               LOG.debug("Scheduled cache poll is done");
-
-              long randomDelay = ThreadLocalRandom.current().nextLong(0, commonCacheConfig.getMaxRandomDelay());
-              LOG.debug("Inserting random polling delay of [%s] ms", randomDelay);
-              Thread.sleep(randomDelay);
             }
             catch (Throwable t) {
               LOG.makeAlert(t, "Error occured while polling for cachedUserMaps.").emit();
@@ -134,6 +138,18 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
     }
   }
 
+  @LifecycleStop
+  public void stop()
+  {
+    if (!lifecycleLock.canStop()) {
+      throw new ISE("can't stop.");
+    }
+
+    LOG.info("DefaultBasicAuthenticatorCacheManager is stopping.");
+    exec.shutdown();
+    LOG.info("DefaultBasicAuthenticatorCacheManager is stopped.");
+  }
+
   @Override
   public void handleAuthenticatorUpdate(String authenticatorPrefix, byte[] serializedUserMap)
   {
@@ -144,12 +160,16 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
           authenticatorPrefix,
           objectMapper.readValue(
               serializedUserMap,
-              CoordinatorBasicAuthenticatorMetadataStorageUpdater.USER_MAP_TYPE_REFERENCE
+              BasicAuthUtils.AUTHENTICATOR_USER_MAP_TYPE_REFERENCE
           )
       );
+
+      if (commonCacheConfig.getCacheDirectory() != null) {
+        writeUserMapToDisk(authenticatorPrefix, serializedUserMap);
+      }
     }
-    catch (IOException ioe) {
-      LOG.makeAlert("WTF? Could not deserialize user map received from coordinator.").emit();
+    catch (Exception e) {
+      LOG.makeAlert(e, "WTF? Could not deserialize user map received from coordinator.").emit();
     }
   }
 
@@ -161,7 +181,8 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
     return cachedUserMaps.get(authenticatorPrefix);
   }
 
-  private Map<String, BasicAuthenticatorUser> fetchUserMapFromCoordinator(String prefix, boolean throwOnFailure)
+  @Nullable
+  private Map<String, BasicAuthenticatorUser> fetchUserMapFromCoordinator(String prefix, boolean isInit)
   {
     try {
       return RetryUtils.retry(
@@ -169,24 +190,57 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
             return tryFetchUserMapFromCoordinator(prefix);
           },
           e -> true,
-          10
+          commonCacheConfig.getMaxSyncRetries()
       );
     }
     catch (Exception e) {
       LOG.makeAlert(e, "Encountered exception while fetching user map for authenticator [%s]", prefix);
-      if (throwOnFailure) {
-        throw new RuntimeException(e);
-      } else {
-        return null;
+      if (isInit) {
+        if (commonCacheConfig.getCacheDirectory() != null) {
+          try {
+            LOG.info("Attempting to load user map snapshot from disk.");
+            return loadUserMapFromDisk(prefix);
+          }
+          catch (Exception e2) {
+            LOG.makeAlert(e2, "Encountered exception while loading user map snapshot for authenticator [%s]", prefix);
+          }
+        }
       }
+      return null;
     }
+  }
+
+  private String getUserMapFilename(String prefix)
+  {
+    return StringUtils.format("%s.authenticator.cache", prefix);
+  }
+
+  @Nullable
+  private Map<String, BasicAuthenticatorUser> loadUserMapFromDisk(String prefix) throws Exception
+  {
+    File userMapFile = new File(commonCacheConfig.getCacheDirectory(), getUserMapFilename(prefix));
+    if (!userMapFile.exists()) {
+      return null;
+    }
+    return objectMapper.readValue(
+        userMapFile,
+        BasicAuthUtils.AUTHENTICATOR_USER_MAP_TYPE_REFERENCE
+    );
+  }
+
+  private void writeUserMapToDisk(String prefix, byte[] userMapBytes) throws Exception
+  {
+    File cacheDir = new File(commonCacheConfig.getCacheDirectory());
+    cacheDir.mkdirs();
+    File userMapFile = new File(commonCacheConfig.getCacheDirectory(), getUserMapFilename(prefix));
+    Files.write(userMapBytes, userMapFile);
   }
 
   private Map<String, BasicAuthenticatorUser> tryFetchUserMapFromCoordinator(String prefix) throws Exception
   {
     Request req = druidLeaderClient.makeRequest(
         HttpMethod.GET,
-        StringUtils.format("/druid-ext/basic-security/authentication/%s/cachedSerializedUserMap", prefix)
+        StringUtils.format("/druid-ext/basic-security/authentication/db/%s/cachedSerializedUserMap", prefix)
     );
     BytesFullResponseHolder responseHolder = (BytesFullResponseHolder) druidLeaderClient.go(
         req,
@@ -195,8 +249,11 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
     byte[] userMapBytes = responseHolder.getBytes();
     Map<String, BasicAuthenticatorUser> userMap = objectMapper.readValue(
         userMapBytes,
-        CoordinatorBasicAuthenticatorMetadataStorageUpdater.USER_MAP_TYPE_REFERENCE
+        BasicAuthUtils.AUTHENTICATOR_USER_MAP_TYPE_REFERENCE
     );
+    if (userMap != null && commonCacheConfig.getCacheDirectory() != null) {
+      writeUserMapToDisk(prefix, userMapBytes);
+    }
     return userMap;
   }
 
@@ -212,10 +269,11 @@ public class DefaultBasicAuthenticatorCacheManager implements BasicAuthenticator
       Authenticator authenticator = entry.getValue();
       if (authenticator instanceof BasicHTTPAuthenticator) {
         String authenticatorName = entry.getKey();
-        BasicHTTPAuthenticator basicHTTPAuthenticator = (BasicHTTPAuthenticator) authenticator;
-        Map<String, BasicAuthenticatorUser> userMap = fetchUserMapFromCoordinator(authenticatorName, true);
-        cachedUserMaps.put(authenticatorName, userMap);
         authenticatorPrefixes.add(authenticatorName);
+        Map<String, BasicAuthenticatorUser> userMap = fetchUserMapFromCoordinator(authenticatorName, true);
+        if (userMap != null) {
+          cachedUserMaps.put(authenticatorName, userMap);
+        }
       }
     }
   }

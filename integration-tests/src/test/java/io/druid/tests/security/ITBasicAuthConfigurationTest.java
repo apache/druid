@@ -19,6 +19,7 @@
 
 package io.druid.tests.security;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
@@ -33,6 +34,7 @@ import io.druid.guice.annotations.Client;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import io.druid.server.security.Action;
 import io.druid.server.security.Resource;
 import io.druid.server.security.ResourceAction;
@@ -41,6 +43,7 @@ import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.guice.DruidTestModuleFactory;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.testng.Assert;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
@@ -48,11 +51,17 @@ import javax.ws.rs.core.MediaType;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITBasicAuthConfigurationTest
 {
   private static final Logger LOG = new Logger(ITBasicAuthConfigurationTest.class);
+
+  private static final TypeReference LOAD_STATUS_TYPE_REFERENCE =
+      new TypeReference<Map<String, Boolean>>()
+      {
+      };
 
   @Inject
   IntegrationTestingConfig config;
@@ -94,35 +103,35 @@ public class ITBasicAuthConfigurationTest
     makeRequest(
         adminClient,
         HttpMethod.POST,
-        config.getCoordinatorUrl() + "/druid-ext/basic-security/authentication/basic/users/druid",
+        config.getCoordinatorUrl() + "/druid-ext/basic-security/authentication/db/basic/users/druid",
         null
     );
 
     makeRequest(
         adminClient,
         HttpMethod.POST,
-        config.getCoordinatorUrl() + "/druid-ext/basic-security/authentication/basic/users/druid/credentials",
-        StringUtils.toUtf8("helloworld")
+        config.getCoordinatorUrl() + "/druid-ext/basic-security/authentication/db/basic/users/druid/credentials",
+        jsonMapper.writeValueAsBytes(new BasicAuthenticatorCredentialUpdate("helloworld", 5000))
     );
 
     makeRequest(
         adminClient,
         HttpMethod.POST,
-        config.getCoordinatorUrl() + "/druid-ext/basic-security/authorization/basic/users/druid",
+        config.getCoordinatorUrl() + "/druid-ext/basic-security/authorization/db/basic/users/druid",
         null
     );
 
     makeRequest(
         adminClient,
         HttpMethod.POST,
-        config.getCoordinatorUrl() + "/druid-ext/basic-security/authorization/basic/roles/druidrole",
+        config.getCoordinatorUrl() + "/druid-ext/basic-security/authorization/db/basic/roles/druidrole",
         null
     );
 
     makeRequest(
         adminClient,
         HttpMethod.POST,
-        config.getCoordinatorUrl() + "/druid-ext/basic-security/authorization/basic/users/druid/roles/druidrole",
+        config.getCoordinatorUrl() + "/druid-ext/basic-security/authorization/db/basic/users/druid/roles/druidrole",
         null
     );
 
@@ -136,12 +145,58 @@ public class ITBasicAuthConfigurationTest
     makeRequest(
         adminClient,
         HttpMethod.POST,
-        config.getCoordinatorUrl() + "/druid-ext/basic-security/authorization/basic/roles/druidrole/permissions",
+        config.getCoordinatorUrl() + "/druid-ext/basic-security/authorization/db/basic/roles/druidrole/permissions",
         permissionsBytes
     );
 
     // check that the new user works
     checkNodeAccess(newUserClient);
+
+    // check loadStatus
+    checkLoadStatus(adminClient);
+
+
+    // create 100 users
+    for (int i = 0; i < 100; i++) {
+      makeRequest(
+          adminClient,
+          HttpMethod.POST,
+          config.getCoordinatorUrl() + "/druid-ext/basic-security/authentication/db/basic/users/druid" + i,
+          null
+      );
+
+      makeRequest(
+          adminClient,
+          HttpMethod.POST,
+          config.getCoordinatorUrl() + "/druid-ext/basic-security/authorization/db/basic/users/druid" + i,
+          null
+      );
+
+      LOG.info("Finished creating user druid" + i);
+    }
+
+    // setup the last of 100 users and check that it works
+    makeRequest(
+        adminClient,
+        HttpMethod.POST,
+        config.getCoordinatorUrl() + "/druid-ext/basic-security/authentication/db/basic/users/druid99/credentials",
+        jsonMapper.writeValueAsBytes(new BasicAuthenticatorCredentialUpdate("helloworld", 5000))
+    );
+
+    makeRequest(
+        adminClient,
+        HttpMethod.POST,
+        config.getCoordinatorUrl() + "/druid-ext/basic-security/authorization/db/basic/users/druid99/roles/druidrole",
+        null
+    );
+
+    HttpClient newUser99Client = new CredentialedHttpClient(
+        new BasicCredentials("druid99", "helloworld"),
+        httpClient
+    );
+
+    LOG.info("Checking access for user druid99.");
+    checkNodeAccess(newUser99Client);
   }
 
   private void checkNodeAccess(HttpClient httpClient)
@@ -151,6 +206,42 @@ public class ITBasicAuthConfigurationTest
     makeRequest(httpClient, HttpMethod.GET, config.getBrokerUrl() + "/status", null);
     makeRequest(httpClient, HttpMethod.GET, config.getHistoricalUrl() + "/status", null);
     makeRequest(httpClient, HttpMethod.GET, config.getRouterUrl() + "/status", null);
+  }
+
+  private void checkLoadStatus(HttpClient httpClient) throws Exception
+  {
+    checkLoadStatusSingle(httpClient, config.getCoordinatorUrl());
+    checkLoadStatusSingle(httpClient, config.getIndexerUrl());
+    checkLoadStatusSingle(httpClient, config.getBrokerUrl());
+    checkLoadStatusSingle(httpClient, config.getHistoricalUrl());
+    checkLoadStatusSingle(httpClient, config.getRouterUrl());
+  }
+
+  private void checkLoadStatusSingle(HttpClient httpClient, String baseUrl) throws Exception
+  {
+    StatusResponseHolder holder = makeRequest(
+        httpClient,
+        HttpMethod.GET,
+        baseUrl + "/druid-ext/basic-security/authentication/loadStatus",
+        null
+    );
+    String content = holder.getContent();
+    Map<String, Boolean> loadStatus = jsonMapper.readValue(content, LOAD_STATUS_TYPE_REFERENCE);
+
+    Assert.assertNotNull(loadStatus.get("basic"));
+    Assert.assertTrue(loadStatus.get("basic"));
+
+    holder = makeRequest(
+        httpClient,
+        HttpMethod.GET,
+        baseUrl + "/druid-ext/basic-security/authorization/loadStatus",
+        null
+    );
+    content = holder.getContent();
+    loadStatus = jsonMapper.readValue(content, LOAD_STATUS_TYPE_REFERENCE);
+
+    Assert.assertNotNull(loadStatus.get("basic"));
+    Assert.assertTrue(loadStatus.get("basic"));
   }
 
   private StatusResponseHolder makeRequest(HttpClient httpClient, HttpMethod method, String url, byte[] content)

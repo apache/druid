@@ -19,10 +19,8 @@
 
 package io.druid.security.basic.authentication.db.updater;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.common.config.ConfigManager;
@@ -38,25 +36,28 @@ import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.metadata.MetadataCASUpdate;
 import io.druid.metadata.MetadataStorageConnector;
 import io.druid.metadata.MetadataStorageTablesConfig;
+import io.druid.security.basic.BasicAuthCommonCacheConfig;
+import io.druid.security.basic.BasicAuthDBConfig;
+import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.BasicSecurityDBResourceException;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
-import io.druid.security.basic.BasicAuthDBConfig;
-import io.druid.security.basic.BasicAuthCommonCacheConfig;
 import io.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheNotifier;
+import io.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import io.druid.security.basic.authentication.entity.BasicAuthenticatorCredentials;
 import io.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
+import io.druid.security.basic.authentication.entity.BasicAuthenticatorUserMapBundle;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
 import org.joda.time.Duration;
 
-import java.io.IOException;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 @ManageLifecycle
@@ -64,11 +65,8 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
 {
   private static final EmittingLogger LOG =
       new EmittingLogger(CoordinatorBasicAuthenticatorMetadataStorageUpdater.class);
-
-  public static final String USERS = "users";
-  public static final TypeReference USER_MAP_TYPE_REFERENCE = new TypeReference<Map<String, BasicAuthenticatorUser>>()
-  {
-  };
+  private static final String USERS = "users";
+  private static final long UPDATE_RETRY_DELAY = 1000;
 
   private final AuthenticatorMapper authenticatorMapper;
   private final MetadataStorageConnector connector;
@@ -78,12 +76,11 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
   private final BasicAuthenticatorCacheNotifier cacheNotifier;
   private final int numRetries = 5;
 
-  private final Map<String, Map<String, BasicAuthenticatorUser>> cachedUserMaps;
-  private final Map<String, byte[]> cachedSerializedUserMaps;
+  private final Map<String, BasicAuthenticatorUserMapBundle> cachedUserMaps;
   private final Set<String> authenticatorPrefixes;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
 
-  private volatile ScheduledExecutorService exec;
+  private final ScheduledExecutorService exec;
   private volatile boolean stopped = false;
 
   @Inject
@@ -97,14 +94,14 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
       ConfigManager configManager // ConfigManager creates the db table we need, set a dependency here
   )
   {
+    this.exec = Execs.scheduledSingleThreaded("CoordinatorBasicAuthenticatorMetadataStorageUpdater-Exec--%d");
     this.authenticatorMapper = authenticatorMapper;
     this.connector = connector;
     this.connectorConfig = connectorConfig;
     this.commonCacheConfig = commonCacheConfig;
     this.objectMapper = objectMapper;
     this.cacheNotifier = cacheNotifier;
-    this.cachedUserMaps = new HashMap<>();
-    this.cachedSerializedUserMaps = new HashMap<>();
+    this.cachedUserMaps = new ConcurrentHashMap<>();
     this.authenticatorPrefixes = new HashSet<>();
   }
 
@@ -129,27 +126,38 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
           BasicHTTPAuthenticator basicHTTPAuthenticator = (BasicHTTPAuthenticator) authenticator;
           BasicAuthDBConfig dbConfig = basicHTTPAuthenticator.getDbConfig();
           byte[] userMapBytes = getCurrentUserMapBytes(authenticatorName);
-          Map<String, BasicAuthenticatorUser> userMap = deserializeUserMap(userMapBytes);
-          cachedUserMaps.put(authenticatorName, userMap);
-          cachedSerializedUserMaps.put(authenticatorName, userMapBytes);
+          Map<String, BasicAuthenticatorUser> userMap = BasicAuthUtils.deserializeAuthenticatorUserMap(
+              objectMapper,
+              userMapBytes
+          );
+          cachedUserMaps.put(authenticatorName, new BasicAuthenticatorUserMapBundle(userMap, userMapBytes));
 
-          if (dbConfig.getInitialAdminPassword() != null && !userMap.containsKey("admin")) {
-            createUserInternal(authenticatorName, "admin");
-            setUserCredentialsInternal(authenticatorName, "admin", dbConfig.getInitialAdminPassword().toCharArray());
-          }
-
-          if (dbConfig.getInitialInternalClientPassword() != null && !userMap.containsKey("druid_system")) {
-            createUserInternal(authenticatorName, "druid_system");
+          if (dbConfig.getInitialAdminPassword() != null && !userMap.containsKey(BasicAuthUtils.ADMIN_NAME)) {
+            createUserInternal(authenticatorName, BasicAuthUtils.ADMIN_NAME);
             setUserCredentialsInternal(
                 authenticatorName,
-                "druid_system",
-                dbConfig.getInitialInternalClientPassword().toCharArray()
+                BasicAuthUtils.ADMIN_NAME,
+                new BasicAuthenticatorCredentialUpdate(
+                    dbConfig.getInitialAdminPassword(),
+                    BasicAuthUtils.DEFAULT_KEY_ITERATIONS
+                )
+            );
+          }
+
+          if (dbConfig.getInitialInternalClientPassword() != null
+              && !userMap.containsKey(BasicAuthUtils.INTERNAL_USER_NAME)) {
+            createUserInternal(authenticatorName, BasicAuthUtils.INTERNAL_USER_NAME);
+            setUserCredentialsInternal(
+                authenticatorName,
+                BasicAuthUtils.INTERNAL_USER_NAME,
+                new BasicAuthenticatorCredentialUpdate(
+                    dbConfig.getInitialInternalClientPassword(),
+                    BasicAuthUtils.DEFAULT_KEY_ITERATIONS
+                )
             );
           }
         }
       }
-
-      this.exec = Execs.scheduledSingleThreaded("CoordinatorBasicAuthenticatorMetadataStorageUpdater-Exec--%d");
 
       ScheduledExecutors.scheduleWithFixedDelay(
           exec,
@@ -168,12 +176,12 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
                 for (String authenticatorPrefix : authenticatorPrefixes) {
 
                   byte[] userMapBytes = getCurrentUserMapBytes(authenticatorPrefix);
-                  Map<String, BasicAuthenticatorUser> userMap = deserializeUserMap(userMapBytes);
+                  Map<String, BasicAuthenticatorUser> userMap = BasicAuthUtils.deserializeAuthenticatorUserMap(
+                      objectMapper,
+                      userMapBytes
+                  );
                   if (userMapBytes != null) {
-                    synchronized (cachedUserMaps) {
-                      cachedUserMaps.put(authenticatorPrefix, userMap);
-                      cachedSerializedUserMaps.put(authenticatorPrefix, userMapBytes);
-                    }
+                    cachedUserMaps.put(authenticatorPrefix, new BasicAuthenticatorUserMapBundle(userMap, userMapBytes));
                   }
                 }
                 LOG.debug("Scheduled db poll is done");
@@ -220,10 +228,10 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
   }
 
   @Override
-  public void setUserCredentials(String prefix, String userName, char[] password)
+  public void setUserCredentials(String prefix, String userName, BasicAuthenticatorCredentialUpdate update)
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
-    setUserCredentialsInternal(prefix, userName, password);
+    setUserCredentialsInternal(prefix, userName, update);
   }
 
   @Override
@@ -231,8 +239,11 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
 
-    synchronized (cachedUserMaps) {
-      return cachedUserMaps.get(prefix);
+    BasicAuthenticatorUserMapBundle bundle = cachedUserMaps.get(prefix);
+    if (bundle == null) {
+      return null;
+    } else {
+      return bundle.getUserMap();
     }
   }
 
@@ -241,8 +252,11 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
 
-    synchronized (cachedUserMaps) {
-      return cachedSerializedUserMaps.get(prefix);
+    BasicAuthenticatorUserMapBundle bundle = cachedUserMaps.get(prefix);
+    if (bundle == null) {
+      return null;
+    } else {
+      return bundle.getSerializedUserMap();
     }
   }
 
@@ -258,31 +272,13 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
   }
 
   @Override
-  public Map<String, BasicAuthenticatorUser> deserializeUserMap(byte[] userMapBytes)
+  public void refreshAllNotification()
   {
-    Map<String, BasicAuthenticatorUser> userMap;
-    if (userMapBytes == null) {
-      userMap = Maps.newHashMap();
-    } else {
-      try {
-        userMap = objectMapper.readValue(userMapBytes, USER_MAP_TYPE_REFERENCE);
-      }
-      catch (IOException ioe) {
-        throw new RuntimeException(ioe);
-      }
-    }
-    return userMap;
-  }
-
-  @Override
-  public byte[] serializeUserMap(Map<String, BasicAuthenticatorUser> userMap)
-  {
-    try {
-      return objectMapper.writeValueAsBytes(userMap);
-    }
-    catch (IOException ioe) {
-      throw new ISE("WTF? Couldn't serialize userMap!");
-    }
+    cachedUserMaps.forEach(
+        (authenticatorName, userMapBundle) -> {
+          cacheNotifier.addUpdate(authenticatorName, userMapBundle.getSerializedUserMap());
+        }
+    );
   }
 
   private static String getPrefixedKeyColumn(String keyPrefix, String keyName)
@@ -298,28 +294,25 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
   )
   {
     try {
-      synchronized (cachedUserMaps) {
-        MetadataCASUpdate update = new MetadataCASUpdate(
-            connectorConfig.getConfigTable(),
-            MetadataStorageConnector.CONFIG_TABLE_KEY_COLUMN,
-            MetadataStorageConnector.CONFIG_TABLE_VALUE_COLUMN,
-            getPrefixedKeyColumn(prefix, USERS),
-            oldValue,
-            newValue
-        );
+      MetadataCASUpdate update = new MetadataCASUpdate(
+          connectorConfig.getConfigTable(),
+          MetadataStorageConnector.CONFIG_TABLE_KEY_COLUMN,
+          MetadataStorageConnector.CONFIG_TABLE_VALUE_COLUMN,
+          getPrefixedKeyColumn(prefix, USERS),
+          oldValue,
+          newValue
+      );
 
-        boolean succeeded = connector.compareAndSwap(
-            Collections.singletonList(update)
-        );
+      boolean succeeded = connector.compareAndSwap(
+          Collections.singletonList(update)
+      );
 
-        if (succeeded) {
-          cachedUserMaps.put(prefix, userMap);
-          cachedSerializedUserMaps.put(prefix, newValue);
-          cacheNotifier.addUpdate(prefix, newValue);
-          return true;
-        } else {
-          return false;
-        }
+      if (succeeded) {
+        cachedUserMaps.put(prefix, new BasicAuthenticatorUserMapBundle(userMap, newValue));
+        cacheNotifier.addUpdate(prefix, newValue);
+        return true;
+      } else {
+        return false;
       }
     }
     catch (Exception e) {
@@ -336,6 +329,12 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
       } else {
         attempts++;
       }
+      try {
+        Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
+      }
+      catch (InterruptedException ie) {
+        throw new RuntimeException(ie);
+      }
     }
     throw new ISE("Could not create user[%s] due to concurrent update contention.", userName);
   }
@@ -349,19 +348,47 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
       } else {
         attempts++;
       }
+      try {
+        Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
+      }
+      catch (InterruptedException ie) {
+        throw new RuntimeException(ie);
+      }
     }
     throw new ISE("Could not delete user[%s] due to concurrent update contention.", userName);
   }
 
-  private void setUserCredentialsInternal(String prefix, String userName, char[] password)
+  private void setUserCredentialsInternal(String prefix, String userName, BasicAuthenticatorCredentialUpdate update)
   {
-    BasicAuthenticatorCredentials credentials = new BasicAuthenticatorCredentials(password);
+    BasicAuthenticatorCredentials credentials;
+
+    // use default iteration count from Authenticator if not specified in request
+    if (update.getIterations() == -1) {
+      BasicHTTPAuthenticator authenticator = (BasicHTTPAuthenticator) authenticatorMapper.getAuthenticatorMap().get(
+          prefix
+      );
+      credentials = new BasicAuthenticatorCredentials(
+          new BasicAuthenticatorCredentialUpdate(
+              update.getPassword(),
+              authenticator.getDbConfig().getIterations()
+          )
+      );
+    } else {
+      credentials = new BasicAuthenticatorCredentials(update);
+    }
+
     int attempts = 0;
     while (attempts < numRetries) {
       if (setUserCredentialOnce(prefix, userName, credentials)) {
         return;
       } else {
         attempts++;
+      }
+      try {
+        Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
+      }
+      catch (InterruptedException ie) {
+        throw new RuntimeException(ie);
       }
     }
     throw new ISE("Could not set credentials for user[%s] due to concurrent update contention.", userName);
@@ -370,39 +397,48 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
   private boolean createUserOnce(String prefix, String userName)
   {
     byte[] oldValue = getCurrentUserMapBytes(prefix);
-    Map<String, BasicAuthenticatorUser> userMap = deserializeUserMap(oldValue);
+    Map<String, BasicAuthenticatorUser> userMap = BasicAuthUtils.deserializeAuthenticatorUserMap(
+        objectMapper,
+        oldValue
+    );
     if (userMap.get(userName) != null) {
       throw new BasicSecurityDBResourceException("User [%s] already exists.", userName);
     } else {
       userMap.put(userName, new BasicAuthenticatorUser(userName, null));
     }
-    byte[] newValue = serializeUserMap(userMap);
+    byte[] newValue = BasicAuthUtils.serializeAuthenticatorUserMap(objectMapper, userMap);
     return tryUpdateUserMap(prefix, userMap, oldValue, newValue);
   }
 
   private boolean deleteUserOnce(String prefix, String userName)
   {
     byte[] oldValue = getCurrentUserMapBytes(prefix);
-    Map<String, BasicAuthenticatorUser> userMap = deserializeUserMap(oldValue);
+    Map<String, BasicAuthenticatorUser> userMap = BasicAuthUtils.deserializeAuthenticatorUserMap(
+        objectMapper,
+        oldValue
+    );
     if (userMap.get(userName) == null) {
       throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
     } else {
       userMap.remove(userName);
     }
-    byte[] newValue = serializeUserMap(userMap);
+    byte[] newValue = BasicAuthUtils.serializeAuthenticatorUserMap(objectMapper, userMap);
     return tryUpdateUserMap(prefix, userMap, oldValue, newValue);
   }
 
   private boolean setUserCredentialOnce(String prefix, String userName, BasicAuthenticatorCredentials credentials)
   {
     byte[] oldValue = getCurrentUserMapBytes(prefix);
-    Map<String, BasicAuthenticatorUser> userMap = deserializeUserMap(oldValue);
+    Map<String, BasicAuthenticatorUser> userMap = BasicAuthUtils.deserializeAuthenticatorUserMap(
+        objectMapper,
+        oldValue
+    );
     if (userMap.get(userName) == null) {
       throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
     } else {
       userMap.put(userName, new BasicAuthenticatorUser(userName, credentials));
     }
-    byte[] newValue = serializeUserMap(userMap);
+    byte[] newValue = BasicAuthUtils.serializeAuthenticatorUserMap(objectMapper, userMap);
     return tryUpdateUserMap(prefix, userMap, oldValue, newValue);
   }
 }

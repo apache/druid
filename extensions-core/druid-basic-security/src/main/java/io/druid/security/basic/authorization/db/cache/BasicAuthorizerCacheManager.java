@@ -24,11 +24,33 @@ import io.druid.security.basic.authorization.entity.BasicAuthorizerUser;
 
 import java.util.Map;
 
+/**
+ * This class is reponsible for maintaining a cache of the authorization database state. The BasicRBACAuthorizer
+ * uses an injected BasicAuthorizerCacheManager to make its authorization decisions.
+ */
 public interface BasicAuthorizerCacheManager
 {
+  /**
+   * Update this cache manager's local state with fresh information pushed by the coordinator.
+   *
+   * @param authorizerPrefix The name of the authorizer this update applies to.
+   * @param serializedUserAndRoleMap The updated, serialized user and role maps
+   */
   void handleAuthorizerUpdate(String authorizerPrefix, byte[] serializedUserAndRoleMap);
 
+  /**
+   * Return the cache manager's local view of the user map for the authorizer named `authorizerPrefix`.
+   *
+   * @param authorizerPrefix The name of the authorizer
+   * @return User map
+   */
   Map<String, BasicAuthorizerUser> getUserMap(String authorizerPrefix);
 
+  /**
+   * Return the cache manager's local view of the role map for the authorizer named `authorizerPrefix`.
+   *
+   * @param authorizerPrefix The name of the authorizer
+   * @return Role map
+   */
   Map<String, BasicAuthorizerRole> getRoleMap(String authorizerPrefix);
 }

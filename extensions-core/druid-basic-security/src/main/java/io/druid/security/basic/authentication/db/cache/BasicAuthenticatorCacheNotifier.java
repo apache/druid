@@ -19,7 +19,16 @@
 
 package io.druid.security.basic.authentication.db.cache;
 
+/**
+ * Sends a notification to druid services, containing updated authenticator user map state.
+ */
 public interface BasicAuthenticatorCacheNotifier
 {
+  /**
+   * Send the user map state contained in updatedUserMap to all non-coordinator Druid services
+   *
+   * @param updatedAuthenticatorPrefix Name of authenticator being updated
+   * @param updatedUserMap User map state
+   */
   void addUpdate(String updatedAuthenticatorPrefix, byte[] updatedUserMap);
 }

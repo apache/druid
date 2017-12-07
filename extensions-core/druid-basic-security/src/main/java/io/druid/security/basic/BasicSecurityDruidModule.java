@@ -36,13 +36,11 @@ import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import io.druid.security.basic.authentication.BasicHTTPEscalator;
 import io.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheManager;
 import io.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheNotifier;
-import io.druid.security.basic.authentication.db.cache.CoordinatorBasicAuthenticatorCacheManager;
 import io.druid.security.basic.authentication.db.cache.CoordinatorBasicAuthenticatorCacheNotifier;
-import io.druid.security.basic.authentication.db.cache.DefaultBasicAuthenticatorCacheManager;
-import io.druid.security.basic.authentication.db.cache.NoopBasicAuthenticatorCacheNotifier;
+import io.druid.security.basic.authentication.db.cache.CoordinatorPollingBasicAuthenticatorCacheManager;
+import io.druid.security.basic.authentication.db.cache.MetadataStoragePollingBasicAuthenticatorCacheManager;
 import io.druid.security.basic.authentication.db.updater.BasicAuthenticatorMetadataStorageUpdater;
 import io.druid.security.basic.authentication.db.updater.CoordinatorBasicAuthenticatorMetadataStorageUpdater;
-import io.druid.security.basic.authentication.db.updater.NoopBasicAuthenticatorMetadataStorageUpdater;
 import io.druid.security.basic.authentication.endpoint.BasicAuthenticatorResource;
 import io.druid.security.basic.authentication.endpoint.BasicAuthenticatorResourceHandler;
 import io.druid.security.basic.authentication.endpoint.CoordinatorBasicAuthenticatorResourceHandler;
@@ -50,13 +48,11 @@ import io.druid.security.basic.authentication.endpoint.DefaultBasicAuthenticator
 import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
 import io.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheManager;
 import io.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheNotifier;
-import io.druid.security.basic.authorization.db.cache.CoordinatorBasicAuthorizerCacheManager;
 import io.druid.security.basic.authorization.db.cache.CoordinatorBasicAuthorizerCacheNotifier;
-import io.druid.security.basic.authorization.db.cache.DefaultBasicAuthorizerCacheManager;
-import io.druid.security.basic.authorization.db.cache.NoopBasicAuthorizerCacheNotifier;
+import io.druid.security.basic.authorization.db.cache.CoordinatorPollingBasicAuthorizerCacheManager;
+import io.druid.security.basic.authorization.db.cache.MetadataStoragePollingBasicAuthorizerCacheManager;
 import io.druid.security.basic.authorization.db.updater.BasicAuthorizerMetadataStorageUpdater;
 import io.druid.security.basic.authorization.db.updater.CoordinatorBasicAuthorizerMetadataStorageUpdater;
-import io.druid.security.basic.authorization.db.updater.NoopBasicAuthorizerMetadataStorageUpdater;
 import io.druid.security.basic.authorization.endpoint.BasicAuthorizerResource;
 import io.druid.security.basic.authorization.endpoint.BasicAuthorizerResourceHandler;
 import io.druid.security.basic.authorization.endpoint.CoordinatorBasicAuthorizerResourceHandler;
@@ -86,7 +82,7 @@ public class BasicSecurityDruidModule implements DruidModule
     if (isCoordinator(injector)) {
       return injector.getInstance(CoordinatorBasicAuthenticatorMetadataStorageUpdater.class);
     } else {
-      return injector.getInstance(NoopBasicAuthenticatorMetadataStorageUpdater.class);
+      return null;
     }
   }
 
@@ -94,9 +90,9 @@ public class BasicSecurityDruidModule implements DruidModule
   public static BasicAuthenticatorCacheManager createAuthenticatorCacheManager(final Injector injector)
   {
     if (isCoordinator(injector)) {
-      return injector.getInstance(CoordinatorBasicAuthenticatorCacheManager.class);
+      return injector.getInstance(MetadataStoragePollingBasicAuthenticatorCacheManager.class);
     } else {
-      return injector.getInstance(DefaultBasicAuthenticatorCacheManager.class);
+      return injector.getInstance(CoordinatorPollingBasicAuthenticatorCacheManager.class);
     }
   }
 
@@ -116,7 +112,7 @@ public class BasicSecurityDruidModule implements DruidModule
     if (isCoordinator(injector)) {
       return injector.getInstance(CoordinatorBasicAuthenticatorCacheNotifier.class);
     } else {
-      return injector.getInstance(NoopBasicAuthenticatorCacheNotifier.class);
+      return null;
     }
   }
 
@@ -126,7 +122,7 @@ public class BasicSecurityDruidModule implements DruidModule
     if (isCoordinator(injector)) {
       return injector.getInstance(CoordinatorBasicAuthorizerMetadataStorageUpdater.class);
     } else {
-      return injector.getInstance(NoopBasicAuthorizerMetadataStorageUpdater.class);
+      return null;
     }
   }
 
@@ -134,9 +130,9 @@ public class BasicSecurityDruidModule implements DruidModule
   public static BasicAuthorizerCacheManager createAuthorizerCacheManager(final Injector injector)
   {
     if (isCoordinator(injector)) {
-      return injector.getInstance(CoordinatorBasicAuthorizerCacheManager.class);
+      return injector.getInstance(MetadataStoragePollingBasicAuthorizerCacheManager.class);
     } else {
-      return injector.getInstance(DefaultBasicAuthorizerCacheManager.class);
+      return injector.getInstance(CoordinatorPollingBasicAuthorizerCacheManager.class);
     }
   }
 
@@ -156,7 +152,7 @@ public class BasicSecurityDruidModule implements DruidModule
     if (isCoordinator(injector)) {
       return injector.getInstance(CoordinatorBasicAuthorizerCacheNotifier.class);
     } else {
-      return injector.getInstance(NoopBasicAuthorizerCacheNotifier.class);
+      return null;
     }
   }
 

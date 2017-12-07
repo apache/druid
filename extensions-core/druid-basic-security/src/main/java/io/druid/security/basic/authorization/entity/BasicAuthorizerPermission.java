@@ -54,6 +54,7 @@ public class BasicAuthorizerPermission
     }
     catch (PatternSyntaxException pse) {
       throw new BasicSecurityDBResourceException(
+          pse,
           "Invalid permission, resource name regex[%s] does not compile.",
           resourceAction.getResource().getName()
       );

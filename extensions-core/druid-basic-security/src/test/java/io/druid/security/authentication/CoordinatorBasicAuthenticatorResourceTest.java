@@ -34,14 +34,14 @@ import io.druid.guice.annotations.Self;
 import io.druid.initialization.Initialization;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.metadata.TestDerbyConnector;
+import io.druid.security.basic.BasicAuthCommonCacheConfig;
 import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import io.druid.security.basic.authentication.BasicHTTPEscalator;
-import io.druid.security.basic.BasicAuthCommonCacheConfig;
-import io.druid.security.basic.authentication.db.cache.NoopBasicAuthenticatorCacheNotifier;
 import io.druid.security.basic.authentication.db.updater.CoordinatorBasicAuthenticatorMetadataStorageUpdater;
 import io.druid.security.basic.authentication.endpoint.BasicAuthenticatorResource;
 import io.druid.security.basic.authentication.endpoint.CoordinatorBasicAuthenticatorResourceHandler;
+import io.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import io.druid.security.basic.authentication.entity.BasicAuthenticatorCredentials;
 import io.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 import io.druid.server.DruidNode;
@@ -96,6 +96,7 @@ public class CoordinatorBasicAuthenticatorResourceTest
                 "druid",
                 "druid",
                 null,
+                null,
                 null
             ),
             AUTHENTICATOR_NAME2,
@@ -106,6 +107,7 @@ public class CoordinatorBasicAuthenticatorResourceTest
                 "druid",
                 "druid",
                 null,
+                null,
                 null
             )
         )
@@ -115,7 +117,7 @@ public class CoordinatorBasicAuthenticatorResourceTest
         authenticatorMapper,
         connector,
         tablesConfig,
-        new BasicAuthCommonCacheConfig(null, null),
+        new BasicAuthCommonCacheConfig(null, null, null, null),
         new ObjectMapper(new SmileFactory()),
         new NoopBasicAuthenticatorCacheNotifier(),
         null
@@ -153,15 +155,15 @@ public class CoordinatorBasicAuthenticatorResourceTest
   {
     Response response = resource.getAllUsers(req, AUTHENTICATOR_NAME);
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableSet.of("admin", "druid_system"), response.getEntity());
+    Assert.assertEquals(ImmutableSet.of(BasicAuthUtils.ADMIN_NAME, BasicAuthUtils.INTERNAL_USER_NAME), response.getEntity());
 
     resource.createUser(req, AUTHENTICATOR_NAME, "druid");
     resource.createUser(req, AUTHENTICATOR_NAME, "druid2");
     resource.createUser(req, AUTHENTICATOR_NAME, "druid3");
 
     Set<String> expectedUsers = ImmutableSet.of(
-        "admin",
-        "druid_system",
+        BasicAuthUtils.ADMIN_NAME,
+        BasicAuthUtils.INTERNAL_USER_NAME,
         "druid",
         "druid2",
         "druid3"
@@ -177,7 +179,7 @@ public class CoordinatorBasicAuthenticatorResourceTest
   {
     Response response = resource.getAllUsers(req, AUTHENTICATOR_NAME);
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableSet.of("admin", "druid_system"), response.getEntity());
+    Assert.assertEquals(ImmutableSet.of(BasicAuthUtils.ADMIN_NAME, BasicAuthUtils.INTERNAL_USER_NAME), response.getEntity());
 
     resource.createUser(req, AUTHENTICATOR_NAME, "druid");
     resource.createUser(req, AUTHENTICATOR_NAME, "druid2");
@@ -188,16 +190,16 @@ public class CoordinatorBasicAuthenticatorResourceTest
     resource.createUser(req, AUTHENTICATOR_NAME2, "druid6");
 
     Set<String> expectedUsers = ImmutableSet.of(
-        "admin",
-        "druid_system",
+        BasicAuthUtils.ADMIN_NAME,
+        BasicAuthUtils.INTERNAL_USER_NAME,
         "druid",
         "druid2",
         "druid3"
     );
 
     Set<String> expectedUsers2 = ImmutableSet.of(
-        "admin",
-        "druid_system",
+        BasicAuthUtils.ADMIN_NAME,
+        BasicAuthUtils.INTERNAL_USER_NAME,
         "druid4",
         "druid5",
         "druid6"
@@ -241,7 +243,12 @@ public class CoordinatorBasicAuthenticatorResourceTest
     Response response = resource.createUser(req, AUTHENTICATOR_NAME, "druid");
     Assert.assertEquals(200, response.getStatus());
 
-    response = resource.updateUserCredentials(req, AUTHENTICATOR_NAME, "druid", "helloworld");
+    response = resource.updateUserCredentials(
+        req,
+        AUTHENTICATOR_NAME,
+        "druid",
+        new BasicAuthenticatorCredentialUpdate("helloworld", null)
+    );
     Assert.assertEquals(200, response.getStatus());
 
     response = resource.getUser(req, AUTHENTICATOR_NAME, "druid");
@@ -255,7 +262,7 @@ public class CoordinatorBasicAuthenticatorResourceTest
     int iterations = credentials.getIterations();
     Assert.assertEquals(BasicAuthUtils.SALT_LENGTH, salt.length);
     Assert.assertEquals(BasicAuthUtils.KEY_LENGTH / 8, hash.length);
-    Assert.assertEquals(BasicAuthUtils.KEY_ITERATIONS, iterations);
+    Assert.assertEquals(BasicAuthUtils.DEFAULT_KEY_ITERATIONS, iterations);
 
     byte[] recalculatedHash = BasicAuthUtils.hashPassword(
         "helloworld".toCharArray(),
@@ -271,7 +278,12 @@ public class CoordinatorBasicAuthenticatorResourceTest
     Assert.assertEquals(400, response.getStatus());
     Assert.assertEquals(errorMapWithMsg("User [druid] does not exist."), response.getEntity());
 
-    response = resource.updateUserCredentials(req, AUTHENTICATOR_NAME, "druid", "helloworld");
+    response = resource.updateUserCredentials(
+        req,
+        AUTHENTICATOR_NAME,
+        "druid",
+        new BasicAuthenticatorCredentialUpdate("helloworld", null)
+    );
     Assert.assertEquals(400, response.getStatus());
     Assert.assertEquals(errorMapWithMsg("User [druid] does not exist."), response.getEntity());
   }

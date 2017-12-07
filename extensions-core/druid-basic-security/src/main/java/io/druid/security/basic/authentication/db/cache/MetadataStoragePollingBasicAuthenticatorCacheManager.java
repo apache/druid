@@ -26,14 +26,18 @@ import io.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 
 import java.util.Map;
 
-public class CoordinatorBasicAuthenticatorCacheManager implements BasicAuthenticatorCacheManager
+/**
+ * Used on coordinator nodes, reading from a BasicAuthenticatorMetadataStorageUpdater that has direct access to the
+ * metadata store.
+ */
+public class MetadataStoragePollingBasicAuthenticatorCacheManager implements BasicAuthenticatorCacheManager
 {
-  private static final Logger log = new Logger(CoordinatorBasicAuthenticatorCacheManager.class);
+  private static final Logger log = new Logger(MetadataStoragePollingBasicAuthenticatorCacheManager.class);
 
   private final BasicAuthenticatorMetadataStorageUpdater storageUpdater;
 
   @Inject
-  public CoordinatorBasicAuthenticatorCacheManager(
+  public MetadataStoragePollingBasicAuthenticatorCacheManager(
       BasicAuthenticatorMetadataStorageUpdater storageUpdater
   )
   {

@@ -17,12 +17,14 @@
  * under the License.
  */
 
-package io.druid.security.basic.authorization.db.cache;
+package io.druid.security.authentication;
 
-public class NoopBasicAuthorizerCacheNotifier implements BasicAuthorizerCacheNotifier
+import io.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheNotifier;
+
+public class NoopBasicAuthenticatorCacheNotifier implements BasicAuthenticatorCacheNotifier
 {
   @Override
-  public void addUpdate(String authorizerPrefix, byte[] userAndRoleMap)
+  public void addUpdate(String updatedAuthenticatorPrefix, byte[] updatedUserMap)
   {
 
   }

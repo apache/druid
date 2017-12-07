@@ -27,10 +27,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.metadata.TestDerbyConnector;
-import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.BasicAuthCommonCacheConfig;
+import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
-import io.druid.security.basic.authorization.db.cache.NoopBasicAuthorizerCacheNotifier;
 import io.druid.security.basic.authorization.db.updater.CoordinatorBasicAuthorizerMetadataStorageUpdater;
 import io.druid.security.basic.authorization.endpoint.BasicAuthorizerResource;
 import io.druid.security.basic.authorization.endpoint.CoordinatorBasicAuthorizerResourceHandler;
@@ -107,7 +106,7 @@ public class CoordinatorBasicAuthorizerResourceTest
         authorizerMapper,
         connector,
         tablesConfig,
-        new BasicAuthCommonCacheConfig(null, null),
+        new BasicAuthCommonCacheConfig(null, null, null, null),
         new ObjectMapper(new SmileFactory()),
         new NoopBasicAuthorizerCacheNotifier(),
         null

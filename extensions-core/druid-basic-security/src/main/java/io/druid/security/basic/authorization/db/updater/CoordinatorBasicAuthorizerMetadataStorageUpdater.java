@@ -19,11 +19,9 @@
 
 package io.druid.security.basic.authorization.db.updater;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.common.config.ConfigManager;
@@ -39,13 +37,16 @@ import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.metadata.MetadataCASUpdate;
 import io.druid.metadata.MetadataStorageConnector;
 import io.druid.metadata.MetadataStorageTablesConfig;
-import io.druid.security.basic.BasicSecurityDBResourceException;
 import io.druid.security.basic.BasicAuthCommonCacheConfig;
+import io.druid.security.basic.BasicAuthUtils;
+import io.druid.security.basic.BasicSecurityDBResourceException;
 import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
 import io.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheNotifier;
 import io.druid.security.basic.authorization.entity.BasicAuthorizerPermission;
 import io.druid.security.basic.authorization.entity.BasicAuthorizerRole;
+import io.druid.security.basic.authorization.entity.BasicAuthorizerRoleMapBundle;
 import io.druid.security.basic.authorization.entity.BasicAuthorizerUser;
+import io.druid.security.basic.authorization.entity.BasicAuthorizerUserMapBundle;
 import io.druid.security.basic.authorization.entity.UserAndRoleMap;
 import io.druid.server.security.Action;
 import io.druid.server.security.Authorizer;
@@ -55,15 +56,17 @@ import io.druid.server.security.ResourceAction;
 import io.druid.server.security.ResourceType;
 import org.joda.time.Duration;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 @ManageLifecycle
@@ -72,23 +75,13 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
   private static final EmittingLogger LOG =
       new EmittingLogger(CoordinatorBasicAuthorizerMetadataStorageUpdater.class);
 
+  private static final long UPDATE_RETRY_DELAY = 1000;
+
+  private static final String USERS = "users";
+  private static final String ROLES = "roles";
+
   public static final List<ResourceAction> SUPERUSER_PERMISSIONS = makeSuperUserPermissions();
 
-  public static final String USERS = "users";
-  public static final String ROLES = "roles";
-  public static final TypeReference USER_MAP_TYPE_REFERENCE = new TypeReference<Map<String, BasicAuthorizerUser>>()
-  {
-  };
-  public static final TypeReference ROLE_MAP_TYPE_REFERENCE = new TypeReference<Map<String, BasicAuthorizerRole>>()
-  {
-  };
-  public static final TypeReference USER_AND_ROLE_MAP_TYPE_REFERENCE = new TypeReference<UserAndRoleMap>()
-  {
-  };
-
-  public static final String DEFAULT_ADMIN_NAME = "admin";
-  public static final String DEFAULT_INTERNAL_SYSTEM_NAME = "druid_system";
-  
   private final AuthorizerMapper authorizerMapper;
   private final MetadataStorageConnector connector;
   private final MetadataStorageTablesConfig connectorConfig;
@@ -97,16 +90,13 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
   private final ObjectMapper objectMapper;
   private final int numRetries = 5;
 
-  private final Map<String, Map<String, BasicAuthorizerUser>> cachedUserMaps;
-  private final Map<String, byte[]> cachedSerializedUserMaps;
-
-  private final Map<String, Map<String, BasicAuthorizerRole>> cachedRoleMaps;
-  private final Map<String, byte[]> cachedSerializedRoleMaps;
+  private final Map<String, BasicAuthorizerUserMapBundle> cachedUserMaps;
+  private final Map<String, BasicAuthorizerRoleMapBundle> cachedRoleMaps;
 
   private final Set<String> authorizerNames;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
 
-  private volatile ScheduledExecutorService exec;
+  private final ScheduledExecutorService exec;
   private volatile boolean stopped = false;
 
   @Inject
@@ -120,16 +110,15 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
       ConfigManager configManager // ConfigManager creates the db table we need, set a dependency here
   )
   {
+    this.exec = Execs.scheduledSingleThreaded("CoordinatorBasicAuthorizerMetadataStorageUpdater-Exec--%d");
     this.authorizerMapper = authorizerMapper;
     this.connector = connector;
     this.connectorConfig = connectorConfig;
     this.commonCacheConfig = commonCacheConfig;
     this.objectMapper = objectMapper;
     this.cacheNotifier = cacheNotifier;
-    this.cachedUserMaps = new HashMap<>();
-    this.cachedSerializedUserMaps = new HashMap<>();
-    this.cachedRoleMaps = new HashMap<>();
-    this.cachedSerializedRoleMaps = new HashMap<>();
+    this.cachedUserMaps = new ConcurrentHashMap<>();
+    this.cachedRoleMaps = new ConcurrentHashMap<>();
     this.authorizerNames = new HashSet<>();
   }
 
@@ -154,20 +143,22 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
           BasicRoleBasedAuthorizer basicRoleBasedAuthorizer = (BasicRoleBasedAuthorizer) authorizer;
 
           byte[] userMapBytes = getCurrentUserMapBytes(authorizerName);
-          Map<String, BasicAuthorizerUser> userMap = deserializeUserMap(userMapBytes);
-          cachedUserMaps.put(authorizerName, userMap);
-          cachedSerializedUserMaps.put(authorizerName, userMapBytes);
+          Map<String, BasicAuthorizerUser> userMap = BasicAuthUtils.deserializeAuthorizerUserMap(
+              objectMapper,
+              userMapBytes
+          );
+          cachedUserMaps.put(authorizerName, new BasicAuthorizerUserMapBundle(userMap, userMapBytes));
 
           byte[] roleMapBytes = getCurrentRoleMapBytes(authorizerName);
-          Map<String, BasicAuthorizerRole> roleMap = deserializeRoleMap(roleMapBytes);
-          cachedRoleMaps.put(authorizerName, roleMap);
-          cachedSerializedRoleMaps.put(authorizerName, roleMapBytes);
+          Map<String, BasicAuthorizerRole> roleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
+              objectMapper,
+              roleMapBytes
+          );
+          cachedRoleMaps.put(authorizerName, new BasicAuthorizerRoleMapBundle(roleMap, roleMapBytes));
 
           initSuperusers(authorizerName, userMap, roleMap);
         }
       }
-
-      this.exec = Execs.scheduledSingleThreaded("CoordinatorBasicAuthorizerMetadataStorageUpdater-Exec--%d");
 
       ScheduledExecutors.scheduleWithFixedDelay(
           exec,
@@ -186,20 +177,24 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
                 for (String authorizerName : authorizerNames) {
 
                   byte[] userMapBytes = getCurrentUserMapBytes(authorizerName);
-                  Map<String, BasicAuthorizerUser> userMap = deserializeUserMap(userMapBytes);
+                  Map<String, BasicAuthorizerUser> userMap = BasicAuthUtils.deserializeAuthorizerUserMap(
+                      objectMapper,
+                      userMapBytes
+                  );
                   if (userMapBytes != null) {
                     synchronized (cachedUserMaps) {
-                      cachedUserMaps.put(authorizerName, userMap);
-                      cachedSerializedUserMaps.put(authorizerName, userMapBytes);
+                      cachedUserMaps.put(authorizerName, new BasicAuthorizerUserMapBundle(userMap, userMapBytes));
                     }
                   }
 
                   byte[] roleMapBytes = getCurrentRoleMapBytes(authorizerName);
-                  Map<String, BasicAuthorizerRole> roleMap = deserializeRoleMap(roleMapBytes);
+                  Map<String, BasicAuthorizerRole> roleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
+                      objectMapper,
+                      roleMapBytes
+                  );
                   if (roleMapBytes != null) {
                     synchronized (cachedUserMaps) {
-                      cachedRoleMaps.put(authorizerName, roleMap);
-                      cachedSerializedRoleMaps.put(authorizerName, roleMapBytes);
+                      cachedRoleMaps.put(authorizerName, new BasicAuthorizerRoleMapBundle(roleMap, roleMapBytes));
                     }
                   }
                 }
@@ -269,58 +264,50 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
   )
   {
     try {
-      synchronized (cachedRoleMaps) {
-        List<MetadataCASUpdate> updates = new ArrayList<>();
-        if (userMap != null) {
-          updates.add(
-              new MetadataCASUpdate(
-                  connectorConfig.getConfigTable(),
-                  MetadataStorageConnector.CONFIG_TABLE_KEY_COLUMN,
-                  MetadataStorageConnector.CONFIG_TABLE_VALUE_COLUMN,
-                  getPrefixedKeyColumn(prefix, USERS),
-                  oldUserMapValue,
-                  newUserMapValue
-              )
-          );
-        }
-
-        if (roleMap != null) {
-          updates.add(
-              new MetadataCASUpdate(
-                  connectorConfig.getConfigTable(),
-                  MetadataStorageConnector.CONFIG_TABLE_KEY_COLUMN,
-                  MetadataStorageConnector.CONFIG_TABLE_VALUE_COLUMN,
-                  getPrefixedKeyColumn(prefix, ROLES),
-                  oldRoleMapValue,
-                  newRoleMapValue
-              )
-          );
-        }
-
-        boolean succeeded = connector.compareAndSwap(updates);
-        if (succeeded) {
-          if (userMap != null) {
-            cachedUserMaps.put(prefix, userMap);
-            cachedSerializedUserMaps.put(prefix, newUserMapValue);
-          }
-          if (roleMap != null) {
-            cachedRoleMaps.put(prefix, roleMap);
-            cachedSerializedRoleMaps.put(prefix, newRoleMapValue);
-          }
-
-          UserAndRoleMap userAndRoleMap = new UserAndRoleMap(
-              cachedUserMaps.get(prefix),
-              cachedRoleMaps.get(prefix)
-          );
-
-          byte[] serializedUserAndRoleMap = objectMapper.writeValueAsBytes(userAndRoleMap);
-          cacheNotifier.addUpdate(prefix, serializedUserAndRoleMap);
-
-          return true;
-        } else {
-          return false;
-        }
+      List<MetadataCASUpdate> updates = new ArrayList<>();
+      if (userMap != null) {
+        updates.add(
+            new MetadataCASUpdate(
+                connectorConfig.getConfigTable(),
+                MetadataStorageConnector.CONFIG_TABLE_KEY_COLUMN,
+                MetadataStorageConnector.CONFIG_TABLE_VALUE_COLUMN,
+                getPrefixedKeyColumn(prefix, USERS),
+                oldUserMapValue,
+                newUserMapValue
+            )
+        );
       }
+
+      if (roleMap != null) {
+        updates.add(
+            new MetadataCASUpdate(
+                connectorConfig.getConfigTable(),
+                MetadataStorageConnector.CONFIG_TABLE_KEY_COLUMN,
+                MetadataStorageConnector.CONFIG_TABLE_VALUE_COLUMN,
+                getPrefixedKeyColumn(prefix, ROLES),
+                oldRoleMapValue,
+                newRoleMapValue
+            )
+        );
+      }
+
+      boolean succeeded = connector.compareAndSwap(updates);
+      if (succeeded) {
+        if (userMap != null) {
+          cachedUserMaps.put(prefix, new BasicAuthorizerUserMapBundle(userMap, newUserMapValue));
+        }
+        if (roleMap != null) {
+          cachedRoleMaps.put(prefix, new BasicAuthorizerRoleMapBundle(roleMap, newRoleMapValue));
+        }
+
+        byte[] serializedUserAndRoleMap = getCurrentUserAndRoleMapSerialized(prefix);
+        cacheNotifier.addUpdate(prefix, serializedUserAndRoleMap);
+
+        return true;
+      } else {
+        return false;
+      }
+
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -379,15 +366,19 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
   }
 
   @Override
+  @Nullable
   public Map<String, BasicAuthorizerUser> getCachedUserMap(String prefix)
   {
-    return cachedUserMaps.get(prefix);
+    BasicAuthorizerUserMapBundle userMapBundle = cachedUserMaps.get(prefix);
+    return userMapBundle == null ? null : userMapBundle.getUserMap();
   }
 
   @Override
+  @Nullable
   public Map<String, BasicAuthorizerRole> getCachedRoleMap(String prefix)
   {
-    return cachedRoleMaps.get(prefix);
+    BasicAuthorizerRoleMapBundle roleMapBundle = cachedRoleMaps.get(prefix);
+    return roleMapBundle == null ? null : roleMapBundle.getRoleMap();
   }
 
   @Override
@@ -413,57 +404,32 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
   }
 
   @Override
-  public Map<String, BasicAuthorizerUser> deserializeUserMap(byte[] userMapBytes)
+  public void refreshAllNotification()
   {
-    Map<String, BasicAuthorizerUser> userMap;
-    if (userMapBytes == null) {
-      userMap = Maps.newHashMap();
-    } else {
-      try {
-        userMap = objectMapper.readValue(userMapBytes, USER_MAP_TYPE_REFERENCE);
-      }
-      catch (IOException ioe) {
-        throw new RuntimeException(ioe);
-      }
-    }
-    return userMap;
+    authorizerNames.forEach(
+        (authorizerName) -> {
+          try {
+            byte[] serializedUserAndRoleMap = getCurrentUserAndRoleMapSerialized(authorizerName);
+            cacheNotifier.addUpdate(authorizerName, serializedUserAndRoleMap);
+          }
+          catch (IOException ioe) {
+            throw new RuntimeException(ioe);
+          }
+        }
+    );
   }
 
-  public byte[] serializeUserMap(Map<String, BasicAuthorizerUser> userMap)
+  private byte[] getCurrentUserAndRoleMapSerialized(String prefix) throws IOException
   {
-    try {
-      return objectMapper.writeValueAsBytes(userMap);
-    }
-    catch (IOException ioe) {
-      throw new ISE("WTF? Couldn't serialize userMap!");
-    }
-  }
+    BasicAuthorizerUserMapBundle userMapBundle = cachedUserMaps.get(prefix);
+    BasicAuthorizerRoleMapBundle roleMapBundle = cachedRoleMaps.get(prefix);
 
-  @Override
-  public Map<String, BasicAuthorizerRole> deserializeRoleMap(byte[] roleMapBytes)
-  {
-    Map<String, BasicAuthorizerRole> roleMap;
-    if (roleMapBytes == null) {
-      roleMap = Maps.newHashMap();
-    } else {
-      try {
-        roleMap = objectMapper.readValue(roleMapBytes, ROLE_MAP_TYPE_REFERENCE);
-      }
-      catch (IOException ioe) {
-        throw new RuntimeException(ioe);
-      }
-    }
-    return roleMap;
-  }
+    UserAndRoleMap userAndRoleMap = new UserAndRoleMap(
+        userMapBundle == null ? null : userMapBundle.getUserMap(),
+        roleMapBundle == null ? null : roleMapBundle.getRoleMap()
+    );
 
-  public byte[] serializeRoleMap(Map<String, BasicAuthorizerRole> roleMap)
-  {
-    try {
-      return objectMapper.writeValueAsBytes(roleMap);
-    }
-    catch (IOException ioe) {
-      throw new ISE("WTF? Couldn't serialize roleMap!");
-    }
+    return objectMapper.writeValueAsBytes(userAndRoleMap);
   }
 
   private void createUserInternal(String prefix, String userName)
@@ -474,6 +440,12 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
         return;
       } else {
         attempts++;
+      }
+      try {
+        Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
+      }
+      catch (InterruptedException ie) {
+        throw new RuntimeException(ie);
       }
     }
     throw new ISE("Could not create user[%s] due to concurrent update contention.", userName);
@@ -488,6 +460,12 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
       } else {
         attempts++;
       }
+      try {
+        Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
+      }
+      catch (InterruptedException ie) {
+        throw new RuntimeException(ie);
+      }
     }
     throw new ISE("Could not delete user[%s] due to concurrent update contention.", userName);
   }
@@ -500,6 +478,12 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
         return;
       } else {
         attempts++;
+      }
+      try {
+        Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
+      }
+      catch (InterruptedException ie) {
+        throw new RuntimeException(ie);
       }
     }
     throw new ISE("Could not create role[%s] due to concurrent update contention.", roleName);
@@ -514,6 +498,12 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
       } else {
         attempts++;
       }
+      try {
+        Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
+      }
+      catch (InterruptedException ie) {
+        throw new RuntimeException(ie);
+      }
     }
     throw new ISE("Could not delete role[%s] due to concurrent update contention.", roleName);
   }
@@ -526,6 +516,12 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
         return;
       } else {
         attempts++;
+      }
+      try {
+        Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
+      }
+      catch (InterruptedException ie) {
+        throw new RuntimeException(ie);
       }
     }
     throw new ISE("Could not assign role[%s] to user[%s] due to concurrent update contention.", roleName, userName);
@@ -540,6 +536,12 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
       } else {
         attempts++;
       }
+      try {
+        Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
+      }
+      catch (InterruptedException ie) {
+        throw new RuntimeException(ie);
+      }
     }
     throw new ISE("Could not unassign role[%s] from user[%s] due to concurrent update contention.", roleName, userName);
   }
@@ -553,6 +555,12 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
       } else {
         attempts++;
       }
+      try {
+        Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
+      }
+      catch (InterruptedException ie) {
+        throw new RuntimeException(ie);
+      }
     }
     throw new ISE("Could not set permissions for role[%s] due to concurrent update contention.", roleName);
   }
@@ -560,46 +568,49 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
   private boolean createUserOnce(String prefix, String userName)
   {
     byte[] oldValue = getCurrentUserMapBytes(prefix);
-    Map<String, BasicAuthorizerUser> userMap = deserializeUserMap(oldValue);
+    Map<String, BasicAuthorizerUser> userMap = BasicAuthUtils.deserializeAuthorizerUserMap(objectMapper, oldValue);
     if (userMap.get(userName) != null) {
       throw new BasicSecurityDBResourceException("User [%s] already exists.", userName);
     } else {
       userMap.put(userName, new BasicAuthorizerUser(userName, null));
     }
-    byte[] newValue = serializeUserMap(userMap);
+    byte[] newValue = BasicAuthUtils.serializeAuthorizerUserMap(objectMapper, userMap);
     return tryUpdateUserMap(prefix, userMap, oldValue, newValue);
   }
 
   private boolean deleteUserOnce(String prefix, String userName)
   {
     byte[] oldValue = getCurrentUserMapBytes(prefix);
-    Map<String, BasicAuthorizerUser> userMap = deserializeUserMap(oldValue);
+    Map<String, BasicAuthorizerUser> userMap = BasicAuthUtils.deserializeAuthorizerUserMap(objectMapper, oldValue);
     if (userMap.get(userName) == null) {
       throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
     } else {
       userMap.remove(userName);
     }
-    byte[] newValue = serializeUserMap(userMap);
+    byte[] newValue = BasicAuthUtils.serializeAuthorizerUserMap(objectMapper, userMap);
     return tryUpdateUserMap(prefix, userMap, oldValue, newValue);
   }
 
   private boolean createRoleOnce(String prefix, String roleName)
   {
     byte[] oldValue = getCurrentRoleMapBytes(prefix);
-    Map<String, BasicAuthorizerRole> roleMap = deserializeRoleMap(oldValue);
+    Map<String, BasicAuthorizerRole> roleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(objectMapper, oldValue);
     if (roleMap.get(roleName) != null) {
       throw new BasicSecurityDBResourceException("Role [%s] already exists.", roleName);
     } else {
       roleMap.put(roleName, new BasicAuthorizerRole(roleName, null));
     }
-    byte[] newValue = serializeRoleMap(roleMap);
+    byte[] newValue = BasicAuthUtils.serializeAuthorizerRoleMap(objectMapper, roleMap);
     return tryUpdateRoleMap(prefix, roleMap, oldValue, newValue);
   }
 
   private boolean deleteRoleOnce(String prefix, String roleName)
   {
     byte[] oldRoleMapValue = getCurrentRoleMapBytes(prefix);
-    Map<String, BasicAuthorizerRole> roleMap = deserializeRoleMap(oldRoleMapValue);
+    Map<String, BasicAuthorizerRole> roleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
+        objectMapper,
+        oldRoleMapValue
+    );
     if (roleMap.get(roleName) == null) {
       throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
     } else {
@@ -607,12 +618,15 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
     }
 
     byte[] oldUserMapValue = getCurrentUserMapBytes(prefix);
-    Map<String, BasicAuthorizerUser> userMap = deserializeUserMap(oldUserMapValue);
+    Map<String, BasicAuthorizerUser> userMap = BasicAuthUtils.deserializeAuthorizerUserMap(
+        objectMapper,
+        oldUserMapValue
+    );
     for (BasicAuthorizerUser user : userMap.values()) {
       user.getRoles().remove(roleName);
     }
-    byte[] newUserMapValue = serializeUserMap(userMap);
-    byte[] newRoleMapValue = serializeRoleMap(roleMap);
+    byte[] newUserMapValue = BasicAuthUtils.serializeAuthorizerUserMap(objectMapper, userMap);
+    byte[] newRoleMapValue = BasicAuthUtils.serializeAuthorizerRoleMap(objectMapper, roleMap);
 
     return tryUpdateUserAndRoleMap(
         prefix,
@@ -624,13 +638,19 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
   private boolean assignRoleOnce(String prefix, String userName, String roleName)
   {
     byte[] oldRoleMapValue = getCurrentRoleMapBytes(prefix);
-    Map<String, BasicAuthorizerRole> roleMap = deserializeRoleMap(oldRoleMapValue);
+    Map<String, BasicAuthorizerRole> roleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
+        objectMapper,
+        oldRoleMapValue
+    );
     if (roleMap.get(roleName) == null) {
       throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
     }
 
     byte[] oldUserMapValue = getCurrentUserMapBytes(prefix);
-    Map<String, BasicAuthorizerUser> userMap = deserializeUserMap(oldUserMapValue);
+    Map<String, BasicAuthorizerUser> userMap = BasicAuthUtils.deserializeAuthorizerUserMap(
+        objectMapper,
+        oldUserMapValue
+    );
     BasicAuthorizerUser user = userMap.get(userName);
     if (userMap.get(userName) == null) {
       throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
@@ -641,7 +661,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
     }
 
     user.getRoles().add(roleName);
-    byte[] newUserMapValue = serializeUserMap(userMap);
+    byte[] newUserMapValue = BasicAuthUtils.serializeAuthorizerUserMap(objectMapper, userMap);
 
     // Role map is unchanged, but submit as an update to ensure that the table didn't change (e.g., role deleted)
     return tryUpdateUserAndRoleMap(
@@ -654,13 +674,19 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
   private boolean unassignRoleOnce(String prefix, String userName, String roleName)
   {
     byte[] oldRoleMapValue = getCurrentRoleMapBytes(prefix);
-    Map<String, BasicAuthorizerRole> roleMap = deserializeRoleMap(oldRoleMapValue);
+    Map<String, BasicAuthorizerRole> roleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
+        objectMapper,
+        oldRoleMapValue
+    );
     if (roleMap.get(roleName) == null) {
       throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
     }
 
     byte[] oldUserMapValue = getCurrentUserMapBytes(prefix);
-    Map<String, BasicAuthorizerUser> userMap = deserializeUserMap(oldUserMapValue);
+    Map<String, BasicAuthorizerUser> userMap = BasicAuthUtils.deserializeAuthorizerUserMap(
+        objectMapper,
+        oldUserMapValue
+    );
     BasicAuthorizerUser user = userMap.get(userName);
     if (userMap.get(userName) == null) {
       throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
@@ -671,7 +697,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
     }
 
     user.getRoles().remove(roleName);
-    byte[] newUserMapValue = serializeUserMap(userMap);
+    byte[] newUserMapValue = BasicAuthUtils.serializeAuthorizerUserMap(objectMapper, userMap);
 
     // Role map is unchanged, but submit as an update to ensure that the table didn't change (e.g., role deleted)
     return tryUpdateUserAndRoleMap(
@@ -684,7 +710,10 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
   private boolean setPermissionsOnce(String prefix, String roleName, List<ResourceAction> permissions)
   {
     byte[] oldRoleMapValue = getCurrentRoleMapBytes(prefix);
-    Map<String, BasicAuthorizerRole> roleMap = deserializeRoleMap(oldRoleMapValue);
+    Map<String, BasicAuthorizerRole> roleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
+        objectMapper,
+        oldRoleMapValue
+    );
     if (roleMap.get(roleName) == null) {
       throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
     }
@@ -692,7 +721,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
         roleName,
         new BasicAuthorizerRole(roleName, BasicAuthorizerPermission.makePermissionList(permissions))
     );
-    byte[] newRoleMapValue = serializeRoleMap(roleMap);
+    byte[] newRoleMapValue = BasicAuthUtils.serializeAuthorizerRoleMap(objectMapper, roleMap);
 
     return tryUpdateRoleMap(prefix, roleMap, oldRoleMapValue, newRoleMapValue);
   }
@@ -703,24 +732,24 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
       Map<String, BasicAuthorizerRole> roleMap
   )
   {
-    if (!roleMap.containsKey(DEFAULT_ADMIN_NAME)) {
-      createRoleInternal(authorizerName, DEFAULT_ADMIN_NAME);
-      setPermissionsInternal(authorizerName, DEFAULT_ADMIN_NAME, SUPERUSER_PERMISSIONS);
+    if (!roleMap.containsKey(BasicAuthUtils.ADMIN_NAME)) {
+      createRoleInternal(authorizerName, BasicAuthUtils.ADMIN_NAME);
+      setPermissionsInternal(authorizerName, BasicAuthUtils.ADMIN_NAME, SUPERUSER_PERMISSIONS);
     }
 
-    if (!roleMap.containsKey(DEFAULT_INTERNAL_SYSTEM_NAME)) {
-      createRoleInternal(authorizerName, DEFAULT_INTERNAL_SYSTEM_NAME);
-      setPermissionsInternal(authorizerName, DEFAULT_INTERNAL_SYSTEM_NAME, SUPERUSER_PERMISSIONS);
+    if (!roleMap.containsKey(BasicAuthUtils.INTERNAL_USER_NAME)) {
+      createRoleInternal(authorizerName, BasicAuthUtils.INTERNAL_USER_NAME);
+      setPermissionsInternal(authorizerName, BasicAuthUtils.INTERNAL_USER_NAME, SUPERUSER_PERMISSIONS);
     }
 
-    if (!userMap.containsKey(DEFAULT_INTERNAL_SYSTEM_NAME)) {
-      createUserInternal(authorizerName, DEFAULT_INTERNAL_SYSTEM_NAME);
-      assignRoleInternal(authorizerName, DEFAULT_INTERNAL_SYSTEM_NAME, DEFAULT_INTERNAL_SYSTEM_NAME);
+    if (!userMap.containsKey(BasicAuthUtils.INTERNAL_USER_NAME)) {
+      createUserInternal(authorizerName, BasicAuthUtils.INTERNAL_USER_NAME);
+      assignRoleInternal(authorizerName, BasicAuthUtils.INTERNAL_USER_NAME, BasicAuthUtils.INTERNAL_USER_NAME);
     }
 
-    if (!userMap.containsKey(DEFAULT_ADMIN_NAME)) {
-      createUserInternal(authorizerName, DEFAULT_ADMIN_NAME);
-      assignRoleInternal(authorizerName, DEFAULT_ADMIN_NAME, DEFAULT_ADMIN_NAME);
+    if (!userMap.containsKey(BasicAuthUtils.ADMIN_NAME)) {
+      createUserInternal(authorizerName, BasicAuthUtils.ADMIN_NAME);
+      assignRoleInternal(authorizerName, BasicAuthUtils.ADMIN_NAME, BasicAuthUtils.ADMIN_NAME);
     }
   }
 

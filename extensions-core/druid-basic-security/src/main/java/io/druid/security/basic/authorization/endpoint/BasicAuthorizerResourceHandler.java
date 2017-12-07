@@ -24,8 +24,14 @@ import io.druid.server.security.ResourceAction;
 import javax.ws.rs.core.Response;
 import java.util.List;
 
+/**
+ * Handles authorizer-related API calls. Coordinator and non-coordinator methods are combined here because of an
+ * inability to selectively inject jetty resources in configure(Binder binder) of the extension module based
+ * on node type.
+ */
 public interface BasicAuthorizerResourceHandler
 {
+  // coordinator methods
   Response getAllUsers(String authorizerName);
 
   Response getUser(String authorizerName, String userName, boolean isFull);
@@ -50,5 +56,11 @@ public interface BasicAuthorizerResourceHandler
 
   Response getCachedMaps(String authorizerName);
 
+  Response refreshAll();
+
+  // non-coordinator methods
   Response authorizerUpdateListener(String authorizerName, byte[] serializedUserAndRoleMap);
+
+  // common
+  Response getLoadStatus();
 }

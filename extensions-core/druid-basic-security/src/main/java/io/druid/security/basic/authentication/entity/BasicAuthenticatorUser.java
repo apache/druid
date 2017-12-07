@@ -65,7 +65,6 @@ public class BasicAuthenticatorUser
       return false;
     }
     return getCredentials() != null ? getCredentials().equals(that.getCredentials()) : that.getCredentials() == null;
-
   }
 
   @Override

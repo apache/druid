@@ -25,8 +25,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.inject.Provider;
 import io.druid.java.util.common.IAE;
-import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.BasicAuthDBConfig;
+import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheManager;
 import io.druid.security.basic.authentication.entity.BasicAuthenticatorCredentials;
 import io.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
@@ -65,7 +65,8 @@ public class BasicHTTPAuthenticator implements Authenticator
       @JsonProperty("initialAdminPassword") String initialAdminPassword,
       @JsonProperty("initialInternalClientPassword") String initialInternalClientPassword,
       @JsonProperty("enableCacheNotifications") Boolean enableCacheNotifications,
-      @JsonProperty("cacheNotificationTimeout") Long cacheNotificationTimeout
+      @JsonProperty("cacheNotificationTimeout") Long cacheNotificationTimeout,
+      @JsonProperty("credentialIterations") Integer credentialIterations
   )
   {
     this.name = name;
@@ -74,7 +75,8 @@ public class BasicHTTPAuthenticator implements Authenticator
         initialAdminPassword,
         initialInternalClientPassword,
         enableCacheNotifications == null ? true : enableCacheNotifications,
-        cacheNotificationTimeout == null ? BasicAuthDBConfig.DEFAULT_CACHE_NOTIFY_TIMEOUT_MS : cacheNotificationTimeout
+        cacheNotificationTimeout == null ? BasicAuthDBConfig.DEFAULT_CACHE_NOTIFY_TIMEOUT_MS : cacheNotificationTimeout,
+        credentialIterations == null ? BasicAuthUtils.DEFAULT_KEY_ITERATIONS : credentialIterations
     );
     this.cacheManager = cacheManager;
   }

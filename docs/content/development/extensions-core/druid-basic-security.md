@@ -16,13 +16,18 @@ Please see [Authentication and Authorization](../../configuration/auth.html) for
 
 The examples in the section will use "MyBasicAuthenticator" and "MyBasicAuthorizer" as names for the Authenticator and Authorizer.
 
+These properties are not tied to specific Authenticator or Authorizer instances.
+
+These configuration properties should be added to the common runtime properties file.
+
 ### Properties
 |Property|Description|Default|required|
 |--------|-----------|-------|--------|
 |`druid.auth.basic.common.pollingPeriod`|Defines in milliseconds how often nodes should poll the coordinator for the current authenticator/authorizer database state.|60000|No|
 |`druid.auth.basic.common.maxRandomDelay`|Defines in milliseconds the amount of random delay to add to the pollingPeriod, to spread polling requests across time.|6000|No|
+|`druid.auth.basic.common.maxSyncRetries`|Determines how many times a service will retry if the authentication/authorization database state sync with the coordinator fails.|10|No|
+|`druid.auth.basic.common.cacheDirectory`|If defined, snapshots of the basic Authenticator and Authorizer database caches will be stored on disk in this directory. If this property is defined, when a service is starting, it will attempt to initialize its caches from these on-disk snapshots, if the service is unable to initialize its state by communicating with the coordinator.|null|No|
 
-These properties are not tied to specific Authenticator or Authorizer instances.
 
 ### Creating an Authenticator
 ```
@@ -48,13 +53,13 @@ The configuration examples in the rest of this document will use "MyBasicAuthent
 #### Properties
 |Property|Description|Default|required|
 |--------|-----------|-------|--------|
-|`druid.auth.authenticator.MyBasicAuthenticator.initialAdminPassword`|Initial password for the automatically created default admin user. If no password is specified, the default admin user will not be created.|null|No|
-|`druid.auth.authenticator.MyBasicAuthenticator.initialInternalClientPassword`|Initial password for the default internal system user, used for internal node communication. If no password is specified, the default internal system user will not be created.|null|No|
+|`druid.auth.authenticator.MyBasicAuthenticator.initialAdminPassword`|Initial password for the automatically created default admin user. If no password is specified, the default admin user will not be created. If the default admin user already exists, setting this property will affect its password.|null|No|
+|`druid.auth.authenticator.MyBasicAuthenticator.initialInternalClientPassword`|Initial password for the default internal system user, used for internal node communication. If no password is specified, the default internal system user will not be created. If the default internal system user already exists, setting this property will affect its password.|null|No|
 |`druid.auth.authenticator.MyBasicAuthenticator.enableCacheNotifications`|If true, the coordinator will notify Druid nodes whenever a configuration change to this Authenticator occurs, allowing them to immediately update their state without waiting for polling.|true|No|
 |`druid.auth.authenticator.MyBasicAuthenticator.cacheNotificationTimeout`|The timeout in milliseconds for the cache notifications.|5000|No|
+|`druid.auth.authenticator.MyBasicAuthenticator.credentialIterations`|Number of iterations to use for password hashing.|10000|No|
 |`druid.auth.authenticator.MyBasicAuthenticator.authorizerName`|Authorizer that requests should be directed to|N/A|Yes|
 
-enableCacheNotifications
 ### Creating an Escalator
 
 ```
@@ -106,22 +111,33 @@ Root path: `/druid-ext/basic-security/authentication`
 Each API endpoint includes {authenticatorName}, specifying which Authenticator instance is being configured.
 
 ##### User/Credential Management
-`GET(/{authenticatorName}/users)`
+`GET(/druid-ext/basic-security/authentication/db/{authenticatorName}/users)`
 Return a list of all user names.
 
-`GET(/{authenticatorName}/users/{userName})`
+`GET(/druid-ext/basic-security/authentication/db/{authenticatorName}/users/{userName})`
 Return the name and credentials information of the user with name {userName}
 
-`POST(/{authenticatorName}/users/{userName})`
+`POST(/druid-ext/basic-security/authentication/db/{authenticatorName}/users/{userName})`
 Create a new user with name {userName}
 
-`DELETE(/{authenticatorName}/users/{userName})`
+`DELETE(/druid-ext/basic-security/authentication/db/{authenticatorName}/users/{userName})`
 Delete the user with name {userName}
 
-`POST(/{authenticatorName}/users/{userName}/credentials)`
+`POST(/druid-ext/basic-security/authentication/db/{authenticatorName}/users/{userName}/credentials)`
 Assign a password used for HTTP basic authentication for {userName}
-Content: password string
+Content: JSON password request object
 
+Example request body:
+
+```
+{
+  "password": "helloworld"
+}
+```
+
+##### Cache Load Status
+`GET(/druid-ext/basic-security/authentication/loadStatus)`
+Return the current load status of the local caches of the authentication database.
 
 #### Authorization API
 
@@ -130,58 +146,58 @@ Root path: `/druid-ext/basic-security/authorization`
 Each API endpoint includes {authorizerName}, specifying which Authorizer instance is being configured.
 
 ##### User Creation/Deletion
-`GET(/{authorizerName}/users)`
+`GET(/druid-ext/basic-security/authorization/db/{authorizerName}/users)`
 Return a list of all user names.
 
-`GET(/{authorizerName}/users/{userName})`
-Return the name and credentials information of the user with name {userName}
+`GET(/druid-ext/basic-security/authorization/db/{authorizerName}/users/{userName})`
+Return the name and role information of the user with name {userName}
 
-`POST(/{authorizerName}/users/{userName})`
+`POST(/druid-ext/basic-security/authorization/db/{authorizerName}/users/{userName})`
 Create a new user with name {userName}
 
-`DELETE(/{authorizerName}/users/{userName})`
+`DELETE(/druid-ext/basic-security/authorization/db/{authorizerName}/users/{userName})`
 Delete the user with name {userName}
 
 
 #### Role Creation/Deletion
-`GET(/{authorizerName}/roles)`
+`GET(/druid-ext/basic-security/authorization/db/{authorizerName}/roles)`
 Return a list of all role names.
 
-`GET(/{authorizerName}/roles/{roleName})`
+`GET(/druid-ext/basic-security/authorization/db/{authorizerName}/roles/{roleName})`
 Return name and permissions for the role named {roleName}
 
-`POST(/{authorizerName}/roles/{roleName})`
+`POST(/druid-ext/basic-security/authorization/db/{authorizerName}/roles/{roleName})`
 Create a new role with name {roleName}.
 Content: username string
 
-`DELETE(/{authorizerName}/roles/{roleName})`
+`DELETE(/druid-ext/basic-security/authorization/db/{authorizerName}/roles/{roleName})`
 Delete the role with name {roleName}.
 
 
 #### Role Assignment
-`POST(/{authorizerName}/users/{userName}/roles/{roleName})`
+`POST(/druid-ext/basic-security/authorization/db/{authorizerName}/users/{userName}/roles/{roleName})`
 Assign role {roleName} to user {userName}.
 
-`DELETE(/{authorizerName}/users/{userName}/roles/{roleName})`
+`DELETE(/druid-ext/basic-security/authorization/db/{authorizerName}/users/{userName}/roles/{roleName})`
 Unassign role {roleName} from user {userName}
 
 
 #### Permissions
-`POST(/{authorizerName}/roles/{roleName}/permissions)`
+`POST(/druid-ext/basic-security/authorization/db/{authorizerName}/roles/{roleName}/permissions)`
 Set the permissions of {roleName}. This replaces the previous set of permissions on the role.
 
 Content: List of JSON Resource-Action objects, e.g.:
 ```
 [
 { 
-  resource": {
+  "resource": {
     "name": "wiki.*",
     "type": "DATASOURCE"
   },
   "action": "READ"
 },
 { 
-  resource": {
+  "resource": {
     "name": "wikiticker",
     "type": "DATASOURCE"
   },
@@ -193,6 +209,10 @@ Content: List of JSON Resource-Action objects, e.g.:
 The "name" field for resources in the permission definitions are regexes used to match resource names during authorization checks. 
 
 Please see [Defining permissions](#defining-permissions) for more details.
+
+##### Cache Load Status
+`GET(/druid-ext/basic-security/authorization/loadStatus)`
+Return the current load status of the local caches of the authorization database.
 
 ## Default user accounts
 

@@ -17,23 +17,37 @@
  * under the License.
  */
 
-package io.druid.security.basic;
+package io.druid.security.basic.authorization.entity;
 
-import io.druid.java.util.common.StringUtils;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-/**
- * Throw this for invalid resource accesses in the druid-basic-security extension that are likely a result of user error
- * (e.g., entry not found, duplicate entries).
- */
-public class BasicSecurityDBResourceException extends IllegalArgumentException
+import java.util.Map;
+
+public class BasicAuthorizerRoleMapBundle
 {
-  public BasicSecurityDBResourceException(String formatText, Object... arguments)
+  private final Map<String, BasicAuthorizerRole> roleMap;
+  private final byte[] serializedRoleMap;
+
+  @JsonCreator
+  public BasicAuthorizerRoleMapBundle(
+      @JsonProperty("roleMap") Map<String, BasicAuthorizerRole> roleMap,
+      @JsonProperty("serializedRoleMap") byte[] serializedRoleMap
+  )
   {
-    super(StringUtils.nonStrictFormat(formatText, arguments));
+    this.roleMap = roleMap;
+    this.serializedRoleMap = serializedRoleMap;
   }
 
-  public BasicSecurityDBResourceException(Throwable t, String formatText, Object... arguments)
+  @JsonProperty
+  public Map<String, BasicAuthorizerRole> getRoleMap()
   {
-    super(StringUtils.nonStrictFormat(formatText, arguments), t);
+    return roleMap;
+  }
+
+  @JsonProperty
+  public byte[] getSerializedRoleMap()
+  {
+    return serializedRoleMap;
   }
 }

@@ -19,10 +19,18 @@
 
 package io.druid.security.basic.authentication.endpoint;
 
+import io.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
+
 import javax.ws.rs.core.Response;
 
+/**
+ * Handles authenticator-related API calls. Coordinator and non-coordinator methods are combined here because of an
+ * inability to selectively inject jetty resources in configure(Binder binder) of the extension module based
+ * on node type.
+ */
 public interface BasicAuthenticatorResourceHandler
 {
+  // coordinator methods
   Response getAllUsers(String authenticatorName);
 
   Response getUser(String authenticatorName, String userName);
@@ -31,9 +39,15 @@ public interface BasicAuthenticatorResourceHandler
 
   Response deleteUser(String authenticatorName, String userName);
 
-  Response updateUserCredentials(String authenticatorName, String userName, String password);
+  Response updateUserCredentials(String authenticatorName, String userName, BasicAuthenticatorCredentialUpdate update);
 
   Response getCachedSerializedUserMap(String authenticatorName);
 
+  Response refreshAll();
+
+  // non-coordinator methods
   Response authenticatorUpdateListener(String authenticatorName, byte[] serializedUserMap);
+
+  // common methods
+  Response getLoadStatus();
 }

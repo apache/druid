@@ -17,13 +17,37 @@
  * under the License.
  */
 
-package io.druid.security.basic.authentication.db.cache;
+package io.druid.security.basic.authorization.entity;
 
-public class NoopBasicAuthenticatorCacheNotifier implements BasicAuthenticatorCacheNotifier
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.util.Map;
+
+public class BasicAuthorizerUserMapBundle
 {
-  @Override
-  public void addUpdate(String updatedAuthenticatorPrefix, byte[] updatedUserMap)
-  {
+  private final Map<String, BasicAuthorizerUser> userMap;
+  private final byte[] serializedUserMap;
 
+  @JsonCreator
+  public BasicAuthorizerUserMapBundle(
+      @JsonProperty("userMap") Map<String, BasicAuthorizerUser> userMap,
+      @JsonProperty("serializedUserMap") byte[] serializedUserMap
+  )
+  {
+    this.userMap = userMap;
+    this.serializedUserMap = serializedUserMap;
+  }
+
+  @JsonProperty
+  public Map<String, BasicAuthorizerUser> getUserMap()
+  {
+    return userMap;
+  }
+
+  @JsonProperty
+  public byte[] getSerializedUserMap()
+  {
+    return serializedUserMap;
   }
 }

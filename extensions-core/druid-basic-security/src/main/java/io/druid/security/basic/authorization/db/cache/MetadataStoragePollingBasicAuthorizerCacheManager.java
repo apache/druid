@@ -26,12 +26,12 @@ import io.druid.security.basic.authorization.entity.BasicAuthorizerUser;
 
 import java.util.Map;
 
-public class CoordinatorBasicAuthorizerCacheManager implements BasicAuthorizerCacheManager
+public class MetadataStoragePollingBasicAuthorizerCacheManager implements BasicAuthorizerCacheManager
 {
   private final BasicAuthorizerMetadataStorageUpdater storageUpdater;
 
   @Inject
-  public CoordinatorBasicAuthorizerCacheManager(
+  public MetadataStoragePollingBasicAuthorizerCacheManager(
       BasicAuthorizerMetadataStorageUpdater storageUpdater
   )
   {

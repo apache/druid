@@ -21,6 +21,7 @@ package io.druid.security.basic.authentication.entity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import io.druid.security.basic.BasicAuthUtils;
 
 import java.util.Arrays;
@@ -38,16 +39,18 @@ public class BasicAuthenticatorCredentials
       @JsonProperty("iterations") int iterations
   )
   {
+    Preconditions.checkNotNull(salt);
+    Preconditions.checkNotNull(hash);
     this.salt = salt;
     this.hash = hash;
     this.iterations = iterations;
   }
 
-  public BasicAuthenticatorCredentials(char[] password)
+  public BasicAuthenticatorCredentials(BasicAuthenticatorCredentialUpdate update)
   {
-    this.iterations = BasicAuthUtils.KEY_ITERATIONS;
+    this.iterations = update.getIterations();
     this.salt = BasicAuthUtils.generateSalt();
-    this.hash = BasicAuthUtils.hashPassword(password, salt, iterations);
+    this.hash = BasicAuthUtils.hashPassword(update.getPassword().toCharArray(), salt, iterations);
   }
 
   @JsonProperty

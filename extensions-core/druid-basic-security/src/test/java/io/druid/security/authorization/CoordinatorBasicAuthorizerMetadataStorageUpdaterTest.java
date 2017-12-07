@@ -27,11 +27,10 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.metadata.TestDerbyConnector;
+import io.druid.security.basic.BasicAuthCommonCacheConfig;
 import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.BasicSecurityDBResourceException;
-import io.druid.security.basic.BasicAuthCommonCacheConfig;
 import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
-import io.druid.security.basic.authorization.db.cache.NoopBasicAuthorizerCacheNotifier;
 import io.druid.security.basic.authorization.db.updater.CoordinatorBasicAuthorizerMetadataStorageUpdater;
 import io.druid.security.basic.authorization.entity.BasicAuthorizerPermission;
 import io.druid.security.basic.authorization.entity.BasicAuthorizerRole;
@@ -55,8 +54,10 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
   private final static String AUTHORIZER_NAME = "test";
 
   private final static Map<String, BasicAuthorizerUser> BASE_USER_MAP = ImmutableMap.of(
-      BasicAuthUtils.ADMIN_NAME, new BasicAuthorizerUser(BasicAuthUtils.ADMIN_NAME, ImmutableSet.of(BasicAuthUtils.ADMIN_NAME)),
-      BasicAuthUtils.INTERNAL_USER_NAME, new BasicAuthorizerUser(BasicAuthUtils.INTERNAL_USER_NAME, ImmutableSet.of(
+      BasicAuthUtils.ADMIN_NAME,
+      new BasicAuthorizerUser(BasicAuthUtils.ADMIN_NAME, ImmutableSet.of(BasicAuthUtils.ADMIN_NAME)),
+      BasicAuthUtils.INTERNAL_USER_NAME,
+      new BasicAuthorizerUser(BasicAuthUtils.INTERNAL_USER_NAME, ImmutableSet.of(
           BasicAuthUtils.INTERNAL_USER_NAME))
   );
 
@@ -82,10 +83,12 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
   private TestDerbyConnector connector;
   private MetadataStorageTablesConfig tablesConfig;
   private CoordinatorBasicAuthorizerMetadataStorageUpdater updater;
+  private ObjectMapper objectMapper;
 
   @Before
   public void setUp() throws Exception
   {
+    objectMapper = new ObjectMapper(new SmileFactory());
     connector = derbyConnectorRule.getConnector();
     tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
     connector.createConfigTable();
@@ -104,8 +107,8 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
         ),
         connector,
         tablesConfig,
-        new BasicAuthCommonCacheConfig(null, null),
-        new ObjectMapper(new SmileFactory()),
+        new BasicAuthCommonCacheConfig(null, null, null, null),
+        objectMapper,
         new NoopBasicAuthorizerCacheNotifier(),
         null
     );
@@ -120,14 +123,16 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
     updater.createUser(AUTHORIZER_NAME, "druid");
     Map<String, BasicAuthorizerUser> expectedUserMap = Maps.newHashMap(BASE_USER_MAP);
     expectedUserMap.put("druid", new BasicAuthorizerUser("druid", ImmutableSet.of()));
-    Map<String, BasicAuthorizerUser> actualUserMap = updater.deserializeUserMap(
+    Map<String, BasicAuthorizerUser> actualUserMap = BasicAuthUtils.deserializeAuthorizerUserMap(
+        objectMapper,
         updater.getCurrentUserMapBytes(AUTHORIZER_NAME)
     );
     Assert.assertEquals(expectedUserMap, actualUserMap);
 
     updater.deleteUser(AUTHORIZER_NAME, "druid");
     expectedUserMap.remove("druid");
-    actualUserMap = updater.deserializeUserMap(
+    actualUserMap = BasicAuthUtils.deserializeAuthorizerUserMap(
+        objectMapper,
         updater.getCurrentUserMapBytes(AUTHORIZER_NAME)
     );
     Assert.assertEquals(expectedUserMap, actualUserMap);
@@ -157,14 +162,16 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
     updater.createRole(AUTHORIZER_NAME, "druid");
     Map<String, BasicAuthorizerRole> expectedRoleMap = Maps.newHashMap(BASE_ROLE_MAP);
     expectedRoleMap.put("druid", new BasicAuthorizerRole("druid", ImmutableList.of()));
-    Map<String, BasicAuthorizerRole> actualRoleMap = updater.deserializeRoleMap(
+    Map<String, BasicAuthorizerRole> actualRoleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
+        objectMapper,
         updater.getCurrentRoleMapBytes(AUTHORIZER_NAME)
     );
     Assert.assertEquals(expectedRoleMap, actualRoleMap);
 
     updater.deleteRole(AUTHORIZER_NAME, "druid");
     expectedRoleMap.remove("druid");
-    actualRoleMap = updater.deserializeRoleMap(
+    actualRoleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
+        objectMapper,
         updater.getCurrentRoleMapBytes(AUTHORIZER_NAME)
     );
     Assert.assertEquals(expectedRoleMap, actualRoleMap);
@@ -201,11 +208,13 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
     Map<String, BasicAuthorizerRole> expectedRoleMap = Maps.newHashMap(BASE_ROLE_MAP);
     expectedRoleMap.put("druidRole", new BasicAuthorizerRole("druidRole", ImmutableList.of()));
 
-    Map<String, BasicAuthorizerUser> actualUserMap = updater.deserializeUserMap(
+    Map<String, BasicAuthorizerUser> actualUserMap = BasicAuthUtils.deserializeAuthorizerUserMap(
+        objectMapper,
         updater.getCurrentUserMapBytes(AUTHORIZER_NAME)
     );
 
-    Map<String, BasicAuthorizerRole> actualRoleMap = updater.deserializeRoleMap(
+    Map<String, BasicAuthorizerRole> actualRoleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
+        objectMapper,
         updater.getCurrentRoleMapBytes(AUTHORIZER_NAME)
     );
 
@@ -214,7 +223,8 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
 
     updater.unassignRole(AUTHORIZER_NAME, "druid", "druidRole");
     expectedUserMap.put("druid", new BasicAuthorizerUser("druid", ImmutableSet.of()));
-    actualUserMap = updater.deserializeUserMap(
+    actualUserMap = BasicAuthUtils.deserializeAuthorizerUserMap(
+        objectMapper,
         updater.getCurrentUserMapBytes(AUTHORIZER_NAME)
     );
 
@@ -266,11 +276,13 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
     Map<String, BasicAuthorizerRole> expectedRoleMap = Maps.newHashMap(BASE_ROLE_MAP);
     expectedRoleMap.put("druidRole", new BasicAuthorizerRole("druidRole", ImmutableList.of()));
 
-    Map<String, BasicAuthorizerUser> actualUserMap = updater.deserializeUserMap(
+    Map<String, BasicAuthorizerUser> actualUserMap = BasicAuthUtils.deserializeAuthorizerUserMap(
+        objectMapper,
         updater.getCurrentUserMapBytes(AUTHORIZER_NAME)
     );
 
-    Map<String, BasicAuthorizerRole> actualRoleMap = updater.deserializeRoleMap(
+    Map<String, BasicAuthorizerRole> actualRoleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
+        objectMapper,
         updater.getCurrentRoleMapBytes(AUTHORIZER_NAME)
     );
 
@@ -306,11 +318,13 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
         new BasicAuthorizerRole("druidRole", BasicAuthorizerPermission.makePermissionList(permsToAdd))
     );
 
-    Map<String, BasicAuthorizerUser> actualUserMap = updater.deserializeUserMap(
+    Map<String, BasicAuthorizerUser> actualUserMap = BasicAuthUtils.deserializeAuthorizerUserMap(
+        objectMapper,
         updater.getCurrentUserMapBytes(AUTHORIZER_NAME)
     );
 
-    Map<String, BasicAuthorizerRole> actualRoleMap = updater.deserializeRoleMap(
+    Map<String, BasicAuthorizerRole> actualRoleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
+        objectMapper,
         updater.getCurrentRoleMapBytes(AUTHORIZER_NAME)
     );
 
@@ -319,7 +333,8 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
 
     updater.setPermissions(AUTHORIZER_NAME, "druidRole", null);
     expectedRoleMap.put("druidRole", new BasicAuthorizerRole("druidRole", null));
-    actualRoleMap = updater.deserializeRoleMap(
+    actualRoleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
+        objectMapper,
         updater.getCurrentRoleMapBytes(AUTHORIZER_NAME)
     );
 

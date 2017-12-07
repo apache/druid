@@ -26,6 +26,12 @@ import io.druid.server.security.ResourceAction;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Implementations of this interface are responsible for connecting directly to the metadata storage,
+ * modifying the authorizer database state or reading it. This interface is used by the
+ * MetadataStoragePollingBasicAuthorizerCacheManager (for reads) and the CoordinatorBasicAuthorizerResourceHandler
+ * (for handling configuration read/writes).
+ */
 public interface BasicAuthorizerMetadataStorageUpdater
 {
   void createUser(String prefix, String userName);
@@ -46,11 +52,9 @@ public interface BasicAuthorizerMetadataStorageUpdater
 
   Map<String, BasicAuthorizerRole> getCachedRoleMap(String prefix);
 
-  Map<String, BasicAuthorizerUser> deserializeUserMap(byte[] userMapBytes);
-
-  Map<String, BasicAuthorizerRole> deserializeRoleMap(byte[] roleMapBytes);
-
   byte[] getCurrentUserMapBytes(String prefix);
 
   byte[] getCurrentRoleMapBytes(String prefix);
+
+  void refreshAllNotification();
 }

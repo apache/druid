@@ -29,7 +29,7 @@ public class BasicAuthUtilsTest
   public void testHashPassword()
   {
     char[] password = "HELLO".toCharArray();
-    int iterations = BasicAuthUtils.KEY_ITERATIONS;
+    int iterations = BasicAuthUtils.DEFAULT_KEY_ITERATIONS;
     byte[] salt = BasicAuthUtils.generateSalt();
     byte[] hash = BasicAuthUtils.hashPassword(password, salt, iterations);
 

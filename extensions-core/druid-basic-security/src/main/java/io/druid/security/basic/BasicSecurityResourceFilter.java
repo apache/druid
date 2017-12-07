@@ -37,11 +37,12 @@ import java.util.List;
 
 public class BasicSecurityResourceFilter extends AbstractResourceFilter
 {
-  private static final List<String> applicablePaths = ImmutableList.of(
-      "druid/coordinator/v1/security/*",
-      "druid/security/internal/authentication/*",
-      "druid/basic-security/authentication/*"
+  private static final List<String> APPLICABLE_PATHS = ImmutableList.of(
+      "/druid-ext/basic-security/authentication",
+      "/druid-ext/basic-security/authorization"
   );
+
+  private static final String SECURITY_RESOURCE_NAME = "security";
 
   @Inject
   public BasicSecurityResourceFilter(
@@ -55,7 +56,7 @@ public class BasicSecurityResourceFilter extends AbstractResourceFilter
   public ContainerRequest filter(ContainerRequest request)
   {
     final ResourceAction resourceAction = new ResourceAction(
-        new Resource("security", ResourceType.CONFIG),
+        new Resource(SECURITY_RESOURCE_NAME, ResourceType.CONFIG),
         getAction(request)
     );
 
@@ -79,7 +80,7 @@ public class BasicSecurityResourceFilter extends AbstractResourceFilter
   @Override
   public boolean isApplicable(String requestPath)
   {
-    for (String path : applicablePaths) {
+    for (String path : APPLICABLE_PATHS) {
       if (requestPath.startsWith(path) && !requestPath.equals(path)) {
         return true;
       }

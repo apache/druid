@@ -31,6 +31,7 @@ import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.ResourceAction;
 
 import javax.ws.rs.core.Response;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -139,6 +140,12 @@ public class DefaultBasicAuthorizerResourceHandler implements BasicAuthorizerRes
   }
 
   @Override
+  public Response refreshAll()
+  {
+    return NOT_FOUND_RESPONSE;
+  }
+
+  @Override
   public Response authorizerUpdateListener(String authorizerName, byte[] serializedUserAndRoleMap)
   {
     final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
@@ -155,5 +162,17 @@ public class DefaultBasicAuthorizerResourceHandler implements BasicAuthorizerRes
 
     cacheManager.handleAuthorizerUpdate(authorizerName, serializedUserAndRoleMap);
     return Response.ok().build();
+  }
+
+  @Override
+  public Response getLoadStatus()
+  {
+    Map<String, Boolean> loadStatus = new HashMap<>();
+    authorizerMap.forEach(
+        (authorizerName, authorizer) -> {
+          loadStatus.put(authorizerName, cacheManager.getUserMap(authorizerName) != null);
+        }
+    );
+    return Response.ok(loadStatus).build();
   }
 }

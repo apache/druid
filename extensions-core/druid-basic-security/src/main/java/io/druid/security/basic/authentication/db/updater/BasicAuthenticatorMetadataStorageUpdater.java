@@ -19,17 +19,24 @@
 
 package io.druid.security.basic.authentication.db.updater;
 
+import io.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import io.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 
 import java.util.Map;
 
+/**
+ * Implementations of this interface are responsible for connecting directly to the metadata storage,
+ * modifying the authenticator database state or reading it. This interface is used by the
+ * MetadataStoragePollingBasicAuthenticatorCacheManager (for reads) and the CoordinatorBasicAuthenticatorResourceHandler
+ * (for handling configuration read/writes).
+ */
 public interface BasicAuthenticatorMetadataStorageUpdater
 {
   void createUser(String prefix, String userName);
 
   void deleteUser(String prefix, String userName);
 
-  void setUserCredentials(String prefix, String userName, char[] password);
+  void setUserCredentials(String prefix, String userName, BasicAuthenticatorCredentialUpdate update);
 
   Map<String, BasicAuthenticatorUser> getCachedUserMap(String prefix);
 
@@ -37,7 +44,5 @@ public interface BasicAuthenticatorMetadataStorageUpdater
 
   byte[] getCurrentUserMapBytes(String prefix);
 
-  Map<String, BasicAuthenticatorUser> deserializeUserMap(byte[] userMapBytes);
-
-  byte[] serializeUserMap(Map<String, BasicAuthenticatorUser> userMap);
+  void refreshAllNotification();
 }

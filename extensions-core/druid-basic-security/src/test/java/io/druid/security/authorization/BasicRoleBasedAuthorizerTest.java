@@ -27,8 +27,7 @@ import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.metadata.TestDerbyConnector;
 import io.druid.security.basic.BasicAuthCommonCacheConfig;
 import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
-import io.druid.security.basic.authorization.db.cache.CoordinatorBasicAuthorizerCacheManager;
-import io.druid.security.basic.authorization.db.cache.NoopBasicAuthorizerCacheNotifier;
+import io.druid.security.basic.authorization.db.cache.MetadataStoragePollingBasicAuthorizerCacheManager;
 import io.druid.security.basic.authorization.db.updater.CoordinatorBasicAuthorizerMetadataStorageUpdater;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
@@ -78,7 +77,7 @@ public class BasicRoleBasedAuthorizerTest
         ),
         connector,
         tablesConfig,
-        new BasicAuthCommonCacheConfig(null, null),
+        new BasicAuthCommonCacheConfig(null, null, null, null),
         new ObjectMapper(new SmileFactory()),
         new NoopBasicAuthorizerCacheNotifier(),
         null
@@ -87,7 +86,7 @@ public class BasicRoleBasedAuthorizerTest
     updater.start();
 
     authorizer = new BasicRoleBasedAuthorizer(
-        new CoordinatorBasicAuthorizerCacheManager(
+        new MetadataStoragePollingBasicAuthorizerCacheManager(
             updater
         ),
         AUTHORIZER_NAME,

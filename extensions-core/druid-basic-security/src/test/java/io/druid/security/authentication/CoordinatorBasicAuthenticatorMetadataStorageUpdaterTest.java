@@ -33,13 +33,13 @@ import io.druid.guice.annotations.Self;
 import io.druid.initialization.Initialization;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.metadata.TestDerbyConnector;
+import io.druid.security.basic.BasicAuthCommonCacheConfig;
 import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.BasicSecurityDBResourceException;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import io.druid.security.basic.authentication.BasicHTTPEscalator;
-import io.druid.security.basic.BasicAuthCommonCacheConfig;
-import io.druid.security.basic.authentication.db.cache.NoopBasicAuthenticatorCacheNotifier;
 import io.druid.security.basic.authentication.db.updater.CoordinatorBasicAuthenticatorMetadataStorageUpdater;
+import io.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import io.druid.security.basic.authentication.entity.BasicAuthenticatorCredentials;
 import io.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 import io.druid.server.DruidNode;
@@ -66,14 +66,15 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
   private TestDerbyConnector connector;
   private MetadataStorageTablesConfig tablesConfig;
   private CoordinatorBasicAuthenticatorMetadataStorageUpdater updater;
+  private ObjectMapper objectMapper;
 
   @Before
   public void setUp() throws Exception
   {
+    objectMapper = new ObjectMapper(new SmileFactory());
     connector = derbyConnectorRule.getConnector();
     tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
     connector.createConfigTable();
-    //injector = setupInjector();
 
     updater = new CoordinatorBasicAuthenticatorMetadataStorageUpdater(
         new AuthenticatorMapper(
@@ -86,14 +87,15 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
                     null,
                     null,
                     null,
+                    null,
                     null
                 )
             )
         ),
         connector,
         tablesConfig,
-        new BasicAuthCommonCacheConfig(null, null),
-        new ObjectMapper(new SmileFactory()),
+        new BasicAuthCommonCacheConfig(null, null, null, null),
+        objectMapper,
         new NoopBasicAuthenticatorCacheNotifier(),
         null
     );
@@ -114,7 +116,10 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
     Map<String, BasicAuthenticatorUser> expectedUserMap = ImmutableMap.of(
         "druid", new BasicAuthenticatorUser("druid", null)
     );
-    Map<String, BasicAuthenticatorUser> actualUserMap = updater.deserializeUserMap(updater.getCurrentUserMapBytes(AUTHENTICATOR_NAME));
+    Map<String, BasicAuthenticatorUser> actualUserMap = BasicAuthUtils.deserializeAuthenticatorUserMap(
+        objectMapper,
+        updater.getCurrentUserMapBytes(AUTHENTICATOR_NAME)
+    );
     Assert.assertEquals(expectedUserMap, actualUserMap);
 
     // create duplicate should fail
@@ -129,7 +134,10 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
     updater.createUser(AUTHENTICATOR_NAME, "druid");
     updater.deleteUser(AUTHENTICATOR_NAME, "druid");
     Map<String, BasicAuthenticatorUser> expectedUserMap = ImmutableMap.of();
-    Map<String, BasicAuthenticatorUser> actualUserMap = updater.deserializeUserMap(updater.getCurrentUserMapBytes(AUTHENTICATOR_NAME));
+    Map<String, BasicAuthenticatorUser> actualUserMap = BasicAuthUtils.deserializeAuthenticatorUserMap(
+        objectMapper,
+        updater.getCurrentUserMapBytes(AUTHENTICATOR_NAME)
+    );
     Assert.assertEquals(expectedUserMap, actualUserMap);
 
     // delete non-existent user should fail
@@ -142,9 +150,12 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
   public void setCredentials()
   {
     updater.createUser(AUTHENTICATOR_NAME, "druid");
-    updater.setUserCredentials(AUTHENTICATOR_NAME, "druid", "helloworld".toCharArray());
+    updater.setUserCredentials(AUTHENTICATOR_NAME, "druid", new BasicAuthenticatorCredentialUpdate("helloworld", null));
 
-    Map<String, BasicAuthenticatorUser> userMap = updater.deserializeUserMap(updater.getCurrentUserMapBytes(AUTHENTICATOR_NAME));
+    Map<String, BasicAuthenticatorUser> userMap = BasicAuthUtils.deserializeAuthenticatorUserMap(
+        objectMapper,
+        updater.getCurrentUserMapBytes(AUTHENTICATOR_NAME)
+    );
     BasicAuthenticatorCredentials credentials = userMap.get("druid").getCredentials();
 
     byte[] recalculatedHash = BasicAuthUtils.hashPassword(
@@ -184,6 +195,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
                                 null,
                                 "test",
                                 "test",
+                                null,
                                 null,
                                 null,
                                 null,
