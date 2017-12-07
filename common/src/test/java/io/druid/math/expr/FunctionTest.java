@@ -20,7 +20,7 @@
 package io.druid.math.expr;
 
 import com.google.common.collect.ImmutableMap;
-import io.druid.common.config.NullHandlingExpressionHelper;
+import io.druid.common.config.NullHandlingUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -56,7 +56,7 @@ public class FunctionTest
   public void testConcat()
   {
     assertExpr("concat(x,' ',y)", "foo 2");
-    if (NullHandlingExpressionHelper.useDefaultValuesForNull()) {
+    if (NullHandlingUtil.useDefaultValuesForNull()) {
       assertExpr("concat(x,' ',nonexistent,' ',y)", "foo  2");
     } else {
       assertExpr("concat(x,' ',nonexistent,' ',y)", null);

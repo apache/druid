@@ -49,6 +49,8 @@ import java.util.Map;
 public class InputRowSerde
 {
   private static final Logger log = new Logger(InputRowSerde.class);
+  private static final byte TRUE_BYTE = (byte) 1;
+  private static final byte FALSE_BYTE = (byte) 0;
 
   public static final byte[] toBytes(final InputRow row, AggregatorFactory[] aggs, boolean reportParseExceptions)
   {
@@ -105,9 +107,9 @@ public class InputRowSerde
 
           String t = aggFactory.getTypeName();
           if (agg.isNull()) {
-            out.writeByte((byte) 1);
+            out.writeByte(TRUE_BYTE);
           } else {
-            out.writeByte((byte) 0);
+            out.writeByte(FALSE_BYTE);
             if (t.equals("float")) {
               out.writeFloat(agg.getFloat());
             } else if (t.equals("long")) {
@@ -222,7 +224,7 @@ public class InputRowSerde
         String metric = readString(in);
         String type = getType(metric, aggs, i);
         byte metricNullability = in.readByte();
-        if (metricNullability == (byte) 1) {
+        if (metricNullability == TRUE_BYTE) {
           // metric value is null.
           continue;
         }

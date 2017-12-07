@@ -20,7 +20,7 @@
 package io.druid.math.expr;
 
 import com.google.common.base.Strings;
-import io.druid.common.config.NullHandlingExpressionHelper;
+import io.druid.common.config.NullHandlingUtil;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
@@ -75,7 +75,7 @@ interface Function
     @Override
     protected final ExprEval eval(ExprEval param)
     {
-      if (!NullHandlingExpressionHelper.useDefaultValuesForNull() && param.isNull()) {
+      if (!NullHandlingUtil.useDefaultValuesForNull() && param.isNull()) {
         return ExprEval.of(null);
       }
       if (param.type() == ExprType.LONG) {
@@ -903,12 +903,12 @@ interface Function
         final StringBuilder builder = new StringBuilder(Strings.nullToEmpty(args.get(0).eval(bindings).asString()));
         for (int i = 1; i < args.size(); i++) {
           final String s = args.get(i).eval(bindings).asString();
-          if (!NullHandlingExpressionHelper.useDefaultValuesForNull() && s == null) {
+          if (!NullHandlingUtil.useDefaultValuesForNull() && s == null) {
             // Result of concatenation is null if any of the Values is null.
             // e.g. 'select CONCAT(null, "abc") as c;' will return null as per Standard SQL spec.
             return ExprEval.of(null);
           } else {
-            builder.append(NullHandlingExpressionHelper.nullToEmptyIfNeeded(s));
+            builder.append(NullHandlingUtil.nullToEmptyIfNeeded(s));
           }
         }
         return ExprEval.of(builder.toString());
@@ -992,7 +992,7 @@ interface Function
       } else {
         // If starting index of substring is greater then the length of string, the result will be a zero length string.
         // e.g. 'select substring("abc", 4,5) as c;' will return an empty string
-        return ExprEval.of(NullHandlingExpressionHelper.nullToEmptyIfNeeded((String) null));
+        return ExprEval.of(NullHandlingUtil.nullToEmptyIfNeeded((String) null));
       }
     }
   }
@@ -1016,10 +1016,10 @@ interface Function
       final String pattern = args.get(1).eval(bindings).asString();
       final String replacement = args.get(2).eval(bindings).asString();
       if (arg == null) {
-        return ExprEval.of(NullHandlingExpressionHelper.nullToEmptyIfNeeded((String) null));
+        return ExprEval.of(NullHandlingUtil.nullToEmptyIfNeeded(null));
       }
       return ExprEval.of(
-          NullHandlingExpressionHelper.nullToEmptyIfNeeded(arg).replace(Strings.nullToEmpty(pattern), Strings.nullToEmpty(replacement))
+          arg.replace(Strings.nullToEmpty(pattern), Strings.nullToEmpty(replacement))
       );
     }
   }
@@ -1041,7 +1041,7 @@ interface Function
 
       final String arg = args.get(0).eval(bindings).asString();
       if (arg == null) {
-        return ExprEval.of(NullHandlingExpressionHelper.nullToEmptyIfNeeded((String) null));
+        return ExprEval.of(NullHandlingUtil.nullToEmptyIfNeeded((String) null));
       }
       return ExprEval.of(StringUtils.toLowerCase(arg));
     }
@@ -1064,7 +1064,7 @@ interface Function
 
       final String arg = args.get(0).eval(bindings).asString();
       if (arg == null) {
-        return ExprEval.of(NullHandlingExpressionHelper.nullToEmptyIfNeeded((String) null));
+        return ExprEval.of(NullHandlingUtil.nullToEmptyIfNeeded((String) null));
       }
       return ExprEval.of(StringUtils.toUpperCase(arg));
     }

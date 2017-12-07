@@ -20,7 +20,7 @@
 package io.druid.math.expr;
 
 import com.google.common.collect.ImmutableMap;
-import io.druid.common.config.NullHandlingExpressionHelper;
+import io.druid.common.config.NullHandlingUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -140,7 +140,7 @@ public class EvalTest
     Assert.assertEquals(1271055781L, evalLong("unix_timestamp('2010-04-12T07:03:01')", bindings));
     Assert.assertEquals(1271023381L, evalLong("unix_timestamp('2010-04-12T07:03:01+09:00')", bindings));
     Assert.assertEquals(1271023381L, evalLong("unix_timestamp('2010-04-12T07:03:01.419+09:00')", bindings));
-    if (NullHandlingExpressionHelper.useDefaultValuesForNull()) {
+    if (NullHandlingUtil.useDefaultValuesForNull()) {
       Assert.assertEquals("NULL", eval("nvl(if(x == 9223372036854775807, '', 'x'), 'NULL')", bindings).asString());
     } else {
       Assert.assertEquals("", eval("nvl(if(x == 9223372036854775807, '', 'x'), 'NULL')", bindings).asString());

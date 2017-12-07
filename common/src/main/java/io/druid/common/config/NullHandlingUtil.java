@@ -22,7 +22,9 @@ package io.druid.common.config;
 import com.google.common.base.Strings;
 import com.google.inject.Inject;
 
-public class NullHandlingExpressionHelper
+import javax.annotation.Nullable;
+
+public class NullHandlingUtil
 {
   private static String NULL_HANDLING_CONFIG_STRING = "druid.generic.useDefaultValueForNull";
 
@@ -41,12 +43,12 @@ public class NullHandlingExpressionHelper
     return INSTANCE.isUseDefaultValuesForNull();
   }
 
-  public static String nullToEmptyIfNeeded(String value)
+  public static @Nullable String nullToEmptyIfNeeded(@Nullable String value)
   {
     return INSTANCE.isUseDefaultValuesForNull() ? Strings.nullToEmpty(value) : value;
   }
 
-  public static String emptyToNullIfNeeded(String value)
+  public static @Nullable String emptyToNullIfNeeded(@Nullable String value)
   {
     return INSTANCE.isUseDefaultValuesForNull() ? Strings.emptyToNull(value) : value;
   }

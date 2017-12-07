@@ -51,7 +51,7 @@ matrix:
       # processing module test with SQL Compatible Null Handling
     - sudo: false
       env:
-        - NAME="processing module test"
+        - NAME="processing module test with SQL Compatible Null Handling"
       install: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn install -q -ff -DskipTests -B
       before_script:
         - unset _JAVA_OPTIONS
@@ -60,7 +60,7 @@ matrix:
       # server module test with SQL Compatible Null Handling
     - sudo: false
       env:
-        - NAME="server module test"
+        - NAME="server module test with SQL Compatible Null Handling"
       install: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn install -Ddruid.generic.useDefaultValueForNull=false -q -ff -DskipTests -B
       before_script:
         - unset _JAVA_OPTIONS
@@ -70,7 +70,7 @@ matrix:
       # other modules test with SQL Compatible Null Handling
     - sudo: false
       env:
-        - NAME="other modules test"
+        - NAME="other modules test with SQL Compatible Null Handling"
       install: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn install -q -ff -DskipTests -B
       before_script:
         - unset _JAVA_OPTIONS

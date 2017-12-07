@@ -1631,8 +1631,12 @@ public class CalciteQueryTest
   }
 
   @Test
-  public void testNullEmptyStringEquality() throws Exception
+  public void testNullEmptyStringEqualityBackwardsCompatibility() throws Exception
   {
+    if(!NullHandlingHelper.useDefaultValuesForNull()){
+      // This test only makes sense when nulls and empty strings are considered equal.
+      return;
+    }
     // Doesn't conform to the SQL standard, but it's how we do it.
     // This example is used in the sql.md doc.
 
@@ -1641,58 +1645,27 @@ public class CalciteQueryTest
         "NULLIF(dim2, 'a') IS NULL"
     );
 
-    testQuery(
-        "SELECT COUNT(*)\n"
-        + "FROM druid.foo\n"
-        + "WHERE " + wheres.get(0),
-        ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .filters(EXPRESSION_FILTER("case_searched((\"dim2\" == 'a'),"
-                                             + (NullHandlingHelper.useDefaultValuesForNull() ? "1" : "0")
-                                             + ",(\"dim2\" == ''))"))
-                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
-                  .build()
-        ),
-        NullHandlingHelper.useDefaultValuesForNull() ?
-        ImmutableList.of(
-            // Matches everything but "abc"
-            new Object[]{5L}
-        ) :
-        ImmutableList.of(
-            // Matches only null value
-            new Object[]{1L}
-        )
-    );
-
-    testQuery(
-        "SELECT COUNT(*)\n"
-        + "FROM druid.foo\n"
-        + "WHERE " + wheres.get(1),
-        ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .filters(EXPRESSION_FILTER("case_searched((\"dim2\" == 'a'),1,isnull(\"dim2\"))"))
-                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
-                  .build()
-        ),
-        NullHandlingHelper.useDefaultValuesForNull() ?
-        ImmutableList.of(
-            // Matches everything but "abc"
-            new Object[]{5L}
-        ) :
-        ImmutableList.of(
-            // Matches everything but "abc" and ""(Empty String)
-            new Object[]{4L}
-        )
-    );
-
+    for (String where : wheres) {
+      testQuery(
+          "SELECT COUNT(*)\n"
+          + "FROM druid.foo\n"
+          + "WHERE " + where,
+          ImmutableList.of(
+              Druids.newTimeseriesQueryBuilder()
+                    .dataSource(CalciteTests.DATASOURCE1)
+                    .intervals(QSS(Filtration.eternity()))
+                    .granularity(Granularities.ALL)
+                    .filters(EXPRESSION_FILTER("case_searched((\"dim2\" == 'a'),1,(\"dim2\" == ''))"))
+                    .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                    .context(TIMESERIES_CONTEXT_DEFAULT)
+                    .build()
+          ),
+          ImmutableList.of(
+              // Matches everything but "abc"
+              new Object[]{5L}
+          )
+      );
+    }
   }
 
   @Test
