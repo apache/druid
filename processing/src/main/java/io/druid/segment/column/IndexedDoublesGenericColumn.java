@@ -73,6 +73,7 @@ public class IndexedDoublesGenericColumn implements GenericColumn
     return nullValueBitmap.get(rowNum);
   }
 
+  @Override
   public void close()
   {
     column.close();

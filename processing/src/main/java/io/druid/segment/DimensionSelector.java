@@ -173,6 +173,7 @@ public interface DimensionSelector extends ColumnValueSelector, HotLoopCallee
    * This method is not the default implementation of {@link #getObject()} to minimize the chance that implementations
    * "forget" to override it with more optimized version.
    */
+  @Deprecated
   @Nullable
   default Object defaultGetObject()
   {

@@ -76,6 +76,7 @@ public interface AggregateCombiner<T> extends ColumnValueSelector<T>
     return false;
   }
 
+  @Override
   default void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
     // Usually AggregateCombiner has nothing to inspect

@@ -404,6 +404,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
           return false;
         }
 
+        @Override
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
           inspector.visit("row", row);

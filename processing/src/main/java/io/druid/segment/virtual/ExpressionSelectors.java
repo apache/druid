@@ -83,6 +83,7 @@ public class ExpressionSelectors
         return baseSelector.getObject().isNull();
       }
 
+      @Override
       public float getFloat()
       {
         return baseSelector.getFloat();
