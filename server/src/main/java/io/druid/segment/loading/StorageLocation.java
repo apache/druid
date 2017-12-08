@@ -39,15 +39,22 @@ class StorageLocation
 
   private volatile long currSize = 0;
 
-  StorageLocation(File path, long maxSize, float freeSpacePercent)
+  StorageLocation(File path, long maxSize, Float freeSpacePercent)
   {
     this.path = path;
     this.maxSize = maxSize;
 
-    if (freeSpacePercent > 0) {
-      this.freeSpaceToKeep = (long) ((freeSpacePercent * path.getTotalSpace()) / 100);
+    if (freeSpacePercent != null) {
+      long totalSpaceInPartition = path.getTotalSpace();
+      this.freeSpaceToKeep = (long) ((freeSpacePercent * totalSpaceInPartition) / 100);
+      log.info(
+          "SegmentLocation[%s] will try and maintain [%d:%d] free space while loading segments.",
+          path,
+          freeSpaceToKeep,
+          totalSpaceInPartition
+      );
     } else {
-      this.freeSpaceToKeep = -1;
+      this.freeSpaceToKeep = 0;
     }
 
     this.segments = Sets.newHashSet();

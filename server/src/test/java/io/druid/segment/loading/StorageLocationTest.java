@@ -36,7 +36,7 @@ public class StorageLocationTest
   public void testStorageLocation() throws Exception
   {
     long expectedAvail = 1000L;
-    StorageLocation loc = new StorageLocation(new File("/tmp"), expectedAvail, -1.0f);
+    StorageLocation loc = new StorageLocation(new File("/tmp"), expectedAvail, null);
 
     verifyLoc(expectedAvail, loc);
 
