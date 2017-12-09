@@ -20,7 +20,10 @@
 package io.druid.query.aggregation.datasketches.tuple;
 
 import java.io.BufferedWriter;
-import java.io.FileWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Random;
 
 import org.apache.commons.codec.binary.Base64;
@@ -40,7 +43,8 @@ public class GenerateTestData
 
   static void generateSketches() throws Exception
   {
-    try (BufferedWriter out = new BufferedWriter(new FileWriter("array_of_doubles_sketch_data.tsv"))) {
+    Path path = FileSystems.getDefault().getPath("array_of_doubles_sketch_data.tsv");
+    try (BufferedWriter out = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
       Random rand = new Random();
       int key = 0;
       for (int i = 0; i < 20; i++) {
@@ -55,7 +59,6 @@ public class GenerateTestData
         out.write(Base64.encodeBase64String(sketch.compact().toByteArray()));
         out.newLine();
       }
-      out.close();
     }
   }
 
@@ -67,7 +70,8 @@ public class GenerateTestData
   {
     double meanTest = 10;
     double meanControl = 10.2;
-    try (BufferedWriter out = new BufferedWriter(new FileWriter("bucket_test_data.tsv"))) {
+    Path path = FileSystems.getDefault().getPath("bucket_test_data.tsv");
+    try (BufferedWriter out = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
       Random rand = new Random();
       for (int i = 0; i < 1000; i++) {
         writeBucketTestRecord(out, "test", i, rand.nextGaussian() + meanTest);
