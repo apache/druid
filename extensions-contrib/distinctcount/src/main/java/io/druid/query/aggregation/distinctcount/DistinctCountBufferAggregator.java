@@ -33,14 +33,18 @@ import java.nio.ByteBuffer;
 
 public class DistinctCountBufferAggregator implements BufferAggregator
 {
+  private static final int UNKNOWN_ID = -1;
   private final DimensionSelector selector;
   private final Int2ObjectMap<MutableBitmap> mutableBitmapCollection = new Int2ObjectOpenHashMap<>();
+  private final int idForNull;
+
 
   public DistinctCountBufferAggregator(
       DimensionSelector selector
   )
   {
     this.selector = selector;
+    this.idForNull = selector.nameLookupPossibleInAdvance() ? selector.idLookup().lookupId(null) : UNKNOWN_ID;
   }
 
   @Override
@@ -56,9 +60,8 @@ public class DistinctCountBufferAggregator implements BufferAggregator
     MutableBitmap mutableBitmap = getMutableBitmap(position);
     IndexedInts row = selector.getRow();
     for (int i = 0; i < row.size(); i++) {
-
       int index = row.get(i);
-      if (countNulls || selector.lookupName(index) != null) {
+      if (NullHandlingHelper.useDefaultValuesForNull() || isNotNull(index)) {
         mutableBitmap.add(index);
       }
     }
@@ -75,28 +78,33 @@ public class DistinctCountBufferAggregator implements BufferAggregator
     return mutableBitmap;
   }
 
+  private boolean isNotNull(int index)
+  {
+    return selector.nameLookupPossibleInAdvance() ? index != idForNull : selector.lookupName(index) != null;
+  }
+
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    return countValues(buf, position);
+    return buf.getLong(position);
   }
 
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    return (float) countValues(buf, position);
+    return (float) buf.getLong(position);
   }
 
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
-    return countValues(buf, position);
+    return buf.getLong(position);
   }
 
   @Override
   public double getDouble(ByteBuffer buf, int position)
   {
-    return (double) countValues(buf, position);
+    return (double) buf.getLong(position);
   }
 
   @Override
@@ -109,15 +117,5 @@ public class DistinctCountBufferAggregator implements BufferAggregator
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
     inspector.visit("selector", selector);
-  }
-
-  private long countValues(ByteBuffer buf, int position)
-  {
-    MutableBitmap mutableBitmap = getMutableBitmap(position);
-    if (!selector.nameLookupPossibleInAdvance() || NullHandlingHelper.useDefaultValuesForNull()) {
-      return mutableBitmap.size();
-    }
-    int nullId = selector.idLookup().lookupId(null);
-    return mutableBitmap.get(nullId) ? mutableBitmap.size() - 1 : mutableBitmap.size();
   }
 }

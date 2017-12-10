@@ -94,7 +94,7 @@ public class Rows
    * @throws ParseException       if the column cannot be converted to a number
    */
   @Nullable
-  public static Number objectToNumber(final String name, final Object inputValue)
+  public static Number objectToNumber(final String name, @Nullable final Object inputValue)
   {
     if (inputValue == null) {
       return null;

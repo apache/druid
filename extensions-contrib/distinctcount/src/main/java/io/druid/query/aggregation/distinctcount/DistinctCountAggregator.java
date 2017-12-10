@@ -23,12 +23,14 @@ import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.NullHandlingHelper;
+import io.druid.segment.data.IndexedInts;
 
 public class DistinctCountAggregator implements Aggregator
 {
-
+  private static final int UNKNOWN_ID = -1;
   private final DimensionSelector selector;
   private final MutableBitmap mutableBitmap;
+  private final int idForNull;
 
   public DistinctCountAggregator(
       DimensionSelector selector,
@@ -37,18 +39,24 @@ public class DistinctCountAggregator implements Aggregator
   {
     this.selector = selector;
     this.mutableBitmap = mutableBitmap;
+    this.idForNull = selector.nameLookupPossibleInAdvance() ? selector.idLookup().lookupId(null) : UNKNOWN_ID;
   }
 
   @Override
   public void aggregate()
   {
-
-    boolean countNulls = !selector.nameLookupPossibleInAdvance() || NullHandlingHelper.useDefaultValuesForNull();
-    selector.getRow().forEach(index -> {
-      if (countNulls || selector.lookupName(index) != null) {
+    IndexedInts row = selector.getRow();
+    for (int i = 0; i < row.size(); i++) {
+      int index = row.get(i);
+      if (NullHandlingHelper.useDefaultValuesForNull() || isNotNull(index)) {
         mutableBitmap.add(index);
       }
-    });
+    }
+  }
+
+  private boolean isNotNull(int index)
+  {
+    return selector.nameLookupPossibleInAdvance() ? index != idForNull : selector.lookupName(index) != null;
   }
 
   @Override
@@ -60,13 +68,13 @@ public class DistinctCountAggregator implements Aggregator
   @Override
   public Object get()
   {
-    return countValues();
+    return mutableBitmap.size();
   }
 
   @Override
   public float getFloat()
   {
-    return (float) countValues();
+    return (float) mutableBitmap.size();
   }
 
   @Override
@@ -78,21 +86,12 @@ public class DistinctCountAggregator implements Aggregator
   @Override
   public long getLong()
   {
-    return (long) countValues();
+    return (long) mutableBitmap.size();
   }
 
   @Override
   public double getDouble()
   {
-    return (double) countValues();
-  }
-
-  private int countValues()
-  {
-    if (!selector.nameLookupPossibleInAdvance() || NullHandlingHelper.useDefaultValuesForNull()) {
-      return mutableBitmap.size();
-    }
-    int nullId = selector.idLookup().lookupId(null);
-    return mutableBitmap.get(nullId) ? mutableBitmap.size() - 1 : mutableBitmap.size();
+    return (double) mutableBitmap.size();
   }
 }

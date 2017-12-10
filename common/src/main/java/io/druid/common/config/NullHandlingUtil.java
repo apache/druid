@@ -28,11 +28,13 @@ public class NullHandlingUtil
 {
   private static String NULL_HANDLING_CONFIG_STRING = "druid.generic.useDefaultValueForNull";
 
-  // INSTANCE is injected using static injection to avoid adding JacksonInject annotations all over the code.
-  // See NullHandlingModule for details.
-  // It does not take effect in all unit tests since we don't use Guice Injection.
-  // For tests default system property is supposed to be used only in tests
 
+  /**
+   * INSTANCE is injected using static injection to avoid adding JacksonInject annotations all over the code.
+   * See {@link io.druid.guice.NullHandlingModule} for details.
+   * It does not take effect in all unit tests since we don't use Guice Injection.
+   * For tests default system property is supposed to be used only in tests
+   */
   @Inject
   private static NullValueHandlingConfig INSTANCE = new NullValueHandlingConfig(
       Boolean.valueOf(System.getProperty(NULL_HANDLING_CONFIG_STRING, "true"))
@@ -43,12 +45,14 @@ public class NullHandlingUtil
     return INSTANCE.isUseDefaultValuesForNull();
   }
 
-  public static @Nullable String nullToEmptyIfNeeded(@Nullable String value)
+  @Nullable
+  public static String nullToEmptyIfNeeded(@Nullable String value)
   {
     return INSTANCE.isUseDefaultValuesForNull() ? Strings.nullToEmpty(value) : value;
   }
 
-  public static @Nullable String emptyToNullIfNeeded(@Nullable String value)
+  @Nullable
+  public static String emptyToNullIfNeeded(@Nullable String value)
   {
     return INSTANCE.isUseDefaultValuesForNull() ? Strings.emptyToNull(value) : value;
   }

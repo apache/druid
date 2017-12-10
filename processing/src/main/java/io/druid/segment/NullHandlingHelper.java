@@ -30,6 +30,8 @@ import io.druid.query.aggregation.NullableAggregateCombiner;
 import io.druid.query.aggregation.NullableAggregator;
 import io.druid.query.aggregation.NullableBufferAggregator;
 
+import javax.annotation.Nullable;
+
 public class NullHandlingHelper
 {
   private static String NULL_HANDLING_CONFIG_STRING = "druid.generic.useDefaultValueForNull";
@@ -40,10 +42,12 @@ public class NullHandlingHelper
   public static final Float ZERO_FLOAT = 0.0f;
   public static final Long ZERO_LONG = 0L;
 
-  // INSTANCE is injected using static injection to avoid adding JacksonInject annotations all over the code.
-  // See NullHandlingModule for details.
-  // It does not take effect in all unit tests since we don't use Guice Injection.
-  // For tests default system property is supposed to be used only in tests
+  /**
+   * INSTANCE is injected using static injection to avoid adding JacksonInject annotations all over the code.
+   * See {@link io.druid.guice.NullHandlingModule} for details.
+   * It does not take effect in all unit tests since we don't use Guice Injection.
+   * For tests default system property is supposed to be used only in tests
+   */
   @Inject
   private static NullValueHandlingConfig INSTANCE = new NullValueHandlingConfig(
       Boolean.valueOf(System.getProperty(NULL_HANDLING_CONFIG_STRING, "true"))
@@ -54,32 +58,37 @@ public class NullHandlingHelper
     return INSTANCE.isUseDefaultValuesForNull();
   }
 
-  public static String nullToEmptyIfNeeded(String value)
+  @Nullable
+  public static String nullToEmptyIfNeeded(@Nullable String value)
   {
     return INSTANCE.isUseDefaultValuesForNull() ? Strings.nullToEmpty(value) : value;
   }
 
-  public static String emptyToNullIfNeeded(String value)
+  @Nullable
+  public static String emptyToNullIfNeeded(@Nullable String value)
   {
     return INSTANCE.isUseDefaultValuesForNull() ? Strings.emptyToNull(value) : value;
   }
 
-  public static boolean isNullOrEquivalent(String value)
+  public static boolean isNullOrEquivalent(@Nullable String value)
   {
     return INSTANCE.isUseDefaultValuesForNull() ? Strings.isNullOrEmpty(value) : value == null;
   }
 
-  public static Long nullToZeroIfNeeded(Long value)
+  @Nullable
+  public static Long nullToZeroIfNeeded(@Nullable Long value)
   {
     return INSTANCE.isUseDefaultValuesForNull() && value == null ? ZERO_LONG : value;
   }
 
-  public static Double nullToZeroIfNeeded(Double value)
+  @Nullable
+  public static Double nullToZeroIfNeeded(@Nullable Double value)
   {
     return INSTANCE.isUseDefaultValuesForNull() && value == null ? ZERO_DOUBLE : value;
   }
 
-  public static Float nullToZeroIfNeeded(Float value)
+  @Nullable
+  public static Float nullToZeroIfNeeded(@Nullable Float value)
   {
     return INSTANCE.isUseDefaultValuesForNull() && value == null ? ZERO_FLOAT : value;
   }
