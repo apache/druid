@@ -5368,7 +5368,7 @@ public class CalciteQueryTest
   public void testGroupByStringLength() throws Exception
   {
     testQuery(
-        "SELECT CHARACTER_LENGTH(dim1), COUNT(*) FROM druid.foo GROUP BY CHARACTER_LENGTH(dim1)",
+        "SELECT CHARACTER_LENGTH(dim1), COUNT(*) FROM druid.foo GROUP BY CHARACTER_LENGTH(dim1) ORDER BY CHARACTER_LENGTH(dim1)",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -5378,6 +5378,11 @@ public class CalciteQueryTest
                         .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG)))
                         .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setLimitSpec(new DefaultLimitSpec(ImmutableList.of(new OrderByColumnSpec(
+                            "d0",
+                            OrderByColumnSpec.Direction.ASCENDING,
+                            StringComparators.NUMERIC
+                        )), null))
                         .build()
         ),
         ImmutableList.of(
