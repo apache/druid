@@ -24,12 +24,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import io.druid.data.input.MapBasedRow;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
 import io.druid.query.timeboundary.TimeBoundaryResultValue;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
@@ -77,10 +79,19 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
   {
     return new QueryRunner<T>()
     {
+
       @Override
       public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
       {
-        final long offset = computeOffset(now);
+        final DateTimeZone tz;
+        if (queryPlus.getQuery() instanceof TimeBucketedQuery
+            && ((TimeBucketedQuery) queryPlus.getQuery()).getGranularity() instanceof PeriodGranularity) {
+          tz = ((PeriodGranularity) ((TimeBucketedQuery) queryPlus.getQuery()).getGranularity()).getTimeZone();
+        } else {
+          tz = DateTimeZone.UTC;
+        }
+
+        final long offset = computeOffset(now, tz);
 
         final Interval interval = queryPlus.getQuery().getIntervals().get(0);
         final Interval modifiedInterval = new Interval(
@@ -142,7 +153,7 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
    *
    * @return the offset between the mapped time and time t
    */
-  protected long computeOffset(final long t)
+  protected long computeOffset(final long t, final DateTimeZone tz)
   {
     // start is the beginning of the last period ending within dataInterval
     long start = dataInterval.getEndMillis() - periodMillis;
@@ -159,6 +170,6 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
       tOffset += periodMillis;
     }
     tOffset += start;
-    return tOffset - t;
+    return tOffset - t - (tz.getOffset(tOffset) - tz.getOffset(t));
   }
 }

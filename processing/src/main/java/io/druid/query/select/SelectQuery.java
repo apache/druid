@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
-import io.druid.query.BaseQuery;
+import io.druid.query.TimeBucketedQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Druids;
 import io.druid.query.Query;
@@ -42,10 +42,9 @@ import java.util.Objects;
 /**
  */
 @JsonTypeName("select")
-public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
+public class SelectQuery extends TimeBucketedQuery<Result<SelectResultValue>>
 {
   private final DimFilter dimFilter;
-  private final Granularity granularity;
   private final List<DimensionSpec> dimensions;
   private final List<String> metrics;
   private final VirtualColumns virtualColumns;
@@ -65,9 +64,8 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, descending, context);
+    super(dataSource, querySegmentSpec, descending, context, granularity == null ? Granularities.ALL : granularity);
     this.dimFilter = dimFilter;
-    this.granularity = granularity == null ? Granularities.ALL : granularity;
     this.dimensions = dimensions;
     this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.metrics = metrics;
@@ -109,12 +107,6 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
   public DimFilter getDimensionsFilter()
   {
     return dimFilter;
-  }
-
-  @JsonProperty
-  public Granularity getGranularity()
-  {
-    return granularity;
   }
 
   @JsonProperty
@@ -183,7 +175,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
         ", querySegmentSpec=" + getQuerySegmentSpec() +
         ", descending=" + isDescending() +
         ", dimFilter=" + dimFilter +
-        ", granularity=" + granularity +
+        ", granularity=" + getGranularity() +
         ", dimensions=" + dimensions +
         ", metrics=" + metrics +
         ", virtualColumns=" + virtualColumns +
@@ -209,9 +201,6 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
     if (!Objects.equals(dimFilter, that.dimFilter)) {
       return false;
     }
-    if (!Objects.equals(granularity, that.granularity)) {
-      return false;
-    }
     if (!Objects.equals(dimensions, that.dimensions)) {
       return false;
     }
@@ -233,7 +222,6 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
   {
     int result = super.hashCode();
     result = 31 * result + (dimFilter != null ? dimFilter.hashCode() : 0);
-    result = 31 * result + (granularity != null ? granularity.hashCode() : 0);
     result = 31 * result + (dimensions != null ? dimensions.hashCode() : 0);
     result = 31 * result + (metrics != null ? metrics.hashCode() : 0);
     result = 31 * result + (virtualColumns != null ? virtualColumns.hashCode() : 0);

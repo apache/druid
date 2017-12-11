@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import io.druid.java.util.common.granularity.Granularity;
-import io.druid.query.BaseQuery;
+import io.druid.query.TimeBucketedQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Queries;
 import io.druid.query.Query;
@@ -42,7 +42,7 @@ import java.util.Objects;
 
 /**
  */
-public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
+public class TopNQuery extends TimeBucketedQuery<Result<TopNResultValue>>
 {
   public static final String TOPN = "topN";
 
@@ -51,7 +51,6 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   private final TopNMetricSpec topNMetricSpec;
   private final int threshold;
   private final DimFilter dimFilter;
-  private final Granularity granularity;
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
 
@@ -70,7 +69,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, false, context);
+    super(dataSource, querySegmentSpec, false, context, granularity);
 
     this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.dimensionSpec = dimensionSpec;
@@ -78,7 +77,6 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     this.threshold = threshold;
 
     this.dimFilter = dimFilter;
-    this.granularity = granularity;
     this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.<AggregatorFactory>of() : aggregatorSpecs;
     this.postAggregatorSpecs = Queries.prepareAggregations(
         ImmutableList.of(dimensionSpec.getOutputName()),
@@ -141,12 +139,6 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   public DimFilter getDimensionsFilter()
   {
     return dimFilter;
-  }
-
-  @JsonProperty
-  public Granularity getGranularity()
-  {
-    return granularity;
   }
 
   @JsonProperty("aggregations")
@@ -218,7 +210,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
         ", querySegmentSpec=" + getQuerySegmentSpec() +
         ", virtualColumns=" + virtualColumns +
         ", dimFilter=" + dimFilter +
-        ", granularity='" + granularity + '\'' +
+        ", granularity='" + getGranularity() + '\'' +
         ", aggregatorSpecs=" + aggregatorSpecs +
         ", postAggregatorSpecs=" + postAggregatorSpecs +
         '}';
@@ -242,7 +234,6 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
         Objects.equals(dimensionSpec, topNQuery.dimensionSpec) &&
         Objects.equals(topNMetricSpec, topNQuery.topNMetricSpec) &&
         Objects.equals(dimFilter, topNQuery.dimFilter) &&
-        Objects.equals(granularity, topNQuery.granularity) &&
         Objects.equals(aggregatorSpecs, topNQuery.aggregatorSpecs) &&
         Objects.equals(postAggregatorSpecs, topNQuery.postAggregatorSpecs);
   }
@@ -257,7 +248,6 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
         topNMetricSpec,
         threshold,
         dimFilter,
-        granularity,
         aggregatorSpecs,
         postAggregatorSpecs
     );

@@ -38,7 +38,7 @@ import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.query.BaseQuery;
+import io.druid.query.TimeBucketedQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Queries;
 import io.druid.query.Query;
@@ -78,7 +78,7 @@ import java.util.stream.Collectors;
 
 /**
  */
-public class GroupByQuery extends BaseQuery<Row>
+public class GroupByQuery extends TimeBucketedQuery<Row>
 {
   public final static String CTX_KEY_SORT_BY_DIMS_FIRST = "sortByDimsFirst";
 
@@ -96,7 +96,6 @@ public class GroupByQuery extends BaseQuery<Row>
   private final LimitSpec limitSpec;
   private final HavingSpec havingSpec;
   private final DimFilter dimFilter;
-  private final Granularity granularity;
   private final List<DimensionSpec> dimensions;
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
@@ -171,15 +170,16 @@ public class GroupByQuery extends BaseQuery<Row>
       final Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, false, context);
+    super(dataSource, querySegmentSpec, false, context, granularity);
 
     this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.dimFilter = dimFilter;
-    this.granularity = granularity;
     this.dimensions = dimensions == null ? ImmutableList.of() : dimensions;
     for (DimensionSpec spec : this.dimensions) {
       Preconditions.checkArgument(spec != null, "dimensions has null DimensionSpec");
     }
+    Preconditions.checkNotNull(granularity, "Must specify a granularity");
+
     this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.<AggregatorFactory>of() : aggregatorSpecs;
     this.postAggregatorSpecs = Queries.prepareAggregations(
         this.dimensions.stream().map(DimensionSpec::getOutputName).collect(Collectors.toList()),
@@ -189,7 +189,6 @@ public class GroupByQuery extends BaseQuery<Row>
     this.havingSpec = havingSpec;
     this.limitSpec = LimitSpec.nullToNoopLimitSpec(limitSpec);
 
-    Preconditions.checkNotNull(this.granularity, "Must specify a granularity");
 
     // Verify no duplicate names between dimensions, aggregators, and postAggregators.
     // They will all end up in the same namespace in the returned Rows and we can't have them clobbering each other.
@@ -212,12 +211,6 @@ public class GroupByQuery extends BaseQuery<Row>
   public DimFilter getDimFilter()
   {
     return dimFilter;
-  }
-
-  @JsonProperty
-  public Granularity getGranularity()
-  {
-    return granularity;
   }
 
   @JsonProperty
@@ -518,12 +511,12 @@ public class GroupByQuery extends BaseQuery<Row>
 
   private Comparator<Row> getTimeComparator(boolean granular)
   {
-    if (Granularities.ALL.equals(granularity)) {
+    if (Granularities.ALL.equals(getGranularity())) {
       return null;
     } else if (granular) {
       return (lhs, rhs) -> Longs.compare(
-          granularity.bucketStart(lhs.getTimestamp()).getMillis(),
-          granularity.bucketStart(rhs.getTimestamp()).getMillis()
+          getGranularity().bucketStart(lhs.getTimestamp()).getMillis(),
+          getGranularity().bucketStart(rhs.getTimestamp()).getMillis()
       );
     } else {
       return NON_GRANULAR_TIME_COMP;
@@ -990,7 +983,7 @@ public class GroupByQuery extends BaseQuery<Row>
            ", virtualColumns=" + virtualColumns +
            ", limitSpec=" + limitSpec +
            ", dimFilter=" + dimFilter +
-           ", granularity=" + granularity +
+           ", granularity=" + getGranularity() +
            ", dimensions=" + dimensions +
            ", aggregatorSpecs=" + aggregatorSpecs +
            ", postAggregatorSpecs=" + postAggregatorSpecs +
@@ -1015,7 +1008,6 @@ public class GroupByQuery extends BaseQuery<Row>
            Objects.equals(limitSpec, that.limitSpec) &&
            Objects.equals(havingSpec, that.havingSpec) &&
            Objects.equals(dimFilter, that.dimFilter) &&
-           Objects.equals(granularity, that.granularity) &&
            Objects.equals(dimensions, that.dimensions) &&
            Objects.equals(aggregatorSpecs, that.aggregatorSpecs) &&
            Objects.equals(postAggregatorSpecs, that.postAggregatorSpecs);
@@ -1030,7 +1022,6 @@ public class GroupByQuery extends BaseQuery<Row>
         limitSpec,
         havingSpec,
         dimFilter,
-        granularity,
         dimensions,
         aggregatorSpecs,
         postAggregatorSpecs

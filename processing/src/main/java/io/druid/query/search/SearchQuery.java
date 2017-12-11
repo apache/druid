@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
-import io.druid.query.BaseQuery;
+import io.druid.query.TimeBucketedQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Druids;
 import io.druid.query.Query;
@@ -39,13 +39,12 @@ import java.util.Map;
 
 /**
  */
-public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
+public class SearchQuery extends TimeBucketedQuery<Result<SearchResultValue>>
 {
   private static final SearchSortSpec DEFAULT_SORT_SPEC = new SearchSortSpec(StringComparators.LEXICOGRAPHIC);
 
   private final DimFilter dimFilter;
   private final SearchSortSpec sortSpec;
-  private final Granularity granularity;
   private final List<DimensionSpec> dimensions;
   private final SearchQuerySpec querySpec;
   private final int limit;
@@ -63,12 +62,11 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, false, context);
+    super(dataSource, querySegmentSpec, false, context, granularity == null ? Granularities.ALL : granularity);
     Preconditions.checkNotNull(querySegmentSpec, "Must specify an interval");
 
     this.dimFilter = dimFilter;
     this.sortSpec = sortSpec == null ? DEFAULT_SORT_SPEC : sortSpec;
-    this.granularity = granularity == null ? Granularities.ALL : granularity;
     this.limit = (limit == 0) ? 1000 : limit;
     this.dimensions = dimensions;
     this.querySpec = querySpec == null ? new AllSearchQuerySpec() : querySpec;
@@ -123,12 +121,6 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   }
 
   @JsonProperty
-  public Granularity getGranularity()
-  {
-    return granularity;
-  }
-
-  @JsonProperty
   public int getLimit()
   {
     return limit;
@@ -163,7 +155,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
     return "SearchQuery{" +
         "dataSource='" + getDataSource() + '\'' +
         ", dimFilter=" + dimFilter +
-        ", granularity='" + granularity + '\'' +
+        ", granularity='" + getGranularity() + '\'' +
         ", dimensions=" + dimensions +
         ", querySpec=" + querySpec +
         ", querySegmentSpec=" + getQuerySegmentSpec() +
@@ -195,9 +187,6 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
     if (dimensions != null ? !dimensions.equals(that.dimensions) : that.dimensions != null) {
       return false;
     }
-    if (granularity != null ? !granularity.equals(that.granularity) : that.granularity != null) {
-      return false;
-    }
     if (querySpec != null ? !querySpec.equals(that.querySpec) : that.querySpec != null) {
       return false;
     }
@@ -214,7 +203,6 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
     int result = super.hashCode();
     result = 31 * result + (dimFilter != null ? dimFilter.hashCode() : 0);
     result = 31 * result + (sortSpec != null ? sortSpec.hashCode() : 0);
-    result = 31 * result + (granularity != null ? granularity.hashCode() : 0);
     result = 31 * result + (dimensions != null ? dimensions.hashCode() : 0);
     result = 31 * result + (querySpec != null ? querySpec.hashCode() : 0);
     result = 31 * result + limit;
