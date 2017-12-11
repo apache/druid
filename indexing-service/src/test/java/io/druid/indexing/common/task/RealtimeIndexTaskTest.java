@@ -47,6 +47,7 @@ import io.druid.data.input.impl.TimestampSpec;
 import io.druid.discovery.DataNodeService;
 import io.druid.discovery.DruidNodeAnnouncer;
 import io.druid.discovery.LookupNodeService;
+import io.druid.indexer.TaskState;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
@@ -374,7 +375,7 @@ public class RealtimeIndexTaskTest
 
     // Wait for the task to finish.
     final TaskStatus taskStatus = statusFuture.get();
-    Assert.assertEquals(TaskStatus.Status.SUCCESS, taskStatus.getStatusCode());
+    Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
   }
 
   @Test(timeout = 60_000L)
@@ -445,7 +446,7 @@ public class RealtimeIndexTaskTest
 
     // Wait for the task to finish.
     final TaskStatus taskStatus = statusFuture.get();
-    Assert.assertEquals(TaskStatus.Status.SUCCESS, taskStatus.getStatusCode());
+    Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
   }
 
   @Test(timeout = 60_000L)
@@ -572,7 +573,7 @@ public class RealtimeIndexTaskTest
 
     // Wait for the task to finish.
     final TaskStatus taskStatus = statusFuture.get();
-    Assert.assertEquals(TaskStatus.Status.SUCCESS, taskStatus.getStatusCode());
+    Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
   }
 
   @Test(timeout = 60_000L)
@@ -606,7 +607,7 @@ public class RealtimeIndexTaskTest
 
       // Wait for the task to finish. The status doesn't really matter, but we'll check it anyway.
       final TaskStatus taskStatus = statusFuture.get();
-      Assert.assertEquals(TaskStatus.Status.SUCCESS, taskStatus.getStatusCode());
+      Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
 
       // Nothing should be published.
       Assert.assertEquals(Sets.newHashSet(), mdc.getPublished());
@@ -665,7 +666,7 @@ public class RealtimeIndexTaskTest
 
       // Wait for the task to finish.
       final TaskStatus taskStatus = statusFuture.get();
-      Assert.assertEquals(TaskStatus.Status.SUCCESS, taskStatus.getStatusCode());
+      Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
     }
   }
 
@@ -760,7 +761,7 @@ public class RealtimeIndexTaskTest
 
       // Wait for the task to finish.
       final TaskStatus taskStatus = statusFuture.get();
-      Assert.assertEquals(TaskStatus.Status.SUCCESS, taskStatus.getStatusCode());
+      Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
     }
   }
 
@@ -794,7 +795,7 @@ public class RealtimeIndexTaskTest
 
       // Wait for the task to finish. The status doesn't really matter, but we'll check it anyway.
       final TaskStatus taskStatus = statusFuture.get();
-      Assert.assertEquals(TaskStatus.Status.SUCCESS, taskStatus.getStatusCode());
+      Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
 
       // Nothing should be published.
       Assert.assertEquals(Sets.newHashSet(), mdc.getPublished());
@@ -846,7 +847,7 @@ public class RealtimeIndexTaskTest
 
     // Wait for the task to finish.
     final TaskStatus taskStatus = statusFuture.get();
-    Assert.assertEquals(TaskStatus.Status.SUCCESS, taskStatus.getStatusCode());
+    Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
   }
 
   private ListenableFuture<TaskStatus> runTask(final Task task, final TaskToolbox toolbox)

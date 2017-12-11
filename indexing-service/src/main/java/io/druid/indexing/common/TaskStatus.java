@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
+import io.druid.indexer.TaskState;
 
 /**
  * Represents the status of a task from the perspective of the coordinator. The task may be ongoing
@@ -33,41 +34,34 @@ import com.google.common.base.Preconditions;
  */
 public class TaskStatus
 {
-  public enum Status
-  {
-    RUNNING,
-    SUCCESS,
-    FAILED
-  }
-
   public static TaskStatus running(String taskId)
   {
-    return new TaskStatus(taskId, Status.RUNNING, -1);
+    return new TaskStatus(taskId, TaskState.RUNNING, -1);
   }
 
   public static TaskStatus success(String taskId)
   {
-    return new TaskStatus(taskId, Status.SUCCESS, -1);
+    return new TaskStatus(taskId, TaskState.SUCCESS, -1);
   }
 
   public static TaskStatus failure(String taskId)
   {
-    return new TaskStatus(taskId, Status.FAILED, -1);
+    return new TaskStatus(taskId, TaskState.FAILED, -1);
   }
 
-  public static TaskStatus fromCode(String taskId, Status code)
+  public static TaskStatus fromCode(String taskId, TaskState code)
   {
     return new TaskStatus(taskId, code, -1);
   }
 
   private final String id;
-  private final Status status;
+  private final TaskState status;
   private final long duration;
 
   @JsonCreator
-  private TaskStatus(
+  protected TaskStatus(
       @JsonProperty("id") String id,
-      @JsonProperty("status") Status status,
+      @JsonProperty("status") TaskState status,
       @JsonProperty("duration") long duration
   )
   {
@@ -87,7 +81,7 @@ public class TaskStatus
   }
 
   @JsonProperty("status")
-  public Status getStatusCode()
+  public TaskState getStatusCode()
   {
     return status;
   }
@@ -107,7 +101,7 @@ public class TaskStatus
   @JsonIgnore
   public boolean isRunnable()
   {
-    return status == Status.RUNNING;
+    return status == TaskState.RUNNING;
   }
 
   /**
@@ -130,7 +124,7 @@ public class TaskStatus
   @JsonIgnore
   public boolean isSuccess()
   {
-    return status == Status.SUCCESS;
+    return status == TaskState.SUCCESS;
   }
 
   /**
@@ -142,7 +136,7 @@ public class TaskStatus
   @JsonIgnore
   public boolean isFailure()
   {
-    return status == Status.FAILED;
+    return status == TaskState.FAILED;
   }
 
   public TaskStatus withDuration(long _duration)

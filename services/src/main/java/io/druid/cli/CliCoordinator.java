@@ -57,6 +57,7 @@ import io.druid.metadata.MetadataStorageProvider;
 import io.druid.server.audit.AuditManagerProvider;
 import io.druid.server.coordinator.BalancerStrategyFactory;
 import io.druid.server.coordinator.DruidCoordinator;
+import io.druid.server.coordinator.DruidCoordinatorCleanupPendingSegments;
 import io.druid.server.coordinator.DruidCoordinatorConfig;
 import io.druid.server.coordinator.LoadQueueTaskMaster;
 import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
@@ -86,6 +87,7 @@ import org.eclipse.jetty.server.Server;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.Executors;
 
@@ -207,6 +209,10 @@ public class CliCoordinator extends ServerRunnable
                 "druid.coordinator.kill.on",
                 Predicates.equalTo("true"),
                 DruidCoordinatorSegmentKiller.class
+            ).addConditionBinding(
+                "druid.coordinator.kill.pendingSegments.on",
+                predicate -> Objects.equals(predicate, "true"),
+                DruidCoordinatorCleanupPendingSegments.class
             );
 
             binder.bind(DiscoverySideEffectsProvider.Child.class).annotatedWith(Coordinator.class).toProvider(

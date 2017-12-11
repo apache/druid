@@ -614,6 +614,24 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     );
   }
 
+  @Override
+  public int deletePendingSegments(String dataSource, Interval deleteInterval)
+  {
+    return connector.getDBI().inTransaction(
+        (handle, status) -> handle
+            .createStatement(
+                StringUtils.format(
+                    "delete from %s where datasource = :dataSource and created_date >= :start and created_date < :end",
+                    dbTables.getPendingSegmentsTable()
+                )
+            )
+            .bind("dataSource", dataSource)
+            .bind("start", deleteInterval.getStart().toString())
+            .bind("end", deleteInterval.getEnd().toString())
+            .execute()
+    );
+  }
+
   /**
    * Attempts to insert a single segment to the database. If the segment already exists, will do nothing; although,
    * this checking is imperfect and callers must be prepared to retry their entire transaction on exceptions.

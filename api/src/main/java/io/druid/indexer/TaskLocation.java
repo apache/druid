@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.indexing.common;
+package io.druid.indexer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

@@ -17,24 +17,31 @@
  * under the License.
  */
 
-package io.druid.indexing.common;
+package io.druid.indexer;
 
-import com.google.common.base.Optional;
-import io.druid.indexer.TaskLocation;
-
-public interface TaskInfoProvider
+public enum TaskState
 {
-  /**
-   * @param id the task ID
-   *
-   * @return a TaskLocation associated with the task or TaskLocation.unknown() if no associated entry could be found
-   */
-  TaskLocation getTaskLocation(String id);
+  RUNNING,
+  SUCCESS,
+  FAILED;
 
-  /**
-   * @param id the task ID
-   *
-   * @return an Optional.of() with the current status of the task or Optional.absent() if the task could not be found
-   */
-  Optional<TaskStatus> getTaskStatus(String id);
+  public boolean isRunnable()
+  {
+    return this == RUNNING;
+  }
+
+  public boolean isComplete()
+  {
+    return this != RUNNING;
+  }
+
+  public boolean isSuccess()
+  {
+    return this == SUCCESS;
+  }
+
+  public boolean isFailure()
+  {
+    return this == FAILED;
+  }
 }
