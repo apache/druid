@@ -99,7 +99,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
 
     if (!currentlyMovingSegments.get(tier).isEmpty()) {
       reduceLifetimes(tier);
-      log.info("[%s]: Still waiting on %,d segments to be moved", tier, currentlyMovingSegments.size());
+      log.info("[%s]: Still waiting on %,d segments to be moved", tier, currentlyMovingSegments.get(tier).size());
       return;
     }
 
