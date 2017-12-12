@@ -56,6 +56,7 @@ public class BasicAuthorizerRoleFull
     return permissions;
   }
 
+  @JsonProperty
   public Set<String> getUsers()
   {
     return users;
