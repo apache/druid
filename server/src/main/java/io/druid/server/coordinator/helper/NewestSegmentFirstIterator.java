@@ -39,7 +39,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -52,15 +51,29 @@ import java.util.PriorityQueue;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+/**
+ * This class iterates all segments of the dataSources configured for compaction from the newest to the oldest.
+ */
 public class NewestSegmentFirstIterator implements CompactionSegmentIterator
 {
   private static final Logger log = new Logger(NewestSegmentFirstIterator.class);
 
-  private Map<String, CoordinatorCompactionConfig> compactionConfigs;
-  private Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources;
-  private Map<String, Interval> intervalsToFind;
-  private Map<String, DateTime> searchEndDates;
-  private PriorityQueue<QueueEntry> queue = new PriorityQueue<>(
+  private final Map<String, CoordinatorCompactionConfig> compactionConfigs;
+  private final Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources;
+
+  // dataSource -> intervalToFind
+  // searchIntervals keeps track of the current state of which interval should be considered to search segments to
+  // compact.
+  private final Map<String, Interval> searchIntervals;
+
+  // dataSource -> end dateTime of the initial searchInterval
+  // searchEndDates keeps the endDate of the initial searchInterval (the entire searchInterval). It's immutable and not
+  // changed once it's initialized.
+  // This is used to determine that we can expect more segments to be added for an interval in the future. If the end of
+  // the interval is same with searchEndDate, we can expect more segments to be added and discard the found segments for
+  // compaction in this run to further optimize the size of compact segments. See checkCompactableSizeForLastSegmentOrReturn().
+  private final Map<String, DateTime> searchEndDates;
+  private final PriorityQueue<QueueEntry> queue = new PriorityQueue<>(
       (o1, o2) -> Comparators.intervalsByStartThenEnd().compare(o2.interval, o1.interval)
   );
 
@@ -71,7 +84,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   {
     this.compactionConfigs = compactionConfigs;
     this.dataSources = dataSources;
-    this.intervalsToFind = new HashMap<>(dataSources.size());
+    this.searchIntervals = new HashMap<>(dataSources.size());
     this.searchEndDates = new HashMap<>(dataSources.size());
 
     for (Entry<String, VersionedIntervalTimeline<String, DataSegment>> entry : dataSources.entrySet()) {
@@ -79,14 +92,10 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       final VersionedIntervalTimeline<String, DataSegment> timeline = entry.getValue();
       final CoordinatorCompactionConfig config = compactionConfigs.get(dataSource);
 
-      log.info("Initializing dataSource[%s]", dataSource);
-
       if (config != null && !timeline.isEmpty()) {
         final Interval searchInterval = findInitialSearchInterval(timeline, config.getSkipOffsetFromLatest());
-        intervalsToFind.put(dataSource, searchInterval);
-        if (!isZero(config.getSkipOffsetFromLatest())) {
-          searchEndDates.put(dataSource, searchInterval.getEnd());
-        }
+        searchIntervals.put(dataSource, searchInterval);
+        searchEndDates.put(dataSource, searchInterval.getEnd());
       }
     }
 
@@ -153,6 +162,11 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     return resultSegments;
   }
 
+  /**
+   * Find the next segments to compact for the given dataSource and add them to the queue.
+   * {@link #searchIntervals} is updated according to the found segments. That is, the interval of the found segments
+   * are removed from the searchInterval of the given dataSource.
+   */
   private void updateQueue(String dataSourceName, CoordinatorCompactionConfig config)
   {
     VersionedIntervalTimeline<String, DataSegment> timeline = dataSources.get(dataSourceName);
@@ -162,33 +176,50 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       return;
     }
 
-    Interval intervalToFind = intervalsToFind.get(dataSourceName);
-    if (intervalToFind == null) {
-      throw new ISE("Cannot find intervals to find for dataSource[%s]", dataSourceName);
-    }
-    // searchEnd can be null if skipOffsetFromLatest is not set for dataSource
-    final DateTime searchEnd = searchEndDates.get(dataSourceName);
+    final Interval searchInterval = Preconditions.checkNotNull(
+        searchIntervals.get(dataSourceName),
+        "Cannot find intervals to find for dataSource[%s]",
+        dataSourceName
+    );
+    final DateTime searchEnd = Preconditions.checkNotNull(
+        searchEndDates.get(dataSourceName),
+        "searchEndDate for dataSource[%s]",
+        dataSourceName
+    );
 
     final Pair<Interval, SegmentsToCompact> pair = findSegmentsToCompact(
         timeline,
-        intervalToFind,
+        searchInterval,
         searchEnd,
         config
     );
     final List<DataSegment> segmentsToCompact = pair.rhs.getSegments();
-    intervalToFind = pair.lhs;
+    final Interval remainingSearchInterval = pair.lhs;
 
-    intervalsToFind.put(dataSourceName, intervalToFind);
+    searchIntervals.put(dataSourceName, remainingSearchInterval);
     if (!segmentsToCompact.isEmpty()) {
       queue.add(new QueueEntry(segmentsToCompact));
     }
   }
 
+  /**
+   * Find segments to compact together for the given intervalToSearch. It progressively searches the given
+   * intervalToSearch in time order (latest first). The timeline lookup duration is one day. It means, the timeline is
+   * looked up for the last one day of the given intervalToSearch, and the next day is searched again if the size of
+   * found segments are not enough to compact. This is repeated until enough amount of segments are found.
+   *
+   * @param timeline         timeline of a dataSource
+   * @param intervalToSearch interval to search
+   * @param searchEnd        the end of the whole searchInterval
+   * @param config           compaction config
+   *
+   * @return a pair of the reduced interval of (intervalToSearch - interval of found segments) and segments to compact
+   */
   @VisibleForTesting
   static Pair<Interval, SegmentsToCompact> findSegmentsToCompact(
       final VersionedIntervalTimeline<String, DataSegment> timeline,
       final Interval intervalToSearch,
-      @Nullable final DateTime searchEnd,
+      final DateTime searchEnd,
       final CoordinatorCompactionConfig config
   )
   {
@@ -198,8 +229,10 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     Interval searchInterval = intervalToSearch;
     long totalSegmentsToCompactBytes = 0;
 
-    // Finds segments to compact together while iterating intervalToFind from latest to oldest
-    while (!Intervals.isEmpty(searchInterval) && totalSegmentsToCompactBytes < targetCompactionSize) {
+    // Finds segments to compact together while iterating searchInterval from latest to oldest
+    while (!Intervals.isEmpty(searchInterval)
+           && totalSegmentsToCompactBytes < targetCompactionSize
+           && segmentsToCompact.size() < numTargetSegments) {
       final Interval lookupInterval = SegmentCompactorUtil.getNextLoopupInterval(searchInterval);
       // holders are sorted by their interval
       final List<TimelineObjectHolder<String, DataSegment>> holders = timeline.lookup(lookupInterval);
@@ -235,7 +268,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         } else {
           if (segmentsToCompact.size() > 1) {
             // We found some segmens to compact and cannot add more. End here.
-            return returnIfCompactibleSize(
+            return checkCompactableSizeForLastSegmentOrReturn(
                 segmentsToCompact,
                 totalSegmentsToCompactBytes,
                 timeline,
@@ -244,12 +277,12 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
                 config
             );
           } else {
-            // Discard segments found so far because we can't compact it anyway.
+            // (*) Discard segments found so far because we can't compact it anyway.
             final int numSegmentsToCompact = segmentsToCompact.size();
             segmentsToCompact.clear();
 
             if (!SegmentCompactorUtil.isCompactible(targetCompactionSize, 0, partitionBytes)) {
-              // TODO: this should be changed to compact many segments into a few segments
+              // TODO: this should be changed to compact many small segments into a few large segments
               final DataSegment segment = chunks.get(0).getObject();
               log.warn(
                   "shardSize[%d] for dataSource[%s] and interval[%s] is larger than targetCompactionSize[%d]."
@@ -275,6 +308,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
               if (numSegmentsToCompact == 1) {
                 // We found a segment which is smaller than targetCompactionSize but too large to compact with other
                 // segments. Skip this one.
+                // Note that segmentsToCompact is already cleared at (*).
                 chunks.forEach(chunk -> segmentsToCompact.add(chunk.getObject()));
                 totalSegmentsToCompactBytes = partitionBytes;
               } else {
@@ -307,7 +341,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       }
     }
 
-    return returnIfCompactibleSize(
+    return checkCompactableSizeForLastSegmentOrReturn(
         segmentsToCompact,
         totalSegmentsToCompactBytes,
         timeline,
@@ -317,22 +351,25 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     );
   }
 
-  private static Pair<Interval, SegmentsToCompact> returnIfCompactibleSize(
+  /**
+   * Check the found segments are enough to compact. If it's expected that more data will be added in the future for the
+   * interval of found segments, the found segments are skipped and remained to be considered again in the next
+   * coordinator run. Otherwise, simply returns a pair of the given searchInterval and found segments.
+   */
+  private static Pair<Interval, SegmentsToCompact> checkCompactableSizeForLastSegmentOrReturn(
       final List<DataSegment> segmentsToCompact,
       final long totalSegmentsToCompactBytes,
       final VersionedIntervalTimeline<String, DataSegment> timeline,
       final Interval searchInterval,
-      @Nullable final DateTime searchEnd,
+      final DateTime searchEnd,
       final CoordinatorCompactionConfig config
   )
   {
     if (segmentsToCompact.size() > 0) {
-      // Check we have enough segments to compact. For realtime dataSources, we can expect more data can be added in the
+      // Check we have enough segments to compact. For realtime dataSources, we can expect more data to be added in the
       // future, so we skip compaction for segments in this run if their size is not sufficiently large.
-      // To enable this feature, skipOffsetFromLatest should be set (and thus searchEnd should not be null).
       final DataSegment lastSegment = segmentsToCompact.get(segmentsToCompact.size() - 1);
-      if (searchEnd != null &&
-          lastSegment.getInterval().getEnd().equals(searchEnd) &&
+      if (lastSegment.getInterval().getEnd().equals(searchEnd) &&
           !SegmentCompactorUtil.isProperCompactionSize(
               config.getTargetCompactionSizeBytes(),
               totalSegmentsToCompactBytes
@@ -346,18 +383,14 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     return Pair.of(searchInterval, new SegmentsToCompact(segmentsToCompact, totalSegmentsToCompactBytes));
   }
 
-  private static boolean isZero(Period period)
-  {
-    return period.getYears() == 0 &&
-           period.getMonths() == 0 &&
-           period.getWeeks() == 0 &&
-           period.getDays() == 0 &&
-           period.getHours() == 0 &&
-           period.getMinutes() == 0 &&
-           period.getSeconds() == 0 &&
-           period.getMillis() == 0;
-  }
-
+  /**
+   * Returns the initial searchInterval which is {@code (timeline.first().start, timeline.last().end - skipOffset)}.
+   *
+   * @param timeline   timeline of a dataSource
+   * @param skipOffset skipOFfset
+   *
+   * @return found searchInterval
+   */
   private static Interval findInitialSearchInterval(
       VersionedIntervalTimeline<String, DataSegment> timeline,
       Period skipOffset
@@ -365,6 +398,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   {
     Preconditions.checkArgument(timeline != null && !timeline.isEmpty(), "timeline should not be null or empty");
     Preconditions.checkNotNull(skipOffset, "skipOffset");
+
     final TimelineObjectHolder<String, DataSegment> first = Preconditions.checkNotNull(timeline.first(), "first");
     final TimelineObjectHolder<String, DataSegment> last = Preconditions.checkNotNull(timeline.last(), "last");
 
@@ -394,7 +428,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
 
   private static class QueueEntry
   {
-    private final Interval interval;
+    private final Interval interval; // whole interval for all segments
     private final List<DataSegment> segments;
 
     QueueEntry(List<DataSegment> segments)

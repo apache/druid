@@ -182,6 +182,7 @@ public class WorkerTaskMonitor
         workerCuratorCoordinator.updateTaskStatusAnnouncement(
             TaskAnnouncement.create(
                 announcement.getTaskStatus().getId(),
+                announcement.getTaskType(),
                 announcement.getTaskResource(),
                 TaskStatus.failure(announcement.getTaskStatus().getId()),
                 TaskLocation.unknown()

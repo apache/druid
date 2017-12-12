@@ -244,7 +244,7 @@ public class OverlordResourceTest
 
     EasyMock.replay(taskRunner, taskMaster, tsqa, req);
 
-    List<OverlordResource.TaskResponseObject> responseObjects = (List) overlordResource.getRunningTasks(req)
+    List<OverlordResource.TaskResponseObject> responseObjects = (List) overlordResource.getRunningTasks(null, req)
                                                                                        .getEntity();
 
     Assert.assertEquals(1, responseObjects.size());
@@ -305,6 +305,12 @@ public class OverlordResourceTest
 
     @Override
     public TaskLocation getLocation()
+    {
+      return null;
+    }
+
+    @Override
+    public String getTaskType()
     {
       return null;
     }

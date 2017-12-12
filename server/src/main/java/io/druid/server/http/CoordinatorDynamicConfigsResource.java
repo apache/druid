@@ -106,7 +106,7 @@ public class CoordinatorDynamicConfigsResource
   }
 
   @POST
-  @Path("/{dataSource}")
+  @Path("/compaction/{dataSource}")
   @Consumes(MediaType.APPLICATION_JSON)
   public Response addOrUpdateCompactionConfig(
       final CoordinatorCompactionConfig newConfig,
@@ -148,7 +148,7 @@ public class CoordinatorDynamicConfigsResource
   }
 
   @GET
-  @Path("/{dataSource}")
+  @Path("/compaction/{dataSource}")
   @Produces(MediaType.APPLICATION_JSON)
   public Response getCompactionConfig(@PathParam("dataSource") String dataSource)
   {
@@ -175,7 +175,7 @@ public class CoordinatorDynamicConfigsResource
   }
 
   @DELETE
-  @Path("{dataSource}")
+  @Path("/compaction/{dataSource}")
   @Produces(MediaType.APPLICATION_JSON)
   public Response deleteCompactionConfig(
       @PathParam("dataSource") String dataSource,

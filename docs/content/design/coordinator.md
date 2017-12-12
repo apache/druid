@@ -41,8 +41,11 @@ To ensure an even distribution of segments across historical nodes in the cluste
 Compacting Segments
 -------------------
 
-Each run, the Druid coordinator compacts small segments abutting each other.
-It first finds the segments to compact together based on the [segment search policy](#segment-search-policy).
+Each run, the Druid coordinator compacts small segments abutting each other. This is useful when you have a lot of small
+segments which may degrade the query performance as well as increasing the disk usage. Note that the data for an interval
+cannot be rolled up across the partitions.
+
+The coordinator first finds the segments to compact together based on the [segment search policy](#segment-search-policy).
 Once it finds some segments, it launches a [compact task](../ingestion/tasks.html#compaction-task) to compact those segments.
 The maximum number of running compact tasks is `max(sum of worker capacity * compactionTaskSlotRatio, 1)`. (See [Dynamic Configuration](../configuration/coordinator.html#dynamic-configuration) for `compactionTaskSlotRatio`.)
  
@@ -278,7 +281,7 @@ Returns total size and count for each datasource for each interval within given 
 
 #### Compaction Configs
 
-* `/druid/coordinator/v1/config/{dataSource}`
+* `/druid/coordinator/v1/config/compaction/{dataSource}`
 
 Returns a compaction config of a dataSource.
 
@@ -309,7 +312,7 @@ Optional Header Parameters for auditing the config change can also be specified.
 
 #### Compaction Configs
 
-* `/druid/coordinator/v1/config/{dataSource}`
+* `/druid/coordinator/v1/config/compaction/{dataSource}`
 
 Creates or updates the compaction config for a dataSource.
 
@@ -334,7 +337,7 @@ Disables a segment.
 
 #### Compaction Configs
 
-* `/druid/coordinator/v1/config/{dataSource}`
+* `/druid/coordinator/v1/config/compaction/{dataSource}`
 
 Removes the compaction config for a dataSource.
 

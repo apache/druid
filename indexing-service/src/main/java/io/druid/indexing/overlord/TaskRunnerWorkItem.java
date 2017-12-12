@@ -85,6 +85,7 @@ public abstract class TaskRunnerWorkItem
   }
 
   public abstract TaskLocation getLocation();
+  public abstract String getTaskType();
 
   @Override
   public String toString()

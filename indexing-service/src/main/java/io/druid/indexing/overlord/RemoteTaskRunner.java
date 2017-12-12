@@ -625,7 +625,12 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   private RemoteTaskRunnerWorkItem addPendingTask(final Task task)
   {
     log.info("Added pending task %s", task.getId());
-    final RemoteTaskRunnerWorkItem taskRunnerWorkItem = new RemoteTaskRunnerWorkItem(task.getId(), null, null);
+    final RemoteTaskRunnerWorkItem taskRunnerWorkItem = new RemoteTaskRunnerWorkItem(
+        task.getId(),
+        task.getType(),
+        null,
+        null
+    );
     pendingTaskPayloads.put(task.getId(), task);
     pendingTasks.put(task.getId(), taskRunnerWorkItem);
     runPendingTasks();
@@ -960,6 +965,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                       } else {
                         final RemoteTaskRunnerWorkItem newTaskRunnerWorkItem = new RemoteTaskRunnerWorkItem(
                             taskId,
+                            announcement.getTaskType(),
                             zkWorker.getWorker(),
                             TaskLocation.unknown()
                         );

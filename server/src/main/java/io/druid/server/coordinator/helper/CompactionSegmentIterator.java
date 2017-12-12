@@ -29,7 +29,7 @@ public interface CompactionSegmentIterator extends Iterator<List<DataSegment>>
 {
   /**
    * Return a map of (dataSource, number of remaining segments) for all dataSources.
-   * This method should consider all segments except the segments returned by {@link #nextSegments()}.
+   * This method should consider all segments except the segments returned by {@link #next()}.
    */
   Object2LongOpenHashMap<String> remainingSegments();
 }

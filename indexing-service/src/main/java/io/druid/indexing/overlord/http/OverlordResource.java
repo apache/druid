@@ -28,6 +28,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.ByteSource;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
@@ -58,8 +59,8 @@ import io.druid.server.http.security.ConfigResourceFilter;
 import io.druid.server.http.security.StateResourceFilter;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
-import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.ForbiddenException;
 import io.druid.server.security.Resource;
 import io.druid.server.security.ResourceAction;
@@ -89,6 +90,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -400,11 +402,10 @@ public class OverlordResource
               if (!runnersKnownTasks.contains(task.getId())) {
                 waitingTasks.add(
                     // Would be nice to include the real created date, but the TaskStorage API doesn't yet allow it.
-                    new TaskRunnerWorkItem(
+                    new WaitingTask(
                         task.getId(),
-                        SettableFuture.<TaskStatus>create(),
-                        DateTimes.EPOCH,
-                        DateTimes.EPOCH
+                        task.getType(),
+                        SettableFuture.create()
                     )
                     {
                       @Override
@@ -420,6 +421,33 @@ public class OverlordResource
           }
         }
     );
+  }
+
+  private static class WaitingTask extends TaskRunnerWorkItem
+  {
+    private final String taskType;
+
+    WaitingTask(
+        String taskId,
+        String taskType,
+        ListenableFuture<TaskStatus> result
+    )
+    {
+      super(taskId, result, DateTimes.EPOCH, DateTimes.EPOCH);
+      this.taskType = taskType;
+    }
+
+    @Override
+    public TaskLocation getLocation()
+    {
+      return TaskLocation.unknown();
+    }
+
+    @Override
+    public String getTaskType()
+    {
+      return taskType;
+    }
   }
 
   @GET
@@ -442,7 +470,10 @@ public class OverlordResource
   @GET
   @Path("/runningTasks")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getRunningTasks(@Context final HttpServletRequest req)
+  public Response getRunningTasks(
+      @QueryParam("type") String taskType,
+      @Context final HttpServletRequest req
+  )
   {
     return workItemsResponse(
         new Function<TaskRunner, Collection<? extends TaskRunnerWorkItem>>()
@@ -450,7 +481,17 @@ public class OverlordResource
           @Override
           public Collection<? extends TaskRunnerWorkItem> apply(TaskRunner taskRunner)
           {
-            return securedTaskRunnerWorkItem(taskRunner.getRunningTasks(), req);
+            final Collection<? extends TaskRunnerWorkItem> workItems;
+            if (taskType == null) {
+              workItems = taskRunner.getRunningTasks();
+            } else {
+              workItems = taskRunner.getRunningTasks()
+                                    .stream()
+                                    .filter(workitem -> workitem.getTaskType().equals(taskType))
+                                    .collect(Collectors.toList());
+            }
+
+            return securedTaskRunnerWorkItem(workItems, req);
           }
         }
     );
