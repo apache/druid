@@ -58,7 +58,7 @@ public class DataSchemaTest
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  private final ObjectMapper jsonMapper = TestHelper.getJsonMapper();
+  private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
   @Test
   public void testDefaultExclusions() throws Exception

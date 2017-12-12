@@ -201,7 +201,8 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
 
   private void loadInLocation(DataSegment segment, File storageDir) throws SegmentLoadingException
   {
-    // LoadSpec isn't materialized until here so that any system can interpret Segment without having to have all the LoadSpec dependencies.
+    // LoadSpec isn't materialized until here so that any system can interpret Segment without having to have all the
+    // LoadSpec dependencies.
     final LoadSpec loadSpec = jsonMapper.convertValue(segment.getLoadSpec(), LoadSpec.class);
     final LoadSpec.LoadSpecResult result = loadSpec.loadSegment(storageDir);
     if (result.getSize() != segment.getSize()) {

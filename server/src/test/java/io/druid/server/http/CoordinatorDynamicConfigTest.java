@@ -34,7 +34,7 @@ import java.util.Set;
  */
 public class CoordinatorDynamicConfigTest
 {
-  private final ObjectMapper mapper = TestHelper.getJsonMapper();
+  private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
   @Test
   public void testSerde() throws Exception

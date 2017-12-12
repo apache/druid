@@ -17,8 +17,9 @@
  * under the License.
  */
 
-package io.druid.client;
+package io.druid.timeline;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -29,11 +30,11 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.segment.IndexIO;
-import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.SingleDimensionShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -47,6 +48,14 @@ import java.util.Set;
 public class DataSegmentTest
 {
   final ObjectMapper mapper = new DefaultObjectMapper();
+
+  @Before
+  public void setUp()
+  {
+    InjectableValues.Std injectableValues = new InjectableValues.Std();
+    injectableValues.addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT);
+    mapper.setInjectableValues(injectableValues);
+  }
 
   @Test
   public void testV1Serialization() throws Exception

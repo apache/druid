@@ -42,7 +42,7 @@ public class LongMinAggregationTest
   public LongMinAggregationTest() throws Exception
   {
     String aggSpecJson = "{\"type\": \"longMin\", \"name\": \"billy\", \"fieldName\": \"nilly\"}";
-    longMinAggFactory = TestHelper.getJsonMapper().readValue(aggSpecJson, LongMinAggregatorFactory.class);
+    longMinAggFactory = TestHelper.makeJsonMapper().readValue(aggSpecJson, LongMinAggregatorFactory.class);
   }
 
   @Before

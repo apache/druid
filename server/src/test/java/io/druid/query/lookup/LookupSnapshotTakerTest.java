@@ -43,7 +43,7 @@ public class LookupSnapshotTakerTest
 {
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
-  private final ObjectMapper mapper = TestHelper.getJsonMapper();
+  private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
 
   private LookupSnapshotTaker lookupSnapshotTaker;
