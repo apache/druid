@@ -86,6 +86,8 @@ public class CoordinatorBasicAuthenticatorResourceTest
     tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
     connector.createConfigTable();
 
+    ObjectMapper objectMapper = new ObjectMapper(new SmileFactory());
+
     AuthenticatorMapper authenticatorMapper = new AuthenticatorMapper(
         ImmutableMap.of(
             AUTHENTICATOR_NAME,
@@ -118,7 +120,7 @@ public class CoordinatorBasicAuthenticatorResourceTest
         connector,
         tablesConfig,
         new BasicAuthCommonCacheConfig(null, null, null, null),
-        new ObjectMapper(new SmileFactory()),
+        objectMapper,
         new NoopBasicAuthenticatorCacheNotifier(),
         null
     );
@@ -126,7 +128,8 @@ public class CoordinatorBasicAuthenticatorResourceTest
     resource = new BasicAuthenticatorResource(
         new CoordinatorBasicAuthenticatorResourceHandler(
             storageUpdater,
-            authenticatorMapper
+            authenticatorMapper,
+            objectMapper
         )
     );
 

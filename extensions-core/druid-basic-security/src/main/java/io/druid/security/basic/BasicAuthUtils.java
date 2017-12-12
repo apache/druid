@@ -171,7 +171,7 @@ public class BasicAuthUtils
       return objectMapper.writeValueAsBytes(userMap);
     }
     catch (IOException ioe) {
-      throw new ISE("WTF? Couldn't serialize userMap!");
+      throw new ISE(ioe, "WTF? Couldn't serialize userMap!");
     }
   }
 
@@ -200,7 +200,7 @@ public class BasicAuthUtils
       return objectMapper.writeValueAsBytes(userMap);
     }
     catch (IOException ioe) {
-      throw new ISE("WTF? Couldn't serialize userMap!");
+      throw new ISE(ioe, "WTF? Couldn't serialize userMap!");
     }
   }
 
@@ -229,7 +229,7 @@ public class BasicAuthUtils
       return objectMapper.writeValueAsBytes(roleMap);
     }
     catch (IOException ioe) {
-      throw new ISE("WTF? Couldn't serialize roleMap!");
+      throw new ISE(ioe, "WTF? Couldn't serialize roleMap!");
     }
   }
 }

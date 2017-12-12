@@ -51,6 +51,7 @@ import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -216,7 +217,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
   }
 
   @Nullable
-  private Map<String, BasicAuthenticatorUser> loadUserMapFromDisk(String prefix) throws Exception
+  private Map<String, BasicAuthenticatorUser> loadUserMapFromDisk(String prefix) throws IOException
   {
     File userMapFile = new File(commonCacheConfig.getCacheDirectory(), getUserMapFilename(prefix));
     if (!userMapFile.exists()) {
@@ -228,7 +229,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
     );
   }
 
-  private void writeUserMapToDisk(String prefix, byte[] userMapBytes) throws Exception
+  private void writeUserMapToDisk(String prefix, byte[] userMapBytes) throws IOException
   {
     File cacheDir = new File(commonCacheConfig.getCacheDirectory());
     cacheDir.mkdirs();

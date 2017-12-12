@@ -53,6 +53,7 @@ import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -194,7 +195,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
   }
 
   @Nullable
-  private UserAndRoleMap loadUserAndRoleMapFromDisk(String prefix) throws Exception
+  private UserAndRoleMap loadUserAndRoleMapFromDisk(String prefix) throws IOException
   {
     File userAndRoleMapFile = new File(commonCacheConfig.getCacheDirectory(), getUserRoleMapFilename(prefix));
     if (!userAndRoleMapFile.exists()) {
@@ -206,7 +207,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
     );
   }
 
-  private void writeMapToDisk(String prefix, byte[] userMapBytes) throws Exception
+  private void writeMapToDisk(String prefix, byte[] userMapBytes) throws IOException
   {
     File cacheDir = new File(commonCacheConfig.getCacheDirectory());
     cacheDir.mkdirs();

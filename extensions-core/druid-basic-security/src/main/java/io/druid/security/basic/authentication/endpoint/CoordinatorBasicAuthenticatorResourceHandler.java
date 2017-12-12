@@ -20,10 +20,10 @@
 package io.druid.security.basic.authentication.endpoint;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
+import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.StringUtils;
 import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.BasicSecurityDBResourceException;
@@ -47,11 +47,12 @@ public class CoordinatorBasicAuthenticatorResourceHandler implements BasicAuthen
   @Inject
   public CoordinatorBasicAuthenticatorResourceHandler(
       BasicAuthenticatorMetadataStorageUpdater storageUpdater,
-      AuthenticatorMapper authenticatorMapper
+      AuthenticatorMapper authenticatorMapper,
+      @Smile ObjectMapper objectMapper
   )
   {
     this.storageUpdater = storageUpdater;
-    this.objectMapper = new ObjectMapper(new SmileFactory());
+    this.objectMapper = objectMapper;
 
     this.authenticatorMap = Maps.newHashMap();
     for (Map.Entry<String, Authenticator> authenticatorEntry : authenticatorMapper.getAuthenticatorMap().entrySet()) {

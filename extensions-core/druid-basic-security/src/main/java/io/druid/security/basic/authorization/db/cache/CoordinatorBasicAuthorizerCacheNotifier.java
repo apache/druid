@@ -29,6 +29,7 @@ import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.EscalatedClient;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.security.basic.BasicAuthDBConfig;
 import io.druid.security.basic.CommonCacheNotifier;
 import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
@@ -59,7 +60,7 @@ public class CoordinatorBasicAuthorizerCacheNotifier implements BasicAuthorizerC
         discoveryProvider,
         httpClient,
         "/druid-ext/basic-security/authorization/listen/%s",
-        "CoordinatorBasicAuthorizerCacheNotifier-notifierThread",
+        "CoordinatorBasicAuthorizerCacheNotifier-notifierThread-%d",
         LOG
     );
   }
@@ -77,6 +78,20 @@ public class CoordinatorBasicAuthorizerCacheNotifier implements BasicAuthorizerC
     }
     finally {
       lifecycleLock.exitStart();
+    }
+  }
+
+  @LifecycleStop
+  public void stop()
+  {
+    if (!lifecycleLock.canStop()) {
+      return;
+    }
+    try {
+      cacheNotifier.stop();
+    }
+    finally {
+      lifecycleLock.exitStop();
     }
   }
 
