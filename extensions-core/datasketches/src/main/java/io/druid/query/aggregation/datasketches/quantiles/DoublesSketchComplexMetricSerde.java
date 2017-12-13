@@ -113,5 +113,4 @@ public class DoublesSketchComplexMetricSerde extends ComplexMetricSerde
   {
     return LargeColumnSupportedComplexColumnSerializer.create(segmentWriteOutMedium, column, this.getObjectStrategy());
   }
-
 }

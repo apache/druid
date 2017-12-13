@@ -80,12 +80,14 @@ public class BatchDeltaIngestionTest
   static {
     MAPPER = new DefaultObjectMapper();
     MAPPER.registerSubtypes(new NamedType(HashBasedNumberedShardSpec.class, "hashed"));
-    InjectableValues inject = new InjectableValues.Std().addValue(ObjectMapper.class, MAPPER);
+    InjectableValues inject = new InjectableValues.Std()
+        .addValue(ObjectMapper.class, MAPPER)
+        .addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT);
     MAPPER.setInjectableValues(inject);
     INDEX_IO = HadoopDruidIndexerConfig.INDEX_IO;
 
     try {
-      SEGMENT = new DefaultObjectMapper()
+      SEGMENT = MAPPER
           .readValue(
               BatchDeltaIngestionTest.class.getClassLoader().getResource("test-segment/descriptor.json"),
               DataSegment.class

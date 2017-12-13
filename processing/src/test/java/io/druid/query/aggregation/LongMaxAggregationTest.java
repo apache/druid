@@ -42,7 +42,7 @@ public class LongMaxAggregationTest
   public LongMaxAggregationTest() throws Exception
   {
     String aggSpecJson = "{\"type\": \"longMax\", \"name\": \"billy\", \"fieldName\": \"nilly\"}";
-    longMaxAggFactory = TestHelper.getJsonMapper().readValue(aggSpecJson, LongMaxAggregatorFactory.class);
+    longMaxAggFactory = TestHelper.makeJsonMapper().readValue(aggSpecJson, LongMaxAggregatorFactory.class);
   }
 
   @Before

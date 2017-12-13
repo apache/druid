@@ -26,9 +26,9 @@ import com.google.common.collect.ImmutableSet;
 import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.indexing.overlord.ObjectMetadata;
 import io.druid.indexing.overlord.SegmentPublishResult;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
+import io.druid.segment.TestHelper;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -53,7 +53,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
-  private final ObjectMapper mapper = new DefaultObjectMapper();
+  private final ObjectMapper mapper = TestHelper.makeJsonMapper();
   private final DataSegment defaultSegment = new DataSegment(
       "fooDataSource",
       Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),

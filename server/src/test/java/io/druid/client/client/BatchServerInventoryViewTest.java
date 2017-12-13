@@ -35,11 +35,11 @@ import io.druid.client.DruidServer;
 import io.druid.client.ServerView;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.announcement.Announcer;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.Comparators;
+import io.druid.segment.TestHelper;
 import io.druid.server.coordination.BatchDataSegmentAnnouncer;
 import io.druid.server.coordination.CuratorDataSegmentServerAnnouncer;
 import io.druid.server.coordination.DataSegmentServerAnnouncer;
@@ -114,7 +114,7 @@ public class BatchServerInventoryViewTest
     cf.blockUntilConnected();
     cf.create().creatingParentsIfNeeded().forPath(testBasePath);
 
-    jsonMapper = new DefaultObjectMapper();
+    jsonMapper = TestHelper.makeJsonMapper();
 
     announcer = new Announcer(
         cf,
