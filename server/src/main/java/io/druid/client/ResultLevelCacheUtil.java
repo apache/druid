@@ -19,23 +19,18 @@
 
 package io.druid.client;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Query;
 import io.druid.query.QueryContexts;
 
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
 public class ResultLevelCacheUtil
 {
+  private static final Logger log = new Logger(ResultLevelCacheUtil.class);
+
   public static Cache.NamedKey computeResultLevelCacheKey(
       String resultLevelCacheIdentifier
   )
@@ -47,31 +42,12 @@ public class ResultLevelCacheUtil
 
   public static void populate(
       Cache cache,
-      ObjectMapper mapper,
       Cache.NamedKey key,
-      Iterable<Object> results,
-      int cacheLimit,
-      String resultSetId
+      byte[] resultBytes
   )
   {
-    try {
-      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-      try (JsonGenerator gen = mapper.getFactory().createGenerator(bytes)) {
-        // Save the resultSetId and its length
-        bytes.write(ByteBuffer.allocate(Integer.BYTES).putInt(resultSetId.length()).array());
-        bytes.write(StringUtils.toUtf8(resultSetId));
-        for (Object result : results) {
-          gen.writeObject(result);
-        }
-      }
-      if (cacheLimit > 0 && bytes.size() > cacheLimit) {
-        return;
-      }
-      cache.put(key, bytes.toByteArray());
-    }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
-    }
+    log.debug("Populating results into cache");
+    cache.put(key, resultBytes);
   }
 
   public static <T> boolean useResultLevelCacheOnBrokers(

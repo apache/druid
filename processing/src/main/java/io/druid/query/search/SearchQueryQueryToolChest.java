@@ -309,18 +309,6 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
         };
       }
 
-      @Override
-      public Function<Result<SearchResultValue>, Object> prepareForResultLevelCache()
-      {
-        return prepareForCache();
-      }
-
-      @Override
-      public Function<Object, Result<SearchResultValue>> pullFromResultLevelCache()
-      {
-        return pullFromCache();
-      }
-
       private boolean hasOutputName(List<Object> cachedEntry)
       {
         /*

@@ -328,18 +328,6 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
           }
         };
       }
-
-      @Override
-      public Function<Result<SelectResultValue>, Object> prepareForResultLevelCache()
-      {
-        return prepareForCache();
-      }
-
-      @Override
-      public Function<Object, Result<SelectResultValue>> pullFromResultLevelCache()
-      {
-        return pullFromCache();
-      }
     };
   }
 

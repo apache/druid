@@ -269,20 +269,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
       @Nullable
       final byte[] queryCacheKey = computeQueryCacheKey();
 
-      if (responseContext.containsKey(CacheConfig.ENABLE_RESULTLEVEL_CACHE)
-          || query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH) != null) {
-        @Nullable
-        final String prevEtag = (responseContext.get(QueryResource.EXISTING_RESULT_ID) == null)
-                                ? (String) query.getContext()
-                                                .get(QueryResource.HEADER_IF_NONE_MATCH)
-                                : (String) responseContext.get(QueryResource.EXISTING_RESULT_ID);
-        @Nullable
-        final String currentEtag = computeCurrentEtag(segments, queryCacheKey);
-        if (currentEtag != null && currentEtag.equals(prevEtag)) {
-          return Sequences.empty();
-        }
-      }
-
       if (query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH) != null) {
         @Nullable
         final String prevEtag = (String) query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH);

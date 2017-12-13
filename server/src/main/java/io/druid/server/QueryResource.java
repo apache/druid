@@ -85,7 +85,6 @@ public class QueryResource implements QueryCountStatsProvider
 
   public static final String HEADER_IF_NONE_MATCH = "If-None-Match";
   public static final String HEADER_ETAG = "ETag";
-  public static final String EXISTING_RESULT_ID = "existingResultSetIdentifier";
 
   protected final QueryLifecycleFactory queryLifecycleFactory;
   protected final ObjectMapper jsonMapper;

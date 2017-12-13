@@ -222,18 +222,6 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
           }
         };
       }
-
-      @Override
-      public Function<SegmentAnalysis, SegmentAnalysis> prepareForResultLevelCache()
-      {
-        return prepareForCache();
-      }
-
-      @Override
-      public Function<SegmentAnalysis, SegmentAnalysis> pullFromResultLevelCache()
-      {
-        return pullFromCache();
-      }
     };
   }
 

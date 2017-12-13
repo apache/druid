@@ -32,6 +32,8 @@ import io.druid.query.Result;
 import io.druid.query.TableDataSource;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
+import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.segment.TestHelper;
 import io.druid.segment.VirtualColumns;
@@ -77,12 +79,12 @@ public class TimeseriesQueryQueryToolChestTest
                     new CountAggregatorFactory("metric1"),
                     new LongSumAggregatorFactory("metric0", "metric0")
                 ),
-                null,
+                ImmutableList.<PostAggregator>of(new ConstantPostAggregator("post", 10)),
                 null
             )
         );
 
-    final Result<TimeseriesResultValue> result = new Result<>(
+    final Result<TimeseriesResultValue> result1 = new Result<>(
         // test timestamps that result in integer size millis
         DateTimes.utc(123L),
         new TimeseriesResultValue(
@@ -90,7 +92,7 @@ public class TimeseriesQueryQueryToolChestTest
         )
     );
 
-    Object preparedValue = strategy.prepareForCache().apply(result);
+    Object preparedValue = strategy.prepareForCache().apply(result1);
 
     ObjectMapper objectMapper = TestHelper.getJsonMapper();
     Object fromCacheValue = objectMapper.readValue(
@@ -100,7 +102,24 @@ public class TimeseriesQueryQueryToolChestTest
 
     Result<TimeseriesResultValue> fromCacheResult = strategy.pullFromCache().apply(fromCacheValue);
 
-    Assert.assertEquals(result, fromCacheResult);
+    Assert.assertEquals(result1, fromCacheResult);
+
+    final Result<TimeseriesResultValue> result2 = new Result<>(
+        // test timestamps that result in integer size millis
+        DateTimes.utc(123L),
+        new TimeseriesResultValue(
+            ImmutableMap.of("metric1", 2, "metric0", 3, "post", 10)
+        )
+    );
+
+    Object preparedResultLevelCacheValue = strategy.prepareForResultLevelCache().apply(result2);
+    Object fromResultLevelCacheValue = objectMapper.readValue(
+        objectMapper.writeValueAsBytes(preparedResultLevelCacheValue),
+        strategy.getCacheObjectClazz()
+    );
+
+    Result<TimeseriesResultValue> fromResultLevelCacheRes = strategy.pullFromResultLevelCache().apply(fromResultLevelCacheValue);
+    Assert.assertEquals(result2, fromResultLevelCacheRes);
   }
 
   @Test
