@@ -266,7 +266,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
       final Set<ServerToSegment> segments = computeSegmentsToQuery(timeline);
       @Nullable final byte[] queryCacheKey = computeQueryCacheKey();
-
       if (query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH) != null) {
         @Nullable final String prevEtag = (String) query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH);
         @Nullable final String currentEtag = computeCurrentEtag(segments, queryCacheKey);
