@@ -37,7 +37,7 @@ public class ListFilteredDimensionSpecTest
   @Test
   public void testSerde() throws Exception
   {
-    ObjectMapper mapper = TestHelper.getJsonMapper();
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
 
     //isWhitelist = true
     String jsonStr = "{\n"

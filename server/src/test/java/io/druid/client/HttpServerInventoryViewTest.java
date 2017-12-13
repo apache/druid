@@ -33,9 +33,9 @@ import io.druid.discovery.DataNodeService;
 import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscovery;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.RE;
+import io.druid.segment.TestHelper;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.SegmentChangeRequestDrop;
@@ -70,7 +70,7 @@ public class HttpServerInventoryViewTest
   @Test(timeout = 10000)
   public void testSimple() throws Exception
   {
-    ObjectMapper jsonMapper = new DefaultObjectMapper();
+    ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);

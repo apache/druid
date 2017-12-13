@@ -183,7 +183,7 @@ public class HyperUniquesAggregatorFactoryTest
         true
     );
 
-    final ObjectMapper jsonMapper = TestHelper.getJsonMapper();
+    final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     final AggregatorFactory factory2 = jsonMapper.readValue(
         jsonMapper.writeValueAsString(factory),
         AggregatorFactory.class

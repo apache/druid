@@ -92,7 +92,10 @@ public class HdfsDataSegmentPusherTest
   }
   static {
     objectMapper = new TestObjectMapper();
-    objectMapper.setInjectableValues(new InjectableValues.Std().addValue(ObjectMapper.class, objectMapper));
+    InjectableValues.Std injectableValues = new InjectableValues.Std();
+    injectableValues.addValue(ObjectMapper.class, objectMapper);
+    injectableValues.addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT);
+    objectMapper.setInjectableValues(injectableValues);
   }
 
   @Test

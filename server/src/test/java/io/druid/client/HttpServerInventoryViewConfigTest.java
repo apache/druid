@@ -34,7 +34,7 @@ public class HttpServerInventoryViewConfigTest
   {
     String json = "{}";
 
-    HttpServerInventoryViewConfig config = TestHelper.getJsonMapper().readValue(json, HttpServerInventoryViewConfig.class);
+    HttpServerInventoryViewConfig config = TestHelper.makeJsonMapper().readValue(json, HttpServerInventoryViewConfig.class);
 
     Assert.assertEquals(TimeUnit.MINUTES.toMillis(4), config.getServerTimeout());
     Assert.assertEquals(TimeUnit.MINUTES.toMillis(1), config.getServerUnstabilityTimeout());
@@ -50,7 +50,7 @@ public class HttpServerInventoryViewConfigTest
                   + "  \"numThreads\": 7\n"
                   + "}";
 
-    HttpServerInventoryViewConfig config = TestHelper.getJsonMapper().readValue(json, HttpServerInventoryViewConfig.class);
+    HttpServerInventoryViewConfig config = TestHelper.makeJsonMapper().readValue(json, HttpServerInventoryViewConfig.class);
 
     Assert.assertEquals(TimeUnit.MINUTES.toMillis(2), config.getServerTimeout());
     Assert.assertEquals(TimeUnit.MINUTES.toMillis(3), config.getServerUnstabilityTimeout());

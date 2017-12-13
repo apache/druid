@@ -66,7 +66,7 @@ public class RetryQueryRunnerTest
     }
   }
 
-  private final ObjectMapper jsonMapper = TestHelper.getJsonMapper();
+  private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
   final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                       .dataSource(QueryRunnerTestHelper.dataSource)

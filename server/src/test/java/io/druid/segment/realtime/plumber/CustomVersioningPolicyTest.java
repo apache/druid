@@ -19,7 +19,7 @@
 
 package io.druid.segment.realtime.plumber;
 
-import io.druid.TestUtil;
+import io.druid.server.ServerTestHelper;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -37,8 +37,8 @@ public class CustomVersioningPolicyTest
 
     CustomVersioningPolicy policy = new CustomVersioningPolicy(version);
 
-    CustomVersioningPolicy serialized = TestUtil.MAPPER.readValue(
-        TestUtil.MAPPER.writeValueAsBytes(policy),
+    CustomVersioningPolicy serialized = ServerTestHelper.MAPPER.readValue(
+        ServerTestHelper.MAPPER.writeValueAsBytes(policy),
         CustomVersioningPolicy.class
     );
 
