@@ -22,10 +22,12 @@ package io.druid.firehose.azure;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Predicate;
 import io.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.storage.azure.AzureByteSource;
 import io.druid.storage.azure.AzureStorage;
+import io.druid.storage.azure.AzureUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -123,5 +125,11 @@ public class StaticAzureBlobStoreFirehoseFactory extends PrefetchableTextFilesFi
         getFetchTimeout(),
         getMaxFetchRetry()
     );
+  }
+
+  @Override
+  protected Predicate<Throwable> getRetryCondition()
+  {
+    return AzureUtils.AZURE_RETRY;
   }
 }

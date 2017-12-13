@@ -22,6 +22,7 @@ package io.druid.data.input.impl.prefetch;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.impl.AbstractTextFilesFirehoseFactory;
@@ -32,6 +33,7 @@ import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.logger.Logger;
 import org.apache.commons.io.LineIterator;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -159,22 +161,25 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
   }
 
   @Override
-  public Firehose connect(StringInputRowParser firehoseParser, File temporaryDirectory) throws IOException
+  public Firehose connect(StringInputRowParser firehoseParser, @Nullable File temporaryDirectory) throws IOException
   {
-    if (!cacheManager.isEnabled() && maxFetchCapacityBytes == 0) {
-      return super.connect(firehoseParser, temporaryDirectory);
-    }
-
     if (objects == null) {
       objects = ImmutableList.copyOf(Preconditions.checkNotNull(initObjects(), "objects"));
     }
 
-    Preconditions.checkState(temporaryDirectory.exists(), "temporaryDirectory[%s] does not exist", temporaryDirectory);
-    Preconditions.checkState(
-        temporaryDirectory.isDirectory(),
-        "temporaryDirectory[%s] is not a directory",
-        temporaryDirectory
-    );
+    if (cacheManager.isEnabled() || maxFetchCapacityBytes > 0) {
+      Preconditions.checkNotNull(temporaryDirectory, "temporaryDirectory");
+      Preconditions.checkArgument(
+          temporaryDirectory.exists(),
+          "temporaryDirectory[%s] does not exist",
+          temporaryDirectory
+      );
+      Preconditions.checkArgument(
+          temporaryDirectory.isDirectory(),
+          "temporaryDirectory[%s] is not a directory",
+          temporaryDirectory
+      );
+    }
 
     LOG.info("Create a new firehose for [%d] objects", objects.size());
 
@@ -189,7 +194,8 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
         prefetchTriggerBytes,
         fetchTimeout,
         maxFetchRetry,
-        this::openObjectStream
+        this::openObjectStream,
+        getRetryCondition()
     );
 
     return new FileIteratingFirehose(
@@ -239,6 +245,8 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
         }
     );
   }
+
+  protected abstract Predicate<Throwable> getRetryCondition();
 
   /**
    * This class calls the {@link Closeable#close()} method of the resourceCloser when it is closed.

@@ -19,11 +19,16 @@
 
 package io.druid.data.input.impl.prefetch;
 
+import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.RetryUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import org.apache.commons.io.IOUtils;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -54,6 +59,8 @@ public class Fetcher<T> implements Iterator<OpenedObject<T>>
   private final CacheManager<T> cacheManager;
   private final List<T> objects;
   private final ExecutorService fetchExecutor;
+
+  @Nullable
   private final File temporaryDirectory;
 
   // A roughly max size of total fetched objects, but the actual fetched size can be bigger. The reason is our current
@@ -80,6 +87,7 @@ public class Fetcher<T> implements Iterator<OpenedObject<T>>
   private final AtomicLong fetchedBytes = new AtomicLong(0);
 
   private final ObjectOpenFunction<T> openObjectFunction;
+  private final Predicate<Throwable> retryCondition;
   private final byte[] buffer;
 
   private Future<Void> fetchFuture;
@@ -94,12 +102,13 @@ public class Fetcher<T> implements Iterator<OpenedObject<T>>
       CacheManager<T> cacheManager,
       List<T> objects,
       ExecutorService fetchExecutor,
-      File temporaryDirectory,
+      @Nullable File temporaryDirectory,
       long maxFetchCapacityBytes,
       long prefetchTriggerBytes,
       long fetchTimeout,
       int maxFetchRetry,
-      ObjectOpenFunction<T> openObjectFunction
+      ObjectOpenFunction<T> openObjectFunction,
+      Predicate<Throwable> retryCondition
   )
   {
     this.cacheManager = cacheManager;
@@ -111,6 +120,7 @@ public class Fetcher<T> implements Iterator<OpenedObject<T>>
     this.fetchTimeout = fetchTimeout;
     this.maxFetchRetry = maxFetchRetry;
     this.openObjectFunction = openObjectFunction;
+    this.retryCondition = retryCondition;
     this.buffer = new byte[BUFFER_SIZE];
 
     this.prefetchEnabled = maxFetchCapacityBytes > 0;
@@ -119,6 +129,10 @@ public class Fetcher<T> implements Iterator<OpenedObject<T>>
     // (*) If cache is initialized, put all cached files to the queue.
     this.fetchedFiles.addAll(cacheManager.getFiles());
     this.nextFetchIndex = fetchedFiles.size();
+
+    if (cacheManager.isEnabled() || prefetchEnabled) {
+      Preconditions.checkNotNull(temporaryDirectory, "temporaryDirectory");
+    }
 
     if (prefetchEnabled) {
       fetchIfNeeded(0L);
@@ -155,7 +169,7 @@ public class Fetcher<T> implements Iterator<OpenedObject<T>>
       final T object = objects.get(nextFetchIndex);
       LOG.info("Fetching [%d]th object[%s], fetchedBytes[%d]", nextFetchIndex, object, fetchedBytes.get());
       final File outFile = File.createTempFile(FETCH_FILE_PREFIX, null, temporaryDirectory);
-      fetchedBytes.addAndGet(download(object, outFile, 0));
+      fetchedBytes.addAndGet(download(object, outFile));
       fetchedFiles.put(new FetchedFile<>(object, outFile, getFileCloser(outFile, fetchedBytes)));
     }
   }
@@ -166,26 +180,26 @@ public class Fetcher<T> implements Iterator<OpenedObject<T>>
    *
    * @param object   an object to be downloaded
    * @param outFile  a file which the object data is stored
-   * @param tryCount current retry count
    *
    * @return number of downloaded bytes
    */
-  private long download(T object, File outFile, int tryCount) throws IOException
+  private long download(T object, File outFile) throws IOException
   {
-    try (final InputStream is = openObjectFunction.open(object);
-         final OutputStream os = new FileOutputStream(outFile)) {
-      return IOUtils.copyLarge(is, os, buffer);
+    try {
+      return RetryUtils.retry(
+          () -> {
+            try (final InputStream is = openObjectFunction.open(object);
+                 final OutputStream os = new FileOutputStream(outFile)) {
+              return IOUtils.copyLarge(is, os, buffer);
+            }
+          },
+          retryCondition,
+          maxFetchRetry,
+          StringUtils.format("Failed to download object[%s]", object)
+      );
     }
-    catch (IOException e) {
-      final int nextTry = tryCount + 1;
-      if (!Thread.currentThread().isInterrupted() && nextTry < maxFetchRetry) {
-        LOG.error(e, "Failed to download object[%s], retrying (%d of %d)", object, nextTry, maxFetchRetry);
-        outFile.delete();
-        return download(object, outFile, nextTry);
-      } else {
-        LOG.error(e, "Failed to download object[%s], retries exhausted, aborting", object);
-        throw e;
-      }
+    catch (Exception e) {
+      throw new IOException(e);
     }
   }
 
@@ -289,7 +303,11 @@ public class Fetcher<T> implements Iterator<OpenedObject<T>>
       final T object = objects.get(nextFetchIndex);
       LOG.info("Reading [%d]th object[%s]", nextFetchIndex, object);
       nextFetchIndex++;
-      return new OpenedObject<>(object, openObjectFunction.open(object), getNoopCloser());
+      return new OpenedObject<>(
+          object,
+          new RetryingInputStream<>(object, openObjectFunction, retryCondition, maxFetchRetry),
+          getNoopCloser()
+      );
     }
   }
 

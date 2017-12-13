@@ -157,7 +157,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       }
     };
     try {
-      return RetryUtils.retry(call, shouldRetry, quietTries, maxTries);
+      return RetryUtils.retry(call, shouldRetry, quietTries, maxTries, null);
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

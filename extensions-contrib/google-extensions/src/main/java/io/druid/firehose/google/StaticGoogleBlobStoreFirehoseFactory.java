@@ -22,10 +22,12 @@ package io.druid.firehose.google;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Predicate;
 import io.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.storage.google.GoogleByteSource;
 import io.druid.storage.google.GoogleStorage;
+import io.druid.storage.google.GoogleUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -114,6 +116,12 @@ public class StaticGoogleBlobStoreFirehoseFactory extends PrefetchableTextFilesF
         getFetchTimeout(),
         getMaxFetchRetry()
     );
+  }
+
+  @Override
+  protected Predicate<Throwable> getRetryCondition()
+  {
+    return GoogleUtils.GOOGLE_RETRY;
   }
 }
 

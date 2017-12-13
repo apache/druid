@@ -21,6 +21,7 @@ package io.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Predicate;
 import io.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
 
@@ -104,5 +105,11 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
         getFetchTimeout(),
         getMaxFetchRetry()
     );
+  }
+
+  @Override
+  protected Predicate<Throwable> getRetryCondition()
+  {
+    return e -> e instanceof IOException;
   }
 }

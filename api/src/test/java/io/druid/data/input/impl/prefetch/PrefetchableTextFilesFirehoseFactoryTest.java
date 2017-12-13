@@ -21,6 +21,7 @@ package io.druid.data.input.impl.prefetch;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.google.common.io.CountingOutputStream;
 import io.druid.data.input.Firehose;
@@ -377,7 +378,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
 
   static class TestPrefetchableTextFilesFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<File>
   {
-    private static final long defaultTimeout = 1000;
+    private static final long defaultTimeout = 60000; // RetryUtils.maxSleepMillis is 60000
     private final long sleepMillis;
     private final File baseDir;
     private int openExceptionCount;
@@ -392,6 +393,25 @@ public class PrefetchableTextFilesFirehoseFactoryTest
           defaultTimeout,
           3,
           0,
+          0
+      );
+    }
+
+    static TestPrefetchableTextFilesFirehoseFactory with(
+        File baseDir,
+        long cacheCapacity,
+        long fetchCapacity,
+        int openExceptionCount
+    )
+    {
+      return new TestPrefetchableTextFilesFirehoseFactory(
+          baseDir,
+          1024,
+          cacheCapacity,
+          fetchCapacity,
+          defaultTimeout,
+          3,
+          openExceptionCount,
           0
       );
     }
@@ -493,6 +513,12 @@ public class PrefetchableTextFilesFirehoseFactoryTest
     protected InputStream wrapObjectStream(File object, InputStream stream) throws IOException
     {
       return stream;
+    }
+
+    @Override
+    protected Predicate<Throwable> getRetryCondition()
+    {
+      return e -> e instanceof IOException;
     }
   }
 }

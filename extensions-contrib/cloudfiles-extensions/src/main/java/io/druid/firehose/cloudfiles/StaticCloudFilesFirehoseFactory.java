@@ -22,11 +22,13 @@ package io.druid.firehose.cloudfiles;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Predicate;
 import io.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.storage.cloudfiles.CloudFilesByteSource;
 import io.druid.storage.cloudfiles.CloudFilesObjectApiProxy;
+import io.druid.storage.cloudfiles.CloudFilesUtils;
 import org.jclouds.rackspace.cloudfiles.v1.CloudFilesApi;
 
 import java.io.IOException;
@@ -124,5 +126,11 @@ public class StaticCloudFilesFirehoseFactory extends PrefetchableTextFilesFireho
         getFetchTimeout(),
         getMaxFetchRetry()
     );
+  }
+
+  @Override
+  protected Predicate<Throwable> getRetryCondition()
+  {
+    return CloudFilesUtils.CLOUDFILESRETRY;
   }
 }
