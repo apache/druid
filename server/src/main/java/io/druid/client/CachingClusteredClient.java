@@ -255,8 +255,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
     Sequence<T> run(final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter)
     {
-      @Nullable
-      TimelineLookup<String, ServerSelector> timeline = serverView.getTimeline(query.getDataSource());
+      @Nullable TimelineLookup<String, ServerSelector> timeline = serverView.getTimeline(query.getDataSource());
       if (timeline == null) {
         return Sequences.empty();
       }
@@ -266,14 +265,11 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
 
       final Set<ServerToSegment> segments = computeSegmentsToQuery(timeline);
-      @Nullable
-      final byte[] queryCacheKey = computeQueryCacheKey();
+      @Nullable final byte[] queryCacheKey = computeQueryCacheKey();
 
       if (query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH) != null) {
-        @Nullable
-        final String prevEtag = (String) query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH);
-        @Nullable
-        final String currentEtag = computeCurrentEtag(segments, queryCacheKey);
+        @Nullable final String prevEtag = (String) query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH);
+        @Nullable final String currentEtag = computeCurrentEtag(segments, queryCacheKey);
         if (currentEtag != null && currentEtag.equals(prevEtag)) {
           return Sequences.empty();
         }
