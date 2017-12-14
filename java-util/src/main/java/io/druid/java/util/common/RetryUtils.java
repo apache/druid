@@ -31,6 +31,8 @@ import java.util.concurrent.ThreadLocalRandom;
 public class RetryUtils
 {
   public static final Logger log = new Logger(RetryUtils.class);
+  public static final long MAX_SLEEP_MILLIS = 60000;
+  public static final long BASE_SLEEP_MILLIS = 1000;
 
   /**
    * Retry an operation using fuzzy exponentially increasing backoff. The wait time after the nth failed attempt is
@@ -125,10 +127,8 @@ public class RetryUtils
 
   public static long nextRetrySleepMillis(final int nTry)
   {
-    final long baseSleepMillis = 1000;
-    final long maxSleepMillis = 60000;
     final double fuzzyMultiplier = Math.min(Math.max(1 + 0.2 * ThreadLocalRandom.current().nextGaussian(), 0), 2);
-    final long sleepMillis = (long) (Math.min(maxSleepMillis, baseSleepMillis * Math.pow(2, nTry - 1))
+    final long sleepMillis = (long) (Math.min(MAX_SLEEP_MILLIS, BASE_SLEEP_MILLIS * Math.pow(2, nTry - 1))
                                      * fuzzyMultiplier);
     return sleepMillis;
   }
