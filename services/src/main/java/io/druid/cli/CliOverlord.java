@@ -348,6 +348,8 @@ public class CliOverlord extends ServerRunnable
       // Can't use /* here because of Guice and Jetty static content conflicts
       root.addFilter(GuiceFilter.class, "/druid/*", null);
 
+      root.addFilter(GuiceFilter.class, "/druid-ext/*", null);
+
       HandlerList handlerList = new HandlerList();
       handlerList.setHandlers(
           new Handler[]{

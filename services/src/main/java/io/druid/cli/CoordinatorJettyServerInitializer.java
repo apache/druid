@@ -144,6 +144,8 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     if (beOverlord) {
       root.addFilter(GuiceFilter.class, "/druid/indexer/*", null);
     }
+    root.addFilter(GuiceFilter.class, "/druid-ext/*", null);
+
     // this will be removed in the next major release
     root.addFilter(GuiceFilter.class, "/coordinator/*", null);
 
