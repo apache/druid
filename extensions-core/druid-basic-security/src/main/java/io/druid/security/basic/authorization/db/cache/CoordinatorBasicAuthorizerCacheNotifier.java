@@ -60,8 +60,7 @@ public class CoordinatorBasicAuthorizerCacheNotifier implements BasicAuthorizerC
         discoveryProvider,
         httpClient,
         "/druid-ext/basic-security/authorization/listen/%s",
-        "CoordinatorBasicAuthorizerCacheNotifier-notifierThread-%d",
-        LOG
+        "CoordinatorBasicAuthorizerCacheNotifier"
     );
   }
 

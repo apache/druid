@@ -236,6 +236,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
             return loadUserAndRoleMapFromDisk(prefix);
           }
           catch (Exception e2) {
+            e2.addSuppressed(e);
             LOG.makeAlert(e2, "Encountered exception while loading user-role map snapshot for authorizer [%s]", prefix);
           }
         }

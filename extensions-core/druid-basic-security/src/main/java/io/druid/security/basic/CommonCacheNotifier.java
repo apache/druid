@@ -55,6 +55,8 @@ import java.util.concurrent.TimeUnit;
 
 public class CommonCacheNotifier
 {
+  private static final EmittingLogger LOG = new EmittingLogger(CommonCacheNotifier.class);
+
   private static final List<String> NODE_TYPES = Arrays.asList(
       DruidNodeDiscoveryProvider.NODE_TYPE_BROKER,
       DruidNodeDiscoveryProvider.NODE_TYPE_OVERLORD,
@@ -69,8 +71,7 @@ public class CommonCacheNotifier
   private final BlockingQueue<Pair<String, byte[]>> updateQueue;
   private final Map<String, BasicAuthDBConfig> itemConfigMap;
   private final String baseUrl;
-  private final EmittingLogger logger;
-  private final String threadName;
+  private final String callerName;
   private final ExecutorService exec;
 
   public CommonCacheNotifier(
@@ -78,13 +79,11 @@ public class CommonCacheNotifier
       DruidNodeDiscoveryProvider discoveryProvider,
       HttpClient httpClient,
       String baseUrl,
-      String threadName,
-      EmittingLogger logger
+      String callerName
   )
   {
-    this.exec = Execs.scheduledSingleThreaded(threadName);
-    this.threadName = threadName;
-    this.logger = logger;
+    this.exec = Execs.scheduledSingleThreaded(StringUtils.format("%s-notifierThread-", callerName) + "%d");
+    this.callerName = callerName;
     this.updateQueue = new LinkedBlockingQueue<>();
     this.itemConfigMap = itemConfigMap;
     this.discoveryProvider = discoveryProvider;
@@ -98,7 +97,7 @@ public class CommonCacheNotifier
         () -> {
           while (!Thread.interrupted()) {
             try {
-              logger.debug("Waiting for cache update notification");
+              LOG.debug(callerName + ":Waiting for cache update notification");
               Pair<String, byte[]> update = updateQueue.take();
               String authorizer = update.lhs;
               byte[] serializedMap = update.rhs;
@@ -107,7 +106,7 @@ public class CommonCacheNotifier
                 continue;
               }
 
-              logger.debug("Sending cache update notifications");
+              LOG.debug(callerName + ":Sending cache update notifications");
               // Best effort, if a notification fails, the remote node will eventually poll to update its state
               // We wait for responses however, to avoid flooding remote nodes with notifications.
               List<ListenableFuture<StatusResponseHolder>> futures = sendUpdate(
@@ -123,17 +122,17 @@ public class CommonCacheNotifier
                                                               );
 
                 for (StatusResponseHolder response : responses) {
-                  logger.debug("Got status: " + response.getStatus());
+                  LOG.debug(callerName + ":Got status: " + response.getStatus());
                 }
               }
               catch (Exception e) {
-                logger.makeAlert(e, "Failed to get response for cache notification.").emit();
+                LOG.makeAlert(e, callerName + ":Failed to get response for cache notification.").emit();
               }
 
-              logger.debug("Received responses for cache update notifications.");
+              LOG.debug(callerName + ":Received responses for cache update notifications.");
             }
             catch (Throwable t) {
-              logger.makeAlert(t, "Error occured while handling updates for cachedUserMaps.").emit();
+              LOG.makeAlert(t, callerName + ":Error occured while handling updates for cachedUserMaps.").emit();
             }
           }
         }
@@ -189,7 +188,7 @@ public class CommonCacheNotifier
       );
     }
     catch (MalformedURLException mue) {
-      logger.error("WTF? Malformed url for DruidNode[%s] and itemName[%s]", druidNode, itemName);
+      LOG.error(callerName + ":WTF? Malformed url for DruidNode[%s] and itemName[%s]", druidNode, itemName);
       throw new RuntimeException(mue);
     }
   }

@@ -203,6 +203,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
             return loadUserMapFromDisk(prefix);
           }
           catch (Exception e2) {
+            e2.addSuppressed(e);
             LOG.makeAlert(e2, "Encountered exception while loading user map snapshot for authenticator [%s]", prefix);
           }
         }
