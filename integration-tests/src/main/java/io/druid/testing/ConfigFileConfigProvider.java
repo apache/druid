@@ -139,6 +139,12 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
       }
 
       @Override
+      public String getHistoricalUrl()
+      {
+        return historicalUrl;
+      }
+
+      @Override
       public String getMiddleManagerHost()
       {
         return middleManagerHost;
