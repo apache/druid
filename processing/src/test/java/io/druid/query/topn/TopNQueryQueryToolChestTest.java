@@ -91,7 +91,7 @@ public class TopNQueryQueryToolChestTest
         )
     );
 
-    Object preparedValue = strategy.prepareForCache().apply(
+    Object preparedValue = strategy.prepareForCache(false).apply(
         result1
     );
 
@@ -101,7 +101,7 @@ public class TopNQueryQueryToolChestTest
         strategy.getCacheObjectClazz()
     );
 
-    Result<TopNResultValue> fromCacheResult = strategy.pullFromCache().apply(fromCacheValue);
+    Result<TopNResultValue> fromCacheResult = strategy.pullFromCache(false).apply(fromCacheValue);
 
     Assert.assertEquals(result1, fromCacheResult);
 
@@ -119,7 +119,7 @@ public class TopNQueryQueryToolChestTest
         )
     );
 
-    Object preparedResultCacheValue = strategy.prepareForResultLevelCache().apply(
+    Object preparedResultCacheValue = strategy.prepareForCache(true).apply(
         result2
     );
 
@@ -128,7 +128,7 @@ public class TopNQueryQueryToolChestTest
         strategy.getCacheObjectClazz()
     );
 
-    Result<TopNResultValue> fromResultCacheResult = strategy.pullFromResultLevelCache().apply(fromResultCacheValue);
+    Result<TopNResultValue> fromResultCacheResult = strategy.pullFromCache(true).apply(fromResultCacheValue);
     Assert.assertEquals(result2, fromResultCacheResult);
 
   }

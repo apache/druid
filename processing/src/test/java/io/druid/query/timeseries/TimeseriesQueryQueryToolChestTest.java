@@ -92,7 +92,7 @@ public class TimeseriesQueryQueryToolChestTest
         )
     );
 
-    Object preparedValue = strategy.prepareForCache().apply(result1);
+    Object preparedValue = strategy.prepareForCache(false).apply(result1);
 
     ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     Object fromCacheValue = objectMapper.readValue(
@@ -100,7 +100,7 @@ public class TimeseriesQueryQueryToolChestTest
         strategy.getCacheObjectClazz()
     );
 
-    Result<TimeseriesResultValue> fromCacheResult = strategy.pullFromCache().apply(fromCacheValue);
+    Result<TimeseriesResultValue> fromCacheResult = strategy.pullFromCache(false).apply(fromCacheValue);
 
     Assert.assertEquals(result1, fromCacheResult);
 
@@ -112,13 +112,13 @@ public class TimeseriesQueryQueryToolChestTest
         )
     );
 
-    Object preparedResultLevelCacheValue = strategy.prepareForResultLevelCache().apply(result2);
+    Object preparedResultLevelCacheValue = strategy.prepareForCache(true).apply(result2);
     Object fromResultLevelCacheValue = objectMapper.readValue(
         objectMapper.writeValueAsBytes(preparedResultLevelCacheValue),
         strategy.getCacheObjectClazz()
     );
 
-    Result<TimeseriesResultValue> fromResultLevelCacheRes = strategy.pullFromResultLevelCache().apply(fromResultLevelCacheValue);
+    Result<TimeseriesResultValue> fromResultLevelCacheRes = strategy.pullFromCache(true).apply(fromResultLevelCacheValue);
     Assert.assertEquals(result2, fromResultLevelCacheRes);
   }
 

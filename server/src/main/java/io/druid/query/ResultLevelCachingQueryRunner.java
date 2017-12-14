@@ -98,6 +98,8 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       if (query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH) == null) {
         query = query.withOverriddenContext(
             ImmutableMap.of(QueryResource.HEADER_IF_NONE_MATCH, existingResultSetId));
+        query = query.withOverriddenContext(ImmutableMap.of("ENABLE_RESULT_CACHE", true));
+
       }
       Sequence<T> resultFromClient = baseRunner.run(
           QueryPlus.wrap(query),
@@ -151,7 +153,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       T resultEntry
   )
   {
-    final Function<T, Object> cacheFn = strategy.prepareForResultLevelCache();
+    final Function<T, Object> cacheFn = strategy.prepareForCache(true);
     if (resultLevelCachePopulator != null) {
       resultLevelCachePopulator.cacheFutures
           .add(cachingExec.submit(() -> cacheFn.apply(resultEntry)));
@@ -188,7 +190,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
     if (cachedResult == null) {
       log.error("Cached result set is null");
     }
-    final Function<Object, T> pullFromCacheFunction = strategy.pullFromResultLevelCache();
+    final Function<Object, T> pullFromCacheFunction = strategy.pullFromCache(true);
     final TypeReference<Object> cacheObjectClazz = strategy.getCacheObjectClazz();
     //Skip the resultsetID and its length bytes
     Sequence<T> cachedSequence = Sequences.simple(() -> {

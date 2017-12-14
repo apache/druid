@@ -61,37 +61,16 @@ public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
    *
    * The resulting function must be thread-safe.
    *
+   * @param isResultLevelCache indicates whether the function is invoked for result-level caching or segment-level caching
    * @return a thread-safe function that converts the QueryType's result type into something cacheable
    */
-  Function<T, CacheType> prepareForCache();
+  Function<T, CacheType> prepareForCache(boolean isResultLevelCache);
 
   /**
    * A function that does the inverse of the operation that the function prepareForCache returns
    *
+   * @param isResultLevelCache indicates whether the function is invoked for result-level caching or segment-level caching
    * @return A function that does the inverse of the operation that the function prepareForCache returns
    */
-  Function<CacheType, T> pullFromCache();
-
-  /**
-   * Returns a function that converts the query result set including the post-aggregation results
-   * into something cacheable.
-   *
-   * The resulting function must be thread-safe.
-   *
-   * @return a thread-safe function that converts the QueryType's result type into something cacheable
-   */
-  default Function<T, CacheType> prepareForResultLevelCache()
-  {
-    return prepareForCache();
-  }
-
-  /**
-   * A function that does the inverse of the operation that the function prepareForResultLevelCache returns
-   *
-   * @return A function that does the inverse of the operation that the function prepareForResultLevelCache returns
-   */
-  default Function<CacheType, T> pullFromResultLevelCache()
-  {
-    return pullFromCache();
-  }
+  Function<CacheType, T> pullFromCache(boolean isResultLevelCache);
 }

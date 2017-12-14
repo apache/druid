@@ -103,7 +103,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
     }
 
     if (useCache) {
-      final Function cacheFn = strategy.pullFromCache();
+      final Function cacheFn = strategy.pullFromCache(false);
       final byte[] cachedResult = cache.get(key);
       if (cachedResult != null) {
         final TypeReference cacheObjectClazz = strategy.getCacheObjectClazz();
@@ -143,7 +143,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
 
     final Collection<ListenableFuture<?>> cacheFutures = Collections.synchronizedList(Lists.<ListenableFuture<?>>newLinkedList());
     if (populateCache) {
-      final Function cacheFn = strategy.prepareForCache();
+      final Function cacheFn = strategy.prepareForCache(false);
 
       return Sequences.withEffect(
           Sequences.map(
