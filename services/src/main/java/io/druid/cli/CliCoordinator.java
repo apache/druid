@@ -87,7 +87,6 @@ import org.eclipse.jetty.server.Server;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.Executors;
 
@@ -211,7 +210,7 @@ public class CliCoordinator extends ServerRunnable
                 DruidCoordinatorSegmentKiller.class
             ).addConditionBinding(
                 "druid.coordinator.kill.pendingSegments.on",
-                predicate -> Objects.equals(predicate, "true"),
+                Predicates.equalTo("true"),
                 DruidCoordinatorCleanupPendingSegments.class
             );
 

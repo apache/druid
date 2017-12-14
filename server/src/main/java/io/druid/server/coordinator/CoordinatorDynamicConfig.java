@@ -43,6 +43,8 @@ public class CoordinatorDynamicConfig
   private final boolean emitBalancingStats;
   private final boolean killAllDataSources;
   private final Set<String> killDataSourceWhitelist;
+
+  // The pending segments of the dataSources in this list are not killed.
   private final Set<String> killPendingSegmentsSkipList;
   /**
    * The maximum number of segments that could be queued for loading to any given server.

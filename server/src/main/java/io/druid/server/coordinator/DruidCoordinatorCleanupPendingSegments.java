@@ -62,8 +62,8 @@ public class DruidCoordinatorCleanupPendingSegments implements DruidCoordinatorH
         if (!params.getCoordinatorDynamicConfig().getKillPendingSegmentsSkipList().contains(dataSource.getName())) {
           log.info(
               "Kill pendingSegments created until [%s] for dataSource[%s]",
-              dataSource,
-              firstCreatedTaskStatus.getCreatedTime()
+              firstCreatedTaskStatus.getCreatedTime(),
+              dataSource
           );
           indexingServiceClient.killPendingSegments(dataSource.getName(), firstCreatedTaskStatus.getCreatedTime());
         }
