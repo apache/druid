@@ -39,6 +39,7 @@ import io.druid.java.util.common.Pair;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.QueryWatcher;
 import io.druid.query.TableDataSource;
+import io.druid.segment.TestHelper;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.ServerType;
 import io.druid.server.initialization.ZkPathsConfig;
@@ -75,7 +76,7 @@ public class BrokerServerViewTest extends CuratorTestBase
 
   public BrokerServerViewTest()
   {
-    jsonMapper = new DefaultObjectMapper();
+    jsonMapper = TestHelper.makeJsonMapper();
     zkPathsConfig = new ZkPathsConfig();
   }
 

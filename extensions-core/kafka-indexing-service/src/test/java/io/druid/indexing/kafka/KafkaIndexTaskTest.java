@@ -169,7 +169,7 @@ import java.util.concurrent.TimeoutException;
 public class KafkaIndexTaskTest
 {
   private static final Logger log = new Logger(KafkaIndexTaskTest.class);
-  private static final ObjectMapper objectMapper = TestHelper.getJsonMapper();
+  private static final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
   private static final long POLL_RETRY_MS = 100;
 
   private static TestingCluster zkServer;

@@ -132,7 +132,7 @@ public class IngestSegmentFirehoseFactoryTest
 
   static {
     TestUtils testUtils = new TestUtils();
-    MAPPER = setupInjectablesInObjectMapper(TestHelper.getJsonMapper());
+    MAPPER = setupInjectablesInObjectMapper(TestHelper.makeJsonMapper());
     INDEX_MERGER_V9 = testUtils.getTestIndexMergerV9();
     INDEX_IO = testUtils.getTestIndexIO();
     TASK_STORAGE = new HeapMemoryTaskStorage(

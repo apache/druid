@@ -17,32 +17,24 @@
  * under the License.
  */
 
-package io.druid.discovery;
+package io.druid.timeline;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import com.google.inject.BindingAnnotation;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
+ * This annnotation is used to inject a boolean parameter into a {@link DataSegment} constructor, which prescribes to
+ * drop deserialized "loadSpec" and don't store it in a field of a {@link DataSegment}. It's very useful on Brokers,
+ * because they store a lot of DataSegments in their heap, and loadSpec takes a lot of space, while it's not used on
+ * Brokers.
  */
-public class WorkerNodeServiceTest
+@Target({ElementType.PARAMETER, ElementType.FIELD})
+@Retention(RetentionPolicy.RUNTIME)
+@BindingAnnotation
+public @interface PruneLoadSpec
 {
-  @Test
-  public void testSerde() throws Exception
-  {
-    DruidService expected = new WorkerNodeService(
-        "1.1.1.1",
-        100,
-        "v1"
-    );
-
-    ObjectMapper mapper = TestHelper.makeJsonMapper();
-    DruidService actual = mapper.readValue(
-        mapper.writeValueAsString(expected),
-        DruidService.class
-    );
-
-    Assert.assertEquals(expected, actual);
-  }
 }

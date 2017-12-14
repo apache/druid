@@ -56,7 +56,7 @@ public class DefaultGroupByQueryMetricsTest
   {
     CachingEmitter cachingEmitter = new CachingEmitter();
     ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
-    DefaultGroupByQueryMetrics queryMetrics = new DefaultGroupByQueryMetrics(TestHelper.getJsonMapper());
+    DefaultGroupByQueryMetrics queryMetrics = new DefaultGroupByQueryMetrics(TestHelper.makeJsonMapper());
     GroupByQuery.Builder builder = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
@@ -121,7 +121,7 @@ public class DefaultGroupByQueryMetricsTest
   {
     CachingEmitter cachingEmitter = new CachingEmitter();
     ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
-    DefaultGroupByQueryMetrics queryMetrics = new DefaultGroupByQueryMetrics(TestHelper.getJsonMapper());
+    DefaultGroupByQueryMetrics queryMetrics = new DefaultGroupByQueryMetrics(TestHelper.makeJsonMapper());
     DefaultQueryMetricsTest.testQueryMetricsDefaultMetricNamesAndUnits(cachingEmitter, serviceEmitter, queryMetrics);
   }
 }

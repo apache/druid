@@ -894,7 +894,7 @@ public class RealtimeIndexTaskTest
     ObjectMapper objectMapper = new DefaultObjectMapper();
     DataSchema dataSchema = new DataSchema(
         "test_ds",
-        TestHelper.getJsonMapper().convertValue(
+        TestHelper.makeJsonMapper().convertValue(
             new MapInputRowParser(
                 new TimeAndDimsParseSpec(
                     new TimestampSpec("t", "auto", null),
