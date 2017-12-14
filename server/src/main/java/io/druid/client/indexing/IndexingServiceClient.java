@@ -93,30 +93,49 @@ public class IndexingServiceClient
     runQuery(new ClientConversionQuery(dataSource, interval));
   }
 
-  @Nullable
-  public TaskStatusPlus getLastCompleteTask()
+  public List<TaskStatusPlus> getRunningTasks()
+  {
+    return getTasks("runningTasks");
+  }
+
+  public List<TaskStatusPlus> getPendingTasks()
+  {
+    return getTasks("pendingTasks");
+  }
+
+  public List<TaskStatusPlus> getWaitingTasks()
+  {
+    return getTasks("waitingTasks");
+  }
+
+  private List<TaskStatusPlus> getTasks(String endpointSuffix)
   {
     try {
       final FullResponseHolder responseHolder = druidLeaderClient.go(
-          druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/indexer/v1/completeTasks?n=1")
+          druidLeaderClient.makeRequest(HttpMethod.GET, StringUtils.format("/druid/indexer/v1/%s", endpointSuffix))
       );
 
       if (!responseHolder.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE("Error while fetching the status of the last complete task");
       }
 
-      final List<TaskStatusPlus> taskStatusPluses = jsonMapper.readValue(
+      return jsonMapper.readValue(
           responseHolder.getContent(),
           new TypeReference<List<TaskStatusPlus>>()
           {
           }
       );
-
-      return taskStatusPluses.isEmpty() ? null : taskStatusPluses.get(0);
     }
     catch (IOException | InterruptedException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @Nullable
+  public TaskStatusPlus getLastCompleteTask()
+  {
+    final List<TaskStatusPlus> completeTaskStatuses = getTasks("completeTasks?n=1");
+    return completeTaskStatuses.isEmpty() ? null : completeTaskStatuses.get(0);
   }
 
   public int killPendingSegments(String dataSource, DateTime end)

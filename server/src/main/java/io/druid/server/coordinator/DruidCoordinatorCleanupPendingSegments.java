@@ -26,6 +26,10 @@ import io.druid.indexer.TaskStatusPlus;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+
 public class DruidCoordinatorCleanupPendingSegments implements DruidCoordinatorHelper
 {
   private static final Logger log = new Logger(DruidCoordinatorCleanupPendingSegments.class);
@@ -41,17 +45,27 @@ public class DruidCoordinatorCleanupPendingSegments implements DruidCoordinatorH
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    final TaskStatusPlus taskStatusPlus = indexingServiceClient.getLastCompleteTask();
+    final List<TaskStatusPlus> taskStatusPluses = new ArrayList<>();
+    taskStatusPluses.addAll(indexingServiceClient.getRunningTasks());
+    taskStatusPluses.addAll(indexingServiceClient.getPendingTasks());
+    taskStatusPluses.addAll(indexingServiceClient.getWaitingTasks());
 
-    if (taskStatusPlus != null) {
+    final TaskStatusPlus completeTaskStatus = indexingServiceClient.getLastCompleteTask();
+    if (completeTaskStatus != null) {
+      taskStatusPluses.add(completeTaskStatus);
+    }
+    taskStatusPluses.sort(Comparator.comparing(TaskStatusPlus::getCreatedTime));
+
+    if (!taskStatusPluses.isEmpty()) {
+      final TaskStatusPlus firstCreatedTaskStatus = taskStatusPluses.get(0);
       for (ImmutableDruidDataSource dataSource : params.getDataSources()) {
         if (!params.getCoordinatorDynamicConfig().getKillPendingSegmentsSkipList().contains(dataSource.getName())) {
           log.info(
               "Kill pendingSegments created until [%s] for dataSource[%s]",
               dataSource,
-              taskStatusPlus.getCreatedTime()
+              firstCreatedTaskStatus.getCreatedTime()
           );
-          indexingServiceClient.killPendingSegments(dataSource.getName(), taskStatusPlus.getCreatedTime());
+          indexingServiceClient.killPendingSegments(dataSource.getName(), firstCreatedTaskStatus.getCreatedTime());
         }
       }
     }
