@@ -67,7 +67,7 @@ class RetryingInputStream<T> extends InputStream
     this.delegate = objectOpenFunction.open(object);
   }
 
-  private <V extends Number> Callable<V> wrap(Callable<V> fn) throws Exception
+  private <V extends Number> Callable<V> wrap(Callable<V> fn)
   {
     return () -> {
       final V result = fn.call();
