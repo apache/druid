@@ -21,6 +21,7 @@ package io.druid.server.security;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.java.util.common.StringUtils;
 
 public class ResourceAction
 {
@@ -74,5 +75,11 @@ public class ResourceAction
     int result = getResource().hashCode();
     result = 31 * result + getAction().hashCode();
     return result;
+  }
+
+  @Override
+  public String toString()
+  {
+    return StringUtils.format("{%s,%s}", resource, action);
   }
 }
