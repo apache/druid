@@ -98,8 +98,6 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       if (query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH) == null) {
         query = query.withOverriddenContext(
             ImmutableMap.of(QueryResource.HEADER_IF_NONE_MATCH, existingResultSetId));
-        query = query.withOverriddenContext(ImmutableMap.of("ENABLE_RESULT_CACHE", true));
-
       }
       Sequence<T> resultFromClient = baseRunner.run(
           QueryPlus.wrap(query),
