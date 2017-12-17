@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import io.druid.data.input.MapBasedRow;
 import io.druid.java.util.common.DateTimes;
-import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
