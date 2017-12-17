@@ -43,7 +43,7 @@ public class DoubleMaxAggregationTest
   public DoubleMaxAggregationTest() throws Exception
   {
     String aggSpecJson = "{\"type\": \"doubleMax\", \"name\": \"billy\", \"fieldName\": \"nilly\"}";
-    doubleMaxAggFactory = TestHelper.getJsonMapper().readValue(aggSpecJson, DoubleMaxAggregatorFactory.class);
+    doubleMaxAggFactory = TestHelper.makeJsonMapper().readValue(aggSpecJson, DoubleMaxAggregatorFactory.class);
   }
 
   @Before

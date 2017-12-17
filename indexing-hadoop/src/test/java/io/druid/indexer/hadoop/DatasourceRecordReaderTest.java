@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.data.input.InputRow;
 import io.druid.indexer.HadoopDruidIndexerConfig;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.timeline.DataSegment;
@@ -35,6 +34,7 @@ import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.net.URL;
 import java.util.List;
 import java.util.Map;
 
@@ -45,8 +45,9 @@ public class DatasourceRecordReaderTest
   @Test
   public void testSanity() throws Exception
   {
-    DataSegment segment = new DefaultObjectMapper()
-        .readValue(this.getClass().getClassLoader().getResource("test-segment/descriptor.json"), DataSegment.class)
+    URL segmentDesciptor = this.getClass().getClassLoader().getResource("test-segment/descriptor.json");
+    DataSegment segment = HadoopDruidIndexerConfig.JSON_MAPPER
+        .readValue(segmentDesciptor, DataSegment.class)
         .withLoadSpec(
             ImmutableMap.<String, Object>of(
                 "type",

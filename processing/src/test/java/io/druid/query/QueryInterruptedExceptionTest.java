@@ -31,7 +31,7 @@ import java.util.concurrent.TimeoutException;
 
 public class QueryInterruptedExceptionTest
 {
-  private static final ObjectMapper MAPPER = TestHelper.getJsonMapper();
+  private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
 
   @Test
   public void testErrorCode()

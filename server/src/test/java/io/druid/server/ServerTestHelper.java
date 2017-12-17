@@ -17,23 +17,18 @@
  * under the License.
  */
 
-package io.druid;
+package io.druid.server;
 
-import com.fasterxml.jackson.databind.BeanProperty;
-import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.druid.guice.ServerModule;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.ISE;
+import io.druid.timeline.DataSegment;
 
 import java.util.List;
 
-/**
- */
-public class TestUtil
+public class ServerTestHelper
 {
   public static final ObjectMapper MAPPER = new DefaultObjectMapper();
 
@@ -43,19 +38,9 @@ public class TestUtil
       MAPPER.registerModule(module);
     }
     MAPPER.setInjectableValues(
-        new InjectableValues()
-        {
-          @Override
-          public Object findInjectableValue(
-              Object valueId, DeserializationContext ctxt, BeanProperty forProperty, Object beanInstance
-          )
-          {
-            if (valueId.equals("com.fasterxml.jackson.databind.ObjectMapper")) {
-              return TestUtil.MAPPER;
-            }
-            throw new ISE("No Injectable value found");
-          }
-        }
+        new InjectableValues.Std()
+            .addValue(ObjectMapper.class.getName(), MAPPER)
+            .addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT)
     );
   }
 }

@@ -27,7 +27,7 @@
     </parent>
 
     <artifactId>druid</artifactId>
-    <version>0.11.1-SNAPSHOT</version>
+    <version>0.12.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>${project.groupId}:${project.artifactId}</name>
@@ -54,7 +54,7 @@
         <connection>scm:git:ssh://git@github.com/druid-io/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/druid-io/druid.git</developerConnection>
         <url>https://github.com/druid-io/druid.git</url>
-        <tag>0.11.1-SNAPSHOT</tag>
+        <tag>0.12.0-SNAPSHOT</tag>
     </scm>
 
     <properties>
@@ -121,6 +121,7 @@
         <module>extensions-core/lookups-cached-single</module>
         <module>extensions-core/s3-extensions</module>
         <module>extensions-core/simple-client-sslcontext</module>
+        <module>extensions-core/druid-basic-security</module>
         <!-- Community extensions -->
         <module>extensions-contrib/azure-extensions</module>
         <module>extensions-contrib/cassandra-storage</module>

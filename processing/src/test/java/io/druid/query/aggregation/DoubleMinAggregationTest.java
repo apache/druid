@@ -43,7 +43,7 @@ public class DoubleMinAggregationTest
   public DoubleMinAggregationTest() throws Exception
   {
     String aggSpecJson = "{\"type\": \"doubleMin\", \"name\": \"billy\", \"fieldName\": \"nilly\"}";
-    doubleMinAggFactory = TestHelper.getJsonMapper().readValue(aggSpecJson, DoubleMinAggregatorFactory.class);
+    doubleMinAggFactory = TestHelper.makeJsonMapper().readValue(aggSpecJson, DoubleMinAggregatorFactory.class);
   }
 
   @Before

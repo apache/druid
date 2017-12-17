@@ -24,8 +24,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-import io.druid.TestUtil;
 import io.druid.java.util.common.Intervals;
+import io.druid.server.ServerTestHelper;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.NumberedShardSpec;
@@ -45,8 +45,8 @@ public class NumberedShardSpecTest
   @Test
   public void testSerdeRoundTrip() throws Exception
   {
-    final ShardSpec spec = TestUtil.MAPPER.readValue(
-        TestUtil.MAPPER.writeValueAsBytes(new NumberedShardSpec(1, 2)),
+    final ShardSpec spec = ServerTestHelper.MAPPER.readValue(
+        ServerTestHelper.MAPPER.writeValueAsBytes(new NumberedShardSpec(1, 2)),
         ShardSpec.class
     );
     Assert.assertEquals(1, spec.getPartitionNum());
@@ -56,7 +56,7 @@ public class NumberedShardSpecTest
   @Test
   public void testSerdeBackwardsCompat() throws Exception
   {
-    final ShardSpec spec = TestUtil.MAPPER.readValue(
+    final ShardSpec spec = ServerTestHelper.MAPPER.readValue(
         "{\"type\": \"numbered\", \"partitions\": 2, \"partitionNum\": 1}",
         ShardSpec.class
     );

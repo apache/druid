@@ -226,7 +226,7 @@ public class RealtimePlumberSchoolTest
         TestHelper.getTestIndexIO(segmentWriteOutMediumFactory),
         MapCache.create(0),
         FireDepartmentTest.NO_CACHE_CONFIG,
-        TestHelper.getJsonMapper()
+        TestHelper.makeJsonMapper()
     );
 
     metrics = new FireDepartmentMetrics();

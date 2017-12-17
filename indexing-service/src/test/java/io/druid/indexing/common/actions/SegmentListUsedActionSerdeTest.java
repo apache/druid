@@ -21,8 +21,8 @@ package io.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import io.druid.TestUtil;
 import io.druid.java.util.common.Intervals;
+import io.druid.segment.TestHelper;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -33,7 +33,7 @@ import java.util.List;
  */
 public class SegmentListUsedActionSerdeTest
 {
-  private static final ObjectMapper MAPPER = TestUtil.MAPPER;
+  private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
 
   @Test
   public void testSingleIntervalSerde() throws Exception

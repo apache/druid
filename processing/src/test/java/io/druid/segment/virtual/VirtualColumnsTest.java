@@ -252,7 +252,7 @@ public class VirtualColumnsTest
   @Test
   public void testSerde() throws Exception
   {
-    final ObjectMapper mapper = TestHelper.getJsonMapper();
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
     final ImmutableList<VirtualColumn> theColumns = ImmutableList.<VirtualColumn>of(
         new ExpressionVirtualColumn("expr", "x + y", ValueType.FLOAT, TestExprMacroTable.INSTANCE),
         new ExpressionVirtualColumn("expr2", "x + z", ValueType.FLOAT, TestExprMacroTable.INSTANCE)

@@ -213,7 +213,7 @@ public class CalciteTests
         @Override
         public void configure(final Binder binder)
         {
-          binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(TestHelper.getJsonMapper());
+          binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(TestHelper.makeJsonMapper());
 
           // This Module is just to get a LookupReferencesManager with a usable "lookyloo" lookup.
 
@@ -247,7 +247,7 @@ public class CalciteTests
               new ScanQueryRunnerFactory(
                   new ScanQueryQueryToolChest(
                       new ScanQueryConfig(),
-                      new DefaultGenericQueryMetricsFactory(TestHelper.getJsonMapper())
+                      new DefaultGenericQueryMetricsFactory(TestHelper.makeJsonMapper())
                   ),
                   new ScanQueryEngine()
               )
@@ -256,7 +256,7 @@ public class CalciteTests
               SelectQuery.class,
               new SelectQueryRunnerFactory(
                   new SelectQueryQueryToolChest(
-                      TestHelper.getJsonMapper(),
+                      TestHelper.makeJsonMapper(),
                       QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
                       SELECT_CONFIG_SUPPLIER
                   ),

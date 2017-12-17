@@ -1,6 +1,11 @@
 language: java
 
+# On 12-12-2017, Travis updated their trusty image, which caused integration tests to fail.
+# The group: config instructs Travis to use the previous trusty image.
+# Please see https://github.com/druid-io/druid/pull/5155 for more information.
+sudo: required
 dist: trusty
+group: deprecated-2017Q4
 
 jdk:
   - oraclejdk8
