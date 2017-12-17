@@ -20,9 +20,12 @@
 package io.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.query.spec.QuerySegmentSpec;
+import org.joda.time.DateTimeZone;
 
 import java.util.Map;
 import java.util.Objects;
@@ -41,6 +44,7 @@ public abstract class TimeBucketedQuery<T extends Comparable<T>> extends BaseQue
   )
   {
     super(dataSource, querySegmentSpec, descending, context);
+    Preconditions.checkNotNull(granularity, "Must specify a granularity");
     this.granularity = granularity;
   }
 
@@ -48,6 +52,10 @@ public abstract class TimeBucketedQuery<T extends Comparable<T>> extends BaseQue
   public Granularity getGranularity()
   {
     return granularity;
+  }
+
+  public DateTimeZone getTimezone() {
+    return granularity instanceof PeriodGranularity ? ((PeriodGranularity)granularity).getTimeZone() : DateTimeZone.UTC;
   }
 
   @Override

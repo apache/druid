@@ -24,11 +24,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
-import io.druid.query.TimeBucketedQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.Result;
+import io.druid.query.TimeBucketedQuery;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.ordering.StringComparators;
@@ -62,7 +62,7 @@ public class SearchQuery extends TimeBucketedQuery<Result<SearchResultValue>>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, false, context, granularity == null ? Granularities.ALL : granularity);
+    super(dataSource, querySegmentSpec, false, context, Granularities.nullToAll(granularity));
     Preconditions.checkNotNull(querySegmentSpec, "Must specify an interval");
 
     this.dimFilter = dimFilter;
@@ -153,14 +153,14 @@ public class SearchQuery extends TimeBucketedQuery<Result<SearchResultValue>>
   public String toString()
   {
     return "SearchQuery{" +
-        "dataSource='" + getDataSource() + '\'' +
-        ", dimFilter=" + dimFilter +
-        ", granularity='" + getGranularity() + '\'' +
-        ", dimensions=" + dimensions +
-        ", querySpec=" + querySpec +
-        ", querySegmentSpec=" + getQuerySegmentSpec() +
-        ", limit=" + limit +
-        '}';
+           "dataSource='" + getDataSource() + '\'' +
+           ", dimFilter=" + dimFilter +
+           ", granularity='" + getGranularity() + '\'' +
+           ", dimensions=" + dimensions +
+           ", querySpec=" + querySpec +
+           ", querySegmentSpec=" + getQuerySegmentSpec() +
+           ", limit=" + limit +
+           '}';
   }
 
   @Override

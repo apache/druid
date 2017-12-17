@@ -25,11 +25,11 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
-import io.druid.query.TimeBucketedQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.Result;
+import io.druid.query.TimeBucketedQuery;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.QuerySegmentSpec;
@@ -64,7 +64,7 @@ public class SelectQuery extends TimeBucketedQuery<Result<SelectResultValue>>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, descending, context, granularity == null ? Granularities.ALL : granularity);
+    super(dataSource, querySegmentSpec, descending, context, Granularities.nullToAll(granularity));
     this.dimFilter = dimFilter;
     this.dimensions = dimensions;
     this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
@@ -171,16 +171,16 @@ public class SelectQuery extends TimeBucketedQuery<Result<SelectResultValue>>
   public String toString()
   {
     return "SelectQuery{" +
-        "dataSource='" + getDataSource() + '\'' +
-        ", querySegmentSpec=" + getQuerySegmentSpec() +
-        ", descending=" + isDescending() +
-        ", dimFilter=" + dimFilter +
-        ", granularity=" + getGranularity() +
-        ", dimensions=" + dimensions +
-        ", metrics=" + metrics +
-        ", virtualColumns=" + virtualColumns +
-        ", pagingSpec=" + pagingSpec +
-        '}';
+           "dataSource='" + getDataSource() + '\'' +
+           ", querySegmentSpec=" + getQuerySegmentSpec() +
+           ", descending=" + isDescending() +
+           ", dimFilter=" + dimFilter +
+           ", granularity=" + getGranularity() +
+           ", dimensions=" + dimensions +
+           ", metrics=" + metrics +
+           ", virtualColumns=" + virtualColumns +
+           ", pagingSpec=" + pagingSpec +
+           '}';
   }
 
   @Override

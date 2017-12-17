@@ -84,9 +84,8 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
       public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
       {
         final DateTimeZone tz;
-        if (queryPlus.getQuery() instanceof TimeBucketedQuery
-            && ((TimeBucketedQuery) queryPlus.getQuery()).getGranularity() instanceof PeriodGranularity) {
-          tz = ((PeriodGranularity) ((TimeBucketedQuery) queryPlus.getQuery()).getGranularity()).getTimeZone();
+        if (queryPlus.getQuery() instanceof TimeBucketedQuery) {
+          tz = ((TimeBucketedQuery) queryPlus.getQuery()).getTimezone();
         } else {
           tz = DateTimeZone.UTC;
         }
