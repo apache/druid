@@ -30,7 +30,7 @@ import java.nio.ByteOrder;
 
 public class LongGenericColumnPartSerdeTest
 {
-  private static ObjectMapper jsonMapper = TestHelper.getJsonMapper();
+  private static ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
   @Test
   public void testSerdeV2() throws IOException

@@ -25,7 +25,6 @@ import io.druid.common.config.NullHandling;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DimensionSelector;
-import io.druid.common.config.NullHandling;
 import io.druid.segment.data.IndexedInts;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
