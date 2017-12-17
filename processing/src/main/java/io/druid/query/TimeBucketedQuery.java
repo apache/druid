@@ -54,8 +54,11 @@ public abstract class TimeBucketedQuery<T extends Comparable<T>> extends BaseQue
     return granularity;
   }
 
-  public DateTimeZone getTimezone() {
-    return granularity instanceof PeriodGranularity ? ((PeriodGranularity)granularity).getTimeZone() : DateTimeZone.UTC;
+  public DateTimeZone getTimezone()
+  {
+    return granularity instanceof PeriodGranularity
+           ? ((PeriodGranularity) granularity).getTimeZone()
+           : DateTimeZone.UTC;
   }
 
   @Override
