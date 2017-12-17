@@ -24,10 +24,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionCacheHelper;
 import io.druid.query.extraction.FunctionalExtraction;
-import io.druid.segment.NullHandlingHelper;
 
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
@@ -58,7 +58,7 @@ public class LookupExtractionFn extends FunctionalExtraction
           @Override
           public String apply(@Nullable String input)
           {
-            return NullHandlingHelper.emptyToNullIfNeeded(lookup.apply(NullHandlingHelper.nullToEmptyIfNeeded(input)));
+            return NullHandling.emptyToNullIfNeeded(lookup.apply(NullHandling.nullToEmptyIfNeeded(input)));
           }
         },
         retainMissingValue,

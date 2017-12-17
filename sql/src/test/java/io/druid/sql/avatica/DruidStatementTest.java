@@ -23,7 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.DateTimes;
 import io.druid.math.expr.ExprMacroTable;
-import io.druid.segment.NullHandlingHelper;
+import io.druid.common.config.NullHandling;
 import io.druid.server.security.AllowAllAuthenticator;
 import io.druid.server.security.NoopEscalator;
 import io.druid.server.security.AuthConfig;
@@ -143,7 +143,7 @@ public class DruidStatementTest
         Meta.Frame.create(
             0,
             true,
-            NullHandlingHelper.useDefaultValuesForNull() ?
+            NullHandling.useDefaultValuesForNull() ?
             Lists.<Object>newArrayList(
                 new Object[]{DateTimes.of("2000-01-01").getMillis(), 1L, "", "a", 1.0f},
                 new Object[]{DateTimes.of("2000-01-02").getMillis(), 1L, "10.1", "", 2.0f},
@@ -179,7 +179,7 @@ public class DruidStatementTest
         Meta.Frame.create(
             0,
             false,
-            NullHandlingHelper.useDefaultValuesForNull() ?
+            NullHandling.useDefaultValuesForNull() ?
             Lists.<Object>newArrayList(
                 new Object[]{DateTimes.of("2000-01-01").getMillis(), 1L, "", "a", 1.0f},
                 new Object[]{DateTimes.of("2000-01-02").getMillis(), 1L, "10.1", "", 2.0f}
@@ -199,7 +199,7 @@ public class DruidStatementTest
         Meta.Frame.create(
             2,
             true,
-            NullHandlingHelper.useDefaultValuesForNull() ?
+            NullHandling.useDefaultValuesForNull() ?
             Lists.<Object>newArrayList(
                 new Object[]{DateTimes.of("2000-01-03").getMillis(), 1L, "2", "", 3.0f},
                 new Object[]{DateTimes.of("2001-01-01").getMillis(), 1L, "1", "a", 4.0f},

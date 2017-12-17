@@ -22,6 +22,7 @@ package io.druid.segment.filter;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
@@ -36,7 +37,6 @@ import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.ordering.StringComparators;
 import io.druid.segment.IndexBuilder;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.StorageAdapter;
 import org.junit.AfterClass;
 import org.junit.Test;
@@ -111,7 +111,7 @@ public class BoundFilterTest extends BaseFilterTest
         new BoundDimFilter("dim2", "", "z", false, false, false, null, StringComparators.LEXICOGRAPHIC),
         new BoundDimFilter("dim3", "", "z", false, false, false, null, StringComparators.LEXICOGRAPHIC)
     );
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       for (BoundDimFilter filter : filters) {
         assertFilterMatches(filter, ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7"));
       }
@@ -134,7 +134,7 @@ public class BoundFilterTest extends BaseFilterTest
         new BoundDimFilter("dim1", "", "", false, false, false, null, StringComparators.LEXICOGRAPHIC),
         ImmutableList.of("0")
     );
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       assertFilterMatches(
           new BoundDimFilter("dim2", "", "", false, false, false, null, StringComparators.LEXICOGRAPHIC),
           ImmutableList.of("1", "2", "5")
@@ -150,7 +150,7 @@ public class BoundFilterTest extends BaseFilterTest
   @Test
   public void testLexicographicMatchMissingColumn()
   {
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       assertFilterMatches(
           new BoundDimFilter("dim3", "", "", false, false, false, null, StringComparators.LEXICOGRAPHIC),
           ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7")
@@ -274,7 +274,7 @@ public class BoundFilterTest extends BaseFilterTest
         new BoundDimFilter("dim1", "", "", false, false, true, null, StringComparators.ALPHANUMERIC),
         ImmutableList.of("0")
     );
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       assertFilterMatches(
           new BoundDimFilter("dim2", "", "", false, false, true, null, StringComparators.ALPHANUMERIC),
           ImmutableList.of("1", "2", "5")
@@ -383,7 +383,7 @@ public class BoundFilterTest extends BaseFilterTest
         new BoundDimFilter("dim1", "", "", false, false, false, null, StringComparators.NUMERIC),
         ImmutableList.of("0")
     );
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       assertFilterMatches(
           new BoundDimFilter("dim2", "", "", false, false, false, null, StringComparators.NUMERIC),
           ImmutableList.of("1", "2", "5")
@@ -500,7 +500,7 @@ public class BoundFilterTest extends BaseFilterTest
     String nullJsFn = "function(str) { return null; }";
     ExtractionFn makeNullFn = new JavaScriptExtractionFn(nullJsFn, false, JavaScriptConfig.getEnabledInstance());
 
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       assertFilterMatches(
           new BoundDimFilter("dim0", "", "", false, false, false, makeNullFn, StringComparators.LEXICOGRAPHIC),
           ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7")
@@ -527,7 +527,7 @@ public class BoundFilterTest extends BaseFilterTest
         ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7")
     );
 
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       assertFilterMatches(
           new BoundDimFilter(
               "dim2",

@@ -20,6 +20,7 @@
 package io.druid.query.aggregation.first;
 
 import io.druid.collections.SerializablePair;
+import io.druid.common.config.NullHandling;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Pair;
 import io.druid.query.aggregation.Aggregator;
@@ -28,7 +29,6 @@ import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.TestLongColumnSelector;
 import io.druid.query.aggregation.TestObjectColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.column.Column;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -88,7 +88,7 @@ public class LongFirstAggregationTest
     Assert.assertEquals(longValues[3], agg.getFloat(), 0.0001);
 
     agg.reset();
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       Assert.assertEquals(0, ((Pair<Long, Long>) agg.get()).rhs, 0.0001);
     } else {
       Assert.assertNull(agg.get());
@@ -144,7 +144,7 @@ public class LongFirstAggregationTest
     Assert.assertEquals(expected.rhs, agg.getFloat(), 0.0001);
 
     agg.reset();
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       Assert.assertEquals(0, ((Pair<Long, Long>) agg.get()).rhs, 0.0001);
     } else {
       Assert.assertNull(agg.get());

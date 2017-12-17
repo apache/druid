@@ -22,6 +22,7 @@ package io.druid.segment;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.spatial.ImmutableRTree;
+import io.druid.common.config.NullHandling;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.column.BitmapIndex;
@@ -209,7 +210,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
 
     final Column column = index.getColumn(dimension);
     if (column == null || !columnSupportsFiltering(column)) {
-      if (NullHandlingHelper.isNullOrEquivalent(value)) {
+      if (NullHandling.isNullOrEquivalent(value)) {
         return bitmapFactory.complement(bitmapFactory.makeEmptyImmutableBitmap(), getNumRows());
       } else {
         return bitmapFactory.makeEmptyImmutableBitmap();

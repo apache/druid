@@ -21,9 +21,9 @@ package io.druid.query.groupby.epinephelinae.column;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import io.druid.common.config.NullHandling;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.data.ArrayBasedIndexedInts;
 import io.druid.segment.data.IndexedInts;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -60,7 +60,7 @@ public class DictionaryBuildingStringGroupByColumnSelectorStrategy extends Strin
           value
       );
     } else {
-      resultMap.put(selectorPlus.getOutputName(), NullHandlingHelper.nullToEmptyIfNeeded((String) null));
+      resultMap.put(selectorPlus.getOutputName(), NullHandling.defaultValue());
     }
   }
 

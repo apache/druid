@@ -21,13 +21,6 @@ package io.druid.segment;
 
 import io.druid.guice.annotations.PublicApi;
 
-/**
- * Object value selecting polymorphic "part" of the {@link ColumnValueSelector} interface. Users of {@link
- * ColumnValueSelector#getObject()} are encouraged to reduce the parameter/field/etc. type to
- * BaseObjectColumnValueSelector to make it impossible to accidently call any method other than {@link #getObject()}.
- * <p>
- * All implementations of this interface MUST also implement {@link ColumnValueSelector}.
- */
 @PublicApi
 public interface BaseNullableColumnValueSelector
 {

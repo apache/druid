@@ -22,12 +22,12 @@ package io.druid.query.groupby.epinephelinae;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.MapBasedRow;
 import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
-import io.druid.segment.NullHandlingHelper;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -54,7 +54,7 @@ public class LimitedBufferHashGrouperTest
     for (int i = 0; i < numRows; i++) {
       Assert.assertTrue(String.valueOf(i + keyBase), grouper.aggregate(i + keyBase).isOk());
     }
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       // bucket size is hash(int) + key(int) + aggs(2 longs) + heap offset(int) = 28 bytes
       // limit is 100 so heap occupies 101 * 4 bytes = 404 bytes
       // buffer is 20000 bytes, so table arena size is 20000 - 404 = 19596 bytes
@@ -95,7 +95,7 @@ public class LimitedBufferHashGrouperTest
       Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
     }
 
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       // we added another 1000 unique keys
       // previous size is 112, so next swap occurs after 62 rows
       // after that, there are 1000 - 62 = 938 rows, 938 / 74 = 12 additional swaps after the first,
@@ -150,7 +150,7 @@ public class LimitedBufferHashGrouperTest
     }
 
     // With minimum buffer size, after the first swap, every new key added will result in a swap
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       Assert.assertEquals(224, grouper.getGrowthCount());
       Assert.assertEquals(104, grouper.getSize());
       Assert.assertEquals(209, grouper.getBuckets());
@@ -170,7 +170,7 @@ public class LimitedBufferHashGrouperTest
     for (int i = 0; i < numRows; i++) {
       Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
     }
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       Assert.assertEquals(474, grouper.getGrowthCount());
       Assert.assertEquals(104, grouper.getSize());
       Assert.assertEquals(209, grouper.getBuckets());

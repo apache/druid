@@ -29,6 +29,7 @@ import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.inject.ImplementedBy;
+import io.druid.common.config.NullHandling;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.java.util.common.ByteBufferUtils;
 import io.druid.java.util.common.ISE;
@@ -456,7 +457,7 @@ public interface IndexMerger
         final PeekingIterator<String> iter = Iterators.peekingIterator(
             Iterators.transform(
                 indexed.iterator(),
-                input -> NullHandlingHelper.nullToEmptyIfNeeded(input)
+                input -> NullHandling.nullToEmptyIfNeeded(input)
             )
         );
         if (iter.hasNext()) {

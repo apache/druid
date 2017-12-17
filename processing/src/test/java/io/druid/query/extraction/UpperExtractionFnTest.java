@@ -19,7 +19,7 @@
 
 package io.druid.query.extraction;
 
-import io.druid.segment.NullHandlingHelper;
+import io.druid.common.config.NullHandling;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -32,7 +32,7 @@ public class UpperExtractionFnTest
   public void testApply()
   {
     Assert.assertEquals("UPPER", extractionFn.apply("uPpeR"));
-    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? null : "", extractionFn.apply(""));
+    Assert.assertEquals(NullHandling.useDefaultValuesForNull() ? null : "", extractionFn.apply(""));
     Assert.assertEquals(null, extractionFn.apply(null));
     Assert.assertEquals(null, extractionFn.apply((Object) null));
     Assert.assertEquals("1", extractionFn.apply(1));

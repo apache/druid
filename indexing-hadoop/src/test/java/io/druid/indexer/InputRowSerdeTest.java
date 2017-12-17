@@ -33,7 +33,7 @@ import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.NullHandlingHelper;
+import io.druid.common.config.NullHandling;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
@@ -88,6 +88,18 @@ public class InputRowSerdeTest
     EasyMock.expectLastCall().times(1);
     EasyMock.replay(mockedNullAggregator);
 
+    final AggregatorFactory mockedAggregatorFactory = EasyMock.createMock(AggregatorFactory.class);
+    EasyMock.expect(mockedAggregatorFactory.factorize(EasyMock.anyObject(ColumnSelectorFactory.class))).andReturn(mockedAggregator);
+    EasyMock.expect(mockedAggregatorFactory.getTypeName()).andReturn("double").anyTimes();
+    EasyMock.expect(mockedAggregatorFactory.getName()).andReturn("mockedAggregator").anyTimes();
+
+    final AggregatorFactory mockedNullAggregatorFactory = EasyMock.createMock(AggregatorFactory.class);
+    EasyMock.expect(mockedNullAggregatorFactory.factorize(EasyMock.anyObject(ColumnSelectorFactory.class))).andReturn(mockedNullAggregator);
+    EasyMock.expect(mockedNullAggregatorFactory.getName()).andReturn("mockedNullAggregator").anyTimes();
+    EasyMock.expect(mockedNullAggregatorFactory.getTypeName()).andReturn("double").anyTimes();
+
+    EasyMock.replay(mockedAggregatorFactory, mockedNullAggregatorFactory);
+
     InputRow in = new MapBasedInputRow(
         timestamp,
         dims,
@@ -100,20 +112,8 @@ public class InputRowSerdeTest
         new LongSumAggregatorFactory("m2out", "m2"),
         new HyperUniquesAggregatorFactory("m3out", "m3"),
         new LongSumAggregatorFactory("unparseable", "m3"), // Unparseable from String to Long
-        new DoubleSumAggregatorFactory("mockedAggregator", "m4") {
-          @Override
-          public Aggregator factorize(ColumnSelectorFactory metricFactory)
-          {
-            return mockedAggregator;
-          }
-        },
-        new DoubleSumAggregatorFactory("mockedNullAggregator", "m5") {
-          @Override
-          public Aggregator factorize(ColumnSelectorFactory metricFactory)
-          {
-            return mockedNullAggregator;
-          }
-        }
+        mockedAggregatorFactory,
+        mockedNullAggregatorFactory
     };
 
     byte[] data = InputRowSerde.toBytes(in, aggregatorFactories, false); // Ignore Unparseable aggregator
@@ -125,7 +125,7 @@ public class InputRowSerdeTest
     Assert.assertEquals(ImmutableList.of("d1v"), out.getDimension("d1"));
     Assert.assertEquals(ImmutableList.of("d2v1", "d2v2"), out.getDimension("d2"));
 
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       Assert.assertEquals(0.0f, out.getMetric("agg_non_existing").floatValue(), 0.00001);
     } else {
       Assert.assertNull(out.getMetric("agg_non_existing"));

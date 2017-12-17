@@ -20,7 +20,7 @@
 package io.druid.guice;
 
 import com.google.inject.Injector;
-import io.druid.segment.NullHandlingHelper;
+import io.druid.common.config.NullHandling;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -35,7 +35,7 @@ public class NullHandlingHelperInjectionTest
     try {
       System.setProperty(NULL_HANDLING_CONFIG_STRING, "true");
       Injector injector = GuiceInjectors.makeStartupInjector();
-      Assert.assertEquals(true, NullHandlingHelper.useDefaultValuesForNull());
+      Assert.assertEquals(true, NullHandling.useDefaultValuesForNull());
     }
     finally {
       if (prev != null) {
@@ -51,7 +51,7 @@ public class NullHandlingHelperInjectionTest
     try {
       System.setProperty(NULL_HANDLING_CONFIG_STRING, "false");
       Injector injector = GuiceInjectors.makeStartupInjector();
-      Assert.assertEquals(false, NullHandlingHelper.useDefaultValuesForNull());
+      Assert.assertEquals(false, NullHandling.useDefaultValuesForNull());
     }
     finally {
       if (prev != null) {
@@ -64,7 +64,7 @@ public class NullHandlingHelperInjectionTest
   {
     System.setProperty(NULL_HANDLING_CONFIG_STRING, prev);
     Injector injector = GuiceInjectors.makeStartupInjector();
-    Assert.assertEquals(Boolean.valueOf(prev), NullHandlingHelper.useDefaultValuesForNull());
+    Assert.assertEquals(Boolean.valueOf(prev), NullHandling.useDefaultValuesForNull());
   }
 
 }

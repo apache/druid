@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import io.druid.java.util.common.DateTimes;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.Parser;
-import io.druid.segment.NullHandlingHelper;
+import io.druid.common.config.NullHandling;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -44,7 +44,7 @@ public class ExprMacroTest
           .build()
   );
 
-  public static String emptyStringResult = NullHandlingHelper.useDefaultValuesForNull() ? null : "";
+  public static String emptyStringResult = NullHandling.useDefaultValuesForNull() ? null : "";
 
 
   @Rule

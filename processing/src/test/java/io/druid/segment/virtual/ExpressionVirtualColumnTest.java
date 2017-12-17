@@ -22,6 +22,7 @@ package io.druid.segment.virtual;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
@@ -38,7 +39,6 @@ import io.druid.segment.BaseObjectColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
@@ -114,7 +114,7 @@ public class ExpressionVirtualColumnTest
     Assert.assertEquals(null, selector.getObject());
 
     CURRENT_ROW.set(ROW1);
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       Assert.assertEquals(4.0d, selector.getObject());
     } else {
       // y is null for row1
@@ -137,7 +137,7 @@ public class ExpressionVirtualColumnTest
     Assert.assertEquals(0L, selector.getLong());
 
     CURRENT_ROW.set(ROW1);
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       Assert.assertEquals(4L, selector.getLong());
     } else {
       // y is null for row1
@@ -160,7 +160,7 @@ public class ExpressionVirtualColumnTest
     Assert.assertEquals(0L, selector.getLong());
 
     CURRENT_ROW.set(ROW1);
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       Assert.assertEquals(4L, selector.getLong());
     } else {
       // y is null for row1
@@ -183,7 +183,7 @@ public class ExpressionVirtualColumnTest
     Assert.assertEquals(0.0f, selector.getFloat(), 0.0f);
 
     CURRENT_ROW.set(ROW1);
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       Assert.assertEquals(4.0f, selector.getFloat(), 0.0f);
     } else {
       // y is null for row1
@@ -216,7 +216,7 @@ public class ExpressionVirtualColumnTest
     Assert.assertEquals(null, selector.lookupName(selector.getRow().get(0)));
 
     CURRENT_ROW.set(ROW1);
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       Assert.assertEquals(false, nullMatcher.matches());
       Assert.assertEquals(false, fiveMatcher.matches());
       Assert.assertEquals(true, nonNullMatcher.matches());
@@ -259,7 +259,7 @@ public class ExpressionVirtualColumnTest
     CURRENT_ROW.set(ROW1);
     Assert.assertEquals(1, selector.getRow().size());
     Assert.assertEquals(
-        NullHandlingHelper.useDefaultValuesForNull() ? "4" : null,
+        NullHandling.useDefaultValuesForNull() ? "4" : null,
         selector.lookupName(selector.getRow().get(0))
     );
 
@@ -291,7 +291,7 @@ public class ExpressionVirtualColumnTest
     Assert.assertEquals(null, selector.lookupName(selector.getRow().get(0)));
 
     CURRENT_ROW.set(ROW1);
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       Assert.assertEquals(false, nullMatcher.matches());
       Assert.assertEquals(false, fiveMatcher.matches());
       Assert.assertEquals(true, nonNullMatcher.matches());

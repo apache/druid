@@ -22,6 +22,7 @@ package io.druid.segment.filter;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
@@ -37,7 +38,6 @@ import io.druid.query.filter.SearchQueryDimFilter;
 import io.druid.query.search.ContainsSearchQuerySpec;
 import io.druid.query.search.SearchQuerySpec;
 import io.druid.segment.IndexBuilder;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.StorageAdapter;
 import org.junit.AfterClass;
 import org.junit.Test;
@@ -106,7 +106,7 @@ public class SearchQueryFilterTest extends BaseFilterTest
   @Test
   public void testSingleValueStringColumnWithNulls()
   {
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       // SearchQueryFilter always returns false for null row values.
       assertFilterMatches(
           new SearchQueryDimFilter("dim1", specForValue(""), null),
@@ -129,7 +129,7 @@ public class SearchQueryFilterTest extends BaseFilterTest
   @Test
   public void testMultiValueStringColumn()
   {
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       assertFilterMatches(new SearchQueryDimFilter("dim2", specForValue(""), null), ImmutableList.of("0", "3", "4"));
     } else {
       assertFilterMatches(
@@ -169,7 +169,7 @@ public class SearchQueryFilterTest extends BaseFilterTest
     String nullJsFn = "function(str) { if (str === null) { return 'NOT_NULL_ANYMORE'; } else { return str;} }";
     ExtractionFn changeNullFn = new JavaScriptExtractionFn(nullJsFn, false, JavaScriptConfig.getEnabledInstance());
 
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       assertFilterMatches(
           new SearchQueryDimFilter("dim1", specForValue("ANYMORE"), changeNullFn),
           ImmutableList.of("0")

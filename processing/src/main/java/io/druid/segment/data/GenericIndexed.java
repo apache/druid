@@ -21,6 +21,7 @@ package io.druid.segment.data;
 
 import com.google.common.primitives.Ints;
 import io.druid.collections.ResourceHolder;
+import io.druid.common.config.NullHandling;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.io.Channels;
 import io.druid.java.util.common.IAE;
@@ -31,7 +32,6 @@ import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.serde.MetaSerdeHelper;
 import io.druid.segment.serde.Serializer;
 import io.druid.segment.writeout.HeapByteBufferWriteOutBytes;
@@ -105,13 +105,13 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
         // nulBytes will be -1 for null values.
         return null;
       }
-      return NullHandlingHelper.emptyToNullIfNeeded(StringUtils.fromUtf8Nullable(buffer, numBytes));
+      return NullHandling.emptyToNullIfNeeded(StringUtils.fromUtf8Nullable(buffer, numBytes));
     }
 
     @Override
     public byte[] toBytes(String val)
     {
-      return StringUtils.toUtf8Nullable(NullHandlingHelper.nullToEmptyIfNeeded(val));
+      return StringUtils.toUtf8Nullable(NullHandling.nullToEmptyIfNeeded(val));
     }
 
     @Override

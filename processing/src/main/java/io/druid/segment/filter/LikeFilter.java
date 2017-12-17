@@ -22,6 +22,7 @@ package io.druid.segment.filter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.common.config.NullHandling;
 import io.druid.query.BitmapResultFactory;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
@@ -30,7 +31,6 @@ import io.druid.query.filter.LikeDimFilter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.data.Indexed;
 import it.unimi.dsi.fastutil.ints.IntIterable;
@@ -93,7 +93,7 @@ public class LikeFilter implements Filter
       // Verify that dimension equals prefix.
       return ImmutableList.of(selector.getBitmapIndex(
           dimension,
-          NullHandlingHelper.emptyToNullIfNeeded(likeMatcher.getPrefix())
+          NullHandling.emptyToNullIfNeeded(likeMatcher.getPrefix())
       ));
     } else if (isSimplePrefix()) {
       // Verify that dimension startsWith prefix, and is accepted by likeMatcher.matchesSuffixOnly.

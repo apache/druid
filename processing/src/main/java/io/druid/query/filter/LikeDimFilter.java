@@ -27,9 +27,9 @@ import com.google.common.base.Strings;
 import com.google.common.collect.RangeSet;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.filter.LikeFilter;
 
@@ -152,7 +152,7 @@ public class LikeDimFilter implements DimFilter
 
     public boolean matches(@Nullable final String s)
     {
-      String val = NullHandlingHelper.nullToEmptyIfNeeded(s);
+      String val = NullHandling.nullToEmptyIfNeeded(s);
       return val != null && pattern.matcher(val).matches();
     }
 

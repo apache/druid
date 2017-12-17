@@ -22,11 +22,12 @@ package io.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.segment.BaseDoubleColumnValueSelector;
+import io.druid.segment.BaseNullableColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.NullHandlingHelper;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -54,26 +55,26 @@ public class DoubleMaxAggregatorFactory extends SimpleDoubleAggregatorFactory
   }
 
   @Override
-  public Aggregator factorize(ColumnSelectorFactory metricFactory)
+  public Pair<Aggregator, BaseNullableColumnValueSelector> factorize2(ColumnSelectorFactory metricFactory)
   {
     BaseDoubleColumnValueSelector doubleColumnSelector = getDoubleColumnSelector(
         metricFactory,
         Double.NEGATIVE_INFINITY
     );
-    return NullHandlingHelper.getNullableAggregator(
+    return Pair.of(
         new DoubleMaxAggregator(doubleColumnSelector),
         doubleColumnSelector
     );
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+  public Pair<BufferAggregator, BaseNullableColumnValueSelector> factorizeBuffered2(ColumnSelectorFactory metricFactory)
   {
     BaseDoubleColumnValueSelector doubleColumnSelector = getDoubleColumnSelector(
         metricFactory,
         Double.NEGATIVE_INFINITY
     );
-    return NullHandlingHelper.getNullableAggregator(
+    return Pair.of(
         new DoubleMaxBufferAggregator(doubleColumnSelector),
         doubleColumnSelector
     );
@@ -93,9 +94,9 @@ public class DoubleMaxAggregatorFactory extends SimpleDoubleAggregatorFactory
   }
 
   @Override
-  public AggregateCombiner makeAggregateCombiner()
+  public AggregateCombiner makeAggregateCombiner2()
   {
-    return NullHandlingHelper.getNullableCombiner(new DoubleMaxAggregateCombiner());
+    return new DoubleMaxAggregateCombiner();
   }
 
   @Override

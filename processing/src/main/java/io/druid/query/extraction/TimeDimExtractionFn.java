@@ -23,8 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.ibm.icu.text.SimpleDateFormat;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.StringUtils;
-import io.druid.segment.NullHandlingHelper;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -77,7 +77,7 @@ public class TimeDimExtractionFn extends DimExtractionFn
   @Override
   public String apply(@Nullable String dimValue)
   {
-    if (NullHandlingHelper.isNullOrEquivalent(dimValue)) {
+    if (NullHandling.isNullOrEquivalent(dimValue)) {
       return null;
     }
 

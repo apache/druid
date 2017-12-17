@@ -19,22 +19,23 @@
 
 package io.druid.segment;
 
-import io.druid.guice.annotations.PublicApi;
+import com.google.common.base.Supplier;
+import io.druid.common.config.NullHandling;
 
-import javax.annotation.Nullable;
-
-/**
- * Object value selecting polymorphic "part" of the {@link ColumnValueSelector} interface. Users of {@link
- * ColumnValueSelector#getObject()} are encouraged to reduce the parameter/field/etc. type to
- * BaseObjectColumnValueSelector to make it impossible to accidently call any method other than {@link #getObject()}.
- * <p>
- * All implementations of this interface MUST also implement {@link ColumnValueSelector}.
- */
-@PublicApi
-public interface BaseObjectColumnValueSelector<T>
+public class AggregatorNullHandling
 {
-  @Nullable
-  T getObject();
 
-  Class<T> classOfObject();
+  public static <T> Supplier<T> getNullableSupplier(
+      final Supplier<T> supplier,
+      final BaseNullableColumnValueSelector selector
+  )
+  {
+    return NullHandling.useDefaultValuesForNull() ?
+           supplier : () -> {
+      if (selector.isNull()) {
+        return null;
+      }
+      return supplier.get();
+    };
+  }
 }

@@ -35,6 +35,7 @@ import io.druid.collections.BlockingPool;
 import io.druid.collections.DefaultBlockingPool;
 import io.druid.collections.NonBlockingPool;
 import io.druid.collections.StupidPool;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
@@ -122,7 +123,6 @@ import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.ordering.StringComparators;
 import io.druid.query.search.ContainsSearchQuerySpec;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.TestHelper;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
@@ -6955,7 +6955,7 @@ public class GroupByQueryRunnerTest
 
     List<Row> expectedResults;
 
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       expectedResults = Arrays.asList(
           GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
           GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
@@ -7022,7 +7022,7 @@ public class GroupByQueryRunnerTest
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
     LookupExtractionFn lookupExtractionFn;
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, false);
       extractionMap.put("", "REPLACED_VALUE");
     } else {
@@ -7113,7 +7113,7 @@ public class GroupByQueryRunnerTest
             "rows",
             0L,
             "idx",
-            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null
+            NullHandling.useDefaultValuesForNull() ? 0L : null
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "2011-04-01",
@@ -7122,7 +7122,7 @@ public class GroupByQueryRunnerTest
             "rows",
             0L,
             "idx",
-            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null
+            NullHandling.useDefaultValuesForNull() ? 0L : null
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "2011-04-01",
@@ -7131,7 +7131,7 @@ public class GroupByQueryRunnerTest
             "rows",
             0L,
             "idx",
-            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null
+            NullHandling.useDefaultValuesForNull() ? 0L : null
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "2011-04-01",
@@ -7140,7 +7140,7 @@ public class GroupByQueryRunnerTest
             "rows",
             0L,
             "idx",
-            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null
+            NullHandling.useDefaultValuesForNull() ? 0L : null
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
@@ -7151,7 +7151,7 @@ public class GroupByQueryRunnerTest
             "rows",
             0L,
             "idx",
-            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null
+            NullHandling.useDefaultValuesForNull() ? 0L : null
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "2011-04-01",
@@ -7160,7 +7160,7 @@ public class GroupByQueryRunnerTest
             "rows",
             0L,
             "idx",
-            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null
+            NullHandling.useDefaultValuesForNull() ? 0L : null
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "2011-04-01",
@@ -7169,7 +7169,7 @@ public class GroupByQueryRunnerTest
             "rows",
             0L,
             "idx",
-            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null
+            NullHandling.useDefaultValuesForNull() ? 0L : null
         ),
 
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -7179,7 +7179,7 @@ public class GroupByQueryRunnerTest
             "rows",
             0L,
             "idx",
-            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null
+            NullHandling.useDefaultValuesForNull() ? 0L : null
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "2011-04-02",
@@ -7188,7 +7188,7 @@ public class GroupByQueryRunnerTest
             "rows",
             0L,
             "idx",
-            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null
+            NullHandling.useDefaultValuesForNull() ? 0L : null
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "2011-04-02",
@@ -7197,7 +7197,7 @@ public class GroupByQueryRunnerTest
             "rows",
             0L,
             "idx",
-            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null
+            NullHandling.useDefaultValuesForNull() ? 0L : null
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "2011-04-02",
@@ -7206,7 +7206,7 @@ public class GroupByQueryRunnerTest
             "rows",
             0L,
             "idx",
-            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null
+            NullHandling.useDefaultValuesForNull() ? 0L : null
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
@@ -7217,7 +7217,7 @@ public class GroupByQueryRunnerTest
             "rows",
             0L,
             "idx",
-            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null
+            NullHandling.useDefaultValuesForNull() ? 0L : null
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "2011-04-02",
@@ -7226,7 +7226,7 @@ public class GroupByQueryRunnerTest
             "rows",
             0L,
             "idx",
-            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null
+            NullHandling.useDefaultValuesForNull() ? 0L : null
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "2011-04-02",
@@ -7235,7 +7235,7 @@ public class GroupByQueryRunnerTest
             "rows",
             0L,
             "idx",
-            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null
+            NullHandling.useDefaultValuesForNull() ? 0L : null
         )
     );
 
@@ -7292,7 +7292,7 @@ public class GroupByQueryRunnerTest
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
     LookupExtractionFn lookupExtractionFn;
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       extractionMap.put("", "EMPTY");
       lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, true);
     } else {
@@ -8278,7 +8278,7 @@ public class GroupByQueryRunnerTest
         .build();
 
     List<Row> expectedResults;
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       // "entertainment" rows are excluded by the decorated specs, they become empty rows
       expectedResults = Arrays.asList(
           GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -8353,7 +8353,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
     List<Row> expectedResults;
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       expectedResults = Arrays.asList(
           GroupByQueryRunnerTestHelper.createExpectedRow(
               "2011-04-01",

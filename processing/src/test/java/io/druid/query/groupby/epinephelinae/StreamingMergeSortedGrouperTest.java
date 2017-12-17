@@ -25,13 +25,13 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.MapBasedRow;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.groupby.epinephelinae.Grouper.Entry;
-import io.druid.segment.NullHandlingHelper;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -149,7 +149,7 @@ public class StreamingMergeSortedGrouperTest
   public void testNotEnoughBuffer()
   {
     expectedException.expect(IllegalStateException.class);
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       expectedException.expectMessage("Buffer[50] should be large enough to store at least three records[20]");
     } else {
       expectedException.expectMessage("Buffer[50] should be large enough to store at least three records[21]");

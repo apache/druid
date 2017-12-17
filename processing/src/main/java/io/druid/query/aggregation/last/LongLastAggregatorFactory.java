@@ -24,19 +24,21 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.metamx.common.StringUtils;
 import io.druid.collections.SerializablePair;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.UOE;
 import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.aggregation.NullableAggregatorFactory;
 import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
 import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.BaseLongColumnValueSelector;
-import io.druid.segment.BaseObjectColumnValueSelector;
+import io.druid.segment.BaseNullableColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.NullHandlingHelper;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.column.Column;
 
 import javax.annotation.Nullable;
@@ -47,7 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class LongLastAggregatorFactory extends AggregatorFactory
+public class LongLastAggregatorFactory extends NullableAggregatorFactory
 {
   private final String fieldName;
   private final String name;
@@ -65,20 +67,20 @@ public class LongLastAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Aggregator factorize(ColumnSelectorFactory metricFactory)
+  public Pair<Aggregator, BaseNullableColumnValueSelector> factorize2(ColumnSelectorFactory metricFactory)
   {
     BaseLongColumnValueSelector longColumnSelector = metricFactory.makeColumnValueSelector(fieldName);
-    return NullHandlingHelper.getNullableAggregator(new LongLastAggregator(
+    return Pair.of(new LongLastAggregator(
         metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
         longColumnSelector
     ), longColumnSelector);
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+  public Pair<BufferAggregator, BaseNullableColumnValueSelector> factorizeBuffered2(ColumnSelectorFactory metricFactory)
   {
     BaseLongColumnValueSelector longColumnSelector = metricFactory.makeColumnValueSelector(fieldName);
-    return NullHandlingHelper.getNullableAggregator(new LongLastBufferAggregator(
+    return Pair.of(new LongLastBufferAggregator(
         metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
         longColumnSelector
     ), longColumnSelector);
@@ -104,7 +106,7 @@ public class LongLastAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public AggregateCombiner makeAggregateCombiner()
+  public AggregateCombiner makeAggregateCombiner2()
   {
     throw new UOE("LongLastAggregatorFactory is not supported during ingestion for rollup");
   }
@@ -115,10 +117,10 @@ public class LongLastAggregatorFactory extends AggregatorFactory
     return new LongLastAggregatorFactory(name, name)
     {
       @Override
-      public Aggregator factorize(ColumnSelectorFactory metricFactory)
+      public Pair<Aggregator, BaseNullableColumnValueSelector> factorize2(ColumnSelectorFactory metricFactory)
       {
-        final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
-        return NullHandlingHelper.getNullableAggregator(new LongLastAggregator(null, null)
+        final ColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
+        return Pair.of(new LongLastAggregator(null, null)
         {
           @Override
           public void aggregate()
@@ -133,10 +135,10 @@ public class LongLastAggregatorFactory extends AggregatorFactory
       }
 
       @Override
-      public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+      public Pair<BufferAggregator, BaseNullableColumnValueSelector> factorizeBuffered2(ColumnSelectorFactory metricFactory)
       {
-        final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
-        return NullHandlingHelper.getNullableAggregator(new LongLastBufferAggregator(null, null)
+        final ColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
+        return Pair.of(new LongLastBufferAggregator(null, null)
         {
           @Override
           public void aggregate(ByteBuffer buf, int position)
@@ -215,9 +217,9 @@ public class LongLastAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public int getMaxIntermediateSize()
+  public int getMaxIntermediateSize2()
   {
-    return Long.BYTES * 2 + NullHandlingHelper.extraAggregatorBytes();
+    return Long.BYTES * 2;
   }
 
   @Override

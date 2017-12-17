@@ -26,6 +26,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
 import com.google.common.util.concurrent.MoreExecutors;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.MapInputRowParser;
@@ -48,7 +49,6 @@ import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.IndexBuilder;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.TestHelper;
@@ -288,7 +288,7 @@ public class SchemaEvolutionTest
     );
 
     // Only nonexistent(4)
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       Assert.assertEquals(
           timeseriesResult(ImmutableMap.of("a", 0L, "b", 0.0, "c", 0L, "d", 0.0)),
           runQuery(query, factory, ImmutableList.of(index4))
@@ -372,9 +372,9 @@ public class SchemaEvolutionTest
     Assert.assertEquals(
         timeseriesResult(TestHelper.createExpectedMap(
             "a",
-            NullHandlingHelper.useDefaultValuesForNull() ? 0L : null,
+            NullHandling.useDefaultValuesForNull() ? 0L : null,
             "b",
-            NullHandlingHelper.useDefaultValuesForNull() ? 0.0 : null,
+            NullHandling.useDefaultValuesForNull() ? 0.0 : null,
             "c",
             0L
         )),

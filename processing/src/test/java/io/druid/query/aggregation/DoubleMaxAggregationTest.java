@@ -20,8 +20,8 @@
 package io.druid.query.aggregation;
 
 import com.google.common.primitives.Doubles;
+import io.druid.common.config.NullHandling;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.TestHelper;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -70,7 +70,7 @@ public class DoubleMaxAggregationTest
     Assert.assertEquals(values[2], agg.getFloat(), 0.0001);
 
     agg.reset();
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       Assert.assertEquals(Double.NEGATIVE_INFINITY, (Double) agg.get(), 0.0001);
     } else {
       Assert.assertNull(agg.get());

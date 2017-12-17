@@ -22,7 +22,7 @@ package io.druid.math.expr;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
-import io.druid.common.config.NullHandlingUtil;
+import io.druid.common.config.NullHandling;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.IAE;
 
@@ -233,7 +233,7 @@ public abstract class ExprEval<T>
   {
     private StringExprEval(String value)
     {
-      super(NullHandlingUtil.emptyToNullIfNeeded(value));
+      super(NullHandling.emptyToNullIfNeeded(value));
     }
 
     @Override

@@ -21,10 +21,11 @@ package io.druid.query.aggregation.distinctcount;
 
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.collections.bitmap.WrappedRoaringBitmap;
+import io.druid.common.config.NullHandling;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.NullHandlingHelper;
+import io.druid.common.config.NullHandling;
 import io.druid.segment.data.IndexedInts;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -33,7 +34,6 @@ import java.nio.ByteBuffer;
 
 public class DistinctCountBufferAggregator implements BufferAggregator
 {
-  private static final int UNKNOWN_ID = -1;
   private final DimensionSelector selector;
   private final Int2ObjectMap<MutableBitmap> mutableBitmapCollection = new Int2ObjectOpenHashMap<>();
   private final int idForNull;
@@ -44,7 +44,7 @@ public class DistinctCountBufferAggregator implements BufferAggregator
   )
   {
     this.selector = selector;
-    this.idForNull = selector.nameLookupPossibleInAdvance() ? selector.idLookup().lookupId(null) : UNKNOWN_ID;
+    this.idForNull = selector.nameLookupPossibleInAdvance() ? selector.idLookup().lookupId(null) : -1;
   }
 
   @Override
@@ -56,12 +56,11 @@ public class DistinctCountBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    boolean countNulls = !selector.nameLookupPossibleInAdvance() || NullHandlingHelper.useDefaultValuesForNull();
     MutableBitmap mutableBitmap = getMutableBitmap(position);
     IndexedInts row = selector.getRow();
     for (int i = 0; i < row.size(); i++) {
       int index = row.get(i);
-      if (NullHandlingHelper.useDefaultValuesForNull() || isNotNull(index)) {
+      if (NullHandling.useDefaultValuesForNull() || isNotNull(index)) {
         mutableBitmap.add(index);
       }
     }

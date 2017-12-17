@@ -20,6 +20,7 @@
 package io.druid.query.aggregation.last;
 
 import io.druid.collections.SerializablePair;
+import io.druid.common.config.NullHandling;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Pair;
 import io.druid.query.aggregation.Aggregator;
@@ -29,7 +30,6 @@ import io.druid.query.aggregation.TestDoubleColumnSelectorImpl;
 import io.druid.query.aggregation.TestLongColumnSelector;
 import io.druid.query.aggregation.TestObjectColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.column.Column;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -89,7 +89,7 @@ public class DoubleLastAggregationTest
     Assert.assertEquals(doubles[0], agg.getDouble(), 0.0001);
 
     agg.reset();
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       Assert.assertEquals(0, ((Pair<Long, Double>) agg.get()).rhs, 0.0001);
     } else {
       Assert.assertNull(agg.get());
@@ -145,7 +145,7 @@ public class DoubleLastAggregationTest
     Assert.assertEquals(expected.rhs, agg.getDouble(), 0.0001);
 
     agg.reset();
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       Assert.assertEquals(0, ((Pair<Long, Double>) agg.get()).rhs, 0.0001);
     }
   }

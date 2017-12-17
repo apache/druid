@@ -24,13 +24,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.IAE;
 import io.druid.query.Queries;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.segment.DimensionHandlerUtils;
-import io.druid.segment.NullHandlingHelper;
 
 import java.util.Comparator;
 import java.util.Iterator;
@@ -111,7 +111,7 @@ public class ArithmeticPostAggregator implements PostAggregator
   public Object compute(Map<String, Object> values)
   {
     Iterator<PostAggregator> fieldsIter = fields.iterator();
-    Double retVal = NullHandlingHelper.useDefaultValuesForNull() ? DimensionHandlerUtils.ZERO_DOUBLE : null;
+    Double retVal = NullHandling.useDefaultValuesForNull() ? DimensionHandlerUtils.ZERO_DOUBLE : null;
     if (fieldsIter.hasNext()) {
       Number nextVal = (Number) fieldsIter.next().compute(values);
       if (nextVal == null) {

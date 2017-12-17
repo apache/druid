@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.collections.StupidPool;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
@@ -50,7 +51,6 @@ import io.druid.query.topn.TopNQueryEngine;
 import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.VirtualColumns;
 import io.druid.segment.data.IndexedInts;
@@ -601,7 +601,7 @@ public class IncrementalIndexStorageAdapterTest
                   // no null id, so should get empty dims array
                   Assert.assertEquals(0, rowD.size());
                   IndexedInts rowE = dimSelector3E.getRow();
-                  if (NullHandlingHelper.useDefaultValuesForNull()) {
+                  if (NullHandling.useDefaultValuesForNull()) {
                     Assert.assertEquals(1, rowE.size());
                     // the null id
                     Assert.assertEquals(0, rowE.get(0));

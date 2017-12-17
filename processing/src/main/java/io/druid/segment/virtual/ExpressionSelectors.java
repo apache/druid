@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
+import io.druid.common.config.NullHandling;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprEval;
 import io.druid.math.expr.Parser;
@@ -36,7 +37,6 @@ import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.ConstantColumnValueSelector;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.DimensionSelectorUtils;
 import io.druid.segment.NilColumnValueSelector;
 import io.druid.segment.column.Column;
@@ -204,7 +204,7 @@ public class ExpressionSelectors
         @Override
         protected String getValue()
         {
-          return NullHandlingHelper.emptyToNullIfNeeded(baseSelector.getObject().asString());
+          return NullHandling.emptyToNullIfNeeded(baseSelector.getObject().asString());
         }
 
         @Override
@@ -220,7 +220,7 @@ public class ExpressionSelectors
         @Override
         protected String getValue()
         {
-          return extractionFn.apply(NullHandlingHelper.emptyToNullIfNeeded(baseSelector.getObject().asString()));
+          return extractionFn.apply(NullHandling.emptyToNullIfNeeded(baseSelector.getObject().asString()));
         }
 
         @Override

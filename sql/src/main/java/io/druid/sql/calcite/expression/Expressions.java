@@ -41,7 +41,7 @@ import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
-import io.druid.segment.NullHandlingHelper;
+import io.druid.common.config.NullHandling;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.filtration.BoundRefKey;
@@ -311,7 +311,7 @@ public class Expressions
 
       final DimFilter equalFilter = new SelectorDimFilter(
           druidExpression.getSimpleExtraction().getColumn(),
-          NullHandlingHelper.nullToEmptyIfNeeded((String) null),
+          NullHandling.nullToEmptyIfNeeded((String) null),
           druidExpression.getSimpleExtraction().getExtractionFn()
       );
 

@@ -22,6 +22,7 @@ package io.druid.segment.filter;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
@@ -38,7 +39,6 @@ import io.druid.query.filter.ColumnComparisonDimFilter;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.segment.IndexBuilder;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.StorageAdapter;
 import org.junit.AfterClass;
 import org.junit.Test;
@@ -124,7 +124,7 @@ public class ColumnComparisonFilterTest extends BaseFilterTest
         DefaultDimensionSpec.of("dim6"),
         DefaultDimensionSpec.of("dim7")
     )), ImmutableList.<String>of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       assertFilterMatches(new ColumnComparisonDimFilter(ImmutableList.<DimensionSpec>of(
           DefaultDimensionSpec.of("dim1"),
           DefaultDimensionSpec.of("dim6")

@@ -63,7 +63,7 @@ public interface Aggregator extends Closeable
   /**
    * returns true if the Aggregator supports returning null values and the aggregated value is Null.
    * The default implementation always return false to enable smooth backward compatibility, re-implement if your aggregator is nullable.
-   * For backwards compatibility, isNull() may return false even if get() returns null. Users of this method should account for this case.
+   * For backwards compatibility, isNull() may return false even if {@link Aggregator#get()} returns null. Users of this method should account for this case.
    */
   default boolean isNull()
   {

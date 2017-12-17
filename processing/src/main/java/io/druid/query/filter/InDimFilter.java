@@ -31,13 +31,13 @@ import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.segment.DimensionHandlerUtils;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.filter.InFilter;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
@@ -79,7 +79,7 @@ public class InDimFilter implements DimFilter
 
     this.values = new TreeSet<>(Comparators.naturalNullsFirst());
     for (String value : values) {
-      this.values.add(NullHandlingHelper.emptyToNullIfNeeded(value));
+      this.values.add(NullHandling.emptyToNullIfNeeded(value));
     }
     this.dimension = dimension;
     this.extractionFn = extractionFn;
@@ -175,7 +175,7 @@ public class InDimFilter implements DimFilter
         // there may be row values that match the selector value but are not included
         // in the lookup map. Match on the selector value as well.
         // If the selector value is overwritten in the lookup map, don't add selector value to keys.
-        if (exFn.isRetainMissingValue() && NullHandlingHelper.isNullOrEquivalent(lookup.apply(convertedValue))) {
+        if (exFn.isRetainMissingValue() && NullHandling.isNullOrEquivalent(lookup.apply(convertedValue))) {
           keys.add(convertedValue);
         }
       }

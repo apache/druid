@@ -101,7 +101,7 @@ import io.druid.query.timeseries.TimeseriesQueryEngine;
 import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import io.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import io.druid.query.timeseries.TimeseriesResultValue;
-import io.druid.segment.NullHandlingHelper;
+import io.druid.common.config.NullHandling;
 import io.druid.segment.TestHelper;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
@@ -427,7 +427,7 @@ public class RealtimeIndexTaskTest
     // Do some queries.
     Assert.assertEquals(1, sumMetric(task, null, "rows").longValue());
     Assert.assertEquals(1, sumMetric(task, new SelectorDimFilter("dim1t", "foofoo", null), "rows").longValue());
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       Assert.assertEquals(0, sumMetric(task, new SelectorDimFilter("dim1t", "barbar", null), "rows").longValue());
     } else {
       Assert.assertNull(sumMetric(task, new SelectorDimFilter("dim1t", "barbar", null), "rows"));
@@ -1121,7 +1121,7 @@ public class RealtimeIndexTaskTest
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     if (results.isEmpty()) {
-      return NullHandlingHelper.nullToZeroIfNeeded((Long) null);
+      return NullHandling.nullToZeroIfNeeded((Long) null);
     }
     return results.get(0).getValue().getLongMetric(metric);
   }

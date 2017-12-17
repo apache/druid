@@ -23,10 +23,10 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import io.druid.common.config.NullHandling;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.js.JavaScriptConfig;
-import io.druid.segment.NullHandlingHelper;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -132,7 +132,7 @@ public class JavaScriptExtractionFnTest
 
     Assert.assertEquals("yes", extractionFn.apply((String) null));
     Assert.assertEquals("yes", extractionFn.apply((Object) null));
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       Assert.assertEquals("yes", extractionFn.apply(""));
     } else {
       Assert.assertEquals("no", extractionFn.apply(""));

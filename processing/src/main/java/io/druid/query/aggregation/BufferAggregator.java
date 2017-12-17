@@ -195,7 +195,7 @@ public interface BufferAggregator extends HotLoopCallee
    * @param position offset within the byte buffer at which the aggregate value is stored
    *
    * @return true if the aggrgeated value is null otherwise false.
-   * For backwards compatibility, isNull() may return false even if get() returns null. Users of this method should account for this case.
+   * For backwards compatibility, isNull() may return false even if {@link BufferAggregator#get(ByteBuffer, int)} returns null. Users of this method should account for this case.
    */
   default boolean isNull(ByteBuffer buf, int position)
   {

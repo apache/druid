@@ -21,6 +21,7 @@ package io.druid.segment.filter;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import io.druid.common.config.NullHandling;
 import io.druid.math.expr.Evals;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprEval;
@@ -34,7 +35,6 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.virtual.ExpressionSelectors;
 
 import java.util.Set;
@@ -110,7 +110,7 @@ public class ExpressionFilter implements Filter
             // There's only one binding, and it must be the single column, so it can safely be ignored in production.
             assert column.equals(identifierName);
             // convert null to Empty before passing to expressions if needed.
-            return NullHandlingHelper.nullToEmptyIfNeeded(value);
+            return NullHandling.nullToEmptyIfNeeded(value);
           }).asBoolean()
       );
     }

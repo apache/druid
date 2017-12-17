@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
@@ -30,9 +31,6 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import io.druid.query.Druids;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
@@ -61,6 +59,9 @@ import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNQueryBuilder;
 import io.druid.query.topn.TopNResultValue;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -406,7 +407,7 @@ public class SchemalessTestFullTest
                     .put("addRowsIndexConstant", 103.0D)
                     .put("uniques", UNIQUES_1)
                     .put("maxIndex", 100.0D)
-                    .put("minIndex", NullHandlingHelper.useDefaultValuesForNull() ? 0.0D : 100.0D)
+                    .put("minIndex", NullHandling.useDefaultValuesForNull() ? 0.0D : 100.0D)
                     .build()
             )
         )
@@ -753,7 +754,7 @@ public class SchemalessTestFullTest
                     .put("addRowsIndexConstant", 103.0D)
                     .put("uniques", UNIQUES_1)
                     .put("maxIndex", 100.0D)
-                    .put("minIndex", NullHandlingHelper.useDefaultValuesForNull() ? 0.0D : 100.0D)
+                    .put("minIndex", NullHandling.useDefaultValuesForNull() ? 0.0D : 100.0D)
                     .build()
             )
         )
@@ -873,11 +874,11 @@ public class SchemalessTestFullTest
             new TimeseriesResultValue(
                 TestHelper.createExpectedMap(
                     "rows", 1L,
-                    "index", NullHandlingHelper.useDefaultValuesForNull() ? 0.0D : null,
-                    "addRowsIndexConstant", NullHandlingHelper.useDefaultValuesForNull() ? 2.0D : null,
+                    "index", NullHandling.useDefaultValuesForNull() ? 0.0D : null,
+                    "addRowsIndexConstant", NullHandling.useDefaultValuesForNull() ? 2.0D : null,
                     "uniques", 0.0D,
-                    "maxIndex", NullHandlingHelper.useDefaultValuesForNull() ? 0.0D : null,
-                    "minIndex", NullHandlingHelper.useDefaultValuesForNull() ? 0.0D : null
+                    "maxIndex", NullHandling.useDefaultValuesForNull() ? 0.0D : null,
+                    "minIndex", NullHandling.useDefaultValuesForNull() ? 0.0D : null
                 ))
         )
     );
@@ -888,11 +889,11 @@ public class SchemalessTestFullTest
             new TimeseriesResultValue(
                 TestHelper.createExpectedMap(
                     "rows", 0L,
-                    "index", NullHandlingHelper.useDefaultValuesForNull() ? 0.0D : null,
-                    "addRowsIndexConstant", NullHandlingHelper.useDefaultValuesForNull() ? 1.0D : null,
+                    "index", NullHandling.useDefaultValuesForNull() ? 0.0D : null,
+                    "addRowsIndexConstant", NullHandling.useDefaultValuesForNull() ? 1.0D : null,
                     "uniques", 0.0D,
-                    "maxIndex", NullHandlingHelper.useDefaultValuesForNull() ? Double.NEGATIVE_INFINITY : null,
-                    "minIndex", NullHandlingHelper.useDefaultValuesForNull() ? Double.POSITIVE_INFINITY : null
+                    "maxIndex", NullHandling.useDefaultValuesForNull() ? Double.NEGATIVE_INFINITY : null,
+                    "minIndex", NullHandling.useDefaultValuesForNull() ? Double.POSITIVE_INFINITY : null
                 )
             )
         )
@@ -1192,7 +1193,7 @@ public class SchemalessTestFullTest
                     .put("addRowsIndexConstant", 912.0D)
                     .put("uniques", UNIQUES_1)
                     .put("maxIndex", 100.0D)
-                    .put("minIndex", NullHandlingHelper.useDefaultValuesForNull() ? 0.0D : 100.0D)
+                    .put("minIndex", NullHandling.useDefaultValuesForNull() ? 0.0D : 100.0D)
                     .build()
             )
         )

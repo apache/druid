@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
@@ -40,7 +41,6 @@ import io.druid.query.filter.InDimFilter;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.segment.IndexBuilder;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.StorageAdapter;
 import org.junit.AfterClass;
 import org.junit.Test;
@@ -126,7 +126,7 @@ public class InFilterTest extends BaseFilterTest
         ImmutableList.of("a")
     );
 
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       assertFilterMatches(
           toInFilter("dim1", null, "10", "abc"),
           ImmutableList.of("a", "b", "f")
@@ -147,7 +147,7 @@ public class InFilterTest extends BaseFilterTest
   @Test
   public void testMultiValueStringColumn()
   {
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       assertFilterMatches(
           toInFilter("dim2", null),
           ImmutableList.of("b", "c", "f")
@@ -207,7 +207,7 @@ public class InFilterTest extends BaseFilterTest
         ImmutableList.of("a", "b", "c", "d", "e", "f")
     );
 
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       assertFilterMatches(
           toInFilter("dim3", ""),
           ImmutableList.of("a", "b", "c", "d", "e", "f")
@@ -249,7 +249,7 @@ public class InFilterTest extends BaseFilterTest
     String nullJsFn = "function(str) { if (str === null) { return 'YES'; } else { return 'NO';} }";
     ExtractionFn yesNullFn = new JavaScriptExtractionFn(nullJsFn, false, JavaScriptConfig.getEnabledInstance());
 
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       assertFilterMatches(
           toInFilterWithFn("dim2", superFn, "super-null", "super-a", "super-b"),
           ImmutableList.of("a", "b", "c", "d", "f")

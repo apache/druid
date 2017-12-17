@@ -20,10 +20,10 @@
 package io.druid.query.aggregation.cardinality.types;
 
 import com.google.common.hash.Hasher;
+import io.druid.common.config.NullHandling;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.query.aggregation.cardinality.CardinalityAggregator;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.data.IndexedInts;
 
 import java.util.Arrays;
@@ -42,7 +42,7 @@ public class StringCardinalityAggregatorColumnSelectorStrategy
     // nothing to add to hasher if size == 0, only handle size == 1 and size != 0 cases.
     if (size == 1) {
       final String value = dimSelector.lookupName(row.get(0));
-      if (NullHandlingHelper.useDefaultValuesForNull() || value != null) {
+      if (NullHandling.useDefaultValuesForNull() || value != null) {
         hasher.putUnencodedChars(nullToSpecial(value));
       }
     } else if (size != 0) {
@@ -50,12 +50,12 @@ public class StringCardinalityAggregatorColumnSelectorStrategy
       final String[] values = new String[size];
       for (int i = 0; i < size; ++i) {
         final String value = dimSelector.lookupName(row.get(i));
-        if (!NullHandlingHelper.useDefaultValuesForNull() && !hasNonNullValue && value != null) {
+        if (!NullHandling.useDefaultValuesForNull() && !hasNonNullValue && value != null) {
           hasNonNullValue = true;
         }
         values[i] = nullToSpecial(value);
       }
-      if (NullHandlingHelper.useDefaultValuesForNull() || hasNonNullValue) {
+      if (NullHandling.useDefaultValuesForNull() || hasNonNullValue) {
         // Values need to be sorted to ensure consistent multi-value ordering across different segments
         Arrays.sort(values);
         for (int i = 0; i < size; ++i) {
@@ -75,7 +75,7 @@ public class StringCardinalityAggregatorColumnSelectorStrategy
     for (int i = 0; i < row.size(); i++) {
       int index = row.get(i);
       final String value = dimSelector.lookupName(index);
-      if (NullHandlingHelper.useDefaultValuesForNull() || value != null) {
+      if (NullHandling.useDefaultValuesForNull() || value != null) {
         collector.add(CardinalityAggregator.hashFn.hashUnencodedChars(nullToSpecial(value)).asBytes());
       }
     }

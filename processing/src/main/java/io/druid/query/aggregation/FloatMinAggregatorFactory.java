@@ -22,11 +22,12 @@ package io.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.segment.BaseFloatColumnValueSelector;
+import io.druid.segment.BaseNullableColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.NullHandlingHelper;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -54,23 +55,23 @@ public class FloatMinAggregatorFactory extends SimpleFloatAggregatorFactory
   }
 
   @Override
-  public Aggregator factorize(ColumnSelectorFactory metricFactory)
+  public Pair<Aggregator, BaseNullableColumnValueSelector> factorize2(ColumnSelectorFactory metricFactory)
   {
     BaseFloatColumnValueSelector floatColumnSelector = makeColumnValueSelectorWithFloatDefault(
         metricFactory,
         Float.POSITIVE_INFINITY
     );
-    return NullHandlingHelper.getNullableAggregator(new FloatMinAggregator(floatColumnSelector), floatColumnSelector);
+    return Pair.of(new FloatMinAggregator(floatColumnSelector), floatColumnSelector);
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+  public Pair<BufferAggregator, BaseNullableColumnValueSelector> factorizeBuffered2(ColumnSelectorFactory metricFactory)
   {
     BaseFloatColumnValueSelector floatColumnSelector = makeColumnValueSelectorWithFloatDefault(
         metricFactory,
         Float.POSITIVE_INFINITY
     );
-    return NullHandlingHelper.getNullableAggregator(
+    return Pair.of(
         new FloatMinBufferAggregator(floatColumnSelector),
         floatColumnSelector
     );
@@ -90,9 +91,9 @@ public class FloatMinAggregatorFactory extends SimpleFloatAggregatorFactory
   }
 
   @Override
-  public AggregateCombiner makeAggregateCombiner()
+  public AggregateCombiner makeAggregateCombiner2()
   {
-    return NullHandlingHelper.getNullableCombiner(new DoubleMinAggregateCombiner());
+    return new DoubleMinAggregateCombiner();
   }
 
   @Override

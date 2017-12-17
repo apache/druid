@@ -22,6 +22,7 @@ package io.druid.segment.filter;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
@@ -37,7 +38,6 @@ import io.druid.query.filter.JavaScriptDimFilter;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.segment.IndexBuilder;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.StorageAdapter;
 import org.junit.AfterClass;
 import org.junit.Test;
@@ -110,7 +110,7 @@ public class JavaScriptFilterTest extends BaseFilterTest
   @Test
   public void testSingleValueStringColumnWithNulls()
   {
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       assertFilterMatches(newJavaScriptDimFilter("dim1", jsNullFilter, null), ImmutableList.of("0"));
     } else {
       assertFilterMatches(newJavaScriptDimFilter("dim1", jsNullFilter, null), ImmutableList.of());
@@ -128,7 +128,7 @@ public class JavaScriptFilterTest extends BaseFilterTest
   public void testMultiValueStringColumn()
   {
     // multi-val null......
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       assertFilterMatches(newJavaScriptDimFilter("dim2", jsNullFilter, null), ImmutableList.of("1", "2", "5"));
     } else {
       assertFilterMatches(newJavaScriptDimFilter("dim2", jsNullFilter, null), ImmutableList.of("1", "5"));

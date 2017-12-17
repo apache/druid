@@ -22,11 +22,11 @@ package io.druid.segment;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
-import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.query.Druids;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
@@ -56,6 +56,7 @@ import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNQueryBuilder;
 import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -151,7 +152,7 @@ public class SchemalessTestSimpleTest
                     .put("addRowsIndexConstant", 912.0)
                     .put("uniques", 2.000977198748901D)
                     .put("maxIndex", 100.0)
-                    .put("minIndex", NullHandlingHelper.useDefaultValuesForNull() ? 0.0 : 100.0)
+                    .put("minIndex", NullHandling.useDefaultValuesForNull() ? 0.0 : 100.0)
                     .build()
             )
         )

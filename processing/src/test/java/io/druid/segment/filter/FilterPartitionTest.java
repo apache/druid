@@ -24,6 +24,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
@@ -46,7 +47,6 @@ import io.druid.query.filter.Filter;
 import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.IndexBuilder;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.StorageAdapter;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -200,7 +200,7 @@ public class FilterPartitionTest extends BaseFilterTest
   @Test
   public void testSinglePreFilterWithNulls()
   {
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       assertFilterMatches(new SelectorDimFilter("dim1", null, null), ImmutableList.of("0"));
     } else {
       assertFilterMatches(new SelectorDimFilter("dim1", null, null), ImmutableList.of());
@@ -217,7 +217,7 @@ public class FilterPartitionTest extends BaseFilterTest
   @Test
   public void testSinglePostFilterWithNulls()
   {
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", null, null), ImmutableList.of("0"));
     } else {
       assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", null, null), ImmutableList.of());
@@ -230,7 +230,7 @@ public class FilterPartitionTest extends BaseFilterTest
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "abc", null), ImmutableList.of("5", "8"));
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "ab", null), ImmutableList.<String>of());
 
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "super-null", JS_EXTRACTION_FN), ImmutableList.of("0"));
     } else {
       assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "super-", JS_EXTRACTION_FN), ImmutableList.of("0"));
@@ -246,7 +246,7 @@ public class FilterPartitionTest extends BaseFilterTest
   @Test
   public void testBasicPreAndPostFilterWithNulls()
   {
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       assertFilterMatches(
           new AndDimFilter(Arrays.<DimFilter>asList(
               new SelectorDimFilter("dim2", "a", null),
@@ -296,7 +296,7 @@ public class FilterPartitionTest extends BaseFilterTest
         ImmutableList.<String>of()
     );
 
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       assertFilterMatches(
           new AndDimFilter(Arrays.<DimFilter>asList(
               new SelectorDimFilter("dim2", "super-a", JS_EXTRACTION_FN),
@@ -378,7 +378,7 @@ public class FilterPartitionTest extends BaseFilterTest
         ImmutableList.of("0", "3")
     );
 
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       assertFilterMatches(
           new OrDimFilter(Arrays.<DimFilter>asList(
               new SelectorDimFilter("dim1", "abc", null),
@@ -444,7 +444,7 @@ public class FilterPartitionTest extends BaseFilterTest
         ImmutableList.of("0", "3")
     );
 
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       assertFilterMatches(
           new OrDimFilter(Arrays.<DimFilter>asList(
               new SelectorDimFilter("dim1", "super-abc", JS_EXTRACTION_FN),
@@ -512,7 +512,7 @@ public class FilterPartitionTest extends BaseFilterTest
   public void testMissingColumnSpecifiedInDimensionList()
   {
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim3", null, null), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       assertFilterMatches(
           new NoBitmapSelectorDimFilter("dim3", "", null),
           ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")
@@ -569,7 +569,7 @@ public class FilterPartitionTest extends BaseFilterTest
   public void testMissingColumnNotSpecifiedInDimensionList()
   {
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim4", null, null), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       assertFilterMatches(
           new NoBitmapSelectorDimFilter("dim4", "", null),
           ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")

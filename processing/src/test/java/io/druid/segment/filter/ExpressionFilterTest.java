@@ -22,6 +22,7 @@ package io.druid.segment.filter;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.FloatDimensionSchema;
@@ -36,7 +37,6 @@ import io.druid.java.util.common.Pair;
 import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.filter.ExpressionDimFilter;
 import io.druid.segment.IndexBuilder;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.junit.AfterClass;
@@ -131,7 +131,7 @@ public class ExpressionFilterTest extends BaseFilterTest
   {
     // Expressions currently treat multi-valued arrays as nulls.
     // This test is just documenting the current behavior, not necessarily saying it makes sense.
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       assertFilterMatches(EDF("dim4 == ''"), ImmutableList.of("0", "1", "2", "4", "5", "6", "7", "8"));
     } else {
       assertFilterMatches(EDF("dim4 == ''"), ImmutableList.of("2"));
@@ -194,7 +194,7 @@ public class ExpressionFilterTest extends BaseFilterTest
   @Test
   public void testMissingColumn()
   {
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       assertFilterMatches(EDF("missing == ''"), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
     } else {
       // AS per SQL standard null == null returns false.
@@ -202,7 +202,7 @@ public class ExpressionFilterTest extends BaseFilterTest
     }
     assertFilterMatches(EDF("missing == '1'"), ImmutableList.of());
     assertFilterMatches(EDF("missing == 2"), ImmutableList.of());
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       // missing equivaluent to 0
       assertFilterMatches(EDF("missing < '2'"), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
       assertFilterMatches(EDF("missing < 2"), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));

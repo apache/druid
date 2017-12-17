@@ -20,7 +20,7 @@
 package io.druid.segment.data;
 
 import com.google.common.collect.Maps;
-import io.druid.segment.NullHandlingHelper;
+import io.druid.common.config.NullHandling;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -149,7 +149,7 @@ public class GenericIndexedTest
         )
     );
     Assert.assertNull(deserialized.get(0));
-    Assert.assertEquals(deserialized.get(1), NullHandlingHelper.emptyToNullIfNeeded(""));
+    Assert.assertEquals(deserialized.get(1), NullHandling.emptyToNullIfNeeded(""));
   }
 
   @Test
@@ -166,7 +166,7 @@ public class GenericIndexedTest
         unCached, CachingIndexed.INITIAL_CACHE_CAPACITY);
 
     Assert.assertNull(deserialized.get(0));
-    Assert.assertEquals(deserialized.get(1), NullHandlingHelper.emptyToNullIfNeeded(""));
+    Assert.assertEquals(deserialized.get(1), NullHandling.emptyToNullIfNeeded(""));
   }
 
 

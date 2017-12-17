@@ -33,6 +33,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import io.druid.collections.ResourceHolder;
+import io.druid.common.config.NullHandling;
 import io.druid.common.utils.IntArrayUtils;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
@@ -64,7 +65,6 @@ import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
@@ -442,7 +442,7 @@ public class RowBasedGrouperHelper
               Object dimVal = entry.getKey().getKey()[i];
               theMap.put(
                   query.getDimensions().get(i - dimStart).getOutputName(),
-                  dimVal instanceof String ? NullHandlingHelper.emptyToNullIfNeeded((String) dimVal) : dimVal
+                  dimVal instanceof String ? NullHandling.emptyToNullIfNeeded((String) dimVal) : dimVal
               );
             }
 
@@ -1588,7 +1588,7 @@ public class RowBasedGrouperHelper
       protected Long readFromBuffer(ByteBuffer buffer, int initialOffset)
       {
         if (buffer.get(initialOffset + keyBufferPosition) == (byte) 1) {
-          return NullHandlingHelper.nullToZeroIfNeeded((Long) null);
+          return NullHandling.nullToZeroIfNeeded((Long) null);
         } else {
           return buffer.getLong(initialOffset + keyBufferPosition + Byte.BYTES);
         }
@@ -1656,7 +1656,7 @@ public class RowBasedGrouperHelper
       protected Float readFromBuffer(ByteBuffer buffer, int initialOffset)
       {
         if (buffer.get(initialOffset + keyBufferPosition) == (byte) 1) {
-          return NullHandlingHelper.nullToZeroIfNeeded((Float) null);
+          return NullHandling.nullToZeroIfNeeded((Float) null);
         } else {
           return buffer.getFloat(initialOffset + keyBufferPosition + Byte.BYTES);
         }
@@ -1724,7 +1724,7 @@ public class RowBasedGrouperHelper
       protected Double readFromBuffer(ByteBuffer buffer, int initialOffset)
       {
         if (buffer.get(initialOffset + keyBufferPosition) == (byte) 1) {
-          return NullHandlingHelper.nullToZeroIfNeeded((Double) null);
+          return NullHandling.nullToZeroIfNeeded((Double) null);
         } else {
           return buffer.getDouble(initialOffset + keyBufferPosition + Byte.BYTES);
         }

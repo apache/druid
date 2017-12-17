@@ -37,7 +37,7 @@ import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
 import io.druid.query.groupby.strategy.GroupByStrategySelector;
 import io.druid.segment.IncrementalIndexSegment;
-import io.druid.segment.NullHandlingHelper;
+import io.druid.common.config.NullHandling;
 import io.druid.segment.Segment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -186,7 +186,7 @@ public class DistinctCountGroupByQueryTest
     );
 
     List<Row> expectedResults;
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       expectedResults = Arrays.asList(
           GroupByQueryRunnerTestHelper.createExpectedRow(
               "1970-01-01T00:00:00.000Z",

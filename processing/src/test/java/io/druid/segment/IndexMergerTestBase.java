@@ -28,6 +28,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import io.druid.collections.bitmap.RoaringBitmapFactory;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionSchema;
@@ -41,7 +42,6 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -58,6 +58,7 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -1251,7 +1252,7 @@ public class IndexMergerTestBase
     final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
     final List<Rowboat> boatList = ImmutableList.copyOf(adapter.getRows());
 
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       Assert.assertEquals(
           ImmutableList.of("d2", "d3", "d5", "d6", "d7", "d8", "d9"),
           ImmutableList.copyOf(adapter.getDimensionNames())
@@ -1416,7 +1417,7 @@ public class IndexMergerTestBase
     final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
     final List<Rowboat> boatList = ImmutableList.copyOf(adapter.getRows());
 
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       Assert.assertEquals(
           ImmutableList.of("d2", "d3", "d5", "d6", "d7", "d8", "d9"),
           ImmutableList.copyOf(adapter.getDimensionNames())
@@ -1428,7 +1429,7 @@ public class IndexMergerTestBase
       );
     }
     Assert.assertEquals(4, boatList.size());
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       Assert.assertArrayEquals(new int[][]{{0}, {1}, {0}, {0}, {0}, {0}, {0}}, boatList.get(0).getDims());
       Assert.assertArrayEquals(new int[][]{{1}, {2}, {0}, {0}, {1}, {1}, {1}}, boatList.get(1).getDims());
       Assert.assertArrayEquals(new int[][]{{0}, {0}, {1}, {1}, {2}, {2}, {2}}, boatList.get(2).getDims());
@@ -1584,7 +1585,7 @@ public class IndexMergerTestBase
     final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
     final List<Rowboat> boatList = ImmutableList.copyOf(adapter.getRows());
 
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       Assert.assertEquals(
           ImmutableList.of("d3", "d6", "d8", "d9"),
           ImmutableList.copyOf(adapter.getDimensionNames())
@@ -2265,7 +2266,7 @@ public class IndexMergerTestBase
             )
         )
     );
-    List<String> expectedColumnNames = NullHandlingHelper.useDefaultValuesForNull()
+    List<String> expectedColumnNames = NullHandling.useDefaultValuesForNull()
                                        ? Arrays.asList("A", "d1")
                                        : Arrays.asList("A", "d1", "d2");
     List<String> actualColumnNames = Lists.newArrayList(index.getColumnNames());
@@ -2274,14 +2275,14 @@ public class IndexMergerTestBase
     Assert.assertEquals(expectedColumnNames, actualColumnNames);
 
     SmooshedFileMapper sfm = closer.closeLater(SmooshedFileMapper.load(tempDir));
-    List<String> expectedFilenames = NullHandlingHelper.useDefaultValuesForNull() ? Arrays.asList(
+    List<String> expectedFilenames = NullHandling.useDefaultValuesForNull() ? Arrays.asList(
         "A",
         "__time",
         "d1",
         "index.drd",
         "metadata.drd"
     )
-                                                                                  : Arrays.asList(
+                                                                                      : Arrays.asList(
                                                                                       "A",
                                                                                       "__time",
                                                                                       "d1",

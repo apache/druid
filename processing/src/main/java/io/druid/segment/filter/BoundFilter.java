@@ -22,6 +22,7 @@ package io.druid.segment.filter;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.Pair;
 import io.druid.query.BitmapResultFactory;
 import io.druid.query.extraction.ExtractionFn;
@@ -37,7 +38,6 @@ import io.druid.query.ordering.StringComparators;
 import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.IntListUtils;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.column.BitmapIndex;
 import it.unimi.dsi.fastutil.ints.IntList;
 
@@ -149,7 +149,7 @@ public class BoundFilter implements Filter
     if (!boundDimFilter.hasLowerBound()) {
       startIndex = 0;
     } else {
-      final int found = bitmapIndex.getIndex(NullHandlingHelper.emptyToNullIfNeeded(boundDimFilter.getLower()));
+      final int found = bitmapIndex.getIndex(NullHandling.emptyToNullIfNeeded(boundDimFilter.getLower()));
       if (found >= 0) {
         startIndex = boundDimFilter.isLowerStrict() ? found + 1 : found;
       } else {
@@ -160,7 +160,7 @@ public class BoundFilter implements Filter
     if (!boundDimFilter.hasUpperBound()) {
       endIndex = bitmapIndex.getCardinality();
     } else {
-      final int found = bitmapIndex.getIndex(NullHandlingHelper.emptyToNullIfNeeded(boundDimFilter.getUpper()));
+      final int found = bitmapIndex.getIndex(NullHandling.emptyToNullIfNeeded(boundDimFilter.getUpper()));
       if (found >= 0) {
         endIndex = boundDimFilter.isUpperStrict() ? found : found + 1;
       } else {
@@ -250,10 +250,10 @@ public class BoundFilter implements Filter
   {
     if (input == null) {
       return (!boundDimFilter.hasLowerBound()
-              || (NullHandlingHelper.isNullOrEquivalent(boundDimFilter.getLower()) && !boundDimFilter.isLowerStrict()))
+              || (NullHandling.isNullOrEquivalent(boundDimFilter.getLower()) && !boundDimFilter.isLowerStrict()))
              // lower bound allows null
              && (!boundDimFilter.hasUpperBound()
-                 || !NullHandlingHelper.isNullOrEquivalent(boundDimFilter.getUpper())
+                 || !NullHandling.isNullOrEquivalent(boundDimFilter.getUpper())
                  || !boundDimFilter.isUpperStrict()); // upper bound allows null
     }
     int lowerComparing = 1;

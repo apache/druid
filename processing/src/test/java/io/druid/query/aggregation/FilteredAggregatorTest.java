@@ -21,6 +21,7 @@ package io.druid.query.aggregation;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
+import io.druid.common.config.NullHandling;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
@@ -44,7 +45,6 @@ import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.DimensionSelectorUtils;
 import io.druid.segment.IdLookup;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
@@ -223,9 +223,9 @@ public class FilteredAggregatorTest
 
   private void assertValues(FilteredAggregator agg, TestFloatColumnSelector selector, double... expectedVals)
   {
-    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? 0.0d : null, agg.get());
-    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? 0.0d : null, agg.get());
-    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? 0.0d : null, agg.get());
+    Assert.assertEquals(NullHandling.useDefaultValuesForNull() ? 0.0d : null, agg.get());
+    Assert.assertEquals(NullHandling.useDefaultValuesForNull() ? 0.0d : null, agg.get());
+    Assert.assertEquals(NullHandling.useDefaultValuesForNull() ? 0.0d : null, agg.get());
     for (double expectedVal : expectedVals) {
       aggregate(selector, agg);
       Assert.assertEquals(expectedVal, agg.get());

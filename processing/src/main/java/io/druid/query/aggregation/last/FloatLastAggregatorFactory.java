@@ -25,19 +25,21 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
 import com.metamx.common.StringUtils;
 import io.druid.collections.SerializablePair;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.UOE;
 import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.aggregation.NullableAggregatorFactory;
 import io.druid.query.aggregation.first.FloatFirstAggregatorFactory;
 import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.BaseFloatColumnValueSelector;
-import io.druid.segment.BaseObjectColumnValueSelector;
+import io.druid.segment.BaseNullableColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.NullHandlingHelper;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.column.Column;
 
 import javax.annotation.Nullable;
@@ -48,7 +50,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class FloatLastAggregatorFactory extends AggregatorFactory
+public class FloatLastAggregatorFactory extends NullableAggregatorFactory
 {
 
   private final String fieldName;
@@ -67,20 +69,20 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Aggregator factorize(ColumnSelectorFactory metricFactory)
+  public Pair<Aggregator, BaseNullableColumnValueSelector> factorize2(ColumnSelectorFactory metricFactory)
   {
     BaseFloatColumnValueSelector floatColumnSelector = metricFactory.makeColumnValueSelector(fieldName);
-    return NullHandlingHelper.getNullableAggregator(new FloatLastAggregator(
+    return Pair.of(new FloatLastAggregator(
         metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
         floatColumnSelector
     ), floatColumnSelector);
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+  public Pair<BufferAggregator, BaseNullableColumnValueSelector> factorizeBuffered2(ColumnSelectorFactory metricFactory)
   {
     BaseFloatColumnValueSelector floatColumnSelector = metricFactory.makeColumnValueSelector(fieldName);
-    return NullHandlingHelper.getNullableAggregator(new FloatLastBufferAggregator(
+    return Pair.of(new FloatLastBufferAggregator(
         metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
         floatColumnSelector
     ), floatColumnSelector);
@@ -106,7 +108,7 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public AggregateCombiner makeAggregateCombiner()
+  public AggregateCombiner makeAggregateCombiner2()
   {
     throw new UOE("FloatLastAggregatorFactory is not supported during ingestion for rollup");
   }
@@ -117,10 +119,10 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
     return new FloatLastAggregatorFactory(name, name)
     {
       @Override
-      public Aggregator factorize(ColumnSelectorFactory metricFactory)
+      public Pair<Aggregator, BaseNullableColumnValueSelector> factorize2(ColumnSelectorFactory metricFactory)
       {
-        final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
-        return NullHandlingHelper.getNullableAggregator(new FloatLastAggregator(null, null)
+        final ColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
+        return Pair.of(new FloatLastAggregator(null, null)
         {
           @Override
           public void aggregate()
@@ -135,10 +137,10 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
       }
 
       @Override
-      public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+      public Pair<BufferAggregator, BaseNullableColumnValueSelector> factorizeBuffered2(ColumnSelectorFactory metricFactory)
       {
-        final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
-        return NullHandlingHelper.getNullableAggregator(new FloatLastBufferAggregator(null, null)
+        final ColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
+        return Pair.of(new FloatLastBufferAggregator(null, null)
         {
           @Override
           public void aggregate(ByteBuffer buf, int position)
@@ -219,9 +221,9 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public int getMaxIntermediateSize()
+  public int getMaxIntermediateSize2()
   {
-    return Long.BYTES + Float.BYTES + NullHandlingHelper.extraAggregatorBytes();
+    return Long.BYTES + Float.BYTES;
   }
 
   @Override

@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.Sets;
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Comparators;
@@ -90,7 +91,7 @@ public class IndexMergerNullHandlingTest
     nullFlavors.add(mNull);
     nullFlavors.add(mListOfNull);
 
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       nullFlavors.add(mEmptyString);
       nullFlavors.add(mListOfEmptyString);
     } else {
@@ -185,7 +186,7 @@ public class IndexMergerNullHandlingTest
             final List<Integer> expectedNullRows = new ArrayList<>();
             for (int i = 0; i < index.getNumRows(); i++) {
               final List<String> row = getRow(dictionaryColumn, i);
-              if (row.isEmpty() || row.stream().anyMatch(NullHandlingHelper::isNullOrEquivalent)) {
+              if (row.isEmpty() || row.stream().anyMatch(NullHandling::isNullOrEquivalent)) {
                 expectedNullRows.add(i);
               }
             }
@@ -222,14 +223,14 @@ public class IndexMergerNullHandlingTest
     if (value == null) {
       retVal.add(null);
     } else if (value instanceof String) {
-      retVal.add(NullHandlingHelper.emptyToNullIfNeeded(((String) value)));
+      retVal.add(NullHandling.emptyToNullIfNeeded(((String) value)));
     } else if (value instanceof List) {
       final List<String> list = (List<String>) value;
       if (list.isEmpty() && !hasMultipleValues) {
         // empty lists become nulls in single valued columns
-        retVal.add(NullHandlingHelper.emptyToNullIfNeeded(null));
+        retVal.add(NullHandling.emptyToNullIfNeeded(null));
       } else {
-        retVal.addAll(list.stream().map(NullHandlingHelper::emptyToNullIfNeeded).collect(Collectors.toList()));
+        retVal.addAll(list.stream().map(NullHandling::emptyToNullIfNeeded).collect(Collectors.toList()));
       }
     } else {
       throw new ISE("didn't expect class[%s]", value.getClass());

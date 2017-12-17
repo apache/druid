@@ -94,6 +94,12 @@ public class StringUtils
     return fromUtf8(bytes);
   }
 
+  /**
+   * Reads numBytes bytes from buffer and converts that to a utf-8 string
+   * @param buffer buffer to read bytes from
+   * @param numBytes number of bytes to read
+   * @return returns null if numBytes is -1 otherwise utf-8 string represetation of bytes read
+   */
   @Nullable
   public static String fromUtf8Nullable(final ByteBuffer buffer, final int numBytes)
   {

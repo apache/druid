@@ -22,7 +22,7 @@ package io.druid.math.expr;
 import com.google.common.base.Preconditions;
 import com.google.common.math.LongMath;
 import com.google.common.primitives.Ints;
-import io.druid.common.config.NullHandlingUtil;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Comparators;
@@ -124,7 +124,7 @@ class StringExpr extends ConstantExpr
 
   public StringExpr(String value)
   {
-    this.value = NullHandlingUtil.emptyToNullIfNeeded(value);
+    this.value = NullHandling.emptyToNullIfNeeded(value);
   }
 
   @Nullable
@@ -365,7 +365,7 @@ abstract class BinaryEvalOpExprBase extends BinaryOpExprBase
 
     // Result of any Binary expressions is null if any of the argument is null.
     // e.g "select null * 2 as c;" or "select null + 1 as c;" will return null as per Standard SQL spec.
-    if (!NullHandlingUtil.useDefaultValuesForNull() && (leftVal.isNull() || rightVal.isNull())) {
+    if (!NullHandling.useDefaultValuesForNull() && (leftVal.isNull() || rightVal.isNull())) {
       return ExprEval.of(null);
     }
 
@@ -498,8 +498,8 @@ class BinPlusExpr extends BinaryEvalOpExprBase
   @Override
   protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
-    return ExprEval.of(NullHandlingUtil.nullToEmptyIfNeeded(left)
-                       + NullHandlingUtil.nullToEmptyIfNeeded(right));
+    return ExprEval.of(NullHandling.nullToEmptyIfNeeded(left)
+                       + NullHandling.nullToEmptyIfNeeded(right));
   }
 
   @Override

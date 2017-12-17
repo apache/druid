@@ -24,16 +24,17 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Maps;
+import io.druid.common.config.NullHandling;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprEval;
 import io.druid.math.expr.Parser;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.AggregatorNullHandling;
 import io.druid.segment.BaseObjectColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
@@ -68,13 +69,13 @@ public class ExpressionObjectSelector implements ObjectColumnSelector<ExprEval>
       final Supplier<Object> supplier;
       if (nativeType == ValueType.FLOAT) {
         final ColumnValueSelector columnValueSelector = columnSelectorFactory.makeColumnValueSelector(columnName);
-        supplier = NullHandlingHelper.getNullableSupplier(columnValueSelector::getFloat, columnValueSelector);
+        supplier = AggregatorNullHandling.getNullableSupplier(columnValueSelector::getFloat, columnValueSelector);
       } else if (nativeType == ValueType.LONG) {
         final ColumnValueSelector columnValueSelector = columnSelectorFactory.makeColumnValueSelector(columnName);
-        supplier = NullHandlingHelper.getNullableSupplier(columnValueSelector::getLong, columnValueSelector);
+        supplier = AggregatorNullHandling.getNullableSupplier(columnValueSelector::getLong, columnValueSelector);
       } else if (nativeType == ValueType.DOUBLE) {
         final ColumnValueSelector columnValueSelector = columnSelectorFactory.makeColumnValueSelector(columnName);
-        supplier = NullHandlingHelper.getNullableSupplier(columnValueSelector::getDouble, columnValueSelector);
+        supplier = AggregatorNullHandling.getNullableSupplier(columnValueSelector::getDouble, columnValueSelector);
       } else if (nativeType == ValueType.STRING) {
         supplier = supplierFromDimensionSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName))
@@ -104,13 +105,13 @@ public class ExpressionObjectSelector implements ObjectColumnSelector<ExprEval>
       final IndexedInts row = selector.getRow();
       if (row.size() == 0) {
         // Treat empty multi-value rows as nulls.
-        return NullHandlingHelper.nullToEmptyIfNeeded((String) null);
+        return NullHandling.nullToEmptyIfNeeded((String) null);
       } else if (row.size() == 1) {
-        return NullHandlingHelper.nullToEmptyIfNeeded(selector.lookupName(row.get(0)));
+        return NullHandling.nullToEmptyIfNeeded(selector.lookupName(row.get(0)));
       } else {
         // Can't handle multi-value rows in expressions.
         // Treat them as nulls until we think of something better to do.
-        return NullHandlingHelper.nullToEmptyIfNeeded((String) null);
+        return NullHandling.nullToEmptyIfNeeded((String) null);
       }
     };
   }
@@ -121,7 +122,7 @@ public class ExpressionObjectSelector implements ObjectColumnSelector<ExprEval>
   {
     if (selector == null) {
       // Missing column.
-      return Suppliers.ofInstance(NullHandlingHelper.nullToEmptyIfNeeded((String) null));
+      return Suppliers.ofInstance(NullHandling.nullToEmptyIfNeeded((String) null));
     }
 
     final Class<?> clazz = selector.classOfObject();
@@ -133,11 +134,11 @@ public class ExpressionObjectSelector implements ObjectColumnSelector<ExprEval>
       return () -> {
         final Object val = selector.getObject();
         if (val instanceof String) {
-          return NullHandlingHelper.nullToEmptyIfNeeded((String) val);
+          return NullHandling.nullToEmptyIfNeeded((String) val);
         } else if (val instanceof Number) {
           return val;
         } else {
-          return NullHandlingHelper.nullToEmptyIfNeeded((String) null);
+          return NullHandling.nullToEmptyIfNeeded((String) null);
         }
       };
     } else {

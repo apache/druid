@@ -17,22 +17,14 @@
  * under the License.
  */
 
-package io.druid.segment;
+package io.druid.common.config;
 
 import com.google.common.base.Strings;
-import com.google.common.base.Supplier;
 import com.google.inject.Inject;
-import io.druid.common.config.NullValueHandlingConfig;
-import io.druid.query.aggregation.AggregateCombiner;
-import io.druid.query.aggregation.Aggregator;
-import io.druid.query.aggregation.BufferAggregator;
-import io.druid.query.aggregation.NullableAggregateCombiner;
-import io.druid.query.aggregation.NullableAggregator;
-import io.druid.query.aggregation.NullableBufferAggregator;
 
 import javax.annotation.Nullable;
 
-public class NullHandlingHelper
+public class NullHandling
 {
   private static String NULL_HANDLING_CONFIG_STRING = "druid.generic.useDefaultValueForNull";
 
@@ -61,13 +53,18 @@ public class NullHandlingHelper
   @Nullable
   public static String nullToEmptyIfNeeded(@Nullable String value)
   {
-    return INSTANCE.isUseDefaultValuesForNull() ? Strings.nullToEmpty(value) : value;
+    return useDefaultValuesForNull() ? Strings.nullToEmpty(value) : value;
   }
 
   @Nullable
   public static String emptyToNullIfNeeded(@Nullable String value)
   {
-    return INSTANCE.isUseDefaultValuesForNull() ? Strings.emptyToNull(value) : value;
+    return useDefaultValuesForNull() ? Strings.emptyToNull(value) : value;
+  }
+
+  public static String defaultValue()
+  {
+    return useDefaultValuesForNull() ? "" : null;
   }
 
   public static boolean isNullOrEquivalent(@Nullable String value)
@@ -91,42 +88,5 @@ public class NullHandlingHelper
   public static Float nullToZeroIfNeeded(@Nullable Float value)
   {
     return INSTANCE.isUseDefaultValuesForNull() && value == null ? ZERO_FLOAT : value;
-  }
-
-  public static Aggregator getNullableAggregator(Aggregator aggregator, BaseNullableColumnValueSelector selector)
-  {
-    return INSTANCE.isUseDefaultValuesForNull() ? aggregator : new NullableAggregator(aggregator, selector);
-  }
-
-  public static BufferAggregator getNullableAggregator(
-      BufferAggregator aggregator,
-      BaseNullableColumnValueSelector selector
-  )
-  {
-    return INSTANCE.isUseDefaultValuesForNull() ? aggregator : new NullableBufferAggregator(aggregator, selector);
-  }
-
-  public static AggregateCombiner getNullableCombiner(AggregateCombiner combiner)
-  {
-    return INSTANCE.isUseDefaultValuesForNull() ? combiner : new NullableAggregateCombiner(combiner);
-  }
-
-  public static int extraAggregatorBytes()
-  {
-    return NullHandlingHelper.useDefaultValuesForNull() ? 0 : Byte.BYTES;
-  }
-
-  public static <T> Supplier<T> getNullableSupplier(
-      final Supplier<T> supplier,
-      final BaseNullableColumnValueSelector selector
-  )
-  {
-    return INSTANCE.isUseDefaultValuesForNull() ?
-           supplier : () -> {
-      if (selector.isNull()) {
-        return null;
-      }
-      return supplier.get();
-    };
   }
 }

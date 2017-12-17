@@ -25,6 +25,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Doubles;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
@@ -60,7 +61,6 @@ import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.ordering.StringComparators;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.TestHelper;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
@@ -149,8 +149,8 @@ public class TimeseriesQueryRunnerTest
                                   .build();
     Map<String, Object> resultMap = Maps.newHashMap();
     resultMap.put("rows", 0L);
-    resultMap.put("index", NullHandlingHelper.useDefaultValuesForNull() ? 0D : null);
-    resultMap.put("first", NullHandlingHelper.useDefaultValuesForNull() ? 0D : null);
+    resultMap.put("index", NullHandling.useDefaultValuesForNull() ? 0D : null);
+    resultMap.put("first", NullHandling.useDefaultValuesForNull() ? 0D : null);
     List<Result<TimeseriesResultValue>> expectedResults = ImmutableList.of(
         new Result<>(
             DateTimes.of("2020-04-02"),
@@ -234,7 +234,7 @@ public class TimeseriesQueryRunnerTest
             0.02
         );
       } else {
-        if (NullHandlingHelper.useDefaultValuesForNull()) {
+        if (NullHandling.useDefaultValuesForNull()) {
           Assert.assertEquals(
               result.toString(),
               0.0D,
@@ -700,7 +700,7 @@ public class TimeseriesQueryRunnerTest
     );
     Map noRowsResult = Maps.newHashMap();
     noRowsResult.put("rows", 0L);
-    noRowsResult.put("idx", NullHandlingHelper.useDefaultValuesForNull() ? 0L : null);
+    noRowsResult.put("idx", NullHandling.useDefaultValuesForNull() ? 0L : null);
     for (Interval interval : iterable) {
       lotsOfZeroes.add(
           new Result<>(
@@ -1461,8 +1461,8 @@ public class TimeseriesQueryRunnerTest
 
     Map<String, Object> resultMap = Maps.newHashMap();
     resultMap.put("rows", 0L);
-    resultMap.put("index", NullHandlingHelper.useDefaultValuesForNull() ? 0.0 : null);
-    resultMap.put("addRowsIndexConstant", NullHandlingHelper.useDefaultValuesForNull() ? 1.0 : null);
+    resultMap.put("index", NullHandling.useDefaultValuesForNull() ? 0.0 : null);
+    resultMap.put("addRowsIndexConstant", NullHandling.useDefaultValuesForNull() ? 1.0 : null);
     resultMap.put("uniques", 0.0);
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
@@ -1614,8 +1614,8 @@ public class TimeseriesQueryRunnerTest
                                   .build();
     Map<String, Object> resultMap = Maps.newHashMap();
     resultMap.put("rows", 0L);
-    resultMap.put("index", NullHandlingHelper.useDefaultValuesForNull() ? 0.0 : null);
-    resultMap.put("addRowsIndexConstant", NullHandlingHelper.useDefaultValuesForNull() ? 1.0 : null);
+    resultMap.put("index", NullHandling.useDefaultValuesForNull() ? 0.0 : null);
+    resultMap.put("addRowsIndexConstant", NullHandling.useDefaultValuesForNull() ? 1.0 : null);
     resultMap.put("uniques", 0.0);
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
@@ -1658,8 +1658,8 @@ public class TimeseriesQueryRunnerTest
                                   .build();
     Map<String, Object> resultMap = Maps.newHashMap();
     resultMap.put("rows", 0L);
-    resultMap.put("index", NullHandlingHelper.useDefaultValuesForNull() ? 0.0 : null);
-    resultMap.put("addRowsIndexConstant", NullHandlingHelper.useDefaultValuesForNull() ? 1.0 : null);
+    resultMap.put("index", NullHandling.useDefaultValuesForNull() ? 0.0 : null);
+    resultMap.put("addRowsIndexConstant", NullHandling.useDefaultValuesForNull() ? 1.0 : null);
     resultMap.put("uniques", 0.0);
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(

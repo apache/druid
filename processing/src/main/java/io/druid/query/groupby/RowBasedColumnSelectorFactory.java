@@ -22,6 +22,7 @@ package io.druid.query.groupby;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.Row;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
@@ -33,7 +34,6 @@ import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.IdLookup;
 import io.druid.segment.LongColumnSelector;
-import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
@@ -227,7 +227,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
                 }
 
                 for (String dimensionValue : dimensionValues) {
-                  if (Objects.equals(NullHandlingHelper.emptyToNullIfNeeded(dimensionValue), value)) {
+                  if (Objects.equals(NullHandling.emptyToNullIfNeeded(dimensionValue), value)) {
                     return true;
                   }
                 }
@@ -252,7 +252,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
                 }
 
                 for (String dimensionValue : dimensionValues) {
-                  if (Objects.equals(extractionFn.apply(NullHandlingHelper.emptyToNullIfNeeded(dimensionValue)), value)) {
+                  if (Objects.equals(extractionFn.apply(NullHandling.emptyToNullIfNeeded(dimensionValue)), value)) {
                     return true;
                   }
                 }
@@ -285,7 +285,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
                 }
 
                 for (String dimensionValue : dimensionValues) {
-                  if (predicate.apply(NullHandlingHelper.emptyToNullIfNeeded(dimensionValue))) {
+                  if (predicate.apply(NullHandling.emptyToNullIfNeeded(dimensionValue))) {
                     return true;
                   }
                 }
@@ -311,7 +311,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
                 }
 
                 for (String dimensionValue : dimensionValues) {
-                  if (predicate.apply(extractionFn.apply(NullHandlingHelper.emptyToNullIfNeeded(dimensionValue)))) {
+                  if (predicate.apply(extractionFn.apply(NullHandling.emptyToNullIfNeeded(dimensionValue)))) {
                     return true;
                   }
                 }
@@ -337,7 +337,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         @Override
         public String lookupName(int id)
         {
-          final String value = NullHandlingHelper.emptyToNullIfNeeded(row.get().getDimension(dimension).get(id));
+          final String value = NullHandling.emptyToNullIfNeeded(row.get().getDimension(dimension).get(id));
           return extractionFn == null ? value : extractionFn.apply(value);
         }
 

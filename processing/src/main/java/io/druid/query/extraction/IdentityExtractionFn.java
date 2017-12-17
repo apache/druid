@@ -19,7 +19,7 @@
 
 package io.druid.query.extraction;
 
-import io.druid.segment.NullHandlingHelper;
+import io.druid.common.config.NullHandling;
 
 import javax.annotation.Nullable;
 
@@ -42,14 +42,14 @@ public class IdentityExtractionFn implements ExtractionFn
   @Nullable
   public String apply(@Nullable Object value)
   {
-    return value == null ? null : NullHandlingHelper.emptyToNullIfNeeded(value.toString());
+    return value == null ? null : NullHandling.emptyToNullIfNeeded(value.toString());
   }
 
   @Override
   @Nullable
   public String apply(@Nullable String value)
   {
-    return NullHandlingHelper.emptyToNullIfNeeded(value);
+    return NullHandling.emptyToNullIfNeeded(value);
   }
 
   @Override

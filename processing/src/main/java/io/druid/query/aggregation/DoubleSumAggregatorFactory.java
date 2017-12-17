@@ -22,11 +22,12 @@ package io.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.segment.BaseDoubleColumnValueSelector;
+import io.druid.segment.BaseNullableColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.NullHandlingHelper;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -55,20 +56,20 @@ public class DoubleSumAggregatorFactory extends SimpleDoubleAggregatorFactory
   }
 
   @Override
-  public Aggregator factorize(ColumnSelectorFactory metricFactory)
+  public Pair<Aggregator, BaseNullableColumnValueSelector> factorize2(ColumnSelectorFactory metricFactory)
   {
     BaseDoubleColumnValueSelector doubleColumnSelector = getDoubleColumnSelector(metricFactory, 0.0);
-    return NullHandlingHelper.getNullableAggregator(
+    return Pair.of(
         new DoubleSumAggregator(doubleColumnSelector),
         doubleColumnSelector
     );
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+  public Pair<BufferAggregator, BaseNullableColumnValueSelector> factorizeBuffered2(ColumnSelectorFactory metricFactory)
   {
     BaseDoubleColumnValueSelector doubleColumnSelector = getDoubleColumnSelector(metricFactory, 0.0);
-    return NullHandlingHelper.getNullableAggregator(
+    return Pair.of(
         new DoubleSumBufferAggregator(doubleColumnSelector),
         doubleColumnSelector
     );
@@ -88,9 +89,9 @@ public class DoubleSumAggregatorFactory extends SimpleDoubleAggregatorFactory
   }
 
   @Override
-  public AggregateCombiner makeAggregateCombiner()
+  public AggregateCombiner makeAggregateCombiner2()
   {
-    return NullHandlingHelper.getNullableCombiner(new DoubleSumAggregateCombiner());
+    return new DoubleSumAggregateCombiner();
   }
 
   @Override

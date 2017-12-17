@@ -22,12 +22,11 @@ package io.druid.query.aggregation.distinctcount;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.NullHandlingHelper;
+import io.druid.common.config.NullHandling;
 import io.druid.segment.data.IndexedInts;
 
 public class DistinctCountAggregator implements Aggregator
 {
-  private static final int UNKNOWN_ID = -1;
   private final DimensionSelector selector;
   private final MutableBitmap mutableBitmap;
   private final int idForNull;
@@ -39,7 +38,7 @@ public class DistinctCountAggregator implements Aggregator
   {
     this.selector = selector;
     this.mutableBitmap = mutableBitmap;
-    this.idForNull = selector.nameLookupPossibleInAdvance() ? selector.idLookup().lookupId(null) : UNKNOWN_ID;
+    this.idForNull = selector.nameLookupPossibleInAdvance() ? selector.idLookup().lookupId(null) : -1;
   }
 
   @Override
@@ -48,7 +47,7 @@ public class DistinctCountAggregator implements Aggregator
     IndexedInts row = selector.getRow();
     for (int i = 0; i < row.size(); i++) {
       int index = row.get(i);
-      if (NullHandlingHelper.useDefaultValuesForNull() || isNotNull(index)) {
+      if (NullHandling.useDefaultValuesForNull() || isNotNull(index)) {
         mutableBitmap.add(index);
       }
     }

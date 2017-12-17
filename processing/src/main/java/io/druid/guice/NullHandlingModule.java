@@ -21,8 +21,7 @@ package io.druid.guice;
 
 import com.google.inject.Binder;
 import com.google.inject.Module;
-import io.druid.common.config.NullHandlingUtil;
-import io.druid.segment.NullHandlingHelper;
+import io.druid.common.config.NullHandling;
 import io.druid.common.config.NullValueHandlingConfig;
 
 /**
@@ -33,8 +32,8 @@ public class NullHandlingModule implements Module
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, "druid.generic", NullValueHandlingConfig.class);
-    binder.requestStaticInjection(NullHandlingHelper.class);
-    binder.requestStaticInjection(NullHandlingUtil.class);
+    binder.requestStaticInjection(NullHandling.class);
+    binder.requestStaticInjection(NullHandling.class);
 
   }
 }

@@ -22,7 +22,7 @@ package io.druid.query.extraction;
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
-import io.druid.segment.NullHandlingHelper;
+import io.druid.common.config.NullHandling;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -136,7 +136,7 @@ public class FunctionalExtractionTest
         false
     );
     final String out = fn.apply(in);
-    Assert.assertEquals(NullHandlingHelper.isNullOrEquivalent(out) ? in : out, exFn.apply(in));
+    Assert.assertEquals(NullHandling.isNullOrEquivalent(out) ? in : out, exFn.apply(in));
   }
 
   @Test
@@ -150,7 +150,7 @@ public class FunctionalExtractionTest
         false
     );
     final String out = fn.apply(in);
-    Assert.assertEquals(NullHandlingHelper.isNullOrEquivalent(out) ? in : out, exFn.apply(in));
+    Assert.assertEquals(NullHandling.isNullOrEquivalent(out) ? in : out, exFn.apply(in));
   }
 
   @Test
@@ -164,8 +164,8 @@ public class FunctionalExtractionTest
         false
     );
     final String out = fn.apply(in);
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
-      Assert.assertEquals(NullHandlingHelper.isNullOrEquivalent(out) ? MISSING : out, exFn.apply(in));
+    if (NullHandling.useDefaultValuesForNull()) {
+      Assert.assertEquals(NullHandling.isNullOrEquivalent(out) ? MISSING : out, exFn.apply(in));
     } else {
       Assert.assertEquals(out == null ? MISSING : out, exFn.apply(in));
     }
@@ -183,7 +183,7 @@ public class FunctionalExtractionTest
         false
     );
     final String out = fn.apply(in);
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       Assert.assertEquals(Strings.isNullOrEmpty(out) ? null : out, exFn.apply(in));
     } else {
       Assert.assertEquals(out == null ? "" : out, exFn.apply(in));
@@ -201,7 +201,7 @@ public class FunctionalExtractionTest
         false
     );
     final String out = fn.apply(in);
-    if (NullHandlingHelper.useDefaultValuesForNull()) {
+    if (NullHandling.useDefaultValuesForNull()) {
       Assert.assertEquals(Strings.isNullOrEmpty(out) ? null : out, exFn.apply(in));
     } else {
       Assert.assertEquals(Strings.isNullOrEmpty(out) ? "" : out, exFn.apply(in));
@@ -217,7 +217,7 @@ public class FunctionalExtractionTest
         null,
         false
     );
-    if (NullHandlingHelper.isNullOrEquivalent(fn.apply(null))) {
+    if (NullHandling.isNullOrEquivalent(fn.apply(null))) {
       Assert.assertEquals(null, exFn.apply(null));
     }
   }
