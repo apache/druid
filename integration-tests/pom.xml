@@ -26,7 +26,7 @@
     <parent>
         <groupId>io.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.11.1-SNAPSHOT</version>
+        <version>0.12.0-SNAPSHOT</version>
     </parent>
 
     <properties>
@@ -203,10 +203,15 @@
                             </execution>
                         </executions>
                         <configuration>
+                            <properties>
+                                <property>
+                                    <name>testrunfactory</name>
+                                    <value>org.testng.DruidTestRunnerFactory</value>
+                                </property>
+                            </properties>
                             <argLine>
                                 -Duser.timezone=UTC
                                 -Dfile.encoding=UTF-8
-                                -Dtestrunfactory=org.testng.DruidTestRunnerFactory
                                 -Ddruid.test.config.dockerIp=${env.DOCKER_IP}
                                 -Ddruid.test.config.hadoopDir=${env.HADOOP_DIR}
                                 -Ddruid.zk.service.host=${env.DOCKER_IP}
@@ -248,10 +253,15 @@
                             </execution>
                         </executions>
                         <configuration>
+                            <properties>
+                                <property>
+                                    <name>testrunfactory</name>
+                                    <value>org.testng.DruidTestRunnerFactory</value>
+                                </property>
+                            </properties>
                             <argLine>
                                 -Duser.timezone=UTC
                                 -Dfile.encoding=UTF-8
-                                -Dtestrunfactory=org.testng.DruidTestRunnerFactory
                                 -Ddruid.test.config.type=configFile
                                 -Ddruid.test.config.configFile=${env.CONFIG_FILE}
                             </argLine>
