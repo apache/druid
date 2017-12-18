@@ -26,6 +26,7 @@ import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.FullResponseHandler;
 import com.metamx.http.client.response.FullResponseHolder;
+import com.metamx.http.client.response.HttpResponseHandler;
 import io.druid.client.selector.Server;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.curator.discovery.ServerDiscoverySelector;
@@ -127,10 +128,18 @@ public class DruidLeaderClient
     return new Request(httpMethod, new URL(StringUtils.format("%s%s", getCurrentKnownLeader(true), urlPath)));
   }
 
+  public FullResponseHolder go(Request request) throws IOException, InterruptedException
+  {
+    return go(request, new FullResponseHandler(Charsets.UTF_8));
+  }
+
   /**
    * Executes a Request object aimed at the leader. Throws IOException if the leader cannot be located.
    */
-  public FullResponseHolder go(Request request) throws IOException, InterruptedException
+  public FullResponseHolder go(
+      Request request,
+      HttpResponseHandler<FullResponseHolder, FullResponseHolder> responseHandler
+  ) throws IOException, InterruptedException
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
     for (int counter = 0; counter < MAX_RETRIES; counter++) {
@@ -139,7 +148,7 @@ public class DruidLeaderClient
 
       try {
         try {
-          fullResponseHolder = httpClient.go(request, new FullResponseHandler(Charsets.UTF_8)).get();
+          fullResponseHolder = httpClient.go(request, responseHandler).get();
         }
         catch (ExecutionException e) {
           // Unwrap IOExceptions and ChannelExceptions, re-throw others

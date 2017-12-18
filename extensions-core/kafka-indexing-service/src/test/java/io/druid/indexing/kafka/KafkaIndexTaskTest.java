@@ -196,7 +196,7 @@ public class KafkaIndexTaskTest
   private final boolean isIncrementalHandoffSupported;
   private final Set<Integer> checkpointRequestsHash = Sets.newHashSet();
 
-  // This should be removed in versions greater that 0.11.1
+  // This should be removed in versions greater that 0.12.x
   // isIncrementalHandoffSupported should always be set to true in those later versions
   @Parameterized.Parameters(name = "isIncrementalHandoffSupported = {0}")
   public static Iterable<Object[]> constructorFeeder()
@@ -1130,7 +1130,7 @@ public class KafkaIndexTaskTest
     // Check published segments & metadata
     SegmentDescriptor desc1 = SD(task, "2010/P1D", 0);
     SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
-    // desc3 will not be created in KafkaIndexTask (0.11.1) as it does not create per Kafka partition Druid segments
+    // desc3 will not be created in KafkaIndexTask (0.12.x) as it does not create per Kafka partition Druid segments
     SegmentDescriptor desc3 = SD(task, "2011/P1D", 1);
     SegmentDescriptor desc4 = SD(task, "2012/P1D", 0);
     Assert.assertEquals(isIncrementalHandoffSupported
