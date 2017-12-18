@@ -126,7 +126,7 @@ public class CompressedVSizeIndexedV3WriterTest
       );
       CompressedVSizeIndexedV3Writer writer = new CompressedVSizeIndexedV3Writer(offsetWriter, valueWriter);
       CompressedVSizeIndexedV3Supplier supplierFromIterable = CompressedVSizeIndexedV3Supplier.fromIterable(
-          Iterables.transform(vals, ArrayBasedIndexedInts::of),
+          Iterables.transform(vals, ArrayBasedIndexedInts::new),
           offsetChunkFactor,
           maxValue,
           byteOrder,

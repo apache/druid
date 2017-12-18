@@ -202,10 +202,13 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn<St
       class SingleValueQueryableDimensionSelector extends QueryableDimensionSelector
           implements SingleValueHistoricalDimensionSelector
       {
+        private final SingleIndexedInt row = new SingleIndexedInt();
+
         @Override
         public IndexedInts getRow()
         {
-          return SingleIndexedInt.of(getRowValue());
+          row.setValue(getRowValue());
+          return row;
         }
 
         public int getRowValue()
@@ -216,7 +219,8 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn<St
         @Override
         public IndexedInts getRow(int offset)
         {
-          return SingleIndexedInt.of(getRowValue(offset));
+          row.setValue(getRowValue(offset));
+          return row;
         }
 
         @Override

@@ -30,6 +30,7 @@ import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIterable;
 import io.druid.segment.data.IndexedMultivalue;
+import io.druid.segment.data.SliceIndexedInts;
 import io.druid.segment.data.WritableSupplier;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
@@ -47,7 +48,6 @@ import java.util.Iterator;
  * the last element in the offsets represents the total length of values column.
  * values - indexed integer representing values in each row
  */
-
 public class CompressedVSizeIndexedSupplier implements WritableSupplier<IndexedMultivalue<IndexedInts>>
 {
   private static final byte version = 0x2;
@@ -154,11 +154,13 @@ public class CompressedVSizeIndexedSupplier implements WritableSupplier<IndexedM
     private final IndexedInts offsets;
     private final IndexedInts values;
 
+    private final SliceIndexedInts rowValues;
 
     CompressedVSizeIndexed(IndexedInts offsets, IndexedInts values)
     {
       this.offsets = offsets;
       this.values = values;
+      this.rowValues = new SliceIndexedInts(values);
     }
 
     @Override
@@ -185,36 +187,8 @@ public class CompressedVSizeIndexedSupplier implements WritableSupplier<IndexedM
     {
       final int offset = offsets.get(index);
       final int size = offsets.get(index + 1) - offset;
-
-      return new IndexedInts()
-      {
-        @Override
-        public int size()
-        {
-          return size;
-        }
-
-        @Override
-        public int get(int index)
-        {
-          if (index >= size) {
-            throw new IAE("Index[%d] >= size[%d]", index, size);
-          }
-          return values.get(index + offset);
-        }
-
-        @Override
-        public void close() throws IOException
-        {
-          // no-op
-        }
-
-        @Override
-        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-        {
-          inspector.visit("values", values);
-        }
-      };
+      rowValues.setValues(offset, size);
+      return rowValues;
     }
 
     @Override

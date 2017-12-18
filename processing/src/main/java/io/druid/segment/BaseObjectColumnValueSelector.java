@@ -33,6 +33,17 @@ import javax.annotation.Nullable;
 @PublicApi
 public interface BaseObjectColumnValueSelector<T>
 {
+  /**
+   * Returns the column value at the current position.
+   *
+   * IMPORTANT. The returned object could generally be reused inside the implementation of
+   * BaseObjectColumnValueSelector, i. e. this method could always return the same object for the same selector. Users
+   * of this API, such as {@link io.druid.query.aggregation.Aggregator#aggregate()}, {@link
+   * io.druid.query.aggregation.BufferAggregator#aggregate}, {@link io.druid.query.aggregation.AggregateCombiner#reset},
+   * {@link io.druid.query.aggregation.AggregateCombiner#fold} should be prepared for that and not storing the object
+   * returned from this method in their state, assuming that the object will remain unchanged even when the position of
+   * the selector changes. This may not be the case.
+   */
   @Nullable
   T getObject();
 
