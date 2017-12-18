@@ -6662,7 +6662,7 @@ public class CalciteQueryTest
     Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResults.size(), results.size());
     for (int i = 0; i < results.size(); i++) {
       Assert.assertArrayEquals(
-          StringUtils.format("result #%d: %s", i + 1, sql),
+          StringUtils.format("result #%d: %s obtainedResults: %s", i + 1, sql, results),
           expectedResults.get(i),
           results.get(i)
       );
