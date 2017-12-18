@@ -286,7 +286,7 @@ public class CompressionFactory
     LongEncodingReader duplicate();
   }
 
-  public static Supplier<IndexedLongs> getLongSupplier(
+  public static Supplier<ColumnarLongs> getLongSupplier(
       int totalSize,
       int sizePer,
       ByteBuffer fromBuffer,
@@ -296,9 +296,9 @@ public class CompressionFactory
   )
   {
     if (strategy == CompressionStrategy.NONE) {
-      return new EntireLayoutIndexedLongSupplier(totalSize, encodingFormat.getReader(fromBuffer, order));
+      return new EntireLayoutColumnarLongsSupplier(totalSize, encodingFormat.getReader(fromBuffer, order));
     } else {
-      return new BlockLayoutIndexedLongSupplier(
+      return new BlockLayoutColumnarLongsSupplier(
           totalSize,
           sizePer,
           fromBuffer,
@@ -309,7 +309,7 @@ public class CompressionFactory
     }
   }
 
-  public static LongSupplierSerializer getLongSerializer(
+  public static ColumnarLongsSerializer getLongSerializer(
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ByteOrder order,
@@ -318,12 +318,12 @@ public class CompressionFactory
   )
   {
     if (encodingStrategy == LongEncodingStrategy.AUTO) {
-      return new IntermediateLongSupplierSerializer(segmentWriteOutMedium, filenameBase, order, compressionStrategy);
+      return new IntermediateColumnarLongsSerializer(segmentWriteOutMedium, filenameBase, order, compressionStrategy);
     } else if (encodingStrategy == LongEncodingStrategy.LONGS) {
       if (compressionStrategy == CompressionStrategy.NONE) {
-        return new EntireLayoutLongSupplierSerializer(segmentWriteOutMedium, new LongsLongEncodingWriter(order));
+        return new EntireLayoutColumnarLongsSerializer(segmentWriteOutMedium, new LongsLongEncodingWriter(order));
       } else {
-        return new BlockLayoutLongSupplierSerializer(
+        return new BlockLayoutColumnarLongsSerializer(
             segmentWriteOutMedium,
             filenameBase,
             order,
@@ -338,7 +338,7 @@ public class CompressionFactory
 
   // Float currently does not support any encoding types, and stores values as 4 byte float
 
-  public static Supplier<IndexedFloats> getFloatSupplier(
+  public static Supplier<ColumnarFloats> getFloatSupplier(
       int totalSize,
       int sizePer,
       ByteBuffer fromBuffer,
@@ -347,13 +347,13 @@ public class CompressionFactory
   )
   {
     if (strategy == CompressionStrategy.NONE) {
-      return new EntireLayoutIndexedFloatSupplier(totalSize, fromBuffer, order);
+      return new EntireLayoutColumnarFloatsSupplier(totalSize, fromBuffer, order);
     } else {
-      return new BlockLayoutIndexedFloatSupplier(totalSize, sizePer, fromBuffer, order, strategy);
+      return new BlockLayoutColumnarFloatsSupplier(totalSize, sizePer, fromBuffer, order, strategy);
     }
   }
 
-  public static FloatSupplierSerializer getFloatSerializer(
+  public static ColumnarFloatsSerializer getFloatSerializer(
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ByteOrder order,
@@ -361,13 +361,13 @@ public class CompressionFactory
   )
   {
     if (compressionStrategy == CompressionStrategy.NONE) {
-      return new EntireLayoutFloatSupplierSerializer(segmentWriteOutMedium, order);
+      return new EntireLayoutColumnarFloatsSerializer(segmentWriteOutMedium, order);
     } else {
-      return new BlockLayoutFloatSupplierSerializer(segmentWriteOutMedium, filenameBase, order, compressionStrategy);
+      return new BlockLayoutColumnarFloatsSerializer(segmentWriteOutMedium, filenameBase, order, compressionStrategy);
     }
   }
 
-  public static Supplier<IndexedDoubles> getDoubleSupplier(
+  public static Supplier<ColumnarDoubles> getDoubleSupplier(
       int totalSize,
       int sizePer,
       ByteBuffer fromBuffer,
@@ -377,14 +377,14 @@ public class CompressionFactory
   {
     switch (strategy) {
       case NONE:
-        return new EntireLayoutIndexedDoubleSupplier(totalSize, fromBuffer, byteOrder);
+        return new EntireLayoutColumnarDoublesSupplier(totalSize, fromBuffer, byteOrder);
       default:
-        return new BlockLayoutIndexedDoubleSupplier(totalSize, sizePer, fromBuffer, byteOrder, strategy);
+        return new BlockLayoutColumnarDoublesSupplier(totalSize, sizePer, fromBuffer, byteOrder, strategy);
     }
 
   }
 
-  public static DoubleSupplierSerializer getDoubleSerializer(
+  public static ColumnarDoublesSerializer getDoubleSerializer(
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ByteOrder byteOrder,
@@ -392,9 +392,9 @@ public class CompressionFactory
   )
   {
     if (compression == CompressionStrategy.NONE) {
-      return new EntireLayoutDoubleSupplierSerializer(segmentWriteOutMedium, byteOrder);
+      return new EntireLayoutColumnarDoublesSerializer(segmentWriteOutMedium, byteOrder);
     } else {
-      return new BlockLayoutDoubleSupplierSerializer(segmentWriteOutMedium, filenameBase, byteOrder, compression);
+      return new BlockLayoutColumnarDoublesSerializer(segmentWriteOutMedium, filenameBase, byteOrder, compression);
     }
   }
 }

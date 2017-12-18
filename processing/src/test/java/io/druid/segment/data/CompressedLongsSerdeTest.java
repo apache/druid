@@ -129,7 +129,7 @@ public class CompressedLongsSerdeTest
 
   public void testValues(long[] values) throws Exception
   {
-    LongSupplierSerializer serializer = CompressionFactory.getLongSerializer(
+    ColumnarLongsSerializer serializer = CompressionFactory.getLongSerializer(
         new OffHeapMemorySegmentWriteOutMedium(),
         "test",
         order,
@@ -146,9 +146,9 @@ public class CompressedLongsSerdeTest
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     serializer.writeTo(Channels.newChannel(baos), null);
     Assert.assertEquals(baos.size(), serializer.getSerializedSize());
-    CompressedLongsIndexedSupplier supplier = CompressedLongsIndexedSupplier
+    CompressedColumnarLongsSupplier supplier = CompressedColumnarLongsSupplier
         .fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order);
-    IndexedLongs longs = supplier.get();
+    ColumnarLongs longs = supplier.get();
 
     assertIndexMatchesVals(longs, values);
     for (int i = 0; i < 10; i++) {
@@ -164,7 +164,7 @@ public class CompressedLongsSerdeTest
     longs.close();
   }
 
-  private void tryFill(IndexedLongs indexed, long[] vals, final int startIndex, final int size)
+  private void tryFill(ColumnarLongs indexed, long[] vals, final int startIndex, final int size)
   {
     long[] filled = new long[size];
     indexed.fill(startIndex, filled);
@@ -174,7 +174,7 @@ public class CompressedLongsSerdeTest
     }
   }
 
-  private void assertIndexMatchesVals(IndexedLongs indexed, long[] vals)
+  private void assertIndexMatchesVals(ColumnarLongs indexed, long[] vals)
   {
     Assert.assertEquals(vals.length, indexed.size());
 
@@ -194,26 +194,26 @@ public class CompressedLongsSerdeTest
     }
   }
 
-  private void testSupplierSerde(CompressedLongsIndexedSupplier supplier, long[] vals) throws IOException
+  private void testSupplierSerde(CompressedColumnarLongsSupplier supplier, long[] vals) throws IOException
   {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     supplier.writeTo(Channels.newChannel(baos), null);
 
     final byte[] bytes = baos.toByteArray();
     Assert.assertEquals(supplier.getSerializedSize(), bytes.length);
-    CompressedLongsIndexedSupplier anotherSupplier = CompressedLongsIndexedSupplier.fromByteBuffer(
+    CompressedColumnarLongsSupplier anotherSupplier = CompressedColumnarLongsSupplier.fromByteBuffer(
         ByteBuffer.wrap(bytes),
         order
     );
-    IndexedLongs indexed = anotherSupplier.get();
+    ColumnarLongs indexed = anotherSupplier.get();
     assertIndexMatchesVals(indexed, vals);
   }
 
   // This test attempts to cause a race condition with the DirectByteBuffers, it's non-deterministic in causing it,
   // which sucks but I can't think of a way to deterministically cause it...
   private void testConcurrentThreadReads(
-      final Supplier<IndexedLongs> supplier,
-      final IndexedLongs indexed, final long[] vals
+      final Supplier<ColumnarLongs> supplier,
+      final ColumnarLongs indexed, final long[] vals
   ) throws Exception
   {
     final AtomicReference<String> reason = new AtomicReference<String>("none");
@@ -261,7 +261,7 @@ public class CompressedLongsSerdeTest
       }
     }).start();
 
-    final IndexedLongs indexed2 = supplier.get();
+    final ColumnarLongs indexed2 = supplier.get();
     try {
       new Thread(new Runnable()
       {

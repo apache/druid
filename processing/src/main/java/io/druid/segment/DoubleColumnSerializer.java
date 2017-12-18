@@ -24,7 +24,7 @@ import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.CompressionStrategy;
-import io.druid.segment.data.DoubleSupplierSerializer;
+import io.druid.segment.data.ColumnarDoublesSerializer;
 
 import java.io.IOException;
 import java.nio.ByteOrder;
@@ -45,7 +45,7 @@ public class DoubleColumnSerializer implements GenericColumnSerializer
   private final String filenameBase;
   private final ByteOrder byteOrder;
   private final CompressionStrategy compression;
-  private DoubleSupplierSerializer writer;
+  private ColumnarDoublesSerializer writer;
 
   private DoubleColumnSerializer(
       SegmentWriteOutMedium segmentWriteOutMedium,

@@ -27,7 +27,7 @@ import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.CompressionStrategy;
-import io.druid.segment.data.LongSupplierSerializer;
+import io.druid.segment.data.ColumnarLongsSerializer;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -139,7 +139,7 @@ public class LongCompressionBenchmarkFileGenerator
           compFile.delete();
           File dataFile = new File(dir, entry.getKey());
 
-          LongSupplierSerializer writer = CompressionFactory.getLongSerializer(
+          ColumnarLongsSerializer writer = CompressionFactory.getLongSerializer(
               new OffHeapMemorySegmentWriteOutMedium(),
               "long",
               ByteOrder.nativeOrder(),
