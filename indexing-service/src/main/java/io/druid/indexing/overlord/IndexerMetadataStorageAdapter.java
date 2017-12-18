@@ -49,7 +49,11 @@ public class IndexerMetadataStorageAdapter
     final Optional<DateTime> minCreatedDateOfActiveTasks = taskStorageQueryAdapter
         .getActiveTasks()
         .stream()
-        .map(task -> taskStorageQueryAdapter.getCreatedTime(task.getId()))
+        .map(task -> Preconditions.checkNotNull(
+            taskStorageQueryAdapter.getCreatedTime(task.getId()),
+            "Can't find the createdTime for task[%s]",
+            task.getId()
+        ))
         .min(Comparator.naturalOrder());
 
     final Interval activeTaskInterval = new Interval(
