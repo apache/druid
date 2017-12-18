@@ -62,6 +62,7 @@ public class RetryUtils
     Preconditions.checkArgument(maxTries > 0, "maxTries > 0");
     Preconditions.checkArgument(quietTries >= 0, "quietTries >= 0");
     int nTry = 0;
+    final int maxRetries = maxTries - 1;
     while (true) {
       try {
         nTry++;
@@ -69,7 +70,7 @@ public class RetryUtils
       }
       catch (Throwable e) {
         if (nTry < maxTries && shouldRetry.apply(e)) {
-          awaitNextRetry(e, messageOnRetry, nTry, maxTries, nTry <= quietTries);
+          awaitNextRetry(e, messageOnRetry, nTry, maxRetries, nTry <= quietTries);
         } else {
           Throwables.propagateIfInstanceOf(e, Exception.class);
           throw Throwables.propagate(e);
@@ -100,19 +101,18 @@ public class RetryUtils
       final Throwable e,
       @Nullable final String messageOnRetry,
       final int nTry,
-      final int maxTries,
+      final int maxRetries,
       final boolean quiet
   ) throws InterruptedException
   {
     final long sleepMillis = nextRetrySleepMillis(nTry);
-    final int nRetry = nTry + 1;
     final String fullMessage = messageOnRetry == null ?
-                               StringUtils.format("Retrying (%d of %d) in %,dms.", nRetry, maxTries, sleepMillis) :
+                               StringUtils.format("Retrying (%d of %d) in %,dms.", nTry, maxRetries, sleepMillis) :
                                StringUtils.format(
                                    "%s, retrying (%d of %d) in %,dms.",
                                    messageOnRetry,
-                                   nRetry,
-                                   maxTries,
+                                   nTry,
+                                   maxRetries,
                                    sleepMillis
                                );
 

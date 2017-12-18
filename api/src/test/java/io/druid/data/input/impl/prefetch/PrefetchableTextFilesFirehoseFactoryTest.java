@@ -49,6 +49,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
@@ -175,6 +176,25 @@ public class PrefetchableTextFilesFirehoseFactoryTest
   {
     final TestPrefetchableTextFilesFirehoseFactory factory =
         TestPrefetchableTextFilesFirehoseFactory.with(TEST_DIR, 0, 0);
+
+    final List<Row> rows = new ArrayList<>();
+    final File firehoseTmpDir = createFirehoseTmpDir("testWithoutCacheAndFetch");
+    try (Firehose firehose = factory.connect(parser, firehoseTmpDir)) {
+      while (firehose.hasMore()) {
+        rows.add(firehose.nextRow());
+      }
+    }
+
+    Assert.assertEquals(0, factory.getCacheManager().getTotalCachedBytes());
+    assertResult(rows);
+    assertNumRemainingCacheFiles(firehoseTmpDir, 0);
+  }
+
+  @Test
+  public void testWithoutCacheAndFetchAgainstConnectionReset() throws IOException
+  {
+    final TestPrefetchableTextFilesFirehoseFactory factory =
+        TestPrefetchableTextFilesFirehoseFactory.withConnectionResets(TEST_DIR, 0, 0, 2);
 
     final List<Row> rows = new ArrayList<>();
     final File firehoseTmpDir = createFirehoseTmpDir("testWithoutCacheAndFetch");
@@ -381,7 +401,8 @@ public class PrefetchableTextFilesFirehoseFactoryTest
   {
     private final long sleepMillis;
     private final File baseDir;
-    private int openExceptionCount;
+    private int numOpenExceptions;
+    private int maxConnectionResets;
 
     static TestPrefetchableTextFilesFirehoseFactory with(File baseDir, long cacheCapacity, long fetchCapacity)
     {
@@ -392,24 +413,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
           fetchCapacity,
           3,
           0,
-          0
-      );
-    }
-
-    static TestPrefetchableTextFilesFirehoseFactory with(
-        File baseDir,
-        long cacheCapacity,
-        long fetchCapacity,
-        int openExceptionCount
-    )
-    {
-      return new TestPrefetchableTextFilesFirehoseFactory(
-          baseDir,
-          1024,
-          cacheCapacity,
-          fetchCapacity,
-          3,
-          openExceptionCount,
+          0,
           0
       );
     }
@@ -422,6 +426,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
           2048,
           2048,
           3,
+          0,
           0,
           0
       );
@@ -436,6 +441,26 @@ public class PrefetchableTextFilesFirehoseFactoryTest
           2048,
           3,
           count,
+          0,
+          0
+      );
+    }
+
+    static TestPrefetchableTextFilesFirehoseFactory withConnectionResets(
+        File baseDir,
+        long cacheCapacity,
+        long fetchCapacity,
+        int numConnectionResets
+    )
+    {
+      return new TestPrefetchableTextFilesFirehoseFactory(
+          baseDir,
+          fetchCapacity / 2,
+          cacheCapacity,
+          fetchCapacity,
+          3,
+          0,
+          numConnectionResets,
           0
       );
     }
@@ -449,6 +474,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
           2048,
           100,
           3,
+          0,
           0,
           ms
       );
@@ -470,7 +496,8 @@ public class PrefetchableTextFilesFirehoseFactoryTest
         long maxCacheCapacityBytes,
         long maxFetchCapacityBytes,
         int maxRetry,
-        int openExceptionCount,
+        int numOpenExceptions,
+        int numConnectionResets,
         long sleepMillis
     )
     {
@@ -481,7 +508,8 @@ public class PrefetchableTextFilesFirehoseFactoryTest
           maxFetchCapacityBytes,
           computeTimeout(maxRetry),
           maxRetry,
-          openExceptionCount,
+          numOpenExceptions,
+          numConnectionResets,
           sleepMillis
       );
     }
@@ -493,7 +521,8 @@ public class PrefetchableTextFilesFirehoseFactoryTest
         long maxFetchCapacityBytes,
         long timeout,
         int maxRetry,
-        int openExceptionCount,
+        int numOpenExceptions,
+        int maxConnectionResets,
         long sleepMillis
     )
     {
@@ -504,7 +533,8 @@ public class PrefetchableTextFilesFirehoseFactoryTest
           timeout,
           maxRetry
       );
-      this.openExceptionCount = openExceptionCount;
+      this.numOpenExceptions = numOpenExceptions;
+      this.maxConnectionResets = maxConnectionResets;
       this.sleepMillis = sleepMillis;
       this.baseDir = baseDir;
     }
@@ -522,8 +552,8 @@ public class PrefetchableTextFilesFirehoseFactoryTest
     @Override
     protected InputStream openObjectStream(File object) throws IOException
     {
-      if (openExceptionCount > 0) {
-        openExceptionCount--;
+      if (numOpenExceptions > 0) {
+        numOpenExceptions--;
         throw new IOException("Exception for retry test");
       }
       if (sleepMillis > 0) {
@@ -534,7 +564,9 @@ public class PrefetchableTextFilesFirehoseFactoryTest
           throw new RuntimeException(e);
         }
       }
-      return FileUtils.openInputStream(object);
+      return maxConnectionResets > 0 ?
+             new TestInputStream(FileUtils.openInputStream(object), maxConnectionResets) :
+             FileUtils.openInputStream(object);
     }
 
     @Override
@@ -547,6 +579,71 @@ public class PrefetchableTextFilesFirehoseFactoryTest
     protected Predicate<Throwable> getRetryCondition()
     {
       return e -> e instanceof IOException;
+    }
+
+    @Override
+    protected InputStream openObjectStream(File object, long start) throws IOException
+    {
+      if (numOpenExceptions > 0) {
+        numOpenExceptions--;
+        throw new IOException("Exception for retry test");
+      }
+      if (sleepMillis > 0) {
+        try {
+          Thread.sleep(sleepMillis);
+        }
+        catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+      }
+
+      final InputStream in = FileUtils.openInputStream(object);
+      in.skip(start);
+
+      return maxConnectionResets > 0 ? new TestInputStream(in, maxConnectionResets) : in;
+    }
+
+    private int readCount;
+    private int numConnectionResets;
+
+    private class TestInputStream extends InputStream
+    {
+      private static final int NUM_READ_COUNTS_BEFORE_ERROR = 10;
+      private final InputStream delegate;
+      private final int maxConnectionResets;
+
+      TestInputStream(
+          InputStream delegate,
+          int maxConnectionResets
+      )
+      {
+        this.delegate = delegate;
+        this.maxConnectionResets = maxConnectionResets;
+      }
+
+      @Override
+      public int read() throws IOException
+      {
+        if (readCount++ % NUM_READ_COUNTS_BEFORE_ERROR == 0) {
+          if (numConnectionResets++ < maxConnectionResets) {
+            // Simulate connection reset
+            throw new IllegalArgumentException(new SocketTimeoutException("Test connection reset"));
+          }
+        }
+        return delegate.read();
+      }
+
+      @Override
+      public int read(byte b[], int off, int len) throws IOException
+      {
+        if (readCount++ % NUM_READ_COUNTS_BEFORE_ERROR == 0) {
+          if (numConnectionResets++ < maxConnectionResets) {
+            // Simulate connection reset
+            throw new IllegalArgumentException(new SocketTimeoutException("Test connection reset"));
+          }
+        }
+        return delegate.read(b, off, len);
+      }
     }
   }
 }

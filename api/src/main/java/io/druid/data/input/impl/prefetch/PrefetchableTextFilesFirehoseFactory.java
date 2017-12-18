@@ -194,7 +194,20 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
         prefetchTriggerBytes,
         fetchTimeout,
         maxFetchRetry,
-        this::openObjectStream,
+        new ObjectOpenFunction<T>()
+        {
+          @Override
+          public InputStream open(T object) throws IOException
+          {
+            return openObjectStream(object);
+          }
+
+          @Override
+          public InputStream open(T object, long start) throws IOException
+          {
+            return openObjectStream(object, start);
+          }
+        },
         getRetryCondition()
     );
 
@@ -246,7 +259,22 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
     );
   }
 
+  /**
+   * Returns a predicate describing retry conditions. {@link Fetcher} and {@link RetryingInputStream} will retry on the
+   * errors satisfying this condition.
+   */
   protected abstract Predicate<Throwable> getRetryCondition();
+
+  /**
+   * Open an input stream from the given object.  If the object is compressed, this method should return a byte stream
+   * as it is compressed.  The object compression should be handled in {@link #wrapObjectStream(Object, InputStream)}.
+   *
+   * @param object an object to be read
+   * @param start  start offset
+   *
+   * @return an input stream for the object
+   */
+  protected abstract InputStream openObjectStream(T object, long start) throws IOException;
 
   /**
    * This class calls the {@link Closeable#close()} method of the resourceCloser when it is closed.

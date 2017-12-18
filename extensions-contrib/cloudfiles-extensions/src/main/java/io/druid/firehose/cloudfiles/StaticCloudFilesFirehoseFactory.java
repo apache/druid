@@ -75,6 +75,17 @@ public class StaticCloudFilesFirehoseFactory extends PrefetchableTextFilesFireho
   @Override
   protected InputStream openObjectStream(CloudFilesBlob object) throws IOException
   {
+    return createCloudFilesByteSource(object).openStream();
+  }
+
+  @Override
+  protected InputStream openObjectStream(CloudFilesBlob object, long start) throws IOException
+  {
+    return createCloudFilesByteSource(object).openStream(start);
+  }
+
+  private CloudFilesByteSource createCloudFilesByteSource(CloudFilesBlob object)
+  {
     final String region = object.getRegion();
     final String container = object.getContainer();
     final String path = object.getPath();
@@ -84,9 +95,7 @@ public class StaticCloudFilesFirehoseFactory extends PrefetchableTextFilesFireho
     );
     CloudFilesObjectApiProxy objectApi = new CloudFilesObjectApiProxy(
         cloudFilesApi, region, container);
-    final CloudFilesByteSource byteSource = new CloudFilesByteSource(objectApi, path);
-
-    return byteSource.openStream();
+    return new CloudFilesByteSource(objectApi, path);
   }
 
   @Override

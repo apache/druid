@@ -78,6 +78,15 @@ public class StaticAzureBlobStoreFirehoseFactory extends PrefetchableTextFilesFi
   }
 
   @Override
+  protected InputStream openObjectStream(AzureBlob object, long start) throws IOException
+  {
+    // BlobInputStream.skip() moves the next read offset instead of skipping first 'start' bytes.
+    final InputStream in = openObjectStream(object);
+    in.skip(start);
+    return in;
+  }
+
+  @Override
   protected InputStream wrapObjectStream(AzureBlob object, InputStream stream) throws IOException
   {
     return object.getPath().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;

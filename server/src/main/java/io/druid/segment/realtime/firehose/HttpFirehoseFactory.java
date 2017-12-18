@@ -21,20 +21,27 @@ package io.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import io.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.logger.Logger;
+import org.apache.http.HttpHeaders;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.net.URLConnection;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
 public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<URI>
 {
+  private static final Logger log = new Logger(HttpFirehoseFactory.class);
   private final List<URI> uris;
+  private final boolean supportContentRange;
 
   @JsonCreator
   public HttpFirehoseFactory(
@@ -44,10 +51,15 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
       @JsonProperty("prefetchTriggerBytes") Long prefetchTriggerBytes,
       @JsonProperty("fetchTimeout") Long fetchTimeout,
       @JsonProperty("maxFetchRetry") Integer maxFetchRetry
-  )
+  ) throws IOException
   {
     super(maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
     this.uris = uris;
+
+    Preconditions.checkArgument(uris.size() > 0, "Empty URIs");
+    final URLConnection connection = uris.get(0).toURL().openConnection();
+    final String acceptRanges = connection.getHeaderField(HttpHeaders.ACCEPT_RANGES);
+    this.supportContentRange = acceptRanges != null && acceptRanges.equalsIgnoreCase("bytes");
   }
 
   @JsonProperty
@@ -66,6 +78,25 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
   protected InputStream openObjectStream(URI object) throws IOException
   {
     return object.toURL().openConnection().getInputStream();
+  }
+
+  @Override
+  protected InputStream openObjectStream(URI object, long start) throws IOException
+  {
+    if (supportContentRange) {
+      final URLConnection connection = object.toURL().openConnection();
+      connection.addRequestProperty(HttpHeaders.RANGE, StringUtils.format("bytes=%d-", start));
+      return connection.getInputStream();
+    } else {
+      log.warn(
+          "Since the input source doesn't support range requests, the object input stream is opened from the start and "
+          + "then skipped. This may make the ingestion speed slower. Consider enabling prefetch if you see this message"
+          + " a lot."
+      );
+      final InputStream in = openObjectStream(object);
+      in.skip(start);
+      return in;
+    }
   }
 
   @Override

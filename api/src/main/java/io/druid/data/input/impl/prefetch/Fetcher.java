@@ -194,7 +194,7 @@ public class Fetcher<T> implements Iterator<OpenedObject<T>>
             }
           },
           retryCondition,
-          maxFetchRetry,
+          maxFetchRetry + 1,
           StringUtils.format("Failed to download object[%s]", object)
       );
     }

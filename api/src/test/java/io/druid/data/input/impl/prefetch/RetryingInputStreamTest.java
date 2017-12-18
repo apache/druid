@@ -62,7 +62,22 @@ public class RetryingInputStreamTest
 
     inputStream = new RetryingInputStream<>(
         testFile,
-        file -> new TestInputStream(new FileInputStream(file)),
+        new ObjectOpenFunction<File>()
+        {
+          @Override
+          public InputStream open(File object) throws IOException
+          {
+            return new TestInputStream(new FileInputStream(object));
+          }
+
+          @Override
+          public InputStream open(File object, long start) throws IOException
+          {
+            final FileInputStream fis = new FileInputStream(object);
+            fis.skip(start);
+            return new TestInputStream(fis);
+          }
+        },
         e -> e instanceof IOException,
         MAX_RETRY
     );

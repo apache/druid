@@ -191,6 +191,28 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   }
 
   @Override
+  protected InputStream openObjectStream(S3Object object, long start) throws IOException
+  {
+    try {
+      final S3Object result = s3Client.getObject(
+          object.getBucketName(),
+          object.getKey(),
+          null,
+          null,
+          null,
+          null,
+          start,
+          null
+      );
+
+      return result.getDataInputStream();
+    }
+    catch (ServiceException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
   protected InputStream wrapObjectStream(S3Object object, InputStream stream) throws IOException
   {
     return object.getKey().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;

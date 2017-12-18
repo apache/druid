@@ -21,6 +21,7 @@ package io.druid.storage.google;
 
 import com.google.api.client.http.AbstractInputStreamContent;
 import com.google.api.services.storage.Storage;
+import com.google.api.services.storage.Storage.Objects.Get;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -47,6 +48,14 @@ public class GoogleStorage
     Storage.Objects.Get getObject = storage.objects().get(bucket, path);
     getObject.getMediaHttpDownloader().setDirectDownloadEnabled(false);
     return getObject.executeMediaAsInputStream();
+  }
+
+  public InputStream get(final String bucket, final String path, long start) throws IOException
+  {
+    final Get get = storage.objects().get(bucket, path);
+    get.getMediaHttpDownloader().setBytesDownloaded(start);
+    get.getMediaHttpDownloader().setDirectDownloadEnabled(false);
+    return get.executeMediaAsInputStream();
   }
 
   public void delete(final String bucket, final String path) throws IOException

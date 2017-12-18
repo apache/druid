@@ -63,4 +63,19 @@ public class CloudFilesByteSource extends ByteSource
       throw Throwables.propagate(e);
     }
   }
+
+  public InputStream openStream(long start) throws IOException
+  {
+    payload = (payload == null) ? objectApi.get(path, start).getPayload() : payload;
+
+    try {
+      return payload.openStream();
+    }
+    catch (IOException e) {
+      if (CloudFilesUtils.CLOUDFILESRETRY.apply(e)) {
+        throw new IOException("Recoverable exception", e);
+      }
+      throw Throwables.propagate(e);
+    }
+  }
 }

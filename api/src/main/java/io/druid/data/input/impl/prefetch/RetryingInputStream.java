@@ -21,26 +21,25 @@ package io.druid.data.input.impl.prefetch;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.io.CountingInputStream;
 import io.druid.java.util.common.RetryUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.SocketTimeoutException;
-import java.util.concurrent.Callable;
 
 class RetryingInputStream<T> extends InputStream
 {
   private final Predicate<Throwable> retryCondition;
-  private final int maxRetry;
+  private final int maxTry;
 
-  private InputStream delegate;
-  private long readMark;
+  private CountingInputStream delegate;
 
   RetryingInputStream(
       T object,
       ObjectOpenFunction<T> objectOpenFunction,
       Predicate<Throwable> retryCondition,
-      int maxRetry
+      int maxTry
   ) throws IOException
   {
     this.retryCondition = t -> {
@@ -48,10 +47,9 @@ class RetryingInputStream<T> extends InputStream
 
       if (t instanceof SocketTimeoutException || t.getCause() instanceof SocketTimeoutException) {
         try {
-          this.delegate.close();
-          this.delegate = objectOpenFunction.open(object);
-
-          delegate.skip(readMark);
+          final long count = delegate.getCount();
+          delegate.close();
+          delegate = new CountingInputStream(objectOpenFunction.open(object, count));
           return true;
         }
         catch (IOException ioe) {
@@ -62,18 +60,9 @@ class RetryingInputStream<T> extends InputStream
 
       return retryCondition.apply(t);
     };
-    this.maxRetry = maxRetry;
 
-    this.delegate = objectOpenFunction.open(object);
-  }
-
-  private <V extends Number> Callable<V> wrap(Callable<V> fn)
-  {
-    return () -> {
-      final V result = fn.call();
-      readMark += result.longValue();
-      return result;
-    };
+    this.maxTry = maxTry + 1;
+    this.delegate = new CountingInputStream(objectOpenFunction.open(object));
   }
 
   @Override
@@ -81,9 +70,9 @@ class RetryingInputStream<T> extends InputStream
   {
     try {
       return RetryUtils.retry(
-          wrap(delegate::read),
+          delegate::read,
           retryCondition,
-          maxRetry
+          maxTry
       );
     }
     catch (Exception e) {
@@ -96,9 +85,9 @@ class RetryingInputStream<T> extends InputStream
   {
     try {
       return RetryUtils.retry(
-          wrap(() -> delegate.read(b)),
+          () -> delegate.read(b),
           retryCondition,
-          maxRetry
+          maxTry
       );
     }
     catch (Exception e) {
@@ -111,9 +100,9 @@ class RetryingInputStream<T> extends InputStream
   {
     try {
       return RetryUtils.retry(
-          wrap(() -> delegate.read(b, off, len)),
+          () -> delegate.read(b, off, len),
           retryCondition,
-          maxRetry
+          maxTry
       );
     }
     catch (Exception e) {
@@ -126,9 +115,9 @@ class RetryingInputStream<T> extends InputStream
   {
     try {
       return RetryUtils.retry(
-          wrap(() -> delegate.skip(n)),
+          () -> delegate.skip(n),
           retryCondition,
-          maxRetry
+          maxTry
       );
     }
     catch (Exception e) {
@@ -143,7 +132,7 @@ class RetryingInputStream<T> extends InputStream
       return RetryUtils.retry(
           delegate::available,
           retryCondition,
-          maxRetry
+          maxTry
       );
     }
     catch (Exception e) {
@@ -154,69 +143,6 @@ class RetryingInputStream<T> extends InputStream
   @Override
   public void close() throws IOException
   {
-    try {
-      RetryUtils.retry(
-          () -> {
-            delegate.close();
-            return null;
-          },
-          retryCondition,
-          maxRetry
-      );
-    }
-    catch (Exception e) {
-      throw new IOException(e);
-    }
-  }
-
-  @Override
-  public void mark(int readlimit)
-  {
-    try {
-      RetryUtils.retry(
-          () -> {
-            delegate.mark(readlimit);
-            return null;
-          },
-          retryCondition,
-          maxRetry
-      );
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  @Override
-  public void reset() throws IOException
-  {
-    try {
-      RetryUtils.retry(
-          () -> {
-            delegate.reset();
-            return null;
-          },
-          retryCondition,
-          maxRetry
-      );
-    }
-    catch (Exception e) {
-      throw new IOException(e);
-    }
-  }
-
-  @Override
-  public boolean markSupported()
-  {
-    try {
-      return RetryUtils.retry(
-          delegate::markSupported,
-          retryCondition,
-          maxRetry
-      );
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
+    delegate.close();
   }
 }
