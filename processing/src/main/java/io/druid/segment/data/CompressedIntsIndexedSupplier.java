@@ -21,7 +21,6 @@ package io.druid.segment.data;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.io.Closeables;
 import com.google.common.primitives.Ints;
 import io.druid.collections.ResourceHolder;
 import io.druid.java.util.common.IAE;
@@ -74,8 +73,8 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
   {
     final int div = Integer.numberOfTrailingZeros(sizePer);
     final int rem = sizePer - 1;
-    final boolean powerOf2 = sizePer == (1 << div);
-    if (powerOf2) {
+    final boolean isPowerOf2 = sizePer == (1 << div);
+    if (isPowerOf2) {
       return new CompressedIndexedInts()
       {
         @Override
@@ -84,12 +83,12 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
           // optimize division and remainder for powers of 2
           final int bufferNum = index >> div;
 
-          if (bufferNum != currIndex) {
+          if (bufferNum != currBufferNum) {
             loadBuffer(bufferNum);
           }
 
           final int bufferIndex = index & rem;
-          return buffer.get(buffer.position() + bufferIndex);
+          return buffer.get(bufferIndex);
         }
       };
     } else {
@@ -272,8 +271,9 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
   {
     final Indexed<ResourceHolder<ByteBuffer>> singleThreadedIntBuffers = baseIntBuffers.singleThreaded();
 
-    int currIndex = -1;
+    int currBufferNum = -1;
     ResourceHolder<ByteBuffer> holder;
+    /** buffer's position must be 0 */
     IntBuffer buffer;
 
     @Override
@@ -285,39 +285,43 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
     @Override
     public int get(int index)
     {
+      // division + remainder is optimized by the compiler so keep those together
       final int bufferNum = index / sizePer;
       final int bufferIndex = index % sizePer;
 
-      if (bufferNum != currIndex) {
+      if (bufferNum != currBufferNum) {
         loadBuffer(bufferNum);
       }
 
-      return buffer.get(buffer.position() + bufferIndex);
+      return buffer.get(bufferIndex);
     }
 
     protected void loadBuffer(int bufferNum)
     {
       CloseQuietly.close(holder);
       holder = singleThreadedIntBuffers.get(bufferNum);
+      // asIntBuffer() makes the buffer's position = 0
       buffer = holder.get().asIntBuffer();
-      currIndex = bufferNum;
+      currBufferNum = bufferNum;
+    }
+
+    @Override
+    public void close()
+    {
+      if (holder != null) {
+        holder.close();
+      }
     }
 
     @Override
     public String toString()
     {
       return "CompressedIntsIndexedSupplier_Anonymous{" +
-             "currIndex=" + currIndex +
+             "currBufferNum=" + currBufferNum +
              ", sizePer=" + sizePer +
              ", numChunks=" + singleThreadedIntBuffers.size() +
              ", totalSize=" + totalSize +
              '}';
-    }
-
-    @Override
-    public void close() throws IOException
-    {
-      Closeables.close(holder, false);
     }
 
     @Override
