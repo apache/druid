@@ -34,11 +34,6 @@ public class EmptyDistinctCountAggregator implements Aggregator
   }
 
   @Override
-  public void reset()
-  {
-  }
-
-  @Override
   public Object get()
   {
     return 0L;

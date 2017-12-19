@@ -69,12 +69,6 @@ public class ApproximateHistogramAggregator implements Aggregator
   }
 
   @Override
-  public void reset()
-  {
-    this.histogram = new ApproximateHistogram(resolution, lowerLimit, upperLimit);
-  }
-
-  @Override
   public Object get()
   {
     return histogram;

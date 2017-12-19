@@ -84,9 +84,6 @@ public class FloatFirstAggregationTest
     Assert.assertEquals(floats[1], result.rhs, 0.0001);
     Assert.assertEquals((long) floats[1], agg.getLong());
     Assert.assertEquals(floats[1], agg.getFloat(), 0.0001);
-
-    agg.reset();
-    Assert.assertEquals(0, ((Pair<Long, Float>) agg.get()).rhs, 0.0001);
   }
 
   @Test
@@ -136,9 +133,6 @@ public class FloatFirstAggregationTest
     Assert.assertEquals(expected.rhs, result.rhs, 0.0001);
     Assert.assertEquals(expected.rhs.longValue(), agg.getLong());
     Assert.assertEquals(expected.rhs, agg.getFloat(), 0.0001);
-
-    agg.reset();
-    Assert.assertEquals(0, ((Pair<Long, Float>) agg.get()).rhs, 0.0001);
   }
 
   @Test

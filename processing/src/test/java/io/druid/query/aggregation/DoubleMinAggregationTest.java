@@ -67,9 +67,6 @@ public class DoubleMinAggregationTest
     Assert.assertEquals(values[2], ((Double) agg.get()).doubleValue(), 0.0001);
     Assert.assertEquals((long) values[2], agg.getLong());
     Assert.assertEquals(values[2], agg.getFloat(), 0.0001);
-
-    agg.reset();
-    Assert.assertEquals(Double.POSITIVE_INFINITY, (Double) agg.get(), 0.0001);
   }
 
   @Test
