@@ -97,10 +97,12 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   private final ConcurrentMap<SegmentCallback, Predicate<Pair<DruidServerMetadata, DataSegment>>> segmentPredicates =
       new ConcurrentHashMap<>();
 
-  // Users of this instance can register filters for what segments should be stored and reported to registered
-  // listeners. For example, A Broker node can be configured to keep state for segments of specific DataSource
-  // by using this feature. In that way, Different Broker nodes can be used for dealing with Queries of Different
-  // DataSources and not maintaining any segment information of other DataSources in memory.
+  /**
+   * Users of this instance can register filters for what segments should be stored and reported to registered
+   * listeners. For example, A Broker node can be configured to keep state for segments of specific DataSource
+   * by using this feature. In that way, Different Broker nodes can be used for dealing with Queries of Different
+   * DataSources and not maintaining any segment information of other DataSources in memory.
+   */
   private final Predicate<Pair<DruidServerMetadata, DataSegment>> defaultFilter;
   private volatile Predicate<Pair<DruidServerMetadata, DataSegment>> finalPredicate;
 
