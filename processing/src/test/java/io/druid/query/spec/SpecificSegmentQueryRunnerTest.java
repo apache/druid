@@ -108,7 +108,7 @@ public class SpecificSegmentQueryRunnerTest
                                   )
                                   .build();
     Sequence results = queryRunner.run(QueryPlus.wrap(query), responseContext);
-    Sequences.toList(results, Lists.newArrayList());
+    results.toList();
     validate(mapper, descriptor, responseContext);
 
     // from toYielder
@@ -185,10 +185,7 @@ public class SpecificSegmentQueryRunnerTest
                                   )
                                   .build();
     Sequence results = queryRunner.run(QueryPlus.wrap(query), responseContext);
-    List<Result<TimeseriesResultValue>> res = Sequences.toList(
-        results,
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    List<Result<TimeseriesResultValue>> res = results.toList();
 
     Assert.assertEquals(1, res.size());
 

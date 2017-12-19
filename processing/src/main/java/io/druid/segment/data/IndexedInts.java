@@ -47,4 +47,16 @@ public interface IndexedInts extends Closeable, HotLoopCallee
       action.accept(get(i));
     }
   }
+
+  @SuppressWarnings("unused") // Set up your IDE to render IndexedInts impls using this method during debug.
+  default String debugToString()
+  {
+    StringBuilder sb = new StringBuilder("[");
+    forEach(v -> sb.append(v).append(',').append(' '));
+    if (sb.length() > 1) {
+      sb.setLength(sb.length() - 2);
+    }
+    sb.append(']');
+    return sb.toString();
+  }
 }

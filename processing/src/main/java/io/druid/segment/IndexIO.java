@@ -44,14 +44,12 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.Smoosh;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.ArrayIndexed;
 import io.druid.segment.data.BitmapSerde;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.ByteBufferSerializer;
@@ -69,6 +67,7 @@ import io.druid.segment.serde.DictionaryEncodedColumnSupplier;
 import io.druid.segment.serde.FloatGenericColumnSupplier;
 import io.druid.segment.serde.LongGenericColumnSupplier;
 import io.druid.segment.serde.SpatialIndexColumnPartSupplier;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -510,16 +509,15 @@ public class IndexIO
         colSet.add(metric);
       }
 
-      String[] cols = colSet.toArray(new String[colSet.size()]);
       columns.put(
-          Column.TIME_COLUMN_NAME, new ColumnBuilder()
+          Column.TIME_COLUMN_NAME,
+          new ColumnBuilder()
               .setType(ValueType.LONG)
               .setGenericColumn(new LongGenericColumnSupplier(index.timestamps))
               .build()
       );
       return new SimpleQueryableIndex(
           index.getDataInterval(),
-          new ArrayIndexed<>(cols, String.class),
           index.getAvailableDimensions(),
           new ConciseBitmapFactory(),
           columns,
@@ -608,7 +606,12 @@ public class IndexIO
       columns.put(Column.TIME_COLUMN_NAME, deserializeColumn(mapper, smooshedFiles.mapFile("__time"), smooshedFiles));
 
       final QueryableIndex index = new SimpleQueryableIndex(
-          dataInterval, cols, dims, segmentBitmapSerdeFactory.getBitmapFactory(), columns, smooshedFiles, metadata
+          dataInterval,
+          dims,
+          segmentBitmapSerdeFactory.getBitmapFactory(),
+          columns,
+          smooshedFiles,
+          metadata
       );
 
       log.debug("Mapped v9 index[%s] in %,d millis", inDir, System.currentTimeMillis() - startTime);
