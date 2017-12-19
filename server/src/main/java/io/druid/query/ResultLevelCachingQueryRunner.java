@@ -41,9 +41,7 @@ import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 
 public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
@@ -108,10 +106,11 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
             cacheKeyStr,
             newResultSetId
         );
-
         if (resultLevelCachePopulator == null) {
           return resultFromClient;
         }
+        final Function<T, Object> cacheFn = strategy.prepareForCache(true);
+
         return Sequences.wrap(Sequences.map(
             resultFromClient,
             new Function<T, T>()
@@ -119,7 +118,9 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
               @Override
               public T apply(T input)
               {
-                cacheResultEntry(resultLevelCachePopulator, input);
+                if (resultLevelCachePopulator.isShouldPopulate()) {
+                  resultLevelCachePopulator.cacheResultEntry(resultLevelCachePopulator, input, cacheFn);
+                }
                 return input;
               }
             }
@@ -128,14 +129,22 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
           @Override
           public void after(boolean isDone, Throwable thrown) throws Exception
           {
-            Preconditions.checkNotNull(resultLevelCachePopulator, "ResultLevelCachePopulator cannot be null during cache population");
+            Preconditions.checkNotNull(
+                resultLevelCachePopulator,
+                "ResultLevelCachePopulator cannot be null during cache population"
+            );
             if (thrown != null) {
-              log.error("Error while preparing for result level caching for query %s ", query.getId());
-            } else {
+              log.error(
+                  "Error while preparing for result level caching for query %s with error %s ",
+                  query.getId(),
+                  thrown.getMessage()
+              );
+            } else if (resultLevelCachePopulator.isShouldPopulate()) {
               // The resultset identifier and its length is cached along with the resultset
-              resultLevelCachePopulator.populateResults(newResultSetId);
+              resultLevelCachePopulator.populateResults();
               log.debug("Cache population complete for query %s", query.getId());
             }
+            resultLevelCachePopulator.cacheObjectStream.close();
           }
         });
       }
@@ -145,17 +154,6 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
           responseContext
       );
     }
-  }
-
-  private T cacheResultEntry(
-      ResultLevelCachePopulator resultLevelCachePopulator,
-      T resultEntry
-  )
-  {
-    final Function<T, Object> cacheFn = strategy.prepareForCache(true);
-    resultLevelCachePopulator.cacheObjects
-        .add(cacheFn.apply(resultEntry));
-    return resultEntry;
   }
 
   private byte[] fetchResultsFromResultLevelCache(
@@ -216,12 +214,25 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
   )
   {
     if (resultSetId != null && populateResultCache) {
-      return new ResultLevelCachePopulator(
+      ResultLevelCachePopulator resultLevelCachePopulator = new ResultLevelCachePopulator(
           cache,
           objectMapper,
           ResultLevelCacheUtil.computeResultLevelCacheKey(cacheKeyStr),
-          cacheConfig
+          cacheConfig,
+          true
       );
+      try {
+        //   Save the resultSetId and its length
+        resultLevelCachePopulator.cacheObjectStream.write(ByteBuffer.allocate(Integer.BYTES)
+                                                                    .putInt(resultSetId.length())
+                                                                    .array());
+        resultLevelCachePopulator.cacheObjectStream.write(StringUtils.toUtf8(resultSetId));
+      }
+      catch (IOException ioe) {
+        log.error("Failed to write cached values for query %s", query.getId());
+        return null;
+      }
+      return resultLevelCachePopulator;
     } else {
       return null;
     }
@@ -232,60 +243,59 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
     private final Cache cache;
     private final ObjectMapper mapper;
     private final Cache.NamedKey key;
-    private final List<Object> cacheObjects = new ArrayList<>();
     private final CacheConfig cacheConfig;
+    private final ByteArrayOutputStream cacheObjectStream = new ByteArrayOutputStream();
+
+    public boolean isShouldPopulate()
+    {
+      return shouldPopulate;
+    }
+
+    private boolean shouldPopulate;
 
     private ResultLevelCachePopulator(
         Cache cache,
         ObjectMapper mapper,
         Cache.NamedKey key,
-        CacheConfig cacheConfig
+        CacheConfig cacheConfig,
+        boolean shouldPopulate
     )
     {
       this.cache = cache;
       this.mapper = mapper;
       this.key = key;
       this.cacheConfig = cacheConfig;
+      this.shouldPopulate = shouldPopulate;
     }
 
-    public void populateResults(String resultSetIdentifier)
+    private void cacheResultEntry(
+        ResultLevelCachePopulator resultLevelCachePopulator,
+        T resultEntry,
+        Function<T, Object> cacheFn
+    )
     {
-      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-      try {
-        // Save the resultSetId and its length
-        bytes.write(ByteBuffer.allocate(Integer.BYTES).putInt(resultSetIdentifier.length()).array());
-        bytes.write(StringUtils.toUtf8(resultSetIdentifier));
-        byte[] resultBytes = fetchResultBytes(bytes, cacheConfig.getCacheBulkMergeLimit());
-        if (resultBytes != null) {
-          ResultLevelCacheUtil.populate(
-              cache,
-              key,
-              resultBytes
-          );
-        }
-        // Help out GC by making sure all references are gone
-        cacheObjects.clear();
+
+      int cacheLimit = cacheConfig.getResultLevelCacheLimit();
+      if (cacheLimit > 0 && resultLevelCachePopulator.cacheObjectStream.size() > cacheLimit) {
+        shouldPopulate = false;
+        return;
       }
-      catch (IOException ioe) {
-        log.error("Failed to write cached values for query %s", query.getId());
+      try (JsonGenerator gen = mapper.getFactory().createGenerator(resultLevelCachePopulator.cacheObjectStream)) {
+        gen.writeObject(cacheFn.apply(resultEntry));
+      }
+      catch (IOException ex) {
+        log.error("Failed to retrieve entry to be cached. Result Level caching will not be performed!");
+        shouldPopulate = false;
       }
     }
 
-    private byte[] fetchResultBytes(ByteArrayOutputStream resultStream, int cacheLimit)
+    public void populateResults()
     {
-      for (Object cacheObj : cacheObjects) {
-        try (JsonGenerator gen = mapper.getFactory().createGenerator(resultStream)) {
-          gen.writeObject(cacheObj);
-          if (cacheLimit > 0 && resultStream.size() > cacheLimit) {
-            return null;
-          }
-        }
-        catch (IOException ex) {
-          log.error("Failed to retrieve entry to be cached. Result Level caching will not be performed!");
-          return null;
-        }
-      }
-      return resultStream.toByteArray();
+      ResultLevelCacheUtil.populate(
+          cache,
+          key,
+          cacheObjectStream.toByteArray()
+      );
     }
   }
 }
