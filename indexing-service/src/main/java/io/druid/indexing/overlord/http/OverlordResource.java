@@ -120,7 +120,7 @@ public class OverlordResource
       JacksonConfigManager configManager,
       AuditManager auditManager,
       AuthorizerMapper authorizerMapper
-  ) throws Exception
+  )
   {
     this.taskMaster = taskMaster;
     this.taskStorageQueryAdapter = taskStorageQueryAdapter;
@@ -153,7 +153,7 @@ public class OverlordResource
     );
 
     if (!authResult.isAllowed()) {
-      throw new ForbiddenException(authResult.toString());
+      throw new ForbiddenException(authResult.getMessage());
     }
 
     return asLeaderWith(
@@ -504,6 +504,7 @@ public class OverlordResource
         .map(status -> new TaskStatusPlus(
             status.getId(),
             taskStorageQueryAdapter.getCreatedTime(status.getId()),
+            // Would be nice to include the real queue insertion time, but the TaskStorage API doesn't yet allow it.
             DateTimes.EPOCH,
             status.getStatusCode(),
             status.getDuration(),
@@ -535,7 +536,7 @@ public class OverlordResource
     );
 
     if (!authResult.isAllowed()) {
-      throw new ForbiddenException(authResult.toString());
+      throw new ForbiddenException(authResult.getMessage());
     }
 
     if (taskMaster.isLeader()) {

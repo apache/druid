@@ -387,7 +387,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final Interval interval,
       final String maxVersion,
       final boolean skipSegmentLineageCheck
-  ) throws IOException
+  )
   {
     Preconditions.checkNotNull(dataSource, "dataSource");
     Preconditions.checkNotNull(sequenceName, "sequenceName");

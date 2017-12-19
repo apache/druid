@@ -63,7 +63,7 @@ public class IndexerMetadataStorageAdapter
 
     Preconditions.checkArgument(
         !deleteInterval.overlaps(activeTaskInterval),
-        "Cannot delete pendingSegments because there is at least one running task created at %s",
+        "Cannot delete pendingSegments because there is at least one active task created at %s",
         activeTaskInterval.getStart()
     );
 

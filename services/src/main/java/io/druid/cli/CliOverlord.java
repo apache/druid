@@ -318,7 +318,6 @@ public class CliOverlord extends ServerRunnable
           )
       );
 
-      final AuthConfig authConfig = injector.getInstance(AuthConfig.class);
       final ObjectMapper jsonMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
       final AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
 
