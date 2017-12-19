@@ -367,8 +367,8 @@ public class AppenderatorTest
                                            .granularity(Granularities.DAY)
                                            .build();
 
-      final List<Result<TimeseriesResultValue>> results1 = Lists.newArrayList();
-      QueryPlus.wrap(query1).run(appenderator, ImmutableMap.of()).toList();
+      final List<Result<TimeseriesResultValue>> results1 =
+          QueryPlus.wrap(query1).run(appenderator, ImmutableMap.of()).toList();
       Assert.assertEquals(
           "query1",
           ImmutableList.of(
@@ -393,8 +393,8 @@ public class AppenderatorTest
                                            .granularity(Granularities.DAY)
                                            .build();
 
-      final List<Result<TimeseriesResultValue>> results2 = Lists.newArrayList();
-      QueryPlus.wrap(query2).run(appenderator, ImmutableMap.of()).toList();
+      final List<Result<TimeseriesResultValue>> results2 =
+          QueryPlus.wrap(query2).run(appenderator, ImmutableMap.of()).toList();
       Assert.assertEquals(
           "query2",
           ImmutableList.of(
@@ -423,8 +423,8 @@ public class AppenderatorTest
                                            .granularity(Granularities.DAY)
                                            .build();
 
-      final List<Result<TimeseriesResultValue>> results3 = Lists.newArrayList();
-      QueryPlus.wrap(query3).run(appenderator, ImmutableMap.of()).toList();
+      final List<Result<TimeseriesResultValue>> results3 =
+          QueryPlus.wrap(query3).run(appenderator, ImmutableMap.of()).toList();
       Assert.assertEquals(
           ImmutableList.of(
               new Result<>(
@@ -457,8 +457,8 @@ public class AppenderatorTest
                                            .granularity(Granularities.DAY)
                                            .build();
 
-      final List<Result<TimeseriesResultValue>> results4 = Lists.newArrayList();
-      QueryPlus.wrap(query4).run(appenderator, ImmutableMap.of()).toList();
+      final List<Result<TimeseriesResultValue>> results4 =
+          QueryPlus.wrap(query4).run(appenderator, ImmutableMap.of()).toList();
       Assert.assertEquals(
           ImmutableList.of(
               new Result<>(
@@ -513,8 +513,8 @@ public class AppenderatorTest
                                            )
                                            .build();
 
-      final List<Result<TimeseriesResultValue>> results1 = Lists.newArrayList();
-      QueryPlus.wrap(query1).run(appenderator, ImmutableMap.of()).toList();
+      final List<Result<TimeseriesResultValue>> results1 =
+          QueryPlus.wrap(query1).run(appenderator, ImmutableMap.of()).toList();
       Assert.assertEquals(
           "query1",
           ImmutableList.of(
@@ -549,8 +549,8 @@ public class AppenderatorTest
                                            )
                                            .build();
 
-      final List<Result<TimeseriesResultValue>> results2 = Lists.newArrayList();
-      QueryPlus.wrap(query2).run(appenderator, ImmutableMap.of()).toList();
+      final List<Result<TimeseriesResultValue>> results2 =
+          QueryPlus.wrap(query2).run(appenderator, ImmutableMap.of()).toList();
       Assert.assertEquals(
           "query2",
           ImmutableList.of(
@@ -590,8 +590,8 @@ public class AppenderatorTest
                                            )
                                            .build();
 
-      final List<Result<TimeseriesResultValue>> results3 = Lists.newArrayList();
-      QueryPlus.wrap(query3).run(appenderator, ImmutableMap.of()).toList();
+      final List<Result<TimeseriesResultValue>> results3 =
+          QueryPlus.wrap(query3).run(appenderator, ImmutableMap.of()).toList();
       Assert.assertEquals(
           "query2",
           ImmutableList.of(
