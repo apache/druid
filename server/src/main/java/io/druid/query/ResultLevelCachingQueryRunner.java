@@ -23,11 +23,8 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterators;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.client.ResultLevelCacheUtil;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
@@ -44,17 +41,15 @@ import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 
 public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
 {
   private static final Logger log = new Logger(ResultLevelCachingQueryRunner.class);
   private final QueryRunner baseRunner;
-  private final ListeningExecutorService cachingExec;
   private ObjectMapper objectMapper;
   private final Cache cache;
   private final CacheConfig cacheConfig;
@@ -69,13 +64,11 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       QueryToolChest queryToolChest,
       Query<T> query,
       ObjectMapper objectMapper,
-      ExecutorService cachingExec,
       Cache cache,
       CacheConfig cacheConfig
   )
   {
     this.baseRunner = baseRunner;
-    this.cachingExec = MoreExecutors.listeningDecorator(cachingExec);
     this.objectMapper = objectMapper;
     this.cache = cache;
     this.cacheConfig = cacheConfig;
@@ -93,6 +86,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       final String cacheKeyStr = StringUtils.fromUtf8(strategy.computeCacheKey(query));
       final byte[] cachedResultSet = fetchResultsFromResultLevelCache(cacheKeyStr);
       String existingResultSetId = extractEtagFromResults(cachedResultSet);
+
       existingResultSetId = existingResultSetId == null ? "" : existingResultSetId;
 
       if (query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH) == null) {
@@ -114,6 +108,10 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
             cacheKeyStr,
             newResultSetId
         );
+
+        if (resultLevelCachePopulator == null) {
+          return resultFromClient;
+        }
         return Sequences.wrap(Sequences.map(
             resultFromClient,
             new Function<T, T>()
@@ -130,7 +128,10 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
           @Override
           public void after(boolean isDone, Throwable thrown) throws Exception
           {
-            if (resultLevelCachePopulator != null) {
+            Preconditions.checkNotNull(resultLevelCachePopulator, "ResultLevelCachePopulator cannot be null during cache population");
+            if (thrown != null) {
+              log.error("Error while preparing for result level caching for query %s ", query.getId());
+            } else {
               // The resultset identifier and its length is cached along with the resultset
               resultLevelCachePopulator.populateResults(newResultSetId);
               log.debug("Cache population complete for query %s", query.getId());
@@ -152,10 +153,8 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
   )
   {
     final Function<T, Object> cacheFn = strategy.prepareForCache(true);
-    if (resultLevelCachePopulator != null) {
-      resultLevelCachePopulator.cacheFutures
-          .add(cachingExec.submit(() -> cacheFn.apply(resultEntry)));
-    }
+    resultLevelCachePopulator.cacheObjects
+        .add(cacheFn.apply(resultEntry));
     return resultEntry;
   }
 
@@ -193,16 +192,13 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
     //Skip the resultsetID and its length bytes
     Sequence<T> cachedSequence = Sequences.simple(() -> {
       try {
-        if (cachedResult.length == 0) {
-          return Iterators.emptyIterator();
-        }
-
+        int resultOffset = Integer.BYTES + resultSetId.length();
         return objectMapper.readValues(
-            objectMapper.getFactory().createParser(Arrays.copyOfRange(
+            objectMapper.getFactory().createParser(
                 cachedResult,
-                Integer.BYTES + resultSetId.length(),
-                cachedResult.length
-            )),
+                resultOffset,
+                cachedResult.length - resultOffset
+            ),
             cacheObjectClazz
         );
       }
@@ -219,14 +215,12 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       String resultSetId
   )
   {
-    // Results need to be cached only if all the segments are historical segments
     if (resultSetId != null && populateResultCache) {
       return new ResultLevelCachePopulator(
           cache,
           objectMapper,
           ResultLevelCacheUtil.computeResultLevelCacheKey(cacheKeyStr),
-          cacheConfig,
-          cachingExec
+          cacheConfig
       );
     } else {
       return null;
@@ -238,23 +232,20 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
     private final Cache cache;
     private final ObjectMapper mapper;
     private final Cache.NamedKey key;
-    private final ConcurrentLinkedQueue<ListenableFuture<Object>> cacheFutures = new ConcurrentLinkedQueue<>();
+    private final List<Object> cacheObjects = new ArrayList<>();
     private final CacheConfig cacheConfig;
-    private final ListeningExecutorService backgroundExecutorService;
 
     private ResultLevelCachePopulator(
         Cache cache,
         ObjectMapper mapper,
         Cache.NamedKey key,
-        CacheConfig cacheConfig,
-        ListeningExecutorService backgroundExecutorService
+        CacheConfig cacheConfig
     )
     {
       this.cache = cache;
       this.mapper = mapper;
       this.key = key;
       this.cacheConfig = cacheConfig;
-      this.backgroundExecutorService = backgroundExecutorService;
     }
 
     public void populateResults(String resultSetIdentifier)
@@ -273,7 +264,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
           );
         }
         // Help out GC by making sure all references are gone
-        cacheFutures.clear();
+        cacheObjects.clear();
       }
       catch (IOException ioe) {
         log.error("Failed to write cached values for query %s", query.getId());
@@ -282,14 +273,14 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
 
     private byte[] fetchResultBytes(ByteArrayOutputStream resultStream, int cacheLimit)
     {
-      for (ListenableFuture lsf : cacheFutures) {
+      for (Object cacheObj : cacheObjects) {
         try (JsonGenerator gen = mapper.getFactory().createGenerator(resultStream)) {
-          gen.writeObject(lsf.get());
+          gen.writeObject(cacheObj);
           if (cacheLimit > 0 && resultStream.size() > cacheLimit) {
             return null;
           }
         }
-        catch (ExecutionException | InterruptedException | IOException ex) {
+        catch (IOException ex) {
           log.error("Failed to retrieve entry to be cached. Result Level caching will not be performed!");
           return null;
         }

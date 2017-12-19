@@ -26,7 +26,6 @@ import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.CachingClusteredClient;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
-import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.query.FluentQueryRunnerBuilder;
 import io.druid.query.PostProcessingOperator;
 import io.druid.query.Query;
@@ -41,8 +40,6 @@ import io.druid.query.SegmentDescriptor;
 import io.druid.server.initialization.ServerConfig;
 import org.joda.time.Interval;
 
-import java.util.concurrent.ExecutorService;
-
 /**
  */
 public class ClientQuerySegmentWalker implements QuerySegmentWalker
@@ -53,7 +50,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private final RetryQueryRunnerConfig retryConfig;
   private final ObjectMapper objectMapper;
   private final ServerConfig serverConfig;
-  private final ExecutorService cachingExec;
   private final Cache cache;
   private final CacheConfig cacheConfig;
 
@@ -66,7 +62,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       RetryQueryRunnerConfig retryConfig,
       ObjectMapper objectMapper,
       ServerConfig serverConfig,
-      @BackgroundCaching ExecutorService cachingExec,
       Cache cache,
       CacheConfig cacheConfig
   )
@@ -77,7 +72,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     this.retryConfig = retryConfig;
     this.objectMapper = objectMapper;
     this.serverConfig = serverConfig;
-    this.cachingExec = cachingExec;
     this.cache = cache;
     this.cacheConfig = cacheConfig;
   }
@@ -124,7 +118,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         toolChest,
         query,
         objectMapper,
-        cachingExec,
         cache,
         cacheConfig
     );
