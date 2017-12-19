@@ -23,6 +23,7 @@ import com.google.common.collect.Sets;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Set;
 
@@ -39,7 +40,7 @@ class StorageLocation
 
   private volatile long currSize = 0;
 
-  StorageLocation(File path, long maxSize, Float freeSpacePercent)
+  StorageLocation(File path, long maxSize, @Nullable Double freeSpacePercent)
   {
     this.path = path;
     this.maxSize = maxSize;

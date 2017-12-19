@@ -39,6 +39,8 @@ The historical node uses several of the global configs in [Configuration](../con
 |`druid.segmentCache.numLoadingThreads`|How many segments to drop or load concurrently from from deep storage.|10|
 |`druid.segmentCache.numBootstrapThreads`|How many segments to load concurrently from local storage at startup.|Same as numLoadingThreads|
 
+In `druid.segmentCache.locations`, *freeSpacePercent* was added because *maxSize* setting is only a theoretical limit and assumes that much space will always be available for storing segments. In case of any druid bug leading to unaccounted segment files left alone on disk or some other process writing stuff to disk, This check can start failing segment loading early before filling up the disk completely and leaving the host usable otherwise.
+
 ### Query Configs
 
 #### Concurrent Requests
