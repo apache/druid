@@ -365,10 +365,12 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     {
       CloseQuietly.close(holder);
       holder = singleThreadedBuffers.get(bufferNum);
+      ByteBuffer bb = holder.get();
+      ByteOrder byteOrder = bb.order();
       // slice() makes the buffer's position = 0
-      buffer = holder.get().slice();
+      buffer = bb.slice().order(byteOrder);
       currBufferNum = bufferNum;
-      bigEndian = buffer.order().equals(ByteOrder.BIG_ENDIAN);
+      bigEndian = byteOrder.equals(ByteOrder.BIG_ENDIAN);
     }
 
     @Override
