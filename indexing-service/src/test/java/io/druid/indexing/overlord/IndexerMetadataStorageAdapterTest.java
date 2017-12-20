@@ -92,7 +92,7 @@ public class IndexerMetadataStorageAdapterTest
     EasyMock.replay(taskStorageQueryAdapter, indexerMetadataStorageCoordinator);
 
     expectedException.expect(CoreMatchers.instanceOf(IllegalArgumentException.class));
-    expectedException.expectMessage("Cannot delete pendingSegments because there is at least one running task created");
+    expectedException.expectMessage("Cannot delete pendingSegments because there is at least one active task created");
     indexerMetadataStorageAdapter.deletePendingSegments("dataSource", deleteInterval);
   }
 }
