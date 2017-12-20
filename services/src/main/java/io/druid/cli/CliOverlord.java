@@ -90,7 +90,6 @@ import io.druid.server.http.RedirectFilter;
 import io.druid.server.http.RedirectInfo;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
-import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticationUtils;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
