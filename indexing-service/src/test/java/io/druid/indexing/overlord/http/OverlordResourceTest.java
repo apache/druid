@@ -266,7 +266,6 @@ public class OverlordResourceTest
   public void testSecuredTaskPost()
   {
     expectedException.expect(ForbiddenException.class);
-    expectedException.expectMessage("Allowed:false, Message:");
     expectAuthorizationTokenCheck();
 
     EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
