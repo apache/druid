@@ -30,7 +30,6 @@ import java.nio.ByteBuffer;
  * Note that the delegate aggregator is not required to perform check for isNull on the columnValueSelector as only non-null values
  * will be passed to the delegate aggregator.
  */
-
 public class NullableBufferAggregator implements BufferAggregator
 {
   private static final byte IS_NULL_BYTE = (byte) 1;

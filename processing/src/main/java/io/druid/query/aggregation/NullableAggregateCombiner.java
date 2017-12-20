@@ -44,8 +44,12 @@ public class NullableAggregateCombiner implements AggregateCombiner
   @Override
   public void reset(ColumnValueSelector selector)
   {
-    isNullResult = true;
-    delegate.reset(selector);
+    if(selector.isNull()){
+      isNullResult = true;
+    } else {
+      isNullResult = false;
+      delegate.reset(selector);
+    }
   }
 
   @Override
@@ -81,7 +85,7 @@ public class NullableAggregateCombiner implements AggregateCombiner
   @Override
   public boolean isNull()
   {
-    return isNullResult;
+    return isNullResult || delegate.isNull();
   }
 
   @Nullable

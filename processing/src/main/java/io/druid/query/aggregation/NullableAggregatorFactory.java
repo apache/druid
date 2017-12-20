@@ -26,10 +26,12 @@ import io.druid.segment.BaseNullableColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 
 /**
+ * abstract class with functionality to wrap aggregator/bufferAggregator/combiner to make them Nullable.
+ * Implementations of {@link AggregatorFactory} which needs to Support Nullable Aggregations are encouraged
+ * to extend this class.
  */
 public abstract class NullableAggregatorFactory extends AggregatorFactory
 {
-
   @Override
   final public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {

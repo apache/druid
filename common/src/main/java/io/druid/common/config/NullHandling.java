@@ -28,8 +28,11 @@ public class NullHandling
 {
   private static String NULL_HANDLING_CONFIG_STRING = "druid.generic.useDefaultValueForNull";
 
-  // use these values to ensure that convertObjectToLong(), convertObjectToDouble() and convertObjectToFloat()
-  // return the same boxed object when returning a constant zero.
+  /**
+   * use these values to ensure that {@link NullHandling#nullToZeroIfNeeded(Long)},
+   * {@link NullHandling#nullToZeroIfNeeded(Double)}, {@link NullHandling#nullToZeroIfNeeded(Float)}
+   * return the same boxed object when returning a constant zero
+   */
   public static final Double ZERO_DOUBLE = 0.0d;
   public static final Float ZERO_FLOAT = 0.0f;
   public static final Long ZERO_LONG = 0L;
@@ -62,9 +65,14 @@ public class NullHandling
     return useDefaultValuesForNull() ? Strings.emptyToNull(value) : value;
   }
 
-  public static String defaultValue()
+  public static String defaultStringValue()
   {
     return useDefaultValuesForNull() ? "" : null;
+  }
+
+  public static Long defaultLongValue()
+  {
+    return useDefaultValuesForNull() ? ZERO_LONG : null;
   }
 
   public static boolean isNullOrEquivalent(@Nullable String value)

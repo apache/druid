@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation.distinctcount;
 
+import com.google.common.base.Preconditions;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.collections.bitmap.WrappedRoaringBitmap;
 import io.druid.common.config.NullHandling;
@@ -33,9 +34,10 @@ import java.nio.ByteBuffer;
 
 public class DistinctCountBufferAggregator implements BufferAggregator
 {
+  private static int UNKNOWN = -1;
   private final DimensionSelector selector;
   private final Int2ObjectMap<MutableBitmap> mutableBitmapCollection = new Int2ObjectOpenHashMap<>();
-  private final int idForNull;
+  private int idForNull;
 
 
   public DistinctCountBufferAggregator(
@@ -43,7 +45,12 @@ public class DistinctCountBufferAggregator implements BufferAggregator
   )
   {
     this.selector = selector;
-    this.idForNull = selector.nameLookupPossibleInAdvance() ? selector.idLookup().lookupId(null) : -1;
+    Preconditions.checkArgument(
+        selector.nameLookupPossibleInAdvance()
+        || selector.getValueCardinality() != DimensionSelector.CARDINALITY_UNKNOWN,
+        "DistinctCountBufferAggregator not supported for selector"
+    );
+    this.idForNull = selector.nameLookupPossibleInAdvance() ? selector.idLookup().lookupId(null) : UNKNOWN;
   }
 
   @Override
@@ -78,7 +85,14 @@ public class DistinctCountBufferAggregator implements BufferAggregator
 
   private boolean isNotNull(int index)
   {
-    return selector.nameLookupPossibleInAdvance() ? index != idForNull : selector.lookupName(index) != null;
+    if (idForNull == UNKNOWN) {
+      String value = selector.lookupName(index);
+      if (value == null) {
+        idForNull = index;
+        return false;
+      }
+    }
+    return index != idForNull;
   }
 
   @Override

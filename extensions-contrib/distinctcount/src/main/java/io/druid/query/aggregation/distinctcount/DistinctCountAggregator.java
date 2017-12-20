@@ -19,17 +19,19 @@
 
 package io.druid.query.aggregation.distinctcount;
 
+import com.google.common.base.Preconditions;
 import io.druid.collections.bitmap.MutableBitmap;
+import io.druid.common.config.NullHandling;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.segment.DimensionSelector;
-import io.druid.common.config.NullHandling;
 import io.druid.segment.data.IndexedInts;
 
 public class DistinctCountAggregator implements Aggregator
 {
+  private static int UNKNOWN = -1;
   private final DimensionSelector selector;
   private final MutableBitmap mutableBitmap;
-  private final int idForNull;
+  private int idForNull;
 
   public DistinctCountAggregator(
       DimensionSelector selector,
@@ -38,7 +40,12 @@ public class DistinctCountAggregator implements Aggregator
   {
     this.selector = selector;
     this.mutableBitmap = mutableBitmap;
-    this.idForNull = selector.nameLookupPossibleInAdvance() ? selector.idLookup().lookupId(null) : -1;
+    Preconditions.checkArgument(
+        selector.nameLookupPossibleInAdvance()
+        || selector.getValueCardinality() != DimensionSelector.CARDINALITY_UNKNOWN,
+        "DistinctCountAggregator not supported for selector"
+    );
+    this.idForNull = selector.nameLookupPossibleInAdvance() ? selector.idLookup().lookupId(null) : UNKNOWN;
   }
 
   @Override
@@ -55,7 +62,14 @@ public class DistinctCountAggregator implements Aggregator
 
   private boolean isNotNull(int index)
   {
-    return selector.nameLookupPossibleInAdvance() ? index != idForNull : selector.lookupName(index) != null;
+    if (idForNull == UNKNOWN) {
+      String value = selector.lookupName(index);
+      if (value == null) {
+        idForNull = index;
+        return false;
+      }
+    }
+    return index != idForNull;
   }
 
   @Override
