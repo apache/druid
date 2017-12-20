@@ -48,6 +48,7 @@ import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Callable;
 
@@ -64,6 +65,7 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
   private static final String TOPIC_NAME = "kafka_indexing_service_topic";
   private static final int NUM_EVENTS_TO_SEND = 60;
   private static final long WAIT_TIME_MILLIS = 2 * 60 * 1000L;
+  public static final String testPropertyPrefix = "kafka.test.property.";
 
   // We'll fill in the current time and numbers for added, deleted and changed
   // before sending the event.
@@ -117,10 +119,19 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
           ZKStringSerializer$.MODULE$
       );
       zkUtils = new ZkUtils(zkClient, new ZkConnection(zkHosts, sessionTimeoutMs), false);
-      int numPartitions = 4;
+      if(config.manageKafkaTopic()) {
+        int numPartitions = 4;
       int replicationFactor = 1;
       Properties topicConfig = new Properties();
-      AdminUtils.createTopic(zkUtils, TOPIC_NAME, numPartitions, replicationFactor, topicConfig, RackAwareMode.Disabled$.MODULE$);
+        AdminUtils.createTopic(
+            zkUtils,
+            TOPIC_NAME,
+            numPartitions,
+            replicationFactor,
+            topicConfig,
+            RackAwareMode.Disabled$.MODULE$
+        );
+      }
     }
     catch (Exception e) {
       throw new ISE(e, "could not create kafka topic");
@@ -129,10 +140,14 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
     String spec;
     try {
       LOG.info("supervisorSpec name: [%s]", INDEXER_FILE);
+      Properties consumerProperties = new Properties();
+      consumerProperties.put("bootstrap.servers", config.getKafkaHost());
+      addFilteredProperties(consumerProperties);
+
       spec = getTaskAsString(INDEXER_FILE)
           .replaceAll("%%DATASOURCE%%", DATASOURCE)
           .replaceAll("%%TOPIC%%", TOPIC_NAME)
-          .replaceAll("%%KAFKA_BROKER%%", config.getKafkaHost());
+          .replaceAll("%%CONSUMER_PROPERTIES%%", jsonMapper.writeValueAsString(consumerProperties));
       LOG.info("supervisorSpec: [%s]\n", spec);
     }
     catch (Exception e) {
@@ -146,6 +161,7 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
 
     // set up kafka producer
     Properties properties = new Properties();
+    addFilteredProperties(properties);
     properties.put("bootstrap.servers", config.getKafkaHost());
     LOG.info("Kafka bootstrap.servers: [%s]", config.getKafkaHost());
     properties.put("acks", "all");
@@ -285,13 +301,23 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
   public void afterClass() throws Exception
   {
     LOG.info("teardown");
-
-    // delete kafka topic
-    AdminUtils.deleteTopic(zkUtils, TOPIC_NAME);
+    if(config.manageKafkaTopic()) {
+      // delete kafka topic
+      AdminUtils.deleteTopic(zkUtils, TOPIC_NAME);
+    }
 
     // remove segments
     if (segmentsExist) {
       unloadAndKillData(DATASOURCE);
+    }
+  }
+
+  public void addFilteredProperties(Properties properties)
+  {
+    for (Map.Entry<String, String> entry : config.getProperties().entrySet()) {
+      if (entry.getKey().startsWith(testPropertyPrefix)) {
+        properties.put(entry.getKey().substring(testPropertyPrefix.length()), entry.getValue());
+      }
     }
   }
 }
