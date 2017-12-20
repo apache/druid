@@ -57,6 +57,7 @@ import io.druid.metadata.MetadataStorageProvider;
 import io.druid.server.audit.AuditManagerProvider;
 import io.druid.server.coordinator.BalancerStrategyFactory;
 import io.druid.server.coordinator.DruidCoordinator;
+import io.druid.server.coordinator.DruidCoordinatorCleanupPendingSegments;
 import io.druid.server.coordinator.DruidCoordinatorConfig;
 import io.druid.server.coordinator.LoadQueueTaskMaster;
 import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
@@ -207,6 +208,10 @@ public class CliCoordinator extends ServerRunnable
                 "druid.coordinator.kill.on",
                 Predicates.equalTo("true"),
                 DruidCoordinatorSegmentKiller.class
+            ).addConditionBinding(
+                "druid.coordinator.kill.pendingSegments.on",
+                Predicates.equalTo("true"),
+                DruidCoordinatorCleanupPendingSegments.class
             );
 
             binder.bind(DiscoverySideEffectsProvider.Child.class).annotatedWith(Coordinator.class).toProvider(

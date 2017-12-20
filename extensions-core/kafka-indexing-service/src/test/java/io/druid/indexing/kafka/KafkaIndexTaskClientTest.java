@@ -32,7 +32,7 @@ import com.metamx.http.client.Request;
 import com.metamx.http.client.response.FullResponseHandler;
 import com.metamx.http.client.response.FullResponseHolder;
 import io.druid.indexing.common.TaskInfoProvider;
-import io.druid.indexing.common.TaskLocation;
+import io.druid.indexer.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;

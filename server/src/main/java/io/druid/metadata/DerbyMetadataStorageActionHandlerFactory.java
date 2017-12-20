@@ -22,21 +22,32 @@ package io.druid.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 
-public abstract class SQLMetadataStorageActionHandlerFactory implements MetadataStorageActionHandlerFactory
+public class DerbyMetadataStorageActionHandlerFactory extends SQLMetadataStorageActionHandlerFactory
 {
-  protected final SQLMetadataConnector connector;
-  protected final MetadataStorageTablesConfig config;
-  protected final ObjectMapper jsonMapper;
-
   @Inject
-  public SQLMetadataStorageActionHandlerFactory(
+  public DerbyMetadataStorageActionHandlerFactory(
       SQLMetadataConnector connector,
       MetadataStorageTablesConfig config,
       ObjectMapper jsonMapper
   )
   {
-    this.connector = connector;
-    this.config = config;
-    this.jsonMapper = jsonMapper;
+    super(connector, config, jsonMapper);
+  }
+
+  @Override
+  public <A, B, C, D> MetadataStorageActionHandler<A, B, C, D> create(
+      final String entryType,
+      MetadataStorageActionHandlerTypes<A, B, C, D> payloadTypes
+  )
+  {
+    return new DerbyMetadataStorageActionHandler<>(
+        connector,
+        jsonMapper,
+        payloadTypes,
+        entryType,
+        config.getEntryTable(entryType),
+        config.getLogTable(entryType),
+        config.getLockTable(entryType)
+    );
   }
 }
