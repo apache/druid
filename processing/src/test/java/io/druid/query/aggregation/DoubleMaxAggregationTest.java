@@ -20,7 +20,6 @@
 package io.druid.query.aggregation;
 
 import com.google.common.primitives.Doubles;
-import io.druid.common.config.NullHandling;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.TestHelper;
 import org.easymock.EasyMock;
@@ -68,7 +67,6 @@ public class DoubleMaxAggregationTest
     Assert.assertEquals(values[2], ((Double) agg.get()).doubleValue(), 0.0001);
     Assert.assertEquals((long) values[2], agg.getLong());
     Assert.assertEquals(values[2], agg.getFloat(), 0.0001);
-
   }
 
   @Test

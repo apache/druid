@@ -84,12 +84,6 @@ public class MapVirtualColumn implements VirtualColumn
       return new MapVirtualColumnValueSelector<Map>(keySelector, valueSelector)
       {
         @Override
-        public boolean isNull()
-        {
-          return false;
-        }
-
-        @Override
         public Class<Map> classOfObject()
         {
           return Map.class;
@@ -122,12 +116,6 @@ public class MapVirtualColumn implements VirtualColumn
       return new MapVirtualColumnValueSelector<String>(keySelector, valueSelector)
       {
         @Override
-        public boolean isNull()
-        {
-          return getObject() == null;
-        }
-
-        @Override
         public Class<String> classOfObject()
         {
           return String.class;
@@ -151,12 +139,6 @@ public class MapVirtualColumn implements VirtualColumn
     } else {
       return new MapVirtualColumnValueSelector<String>(keySelector, valueSelector)
       {
-        @Override
-        public boolean isNull()
-        {
-          return getObject() == null;
-        }
-
         @Override
         public Class<String> classOfObject()
         {
@@ -208,6 +190,12 @@ public class MapVirtualColumn implements VirtualColumn
     public long getLong()
     {
       return 0L;
+    }
+
+    @Override
+    public boolean isNull()
+    {
+      return false;
     }
 
     @Override

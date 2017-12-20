@@ -54,13 +54,6 @@ public class NullableAggregator implements Aggregator
   }
 
   @Override
-  public void reset()
-  {
-    isNullResult = true;
-    delegate.reset();
-  }
-
-  @Override
   @Nullable
   public Object get()
   {

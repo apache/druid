@@ -29,7 +29,6 @@ import javax.annotation.Nullable;
  * Note that the delegate combiner is not required to perform check for isNull on the columnValueSelector as only non-null values
  * will be passed to the delegate combiner.
  */
-
 public class NullableAggregateCombiner implements AggregateCombiner
 {
   private boolean isNullResult = true;
@@ -44,7 +43,7 @@ public class NullableAggregateCombiner implements AggregateCombiner
   @Override
   public void reset(ColumnValueSelector selector)
   {
-    if(selector.isNull()){
+    if (selector.isNull()) {
       isNullResult = true;
     } else {
       isNullResult = false;

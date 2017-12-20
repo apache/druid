@@ -20,7 +20,6 @@
 package io.druid.query.aggregation;
 
 import com.google.common.primitives.Longs;
-import io.druid.common.config.NullHandling;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.TestHelper;
 import org.easymock.EasyMock;

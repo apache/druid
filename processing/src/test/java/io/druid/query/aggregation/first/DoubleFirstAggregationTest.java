@@ -20,7 +20,6 @@
 package io.druid.query.aggregation.first;
 
 import io.druid.collections.SerializablePair;
-import io.druid.common.config.NullHandling;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Pair;
 import io.druid.query.aggregation.Aggregator;
