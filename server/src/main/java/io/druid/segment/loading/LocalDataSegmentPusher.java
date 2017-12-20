@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.Map;
 import java.util.UUID;
 
@@ -71,7 +72,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
   }
 
   @Override
-  public DataSegment push(File dataSegmentFile, DataSegment segment) throws IOException
+  public DataSegment push(File dataSegmentFile, DataSegment segment, boolean replaceExisting) throws IOException
   {
     final String storageDir = this.getStorageDir(segment);
     final File baseStorageDir = config.getStorageDirectory();
@@ -107,13 +108,23 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
     // moving the temporary directory to the final destination, once success the potentially concurrent push operations
     // will be failed and will read the descriptor.json created by current push operation directly
     FileUtils.forceMkdir(outDir.getParentFile());
-    try {
-      Files.move(tmpOutDir.toPath(), outDir.toPath());
-    }
-    catch (FileAlreadyExistsException e) {
-      log.warn("Push destination directory[%s] exists, ignore this message if replication is configured.", outDir);
-      FileUtils.deleteDirectory(tmpOutDir);
-      return jsonMapper.readValue(new File(outDir, "descriptor.json"), DataSegment.class);
+    if (replaceExisting) {
+      try {
+        FileUtils.cleanDirectory(outDir);
+      }
+      catch (IllegalArgumentException e) {
+        log.debug("Directory [%s] doesn't exist and couldn't be cleaned, this is normal", outDir);
+      }
+      Files.move(tmpOutDir.toPath(), outDir.toPath(), StandardCopyOption.REPLACE_EXISTING);
+    } else {
+      try {
+        Files.move(tmpOutDir.toPath(), outDir.toPath());
+      }
+      catch (FileAlreadyExistsException e) {
+        log.info("Push destination directory[%s] exists, ignore this message if replication is configured.", outDir);
+        FileUtils.deleteDirectory(tmpOutDir);
+        return jsonMapper.readValue(new File(outDir, "descriptor.json"), DataSegment.class);
+      }
     }
     return dataSegment;
   }

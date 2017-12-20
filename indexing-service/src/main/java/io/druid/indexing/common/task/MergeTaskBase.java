@@ -185,7 +185,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
       long uploadStart = System.currentTimeMillis();
 
       // Upload file
-      final DataSegment uploadedSegment = toolbox.getSegmentPusher().push(fileToUpload, mergedSegment);
+      final DataSegment uploadedSegment = toolbox.getSegmentPusher().push(fileToUpload, mergedSegment, true);
 
       emitter.emit(builder.build("merger/uploadTime", System.currentTimeMillis() - uploadStart));
       emitter.emit(builder.build("merger/mergeSize", uploadedSegment.getSize()));

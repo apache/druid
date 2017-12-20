@@ -30,6 +30,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.timeline.DataSegment;
+import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.ServiceException;
 import org.jets3t.service.acl.gs.GSAccessControlList;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
@@ -88,7 +89,8 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   }
 
   @Override
-  public DataSegment push(final File indexFilesDir, final DataSegment inSegment) throws IOException
+  public DataSegment push(final File indexFilesDir, final DataSegment inSegment, final boolean replaceExisting)
+      throws IOException
   {
     final String s3Path = S3Utils.constructSegmentPath(config.getBaseKey(), getStorageDir(inSegment));
 
@@ -105,21 +107,10 @@ public class S3DataSegmentPusher implements DataSegmentPusher
             public DataSegment call() throws Exception
             {
               S3Object toPush = new S3Object(zipOutFile);
-
-              final String outputBucket = config.getBucket();
-              final String s3DescriptorPath = S3Utils.descriptorPathForSegmentPath(s3Path);
-
-              toPush.setBucketName(outputBucket);
-              toPush.setKey(s3Path);
-              if (!config.getDisableAcl()) {
-                toPush.setAcl(GSAccessControlList.REST_CANNED_BUCKET_OWNER_FULL_CONTROL);
-              }
-
-              log.info("Pushing %s.", toPush);
-              s3Client.putObject(outputBucket, toPush);
+              putObject(config.getBucket(), s3Path, toPush, replaceExisting);
 
               final DataSegment outSegment = inSegment.withSize(indexSize)
-                                                      .withLoadSpec(makeLoadSpec(outputBucket, toPush.getKey()))
+                                                      .withLoadSpec(makeLoadSpec(config.getBucket(), toPush.getKey()))
                                                       .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
 
               File descriptorFile = File.createTempFile("druid", "descriptor.json");
@@ -127,14 +118,13 @@ public class S3DataSegmentPusher implements DataSegmentPusher
               // runtime, and because Guava deletes methods over time, that causes incompatibilities.
               Files.write(descriptorFile.toPath(), jsonMapper.writeValueAsBytes(outSegment));
               S3Object descriptorObject = new S3Object(descriptorFile);
-              descriptorObject.setBucketName(outputBucket);
-              descriptorObject.setKey(s3DescriptorPath);
-              if (!config.getDisableAcl()) {
-                descriptorObject.setAcl(GSAccessControlList.REST_CANNED_BUCKET_OWNER_FULL_CONTROL);
-              }
 
-              log.info("Pushing %s", descriptorObject);
-              s3Client.putObject(outputBucket, descriptorObject);
+              putObject(
+                  config.getBucket(),
+                  S3Utils.descriptorPathForSegmentPath(s3Path),
+                  descriptorObject,
+                  replaceExisting
+              );
 
               log.info("Deleting zipped index File[%s]", zipOutFile);
               zipOutFile.delete();
@@ -164,7 +154,6 @@ public class S3DataSegmentPusher implements DataSegmentPusher
 
   /**
    * Any change in loadSpec need to be reflected {@link io.druid.indexer.JobHelper#getURIFromSegment()}
-   *
    */
   @SuppressWarnings("JavadocReference")
   private Map<String, Object> makeLoadSpec(String bucket, String key)
@@ -179,5 +168,34 @@ public class S3DataSegmentPusher implements DataSegmentPusher
         "S3Schema",
         config.isUseS3aSchema() ? "s3a" : "s3n"
     );
+  }
+
+  private void putObject(String bucketName, String path, S3Object object, boolean replaceExisting)
+      throws S3ServiceException
+  {
+    object.setBucketName(bucketName);
+    object.setKey(path);
+    if (!config.getDisableAcl()) {
+      object.setAcl(GSAccessControlList.REST_CANNED_BUCKET_OWNER_FULL_CONTROL);
+    }
+
+    log.info("Pushing %s.", object);
+
+    if (!replaceExisting && doesObjectExist(bucketName, object.getKey())) {
+      log.info("Skipping push because key [%s] exists && replaceExisting == false", object.getKey());
+    } else {
+      s3Client.putObject(bucketName, object);
+    }
+  }
+
+  private boolean doesObjectExist(String bucketName, String objectKey)
+  {
+    try {
+      s3Client.getObjectDetails(bucketName, objectKey);
+      return true;
+    }
+    catch (ServiceException e) {
+      return false;
+    }
   }
 }

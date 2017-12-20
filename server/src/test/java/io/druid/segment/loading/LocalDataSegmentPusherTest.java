@@ -79,8 +79,8 @@ public class LocalDataSegmentPusherTest
       */
     final DataSegment dataSegment2 = dataSegment.withVersion("v2");
 
-    DataSegment returnSegment1 = localDataSegmentPusher.push(dataSegmentFiles, dataSegment);
-    DataSegment returnSegment2 = localDataSegmentPusher.push(dataSegmentFiles, dataSegment2);
+    DataSegment returnSegment1 = localDataSegmentPusher.push(dataSegmentFiles, dataSegment, true);
+    DataSegment returnSegment2 = localDataSegmentPusher.push(dataSegmentFiles, dataSegment2, true);
 
     Assert.assertNotNull(returnSegment1);
     Assert.assertEquals(dataSegment, returnSegment1);
@@ -110,8 +110,8 @@ public class LocalDataSegmentPusherTest
   {
     File replicatedDataSegmentFiles = temporaryFolder.newFolder();
     Files.asByteSink(new File(replicatedDataSegmentFiles, "version.bin")).write(Ints.toByteArray(0x8));
-    DataSegment returnSegment1 = localDataSegmentPusher.push(dataSegmentFiles, dataSegment);
-    DataSegment returnSegment2 = localDataSegmentPusher.push(replicatedDataSegmentFiles, dataSegment);
+    DataSegment returnSegment1 = localDataSegmentPusher.push(dataSegmentFiles, dataSegment, true);
+    DataSegment returnSegment2 = localDataSegmentPusher.push(replicatedDataSegmentFiles, dataSegment, true);
 
     Assert.assertEquals(returnSegment1, returnSegment2);
   }
@@ -124,7 +124,7 @@ public class LocalDataSegmentPusherTest
     config.storageDirectory = new File(config.storageDirectory, "xxx");
     Assert.assertTrue(config.storageDirectory.mkdir());
     config.storageDirectory.setWritable(false);
-    localDataSegmentPusher.push(dataSegmentFiles, dataSegment);
+    localDataSegmentPusher.push(dataSegmentFiles, dataSegment, true);
   }
 
   @Test

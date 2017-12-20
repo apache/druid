@@ -635,7 +635,8 @@ public class AppenderatorImpl implements Appenderator
       final DataSegment segment = RetryUtils.retry(
           () -> dataSegmentPusher.push(
               mergedFile,
-              sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes))
+              sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes)),
+              true
           ),
           exception -> exception instanceof Exception,
           5

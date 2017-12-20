@@ -446,7 +446,8 @@ public class RealtimePlumber implements Plumber
 
               DataSegment segment = dataSegmentPusher.push(
                   mergedFile,
-                  sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes))
+                  sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes)),
+                  false
               );
               log.info("Inserting [%s] to the metadata store", sink.getSegment().getIdentifier());
               segmentPublisher.publishSegment(segment);

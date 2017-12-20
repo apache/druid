@@ -484,7 +484,7 @@ public class TaskLifecycleTest
       }
 
       @Override
-      public DataSegment push(File file, DataSegment segment) throws IOException
+      public DataSegment push(File file, DataSegment segment, boolean replaceExisting) throws IOException
       {
         pushedSegments++;
         return segment;
@@ -1033,7 +1033,7 @@ public class TaskLifecycleTest
       }
 
       @Override
-      public DataSegment push(File file, DataSegment dataSegment) throws IOException
+      public DataSegment push(File file, DataSegment dataSegment, boolean replaceExisting) throws IOException
       {
         throw new RuntimeException("FAILURE");
       }

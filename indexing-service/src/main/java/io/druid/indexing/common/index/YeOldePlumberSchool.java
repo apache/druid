@@ -199,7 +199,7 @@ public class YeOldePlumberSchool implements PlumberSchool
                                                      .withDimensions(ImmutableList.copyOf(mappedSegment.getAvailableDimensions()))
                                                      .withBinaryVersion(SegmentUtils.getVersionFromDir(fileToUpload));
 
-          dataSegmentPusher.push(fileToUpload, segmentToUpload);
+          dataSegmentPusher.push(fileToUpload, segmentToUpload, false);
 
           log.info(
               "Uploaded segment[%s]",
