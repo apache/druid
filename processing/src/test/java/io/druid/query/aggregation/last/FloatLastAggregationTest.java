@@ -87,13 +87,6 @@ public class FloatLastAggregationTest
     Assert.assertEquals(floats[0], result.rhs, 0.0001);
     Assert.assertEquals((long) floats[0], agg.getLong());
     Assert.assertEquals(floats[0], agg.getFloat(), 0.0001);
-
-    agg.reset();
-    if (NullHandling.useDefaultValuesForNull()) {
-      Assert.assertEquals(0, ((Pair<Long, Float>) agg.get()).rhs, 0.0001);
-    } else {
-      Assert.assertNull(agg.get());
-    }
   }
 
   @Test
@@ -143,13 +136,6 @@ public class FloatLastAggregationTest
     Assert.assertEquals(expected.rhs, result.rhs, 0.0001);
     Assert.assertEquals(expected.rhs.longValue(), agg.getLong());
     Assert.assertEquals(expected.rhs, agg.getFloat(), 0.0001);
-
-    agg.reset();
-    if (NullHandling.useDefaultValuesForNull()) {
-      Assert.assertEquals(0, ((Pair<Long, Float>) agg.get()).rhs, 0.0001);
-    } else {
-      Assert.assertNull(agg.get());
-    }
   }
 
   @Test

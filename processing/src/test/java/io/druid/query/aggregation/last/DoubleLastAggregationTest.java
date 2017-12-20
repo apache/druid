@@ -87,13 +87,6 @@ public class DoubleLastAggregationTest
     Assert.assertEquals(doubles[0], result.rhs, 0.0001);
     Assert.assertEquals((long) doubles[0], agg.getLong());
     Assert.assertEquals(doubles[0], agg.getDouble(), 0.0001);
-
-    agg.reset();
-    if (NullHandling.useDefaultValuesForNull()) {
-      Assert.assertEquals(0, ((Pair<Long, Double>) agg.get()).rhs, 0.0001);
-    } else {
-      Assert.assertNull(agg.get());
-    }
   }
 
   @Test
@@ -143,11 +136,6 @@ public class DoubleLastAggregationTest
     Assert.assertEquals(expected.rhs, result.rhs, 0.0001);
     Assert.assertEquals(expected.rhs.longValue(), agg.getLong());
     Assert.assertEquals(expected.rhs, agg.getDouble(), 0.0001);
-
-    agg.reset();
-    if (NullHandling.useDefaultValuesForNull()) {
-      Assert.assertEquals(0, ((Pair<Long, Double>) agg.get()).rhs, 0.0001);
-    }
   }
 
   @Test

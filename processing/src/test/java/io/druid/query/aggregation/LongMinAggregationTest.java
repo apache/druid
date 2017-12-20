@@ -68,13 +68,6 @@ public class LongMinAggregationTest
     Assert.assertEquals(values[2], ((Long) agg.get()).longValue());
     Assert.assertEquals(values[2], agg.getLong());
     Assert.assertEquals((float) values[2], agg.getFloat(), 0.0001);
-
-    agg.reset();
-    if (NullHandling.useDefaultValuesForNull()) {
-      Assert.assertEquals(Long.MAX_VALUE, ((Long) agg.get()).longValue());
-    } else {
-      Assert.assertNull(agg.get());
-    }
   }
 
   @Test

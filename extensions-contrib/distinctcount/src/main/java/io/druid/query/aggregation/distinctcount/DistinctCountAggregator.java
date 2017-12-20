@@ -73,12 +73,6 @@ public class DistinctCountAggregator implements Aggregator
   }
 
   @Override
-  public void reset()
-  {
-    mutableBitmap.clear();
-  }
-
-  @Override
   public Object get()
   {
     return mutableBitmap.size();

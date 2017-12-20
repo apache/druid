@@ -86,13 +86,6 @@ public class LongLastAggregationTest
     Assert.assertEquals(longValues[2], result.rhs.longValue());
     Assert.assertEquals(longValues[2], agg.getLong());
     Assert.assertEquals(longValues[2], agg.getFloat(), 1);
-
-    agg.reset();
-    if (NullHandling.useDefaultValuesForNull()) {
-      Assert.assertEquals(0, ((Pair<Long, Long>) agg.get()).rhs.longValue());
-    } else {
-      Assert.assertNull(agg.get());
-    }
   }
 
   @Test
@@ -142,13 +135,6 @@ public class LongLastAggregationTest
     Assert.assertEquals(expected.rhs, result.rhs);
     Assert.assertEquals(expected.rhs.longValue(), agg.getLong());
     Assert.assertEquals(expected.rhs, agg.getFloat(), 1);
-
-    agg.reset();
-    if (NullHandling.useDefaultValuesForNull()) {
-      Assert.assertEquals(0, ((Pair<Long, Long>) agg.get()).rhs.longValue());
-    } else {
-      Assert.assertNull(agg.get());
-    }
   }
 
   @Test

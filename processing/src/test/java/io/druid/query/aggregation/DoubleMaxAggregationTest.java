@@ -69,12 +69,6 @@ public class DoubleMaxAggregationTest
     Assert.assertEquals((long) values[2], agg.getLong());
     Assert.assertEquals(values[2], agg.getFloat(), 0.0001);
 
-    agg.reset();
-    if (NullHandling.useDefaultValuesForNull()) {
-      Assert.assertEquals(Double.NEGATIVE_INFINITY, (Double) agg.get(), 0.0001);
-    } else {
-      Assert.assertNull(agg.get());
-    }
   }
 
   @Test
