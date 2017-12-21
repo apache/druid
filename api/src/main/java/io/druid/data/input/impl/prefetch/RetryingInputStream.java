@@ -34,6 +34,7 @@ class RetryingInputStream<T> extends InputStream
   private final int maxTry;
 
   private CountingInputStream delegate;
+  private long startOffset;
 
   RetryingInputStream(
       T object,
@@ -47,9 +48,9 @@ class RetryingInputStream<T> extends InputStream
 
       if (t instanceof SocketTimeoutException || t.getCause() instanceof SocketTimeoutException) {
         try {
-          final long count = delegate.getCount();
+          startOffset += delegate.getCount();
           delegate.close();
-          delegate = new CountingInputStream(objectOpenFunction.open(object, count));
+          delegate = new CountingInputStream(objectOpenFunction.open(object, startOffset));
           return true;
         }
         catch (IOException ioe) {

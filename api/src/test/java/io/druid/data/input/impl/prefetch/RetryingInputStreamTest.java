@@ -19,7 +19,7 @@
 
 package io.druid.data.input.impl.prefetch;
 
-import io.druid.java.util.common.StringUtils;
+import com.google.common.base.Preconditions;
 import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -28,6 +28,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -35,7 +36,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.SocketTimeoutException;
-import java.nio.ByteBuffer;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 public class RetryingInputStreamTest
 {
@@ -46,7 +48,7 @@ public class RetryingInputStreamTest
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   private File testFile;
-  private RetryingInputStream inputStream;
+  private DataInputStream inputStream;
 
   @Before
   public void setup() throws IOException
@@ -54,33 +56,42 @@ public class RetryingInputStreamTest
     testFile = temporaryFolder.newFile();
 
     try (FileOutputStream fis = new FileOutputStream(testFile);
-         DataOutputStream dis = new DataOutputStream(fis)) {
-      for (int i = 0; i < 100; i++) {
+         GZIPOutputStream gis = new GZIPOutputStream(fis);
+         DataOutputStream dis = new DataOutputStream(gis)) {
+      for (int i = 0; i < 10000; i++) {
         dis.writeInt(i);
       }
     }
 
-    inputStream = new RetryingInputStream<>(
-        testFile,
-        new ObjectOpenFunction<File>()
-        {
-          @Override
-          public InputStream open(File object) throws IOException
-          {
-            return new TestInputStream(new FileInputStream(object));
-          }
+    throwError = false;
 
-          @Override
-          public InputStream open(File object, long start) throws IOException
-          {
-            final FileInputStream fis = new FileInputStream(object);
-            fis.skip(start);
-            return new TestInputStream(fis);
-          }
-        },
-        e -> e instanceof IOException,
-        MAX_RETRY
+    inputStream = new DataInputStream(
+        new GZIPInputStream(
+            new RetryingInputStream<>(
+                testFile,
+                new ObjectOpenFunction<File>()
+                {
+                  @Override
+                  public InputStream open(File object) throws IOException
+                  {
+                    return new TestInputStream(new FileInputStream(object));
+                  }
+
+                  @Override
+                  public InputStream open(File object, long start) throws IOException
+                  {
+                    final FileInputStream fis = new FileInputStream(object);
+                    Preconditions.checkState(fis.skip(start) == start);
+                    return new TestInputStream(fis);
+                  }
+                },
+                e -> e instanceof IOException,
+                MAX_RETRY
+            )
+        )
     );
+
+    throwError = true;
   }
 
   @After
@@ -93,19 +104,9 @@ public class RetryingInputStreamTest
   @Test
   public void testReadRetry() throws IOException
   {
-    final byte[] buf = new byte[16];
-    final ByteBuffer bb = ByteBuffer.wrap(buf);
-
-    int expected = 0;
-    int read;
-    while ((read = inputStream.read(buf)) != -1) {
-      Assert.assertTrue(StringUtils.format("read bytes[%s] should be a multiplier of 4", read), read % 4 == 0);
-
-      for (int i = 0; i < read; i += 4) {
-        Assert.assertEquals(expected++, bb.getInt(i));
-      }
+    for (int i = 0; i < 10000; i++) {
+      Assert.assertEquals(i, inputStream.readInt());
     }
-    Assert.assertEquals(100, expected);
   }
 
   private boolean throwError = true;
@@ -123,19 +124,7 @@ public class RetryingInputStreamTest
     @Override
     public int read() throws IOException
     {
-      if (throwError) {
-        throwError = false;
-        errorCount++;
-        if (errorCount % 2 == 0) {
-          throw new IOException("test retry");
-        } else {
-          delegate.close();
-          throw new IllegalArgumentException(new SocketTimeoutException("test timeout"));
-        }
-      } else {
-        throwError = errorCount < MAX_ERROR;
-        return delegate.read();
-      }
+      return delegate.read();
     }
 
     @Override
