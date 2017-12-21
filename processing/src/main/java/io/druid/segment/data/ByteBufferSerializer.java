@@ -23,7 +23,7 @@ import java.nio.ByteBuffer;
 
 /**
  */
-public class ByteBufferSerializer<T>
+public class ByteBufferSerializer
 {
   public static <T> T read(ByteBuffer buffer, ObjectStrategy<T> strategy)
   {
@@ -34,5 +34,4 @@ public class ByteBufferSerializer<T>
 
     return strategy.fromByteBuffer(bufferToUse, size);
   }
-
 }

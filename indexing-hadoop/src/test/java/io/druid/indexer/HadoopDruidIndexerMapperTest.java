@@ -55,7 +55,7 @@ import java.util.stream.Collectors;
 
 public class HadoopDruidIndexerMapperTest
 {
-  private static final ObjectMapper JSON_MAPPER = TestHelper.getJsonMapper();
+  private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
   private static final DataSchema DATA_SCHEMA = new DataSchema(
       "test_ds",
       JSON_MAPPER.convertValue(

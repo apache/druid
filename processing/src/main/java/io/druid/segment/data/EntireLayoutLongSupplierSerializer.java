@@ -19,46 +19,41 @@
 
 package io.druid.segment.data;
 
-import com.google.common.io.ByteSink;
-import com.google.common.io.ByteStreams;
-import com.google.common.io.CountingOutputStream;
-import com.google.common.primitives.Ints;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
+import io.druid.segment.serde.MetaSerdeHelper;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
+import io.druid.segment.writeout.WriteOutBytes;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 
 public class EntireLayoutLongSupplierSerializer implements LongSupplierSerializer
 {
+  private static final MetaSerdeHelper<EntireLayoutLongSupplierSerializer> metaSerdeHelper = MetaSerdeHelper
+      .firstWriteByte((EntireLayoutLongSupplierSerializer x) -> CompressedLongsIndexedSupplier.VERSION)
+      .writeInt(x -> x.numInserted)
+      .writeInt(x -> 0)
+      .writeSomething(CompressionFactory.longEncodingWriter(x -> x.writer, x -> CompressionStrategy.NONE));
 
-  private final IOPeon ioPeon;
-  private final String valueFile;
-  private final String metaFile;
-  private CountingOutputStream valuesOut;
   private final CompressionFactory.LongEncodingWriter writer;
-  private long metaCount = 0;
+  private final SegmentWriteOutMedium segmentWriteOutMedium;
+  private WriteOutBytes valuesOut;
 
   private int numInserted = 0;
 
-  public EntireLayoutLongSupplierSerializer(
-      IOPeon ioPeon,
-      String filenameBase,
+  EntireLayoutLongSupplierSerializer(
+      SegmentWriteOutMedium segmentWriteOutMedium,
       CompressionFactory.LongEncodingWriter writer
   )
   {
-    this.ioPeon = ioPeon;
-    this.valueFile = filenameBase + ".value";
-    this.metaFile = filenameBase + ".format";
+    this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.writer = writer;
   }
 
   @Override
   public void open() throws IOException
   {
-    valuesOut = new CountingOutputStream(ioPeon.makeOutputStream(valueFile));
+    valuesOut = segmentWriteOutMedium.makeWriteOutBytes();
     writer.setOutputStream(valuesOut);
   }
 
@@ -76,45 +71,17 @@ public class EntireLayoutLongSupplierSerializer implements LongSupplierSerialize
   }
 
   @Override
-  public void closeAndConsolidate(ByteSink consolidatedOut) throws IOException
-  {
-    close();
-    try (OutputStream out = consolidatedOut.openStream();
-         InputStream meta = ioPeon.makeInputStream(metaFile);
-         InputStream value = ioPeon.makeInputStream(valueFile)) {
-      ByteStreams.copy(meta, out);
-      ByteStreams.copy(value, out);
-    }
-  }
-
-  @Override
-  public void close() throws IOException
+  public long getSerializedSize() throws IOException
   {
     writer.flush();
-    valuesOut.close();
-    try (CountingOutputStream metaOut = new CountingOutputStream(ioPeon.makeOutputStream(metaFile))) {
-      metaOut.write(CompressedLongsIndexedSupplier.version);
-      metaOut.write(Ints.toByteArray(numInserted));
-      metaOut.write(Ints.toByteArray(0));
-      writer.putMeta(metaOut, CompressedObjectStrategy.CompressionStrategy.NONE);
-      metaOut.close();
-      metaCount = metaOut.getCount();
-    }
+    return metaSerdeHelper.size(this) + valuesOut.size();
   }
 
   @Override
-  public long getSerializedSize()
+  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    return metaCount + valuesOut.getCount();
-  }
-
-  @Override
-  public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
-  {
-    try (InputStream meta = ioPeon.makeInputStream(metaFile);
-         InputStream value = ioPeon.makeInputStream(valueFile)) {
-      ByteStreams.copy(Channels.newChannel(meta), channel);
-      ByteStreams.copy(Channels.newChannel(value), channel);
-    }
+    writer.flush();
+    metaSerdeHelper.writeTo(channel, this);
+    valuesOut.writeTo(channel);
   }
 }

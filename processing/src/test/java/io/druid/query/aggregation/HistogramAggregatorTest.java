@@ -40,7 +40,7 @@ public class HistogramAggregatorTest
   @Test
   public void testSerde() throws Exception
   {
-    final ObjectMapper objectMapper = TestHelper.getJsonMapper();
+    final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     String json0 = "{\"type\": \"histogram\", \"name\": \"billy\", \"fieldName\": \"nilly\"}";
     HistogramAggregatorFactory agg0 = objectMapper.readValue(json0, HistogramAggregatorFactory.class);
     Assert.assertEquals(ImmutableList.of(), agg0.getBreaks());

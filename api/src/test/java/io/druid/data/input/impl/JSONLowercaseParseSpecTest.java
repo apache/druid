@@ -45,7 +45,7 @@ public class JSONLowercaseParseSpecTest
         )
     );
     Parser parser = spec.makeParser();
-    Map<String, Object> event = parser.parse("{\"timestamp\":\"2015-01-01\",\"A\":\"foo\"}");
+    Map<String, Object> event = parser.parseToMap("{\"timestamp\":\"2015-01-01\",\"A\":\"foo\"}");
     Assert.assertEquals("foo", event.get("a"));
   }
 }

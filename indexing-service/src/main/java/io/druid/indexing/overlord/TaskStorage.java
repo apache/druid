@@ -24,8 +24,11 @@ import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.task.Task;
+import io.druid.java.util.common.Pair;
 import io.druid.metadata.EntryExistsException;
+import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 public interface TaskStorage
@@ -119,13 +122,16 @@ public interface TaskStorage
   List<Task> getActiveTasks();
 
   /**
-   * Returns a list of recently finished task statuses as stored in the storage facility. No particular order
-   * is guaranteed, but implementations are encouraged to return tasks in descending order of creation. No particular
-   * standard of "recent" is guaranteed, and in fact, this method is permitted to simply return nothing.
+   * Returns up to {@code maxTaskStatuses} statuses of recently finished tasks as stored in the storage facility. No
+   * particular order is guaranteed, but implementations are encouraged to return tasks in descending order of creation.
+   * No particular standard of "recent" is guaranteed, and in fact, this method is permitted to simply return nothing.
    *
    * @return list of recently finished tasks
    */
-  List<TaskStatus> getRecentlyFinishedTaskStatuses();
+  List<TaskStatus> getRecentlyFinishedTaskStatuses(@Nullable Integer maxTaskStatuses);
+
+  @Nullable
+  Pair<DateTime, String> getCreatedDateTimeAndDataSource(String taskId);
 
   /**
    * Returns a list of locks for a particular task.

@@ -65,6 +65,12 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       }
 
       @Override
+      public String getHistoricalUrl()
+      {
+        return "http://" + dockerIp + ":8083";
+      }
+
+      @Override
       public String getMiddleManagerHost()
       {
         return dockerIp;

@@ -44,7 +44,7 @@ import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.guice.annotations.Self;
-import io.druid.indexing.common.TaskLocation;
+import io.druid.indexer.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;

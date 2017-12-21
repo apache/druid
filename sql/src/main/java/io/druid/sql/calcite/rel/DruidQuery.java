@@ -64,7 +64,6 @@ import io.druid.sql.calcite.aggregation.Aggregation;
 import io.druid.sql.calcite.aggregation.DimensionExpression;
 import io.druid.sql.calcite.expression.DruidExpression;
 import io.druid.sql.calcite.expression.Expressions;
-import io.druid.sql.calcite.expression.ExtractionFns;
 import io.druid.sql.calcite.filtration.Filtration;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerContext;
@@ -537,13 +536,15 @@ public class DruidQuery
     return toExprType.equals(fromExprType);
   }
 
-  public VirtualColumns getVirtualColumns(final ExprMacroTable macroTable)
+  public VirtualColumns getVirtualColumns(final ExprMacroTable macroTable, final boolean includeDimensions)
   {
     final List<VirtualColumn> retVal = new ArrayList<>();
 
     if (grouping != null) {
-      for (DimensionExpression dimensionExpression : grouping.getDimensions()) {
-        retVal.addAll(dimensionExpression.getVirtualColumns(macroTable));
+      if (includeDimensions) {
+        for (DimensionExpression dimensionExpression : grouping.getDimensions()) {
+          retVal.addAll(dimensionExpression.getVirtualColumns(macroTable));
+        }
       }
 
       for (Aggregation aggregation : grouping.getAggregations()) {
@@ -653,14 +654,15 @@ public class DruidQuery
       queryGranularity = Granularities.ALL;
       descending = false;
     } else if (grouping.getDimensions().size() == 1) {
-      final DimensionSpec dimensionSpec = Iterables.getOnlyElement(grouping.getDimensions()).toDimensionSpec();
-      final Granularity gran = ExtractionFns.toQueryGranularity(dimensionSpec.getExtractionFn());
+      final DimensionExpression dimensionExpression = Iterables.getOnlyElement(grouping.getDimensions());
+      queryGranularity = Expressions.toQueryGranularity(
+          dimensionExpression.getDruidExpression(),
+          plannerContext.getExprMacroTable()
+      );
 
-      if (gran == null || !dimensionSpec.getDimension().equals(Column.TIME_COLUMN_NAME)) {
+      if (queryGranularity == null) {
         // Timeseries only applies if the single dimension is granular __time.
         return null;
-      } else {
-        queryGranularity = gran;
       }
 
       if (limitSpec != null) {
@@ -677,7 +679,7 @@ public class DruidQuery
           // wouldn't matter anyway).
           final OrderByColumnSpec firstOrderBy = limitSpec.getColumns().get(0);
 
-          if (firstOrderBy.getDimension().equals(dimensionSpec.getOutputName())) {
+          if (firstOrderBy.getDimension().equals(dimensionExpression.getOutputName())) {
             // Order by time.
             descending = firstOrderBy.getDirection() == OrderByColumnSpec.Direction.DESCENDING;
           } else {
@@ -703,7 +705,7 @@ public class DruidQuery
         dataSource,
         filtration.getQuerySegmentSpec(),
         descending,
-        getVirtualColumns(plannerContext.getExprMacroTable()),
+        getVirtualColumns(plannerContext.getExprMacroTable(), false),
         filtration.getDimFilter(),
         queryGranularity,
         grouping.getAggregatorFactories(),
@@ -768,7 +770,7 @@ public class DruidQuery
 
     return new TopNQuery(
         dataSource,
-        getVirtualColumns(plannerContext.getExprMacroTable()),
+        getVirtualColumns(plannerContext.getExprMacroTable(), true),
         dimensionSpec,
         topNMetricSpec,
         limitSpec.getLimit(),
@@ -798,7 +800,7 @@ public class DruidQuery
     return new GroupByQuery(
         dataSource,
         filtration.getQuerySegmentSpec(),
-        getVirtualColumns(plannerContext.getExprMacroTable()),
+        getVirtualColumns(plannerContext.getExprMacroTable(), true),
         filtration.getDimFilter(),
         Granularities.ALL,
         grouping.getDimensionSpecs(),
@@ -927,7 +929,7 @@ public class DruidQuery
         Granularities.ALL,
         ImmutableList.of(new DefaultDimensionSpec(dummyColumn, dummyColumn)),
         metrics.stream().sorted().distinct().collect(Collectors.toList()),
-        getVirtualColumns(plannerContext.getExprMacroTable()),
+        getVirtualColumns(plannerContext.getExprMacroTable(), true),
         pagingSpec,
         ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
     );

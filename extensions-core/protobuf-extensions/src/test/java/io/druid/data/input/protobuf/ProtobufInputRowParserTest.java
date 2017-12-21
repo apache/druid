@@ -156,7 +156,7 @@ public class ProtobufInputRowParserTest
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     event.writeTo(out);
 
-    InputRow row = parser.parse(ByteBuffer.wrap(out.toByteArray()));
+    InputRow row = parser.parseBatch(ByteBuffer.wrap(out.toByteArray())).get(0);
     System.out.println(row);
 
     assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
@@ -199,7 +199,7 @@ public class ProtobufInputRowParserTest
     expectedException.expect(CoreMatchers.instanceOf(IllegalStateException.class));
     expectedException.expectMessage("JavaScript is disabled");
 
-    parser.parse(ByteBuffer.allocate(1));
+    parser.parseBatch(ByteBuffer.allocate(1)).get(0);
   }
 
   private void assertDimensionEquals(InputRow row, String dimension, Object expected)

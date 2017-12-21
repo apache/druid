@@ -99,7 +99,7 @@ public class DruidOrcInputFormatTest
 
     OrcStruct data = (OrcStruct) reader.getCurrentValue();
 
-    MapBasedInputRow row = (MapBasedInputRow) parser.parse(data);
+    MapBasedInputRow row = (MapBasedInputRow) parser.parseBatch(data).get(0);
 
     Assert.assertTrue(row.getEvent().keySet().size() == 4);
     Assert.assertEquals(DateTimes.of(timestamp), row.getTimestamp());

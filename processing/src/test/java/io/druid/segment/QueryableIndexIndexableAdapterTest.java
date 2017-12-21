@@ -19,9 +19,13 @@
 
 package io.druid.segment;
 
+import com.google.common.collect.ImmutableList;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import io.druid.segment.data.BitmapValues;
-import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
+import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.data.IncrementalIndexTest;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -29,24 +33,46 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.Collection;
 
+@RunWith(Parameterized.class)
 public class QueryableIndexIndexableAdapterTest
 {
-  private final static IndexMerger INDEX_MERGER = TestHelper.getTestIndexMergerV9();
-  private final static IndexIO INDEX_IO = TestHelper.getTestIndexIO();
   private static final IndexSpec INDEX_SPEC = IndexMergerTestBase.makeIndexSpec(
       new ConciseBitmapSerdeFactory(),
-      CompressedObjectStrategy.CompressionStrategy.LZ4,
-      CompressedObjectStrategy.CompressionStrategy.LZ4,
+      CompressionStrategy.LZ4,
+      CompressionStrategy.LZ4,
       CompressionFactory.LongEncodingStrategy.LONGS
   );
+
+
+  @Parameterized.Parameters
+  public static Collection<?> constructorFeeder() throws IOException
+  {
+    return ImmutableList.of(
+        new Object[] {TmpFileSegmentWriteOutMediumFactory.instance()},
+        new Object[] {OffHeapMemorySegmentWriteOutMediumFactory.instance()}
+    );
+  }
 
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
   @Rule
   public final CloserRule closer = new CloserRule(false);
+
+  private final IndexMerger indexMerger;
+  private final IndexIO indexIO;
+
+  public QueryableIndexIndexableAdapterTest(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
+  {
+    indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
+    indexIO = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory);
+  }
 
   @Test
   public void testGetBitmapIndex() throws Exception
@@ -57,18 +83,19 @@ public class QueryableIndexIndexableAdapterTest
 
     final File tempDir = temporaryFolder.newFolder();
     QueryableIndex index = closer.closeLater(
-        INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
+        indexIO.loadIndex(
+            indexMerger.persist(
                 toPersist,
                 tempDir,
-                INDEX_SPEC
+                INDEX_SPEC,
+                null
             )
         )
     );
 
     IndexableAdapter adapter = new QueryableIndexIndexableAdapter(index);
     String dimension = "dim1";
-    //null is added to all dimensions with value
+    @SuppressWarnings("UnusedAssignment") //null is added to all dimensions with value
     BitmapValues bitmapValues = adapter.getBitmapValues(dimension, 0);
     for (int i = 0; i < adapter.getDimValueLookup(dimension).size(); i++) {
       bitmapValues = adapter.getBitmapValues(dimension, i);

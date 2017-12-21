@@ -53,7 +53,7 @@ import io.druid.java.util.common.concurrent.Execs;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.curator.CuratorUtils;
 import io.druid.curator.cache.PathChildrenCacheFactory;
-import io.druid.indexing.common.TaskLocation;
+import io.druid.indexer.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.autoscaling.ProvisioningService;
@@ -885,7 +885,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
               task.getId(),
               elapsed,
               config.getTaskAssignmentTimeout()
-          );
+          ).emit();
           taskComplete(taskRunnerWorkItem, theZkWorker, TaskStatus.failure(task.getId()));
           break;
         }

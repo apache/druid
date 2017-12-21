@@ -20,12 +20,8 @@
 package io.druid.segment.data;
 
 import com.google.common.base.Supplier;
+import io.druid.segment.serde.Serializer;
 
-import java.io.IOException;
-import java.nio.channels.WritableByteChannel;
-
-public interface WritableSupplier<T> extends Supplier<T>
+public interface WritableSupplier<T> extends Supplier<T>, Serializer
 {
-  long getSerializedSize();
-  void writeToChannel(WritableByteChannel channel) throws IOException;
 }

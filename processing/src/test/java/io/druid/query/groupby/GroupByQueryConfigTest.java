@@ -29,7 +29,7 @@ import org.junit.Test;
 
 public class GroupByQueryConfigTest
 {
-  private final ObjectMapper MAPPER = TestHelper.getJsonMapper();
+  private final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
 
   private final ImmutableMap<String, String> CONFIG_MAP = ImmutableMap
       .<String, String>builder()

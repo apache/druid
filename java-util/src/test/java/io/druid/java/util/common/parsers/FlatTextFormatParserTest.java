@@ -86,7 +86,7 @@ public class FlatTextFormatParserTest
     final String header = concat(format, "time", "value1", "value2");
     final Parser<String, Object> parser = parserFactory.get(format, header);
     final String body = concat(format, "hello", "world", "foo");
-    final Map<String, Object> jsonMap = parser.parse(body);
+    final Map<String, Object> jsonMap = parser.parseToMap(body);
     Assert.assertEquals(
         "jsonMap",
         ImmutableMap.of("time", "hello", "value1", "world", "value2", "foo"),
@@ -99,7 +99,7 @@ public class FlatTextFormatParserTest
   {
     final Parser<String, Object> parser = parserFactory.get(format);
     final String body = concat(format, "hello", "world", "foo");
-    final Map<String, Object> jsonMap = parser.parse(body);
+    final Map<String, Object> jsonMap = parser.parseToMap(body);
     Assert.assertEquals(
         "jsonMap",
         ImmutableMap.of("column_1", "hello", "column_2", "world", "column_3", "foo"),
@@ -120,9 +120,9 @@ public class FlatTextFormatParserTest
     };
     int index;
     for (index = 0; index < skipHeaderRows; index++) {
-      Assert.assertNull(parser.parse(body[index]));
+      Assert.assertNull(parser.parseToMap(body[index]));
     }
-    final Map<String, Object> jsonMap = parser.parse(body[index]);
+    final Map<String, Object> jsonMap = parser.parseToMap(body[index]);
     Assert.assertEquals(
         "jsonMap",
         ImmutableMap.of("column_1", "hello", "column_2", "world", "column_3", "foo"),
@@ -139,8 +139,8 @@ public class FlatTextFormatParserTest
         concat(format, "time", "value1", "value2"),
         concat(format, "hello", "world", "foo")
     };
-    Assert.assertNull(parser.parse(body[0]));
-    final Map<String, Object> jsonMap = parser.parse(body[1]);
+    Assert.assertNull(parser.parseToMap(body[0]));
+    final Map<String, Object> jsonMap = parser.parseToMap(body[1]);
     Assert.assertEquals(
         "jsonMap",
         ImmutableMap.of("time", "hello", "value1", "world", "value2", "foo"),
@@ -157,8 +157,8 @@ public class FlatTextFormatParserTest
         concat(format, "time", "", "value2", ""),
         concat(format, "hello", "world", "foo", "bar")
     };
-    Assert.assertNull(parser.parse(body[0]));
-    final Map<String, Object> jsonMap = parser.parse(body[1]);
+    Assert.assertNull(parser.parseToMap(body[0]));
+    final Map<String, Object> jsonMap = parser.parseToMap(body[1]);
     Assert.assertEquals(
         "jsonMap",
         ImmutableMap.of("time", "hello", "column_2", "world", "value2", "foo", "column_4", "bar"),
@@ -175,8 +175,8 @@ public class FlatTextFormatParserTest
         concat(format, "time", "value1", "value2"),
         concat(format, "hello", "world", "foo")
     };
-    Assert.assertNull(parser.parse(body[0]));
-    Map<String, Object> jsonMap = parser.parse(body[1]);
+    Assert.assertNull(parser.parseToMap(body[0]));
+    Map<String, Object> jsonMap = parser.parseToMap(body[1]);
     Assert.assertEquals(
         "jsonMap",
         ImmutableMap.of("time", "hello", "value1", "world", "value2", "foo"),
@@ -188,8 +188,8 @@ public class FlatTextFormatParserTest
         concat(format, "time", "value1", "value2", "value3"),
         concat(format, "hello", "world", "foo", "bar")
     };
-    Assert.assertNull(parser.parse(body2[0]));
-    jsonMap = parser.parse(body2[1]);
+    Assert.assertNull(parser.parseToMap(body2[0]));
+    jsonMap = parser.parseToMap(body2[1]);
     Assert.assertEquals(
         "jsonMap",
         ImmutableMap.of("time", "hello", "value1", "world", "value2", "foo", "value3", "bar"),
@@ -212,7 +212,7 @@ public class FlatTextFormatParserTest
         concat(format, "header", "line", "2"),
         concat(format, "hello", "world", "foo")
     };
-    parser.parse(body[0]);
+    parser.parseToMap(body[0]);
   }
 
   private static class FlatTextFormatParserFactory

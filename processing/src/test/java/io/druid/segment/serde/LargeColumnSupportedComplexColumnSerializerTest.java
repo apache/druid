@@ -27,12 +27,12 @@ import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.Smoosh;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.java.util.common.io.smoosh.SmooshedWriter;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.IOPeon;
-import io.druid.segment.data.TmpFileIOPeon;
 import org.apache.commons.io.FileUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -60,11 +60,11 @@ public class LargeColumnSupportedComplexColumnSerializerTest
       for (int aCase : cases) {
         File tmpFile = FileUtils.getTempDirectory();
         HyperLogLogCollector baseCollector = HyperLogLogCollector.makeLatestCollector();
-        try (IOPeon peon = new TmpFileIOPeon();
+        try (SegmentWriteOutMedium segmentWriteOutMedium = new OffHeapMemorySegmentWriteOutMedium();
              FileSmoosher v9Smoosher = new FileSmoosher(tmpFile)) {
 
           LargeColumnSupportedComplexColumnSerializer serializer = LargeColumnSupportedComplexColumnSerializer
-              .createWithColumnSize(peon, "test", serde.getObjectStrategy(), columnSize);
+              .createWithColumnSize(segmentWriteOutMedium, "test", serde.getObjectStrategy(), columnSize);
 
           serializer.open();
           for (int i = 0; i < aCase; i++) {
@@ -74,13 +74,12 @@ public class LargeColumnSupportedComplexColumnSerializerTest
             baseCollector.fold(collector);
             serializer.serialize(collector);
           }
-          serializer.close();
 
           try (final SmooshedWriter channel = v9Smoosher.addWithSmooshedWriter(
               "test",
               serializer.getSerializedSize()
           )) {
-            serializer.writeToChannel(channel, v9Smoosher);
+            serializer.writeTo(channel, v9Smoosher);
           }
         }
 

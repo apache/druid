@@ -23,8 +23,11 @@ package io.druid.java.util.common.collect;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class Utils
@@ -33,7 +36,8 @@ public class Utils
   {
     Preconditions.checkArgument(values.length == keys.length,
                                 "number of values[%s] different than number of keys[%s]",
-                                values.length, keys.length);
+                                values.length, keys.length
+    );
 
     return zipMapPartial(keys, values);
   }
@@ -42,7 +46,8 @@ public class Utils
   {
     Preconditions.checkArgument(values.length <= keys.length,
                                 "number of values[%s] exceeds number of keys[%s]",
-                                values.length, keys.length);
+                                values.length, keys.length
+    );
 
     Map<K, V> retVal = new LinkedHashMap<>();
 
@@ -53,8 +58,10 @@ public class Utils
     return retVal;
   }
 
-  /** Create a Map from iterables of keys and values. Will throw an exception if there are more keys than values,
-   *  or more values than keys. */
+  /**
+   * Create a Map from iterables of keys and values. Will throw an exception if there are more keys than values,
+   * or more values than keys.
+   */
   public static <K, V> Map<K, V> zipMap(Iterable<K> keys, Iterable<V> values)
   {
     Map<K, V> retVal = new LinkedHashMap<>();
@@ -67,20 +74,24 @@ public class Utils
 
       Preconditions.checkArgument(valsIter.hasNext(),
                                   "number of values[%s] less than number of keys, broke on key[%s]",
-                                  retVal.size(), key);
+                                  retVal.size(), key
+      );
 
       retVal.put(key, valsIter.next());
     }
 
     Preconditions.checkArgument(!valsIter.hasNext(),
                                 "number of values[%s] exceeds number of keys[%s]",
-                                retVal.size() + Iterators.size(valsIter), retVal.size());
+                                retVal.size() + Iterators.size(valsIter), retVal.size()
+    );
 
     return retVal;
   }
 
-  /** Create a Map from iterables of keys and values. If there are more keys than values, or more values than keys,
-    * the excess will be omitted. */
+  /**
+   * Create a Map from iterables of keys and values. If there are more keys than values, or more values than keys,
+   * the excess will be omitted.
+   */
   public static <K, V> Map<K, V> zipMapPartial(Iterable<K> keys, Iterable<V> values)
   {
     Map<K, V> retVal = new LinkedHashMap<>();
@@ -100,5 +111,21 @@ public class Utils
     }
 
     return retVal;
+  }
+
+  @SafeVarargs
+  public static <T> List<T> nullableListOf(@Nullable T... elements)
+  {
+    final List<T> list;
+    if (elements == null) {
+      list = new ArrayList<>(1);
+      list.add(null);
+    } else {
+      list = new ArrayList<>(elements.length);
+      for (T element : elements) {
+        list.add(element);
+      }
+    }
+    return list;
   }
 }

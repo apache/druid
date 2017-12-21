@@ -50,6 +50,7 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class MetadataTaskStorage implements TaskStorage
 {
@@ -212,23 +213,25 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<TaskStatus> getRecentlyFinishedTaskStatuses()
+  public List<TaskStatus> getRecentlyFinishedTaskStatuses(@Nullable Integer maxTaskStatuses)
   {
-    final DateTime start = DateTimes.nowUtc().minus(config.getRecentlyFinishedThreshold());
-
     return ImmutableList.copyOf(
-        Iterables.filter(
-            handler.getInactiveStatusesSince(start),
-            new Predicate<TaskStatus>()
-            {
-              @Override
-              public boolean apply(TaskStatus status)
-              {
-                return status.isComplete();
-              }
-            }
-        )
+        handler
+            .getInactiveStatusesSince(
+                DateTimes.nowUtc().minus(config.getRecentlyFinishedThreshold()),
+                maxTaskStatuses
+            )
+            .stream()
+            .filter(TaskStatus::isComplete)
+            .collect(Collectors.toList())
     );
+  }
+
+  @Nullable
+  @Override
+  public Pair<DateTime, String> getCreatedDateTimeAndDataSource(String taskId)
+  {
+    return handler.getCreatedDateAndDataSource(taskId);
   }
 
   @Override

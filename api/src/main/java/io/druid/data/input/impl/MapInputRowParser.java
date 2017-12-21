@@ -21,6 +21,7 @@ package io.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.druid.data.input.InputRow;
@@ -45,7 +46,7 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
   }
 
   @Override
-  public InputRow parse(Map<String, Object> theMap)
+  public List<InputRow> parseBatch(Map<String, Object> theMap)
   {
     final List<String> dimensions = parseSpec.getDimensionsSpec().hasCustomDimensions()
                                     ? parseSpec.getDimensionsSpec().getDimensionNames()
@@ -74,7 +75,7 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
       throw new ParseException(e, "Unparseable timestamp found!");
     }
 
-    return new MapBasedInputRow(timestamp.getMillis(), dimensions, theMap);
+    return ImmutableList.of(new MapBasedInputRow(timestamp.getMillis(), dimensions, theMap));
   }
 
   @JsonProperty

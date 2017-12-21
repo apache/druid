@@ -19,7 +19,9 @@
 
 package io.druid.server.coordinator.helper;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
+import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.client.indexing.QueryStatus;
 import io.druid.java.util.common.ISE;
@@ -30,6 +32,8 @@ import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
 
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -60,7 +64,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
   {
     LOG.info("Run coordinator segment compactor");
 
-    Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources = params.getDataSources();
+    Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources = createTimelines(params.getDataSources());
     List<CoordinatorCompactionConfig> compactionConfigList = params.getCoordinatorDynamicConfig()
                                                                    .getCompactionConfigs();
 
@@ -90,6 +94,32 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
     return params.buildFromExisting()
                  .withCoordinatorStats(stats)
                  .build();
+  }
+
+  @VisibleForTesting
+  static Map<String, VersionedIntervalTimeline<String, DataSegment>> createTimelines(
+      Collection<ImmutableDruidDataSource> dataSources
+  )
+  {
+    final Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = new HashMap<>(dataSources.size());
+    dataSources.stream().forEach(
+        dataSource -> {
+          VersionedIntervalTimeline<String, DataSegment> timeline = timelines.computeIfAbsent(
+              dataSource.getName(),
+              k -> new VersionedIntervalTimeline<>(String.CASE_INSENSITIVE_ORDER)
+          );
+
+          dataSource.getSegments().forEach(
+              segment -> timeline.add(
+                  segment.getInterval(),
+                  segment.getVersion(),
+                  segment.getShardSpec().createChunk(segment)
+              )
+          );
+        }
+    );
+
+    return timelines;
   }
 
   private void checkAndClearQueries()
