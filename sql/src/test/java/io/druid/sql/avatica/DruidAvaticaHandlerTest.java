@@ -96,6 +96,7 @@ public class DruidAvaticaHandlerTest
     @Override
     public int getMaxConnections()
     {
+      // This must match the number of Connection objects created in setUp()
       return 3;
     }
 
@@ -687,7 +688,7 @@ public class DruidAvaticaHandlerTest
 
     final Connection connection3 = DriverManager.getConnection(url);
     connection3.createStatement().close();
-    
+
     final Connection connection4 = DriverManager.getConnection(url);
     Assert.assertTrue(true);
   }
