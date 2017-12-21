@@ -96,7 +96,7 @@ public class DruidAvaticaHandlerTest
     @Override
     public int getMaxConnections()
     {
-      return 2;
+      return 3;
     }
 
     @Override
