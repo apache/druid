@@ -23,8 +23,8 @@ package io.druid.benchmark;
 
 import com.google.common.base.Supplier;
 import com.google.common.io.Files;
-import io.druid.segment.data.CompressedFloatsIndexedSupplier;
-import io.druid.segment.data.IndexedFloats;
+import io.druid.segment.data.CompressedColumnarFloatsSupplier;
+import io.druid.segment.data.ColumnarFloats;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -63,7 +63,7 @@ public class FloatCompressionBenchmark
   private static String strategy;
 
   private Random rand;
-  private Supplier<IndexedFloats> supplier;
+  private Supplier<ColumnarFloats> supplier;
 
   @Setup
   public void setup() throws Exception
@@ -72,33 +72,33 @@ public class FloatCompressionBenchmark
     File compFile = new File(dir, file + "-" + strategy);
     rand = new Random();
     ByteBuffer buffer = Files.map(compFile);
-    supplier = CompressedFloatsIndexedSupplier.fromByteBuffer(buffer, ByteOrder.nativeOrder());
+    supplier = CompressedColumnarFloatsSupplier.fromByteBuffer(buffer, ByteOrder.nativeOrder());
   }
 
   @Benchmark
   public void readContinuous(Blackhole bh) throws IOException
   {
-    IndexedFloats indexedFloats = supplier.get();
-    int count = indexedFloats.size();
+    ColumnarFloats columnarFloats = supplier.get();
+    int count = columnarFloats.size();
     float sum = 0;
     for (int i = 0; i < count; i++) {
-      sum += indexedFloats.get(i);
+      sum += columnarFloats.get(i);
     }
     bh.consume(sum);
-    indexedFloats.close();
+    columnarFloats.close();
   }
 
   @Benchmark
   public void readSkipping(Blackhole bh) throws IOException
   {
-    IndexedFloats indexedFloats = supplier.get();
-    int count = indexedFloats.size();
+    ColumnarFloats columnarFloats = supplier.get();
+    int count = columnarFloats.size();
     float sum = 0;
     for (int i = 0; i < count; i += rand.nextInt(2000)) {
-      sum += indexedFloats.get(i);
+      sum += columnarFloats.get(i);
     }
     bh.consume(sum);
-    indexedFloats.close();
+    columnarFloats.close();
   }
 
 }

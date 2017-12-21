@@ -45,12 +45,6 @@ public class CountAggregator implements Aggregator
   }
 
   @Override
-  public void reset()
-  {
-    count = 0;
-  }
-
-  @Override
   public Object get()
   {
     return count;

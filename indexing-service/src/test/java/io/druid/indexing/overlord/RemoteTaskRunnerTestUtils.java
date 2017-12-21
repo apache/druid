@@ -28,7 +28,7 @@ import io.druid.common.guava.DSuppliers;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.cache.PathChildrenCacheFactory;
 import io.druid.indexing.common.IndexingServiceCondition;
-import io.druid.indexing.common.TaskLocation;
+import io.druid.indexer.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.task.Task;

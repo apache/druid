@@ -218,7 +218,9 @@ public class JettyServerModule extends JerseyServletModule
 
     if (node.isEnablePlaintextPort()) {
       log.info("Creating http connector with port [%d]", node.getPlaintextPort());
-      final ServerConnector connector = new ServerConnector(server);
+      HttpConfiguration httpConfiguration = new HttpConfiguration();
+      httpConfiguration.setRequestHeaderSize(config.getMaxRequestHeaderSize());
+      final ServerConnector connector = new ServerConnector(server, new HttpConnectionFactory(httpConfiguration));
       connector.setPort(node.getPlaintextPort());
       serverConnectors.add(connector);
     }
@@ -264,6 +266,7 @@ public class JettyServerModule extends JerseyServletModule
       httpsConfiguration.setSecureScheme("https");
       httpsConfiguration.setSecurePort(node.getTlsPort());
       httpsConfiguration.addCustomizer(new SecureRequestCustomizer());
+      httpsConfiguration.setRequestHeaderSize(config.getMaxRequestHeaderSize());
       final ServerConnector connector = new ServerConnector(
           server,
           new SslConnectionFactory(sslContextFactory, HttpVersion.HTTP_1_1.toString()),

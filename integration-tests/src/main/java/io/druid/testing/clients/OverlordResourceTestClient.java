@@ -29,7 +29,7 @@ import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskState;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.RetryUtils;
 import io.druid.java.util.common.StringUtils;
@@ -117,7 +117,7 @@ public class OverlordResourceTestClient
     }
   }
 
-  public TaskStatus.Status getTaskStatus(String taskID)
+  public TaskState getTaskStatus(String taskID)
   {
     try {
       StatusResponseHolder response = makeRequest(
@@ -135,7 +135,7 @@ public class OverlordResourceTestClient
       );
       //TODO: figure out a better way to parse the response...
       String status = (String) ((Map) responseData.get("status")).get("status");
-      return TaskStatus.Status.valueOf(status);
+      return TaskState.valueOf(status);
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -189,11 +189,11 @@ public class OverlordResourceTestClient
           @Override
           public Boolean call() throws Exception
           {
-            TaskStatus.Status status = getTaskStatus(taskID);
-            if (status == TaskStatus.Status.FAILED) {
+            TaskState status = getTaskStatus(taskID);
+            if (status == TaskState.FAILED) {
               throw new ISE("Indexer task FAILED");
             }
-            return status == TaskStatus.Status.SUCCESS;
+            return status == TaskState.SUCCESS;
           }
         },
         true,

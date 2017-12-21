@@ -76,18 +76,25 @@ public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
   void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess);
 
   /**
-   * Read the first value within a row values object (IndexedInts, IndexedLongs, etc.) and write that value
-   * to the keyBuffer at keyBufferPosition. If rowSize is 0, write GROUP_BY_MISSING_VALUE instead.
+   * Read the first value within a row values object (e. g. {@link io.druid.segment.data.IndexedInts}, as the value in
+   * a dictionary-encoded string column) and write that value to the keyBuffer at keyBufferPosition. If the row size is
+   * 0 (e. g. {@link io.druid.segment.data.IndexedInts#size}), write {@link #GROUP_BY_MISSING_VALUE} instead.
    *
    * If the size of the row is > 0, write 1 to stack[] at columnIndex, otherwise write 0.
    *
    * @param keyBufferPosition Starting offset for this column's value within the grouping key.
    * @param columnIndex Index of the column within the row values array
-   * @param rowObj Row value object for this column (e.g., IndexedInts)
+   * @param rowObj Row value object for this column
    * @param keyBuffer grouping key
    * @param stack array containing the current within-row value index for each column
    */
-  void initGroupingKeyColumnValue(int keyBufferPosition, int columnIndex, Object rowObj, ByteBuffer keyBuffer, int[] stack);
+  void initGroupingKeyColumnValue(
+      int keyBufferPosition,
+      int columnIndex,
+      Object rowObj,
+      ByteBuffer keyBuffer,
+      int[] stack
+  );
 
   /**
    * If rowValIdx is less than the size of rowObj (haven't handled all of the row values):

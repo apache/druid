@@ -59,7 +59,7 @@ public class TimestampAggregator implements Aggregator
     this.comparator = comparator;
     this.initValue = initValue;
 
-    reset();
+    most = this.initValue;
   }
 
   @Override
@@ -70,12 +70,6 @@ public class TimestampAggregator implements Aggregator
     if (value != null) {
       most = comparator.compare(most, value) > 0 ? most : value;
     }
-  }
-
-  @Override
-  public void reset()
-  {
-    most = initValue;
   }
 
   @Override

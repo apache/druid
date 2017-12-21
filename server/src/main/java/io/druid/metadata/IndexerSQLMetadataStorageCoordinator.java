@@ -387,7 +387,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final Interval interval,
       final String maxVersion,
       final boolean skipSegmentLineageCheck
-  ) throws IOException
+  )
   {
     Preconditions.checkNotNull(dataSource, "dataSource");
     Preconditions.checkNotNull(sequenceName, "sequenceName");
@@ -611,6 +611,24 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         },
         ALLOCATE_SEGMENT_QUIET_TRIES,
         SQLMetadataConnector.DEFAULT_MAX_TRIES
+    );
+  }
+
+  @Override
+  public int deletePendingSegments(String dataSource, Interval deleteInterval)
+  {
+    return connector.getDBI().inTransaction(
+        (handle, status) -> handle
+            .createStatement(
+                StringUtils.format(
+                    "delete from %s where datasource = :dataSource and created_date >= :start and created_date < :end",
+                    dbTables.getPendingSegmentsTable()
+                )
+            )
+            .bind("dataSource", dataSource)
+            .bind("start", deleteInterval.getStart().toString())
+            .bind("end", deleteInterval.getEnd().toString())
+            .execute()
     );
   }
 

@@ -101,12 +101,6 @@ public class CardinalityAggregator implements Aggregator
   }
 
   @Override
-  public void reset()
-  {
-    collector = HyperLogLogCollector.makeLatestCollector();
-  }
-
-  @Override
   public Object get()
   {
     // Workaround for non-thread-safe use of HyperLogLogCollector.

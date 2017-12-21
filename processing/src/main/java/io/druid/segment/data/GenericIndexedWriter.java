@@ -45,7 +45,7 @@ import java.nio.channels.WritableByteChannel;
 
 
 /**
- * Streams arrays of objects out in the binary format described by GenericIndexed
+ * Streams arrays of objects out in the binary format described by {@link GenericIndexed}
  */
 public class GenericIndexedWriter<T> implements Serializer
 {

@@ -57,6 +57,9 @@ public class ServerConfig
   @Min(1)
   private long maxQueryTimeout = Long.MAX_VALUE;
 
+  @JsonProperty
+  private int maxRequestHeaderSize = 8 * 1024;
+
   public int getNumThreads()
   {
     return numThreads;
@@ -90,6 +93,11 @@ public class ServerConfig
   public long getMaxQueryTimeout()
   {
     return maxQueryTimeout;
+  }
+
+  public int getMaxRequestHeaderSize()
+  {
+    return maxRequestHeaderSize;
   }
 
   @Override
