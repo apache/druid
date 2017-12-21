@@ -119,10 +119,10 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
           ZKStringSerializer$.MODULE$
       );
       zkUtils = new ZkUtils(zkClient, new ZkConnection(zkHosts, sessionTimeoutMs), false);
-      if(config.manageKafkaTopic()) {
+      if (config.manageKafkaTopic()) {
         int numPartitions = 4;
-      int replicationFactor = 1;
-      Properties topicConfig = new Properties();
+        int replicationFactor = 1;
+        Properties topicConfig = new Properties();
         AdminUtils.createTopic(
             zkUtils,
             TOPIC_NAME,
@@ -301,7 +301,7 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
   public void afterClass() throws Exception
   {
     LOG.info("teardown");
-    if(config.manageKafkaTopic()) {
+    if (config.manageKafkaTopic()) {
       // delete kafka topic
       AdminUtils.deleteTopic(zkUtils, TOPIC_NAME);
     }

@@ -120,7 +120,7 @@ public class ITKafkaTest extends AbstractIndexerTest
           ZKStringSerializer$.MODULE$
       );
       zkUtils = new ZkUtils(zkClient, new ZkConnection(zkHosts, sessionTimeoutMs), false);
-      if(config.manageKafkaTopic()) {
+      if (config.manageKafkaTopic()) {
         int numPartitions = 1;
         int replicationFactor = 1;
         Properties topicConfig = new Properties();
@@ -195,11 +195,11 @@ public class ITKafkaTest extends AbstractIndexerTest
       LOG.info("indexerFile name: [%s]", INDEXER_FILE);
 
       Properties consumerProperties = new Properties();
-      consumerProperties.put("zookeeper.connect",config.getZookeeperHosts());
-      consumerProperties.put("zookeeper.connection.timeout.ms" , "15000");
-      consumerProperties.put("zookeeper.sync.time.ms" , "5000");
-      consumerProperties.put( "group.id", Long.toString(System.currentTimeMillis()));
-      consumerProperties.put("zookeeper.sync.time.ms" , "5000");
+      consumerProperties.put("zookeeper.connect", config.getZookeeperHosts());
+      consumerProperties.put("zookeeper.connection.timeout.ms", "15000");
+      consumerProperties.put("zookeeper.sync.time.ms", "5000");
+      consumerProperties.put("group.id", Long.toString(System.currentTimeMillis()));
+      consumerProperties.put("zookeeper.sync.time.ms", "5000");
       consumerProperties.put("fetch.message.max.bytes", "1048586");
       consumerProperties.put("auto.offset.reset", "smallest");
       consumerProperties.put("auto.commit.enable", "false");
@@ -266,11 +266,11 @@ public class ITKafkaTest extends AbstractIndexerTest
 
     String queryStr = query_response_template
         .replaceAll("%%DATASOURCE%%", DATASOURCE)
-            // time boundary
+        // time boundary
         .replace("%%TIMEBOUNDARY_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst))
         .replace("%%TIMEBOUNDARY_RESPONSE_MAXTIME%%", TIMESTAMP_FMT.print(dtLast))
         .replace("%%TIMEBOUNDARY_RESPONSE_MINTIME%%", TIMESTAMP_FMT.print(dtFirst))
-            // time series
+        // time series
         .replace("%%TIMESERIES_QUERY_START%%", INTERVAL_FMT.print(dtFirst))
         .replace("%%TIMESERIES_QUERY_END%%", INTERVAL_FMT.print(dtFirst.plusMinutes(MINUTES_TO_SEND + 2)))
         .replace("%%TIMESERIES_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst))
@@ -290,7 +290,7 @@ public class ITKafkaTest extends AbstractIndexerTest
   public void afterClass() throws Exception
   {
     LOG.info("teardown");
-    if(config.manageKafkaTopic()) {
+    if (config.manageKafkaTopic()) {
       // delete kafka topic
       AdminUtils.deleteTopic(zkUtils, TOPIC_NAME);
     }
