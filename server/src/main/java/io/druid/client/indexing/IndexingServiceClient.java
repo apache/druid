@@ -137,38 +137,6 @@ public class IndexingServiceClient
     }
   }
 
-  public QueryStatus queryStatus(String queryId)
-  {
-    try {
-      final FullResponseHolder response = druidLeaderClient.go(
-          druidLeaderClient.makeRequest(
-              HttpMethod.GET,
-              StringUtils.format("/druid/indexer/v1/task/%s/status", queryId)
-          )
-      );
-
-      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE("Failed to get status for query[%s]", queryId);
-      }
-
-      final Map<String, Object> resultMap = jsonMapper.readValue(
-          response.getContent(),
-          JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
-      );
-      final Map<String, Object> statusMap = (Map<String, Object>) resultMap.get("status");
-      final QueryStatus queryStatus = jsonMapper.convertValue(
-          statusMap,
-          new TypeReference<QueryStatus>() {}
-      );
-      Preconditions.checkState(queryStatus != null, "Null status for query[%s]", queryId);
-
-      return queryStatus;
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
   public int getTotalWorkerCapacity()
   {
     try {

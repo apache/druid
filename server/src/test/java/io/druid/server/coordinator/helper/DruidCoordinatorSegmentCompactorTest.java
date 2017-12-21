@@ -24,8 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.client.indexing.ClientCompactQueryTuningConfig;
 import io.druid.client.indexing.IndexingServiceClient;
-import io.druid.client.indexing.QueryStatus;
-import io.druid.client.indexing.QueryStatus.Status;
+import io.druid.indexer.TaskStatusPlus;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.server.coordinator.CoordinatorCompactionConfig;
@@ -104,9 +103,9 @@ public class DruidCoordinatorSegmentCompactorTest
     }
 
     @Override
-    public QueryStatus queryStatus(String queryId)
+    public List<TaskStatusPlus> getRunningTasks()
     {
-      return new QueryStatus(queryId, Status.SUCCESS, 1);
+      return ImmutableList.of();
     }
 
     @Override
