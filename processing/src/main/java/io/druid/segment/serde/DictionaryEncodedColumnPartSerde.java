@@ -28,24 +28,23 @@ import io.druid.collections.spatial.ImmutableRTree;
 import io.druid.io.Channels;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.segment.CompressedVSizeIndexedSupplier;
-import io.druid.segment.CompressedVSizeIndexedV3Supplier;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.BitmapSerde;
 import io.druid.segment.data.BitmapSerdeFactory;
-import io.druid.segment.data.ByteBufferSerializer;
 import io.druid.segment.data.ByteBufferWriter;
-import io.druid.segment.data.CompressedVSizeIntsIndexedSupplier;
+import io.druid.segment.data.ColumnarInts;
+import io.druid.segment.data.ColumnarIntsSerializer;
+import io.druid.segment.data.ColumnarMultiInts;
+import io.druid.segment.data.CompressedVSizeColumnarIntsSupplier;
+import io.druid.segment.data.CompressedVSizeColumnarMultiIntsSupplier;
+import io.druid.segment.data.V3CompressedVSizeColumnarMultiIntsSupplier;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.ImmutableRTreeObjectStrategy;
-import io.druid.segment.data.IndexedInts;
-import io.druid.segment.data.IndexedIntsWriter;
-import io.druid.segment.data.IndexedMultivalue;
-import io.druid.segment.data.VSizeIndexed;
-import io.druid.segment.data.VSizeIndexedInts;
+import io.druid.segment.data.VSizeColumnarInts;
+import io.druid.segment.data.VSizeColumnarMultiInts;
 import io.druid.segment.data.WritableSupplier;
 
 import javax.annotation.Nullable;
@@ -146,7 +145,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     private VERSION version = null;
     private int flags = NO_FLAGS;
     private GenericIndexedWriter<String> dictionaryWriter = null;
-    private IndexedIntsWriter valueWriter = null;
+    private ColumnarIntsSerializer valueWriter = null;
     private BitmapSerdeFactory bitmapSerdeFactory = null;
     private GenericIndexedWriter<ImmutableBitmap> bitmapIndexWriter = null;
     private ByteBufferWriter<ImmutableRTree> spatialIndexWriter = null;
@@ -182,7 +181,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       return this;
     }
 
-    public SerializerBuilder withValue(IndexedIntsWriter valueWriter, boolean hasMultiValue, boolean compressed)
+    public SerializerBuilder withValue(ColumnarIntsSerializer valueWriter, boolean hasMultiValue, boolean compressed)
     {
       this.valueWriter = valueWriter;
       if (hasMultiValue) {
@@ -291,8 +290,8 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
         );
         builder.setType(ValueType.STRING);
 
-        final WritableSupplier<IndexedInts> rSingleValuedColumn;
-        final WritableSupplier<IndexedMultivalue<IndexedInts>> rMultiValuedColumn;
+        final WritableSupplier<ColumnarInts> rSingleValuedColumn;
+        final WritableSupplier<ColumnarMultiInts> rMultiValuedColumn;
 
         if (hasMultipleValues) {
           rMultiValuedColumn = readMultiValuedColumn(rVersion, buffer, rFlags);
@@ -323,40 +322,38 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
         ImmutableRTree rSpatialIndex = null;
         if (buffer.hasRemaining()) {
-          rSpatialIndex = ByteBufferSerializer.read(
-              buffer,
-              new ImmutableRTreeObjectStrategy(bitmapSerdeFactory.getBitmapFactory())
-          );
+          rSpatialIndex =
+              new ImmutableRTreeObjectStrategy(bitmapSerdeFactory.getBitmapFactory()).fromByteBufferWithSize(buffer);
           builder.setSpatialIndex(new SpatialIndexColumnPartSupplier(rSpatialIndex));
         }
       }
 
 
-      private WritableSupplier<IndexedInts> readSingleValuedColumn(VERSION version, ByteBuffer buffer)
+      private WritableSupplier<ColumnarInts> readSingleValuedColumn(VERSION version, ByteBuffer buffer)
       {
         switch (version) {
           case UNCOMPRESSED_SINGLE_VALUE:
-            return VSizeIndexedInts.readFromByteBuffer(buffer);
+            return VSizeColumnarInts.readFromByteBuffer(buffer);
           case COMPRESSED:
-            return CompressedVSizeIntsIndexedSupplier.fromByteBuffer(buffer, byteOrder);
+            return CompressedVSizeColumnarIntsSupplier.fromByteBuffer(buffer, byteOrder);
           default:
             throw new IAE("Unsupported single-value version[%s]", version);
         }
       }
 
-      private WritableSupplier<IndexedMultivalue<IndexedInts>> readMultiValuedColumn(
+      private WritableSupplier<ColumnarMultiInts> readMultiValuedColumn(
           VERSION version, ByteBuffer buffer, int flags
       )
       {
         switch (version) {
           case UNCOMPRESSED_MULTI_VALUE: {
-            return VSizeIndexed.readFromByteBuffer(buffer);
+            return VSizeColumnarMultiInts.readFromByteBuffer(buffer);
           }
           case COMPRESSED: {
             if (Feature.MULTI_VALUE.isSet(flags)) {
-              return CompressedVSizeIndexedSupplier.fromByteBuffer(buffer, byteOrder);
+              return CompressedVSizeColumnarMultiIntsSupplier.fromByteBuffer(buffer, byteOrder);
             } else if (Feature.MULTI_VALUE_V3.isSet(flags)) {
-              return CompressedVSizeIndexedV3Supplier.fromByteBuffer(buffer, byteOrder);
+              return V3CompressedVSizeColumnarMultiIntsSupplier.fromByteBuffer(buffer, byteOrder);
             } else {
               throw new IAE("Unrecognized multi-value flag[%d]", flags);
             }

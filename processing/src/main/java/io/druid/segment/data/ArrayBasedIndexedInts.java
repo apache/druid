@@ -23,8 +23,6 @@ import io.druid.java.util.common.IAE;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 
-import java.io.IOException;
-
 /**
  */
 public final class ArrayBasedIndexedInts implements IndexedInts
@@ -72,11 +70,6 @@ public final class ArrayBasedIndexedInts implements IndexedInts
       throw new IndexOutOfBoundsException("index: " + index + ", size: " + size);
     }
     return expansion[index];
-  }
-
-  @Override
-  public void close() throws IOException
-  {
   }
 
   @Override

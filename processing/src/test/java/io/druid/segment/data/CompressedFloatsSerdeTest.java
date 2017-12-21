@@ -107,7 +107,7 @@ public class CompressedFloatsSerdeTest
 
   public void testWithValues(float[] values) throws Exception
   {
-    FloatSupplierSerializer serializer = CompressionFactory.getFloatSerializer(
+    ColumnarFloatsSerializer serializer = CompressionFactory.getFloatSerializer(
         new OffHeapMemorySegmentWriteOutMedium(),
         "test",
         order,
@@ -123,9 +123,9 @@ public class CompressedFloatsSerdeTest
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     serializer.writeTo(Channels.newChannel(baos), null);
     Assert.assertEquals(baos.size(), serializer.getSerializedSize());
-    CompressedFloatsIndexedSupplier supplier = CompressedFloatsIndexedSupplier
+    CompressedColumnarFloatsSupplier supplier = CompressedColumnarFloatsSupplier
         .fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order);
-    IndexedFloats floats = supplier.get();
+    ColumnarFloats floats = supplier.get();
 
     assertIndexMatchesVals(floats, values);
     for (int i = 0; i < 10; i++) {
@@ -141,7 +141,7 @@ public class CompressedFloatsSerdeTest
     floats.close();
   }
 
-  private void tryFill(IndexedFloats indexed, float[] vals, final int startIndex, final int size)
+  private void tryFill(ColumnarFloats indexed, float[] vals, final int startIndex, final int size)
   {
     float[] filled = new float[size];
     indexed.fill(startIndex, filled);
@@ -151,7 +151,7 @@ public class CompressedFloatsSerdeTest
     }
   }
 
-  private void assertIndexMatchesVals(IndexedFloats indexed, float[] vals)
+  private void assertIndexMatchesVals(ColumnarFloats indexed, float[] vals)
   {
     Assert.assertEquals(vals.length, indexed.size());
 
@@ -171,25 +171,25 @@ public class CompressedFloatsSerdeTest
     }
   }
 
-  private void testSupplierSerde(CompressedFloatsIndexedSupplier supplier, float[] vals) throws IOException
+  private void testSupplierSerde(CompressedColumnarFloatsSupplier supplier, float[] vals) throws IOException
   {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     supplier.writeTo(Channels.newChannel(baos), null);
 
     final byte[] bytes = baos.toByteArray();
     Assert.assertEquals(supplier.getSerializedSize(), bytes.length);
-    CompressedFloatsIndexedSupplier anotherSupplier = CompressedFloatsIndexedSupplier.fromByteBuffer(
+    CompressedColumnarFloatsSupplier anotherSupplier = CompressedColumnarFloatsSupplier.fromByteBuffer(
         ByteBuffer.wrap(bytes), order
     );
-    IndexedFloats indexed = anotherSupplier.get();
+    ColumnarFloats indexed = anotherSupplier.get();
     assertIndexMatchesVals(indexed, vals);
   }
 
   // This test attempts to cause a race condition with the DirectByteBuffers, it's non-deterministic in causing it,
   // which sucks but I can't think of a way to deterministically cause it...
   private void testConcurrentThreadReads(
-      final Supplier<IndexedFloats> supplier,
-      final IndexedFloats indexed, final float[] vals
+      final Supplier<ColumnarFloats> supplier,
+      final ColumnarFloats indexed, final float[] vals
   ) throws Exception
   {
     final AtomicReference<String> reason = new AtomicReference<String>("none");
@@ -237,7 +237,7 @@ public class CompressedFloatsSerdeTest
       }
     }).start();
 
-    final IndexedFloats indexed2 = supplier.get();
+    final ColumnarFloats indexed2 = supplier.get();
     try {
       new Thread(new Runnable()
       {
