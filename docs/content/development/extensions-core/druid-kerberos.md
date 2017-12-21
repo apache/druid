@@ -49,6 +49,12 @@ The syntax for mapping rules is `RULE:\[n:string](regexp)s/pattern/replacement/g
 If this string matches regexp, then the s//\[g] substitution command will be run over the string. The optional g will cause the substitution to be global over the string, instead of replacing only the first match in the string.
 If required, multiple rules can be be joined by newline character and specified as a String. 
 
+### Increasing HTTP Header size for large SPNEGO negotiate header
+In Active Directory environment, SPNEGO token in the Authorization header includes PAC (Privilege Access Certificate) information,
+which includes all security groups for the user. In some cases when the user belongs to many security groups the header to grow beyond what druid can handle by default.
+In such cases, max request header size that druid can handle can be increased by setting `druid.server.http.maxRequestHeaderSize` (default 8Kb) and `druid.router.http.maxRequestBufferSize` (default 8Kb).
+
+
 ## Accessing Druid HTTP end points when kerberos security is enabled 
 1. To access druid HTTP endpoints via curl user will need to first login using `kinit` command as follows -  
 
