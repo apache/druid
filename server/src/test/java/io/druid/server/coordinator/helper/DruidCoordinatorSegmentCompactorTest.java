@@ -21,15 +21,11 @@ package io.druid.server.coordinator.helper;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import io.druid.client.DruidDataSource;
-import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.indexing.ClientCompactQueryTuningConfig;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.client.indexing.QueryStatus;
 import io.druid.client.indexing.QueryStatus.Status;
-import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.server.coordinator.CoordinatorCompactionConfig;
@@ -51,6 +47,7 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -90,20 +87,19 @@ public class DruidCoordinatorSegmentCompactorTest
           segments.stream().mapToLong(DataSegment::getSize).sum()
       );
 
-      final ImmutableDruidDataSource oldDruidDataSource = dataSources
-          .stream()
-          .filter(ds -> ds.getName().equals(segments.get(0).getDataSource()))
-          .findFirst()
-          .orElseThrow(() -> new ISE("Failed to find dataSource[%s]", segments.get(0).getDataSource()));
-      final DruidDataSource newDataSource = new DruidDataSource(oldDruidDataSource.getName(), ImmutableMap.of());
-      for (DataSegment segment : oldDruidDataSource.getSegments()) {
-        if (!segments.contains(segment)) {
-          newDataSource.addSegment(segment);
-        }
-      }
-      newDataSource.addSegment(compactSegment);
-      dataSources.remove(oldDruidDataSource);
-      dataSources.add(newDataSource.toImmutableDruidDataSource());
+      final VersionedIntervalTimeline<String, DataSegment> timeline = dataSources.get(segments.get(0).getDataSource());
+      segments.forEach(
+          segment -> timeline.remove(
+              segment.getInterval(),
+              segment.getVersion(),
+              segment.getShardSpec().createChunk(segment)
+          )
+      );
+      timeline.add(
+          compactInterval,
+          compactSegment.getVersion(),
+          compactSegment.getShardSpec().createChunk(compactSegment)
+      );
       return "task_" + idSuffix++;
     }
 
@@ -121,7 +117,7 @@ public class DruidCoordinatorSegmentCompactorTest
   };
 
   private List<CoordinatorCompactionConfig> compactionConfigs;
-  private List<ImmutableDruidDataSource> dataSources;
+  private Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources;
 
   @Before
   public void setup()
@@ -142,30 +138,33 @@ public class DruidCoordinatorSegmentCompactorTest
       );
     }
 
-    dataSources = new ArrayList<>();
+    dataSources = new HashMap<>();
     for (int i = 0; i < 3; i++) {
       final String dataSource = DATA_SOURCE_PREFIX + i;
-      final ImmutableMap.Builder<String, DataSegment> builder = ImmutableMap.builder();
+
+      VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(
+          String.CASE_INSENSITIVE_ORDER
+      );
 
       for (int j = 0; j < 4; j++) {
         for (int k = 0; k < 2; k++) {
           DataSegment segment = createSegment(dataSource, j, true, k);
-          builder.put(segment.getIdentifier(), segment);
+          timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
           segment = createSegment(dataSource, j, false, k);
-          builder.put(segment.getIdentifier(), segment);
+          timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
         }
       }
 
       for (int j = 7; j < 9; j++) {
         for (int k = 0; k < 2; k++) {
           DataSegment segment = createSegment(dataSource, j, true, k);
-          builder.put(segment.getIdentifier(), segment);
+          timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
           segment = createSegment(dataSource, j, false, k);
-          builder.put(segment.getIdentifier(), segment);
+          timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
         }
       }
 
-      dataSources.add(new ImmutableDruidDataSource(dataSource, ImmutableMap.of(), builder.build()));
+      dataSources.put(dataSource, timeline);
     }
   }
 
@@ -252,9 +251,7 @@ public class DruidCoordinatorSegmentCompactorTest
     for (int i = 0; i < 3; i++) {
       final String dataSource = DATA_SOURCE_PREFIX + i;
       final Interval interval = Intervals.of(StringUtils.format("2017-01-09T12:00:00/2017-01-10"));
-      Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = DruidCoordinatorSegmentCompactor
-          .createTimelines(dataSources);
-      List<TimelineObjectHolder<String, DataSegment>> holders = timelines.get(dataSource).lookup(interval);
+      List<TimelineObjectHolder<String, DataSegment>> holders = dataSources.get(dataSource).lookup(interval);
       Assert.assertEquals(1, holders.size());
       for (TimelineObjectHolder<String, DataSegment> holder : holders) {
         List<PartitionChunk<DataSegment>> chunks = Lists.newArrayList(holder.getObject());
@@ -290,7 +287,7 @@ public class DruidCoordinatorSegmentCompactorTest
   {
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
         .newBuilder()
-        .withDatasources(dataSources)
+        .withDataSources(dataSources)
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withCompactionConfigs(compactionConfigs).build())
         .build();
     return compactor.run(params).getCoordinatorStats();
@@ -334,12 +331,9 @@ public class DruidCoordinatorSegmentCompactorTest
       }
     }
 
-    Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = DruidCoordinatorSegmentCompactor
-        .createTimelines(dataSources);
-
     for (int i = 0; i < 3; i++) {
       final String dataSource = DATA_SOURCE_PREFIX + i;
-      List<TimelineObjectHolder<String, DataSegment>> holders = timelines.get(dataSource).lookup(expectedInterval);
+      List<TimelineObjectHolder<String, DataSegment>> holders = dataSources.get(dataSource).lookup(expectedInterval);
       Assert.assertEquals(1, holders.size());
       List<PartitionChunk<DataSegment>> chunks = Lists.newArrayList(holders.get(0).getObject());
       Assert.assertEquals(1, chunks.size());
@@ -352,16 +346,18 @@ public class DruidCoordinatorSegmentCompactorTest
   private void addMoreData(String dataSource, int day)
   {
     for (int i = 0; i < 2; i++) {
-      final ImmutableDruidDataSource oldDruidDataSource = dataSources
-          .stream()
-          .filter(ds -> ds.getName().equals(dataSource))
-          .findFirst()
-          .orElseThrow(() -> new ISE("Failed to find dataSource[%s]", dataSource));
-      final DruidDataSource newDataSource = new DruidDataSource(oldDruidDataSource.getName(), ImmutableMap.of());
-      newDataSource.addSegment(createSegment(dataSource, day, true, i));
-      newDataSource.addSegment(createSegment(dataSource, day, false, i));
-      dataSources.remove(oldDruidDataSource);
-      dataSources.add(newDataSource.toImmutableDruidDataSource());
+      DataSegment newSegment = createSegment(dataSource, day, true, i);
+      dataSources.get(dataSource).add(
+          newSegment.getInterval(),
+          newSegment.getVersion(),
+          newSegment.getShardSpec().createChunk(newSegment)
+      );
+      newSegment = createSegment(dataSource, day, false, i);
+      dataSources.get(dataSource).add(
+          newSegment.getInterval(),
+          newSegment.getVersion(),
+          newSegment.getShardSpec().createChunk(newSegment)
+      );
     }
   }
 }

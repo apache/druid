@@ -648,7 +648,7 @@ public class DruidCoordinator
         DruidCoordinatorRuntimeParams params =
                 DruidCoordinatorRuntimeParams.newBuilder()
                         .withStartTime(startTime)
-                        .withDatasources(metadataSegmentManager.getInventory())
+                        .withDataSources(metadataSegmentManager.getInventory())
                         .withDynamicConfigs(getDynamicConfigs())
                         .withEmitter(emitter)
                         .withBalancerStrategy(balancerStrategy)
