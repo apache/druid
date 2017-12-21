@@ -85,13 +85,27 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    */
   List<Pair<EntryType, StatusType>> getActiveEntriesWithStatus();
 
+  default List<StatusType> getInactiveStatusesSince(DateTime timestamp)
+  {
+    return getInactiveStatusesSince(timestamp, null);
+  }
+
   /**
-   * Return all statuses for inactive entries created on or later than the given timestamp
+   * Return up to {@code maxNumStatuses} statuses for inactive entries created on or later than the given timestamp
    *
    * @param timestamp timestamp
+   * @param maxNumStatuses maxNumStatuses
    * @return list of statuses
    */
-  List<StatusType> getInactiveStatusesSince(DateTime timestamp);
+  List<StatusType> getInactiveStatusesSince(DateTime timestamp, @Nullable Integer maxNumStatuses);
+
+  /**
+   * Return createdDate and dataSource for the given id
+   *
+   * @return a pair of createdDate and dataSource or null if an entry for the given id is not found
+   */
+  @Nullable
+  Pair<DateTime, String> getCreatedDateAndDataSource(String entryId);
 
   /**
    * Add a lock to the given entry

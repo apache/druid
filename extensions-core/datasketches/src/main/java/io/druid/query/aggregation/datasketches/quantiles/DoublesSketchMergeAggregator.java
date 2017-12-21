@@ -66,12 +66,6 @@ public class DoublesSketchMergeAggregator implements Aggregator
   }
 
   @Override
-  public synchronized void reset()
-  {
-    union.reset();
-  }
-
-  @Override
   public synchronized void close()
   {
     union = null;

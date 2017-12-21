@@ -51,12 +51,6 @@ public class HyperUniquesAggregator implements Aggregator
     collector.fold((HyperLogLogCollector) object);
   }
 
-  @Override
-  public void reset()
-  {
-    collector = null;
-  }
-
   @Nullable
   @Override
   public Object get()

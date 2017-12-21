@@ -92,11 +92,6 @@ public final class ArrayBasedIndexedInts implements IndexedInts
   }
 
   @Override
-  public void close()
-  {
-  }
-
-  @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
     // nothing to inspect

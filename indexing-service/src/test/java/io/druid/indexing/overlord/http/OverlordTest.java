@@ -28,17 +28,19 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.discovery.NoopServiceAnnouncer;
 import io.druid.discovery.DruidLeaderSelector;
-import io.druid.indexing.common.TaskLocation;
+import io.druid.indexer.TaskLocation;
+import io.druid.indexer.TaskState;
+import io.druid.indexer.TaskStatusPlus;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
+import io.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import io.druid.indexing.overlord.TaskLockbox;
 import io.druid.indexing.overlord.TaskMaster;
 import io.druid.indexing.overlord.TaskRunner;
@@ -52,11 +54,10 @@ import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.indexing.overlord.helpers.OverlordHelperManager;
 import io.druid.indexing.overlord.supervisor.SupervisorManager;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.server.DruidNode;
 import io.druid.server.coordinator.CoordinatorOverlordServiceConfig;
-import io.druid.server.initialization.IndexerZkConfig;
-import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthTestUtils;
@@ -162,7 +163,6 @@ public class OverlordTest
     taskCompletionCountDownLatches[0] = new CountDownLatch(1);
     taskCompletionCountDownLatches[1] = new CountDownLatch(1);
     announcementLatch = new CountDownLatch(1);
-    IndexerZkConfig indexerZkConfig = new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null);
     setupServerAndCurator();
     curator.start();
     curator.blockUntilConnected();
@@ -211,10 +211,12 @@ public class OverlordTest
     }
     Assert.assertEquals(taskMaster.getCurrentLeader(), druidNode.getHostAndPort());
 
+    final TaskStorageQueryAdapter taskStorageQueryAdapter = new TaskStorageQueryAdapter(taskStorage);
     // Test Overlord resource stuff
     overlordResource = new OverlordResource(
         taskMaster,
-        new TaskStorageQueryAdapter(taskStorage),
+        taskStorageQueryAdapter,
+        new IndexerMetadataStorageAdapter(taskStorageQueryAdapter, null),
         null,
         null,
         null,
@@ -252,7 +254,7 @@ public class OverlordTest
     // Simulate completion of task_0
     taskCompletionCountDownLatches[Integer.parseInt(taskId_0)].countDown();
     // Wait for taskQueue to handle success status of task_0
-    waitForTaskStatus(taskId_0, TaskStatus.Status.SUCCESS);
+    waitForTaskStatus(taskId_0, TaskState.SUCCESS);
 
     // Manually insert task in taskStorage
     // Verifies sync from storage
@@ -265,19 +267,22 @@ public class OverlordTest
     response = overlordResource.getRunningTasks(req);
     // 1 task that was manually inserted should be in running state
     Assert.assertEquals(1, (((List) response.getEntity()).size()));
-    final OverlordResource.TaskResponseObject taskResponseObject = ((List<OverlordResource.TaskResponseObject>) response
+    final TaskStatusPlus taskResponseObject = ((List<TaskStatusPlus>) response
         .getEntity()).get(0);
-    Assert.assertEquals(taskId_1, taskResponseObject.toJson().get("id"));
-    Assert.assertEquals(TASK_LOCATION, taskResponseObject.toJson().get("location"));
+    Assert.assertEquals(taskId_1, taskResponseObject.getId());
+    Assert.assertEquals(TASK_LOCATION, taskResponseObject.getLocation());
 
     // Simulate completion of task_1
     taskCompletionCountDownLatches[Integer.parseInt(taskId_1)].countDown();
     // Wait for taskQueue to handle success status of task_1
-    waitForTaskStatus(taskId_1, TaskStatus.Status.SUCCESS);
+    waitForTaskStatus(taskId_1, TaskState.SUCCESS);
 
     // should return number of tasks which are not in running state
-    response = overlordResource.getCompleteTasks(req);
+    response = overlordResource.getCompleteTasks(null, req);
     Assert.assertEquals(2, (((List) response.getEntity()).size()));
+
+    response = overlordResource.getCompleteTasks(1, req);
+    Assert.assertEquals(1, (((List) response.getEntity()).size()));
     taskMaster.stop();
     Assert.assertFalse(taskMaster.isLeader());
     EasyMock.verify(taskLockbox, taskActionClientFactory);
@@ -287,7 +292,7 @@ public class OverlordTest
    * These method will not timeout until the condition is met so calling method should ensure timeout
    * This method also assumes that the task with given taskId is present
    * */
-  private void waitForTaskStatus(String taskId, TaskStatus.Status status) throws InterruptedException
+  private void waitForTaskStatus(String taskId, TaskState status) throws InterruptedException
   {
     while (true) {
       Response response = overlordResource.getTaskStatus(taskId);

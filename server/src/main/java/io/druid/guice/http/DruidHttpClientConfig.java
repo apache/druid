@@ -50,6 +50,9 @@ public class DruidHttpClientConfig
   @JsonProperty
   private String compressionCodec = DEFAULT_COMPRESSION_CODEC;
 
+  @JsonProperty
+  private int requestBuffersize = 8 * 1024;
+
   public int getNumConnections()
   {
     return numConnections;
@@ -73,5 +76,10 @@ public class DruidHttpClientConfig
   public int getNumRequestsQueued()
   {
     return numRequestsQueued;
+  }
+
+  public int getRequestBuffersize()
+  {
+    return requestBuffersize;
   }
 }

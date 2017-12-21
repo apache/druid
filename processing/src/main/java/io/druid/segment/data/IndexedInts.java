@@ -23,7 +23,6 @@ import io.druid.guice.annotations.PublicApi;
 import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import io.druid.query.monomorphicprocessing.HotLoopCallee;
 
-import java.io.Closeable;
 import java.util.function.IntConsumer;
 
 /**
@@ -33,7 +32,7 @@ import java.util.function.IntConsumer;
  * for-each iteration with boxing.
  */
 @PublicApi
-public interface IndexedInts extends Closeable, HotLoopCallee
+public interface IndexedInts extends HotLoopCallee
 {
   @CalledFromHotLoop
   int size();

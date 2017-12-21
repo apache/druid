@@ -22,8 +22,6 @@ package io.druid.segment.data;
 import io.druid.java.util.common.IAE;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
-import java.io.IOException;
-
 /**
  * Reusable IndexedInts that represents a sequence of a solo value [X].
  */
@@ -53,11 +51,6 @@ public final class SingleIndexedInt implements IndexedInts
       throw new IAE("%d != 0", i);
     }
     return value;
-  }
-
-  @Override
-  public void close() throws IOException
-  {
   }
 
   @Override

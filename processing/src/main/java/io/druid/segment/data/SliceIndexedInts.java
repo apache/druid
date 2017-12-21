@@ -24,7 +24,7 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 /**
  * Reusable IndexedInts, that could represent a sub-sequence ("slice") in a larger IndexedInts object. Used in
- * {@link io.druid.segment.CompressedVSizeIndexedSupplier} implementation.
+ * {@link CompressedVSizeColumnarMultiIntsSupplier} implementation.
  *
  * Unsafe for concurrent use from multiple threads.
  */
@@ -64,11 +64,5 @@ public final class SliceIndexedInts implements IndexedInts
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
     inspector.visit("base", base);
-  }
-
-  @Override
-  public void close()
-  {
-    // Do nothing
   }
 }

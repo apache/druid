@@ -22,8 +22,6 @@ package io.druid.segment.data;
 import io.druid.java.util.common.IAE;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
-import java.io.IOException;
-
 /**
  * Reusable IndexedInts that returns sequences [0, 1, ..., N].
  */
@@ -56,11 +54,6 @@ public class RangeIndexedInts implements IndexedInts
       throw new IAE("index[%d] >= size[%d] or < 0", index, size);
     }
     return index;
-  }
-
-  @Override
-  public void close() throws IOException
-  {
   }
 
   @Override

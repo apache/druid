@@ -28,7 +28,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.java.util.common.concurrent.Execs;
-import io.druid.indexing.common.TaskLocation;
+import io.druid.indexer.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.TaskRunner;
