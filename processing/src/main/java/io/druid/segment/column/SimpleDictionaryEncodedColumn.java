@@ -28,8 +28,9 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DimensionSelectorUtils;
 import io.druid.segment.IdLookup;
 import io.druid.segment.data.CachingIndexed;
+import io.druid.segment.data.ColumnarInts;
+import io.druid.segment.data.ColumnarMultiInts;
 import io.druid.segment.data.IndexedInts;
-import io.druid.segment.data.IndexedMultivalue;
 import io.druid.segment.data.ReadableOffset;
 import io.druid.segment.data.SingleIndexedInt;
 import io.druid.segment.filter.BooleanValueMatcher;
@@ -44,13 +45,13 @@ import java.util.BitSet;
  */
 public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn<String>
 {
-  private final IndexedInts column;
-  private final IndexedMultivalue<IndexedInts> multiValueColumn;
+  private final ColumnarInts column;
+  private final ColumnarMultiInts multiValueColumn;
   private final CachingIndexed<String> cachedLookups;
 
   public SimpleDictionaryEncodedColumn(
-      IndexedInts singleValueColumn,
-      IndexedMultivalue<IndexedInts> multiValueColumn,
+      ColumnarInts singleValueColumn,
+      ColumnarMultiInts multiValueColumn,
       CachingIndexed<String> cachedLookups
   )
   {

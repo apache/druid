@@ -29,7 +29,7 @@ import io.druid.segment.data.ByteBufferWriter;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.CompressionStrategy;
-import io.druid.segment.data.LongSupplierSerializer;
+import io.druid.segment.data.ColumnarLongsSerializer;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -66,7 +66,8 @@ public class LongColumnSerializer implements GenericColumnSerializer
   private final CompressionStrategy compression;
   private final CompressionFactory.LongEncodingStrategy encoding;
   private final BitmapSerdeFactory bitmapSerdeFactory;
-  private LongSupplierSerializer writer;
+
+  private ColumnarLongsSerializer writer;
   private ByteBufferWriter<ImmutableBitmap> nullValueBitmapWriter;
   private MutableBitmap nullRowsBitmap;
   private int rowCount = 0;

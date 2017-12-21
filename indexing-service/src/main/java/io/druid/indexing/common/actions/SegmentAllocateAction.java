@@ -166,13 +166,12 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
       );
 
       final SegmentIdentifier identifier = usedSegmentsForRow.isEmpty() ?
-                                           tryAllocateFirstSegment(toolbox, task, rowInterval, skipSegmentLineageCheck) :
+                                           tryAllocateFirstSegment(toolbox, task, rowInterval) :
                                            tryAllocateSubsequentSegment(
                                                toolbox,
                                                task,
                                                rowInterval,
-                                               usedSegmentsForRow.iterator().next(),
-                                               skipSegmentLineageCheck
+                                               usedSegmentsForRow.iterator().next()
                                            );
       if (identifier != null) {
         return identifier;
@@ -212,12 +211,8 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
     }
   }
 
-  private SegmentIdentifier tryAllocateFirstSegment(
-      TaskActionToolbox toolbox,
-      Task task,
-      Interval rowInterval,
-      boolean skipSegmentLineageCheck
-  ) throws IOException
+  private SegmentIdentifier tryAllocateFirstSegment(TaskActionToolbox toolbox, Task task, Interval rowInterval)
+      throws IOException
   {
     // No existing segments for this row, but there might still be nearby ones that conflict with our preferred
     // segment granularity. Try that first, and then progressively smaller ones if it fails.
@@ -227,7 +222,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
                                                    .collect(Collectors.toList());
     for (Interval tryInterval : tryIntervals) {
       if (tryInterval.contains(rowInterval)) {
-        final SegmentIdentifier identifier = tryAllocate(toolbox, task, tryInterval, rowInterval, false, skipSegmentLineageCheck);
+        final SegmentIdentifier identifier = tryAllocate(toolbox, task, tryInterval, rowInterval, false);
         if (identifier != null) {
           return identifier;
         }
@@ -240,8 +235,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
       TaskActionToolbox toolbox,
       Task task,
       Interval rowInterval,
-      DataSegment usedSegment,
-      boolean skipSegmentLineageCheck
+      DataSegment usedSegment
   ) throws IOException
   {
     // Existing segment(s) exist for this row; use the interval of the first one.
@@ -251,7 +245,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
     } else {
       // If segment allocation failed here, it is highly likely an unrecoverable error. We log here for easier
       // debugging.
-      return tryAllocate(toolbox, task, usedSegment.getInterval(), rowInterval, true, skipSegmentLineageCheck);
+      return tryAllocate(toolbox, task, usedSegment.getInterval(), rowInterval, true);
     }
   }
 
@@ -260,8 +254,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
       Task task,
       Interval tryInterval,
       Interval rowInterval,
-      boolean logOnFail,
-      boolean skipSegmentLineageCheck
+      boolean logOnFail
   ) throws IOException
   {
     log.debug(

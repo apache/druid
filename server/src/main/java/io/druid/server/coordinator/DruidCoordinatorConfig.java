@@ -57,6 +57,12 @@ public abstract class DruidCoordinatorConfig
     return false;
   }
 
+  @Config("druid.coordinator.kill.pendingSegments.on")
+  public boolean isKillPendingSegments()
+  {
+    return false;
+  }
+
   @Config("druid.coordinator.kill.period")
   @Default("P1D")
   public abstract Duration getCoordinatorKillPeriod();

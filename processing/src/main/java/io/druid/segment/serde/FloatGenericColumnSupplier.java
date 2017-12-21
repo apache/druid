@@ -22,18 +22,18 @@ package io.druid.segment.serde;
 import com.google.common.base.Supplier;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.segment.column.GenericColumn;
-import io.druid.segment.column.IndexedFloatsGenericColumn;
-import io.druid.segment.data.CompressedFloatsIndexedSupplier;
+import io.druid.segment.column.FloatsColumn;
+import io.druid.segment.data.CompressedColumnarFloatsSupplier;
 
 /**
 */
 public class FloatGenericColumnSupplier implements Supplier<GenericColumn>
 {
-  private final CompressedFloatsIndexedSupplier column;
+  private final CompressedColumnarFloatsSupplier column;
   private final ImmutableBitmap nullValueBitmap;
 
   public FloatGenericColumnSupplier(
-      CompressedFloatsIndexedSupplier column,
+      CompressedColumnarFloatsSupplier column,
       ImmutableBitmap nullValueBitmap
   )
   {
@@ -44,6 +44,6 @@ public class FloatGenericColumnSupplier implements Supplier<GenericColumn>
   @Override
   public GenericColumn get()
   {
-    return new IndexedFloatsGenericColumn(column.get(), nullValueBitmap);
+    return new FloatsColumn(column.get(), nullValueBitmap);
   }
 }

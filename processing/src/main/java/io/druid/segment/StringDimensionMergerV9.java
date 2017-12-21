@@ -38,16 +38,16 @@ import io.druid.segment.data.ArrayIndexed;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.BitmapValues;
 import io.druid.segment.data.ByteBufferWriter;
-import io.druid.segment.data.CompressedVSizeIndexedV3Writer;
-import io.druid.segment.data.CompressedVSizeIntsIndexedWriter;
+import io.druid.segment.data.V3CompressedVSizeColumnarMultiIntsSerializer;
+import io.druid.segment.data.CompressedVSizeColumnarIntsSerializer;
 import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.ImmutableRTreeObjectStrategy;
 import io.druid.segment.data.Indexed;
-import io.druid.segment.data.IndexedIntsWriter;
-import io.druid.segment.data.VSizeIndexedIntsWriter;
-import io.druid.segment.data.VSizeIndexedWriter;
+import io.druid.segment.data.ColumnarIntsSerializer;
+import io.druid.segment.data.VSizeColumnarIntsSerializer;
+import io.druid.segment.data.VSizeColumnarMultiIntsSerializer;
 import io.druid.segment.serde.DictionaryEncodedColumnPartSerde;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 import it.unimi.dsi.fastutil.ints.IntIterable;
@@ -70,7 +70,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
   protected static final int[] NULL_STR_DIM_ARRAY = new int[]{0};
   private static final Splitter SPLITTER = Splitter.on(",");
 
-  private IndexedIntsWriter encodedValueWriter;
+  private ColumnarIntsSerializer encodedValueWriter;
 
   private String dimensionName;
   private GenericIndexedWriter<String> dictionaryWriter;
@@ -202,25 +202,25 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     String filenameBase = StringUtils.format("%s.forward_dim", dimensionName);
     if (capabilities.hasMultipleValues()) {
       if (compressionStrategy != CompressionStrategy.UNCOMPRESSED) {
-        encodedValueWriter = CompressedVSizeIndexedV3Writer.create(
+        encodedValueWriter = V3CompressedVSizeColumnarMultiIntsSerializer.create(
             segmentWriteOutMedium,
             filenameBase,
             cardinality,
             compressionStrategy
         );
       } else {
-        encodedValueWriter = new VSizeIndexedWriter(segmentWriteOutMedium, cardinality);
+        encodedValueWriter = new VSizeColumnarMultiIntsSerializer(segmentWriteOutMedium, cardinality);
       }
     } else {
       if (compressionStrategy != CompressionStrategy.UNCOMPRESSED) {
-        encodedValueWriter = CompressedVSizeIntsIndexedWriter.create(
+        encodedValueWriter = CompressedVSizeColumnarIntsSerializer.create(
             segmentWriteOutMedium,
             filenameBase,
             cardinality,
             compressionStrategy
         );
       } else {
-        encodedValueWriter = new VSizeIndexedIntsWriter(segmentWriteOutMedium, cardinality);
+        encodedValueWriter = new VSizeColumnarIntsSerializer(segmentWriteOutMedium, cardinality);
       }
     }
     encodedValueWriter.open();

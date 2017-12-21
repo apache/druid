@@ -96,6 +96,13 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
   private final ConcurrentMap<SegmentCallback, Predicate<Pair<DruidServerMetadata, DataSegment>>> segmentPredicates =
       new ConcurrentHashMap<>();
+
+  /**
+   * Users of this instance can register filters for what segments should be stored and reported to registered
+   * listeners. For example, A Broker node can be configured to keep state for segments of specific DataSource
+   * by using this feature. In that way, Different Broker nodes can be used for dealing with Queries of Different
+   * DataSources and not maintaining any segment information of other DataSources in memory.
+   */
   private final Predicate<Pair<DruidServerMetadata, DataSegment>> defaultFilter;
   private volatile Predicate<Pair<DruidServerMetadata, DataSegment>> finalPredicate;
 
@@ -262,6 +269,10 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       Executor exec, SegmentCallback callback, Predicate<Pair<DruidServerMetadata, DataSegment>> filter
   )
   {
+    if (lifecycleLock.isStarted()) {
+      throw new ISE("Lifecycle has already started.");
+    }
+
     SegmentCallback filteringSegmentCallback = new SingleServerInventoryView.FilteringSegmentCallback(callback, filter);
     segmentCallbacks.put(filteringSegmentCallback, exec);
     segmentPredicates.put(filteringSegmentCallback, filter);
@@ -275,12 +286,20 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   @Override
   public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
   {
+    if (lifecycleLock.isStarted()) {
+      throw new ISE("Lifecycle has already started.");
+    }
+
     serverCallbacks.put(callback, exec);
   }
 
   @Override
   public void registerSegmentCallback(Executor exec, SegmentCallback callback)
   {
+    if (lifecycleLock.isStarted()) {
+      throw new ISE("Lifecycle has already started.");
+    }
+
     segmentCallbacks.put(callback, exec);
   }
 

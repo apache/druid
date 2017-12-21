@@ -816,8 +816,8 @@ public class IndexMergerTestBase
 
       obj = field.get(encodedColumn);
     }
-    // CompressedVSizeIntsIndexedSupplier$CompressedByteSizeIndexedInts
-    // CompressedVSizeIndexedSupplier$CompressedVSizeIndexed
+    // CompressedVSizeColumnarIntsSupplier$CompressedByteSizeColumnarInts
+    // CompressedVSizeColumnarMultiIntsSupplier$CompressedVSizeColumnarMultiInts
     Field compressedSupplierField = obj.getClass().getDeclaredField("this$0");
     compressedSupplierField.setAccessible(true);
 

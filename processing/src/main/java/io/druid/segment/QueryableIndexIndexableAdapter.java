@@ -35,9 +35,9 @@ import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.GenericColumn;
-import io.druid.segment.column.IndexedDoublesGenericColumn;
-import io.druid.segment.column.IndexedFloatsGenericColumn;
-import io.druid.segment.column.IndexedLongsGenericColumn;
+import io.druid.segment.column.DoublesColumn;
+import io.druid.segment.column.FloatsColumn;
+import io.druid.segment.column.LongsColumn;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.BitmapValues;
 import io.druid.segment.data.ImmutableBitmapValues;
@@ -269,13 +269,13 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
 
             Object[] metricArray = new Object[numMetrics];
             for (int i = 0; i < metricArray.length; ++i) {
-              if (metrics[i] instanceof IndexedFloatsGenericColumn) {
+              if (metrics[i] instanceof FloatsColumn) {
                 GenericColumn genericColumn = (GenericColumn) metrics[i];
                 metricArray[i] = genericColumn.isNull(currRow) ? null : genericColumn.getFloatSingleValueRow(currRow);
-              } else if (metrics[i] instanceof IndexedDoublesGenericColumn) {
+              } else if (metrics[i] instanceof DoublesColumn) {
                 GenericColumn genericColumn = (GenericColumn) metrics[i];
                 metricArray[i] = genericColumn.isNull(currRow) ? null : genericColumn.getDoubleSingleValueRow(currRow);
-              } else if (metrics[i] instanceof IndexedLongsGenericColumn) {
+              } else if (metrics[i] instanceof LongsColumn) {
                 GenericColumn genericColumn = (GenericColumn) metrics[i];
                 metricArray[i] = genericColumn.isNull(currRow) ? null : genericColumn.getLongSingleValueRow(currRow);
               } else if (metrics[i] instanceof ComplexColumn) {
