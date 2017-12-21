@@ -102,8 +102,13 @@ public class CompressionUtils
         totalSize += Files.asByteSource(file).copyTo(zipOut);
       }
       zipOut.closeEntry();
-      // Workarround for http://hg.openjdk.java.net/jdk8/jdk8/jdk/rev/759aa847dcaf
+      // Workaround for http://hg.openjdk.java.net/jdk8/jdk8/jdk/rev/759aa847dcaf
       zipOut.flush();
+
+      // fsync needs to happen before the FileOutputStream is closed by the try-with-resources
+      if (out instanceof FileOutputStream) {
+        ((FileOutputStream) out).getChannel().force(true);
+      }
     }
 
     return totalSize;

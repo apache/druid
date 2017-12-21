@@ -34,23 +34,22 @@ import java.net.URI;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- */
 public class LocalDataSegmentPusher implements DataSegmentPusher
 {
   private static final Logger log = new Logger(LocalDataSegmentPusher.class);
+
+  private static final String INDEX_FILENAME = "index.zip";
+  private static final String DESCRIPTOR_FILENAME = "descriptor.json";
 
   private final LocalDataSegmentPusherConfig config;
   private final ObjectMapper jsonMapper;
 
   @Inject
-  public LocalDataSegmentPusher(
-      LocalDataSegmentPusherConfig config,
-      ObjectMapper jsonMapper
-  )
+  public LocalDataSegmentPusher(LocalDataSegmentPusherConfig config, ObjectMapper jsonMapper)
   {
     this.config = config;
     this.jsonMapper = jsonMapper;
@@ -96,37 +95,53 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
 
     final File tmpOutDir = new File(baseStorageDir, intermediateDirFor(storageDir));
     log.info("Creating intermediate directory[%s] for segment[%s]", tmpOutDir.toString(), segment.getIdentifier());
-    final long size = compressSegment(dataSegmentFile, tmpOutDir);
+    FileUtils.forceMkdir(tmpOutDir);
 
-    final DataSegment dataSegment = createDescriptorFile(
-        segment.withLoadSpec(makeLoadSpec(new File(outDir, "index.zip").toURI()))
-               .withSize(size)
-               .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile)),
-        tmpOutDir
-    );
+    try {
+      final File tmpIndexFile = new File(tmpOutDir, INDEX_FILENAME);
+      final long size = compressSegment(dataSegmentFile, tmpIndexFile);
 
-    // moving the temporary directory to the final destination, once success the potentially concurrent push operations
-    // will be failed and will read the descriptor.json created by current push operation directly
-    FileUtils.forceMkdir(outDir.getParentFile());
-    if (replaceExisting) {
-      try {
-        FileUtils.cleanDirectory(outDir);
+      final File tmpDescriptorFile = new File(tmpOutDir, DESCRIPTOR_FILENAME);
+      DataSegment dataSegment = createDescriptorFile(
+          segment.withLoadSpec(makeLoadSpec(new File(outDir, INDEX_FILENAME).toURI()))
+                 .withSize(size)
+                 .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile)),
+          tmpDescriptorFile
+      );
+
+      FileUtils.forceMkdir(outDir);
+      if (replaceExisting) {
+        Files.move(
+            tmpIndexFile.toPath(),
+            outDir.toPath().resolve(tmpIndexFile.toPath().getFileName()),
+            StandardCopyOption.REPLACE_EXISTING
+        );
+        Files.move(
+            tmpDescriptorFile.toPath(),
+            outDir.toPath().resolve(tmpDescriptorFile.toPath().getFileName()),
+            StandardCopyOption.REPLACE_EXISTING
+        );
+      } else {
+        try {
+          Files.move(tmpIndexFile.toPath(), outDir.toPath().resolve(tmpIndexFile.toPath().getFileName()));
+        }
+        catch (FileAlreadyExistsException e) {
+          log.info("[%s] already exists at [%s], ignore if replication is configured", INDEX_FILENAME, outDir);
+        }
+        try {
+          Files.move(tmpDescriptorFile.toPath(), outDir.toPath().resolve(tmpDescriptorFile.toPath().getFileName()));
+        }
+        catch (FileAlreadyExistsException e) {
+          log.info("[%s] already exists at [%s], ignore if replication is configured", DESCRIPTOR_FILENAME, outDir);
+          dataSegment = jsonMapper.readValue(new File(outDir, DESCRIPTOR_FILENAME), DataSegment.class);
+        }
       }
-      catch (IllegalArgumentException e) {
-        log.debug("Directory [%s] doesn't exist and couldn't be cleaned, this is normal", outDir);
-      }
-      Files.move(tmpOutDir.toPath(), outDir.toPath(), StandardCopyOption.REPLACE_EXISTING);
-    } else {
-      try {
-        Files.move(tmpOutDir.toPath(), outDir.toPath());
-      }
-      catch (FileAlreadyExistsException e) {
-        log.info("Push destination directory[%s] exists, ignore this message if replication is configured.", outDir);
-        FileUtils.deleteDirectory(tmpOutDir);
-        return jsonMapper.readValue(new File(outDir, "descriptor.json"), DataSegment.class);
-      }
+
+      return dataSegment;
     }
-    return dataSegment;
+    finally {
+      FileUtils.deleteDirectory(tmpOutDir);
+    }
   }
 
   @Override
@@ -140,21 +155,21 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
     return "intermediate_pushes/" + storageDir + "." + UUID.randomUUID().toString();
   }
 
-  private long compressSegment(File dataSegmentFile, File outDir) throws IOException
+  private long compressSegment(File dataSegmentFile, File dest) throws IOException
   {
-    FileUtils.forceMkdir(outDir);
-    File outFile = new File(outDir, "index.zip");
-    log.info("Compressing files from[%s] to [%s]", dataSegmentFile, outFile);
-    return CompressionUtils.zip(dataSegmentFile, outFile);
+    log.info("Compressing files from[%s] to [%s]", dataSegmentFile, dest);
+    return CompressionUtils.zip(dataSegmentFile, dest);
   }
 
-  private DataSegment createDescriptorFile(DataSegment segment, File outDir) throws IOException
+  private DataSegment createDescriptorFile(DataSegment segment, File dest) throws IOException
   {
-    File descriptorFile = new File(outDir, "descriptor.json");
-    log.info("Creating descriptor file at[%s]", descriptorFile);
+    log.info("Creating descriptor file at[%s]", dest);
     // Avoid using Guava in DataSegmentPushers because they might be used with very diverse Guava versions in
     // runtime, and because Guava deletes methods over time, that causes incompatibilities.
-    Files.write(descriptorFile.toPath(), jsonMapper.writeValueAsBytes(segment));
+    Files.write(
+        dest.toPath(), jsonMapper.writeValueAsBytes(segment), StandardOpenOption.CREATE, StandardOpenOption.SYNC
+    );
+
     return segment;
   }
 }

@@ -30,7 +30,6 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.timeline.DataSegment;
-import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.ServiceException;
 import org.jets3t.service.acl.gs.GSAccessControlList;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
@@ -171,7 +170,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   }
 
   private void putObject(String bucketName, String path, S3Object object, boolean replaceExisting)
-      throws S3ServiceException
+      throws ServiceException
   {
     object.setBucketName(bucketName);
     object.setKey(path);
@@ -181,21 +180,10 @@ public class S3DataSegmentPusher implements DataSegmentPusher
 
     log.info("Pushing %s.", object);
 
-    if (!replaceExisting && doesObjectExist(bucketName, object.getKey())) {
+    if (!replaceExisting && S3Utils.isObjectInBucket(s3Client, bucketName, object.getKey())) {
       log.info("Skipping push because key [%s] exists && replaceExisting == false", object.getKey());
     } else {
       s3Client.putObject(bucketName, object);
-    }
-  }
-
-  private boolean doesObjectExist(String bucketName, String objectKey)
-  {
-    try {
-      s3Client.getObjectDetails(bucketName, objectKey);
-      return true;
-    }
-    catch (ServiceException e) {
-      return false;
     }
   }
 }
