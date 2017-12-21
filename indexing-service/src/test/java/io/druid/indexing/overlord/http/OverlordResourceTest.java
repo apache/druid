@@ -212,18 +212,27 @@ public class OverlordResourceTest
         )
     ).once();
 
-    EasyMock.expect(taskStorageQueryAdapter.getTask(tasksIds.get(0))).andReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getTask(EasyMock.eq(tasksIds.get(0)))).andReturn(
         Optional.of(getTaskWithIdAndDatasource(tasksIds.get(0), "deny"))
     ).once();
-    EasyMock.expect(taskStorageQueryAdapter.getTask(tasksIds.get(1))).andReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getTask(EasyMock.eq(tasksIds.get(1)))).andReturn(
         Optional.of(getTaskWithIdAndDatasource(tasksIds.get(1), "allow"))
     ).once();
-    EasyMock.expect(taskStorageQueryAdapter.getTask(tasksIds.get(2))).andReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getTask(EasyMock.eq(tasksIds.get(2)))).andReturn(
+        Optional.of(getTaskWithIdAndDatasource(tasksIds.get(2), "allow"))
+    ).once();
+    EasyMock.expect(taskStorageQueryAdapter.getTask(EasyMock.eq(tasksIds.get(1)))).andReturn(
+        Optional.of(getTaskWithIdAndDatasource(tasksIds.get(1), "allow"))
+    ).once();
+    EasyMock.expect(taskStorageQueryAdapter.getCreatedTime(EasyMock.anyString()))
+            .andReturn(DateTimes.EPOCH)
+            .once();
+    EasyMock.expect(taskStorageQueryAdapter.getTask(EasyMock.eq(tasksIds.get(2)))).andReturn(
         Optional.of(getTaskWithIdAndDatasource(tasksIds.get(2), "allow"))
     ).once();
     EasyMock.expect(taskStorageQueryAdapter.getCreatedTime(EasyMock.anyString()))
             .andReturn(DateTimes.EPOCH)
-            .anyTimes();
+            .once();
     EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
 
     List<TaskStatusPlus> responseObjects = (List) overlordResource.getCompleteTasks(null, req)
@@ -304,7 +313,7 @@ public class OverlordResourceTest
       @Override
       public String getType()
       {
-        return null;
+        return "test";
       }
 
       @Override
@@ -340,7 +349,7 @@ public class OverlordResourceTest
     @Override
     public String getTaskType()
     {
-      return null;
+      return "test";
     }
   }
 

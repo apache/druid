@@ -511,8 +511,7 @@ public class OverlordResource
       @Context final HttpServletRequest req
   )
   {
-    Function<TaskStatus, Iterable<ResourceAction>> raGenerator = taskStatus -> {
-      final String taskId = taskStatus.getId();
+    final Function<String, Task> taskFunction = taskId -> {
       final Optional<Task> optionalTask = taskStorageQueryAdapter.getTask(taskId);
       if (!optionalTask.isPresent()) {
         throw new WebApplicationException(
@@ -521,10 +520,15 @@ public class OverlordResource
             ).build()
         );
       }
+      return optionalTask.get();
+    };
+
+    Function<TaskStatus, Iterable<ResourceAction>> raGenerator = taskStatus -> {
+      final Task task = taskFunction.apply(taskStatus.getId());
 
       return Lists.newArrayList(
           new ResourceAction(
-              new Resource(optionalTask.get().getDataSource(), ResourceType.DATASOURCE),
+              new Resource(task.getDataSource(), ResourceType.DATASOURCE),
               Action.READ
           )
       );
@@ -543,6 +547,7 @@ public class OverlordResource
         .stream()
         .map(status -> new TaskStatusPlus(
             status.getId(),
+            taskFunction.apply(status.getId()).getType(),
             taskStorageQueryAdapter.getCreatedTime(status.getId()),
             // Would be nice to include the real queue insertion time, but the TaskStorage API doesn't yet allow it.
             DateTimes.EPOCH,
@@ -679,6 +684,7 @@ public class OverlordResource
                       {
                         return new TaskStatusPlus(
                             workItem.getTaskId(),
+                            workItem.getTaskType(),
                             workItem.getCreatedTime(),
                             workItem.getQueueInsertionTime(),
                             null,

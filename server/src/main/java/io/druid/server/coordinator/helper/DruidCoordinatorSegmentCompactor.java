@@ -21,7 +21,7 @@ package io.druid.server.coordinator.helper;
 
 import com.google.inject.Inject;
 import io.druid.client.indexing.IndexingServiceClient;
-import io.druid.client.indexing.QueryStatus;
+import io.druid.indexer.TaskStatusPlus;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.coordinator.CoordinatorCompactionConfig;
@@ -30,11 +30,8 @@ import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
 
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -47,7 +44,6 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
 
   private final CompactionSegmentSearchPolicy policy = new NewestSegmentFirstPolicy();
   private final IndexingServiceClient indexingServiceClient;
-  private final Set<String> queryIds = new HashSet<>();
 
   @Inject
   public DruidCoordinatorSegmentCompactor(IndexingServiceClient indexingServiceClient)
@@ -69,17 +65,21 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
       Map<String, CoordinatorCompactionConfig> compactionConfigs = compactionConfigList
           .stream()
           .collect(Collectors.toMap(CoordinatorCompactionConfig::getDataSource, Function.identity()));
-      checkAndClearQueries();
+      final List<TaskStatusPlus> runningCompactTasks = indexingServiceClient
+          .getRunningTasks()
+          .stream()
+          .filter(status -> status.getType().equals("compact"))
+          .collect(Collectors.toList());
       final CompactionSegmentIterator iterator = policy.reset(compactionConfigs, dataSources);
 
       final int compactionTaskCapacity = (int) (indexingServiceClient.getTotalWorkerCapacity() *
                                                 params.getCoordinatorDynamicConfig().getCompactionTaskSlotRatio());
-      final int numAvailableCompactionTaskSlots = queryIds.size() > 0 ?
-                                                  compactionTaskCapacity - queryIds.size() :
-                                                  Math.max(1, compactionTaskCapacity - queryIds.size());
+      final int numAvailableCompactionTaskSlots = runningCompactTasks.size() > 0 ?
+                                                  compactionTaskCapacity - runningCompactTasks.size() :
+                                                  Math.max(1, compactionTaskCapacity - runningCompactTasks.size());
+      LOG.info("Running tasks [%d/%d]", runningCompactTasks.size(), compactionTaskCapacity);
       if (numAvailableCompactionTaskSlots > 0) {
         stats.accumulate(doRun(compactionConfigs, numAvailableCompactionTaskSlots, iterator));
-        LOG.info("Running tasks [%d/%d]", queryIds.size(), compactionTaskCapacity);
       } else {
         stats.accumulate(makeStats(0, iterator));
       }
@@ -90,20 +90,6 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
     return params.buildFromExisting()
                  .withCoordinatorStats(stats)
                  .build();
-  }
-
-  private void checkAndClearQueries()
-  {
-    final Iterator<String> iterator = queryIds.iterator();
-    while (iterator.hasNext()) {
-      final String queryId = iterator.next();
-      final QueryStatus queryStatus = indexingServiceClient.queryStatus(queryId);
-      if (queryStatus.isComplete()) {
-        iterator.remove();
-      }
-    }
-
-    LOG.info("[%d] queries are running after cleanup", queryIds.size());
   }
 
   private CoordinatorStats doRun(
@@ -121,16 +107,13 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
 
       if (segmentsToCompact.size() > 1) {
         final CoordinatorCompactionConfig config = compactionConfigs.get(dataSourceName);
-        final String queryId = indexingServiceClient.compactSegments(
+        final String taskId = indexingServiceClient.compactSegments(
             segmentsToCompact,
             config.getTaskPriority(),
             config.getTuningConfig(),
             config.getTaskContext()
         );
-        if (!queryIds.add(queryId)) {
-          throw new ISE("Duplicated queryId[%s]", queryId);
-        }
-        LOG.info("Submit a compactTask[%s] for segments[%s]", queryId, segmentsToCompact);
+        LOG.info("Submit a compactTask[%s] for segments[%s]", taskId, segmentsToCompact);
 
         if (++numSubmittedCompactionTasks == numAvailableCompactionTaskSlots) {
           break;
