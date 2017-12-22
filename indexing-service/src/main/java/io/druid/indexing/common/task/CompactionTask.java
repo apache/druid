@@ -485,7 +485,7 @@ public class CompactionTask extends AbstractTask
                                                                 .collect(Collectors.toList());
           throw new ISE(
               "Specified segments in the spec are different from the current used segments. "
-              + "There are unused segments[%s] and missing segments[%s] in the spec.",
+              + "There are unknown segments[%s] and missing segments[%s] in the spec.",
               unknownSegments,
               missingSegments
           );

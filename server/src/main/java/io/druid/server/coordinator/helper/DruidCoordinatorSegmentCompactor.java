@@ -25,6 +25,7 @@ import io.druid.indexer.TaskStatusPlus;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.coordinator.CoordinatorCompactionConfig;
+import io.druid.server.coordinator.CoordinatorDynamicConfig;
 import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import io.druid.timeline.DataSegment;
@@ -56,35 +57,42 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
   {
     LOG.info("Run coordinator segment compactor");
 
-    Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources = params.getDataSources();
-    List<CoordinatorCompactionConfig> compactionConfigList = params.getCoordinatorDynamicConfig()
-                                                                   .getCompactionConfigs();
-
+    final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
     final CoordinatorStats stats = new CoordinatorStats();
-    if (compactionConfigList != null && !compactionConfigList.isEmpty()) {
-      Map<String, CoordinatorCompactionConfig> compactionConfigs = compactionConfigList
-          .stream()
-          .collect(Collectors.toMap(CoordinatorCompactionConfig::getDataSource, Function.identity()));
-      final List<TaskStatusPlus> runningCompactTasks = indexingServiceClient
-          .getRunningTasks()
-          .stream()
-          .filter(status -> status.getType().equals("compact"))
-          .collect(Collectors.toList());
-      final CompactionSegmentIterator iterator = policy.reset(compactionConfigs, dataSources);
 
-      final int compactionTaskCapacity = (int) (indexingServiceClient.getTotalWorkerCapacity() *
-                                                params.getCoordinatorDynamicConfig().getCompactionTaskSlotRatio());
-      final int numAvailableCompactionTaskSlots = runningCompactTasks.size() > 0 ?
-                                                  compactionTaskCapacity - runningCompactTasks.size() :
-                                                  Math.max(1, compactionTaskCapacity - runningCompactTasks.size());
-      LOG.info("Running tasks [%d/%d]", runningCompactTasks.size(), compactionTaskCapacity);
-      if (numAvailableCompactionTaskSlots > 0) {
-        stats.accumulate(doRun(compactionConfigs, numAvailableCompactionTaskSlots, iterator));
+    if (dynamicConfig.getMaxCompactionTaskSlots() > 0) {
+      Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources = params.getDataSources();
+      List<CoordinatorCompactionConfig> compactionConfigList = dynamicConfig.getCompactionConfigs();
+
+      if (compactionConfigList != null && !compactionConfigList.isEmpty()) {
+        Map<String, CoordinatorCompactionConfig> compactionConfigs = compactionConfigList
+            .stream()
+            .collect(Collectors.toMap(CoordinatorCompactionConfig::getDataSource, Function.identity()));
+        final List<TaskStatusPlus> runningCompactTasks = indexingServiceClient
+            .getRunningTasks()
+            .stream()
+            .filter(status -> status.getType().equals("compact"))
+            .collect(Collectors.toList());
+        final CompactionSegmentIterator iterator = policy.reset(compactionConfigs, dataSources);
+
+        final int compactionTaskCapacity = (int) Math.min(
+            indexingServiceClient.getTotalWorkerCapacity() * dynamicConfig.getCompactionTaskSlotRatio(),
+            dynamicConfig.getMaxCompactionTaskSlots()
+        );
+        final int numAvailableCompactionTaskSlots = runningCompactTasks.size() > 0 ?
+                                                    compactionTaskCapacity - runningCompactTasks.size() :
+                                                    Math.max(1, compactionTaskCapacity - runningCompactTasks.size());
+        LOG.info("Running tasks [%d/%d]", runningCompactTasks.size(), compactionTaskCapacity);
+        if (numAvailableCompactionTaskSlots > 0) {
+          stats.accumulate(doRun(compactionConfigs, numAvailableCompactionTaskSlots, iterator));
+        } else {
+          stats.accumulate(makeStats(0, iterator));
+        }
       } else {
-        stats.accumulate(makeStats(0, iterator));
+        LOG.info("compactionConfig is empty. Skip.");
       }
     } else {
-      LOG.info("compactionConfig is empty. Skip.");
+      LOG.info("maxCompactionTaskSlots was set to 0. Skip compaction");
     }
 
     return params.buildFromExisting()

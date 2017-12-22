@@ -43,7 +43,7 @@ Compacting Segments
 
 Each run, the Druid coordinator compacts small segments abutting each other. This is useful when you have a lot of small
 segments which may degrade the query performance as well as increasing the disk usage. Note that the data for an interval
-cannot be rolled up across the partitions.
+cannot be compacted across the partitions.
 
 The coordinator first finds the segments to compact together based on the [segment search policy](#segment-search-policy).
 Once it finds some segments, it launches a [compact task](../ingestion/tasks.html#compaction-task) to compact those segments.
@@ -52,7 +52,7 @@ The maximum number of running compact tasks is `max(sum of worker capacity * com
 Compact tasks might fail due to some reasons.
 
 - If the input segments of a compact task are removed or overshadowed before it starts, that compact task fails immediately.
-- If a task of a higher priority acquires a lock for an interval overlapping with the interval of a compact task, the compat task fails.
+- If a task of a higher priority acquires a lock for an interval overlapping with the interval of a compact task, the compact task fails.
 
 Once a compact task fails, the coordinator simply finds the segments for the interval of the failed task again, and launches a new compact task in the next run.
 
@@ -71,7 +71,7 @@ Every run, this policy starts searching from the (very latest interval - [skipOf
 This is to handle the late segments ingested to realtime dataSources.
 
 <div class="note caution">
-This policy currenlty cannot handle the situation when a shard consists of a lot of small segments, thereby its total size exceeds the <a href="../configuration/coordinator.html#compaction-config">targetCompactionSizebytes</a>.
+This policy currently cannot handle the situation when a shard consists of a lot of small segments, thereby its total size exceeds the <a href="../configuration/coordinator.html#compaction-config">targetCompactionSizebytes</a>.
 If it finds such shards, it simply skips them.
 </div>
 

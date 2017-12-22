@@ -57,6 +57,7 @@ public class CoordinatorDynamicConfig
   private final int maxSegmentsInNodeLoadingQueue;
   private final List<CoordinatorCompactionConfig> compactionConfigs;
   private final double compactionTaskSlotRatio;
+  private final int maxCompactionTaskSlots;
 
   @JsonCreator
   public CoordinatorDynamicConfig(
@@ -77,7 +78,8 @@ public class CoordinatorDynamicConfig
       @JsonProperty("killPendingSegmentsSkipList") Object killPendingSegmentsSkipList,
       @JsonProperty("maxSegmentsInNodeLoadingQueue") int maxSegmentsInNodeLoadingQueue,
       @JsonProperty("compactionConfigs") List<CoordinatorCompactionConfig> compactionConfigs,
-      @JsonProperty("compactionTaskSlotRatio") double compactionTaskSlotRatio
+      @JsonProperty("compactionTaskSlotRatio") double compactionTaskSlotRatio,
+      @JsonProperty("maxCompactionTaskSlots") int maxCompactionTaskSlots
   )
   {
     this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
@@ -94,6 +96,7 @@ public class CoordinatorDynamicConfig
     this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue;
     this.compactionConfigs = compactionConfigs;
     this.compactionTaskSlotRatio = compactionTaskSlotRatio;
+    this.maxCompactionTaskSlots = maxCompactionTaskSlots;
 
     if (this.killAllDataSources && !this.killDataSourceWhitelist.isEmpty()) {
       throw new IAE("can't have killAllDataSources and non-empty killDataSourceWhitelist");
@@ -203,6 +206,12 @@ public class CoordinatorDynamicConfig
     return compactionTaskSlotRatio;
   }
 
+  @JsonProperty
+  public int getMaxCompactionTaskSlots()
+  {
+    return maxCompactionTaskSlots;
+  }
+
   @Override
   public String toString()
   {
@@ -221,6 +230,7 @@ public class CoordinatorDynamicConfig
            ", maxSegmentsInNodeLoadingQueue=" + maxSegmentsInNodeLoadingQueue +
            ", compactionConfigs=" + compactionConfigs +
            ", compactionTaskSlotRatio=" + compactionTaskSlotRatio +
+           ", maxCompactionTaskSlots=" + maxCompactionTaskSlots +
            '}';
   }
 
@@ -275,7 +285,11 @@ public class CoordinatorDynamicConfig
     if (!Objects.equals(compactionConfigs, that.compactionConfigs)) {
       return false;
     }
-    return compactionTaskSlotRatio == that.compactionTaskSlotRatio;
+    if (compactionTaskSlotRatio != that.compactionTaskSlotRatio) {
+      return false;
+    }
+
+    return maxCompactionTaskSlots == that.maxCompactionTaskSlots;
   }
 
   @Override
@@ -295,7 +309,8 @@ public class CoordinatorDynamicConfig
         killDataSourceWhitelist,
         killPendingSegmentsSkipList,
         compactionConfigs,
-        compactionTaskSlotRatio
+        compactionTaskSlotRatio,
+        maxCompactionTaskSlots
     );
   }
 
@@ -317,6 +332,7 @@ public class CoordinatorDynamicConfig
     private static final boolean DEFAULT_KILL_ALL_DATA_SOURCES = false;
     private static final int DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 0;
     private static final double DEFAULT_COMPACTION_TASK_RATIO = 0.1;
+    private static final int DEFAILT_MAX_COMPACTION_TASK_SLOTS = Integer.MAX_VALUE;
 
     private Long millisToWaitBeforeDeleting;
     private Long mergeBytesLimit;
@@ -332,6 +348,7 @@ public class CoordinatorDynamicConfig
     private Integer maxSegmentsInNodeLoadingQueue;
     private List<CoordinatorCompactionConfig> compactionConfigs;
     private Double compactionTaskRatio;
+    private Integer maxCompactionTaskSlots;
 
     public Builder()
     {
@@ -352,7 +369,8 @@ public class CoordinatorDynamicConfig
         @JsonProperty("killPendingSegmentsSkipList") Object killPendingSegmentsSkipList,
         @JsonProperty("maxSegmentsInNodeLoadingQueue") Integer maxSegmentsInNodeLoadingQueue,
         @JsonProperty("compactionConfigs") List<CoordinatorCompactionConfig> compactionConfigs,
-        @JsonProperty("compactionTaskSlotRatio") Double compactionTaskRatio
+        @JsonProperty("compactionTaskSlotRatio") Double compactionTaskRatio,
+        @JsonProperty("maxCompactionTaskSlots") Integer maxCompactionTaskSlots
     )
     {
       this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
@@ -369,6 +387,7 @@ public class CoordinatorDynamicConfig
       this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue;
       this.compactionConfigs = compactionConfigs;
       this.compactionTaskRatio = compactionTaskRatio;
+      this.maxCompactionTaskSlots = maxCompactionTaskSlots;
     }
 
     public Builder withMillisToWaitBeforeDeleting(long millisToWaitBeforeDeleting)
@@ -449,6 +468,12 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    public Builder withMaxCompactionTaskSlots(int maxCompactionTaskSlots)
+    {
+      this.maxCompactionTaskSlots = maxCompactionTaskSlots;
+      return this;
+    }
+
     public CoordinatorDynamicConfig build()
     {
       return new CoordinatorDynamicConfig(
@@ -465,7 +490,8 @@ public class CoordinatorDynamicConfig
           killPendingSegmentsSkipList,
           maxSegmentsInNodeLoadingQueue == null ? DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE : maxSegmentsInNodeLoadingQueue,
           compactionConfigs,
-          compactionTaskRatio == null ? DEFAULT_COMPACTION_TASK_RATIO : compactionTaskRatio
+          compactionTaskRatio == null ? DEFAULT_COMPACTION_TASK_RATIO : compactionTaskRatio,
+          maxCompactionTaskSlots == null ? DEFAILT_MAX_COMPACTION_TASK_SLOTS : maxCompactionTaskSlots
       );
     }
 
@@ -485,7 +511,8 @@ public class CoordinatorDynamicConfig
           killPendingSegmentsSkipList == null ? defaults.getKillPendingSegmentsSkipList() : killPendingSegmentsSkipList,
           maxSegmentsInNodeLoadingQueue == null ? defaults.getMaxSegmentsInNodeLoadingQueue() : maxSegmentsInNodeLoadingQueue,
           compactionConfigs == null ? defaults.getCompactionConfigs() : compactionConfigs,
-          compactionTaskRatio == null ? defaults.getCompactionTaskSlotRatio() : compactionTaskRatio
+          compactionTaskRatio == null ? defaults.getCompactionTaskSlotRatio() : compactionTaskRatio,
+          maxCompactionTaskSlots == null ? defaults.getMaxCompactionTaskSlots() : maxCompactionTaskSlots
       );
     }
   }
