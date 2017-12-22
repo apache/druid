@@ -65,31 +65,29 @@ public class RetryingInputStreamTest
 
     throwError = false;
 
-    inputStream = new DataInputStream(
-        new GZIPInputStream(
-            new RetryingInputStream<>(
-                testFile,
-                new ObjectOpenFunction<File>()
-                {
-                  @Override
-                  public InputStream open(File object) throws IOException
-                  {
-                    return new TestInputStream(new FileInputStream(object));
-                  }
+    final InputStream retryingInputStream = new RetryingInputStream<>(
+        testFile,
+        new ObjectOpenFunction<File>()
+        {
+          @Override
+          public InputStream open(File object) throws IOException
+          {
+            return new TestInputStream(new FileInputStream(object));
+          }
 
-                  @Override
-                  public InputStream open(File object, long start) throws IOException
-                  {
-                    final FileInputStream fis = new FileInputStream(object);
-                    Preconditions.checkState(fis.skip(start) == start);
-                    return new TestInputStream(fis);
-                  }
-                },
-                e -> e instanceof IOException,
-                MAX_RETRY
-            )
-        )
+          @Override
+          public InputStream open(File object, long start) throws IOException
+          {
+            final FileInputStream fis = new FileInputStream(object);
+            Preconditions.checkState(fis.skip(start) == start);
+            return new TestInputStream(fis);
+          }
+        },
+        e -> e instanceof IOException,
+        MAX_RETRY
     );
+
+    inputStream = new DataInputStream(new GZIPInputStream(retryingInputStream));
 
     throwError = true;
   }
