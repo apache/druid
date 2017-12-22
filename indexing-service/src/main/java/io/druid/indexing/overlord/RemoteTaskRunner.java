@@ -483,7 +483,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
   public boolean isWorkerRunningTask(ZkWorker worker, String taskId)
   {
-    return Preconditions.checkNotNull(worker).isRunningTask(taskId);
+    return Preconditions.checkNotNull(worker, "worker").isRunningTask(taskId);
   }
 
   /**
