@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.SegmentUtils;
 import io.druid.timeline.DataSegment;
@@ -33,7 +34,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.Map;
 import java.util.UUID;
@@ -111,16 +111,16 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
 
       FileUtils.forceMkdir(outDir);
       if (replaceExisting) {
-        Files.move(
-            tmpIndexFile.toPath(),
-            outDir.toPath().resolve(tmpIndexFile.toPath().getFileName()),
-            StandardCopyOption.REPLACE_EXISTING
-        );
-        Files.move(
-            tmpDescriptorFile.toPath(),
-            outDir.toPath().resolve(tmpDescriptorFile.toPath().getFileName()),
-            StandardCopyOption.REPLACE_EXISTING
-        );
+        final File indexFileTarget = new File(outDir, tmpIndexFile.getName());
+        final File descriptorFileTarget = new File(outDir, tmpDescriptorFile.getName());
+
+        if (!tmpIndexFile.renameTo(indexFileTarget)) {
+          throw new IOE("Failed to rename [%s] to [%s]", tmpIndexFile, indexFileTarget);
+        }
+
+        if (!tmpDescriptorFile.renameTo(descriptorFileTarget)) {
+          throw new IOE("Failed to rename [%s] to [%s]", tmpDescriptorFile, descriptorFileTarget);
+        }
       } else {
         try {
           Files.move(tmpIndexFile.toPath(), outDir.toPath().resolve(tmpIndexFile.toPath().getFileName()));
@@ -158,7 +158,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
   private long compressSegment(File dataSegmentFile, File dest) throws IOException
   {
     log.info("Compressing files from[%s] to [%s]", dataSegmentFile, dest);
-    return CompressionUtils.zip(dataSegmentFile, dest);
+    return CompressionUtils.zip(dataSegmentFile, dest, true);
   }
 
   private DataSegment createDescriptorFile(DataSegment segment, File dest) throws IOException

@@ -556,6 +556,10 @@ public class AppenderatorImpl implements Appenderator
    * Merge segment, push to deep storage. Should only be used on segments that have been fully persisted. Must only
    * be run in the single-threaded pushExecutor.
    *
+   * Note that this calls DataSegmentPusher.push() with replaceExisting == true which is appropriate for the indexing
+   * tasks it is currently being used for (local indexing and Kafka indexing). If this is going to be used by an
+   * indexing task type that requires replaceExisting == false, this setting will need to be pushed to the caller.
+   *
    * @param identifier sink identifier
    * @param sink       sink to push
    *
