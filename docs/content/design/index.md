@@ -150,3 +150,4 @@ Druid is designed to have no single point of failure. Different node types are a
 ### Comprehensive Architecture
 
 For a comprehensive look at Druid architecture, please read our [white paper](http://static.druid.io/docs/druid.pdf).
+
