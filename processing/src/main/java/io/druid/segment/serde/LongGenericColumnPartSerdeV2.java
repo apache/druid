@@ -27,8 +27,7 @@ import io.druid.segment.LongColumnSerializer;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.BitmapSerde;
 import io.druid.segment.data.BitmapSerdeFactory;
-import io.druid.segment.data.ByteBufferSerializer;
-import io.druid.segment.data.CompressedLongsIndexedSupplier;
+import io.druid.segment.data.CompressedColumnarLongsSupplier;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -141,14 +140,14 @@ public class LongGenericColumnPartSerdeV2 implements ColumnPartSerde
     return (buffer, builder, columnConfig) -> {
       int offset = buffer.getInt();
       int initialPos = buffer.position();
-      final CompressedLongsIndexedSupplier column = CompressedLongsIndexedSupplier.fromByteBuffer(
+      final CompressedColumnarLongsSupplier column = CompressedColumnarLongsSupplier.fromByteBuffer(
           buffer,
           byteOrder
       );
       buffer.position(initialPos + offset);
       final ImmutableBitmap bitmap;
       if (buffer.hasRemaining()) {
-        bitmap = ByteBufferSerializer.read(buffer, bitmapSerdeFactory.getObjectStrategy());
+        bitmap = bitmapSerdeFactory.getObjectStrategy().fromByteBufferWithSize(buffer);
       } else {
         bitmap = bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap();
       }

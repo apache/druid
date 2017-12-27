@@ -29,9 +29,8 @@ import io.druid.segment.DoubleColumnSerializer;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.BitmapSerde;
 import io.druid.segment.data.BitmapSerdeFactory;
-import io.druid.segment.data.ByteBufferSerializer;
-import io.druid.segment.data.CompressedDoublesIndexedSupplier;
-import io.druid.segment.data.IndexedDoubles;
+import io.druid.segment.data.ColumnarDoubles;
+import io.druid.segment.data.CompressedColumnarDoublesSuppliers;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -92,7 +91,7 @@ public class DoubleGenericColumnPartSerdeV2 implements ColumnPartSerde
     return (buffer, builder, columnConfig) -> {
       int offset = buffer.getInt();
       int initialPos = buffer.position();
-      final Supplier<IndexedDoubles> column = CompressedDoublesIndexedSupplier.fromByteBuffer(
+      final Supplier<ColumnarDoubles> column = CompressedColumnarDoublesSuppliers.fromByteBuffer(
           buffer,
           byteOrder
       );
@@ -100,7 +99,7 @@ public class DoubleGenericColumnPartSerdeV2 implements ColumnPartSerde
       buffer.position(initialPos + offset);
       final ImmutableBitmap bitmap;
       if (buffer.hasRemaining()) {
-        bitmap = ByteBufferSerializer.read(buffer, bitmapSerdeFactory.getObjectStrategy());
+        bitmap = bitmapSerdeFactory.getObjectStrategy().fromByteBufferWithSize(buffer);
       } else {
         bitmap = bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap();
       }
