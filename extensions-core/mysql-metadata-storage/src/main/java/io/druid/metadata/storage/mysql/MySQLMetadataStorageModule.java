@@ -27,8 +27,10 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.PolyBind;
 import io.druid.guice.SQLMetadataStorageDruidModule;
 import io.druid.initialization.DruidModule;
+import io.druid.metadata.MetadataStorageActionHandlerFactory;
 import io.druid.metadata.MetadataStorageConnector;
 import io.druid.metadata.MetadataStorageProvider;
+import io.druid.metadata.MySQLMetadataStorageActionHandlerFactory;
 import io.druid.metadata.NoopMetadataStorageProvider;
 import io.druid.metadata.SQLMetadataConnector;
 
@@ -71,5 +73,10 @@ public class MySQLMetadataStorageModule extends SQLMetadataStorageDruidModule im
         .addBinding(TYPE)
         .to(MySQLConnector.class)
         .in(LazySingleton.class);
+
+    PolyBind.optionBinder(binder, Key.get(MetadataStorageActionHandlerFactory.class))
+            .addBinding(TYPE)
+            .to(MySQLMetadataStorageActionHandlerFactory.class)
+            .in(LazySingleton.class);
   }
 }

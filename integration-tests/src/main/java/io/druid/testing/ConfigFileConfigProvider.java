@@ -179,6 +179,18 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
       {
         return password;
       }
+
+      @Override
+      public Map<String, String> getProperties()
+      {
+        return props;
+      }
+
+      @Override
+      public boolean manageKafkaTopic()
+      {
+        return Boolean.valueOf(props.getOrDefault("manageKafkaTopic", "true"));
+      }
     };
   }
 }

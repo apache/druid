@@ -20,7 +20,6 @@
 package io.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
@@ -98,6 +97,11 @@ public class HttpServerInventoryViewTest
         null, null, null, null, 0, 0
     );
 
+    final DataSegment segment5 = new DataSegment(
+        "non-loading-datasource", Intervals.of("2014/2015"), "v1",
+        null, null, null, null, 0, 0
+    );
+
     TestHttpClient httpClient = new TestHttpClient(
         ImmutableList.of(
             Futures.immediateFuture(
@@ -151,7 +155,8 @@ public class HttpServerInventoryViewTest
                             SegmentChangeRequestHistory.Counter.ZERO,
                             ImmutableList.of(
                                 new SegmentChangeRequestLoad(segment3),
-                                new SegmentChangeRequestLoad(segment4)
+                                new SegmentChangeRequestLoad(segment4),
+                                new SegmentChangeRequestLoad(segment5)
                             )
                         )
                     )
@@ -172,7 +177,7 @@ public class HttpServerInventoryViewTest
         jsonMapper,
         httpClient,
         druidNodeDiscoveryProvider,
-        Predicates.alwaysTrue(),
+        (pair) -> !pair.rhs.getDataSource().equals("non-loading-datasource"),
         new HttpServerInventoryViewConfig(null, null, null)
     );
 

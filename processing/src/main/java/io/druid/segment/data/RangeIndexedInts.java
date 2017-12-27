@@ -22,8 +22,6 @@ package io.druid.segment.data;
 import com.google.common.base.Preconditions;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
-import java.io.IOException;
-
 /**
  * An IndexedInts that always returns [0, 1, ..., N].
  */
@@ -68,11 +66,6 @@ public class RangeIndexedInts implements IndexedInts
       throw new IndexOutOfBoundsException("index: " + index);
     }
     return index;
-  }
-
-  @Override
-  public void close() throws IOException
-  {
   }
 
   @Override

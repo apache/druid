@@ -26,7 +26,7 @@ public class Access
   public final static Access OK = new Access(true);
 
   private final boolean allowed;
-  private String message;
+  private final String message;
 
   public Access(boolean allowed)
   {
@@ -44,10 +44,9 @@ public class Access
     return allowed;
   }
 
-  public Access setMessage(String message)
+  public String getMessage()
   {
-    this.message = message;
-    return this;
+    return message;
   }
 
   @Override

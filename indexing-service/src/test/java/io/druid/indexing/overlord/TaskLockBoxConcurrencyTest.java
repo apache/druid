@@ -29,8 +29,8 @@ import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Intervals;
+import io.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
 import io.druid.metadata.EntryExistsException;
-import io.druid.metadata.SQLMetadataStorageActionHandlerFactory;
 import io.druid.metadata.TestDerbyConnector;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -65,7 +65,7 @@ public class TaskLockBoxConcurrencyTest
     taskStorage = new MetadataTaskStorage(
         derbyConnector,
         new TaskStorageConfig(null),
-        new SQLMetadataStorageActionHandlerFactory(
+        new DerbyMetadataStorageActionHandlerFactory(
             derbyConnector,
             derby.metadataTablesConfigSupplier().get(),
             objectMapper
