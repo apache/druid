@@ -106,7 +106,7 @@ public class ITKafkaTest extends AbstractIndexerTest
   private IntegrationTestingConfig config;
 
   @Test
-  public void testKafka()Double
+  public void testKafka()
   {
     LOG.info("Starting test: ITKafkaTest");
 

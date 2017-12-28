@@ -1588,7 +1588,7 @@ public class RowBasedGrouperHelper
       protected Long readFromBuffer(ByteBuffer buffer, int initialOffset)
       {
         if (buffer.get(initialOffset + keyBufferPosition) == (byte) 1) {
-          return NullHandling.nullToZeroIfNeeded((Long) null);
+          return NullHandling.defaultLongValue();
         } else {
           return buffer.getLong(initialOffset + keyBufferPosition + Byte.BYTES);
         }
@@ -1656,7 +1656,7 @@ public class RowBasedGrouperHelper
       protected Float readFromBuffer(ByteBuffer buffer, int initialOffset)
       {
         if (buffer.get(initialOffset + keyBufferPosition) == (byte) 1) {
-          return NullHandling.nullToZeroIfNeeded((Float) null);
+          return NullHandling.defaultFloatValue();
         } else {
           return buffer.getFloat(initialOffset + keyBufferPosition + Byte.BYTES);
         }
@@ -1724,7 +1724,7 @@ public class RowBasedGrouperHelper
       protected Double readFromBuffer(ByteBuffer buffer, int initialOffset)
       {
         if (buffer.get(initialOffset + keyBufferPosition) == (byte) 1) {
-          return NullHandling.nullToZeroIfNeeded((Double) null);
+          return NullHandling.defaultDoubleValue();
         } else {
           return buffer.getDouble(initialOffset + keyBufferPosition + Byte.BYTES);
         }

@@ -29,8 +29,8 @@ public class NullHandling
   private static String NULL_HANDLING_CONFIG_STRING = "druid.generic.useDefaultValueForNull";
 
   /**
-   * use these values to ensure that {@link NullHandling#nullToZeroIfNeeded(Long)},
-   * {@link NullHandling#nullToZeroIfNeeded(Double)}, {@link NullHandling#nullToZeroIfNeeded(Float)}
+   * use these values to ensure that {@link NullHandling#defaultDoubleValue()},
+   * {@link NullHandling#defaultFloatValue()} , {@link NullHandling#defaultFloatValue()}
    * return the same boxed object when returning a constant zero
    */
   public static final Double ZERO_DOUBLE = 0.0d;
@@ -65,14 +65,28 @@ public class NullHandling
     return useDefaultValuesForNull() ? Strings.emptyToNull(value) : value;
   }
 
+  @Nullable
   public static String defaultStringValue()
   {
     return useDefaultValuesForNull() ? "" : null;
   }
 
+  @Nullable
   public static Long defaultLongValue()
   {
     return useDefaultValuesForNull() ? ZERO_LONG : null;
+  }
+
+  @Nullable
+  public static Float defaultFloatValue()
+  {
+    return useDefaultValuesForNull() ? ZERO_FLOAT : null;
+  }
+
+  @Nullable
+  public static Double defaultDoubleValue()
+  {
+    return useDefaultValuesForNull() ? ZERO_DOUBLE : null;
   }
 
   public static boolean isNullOrEquivalent(@Nullable String value)
@@ -80,21 +94,4 @@ public class NullHandling
     return INSTANCE.isUseDefaultValuesForNull() ? Strings.isNullOrEmpty(value) : value == null;
   }
 
-  @Nullable
-  public static Long nullToZeroIfNeeded(@Nullable Long value)
-  {
-    return INSTANCE.isUseDefaultValuesForNull() && value == null ? ZERO_LONG : value;
-  }
-
-  @Nullable
-  public static Double nullToZeroIfNeeded(@Nullable Double value)
-  {
-    return INSTANCE.isUseDefaultValuesForNull() && value == null ? ZERO_DOUBLE : value;
-  }
-
-  @Nullable
-  public static Float nullToZeroIfNeeded(@Nullable Float value)
-  {
-    return INSTANCE.isUseDefaultValuesForNull() && value == null ? ZERO_FLOAT : value;
-  }
 }
