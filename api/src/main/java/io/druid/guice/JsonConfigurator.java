@@ -93,7 +93,8 @@ public class JsonConfigurator
           log.info(e, "Unable to parse [%s]=[%s] as a json object, using as is.", prop, propValue);
           value = propValue;
         }
-
+        // Put exact property name for extensions that have dot(.) in property names
+        jsonMap.put(prop.substring(propertyBase.length()), value);
         hieraricalPutValue(propertyPrefix, prop, prop.substring(propertyBase.length()), value, jsonMap);
       }
     }
