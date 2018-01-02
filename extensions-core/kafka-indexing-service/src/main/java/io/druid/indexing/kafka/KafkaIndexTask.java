@@ -511,13 +511,14 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       final Object restoredMetadata = driver.startJob();
       if (restoredMetadata == null) {
         // no persist has happened so far
+        // so either this is a brand new task or replacement of a failed task
         Preconditions.checkState(sequences.get(0).startOffsets.entrySet().stream().allMatch(
             partitionOffsetEntry -> Longs.compare(
                 partitionOffsetEntry.getValue(),
                 ioConfig.getStartPartitions()
                         .getPartitionOffsetMap()
                         .get(partitionOffsetEntry.getKey())
-            ) == 0
+            ) >= 0
         ), "Sequence offsets are not compatible with start offsets of task");
         nextOffsets.putAll(sequences.get(0).startOffsets);
       } else {
@@ -544,7 +545,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
               ioConfig.getStartPartitions().getPartitionOffsetMap().keySet()
           );
         }
-        // sequences size can 0 only when all sequences got published and task stopped before it could finish
+        // sequences size can be 0 only when all sequences got published and task stopped before it could finish
         // which is super rare
         if (sequences.size() == 0 || sequences.get(sequences.size() - 1).isCheckpointed()) {
           this.endOffsets.putAll(sequences.size() == 0
