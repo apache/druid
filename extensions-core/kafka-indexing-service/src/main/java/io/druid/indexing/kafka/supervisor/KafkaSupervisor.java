@@ -670,7 +670,7 @@ public class KafkaSupervisor implements Supervisor
         // as when the task starts they are sent existing checkpoints
         Preconditions.checkState(
             checkpoints.size() <= 1,
-            "Got checkpoint request with null as previous check point, however found more than one checkpoints in metadata store"
+            "Got checkpoint request with null as previous check point, however found more than one checkpoints"
         );
         if (checkpoints.size() == 1) {
           log.info("Already checkpointed with dataSourceMetadata [%s]", checkpoints.get(0));
