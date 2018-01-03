@@ -480,7 +480,7 @@ public class LookupReferencesManager
         new ExecutorCompletionService<>(executorService);
     try {
       LOG.info("Starting lookup loading process");
-      List<LookupBean> remainingLookups = lookupBeanList;
+      final List<LookupBean> remainingLookups = new ArrayList<>(lookupBeanList);
       for (int i = 0; i < lookupConfig.getLookupStartRetries() && !remainingLookups.isEmpty(); i++) {
         LOG.info("Round of attempts #%d, [%d] lookups", i + 1, remainingLookups.size());
         final Map<String, LookupExtractorFactoryContainer> successfulLookups =
