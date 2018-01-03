@@ -148,7 +148,7 @@ public class JsonConfiguratorTest
   public void testPropertyWithDot()
   {
     final JsonConfigurator configurator = new JsonConfigurator(mapper, validator);
-    properties.setProperty(PROP_PREFIX + "prop2.prop", "testing");
+    properties.setProperty(PROP_PREFIX + "prop2.prop.2", "testing");
     properties.setProperty(PROP_PREFIX + "prop1", "prop1");
     final MappableObject obj = configurator.configurate(properties, PROP_PREFIX, MappableObject.class);
     Assert.assertEquals("testing", obj.prop2);
@@ -164,14 +164,14 @@ class MappableObject
   final String prop1;
   @JsonProperty("prop1List")
   final List<String> prop1List;
-  @JsonProperty("prop2.prop")
+  @JsonProperty("prop2.prop.2")
   final String prop2;
 
   @JsonCreator
   protected MappableObject(
       @JsonProperty("prop1") final String prop1,
       @JsonProperty("prop1List") final List<String> prop1List,
-      @JsonProperty("prop2.prop") final String prop2
+      @JsonProperty("prop2.prop.2") final String prop2
   )
   {
     this.prop1 = prop1;
