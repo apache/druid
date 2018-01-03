@@ -23,13 +23,15 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.io.CountingInputStream;
 import io.druid.java.util.common.RetryUtils;
+import io.druid.java.util.common.logger.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.SocketTimeoutException;
+import java.net.SocketException;
 
 class RetryingInputStream<T> extends InputStream
 {
+  private static final Logger log = new Logger(RetryingInputStream.class);
   private final Predicate<Throwable> retryCondition;
   private final int maxTry;
 
@@ -46,9 +48,10 @@ class RetryingInputStream<T> extends InputStream
     this.retryCondition = t -> {
       Preconditions.checkNotNull(t);
 
-      if (t instanceof SocketTimeoutException || t.getCause() instanceof SocketTimeoutException) {
+      if (isConnectionReset(t)) {
         try {
           startOffset += delegate.getCount();
+          log.info("retrying from offset[%d]", startOffset);
           delegate.close();
           delegate = new CountingInputStream(objectOpenFunction.open(object, startOffset));
           return true;
@@ -64,6 +67,12 @@ class RetryingInputStream<T> extends InputStream
 
     this.maxTry = maxTry + 1;
     this.delegate = new CountingInputStream(objectOpenFunction.open(object));
+  }
+
+  private boolean isConnectionReset(Throwable t)
+  {
+    return (t instanceof SocketException && (t.getMessage().contains("Connection reset"))) ||
+           (t.getCause() != null && isConnectionReset(t.getCause()));
   }
 
   @Override

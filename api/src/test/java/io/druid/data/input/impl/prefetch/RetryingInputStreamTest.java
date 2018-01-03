@@ -35,7 +35,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.SocketTimeoutException;
+import java.net.SocketException;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -135,7 +135,7 @@ public class RetryingInputStreamTest
           throw new IOException("test retry");
         } else {
           delegate.close();
-          throw new IllegalArgumentException(new SocketTimeoutException("test timeout"));
+          throw new SocketException("Test Connection reset");
         }
       } else {
         throwError = errorCount < MAX_ERROR;

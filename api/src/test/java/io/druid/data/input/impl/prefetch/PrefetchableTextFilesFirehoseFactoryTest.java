@@ -49,7 +49,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.net.SocketTimeoutException;
+import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
@@ -627,7 +627,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
         if (readCount++ % NUM_READ_COUNTS_BEFORE_ERROR == 0) {
           if (numConnectionResets++ < maxConnectionResets) {
             // Simulate connection reset
-            throw new IllegalArgumentException(new SocketTimeoutException("Test connection reset"));
+            throw new SocketException("Test Connection reset");
           }
         }
         return delegate.read();
@@ -639,7 +639,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
         if (readCount++ % NUM_READ_COUNTS_BEFORE_ERROR == 0) {
           if (numConnectionResets++ < maxConnectionResets) {
             // Simulate connection reset
-            throw new IllegalArgumentException(new SocketTimeoutException("Test connection reset"));
+            throw new SocketException("Test Connection reset");
           }
         }
         return delegate.read(b, off, len);
