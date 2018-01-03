@@ -93,7 +93,6 @@ public class JsonConfigurator
           log.info(e, "Unable to parse [%s]=[%s] as a json object, using as is.", prop, propValue);
           value = propValue;
         }
-
         hieraricalPutValue(propertyPrefix, prop, prop.substring(propertyBase.length()), value, jsonMap);
       }
     }
@@ -175,8 +174,11 @@ public class JsonConfigurator
   )
   {
     int dotIndex = property.indexOf('.');
+    // Always put property with name even if it is of form a.b. This will make sure the property is available for classes
+    // where JsonProperty names are of the form a.b
+    // Note:- this will cause more than required properties to be present in the jsonMap.
+    targetMap.put(property, value);
     if (dotIndex < 0) {
-      targetMap.put(property, value);
       return;
     }
     if (dotIndex == 0) {
