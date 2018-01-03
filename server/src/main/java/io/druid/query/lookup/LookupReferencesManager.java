@@ -65,7 +65,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * This class provide a basic {@link LookupExtractorFactory} references manager.
@@ -472,37 +471,30 @@ public class LookupReferencesManager
 
   private void startLookups(final List<LookupBean> lookupBeanList)
   {
-    ImmutableMap.Builder<String, LookupExtractorFactoryContainer> builder = ImmutableMap.builder();
-    ExecutorService executorService = Execs.multiThreaded(
+    final ImmutableMap.Builder<String, LookupExtractorFactoryContainer> builder = ImmutableMap.builder();
+    final ExecutorService executorService = Execs.multiThreaded(
         lookupConfig.getNumLookupLoadingThreads(),
         "LookupReferencesManager-Startup-%s"
     );
-    CompletionService<Map.Entry<String, LookupExtractorFactoryContainer>> completionService =
+    final CompletionService<Map.Entry<String, LookupExtractorFactoryContainer>> completionService =
         new ExecutorCompletionService<>(executorService);
     try {
       LOG.info("Starting lookup loading process");
       List<LookupBean> remainingLookups = lookupBeanList;
-      for (int i = 0; i < lookupConfig.getLookupStartRetries(); i++) {
+      for (int i = 0; i < lookupConfig.getLookupStartRetries() && !remainingLookups.isEmpty(); i++) {
         LOG.info("Round of attempts #%d, [%d] lookups", i + 1, remainingLookups.size());
-        Map<String, LookupExtractorFactoryContainer> successfulLookups =
+        final Map<String, LookupExtractorFactoryContainer> successfulLookups =
             startLookups(remainingLookups, completionService);
         builder.putAll(successfulLookups);
-        List<LookupBean> failedLookups = remainingLookups
-            .stream()
-            .filter(l -> !successfulLookups.containsKey(l.getName()))
-            .collect(Collectors.toList());
-        if (failedLookups.isEmpty()) {
-          break;
-        } else {
-          // next round
-          remainingLookups = failedLookups;
-        }
+        remainingLookups.removeIf(l -> successfulLookups.containsKey(l.getName()));
       }
-      LOG.info(
-          "Failed to start the following lookups after [%d] attempts: [%s]",
-          lookupConfig.getLookupStartRetries(),
-          remainingLookups
-      );
+      if (!remainingLookups.isEmpty()) {
+        LOG.warn(
+            "Failed to start the following lookups after [%d] attempts: [%s]",
+            lookupConfig.getLookupStartRetries(),
+            remainingLookups
+        );
+      }
       stateRef.set(new LookupUpdateState(builder.build(), ImmutableList.of(), ImmutableList.of()));
     }
     catch (InterruptedException | RuntimeException e) {
