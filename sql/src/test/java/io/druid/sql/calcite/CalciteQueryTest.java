@@ -4994,7 +4994,7 @@ public class CalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Intervals.of("-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z")))
+                  .intervals(QSS(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .filters(
@@ -5022,7 +5022,7 @@ public class CalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Intervals.of("-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z")))
+                  .intervals(QSS(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .filters(
