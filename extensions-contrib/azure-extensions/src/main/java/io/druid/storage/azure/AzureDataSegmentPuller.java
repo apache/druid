@@ -38,6 +38,8 @@ public class AzureDataSegmentPuller implements DataSegmentPuller
 {
   private static final Logger log = new Logger(AzureDataSegmentPuller.class);
 
+  String HADOOP_BLOB_PATH_IDENTIFIER = "blob.core.windows.net";
+
   private final AzureStorage azureStorage;
 
   @Inject
@@ -58,7 +60,19 @@ public class AzureDataSegmentPuller implements DataSegmentPuller
     try {
       prepareOutDir(outDir);
 
-      final ByteSource byteSource = new AzureByteSource(azureStorage, containerName, blobPath);
+      log.info("Loading container: " + containerName + " - " + "blobPath:" + blobPath +" - outdir: " + outDir);
+
+      Boolean blobPathIsHadoop = blobPath.contains(HADOOP_BLOB_PATH_IDENTIFIER);
+      final String actualBlobPath;
+      if (blobPathIsHadoop) {
+        // Remove azure's hadoop prefix to match realtime ingestion path
+        actualBlobPath = blobPath.substring(blobPath.indexOf(HADOOP_BLOB_PATH_IDENTIFIER) +
+          HADOOP_BLOB_PATH_IDENTIFIER.length() + 1);
+      } else {
+        actualBlobPath = blobPath;
+      }
+
+      final ByteSource byteSource = new AzureByteSource(azureStorage, containerName, actualBlobPath);
       final io.druid.java.util.common.FileUtils.FileCopyResult result = CompressionUtils.unzip(
           byteSource,
           outDir,
@@ -66,7 +80,7 @@ public class AzureDataSegmentPuller implements DataSegmentPuller
           false
       );
 
-      log.info("Loaded %d bytes from [%s] to [%s]", result.size(), blobPath, outDir.getAbsolutePath());
+      log.info("Loaded %d bytes from [%s] to [%s]", result.size(), actualBlobPath, outDir.getAbsolutePath());
       return result;
     }
     catch (IOException e) {

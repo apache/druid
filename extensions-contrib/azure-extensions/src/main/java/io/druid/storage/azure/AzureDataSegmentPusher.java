@@ -32,6 +32,7 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.timeline.DataSegment;
+import org.joda.time.format.ISODateTimeFormat;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -72,7 +73,38 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   @Override
   public String getPathForHadoop()
   {
-    return null;
+    String hadoopPath = String.format("%s://%s@%s.blob.core.windows.net/",
+      "wasb",
+      config.getContainer(),
+      config.getAccount()
+    );
+
+    log.info("Using Azure blob storage Hadoop path: " + hadoopPath );
+
+    return hadoopPath;
+  }
+
+  @Override
+  public String getStorageDir(DataSegment dataSegment)
+  {
+
+    String seg = JOINER.join(
+      dataSegment.getDataSource(),
+      String.format(
+        "%s_%s",
+        // Use ISODateTimeFormat.basicDateTime() format, to avoid using colons in file path.
+        dataSegment.getInterval().getStart().toString(ISODateTimeFormat.basicDateTime()),
+        dataSegment.getInterval().getEnd().toString(ISODateTimeFormat.basicDateTime())
+      ),
+      dataSegment.getVersion(),
+      dataSegment.getShardSpec().getPartitionNum()
+    );
+
+    log.info("DataSegment: " + seg);
+
+    // Replace colons with underscores, since they are not supported through wasb:// prefix
+    return seg.replace(":", "_");
+
   }
 
   @Override
