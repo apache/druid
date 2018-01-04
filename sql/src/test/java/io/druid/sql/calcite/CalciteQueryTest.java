@@ -2514,7 +2514,6 @@ public class CalciteQueryTest
   }
 
   @Test
-  @Ignore // https://issues.apache.org/jira/browse/CALCITE-1910
   public void testFilteredAggregationWithNotIn() throws Exception
   {
     testQuery(
@@ -2527,12 +2526,26 @@ public class CalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(QSS(Filtration.eternity()))
                   .granularity(Granularities.ALL)
-                  .aggregators(AGGS())
+                  .aggregators(
+                      AGGS(
+                          new FilteredAggregatorFactory(
+                              new CountAggregatorFactory("a0"),
+                              NOT(SELECTOR("dim1", "1", null))
+                          ),
+                          new FilteredAggregatorFactory(
+                              new CountAggregatorFactory("a1"),
+                              AND(
+                                  NOT(SELECTOR("dim2", null, null)),
+                                  NOT(SELECTOR("dim1", "1", null))
+                              )
+                          )
+                      )
+                  )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{1L, 5L}
+            new Object[]{5L, 2L}
         )
     );
   }
@@ -2814,6 +2827,27 @@ public class CalciteQueryTest
         "SELECT COUNT(*) FROM druid.foo WHERE dim2 = 'a' and not (dim1 > 'a' OR dim1 < 'b')",
         ImmutableList.of(),
         ImmutableList.of(new Object[]{0L})
+    );
+  }
+
+  @Test
+  public void testCountStarWithBoundFilterSimplifyOnMetric() throws Exception
+  {
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo WHERE 2.5 < m1 AND m1 < 3.5",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(BOUND("m1", "2.5", "3.5", true, true, null, StringComparators.NUMERIC))
+                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L}
+        )
     );
   }
 
@@ -3175,6 +3209,39 @@ public class CalciteQueryTest
         "SELECT COUNT(*) FROM druid.foo WHERE "
         + "cnt >= EXTRACT(EPOCH FROM TIMESTAMP '1970-01-01 00:00:00') * 1000 "
         + "AND cnt < EXTRACT(EPOCH FROM TIMESTAMP '1970-01-02 00:00:00') * 1000",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(
+                      BOUND(
+                          "cnt",
+                          String.valueOf(DateTimes.of("1970-01-01").getMillis()),
+                          String.valueOf(DateTimes.of("1970-01-02").getMillis()),
+                          false,
+                          true,
+                          null,
+                          StringComparators.NUMERIC
+                      )
+                  )
+                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{6L}
+        )
+    );
+  }
+
+  @Test
+  public void testCountStarWithTimeFilterOnLongColumnUsingExtractEpochFromDate() throws Exception
+  {
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo WHERE "
+        + "cnt >= EXTRACT(EPOCH FROM DATE '1970-01-01') * 1000 "
+        + "AND cnt < EXTRACT(EPOCH FROM DATE '1970-01-02') * 1000",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -4918,7 +4985,6 @@ public class CalciteQueryTest
   }
 
   @Test
-  @Ignore // https://issues.apache.org/jira/browse/CALCITE-1601
   public void testFilterOnTimeExtract() throws Exception
   {
     testQuery(
@@ -4928,9 +4994,15 @@ public class CalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Intervals.of("2000/P1M")))
+                  .intervals(QSS(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .filters(
+                      AND(
+                          EXPRESSION_FILTER("(timestamp_extract(\"__time\",'YEAR','UTC') == 2000)"),
+                          EXPRESSION_FILTER("(timestamp_extract(\"__time\",'MONTH','UTC') == 1)")
+                      )
+                  )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -4941,24 +5013,33 @@ public class CalciteQueryTest
   }
 
   @Test
-  @Ignore // https://issues.apache.org/jira/browse/CALCITE-1601
-  public void testFilterOnTimeExtractWithMultipleMonths() throws Exception
+  public void testFilterOnTimeExtractWithMultipleDays() throws Exception
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo\n"
         + "WHERE EXTRACT(YEAR FROM __time) = 2000\n"
-        + "AND EXTRACT(MONTH FROM __time) IN (2, 3, 5)",
+        + "AND EXTRACT(DAY FROM __time) IN (2, 3, 5)",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Intervals.of("2000-02-01/P2M"), Intervals.of("2000-05-01/P1M")))
+                  .intervals(QSS(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .filters(
+                      AND(
+                          EXPRESSION_FILTER("(timestamp_extract(\"__time\",'YEAR','UTC') == 2000)"),
+                          OR(
+                              EXPRESSION_FILTER("(timestamp_extract(\"__time\",'DAY','UTC') == 2)"),
+                              EXPRESSION_FILTER("(timestamp_extract(\"__time\",'DAY','UTC') == 3)"),
+                              EXPRESSION_FILTER("(timestamp_extract(\"__time\",'DAY','UTC') == 5)")
+                          )
+                      )
+                  )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{3L}
+            new Object[]{2L}
         )
     );
   }
