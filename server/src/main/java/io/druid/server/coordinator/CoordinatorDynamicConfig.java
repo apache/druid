@@ -25,6 +25,7 @@ import io.druid.java.util.common.IAE;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -42,6 +43,9 @@ public class CoordinatorDynamicConfig
   private final boolean emitBalancingStats;
   private final boolean killAllDataSources;
   private final Set<String> killDataSourceWhitelist;
+
+  // The pending segments of the dataSources in this list are not killed.
+  private final Set<String> killPendingSegmentsSkipList;
   /**
    * The maximum number of segments that could be queued for loading to any given server.
    * Default values is 0 with the meaning of "unbounded" (any number of
@@ -65,6 +69,7 @@ public class CoordinatorDynamicConfig
       // coordinator console can not send array of strings in the update request.
       // See https://github.com/druid-io/druid/issues/3055
       @JsonProperty("killDataSourceWhitelist") Object killDataSourceWhitelist,
+      @JsonProperty("killPendingSegmentsSkipList") Object killPendingSegmentsSkipList,
       @JsonProperty("killAllDataSources") boolean killAllDataSources,
       @JsonProperty("maxSegmentsInNodeLoadingQueue") int maxSegmentsInNodeLoadingQueue
   )
@@ -78,7 +83,8 @@ public class CoordinatorDynamicConfig
     this.balancerComputeThreads = Math.max(balancerComputeThreads, 1);
     this.emitBalancingStats = emitBalancingStats;
     this.killAllDataSources = killAllDataSources;
-    this.killDataSourceWhitelist = parseKillDataSourceWhitelist(killDataSourceWhitelist);
+    this.killDataSourceWhitelist = parseJsonStringOrArray(killDataSourceWhitelist);
+    this.killPendingSegmentsSkipList = parseJsonStringOrArray(killPendingSegmentsSkipList);
     this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue;
 
     if (this.killAllDataSources && !this.killDataSourceWhitelist.isEmpty()) {
@@ -86,10 +92,10 @@ public class CoordinatorDynamicConfig
     }
   }
 
-  private Set<String> parseKillDataSourceWhitelist(Object killDataSourceWhitelist)
+  private static Set<String> parseJsonStringOrArray(Object jsonStringOrArray)
   {
-    if (killDataSourceWhitelist instanceof String) {
-      String[] list = ((String) killDataSourceWhitelist).split(",");
+    if (jsonStringOrArray instanceof String) {
+      String[] list = ((String) jsonStringOrArray).split(",");
       Set<String> result = new HashSet<>();
       for (String item : list) {
         String trimmed = item.trim();
@@ -98,8 +104,8 @@ public class CoordinatorDynamicConfig
         }
       }
       return result;
-    } else if (killDataSourceWhitelist instanceof Collection) {
-      return ImmutableSet.copyOf(((Collection) killDataSourceWhitelist));
+    } else if (jsonStringOrArray instanceof Collection) {
+      return ImmutableSet.copyOf(((Collection) jsonStringOrArray));
     } else {
       return ImmutableSet.of();
     }
@@ -160,6 +166,12 @@ public class CoordinatorDynamicConfig
   }
 
   @JsonProperty
+  public Set<String> getKillPendingSegmentsSkipList()
+  {
+    return killPendingSegmentsSkipList;
+  }
+
+  @JsonProperty
   public boolean isKillAllDataSources()
   {
     return killAllDataSources;
@@ -184,6 +196,7 @@ public class CoordinatorDynamicConfig
            ", balancerComputeThreads=" + balancerComputeThreads +
            ", emitBalancingStats=" + emitBalancingStats +
            ", killDataSourceWhitelist=" + killDataSourceWhitelist +
+           ", killPendingSegmentsSkipList=" + killPendingSegmentsSkipList +
            ", killAllDataSources=" + killAllDataSources +
            ", maxSegmentsInNodeLoadingQueue=" + maxSegmentsInNodeLoadingQueue +
            '}';
@@ -231,27 +244,30 @@ public class CoordinatorDynamicConfig
     if (maxSegmentsInNodeLoadingQueue != that.maxSegmentsInNodeLoadingQueue) {
       return false;
     }
-    return !(killDataSourceWhitelist != null
-             ? !killDataSourceWhitelist.equals(that.killDataSourceWhitelist)
-             : that.killDataSourceWhitelist != null);
+    if (!Objects.equals(killDataSourceWhitelist, that.killDataSourceWhitelist)) {
+      return false;
+    }
 
+    return Objects.equals(killPendingSegmentsSkipList, that.killPendingSegmentsSkipList);
   }
 
   @Override
   public int hashCode()
   {
-    int result = (int) (millisToWaitBeforeDeleting ^ (millisToWaitBeforeDeleting >>> 32));
-    result = 31 * result + (int) (mergeBytesLimit ^ (mergeBytesLimit >>> 32));
-    result = 31 * result + mergeSegmentsLimit;
-    result = 31 * result + maxSegmentsToMove;
-    result = 31 * result + replicantLifetime;
-    result = 31 * result + replicationThrottleLimit;
-    result = 31 * result + balancerComputeThreads;
-    result = 31 * result + (emitBalancingStats ? 1 : 0);
-    result = 31 * result + (killAllDataSources ? 1 : 0);
-    result = 31 * result + (killDataSourceWhitelist != null ? killDataSourceWhitelist.hashCode() : 0);
-    result = 31 * result + maxSegmentsInNodeLoadingQueue;
-    return result;
+    return Objects.hash(
+        millisToWaitBeforeDeleting,
+        mergeBytesLimit,
+        mergeSegmentsLimit,
+        maxSegmentsToMove,
+        replicantLifetime,
+        replicationThrottleLimit,
+        balancerComputeThreads,
+        emitBalancingStats,
+        killAllDataSources,
+        maxSegmentsInNodeLoadingQueue,
+        killDataSourceWhitelist,
+        killPendingSegmentsSkipList
+    );
   }
 
   public static Builder builder()
@@ -281,6 +297,7 @@ public class CoordinatorDynamicConfig
     private Boolean emitBalancingStats;
     private Integer balancerComputeThreads;
     private Object killDataSourceWhitelist;
+    private Object killPendingSegmentsSkipList;
     private Boolean killAllDataSources;
     private Integer maxSegmentsInNodeLoadingQueue;
 
@@ -299,6 +316,7 @@ public class CoordinatorDynamicConfig
         @JsonProperty("balancerComputeThreads") Integer balancerComputeThreads,
         @JsonProperty("emitBalancingStats") Boolean emitBalancingStats,
         @JsonProperty("killDataSourceWhitelist") Object killDataSourceWhitelist,
+        @JsonProperty("killPendingSegmentsSkipList") Object killPendingSegmentsSkipList,
         @JsonProperty("killAllDataSources") Boolean killAllDataSources,
         @JsonProperty("maxSegmentsInNodeLoadingQueue") Integer maxSegmentsInNodeLoadingQueue
     )
@@ -313,6 +331,7 @@ public class CoordinatorDynamicConfig
       this.emitBalancingStats = emitBalancingStats;
       this.killAllDataSources = killAllDataSources;
       this.killDataSourceWhitelist = killDataSourceWhitelist;
+      this.killPendingSegmentsSkipList = killPendingSegmentsSkipList;
       this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue;
     }
 
@@ -382,9 +401,6 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
-
-
-
     public CoordinatorDynamicConfig build()
     {
       return new CoordinatorDynamicConfig(
@@ -397,6 +413,7 @@ public class CoordinatorDynamicConfig
           balancerComputeThreads == null ? DEFAULT_BALANCER_COMPUTE_THREADS : balancerComputeThreads,
           emitBalancingStats == null ? DEFAULT_EMIT_BALANCING_STATS : emitBalancingStats,
           killDataSourceWhitelist,
+          killPendingSegmentsSkipList,
           killAllDataSources == null ? DEFAULT_KILL_ALL_DATA_SOURCES : killAllDataSources,
           maxSegmentsInNodeLoadingQueue == null ? DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE : maxSegmentsInNodeLoadingQueue
       );
@@ -414,6 +431,7 @@ public class CoordinatorDynamicConfig
           balancerComputeThreads == null ? defaults.getBalancerComputeThreads() : balancerComputeThreads,
           emitBalancingStats == null ? defaults.emitBalancingStats() : emitBalancingStats,
           killDataSourceWhitelist == null ? defaults.getKillDataSourceWhitelist() : killDataSourceWhitelist,
+          killPendingSegmentsSkipList == null ? defaults.getKillPendingSegmentsSkipList() : killPendingSegmentsSkipList,
           killAllDataSources == null ? defaults.isKillAllDataSources() : killAllDataSources,
           maxSegmentsInNodeLoadingQueue == null ? defaults.getMaxSegmentsInNodeLoadingQueue() : maxSegmentsInNodeLoadingQueue
       );

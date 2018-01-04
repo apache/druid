@@ -104,7 +104,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
         size
     );
 
-    DataSegment segment = pusher.push(tempFolder.getRoot(), segmentToPush);
+    DataSegment segment = pusher.push(tempFolder.getRoot(), segmentToPush, true);
 
     Assert.assertEquals(segmentToPush.getSize(), segment.getSize());
   }
@@ -133,9 +133,9 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     final File descriptorFile = new File("descriptor.json");
     final Map<String, String> azurePaths = pusher.getAzurePaths(dataSegment);
 
-    azureStorage.uploadBlob(compressedSegmentData, containerName, azurePaths.get("index"));
+    azureStorage.uploadBlob(compressedSegmentData, containerName, azurePaths.get("index"), true);
     expectLastCall();
-    azureStorage.uploadBlob(descriptorFile, containerName, azurePaths.get("descriptor"));
+    azureStorage.uploadBlob(descriptorFile, containerName, azurePaths.get("descriptor"), true);
     expectLastCall();
 
     replayAll();
@@ -146,7 +146,8 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
         0, // empty file
         compressedSegmentData,
         descriptorFile,
-        azurePaths
+        azurePaths,
+        true
     );
 
     assertEquals(compressedSegmentData.length(), pushedDataSegment.getSize());

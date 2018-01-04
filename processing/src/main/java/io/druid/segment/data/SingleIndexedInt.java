@@ -21,8 +21,6 @@ package io.druid.segment.data;
 
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
-import java.io.IOException;
-
 public final class SingleIndexedInt implements IndexedInts
 {
   private static final int CACHE_SIZE = 128;
@@ -63,11 +61,6 @@ public final class SingleIndexedInt implements IndexedInts
       throw new IllegalArgumentException(i + " != 0");
     }
     return value;
-  }
-
-  @Override
-  public void close() throws IOException
-  {
   }
 
   @Override

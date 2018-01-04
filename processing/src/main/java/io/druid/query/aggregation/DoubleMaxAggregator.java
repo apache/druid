@@ -37,20 +37,13 @@ public class DoubleMaxAggregator implements Aggregator
   public DoubleMaxAggregator(BaseDoubleColumnValueSelector selector)
   {
     this.selector = selector;
-
-    reset();
+    this.max = Double.NEGATIVE_INFINITY;
   }
 
   @Override
   public void aggregate()
   {
     max = Math.max(max, selector.getDouble());
-  }
-
-  @Override
-  public void reset()
-  {
-    max = Double.NEGATIVE_INFINITY;
   }
 
   @Override

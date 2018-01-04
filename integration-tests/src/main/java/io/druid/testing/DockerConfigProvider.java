@@ -23,6 +23,8 @@ package io.druid.testing;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.validation.constraints.NotNull;
+import java.util.HashMap;
+import java.util.Map;
 
 public class DockerConfigProvider implements IntegrationTestingConfigProvider
 {
@@ -65,6 +67,12 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       }
 
       @Override
+      public String getHistoricalUrl()
+      {
+        return "http://" + dockerIp + ":8083";
+      }
+
+      @Override
       public String getMiddleManagerHost()
       {
         return dockerIp;
@@ -102,6 +110,18 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       public String getPassword()
       {
         return null;
+      }
+
+      @Override
+      public Map<String, String> getProperties()
+      {
+        return new HashMap<>();
+      }
+
+      @Override
+      public boolean manageKafkaTopic()
+      {
+        return true;
       }
     };
   }
