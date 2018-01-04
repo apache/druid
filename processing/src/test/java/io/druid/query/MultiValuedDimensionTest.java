@@ -34,10 +34,6 @@ import io.druid.data.input.impl.TimestampSpec;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
-import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.AggregationTestHelper;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
@@ -63,6 +59,9 @@ import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -72,7 +71,6 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -183,7 +181,7 @@ public class MultiValuedDimensionTest
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t7", "count", 2L)
     );
 
-    TestHelper.assertExpectedObjects(expectedResults, Sequences.toList(result, new ArrayList<Row>()), "");
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "");
   }
 
   @Test
@@ -215,7 +213,7 @@ public class MultiValuedDimensionTest
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t5", "count", 2L)
     );
 
-    TestHelper.assertExpectedObjects(expectedResults, Sequences.toList(result, new ArrayList<Row>()), "");
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "");
   }
 
   @Test
@@ -250,7 +248,7 @@ public class MultiValuedDimensionTest
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t3", "count", 4L)
     );
 
-    TestHelper.assertExpectedObjects(expectedResults, Sequences.toList(result, new ArrayList<Row>()), "");
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "");
   }
 
   @Test
@@ -298,11 +296,7 @@ public class MultiValuedDimensionTest
             )
         )
     );
-    TestHelper.assertExpectedObjects(
-        expectedResults,
-        Sequences.toList(result, new ArrayList<Result<TopNResultValue>>()),
-        ""
-    );
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "");
   }
 
   @After

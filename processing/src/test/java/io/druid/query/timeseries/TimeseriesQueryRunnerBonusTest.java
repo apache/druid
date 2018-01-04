@@ -21,12 +21,10 @@ package io.druid.query.timeseries;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
@@ -35,7 +33,6 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.Segment;
@@ -130,18 +127,11 @@ public class TimeseriesQueryRunnerBonusTest
                                   .dataSource("xxx")
                                   .granularity(Granularities.ALL)
                                   .intervals(ImmutableList.of(Intervals.of("2012-01-01T00:00:00Z/P1D")))
-                                  .aggregators(
-                                      ImmutableList.<AggregatorFactory>of(
-                                          new CountAggregatorFactory("rows")
-                                      )
-                                  )
+                                  .aggregators(new CountAggregatorFactory("rows"))
                                   .descending(descending)
                                   .build();
     HashMap<String, Object> context = new HashMap<String, Object>();
-    return Sequences.toList(
-        runner.run(QueryPlus.wrap(query), context),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    return runner.run(QueryPlus.wrap(query), context).toList();
   }
 
   private static <T> QueryRunner<T> makeQueryRunner(

@@ -20,14 +20,12 @@
 package io.druid.query.timeboundary;
 
 import com.google.common.base.Function;
-import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.ChainedExecutionQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryPlus;
@@ -122,10 +120,7 @@ public class TimeBoundaryQueryRunnerFactory
           Granularities.ALL,
           this.skipToFirstMatching
       );
-      final List<Result<DateTime>> resultList = Sequences.toList(
-          Sequences.limit(resultSequence, 1),
-          Lists.<Result<DateTime>>newArrayList()
-      );
+      final List<Result<DateTime>> resultList = resultSequence.limit(1).toList();
       if (resultList.size() > 0) {
         return resultList.get(0).getValue();
       }

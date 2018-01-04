@@ -48,7 +48,7 @@ public class ComplexSequenceTest
 
   private void check(String expected, Sequence<Integer> complex)
   {
-    List<Integer> combined = Sequences.toList(complex, new ArrayList<Integer>());
+    List<Integer> combined = complex.toList();
     Assert.assertEquals(expected, combined.toString());
 
     Yielder<Integer> yielder = complex.toYielder(
