@@ -47,6 +47,7 @@ import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.RowBasedColumnSelectorFactory;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.AbstractIndex;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionHandler;
@@ -59,6 +60,7 @@ import io.druid.segment.LongColumnSelector;
 import io.druid.segment.Metadata;
 import io.druid.segment.NilColumnValueSelector;
 import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.StorageAdapter;
 import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
@@ -94,7 +96,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  */
-public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>, Closeable
+public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex implements Iterable<Row>, Closeable
 {
   private volatile DateTime maxIngestedEventTime;
 
@@ -770,6 +772,20 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   public List<String> getMetricNames()
   {
     return ImmutableList.copyOf(metricDescs.keySet());
+  }
+
+  @Override
+  public List<String> getColumnNames()
+  {
+    List<String> columnNames = new ArrayList<>(getDimensionNames());
+    columnNames.addAll(getMetricNames());
+    return columnNames;
+  }
+
+  @Override
+  public StorageAdapter toStorageAdapter()
+  {
+    return new IncrementalIndexStorageAdapter(this);
   }
 
   public ColumnCapabilities getCapabilities(String column)

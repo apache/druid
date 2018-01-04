@@ -82,7 +82,7 @@ public class AsyncQueryRunnerTest
 
     Sequence lazy = asyncRunner.run(QueryPlus.wrap(query), Collections.EMPTY_MAP);
     latch.countDown();
-    Assert.assertEquals(Lists.newArrayList(1), Sequences.toList(lazy, Lists.newArrayList()));
+    Assert.assertEquals(Lists.newArrayList(1), lazy.toList());
   }
   
   @Test(timeout = TEST_TIMEOUT)
@@ -115,7 +115,7 @@ public class AsyncQueryRunnerTest
     );
 
     try {
-      Sequences.toList(lazy, Lists.newArrayList());
+      lazy.toList();
     }
     catch (RuntimeException ex) {
       Assert.assertTrue(ex.getCause() instanceof TimeoutException);

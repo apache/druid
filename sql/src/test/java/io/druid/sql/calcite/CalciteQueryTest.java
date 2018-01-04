@@ -22,7 +22,6 @@ package io.druid.sql.calcite;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.hll.HLLCV1;
 import io.druid.java.util.common.DateTimes;
@@ -30,7 +29,6 @@ import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.PeriodGranularity;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.Druids;
@@ -6644,7 +6642,7 @@ public class CalciteQueryTest
 
     try (DruidPlanner planner = plannerFactory.createPlanner(queryContext)) {
       final PlannerResult plan = planner.plan(sql, null, authenticationResult);
-      return Sequences.toList(plan.run(), Lists.newArrayList());
+      return plan.run().toList();
     }
   }
 

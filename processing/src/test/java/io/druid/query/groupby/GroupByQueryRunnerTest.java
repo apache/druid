@@ -152,8 +152,6 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static org.junit.Assert.assertEquals;
-
 @RunWith(Parameterized.class)
 public class GroupByQueryRunnerTest
 {
@@ -2170,7 +2168,7 @@ public class GroupByQueryRunnerTest
 
     List<Row> expectedResults = ImmutableList.of();
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    assertEquals(expectedResults, results);
+    Assert.assertEquals(expectedResults, results);
   }
 
   @Test
@@ -3582,7 +3580,7 @@ public class GroupByQueryRunnerTest
 
     final Object next1 = resultsIter.next();
     Object expectedNext1 = expectedResultsIter.next();
-    assertEquals("order-limit", expectedNext1, next1);
+    Assert.assertEquals("order-limit", expectedNext1, next1);
 
     final Object next2 = resultsIter.next();
     Object expectedNext2 = expectedResultsIter.next();
@@ -7572,7 +7570,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    assertEquals(
+    Assert.assertEquals(
         Functions.<Sequence<Row>>identity(),
         query.getLimitSpec().build(
             query.getDimensions(),
@@ -7836,7 +7834,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    assertEquals(
+    Assert.assertEquals(
         Functions.<Sequence<Row>>identity(),
         query.getLimitSpec().build(
             query.getDimensions(),
@@ -9052,10 +9050,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    Iterable<Row> results = Sequences.toList(
-        mergedRunner.run(QueryPlus.wrap(allGranQuery), context),
-        new ArrayList<Row>()
-    );
+    Iterable<Row> results = mergedRunner.run(QueryPlus.wrap(allGranQuery), context).toList();
     TestHelper.assertExpectedObjects(allGranExpectedResults, results, "merged");
   }
 
@@ -9145,10 +9140,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "market", "spot", "rows", 2L, "idx", 257L)
     );
 
-    Iterable<Row> results = Sequences.toList(
-        mergedRunner.run(QueryPlus.wrap(allGranQuery), context),
-        Lists.<Row>newArrayList()
-    );
+    Iterable<Row> results = mergedRunner.run(QueryPlus.wrap(allGranQuery), context).toList();
     TestHelper.assertExpectedObjects(allGranExpectedResults, results, "merged");
   }
 
@@ -9242,10 +9234,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "market", "spot", "rows", 2L, "idx", 257L)
     );
 
-    Iterable<Row> results = Sequences.toList(
-        mergedRunner.run(QueryPlus.wrap(allGranQuery), context),
-        Lists.<Row>newArrayList()
-    );
+    Iterable<Row> results = mergedRunner.run(QueryPlus.wrap(allGranQuery), context).toList();
     TestHelper.assertExpectedObjects(allGranExpectedResults, results, "merged");
   }
 

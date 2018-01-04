@@ -43,10 +43,8 @@ import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.math.expr.ExprMacroTable;
-import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.query.BySegmentQueryRunner;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.FinalizeResultsQueryRunner;
@@ -77,6 +75,7 @@ import io.druid.segment.Segment;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -342,7 +341,7 @@ public class GroupByMultiSegmentTest
         .build();
 
     Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
-    List<Row> results = Sequences.toList(queryResult, Lists.<Row>newArrayList());
+    List<Row> results = queryResult.toList();
 
     Row expectedRow = GroupByQueryRunnerTestHelper.createExpectedRow(
         "1970-01-01T00:00:00.000Z",

@@ -113,7 +113,7 @@ public class S3DataSegmentPusherTest
         size
     );
 
-    DataSegment segment = pusher.push(tempFolder.getRoot(), segmentToPush);
+    DataSegment segment = pusher.push(tempFolder.getRoot(), segmentToPush, true);
 
     Assert.assertEquals(segmentToPush.getSize(), segment.getSize());
     Assert.assertEquals(1, (int) segment.getBinaryVersion());

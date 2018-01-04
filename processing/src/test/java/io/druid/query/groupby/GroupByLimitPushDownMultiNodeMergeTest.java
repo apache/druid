@@ -461,7 +461,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         .build();
 
     Sequence<Row> queryResult = finalRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
-    List<Row> results = Sequences.toList(queryResult, Lists.<Row>newArrayList());
+    List<Row> results = queryResult.toList();
 
     Row expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
         "2017-07-14T02:40:00.000Z",

@@ -22,7 +22,6 @@ package io.druid.segment;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.CharSource;
 import io.druid.data.input.impl.DelimitedParseSpec;
@@ -31,7 +30,6 @@ import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
@@ -57,12 +55,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
-import static io.druid.query.QueryRunnerTestHelper.allGran;
-import static io.druid.query.QueryRunnerTestHelper.dataSource;
-import static io.druid.query.QueryRunnerTestHelper.fullOnInterval;
-import static io.druid.query.QueryRunnerTestHelper.makeQueryRunner;
-import static io.druid.query.QueryRunnerTestHelper.transformToConstructionFeeder;
 
 /**
  */
@@ -114,10 +106,20 @@ public class MapVirtualColumnTest
     IncrementalIndex index1 = TestIndex.loadIncrementalIndex(index, input, parser);
     QueryableIndex index2 = TestIndex.persistRealtimeAndLoadMMapped(index1);
 
-    return transformToConstructionFeeder(
+    return QueryRunnerTestHelper.transformToConstructionFeeder(
         Arrays.asList(
-            makeQueryRunner(factory, "index1", new IncrementalIndexSegment(index1, "index1"), "incremental"),
-            makeQueryRunner(factory, "index2", new QueryableIndexSegment("index2", index2), "queryable")
+            QueryRunnerTestHelper.makeQueryRunner(
+                factory,
+                "index1",
+                new IncrementalIndexSegment(index1, "index1"),
+                "incremental"
+            ),
+            QueryRunnerTestHelper.makeQueryRunner(
+                factory,
+                "index2",
+                new QueryableIndexSegment("index2", index2),
+                "queryable"
+            )
         )
     );
   }
@@ -132,9 +134,9 @@ public class MapVirtualColumnTest
   private Druids.SelectQueryBuilder testBuilder()
   {
     return Druids.newSelectQueryBuilder()
-                 .dataSource(dataSource)
-                 .granularity(allGran)
-                 .intervals(fullOnInterval)
+                 .dataSource(QueryRunnerTestHelper.dataSource)
+                 .granularity(QueryRunnerTestHelper.allGran)
+                 .intervals(QueryRunnerTestHelper.fullOnInterval)
                  .pagingSpec(new PagingSpec(null, 3));
   }
 
@@ -185,10 +187,7 @@ public class MapVirtualColumnTest
 
   private void checkSelectQuery(SelectQuery searchQuery, List<Map> expected) throws Exception
   {
-    List<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(searchQuery), ImmutableMap.of()),
-        Lists.<Result<SelectResultValue>>newArrayList()
-    );
+    List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(searchQuery), ImmutableMap.of()).toList();
     Assert.assertEquals(1, results.size());
 
     List<EventHolder> events = results.get(0).getValue().getEvents();

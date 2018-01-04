@@ -36,6 +36,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.MapCache;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
@@ -74,7 +75,6 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.granularity.Granularities;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
@@ -102,7 +102,6 @@ import io.druid.query.timeseries.TimeseriesQueryEngine;
 import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import io.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import io.druid.query.timeseries.TimeseriesResultValue;
-import io.druid.common.config.NullHandling;
 import io.druid.segment.TestHelper;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
@@ -139,7 +138,6 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -1117,13 +1115,8 @@ public class RealtimeIndexTaskTest
                                   .intervals("2000/3000")
                                   .build();
 
-    ArrayList<Result<TimeseriesResultValue>> results = Sequences.toList(
-        task.getQueryRunner(query).run(QueryPlus.wrap(query), ImmutableMap.<String, Object>of()),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
-    if (results.isEmpty()) {
-      return NullHandling.defaultLongValue();
-    }
-    return results.get(0).getValue().getLongMetric(metric);
+    List<Result<TimeseriesResultValue>> results =
+        task.getQueryRunner(query).run(QueryPlus.wrap(query), ImmutableMap.of()).toList();
+    return results.isEmpty() ? NullHandling.defaultLongValue() : results.get(0).getValue().getLongMetric(metric);
   }
 }

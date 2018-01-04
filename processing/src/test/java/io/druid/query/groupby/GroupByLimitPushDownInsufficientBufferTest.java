@@ -483,7 +483,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
         .build();
 
     Sequence<Row> queryResult = theRunner3.run(QueryPlus.wrap(query), Maps.newHashMap());
-    List<Row> results = Sequences.toList(queryResult, Lists.<Row>newArrayList());
+    List<Row> results = queryResult.toList();
 
     Row expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
         "1970-01-01T00:00:00.000Z",
@@ -581,7 +581,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
         .build();
 
     Sequence<Row> queryResult = theRunner3.run(QueryPlus.wrap(query), Maps.newHashMap());
-    List<Row> results = Sequences.toList(queryResult, Lists.<Row>newArrayList());
+    List<Row> results = queryResult.toList();
 
     Row expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
         "1970-01-01T00:00:00.000Z",
