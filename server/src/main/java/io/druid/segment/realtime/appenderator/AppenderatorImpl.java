@@ -556,6 +556,10 @@ public class AppenderatorImpl implements Appenderator
    * Merge segment, push to deep storage. Should only be used on segments that have been fully persisted. Must only
    * be run in the single-threaded pushExecutor.
    *
+   * Note that this calls DataSegmentPusher.push() with replaceExisting == true which is appropriate for the indexing
+   * tasks it is currently being used for (local indexing and Kafka indexing). If this is going to be used by an
+   * indexing task type that requires replaceExisting == false, this setting will need to be pushed to the caller.
+   *
    * @param identifier sink identifier
    * @param sink       sink to push
    *
@@ -633,9 +637,18 @@ public class AppenderatorImpl implements Appenderator
 
       // Retry pushing segments because uploading to deep storage might fail especially for cloud storage types
       final DataSegment segment = RetryUtils.retry(
+          // The appenderator is currently being used for the local indexing task and the Kafka indexing task. For the
+          // Kafka indexing task, pushers MUST overwrite any existing objects in deep storage with the same identifier
+          // in order to maintain exactly-once semantics. If they do not and instead favor existing objects, in case of
+          // failure during publishing, the indexed data may not represent the checkpointed state and data loss or
+          // duplication may occur. See: https://github.com/druid-io/druid/issues/5161. The local indexing task does not
+          // support replicas where different tasks could generate segments with the same identifier but potentially
+          // different contents so it is okay if existing objects are overwritten. In both of these cases, we want to
+          // favor the most recently pushed segment so replaceExisting == true.
           () -> dataSegmentPusher.push(
               mergedFile,
-              sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes))
+              sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes)),
+              true
           ),
           exception -> exception instanceof Exception,
           5
