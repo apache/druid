@@ -65,6 +65,7 @@ import io.druid.indexing.common.task.TaskResource;
 import io.druid.indexing.kafka.supervisor.KafkaSupervisor;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.collect.Utils;
 import io.druid.java.util.common.concurrent.Execs;
@@ -2014,6 +2015,11 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
     final boolean afterMaximumMessageTime = ioConfig.getMaximumMessageTime().isPresent()
                                             && ioConfig.getMaximumMessageTime().get().isBefore(row.getTimestamp());
+
+    if (!Intervals.ETERNITY.contains(row.getTimestamp())) {
+      log.error("Encountered row with timestamp that cannot be represented as a long: [%s]", row);
+      return false;
+    }
 
     if (log.isDebugEnabled()) {
       if (beforeMinimumMessageTime) {
