@@ -58,4 +58,9 @@ public class CloudFilesObjectApiProxy
     Payload payload = swiftObject.getPayload();
     return new CloudFilesObject(payload, this.region, this.container, path);
   }
+
+  public boolean exists(String path)
+  {
+    return objectApi.getWithoutBody(path) != null;
+  }
 }

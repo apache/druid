@@ -193,7 +193,7 @@ public class AppenderatorTester implements AutoCloseable
       }
 
       @Override
-      public DataSegment push(File file, DataSegment segment) throws IOException
+      public DataSegment push(File file, DataSegment segment, boolean replaceExisting) throws IOException
       {
         if (enablePushFailure && mustFail) {
           mustFail = false;
