@@ -79,6 +79,7 @@ import org.apache.zookeeper.KeeperException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Period;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -1335,11 +1336,11 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         String taskId,
         Worker worker,
         TaskLocation location,
-        Task task,
+        @Nullable Task task,
         State state
     )
     {
-      super(taskId, task.getType(), worker, location);
+      super(taskId, task == null ? null : task.getType(), worker, location);
       this.state = Preconditions.checkNotNull(state);
 
       // It is possible to have it null when the TaskRunner is just started and discovered this taskId from a worker,
