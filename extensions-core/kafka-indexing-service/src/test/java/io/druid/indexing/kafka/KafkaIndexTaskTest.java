@@ -1708,6 +1708,7 @@ public class KafkaIndexTaskTest
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically,
+        null,
         null
     );
     final Map<String, Object> context = isIncrementalHandoffSupported
@@ -1746,6 +1747,7 @@ public class KafkaIndexTaskTest
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically,
+        null,
         null
     );
     if (isIncrementalHandoffSupported) {

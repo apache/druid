@@ -49,6 +49,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
   private final boolean resetOffsetAutomatically;
   @Nullable
   private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
+  private final Period intermediateHandoffPeriod;
 
   @JsonCreator
   public KafkaTuningConfig(
@@ -63,7 +64,8 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
       @JsonProperty("reportParseExceptions") @Nullable Boolean reportParseExceptions,
       @JsonProperty("handoffConditionTimeout") @Nullable Long handoffConditionTimeout,
       @JsonProperty("resetOffsetAutomatically") @Nullable Boolean resetOffsetAutomatically,
-      @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+      @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      @JsonProperty("intermediateHandoffPeriod") @Nullable Period intermediateHandoffPeriod
   )
   {
     // Cannot be a static because default basePersistDirectory is unique per-instance
@@ -87,6 +89,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
                                     ? DEFAULT_RESET_OFFSET_AUTOMATICALLY
                                     : resetOffsetAutomatically;
     this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
+    this.intermediateHandoffPeriod = intermediateHandoffPeriod == null ? new Period().withDays(Integer.MAX_VALUE) : intermediateHandoffPeriod;
   }
 
   public static KafkaTuningConfig copyOf(KafkaTuningConfig config)
@@ -102,7 +105,8 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         config.reportParseExceptions,
         config.handoffConditionTimeout,
         config.resetOffsetAutomatically,
-        config.segmentWriteOutMediumFactory
+        config.segmentWriteOutMediumFactory,
+        config.intermediateHandoffPeriod
     );
   }
 
@@ -185,6 +189,12 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     return segmentWriteOutMediumFactory;
   }
 
+  @JsonProperty
+  public Period getIntermediateHandoffPeriod()
+  {
+    return intermediateHandoffPeriod;
+  }
+
   public KafkaTuningConfig withBasePersistDirectory(File dir)
   {
     return new KafkaTuningConfig(
@@ -198,7 +208,8 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically,
-        segmentWriteOutMediumFactory
+        segmentWriteOutMediumFactory,
+        intermediateHandoffPeriod
     );
   }
 
@@ -221,7 +232,8 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
            Objects.equals(intermediatePersistPeriod, that.intermediatePersistPeriod) &&
            Objects.equals(basePersistDirectory, that.basePersistDirectory) &&
            Objects.equals(indexSpec, that.indexSpec) &&
-           Objects.equals(segmentWriteOutMediumFactory, that.segmentWriteOutMediumFactory);
+           Objects.equals(segmentWriteOutMediumFactory, that.segmentWriteOutMediumFactory) &&
+           Objects.equals(intermediateHandoffPeriod, that.intermediateHandoffPeriod);
   }
 
   @Override
@@ -237,7 +249,8 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically,
-        segmentWriteOutMediumFactory
+        segmentWriteOutMediumFactory,
+        intermediateHandoffPeriod
     );
   }
 
@@ -255,6 +268,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
            ", handoffConditionTimeout=" + handoffConditionTimeout +
            ", resetOffsetAutomatically=" + resetOffsetAutomatically +
            ", segmentWriteOutMediumFactory=" + segmentWriteOutMediumFactory +
+           ", intermediateHandoffPeriod=" + intermediateHandoffPeriod +
            '}';
   }
 }

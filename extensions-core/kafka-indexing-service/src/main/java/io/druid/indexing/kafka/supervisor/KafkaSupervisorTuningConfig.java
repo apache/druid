@@ -56,7 +56,8 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
       @JsonProperty("chatRetries") Long chatRetries,
       @JsonProperty("httpTimeout") Period httpTimeout,
       @JsonProperty("shutdownTimeout") Period shutdownTimeout,
-      @JsonProperty("offsetFetchPeriod") Period offsetFetchPeriod
+      @JsonProperty("offsetFetchPeriod") Period offsetFetchPeriod,
+      @JsonProperty("intermediateHandoffPeriod") Period intermediateHandoffPeriod
   )
   {
     super(
@@ -70,7 +71,8 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically,
-        segmentWriteOutMediumFactory
+        segmentWriteOutMediumFactory,
+        intermediateHandoffPeriod
     );
 
     this.workerThreads = workerThreads;
@@ -137,6 +139,7 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
            ", httpTimeout=" + httpTimeout +
            ", shutdownTimeout=" + shutdownTimeout +
            ", offsetFetchPeriod=" + offsetFetchPeriod +
+           ", intermediateHandoffPeriod=" + getIntermediateHandoffPeriod() +
            '}';
   }
 

@@ -231,6 +231,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
   private volatile boolean pauseRequested = false;
   private volatile long pauseMillis = 0;
+  private volatile long nextCheckpointTime;
 
   // This value can be tuned in some tests
   private long pollRetryMs = 30000;
@@ -288,6 +289,12 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     } else {
       useLegacy = true;
     }
+    resetNextCheckpointTime();
+  }
+
+  private void resetNextCheckpointTime()
+  {
+    nextCheckpointTime = DateTimes.nowUtc().plus(tuningConfig.getIntermediateHandoffPeriod()).getMillis();
   }
 
   @VisibleForTesting
@@ -773,6 +780,10 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
               assignPartitions(consumer, topic, assignment);
               stillReading = ioConfig.isPauseAfterRead() || !assignment.isEmpty();
             }
+          }
+
+          if (System.currentTimeMillis() > nextCheckpointTime) {
+            sequenceToCheckpoint = sequences.get(sequences.size() - 1);
           }
 
           if (sequenceToCheckpoint != null && !ioConfig.isPauseAfterRead()) {
@@ -1547,6 +1558,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           }
         }
 
+        resetNextCheckpointTime();
         latestSequence.setEndOffsets(offsets);
 
         if (finish) {
