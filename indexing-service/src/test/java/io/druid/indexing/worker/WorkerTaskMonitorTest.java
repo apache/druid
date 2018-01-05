@@ -26,6 +26,7 @@ import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.indexer.TaskState;
+import io.druid.discovery.DruidLeaderClient;
 import io.druid.indexing.common.IndexingServiceCondition;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskToolboxFactory;
@@ -163,8 +164,6 @@ public class WorkerTaskMonitorTest
     EasyMock.replay(taskActionClientFactory, taskActionClient, notifierFactory);
     return new WorkerTaskMonitor(
         jsonMapper,
-        cf,
-        workerCuratorCoordinator,
         new ThreadPoolTaskRunner(
             new TaskToolboxFactory(
                 taskConfig,
@@ -197,7 +196,11 @@ public class WorkerTaskMonitorTest
             new NoopServiceEmitter(),
             DUMMY_NODE,
             new ServerConfig()
-        )
+        ),
+        taskConfig,
+        cf,
+        workerCuratorCoordinator,
+        EasyMock.createNiceMock(DruidLeaderClient.class)
     );
   }
 

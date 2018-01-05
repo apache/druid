@@ -59,6 +59,7 @@ import io.druid.indexing.common.tasklogs.TaskRunnerTaskLogStreamer;
 import io.druid.indexing.overlord.ForkingTaskRunnerFactory;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.IndexerMetadataStorageAdapter;
+import io.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import io.druid.indexing.overlord.MetadataTaskStorage;
 import io.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import io.druid.indexing.overlord.TaskLockbox;
@@ -76,6 +77,7 @@ import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.indexing.overlord.helpers.OverlordHelper;
 import io.druid.indexing.overlord.helpers.TaskLogAutoCleaner;
 import io.druid.indexing.overlord.helpers.TaskLogAutoCleanerConfig;
+import io.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerResource;
 import io.druid.indexing.overlord.http.OverlordRedirectInfo;
 import io.druid.indexing.overlord.http.OverlordResource;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
@@ -198,6 +200,7 @@ public class CliOverlord extends ServerRunnable
 
             Jerseys.addResource(binder, OverlordResource.class);
             Jerseys.addResource(binder, SupervisorResource.class);
+            Jerseys.addResource(binder, HttpRemoteTaskRunnerResource.class);
 
             if (standalone) {
               LifecycleModule.register(binder, Server.class);
@@ -252,6 +255,9 @@ public class CliOverlord extends ServerRunnable
 
             biddy.addBinding(RemoteTaskRunnerFactory.TYPE_NAME).to(RemoteTaskRunnerFactory.class).in(LazySingleton.class);
             binder.bind(RemoteTaskRunnerFactory.class).in(LazySingleton.class);
+
+            biddy.addBinding(HttpRemoteTaskRunnerFactory.TYPE_NAME).to(HttpRemoteTaskRunnerFactory.class).in(LazySingleton.class);
+            binder.bind(HttpRemoteTaskRunnerFactory.class).in(LazySingleton.class);
 
             JacksonConfigProvider.bind(binder, WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class, null);
           }
@@ -339,8 +345,9 @@ public class CliOverlord extends ServerRunnable
           jsonMapper
       );
 
-      // /status should not redirect, so add first
+      // add some paths not to be redirected to leader.
       root.addFilter(GuiceFilter.class, "/status/*", null);
+      root.addFilter(GuiceFilter.class, "/druid-internal/*", null);
 
       // redirect anything other than status to the current lead
       root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);

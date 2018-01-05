@@ -35,7 +35,7 @@ import java.util.Objects;
 import java.util.function.Function;
 
 /**
- * Represents three kinds of expression-like concepts that native Druid queries support:
+ * Represents two kinds of expression-like concepts that native Druid queries support:
  *
  * (1) SimpleExtractions, which are direct column access, possibly with an extractionFn
  * (2) native Druid expressions.

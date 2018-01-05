@@ -27,7 +27,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.DoubleBuffer;
 
-
 public class BlockLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoubles>
 {
   private final GenericIndexed<ResourceHolder<ByteBuffer>> baseDoubleBuffers;
@@ -42,12 +41,7 @@ public class BlockLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoub
       CompressionStrategy strategy
   )
   {
-
-    baseDoubleBuffers = GenericIndexed.read(
-        fromBuffer,
-        new DecompressingByteBufferObjectStrategy(byteOrder, strategy)
-    );
-
+    baseDoubleBuffers = GenericIndexed.read(fromBuffer, new DecompressingByteBufferObjectStrategy(byteOrder, strategy));
     this.totalSize = totalSize;
     this.sizePer = sizePer;
   }
@@ -55,16 +49,40 @@ public class BlockLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoub
   @Override
   public ColumnarDoubles get()
   {
-    return new BlockLayoutColumnarDoubles();
+    final int div = Integer.numberOfTrailingZeros(sizePer);
+    final int rem = sizePer - 1;
+    final boolean isPowerOf2 = sizePer == (1 << div);
+    if (isPowerOf2) {
+      return new BlockLayoutColumnarDoubles()
+      {
+        @Override
+        public double get(int index)
+        {
+          // optimize division and remainder for powers of 2
+          final int bufferNum = index >> div;
+
+          if (bufferNum != currBufferNum) {
+            loadBuffer(bufferNum);
+          }
+
+          final int bufferIndex = index & rem;
+          return doubleBuffer.get(bufferIndex);
+        }
+      };
+    } else {
+      return new BlockLayoutColumnarDoubles();
+    }
   }
 
   private class BlockLayoutColumnarDoubles implements ColumnarDoubles
   {
-    final Indexed<ResourceHolder<ByteBuffer>> resourceHolderIndexed = baseDoubleBuffers.singleThreaded();
-    int currIndex = -1;
+    final Indexed<ResourceHolder<ByteBuffer>> singleThreadedDoubleBuffers = baseDoubleBuffers.singleThreaded();
+
+    int currBufferNum = -1;
     ResourceHolder<ByteBuffer> holder;
-    ByteBuffer buffer;
+    /** doubleBuffer's position must be 0 */
     DoubleBuffer doubleBuffer;
+
     @Override
     public int size()
     {
@@ -74,23 +92,24 @@ public class BlockLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoub
     @Override
     public double get(int index)
     {
+      // division + remainder is optimized by the compiler so keep those together
       final int bufferNum = index / sizePer;
       final int bufferIndex = index % sizePer;
 
-      if (bufferNum != currIndex) {
+      if (bufferNum != currBufferNum) {
         loadBuffer(bufferNum);
       }
 
-      return doubleBuffer.get(doubleBuffer.position() + bufferIndex);
+      return doubleBuffer.get(bufferIndex);
     }
 
     protected void loadBuffer(int bufferNum)
     {
       CloseQuietly.close(holder);
-      holder = resourceHolderIndexed.get(bufferNum);
-      buffer = holder.get();
-      doubleBuffer = buffer.asDoubleBuffer();
-      currIndex = bufferNum;
+      holder = singleThreadedDoubleBuffers.get(bufferNum);
+      // asDoubleBuffer() makes the doubleBuffer's position = 0
+      doubleBuffer = holder.get().asDoubleBuffer();
+      currBufferNum = bufferNum;
     }
 
     @Override
@@ -105,9 +124,9 @@ public class BlockLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoub
     public String toString()
     {
       return "BlockCompressedColumnarDoubles_Anonymous{" +
-             "currIndex=" + currIndex +
+             "currBufferNum=" + currBufferNum +
              ", sizePer=" + sizePer +
-             ", numChunks=" + resourceHolderIndexed.size() +
+             ", numChunks=" + singleThreadedDoubleBuffers.size() +
              ", totalSize=" + totalSize +
              '}';
     }

@@ -28,7 +28,7 @@ import java.util.List;
 /**
  * Return type of SegmentChangeRequestHistory.getRequestsSince(counter).
  */
-public class SegmentChangeRequestsSnapshot
+public class ChangeRequestsSnapshot<T>
 {
   //if true, that means caller should reset the counter and request again.
   private final boolean resetCounter;
@@ -37,15 +37,15 @@ public class SegmentChangeRequestsSnapshot
   private final String resetCause;
 
   //segments requests delta since counter, if resetCounter if false
-  private final SegmentChangeRequestHistory.Counter counter;
-  private final List<DataSegmentChangeRequest> requests;
+  private final ChangeRequestHistory.Counter counter;
+  private final List<T> requests;
 
   @JsonCreator
-  public SegmentChangeRequestsSnapshot(
+  public ChangeRequestsSnapshot(
       @JsonProperty("resetCounter") boolean resetCounter,
       @JsonProperty("resetCause") String resetCause,
-      @JsonProperty("counter") SegmentChangeRequestHistory.Counter counter,
-      @JsonProperty("requests") List<DataSegmentChangeRequest> requests
+      @JsonProperty("counter") ChangeRequestHistory.Counter counter,
+      @JsonProperty("requests") List<T> requests
   )
   {
     this.resetCounter = resetCounter;
@@ -60,15 +60,15 @@ public class SegmentChangeRequestsSnapshot
     this.requests = requests;
   }
 
-  public static SegmentChangeRequestsSnapshot success(SegmentChangeRequestHistory.Counter counter,
-                                                      List<DataSegmentChangeRequest> requests)
+  public static <T> ChangeRequestsSnapshot<T> success(ChangeRequestHistory.Counter counter,
+                                               List<T> requests)
   {
-    return new SegmentChangeRequestsSnapshot(false, null, counter, requests);
+    return new ChangeRequestsSnapshot(false, null, counter, requests);
   }
 
-  public static SegmentChangeRequestsSnapshot fail(String resetCause)
+  public static <T> ChangeRequestsSnapshot<T> fail(String resetCause)
   {
-    return new SegmentChangeRequestsSnapshot(true, resetCause, null, null);
+    return new ChangeRequestsSnapshot(true, resetCause, null, null);
   }
 
   @JsonProperty
@@ -84,13 +84,13 @@ public class SegmentChangeRequestsSnapshot
   }
 
   @JsonProperty
-  public SegmentChangeRequestHistory.Counter getCounter()
+  public ChangeRequestHistory.Counter getCounter()
   {
     return counter;
   }
 
   @JsonProperty
-  public List<DataSegmentChangeRequest> getRequests()
+  public List<T> getRequests()
   {
     return requests;
   }
@@ -98,7 +98,7 @@ public class SegmentChangeRequestsSnapshot
   @Override
   public String toString()
   {
-    return "SegmentChangeRequestsSnapshot{" +
+    return "ChangeRequestsSnapshot{" +
            "resetCounter=" + resetCounter +
            ", resetCause='" + resetCause + '\'' +
            ", counter=" + counter +
