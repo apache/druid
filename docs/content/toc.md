@@ -90,6 +90,7 @@ layout: toc
   * [Broker](/docs/VERSION/configuration/broker.html)
   * [Realtime](/docs/VERSION/configuration/realtime.html)
   * [Configuring Logging](/docs/VERSION/configuration/logging.html)
+  * [Configuring Authentication and Authorization](/docs/VERSION/configuration/auth.html)
   
 ## Development
   * [Overview](/docs/VERSION/development/overview.html)
