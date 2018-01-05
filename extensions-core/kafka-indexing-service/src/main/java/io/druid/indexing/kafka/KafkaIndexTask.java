@@ -2017,8 +2017,16 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                                             && ioConfig.getMaximumMessageTime().get().isBefore(row.getTimestamp());
 
     if (!Intervals.ETERNITY.contains(row.getTimestamp())) {
-      log.error("Encountered row with timestamp that cannot be represented as a long: [%s]", row);
-      return false;
+      final String errorMsg = StringUtils.format(
+          "Encountered row with timestamp that cannot be represented as a long: [%s]",
+          row
+      );
+      log.debug(errorMsg);
+      if (tuningConfig.isReportParseExceptions()) {
+        throw new ParseException(errorMsg);
+      } else {
+        return false;
+      }
     }
 
     if (log.isDebugEnabled()) {

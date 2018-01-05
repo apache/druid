@@ -873,7 +873,7 @@ public class KafkaIndexTaskTest
     // Check metrics
     Assert.assertEquals(3, task.getFireDepartmentMetrics().processed());
     Assert.assertEquals(0, task.getFireDepartmentMetrics().unparseable());
-    Assert.assertEquals(1, task.getFireDepartmentMetrics().thrownAway());
+    Assert.assertEquals(0, task.getFireDepartmentMetrics().thrownAway());
 
     // Check published metadata
     Assert.assertEquals(ImmutableSet.of(), publishedDescriptors());
