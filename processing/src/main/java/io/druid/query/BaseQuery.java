@@ -64,14 +64,7 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
       Map<String, Object> context
   )
   {
-    Preconditions.checkNotNull(dataSource, "dataSource can't be null");
-    Preconditions.checkNotNull(querySegmentSpec, "querySegmentSpec can't be null");
-
-    this.dataSource = dataSource;
-    this.context = context;
-    this.querySegmentSpec = querySegmentSpec;
-    this.descending = descending;
-    this.granularity = Granularities.ALL;
+    this(dataSource, querySegmentSpec, descending, context, Granularities.ALL);
   }
 
   public BaseQuery(
