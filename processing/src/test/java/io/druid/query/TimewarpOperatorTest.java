@@ -123,10 +123,7 @@ public class TimewarpOperatorTest
                 new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 5))
             )
         ),
-        Sequences.toList(
-            queryRunner.run(QueryPlus.wrap(query), CONTEXT),
-            Lists.<Result<TimeseriesResultValue>>newArrayList()
-        )
+        queryRunner.run(QueryPlus.wrap(query), CONTEXT).toList()
     );
 
 
@@ -175,10 +172,7 @@ public class TimewarpOperatorTest
                 new TimeBoundaryResultValue(ImmutableMap.<String, Object>of("maxTime", DateTimes.of("2014-08-02")))
             )
         ),
-        Sequences.toList(
-            timeBoundaryRunner.run(QueryPlus.wrap(timeBoundaryQuery), CONTEXT),
-            Lists.<Result<TimeBoundaryResultValue>>newArrayList()
-        )
+        timeBoundaryRunner.run(QueryPlus.wrap(timeBoundaryQuery), CONTEXT).toList()
     );
 
   }
@@ -231,10 +225,7 @@ public class TimewarpOperatorTest
                 new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 3))
             )
         ),
-        Sequences.toList(
-            queryRunner.run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap()),
-            Lists.<Result<TimeseriesResultValue>>newArrayList()
-        )
+        queryRunner.run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap()).toList()
     );
   }
 }

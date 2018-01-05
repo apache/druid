@@ -76,9 +76,7 @@ public class TaskAnnouncement
     this.taskLocation = taskLocation == null ? TaskLocation.unknown() : taskLocation;
   }
 
-  // Can be removed when backwards compat is no longer needed
   @JsonProperty("id")
-  @Deprecated
   public String getTaskId()
   {
     return taskStatus.getId();
@@ -90,9 +88,7 @@ public class TaskAnnouncement
     return taskType;
   }
 
-  // Can be removed when backwards compat is no longer needed
   @JsonProperty("status")
-  @Deprecated
   public TaskState getStatus()
   {
     return taskStatus.getStatusCode();
@@ -114,5 +110,15 @@ public class TaskAnnouncement
   public TaskLocation getTaskLocation()
   {
     return taskLocation;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "TaskAnnouncement{" +
+           "taskStatus=" + taskStatus +
+           ", taskResource=" + taskResource +
+           ", taskLocation=" + taskLocation +
+           '}';
   }
 }

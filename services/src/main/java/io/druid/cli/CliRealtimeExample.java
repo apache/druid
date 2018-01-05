@@ -155,7 +155,7 @@ public class CliRealtimeExample extends ServerRunnable
     }
 
     @Override
-    public DataSegment push(File file, DataSegment segment) throws IOException
+    public DataSegment push(File file, DataSegment segment, boolean replaceExisting) throws IOException
     {
       return segment;
     }

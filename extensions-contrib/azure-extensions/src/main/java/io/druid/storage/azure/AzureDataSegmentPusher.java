@@ -109,12 +109,13 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
       final long size,
       final File compressedSegmentData,
       final File descriptorFile,
-      final Map<String, String> azurePaths
+      final Map<String, String> azurePaths,
+      final boolean replaceExisting
   )
       throws StorageException, IOException, URISyntaxException
   {
-    azureStorage.uploadBlob(compressedSegmentData, config.getContainer(), azurePaths.get("index"));
-    azureStorage.uploadBlob(descriptorFile, config.getContainer(), azurePaths.get("descriptor"));
+    azureStorage.uploadBlob(compressedSegmentData, config.getContainer(), azurePaths.get("index"), replaceExisting);
+    azureStorage.uploadBlob(descriptorFile, config.getContainer(), azurePaths.get("descriptor"), replaceExisting);
 
     final DataSegment outSegment = segment
         .withSize(size)
@@ -131,9 +132,9 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   }
 
   @Override
-  public DataSegment push(final File indexFilesDir, final DataSegment segment) throws IOException
+  public DataSegment push(final File indexFilesDir, final DataSegment segment, final boolean replaceExisting)
+      throws IOException
   {
-
     log.info("Uploading [%s] to Azure.", indexFilesDir);
 
     final int version = SegmentUtils.getVersionFromDir(indexFilesDir);
@@ -153,7 +154,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
             @Override
             public DataSegment call() throws Exception
             {
-              return uploadDataSegment(segment, version, size, outFile, descFile, azurePaths);
+              return uploadDataSegment(segment, version, size, outFile, descFile, azurePaths, replaceExisting);
             }
           },
           config.getMaxTries()

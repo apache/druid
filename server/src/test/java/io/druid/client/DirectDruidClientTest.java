@@ -38,7 +38,6 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryPlus;
@@ -191,7 +190,7 @@ public class DirectDruidClientTest
             StringUtils.toUtf8("[{\"timestamp\":\"2014-01-01T01:02:03Z\", \"result\": 42.0}]")
         )
     );
-    List<Result> results = Sequences.toList(s1, Lists.<Result>newArrayList());
+    List<Result> results = s1.toList();
     Assert.assertEquals(1, results.size());
     Assert.assertEquals(DateTimes.of("2014-01-01T01:02:03Z"), results.get(0).getTimestamp());
     Assert.assertEquals(3, client1.getNumOpenConnections());
@@ -277,7 +276,7 @@ public class DirectDruidClientTest
 
     QueryInterruptedException exception = null;
     try {
-      Sequences.toList(results, Lists.newArrayList());
+      results.toList();
     }
     catch (QueryInterruptedException e) {
       exception = e;
@@ -349,7 +348,7 @@ public class DirectDruidClientTest
 
     QueryInterruptedException actualException = null;
     try {
-      Sequences.toList(results, Lists.newArrayList());
+      results.toList();
     }
     catch (QueryInterruptedException e) {
       actualException = e;

@@ -32,6 +32,7 @@ import com.metamx.http.client.HttpClient;
 import io.airlift.airline.Command;
 import io.druid.audit.AuditManager;
 import io.druid.client.CoordinatorServerView;
+import io.druid.client.HttpServerInventoryViewResource;
 import io.druid.client.coordinator.Coordinator;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
@@ -187,6 +188,7 @@ public class CliCoordinator extends ServerRunnable
             Jerseys.addResource(binder, IntervalsResource.class);
             Jerseys.addResource(binder, LookupCoordinatorResource.class);
             Jerseys.addResource(binder, ClusterResource.class);
+            Jerseys.addResource(binder, HttpServerInventoryViewResource.class);
 
             LifecycleModule.register(binder, Server.class);
             LifecycleModule.register(binder, DatasourcesResource.class);

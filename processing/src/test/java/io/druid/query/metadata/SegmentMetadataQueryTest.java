@@ -26,11 +26,10 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.java.util.common.Intervals;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.BySegmentResultValue;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.Druids;
@@ -257,10 +256,7 @@ public class SegmentMetadataQueryTest
   @SuppressWarnings("unchecked")
   public void testSegmentMetadataQuery()
   {
-    List<SegmentAnalysis> results = Sequences.toList(
-        runner1.run(QueryPlus.wrap(testQuery), Maps.newHashMap()),
-        Lists.<SegmentAnalysis>newArrayList()
-    );
+    List<SegmentAnalysis> results = runner1.run(QueryPlus.wrap(testQuery), Maps.newHashMap()).toList();
 
     Assert.assertEquals(Arrays.asList(expectedSegmentAnalysis1), results);
   }

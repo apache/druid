@@ -31,7 +31,7 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
 {
   private final String taskType;
   private final SettableFuture<TaskStatus> result;
-  private final Worker worker;
+  private Worker worker;
   private TaskLocation location;
 
   public RemoteTaskRunnerWorkItem(
@@ -91,6 +91,11 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
   public String getTaskType()
   {
     return taskType;
+  }
+
+  public void setWorker(Worker worker)
+  {
+    this.worker = worker;
   }
 
   public Worker getWorker()

@@ -20,9 +20,9 @@ apt-get install -y mysql-server
 apt-get install -y supervisor
 
 # Zookeeper
-wget -q -O - http://www.us.apache.org/dist/zookeeper/zookeeper-3.4.10/zookeeper-3.4.10.tar.gz | tar -xzf - -C /usr/local \
-  && cp /usr/local/zookeeper-3.4.10/conf/zoo_sample.cfg /usr/local/zookeeper-3.4.10/conf/zoo.cfg \
-  && ln -s /usr/local/zookeeper-3.4.10 /usr/local/zookeeper
+wget -q -O - http://www.us.apache.org/dist/zookeeper/zookeeper-3.4.11/zookeeper-3.4.11.tar.gz | tar -xzf - -C /usr/local \
+  && cp /usr/local/zookeeper-3.4.11/conf/zoo_sample.cfg /usr/local/zookeeper-3.4.11/conf/zoo.cfg \
+  && ln -s /usr/local/zookeeper-3.4.11 /usr/local/zookeeper
 
 # Kafka
 # Match the version to the Kafka client used by KafkaSupervisor

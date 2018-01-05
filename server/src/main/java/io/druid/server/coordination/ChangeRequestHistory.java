@@ -27,8 +27,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.StringUtils;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -46,13 +46,13 @@ import java.util.concurrent.Executors;
  * Clients call ListenableFuture<SegmentChangeRequestsSnapshot> getRequestsSince(final Counter counter) to get segment
  * updates since given counter.
  */
-public class SegmentChangeRequestHistory
+public class ChangeRequestHistory<T>
 {
   private static int MAX_SIZE = 1000;
 
   private final int maxSize;
 
-  private final CircularBuffer<Holder> changes;
+  private final CircularBuffer<Holder<T>> changes;
 
   @VisibleForTesting
   final LinkedHashMap<CustomSettableFuture, Counter> waitingFutures;
@@ -60,12 +60,12 @@ public class SegmentChangeRequestHistory
   private final ExecutorService singleThreadedExecutor;
   private final Runnable resolveWaitingFuturesRunnable;
 
-  public SegmentChangeRequestHistory()
+  public ChangeRequestHistory()
   {
     this(MAX_SIZE);
   }
 
-  public SegmentChangeRequestHistory(int maxSize)
+  public ChangeRequestHistory(int maxSize)
   {
     this.maxSize = maxSize;
     this.changes = new CircularBuffer(maxSize);
@@ -90,14 +90,12 @@ public class SegmentChangeRequestHistory
     );
   }
 
-
-
   /**
    * Add batch of segment changes update.
    */
-  public synchronized void addSegmentChangeRequests(List<DataSegmentChangeRequest> requests)
+  public synchronized void addChangeRequests(List<T> requests)
   {
-    for (DataSegmentChangeRequest request : requests) {
+    for (T request : requests) {
       changes.add(new Holder(request, getLastCounter().inc()));
     }
 
@@ -107,9 +105,9 @@ public class SegmentChangeRequestHistory
   /**
    * Add single segment change update.
    */
-  public synchronized void addSegmentChangeRequest(DataSegmentChangeRequest request)
+  public synchronized void addChangeRequest(T request)
   {
-    addSegmentChangeRequests(ImmutableList.of(request));
+    addChangeRequests(ImmutableList.of(request));
   }
 
   /**
@@ -123,7 +121,7 @@ public class SegmentChangeRequestHistory
    * is added to the "waitingFutures" list and all the futures in the list get resolved as soon as a segment
    * update is provided.
    */
-  public synchronized ListenableFuture<SegmentChangeRequestsSnapshot> getRequestsSince(final Counter counter)
+  public synchronized ListenableFuture<ChangeRequestsSnapshot<T>> getRequestsSince(final Counter counter)
   {
     final CustomSettableFuture future = new CustomSettableFuture(waitingFutures);
 
@@ -136,7 +134,13 @@ public class SegmentChangeRequestHistory
 
     if (counter.counter == lastCounter.counter) {
       if (!counter.matches(lastCounter)) {
-        future.setException(new IAE("counter[%s] failed to match with [%s]", counter, lastCounter));
+        future.set(ChangeRequestsSnapshot.fail(
+            StringUtils.format(
+                "counter[%s] failed to match with [%s]",
+                counter,
+                lastCounter
+            )
+        ));
       } else {
         synchronized (waitingFutures) {
           waitingFutures.put(future, counter);
@@ -154,16 +158,22 @@ public class SegmentChangeRequestHistory
     return future;
   }
 
-  private synchronized SegmentChangeRequestsSnapshot getRequestsSinceWithoutWait(final Counter counter)
+  private synchronized ChangeRequestsSnapshot<T> getRequestsSinceWithoutWait(final Counter counter)
   {
     Counter lastCounter = getLastCounter();
 
     if (counter.counter >= lastCounter.counter) {
-      throw new IAE("counter[%s] >= last counter[%s]", counter, lastCounter);
+      return ChangeRequestsSnapshot.fail(
+          StringUtils.format(
+              "counter[%s] >= last counter[%s]",
+              counter,
+              lastCounter
+          )
+      );
     } else if (lastCounter.counter - counter.counter >= maxSize) {
       // Note: counter reset is requested when client ask for "maxSize" number of changes even if all those changes
       // are present in the history because one extra elements is needed to match the counter hash.
-      return SegmentChangeRequestsSnapshot.fail(
+      return ChangeRequestsSnapshot.fail(
           StringUtils.format(
               "can't serve request, not enough history is kept. given counter [%s] and current last counter [%s]",
               counter,
@@ -175,15 +185,21 @@ public class SegmentChangeRequestHistory
 
       Counter counterToMatch = counter.counter == 0 ? Counter.ZERO : changes.get(changeStartIndex - 1).counter;
       if (!counterToMatch.matches(counter)) {
-        throw new IAE("counter[%s] failed to match with [%s]", counter, counterToMatch);
+        return ChangeRequestsSnapshot.fail(
+            StringUtils.format(
+                "counter[%s] failed to match with [%s]",
+                counter,
+                lastCounter
+            )
+        );
       }
 
-      List<DataSegmentChangeRequest> result = new ArrayList<>();
+      List<T> result = new ArrayList<>();
       for (int i = changeStartIndex; i < changes.size(); i++) {
         result.add(changes.get(i).changeRequest);
       }
 
-      return SegmentChangeRequestsSnapshot.success(changes.get(changes.size() - 1).counter, result);
+      return ChangeRequestsSnapshot.success(changes.get(changes.size() - 1).counter, result);
     }
   }
 
@@ -214,12 +230,12 @@ public class SegmentChangeRequestHistory
     }
   }
 
-  private static class Holder
+  private static class Holder<T>
   {
-    private final DataSegmentChangeRequest changeRequest;
+    private final T changeRequest;
     private final Counter counter;
 
-    public Holder(DataSegmentChangeRequest changeRequest, Counter counter)
+    public Holder(T changeRequest, Counter counter)
     {
       this.changeRequest = changeRequest;
       this.counter = counter;
@@ -281,17 +297,17 @@ public class SegmentChangeRequestHistory
   }
 
   // Future with cancel() implementation to remove it from "waitingFutures" list
-  private static class CustomSettableFuture extends AbstractFuture<SegmentChangeRequestsSnapshot>
+  private static class CustomSettableFuture<T> extends AbstractFuture<ChangeRequestsSnapshot<T>>
   {
-    private final LinkedHashMap<CustomSettableFuture, Counter> waitingFutures;
+    private final LinkedHashMap<CustomSettableFuture<T>, Counter> waitingFutures;
 
-    private CustomSettableFuture(LinkedHashMap<CustomSettableFuture, Counter> waitingFutures)
+    private CustomSettableFuture(LinkedHashMap<CustomSettableFuture<T>, Counter> waitingFutures)
     {
       this.waitingFutures = waitingFutures;
     }
 
     @Override
-    public boolean set(SegmentChangeRequestsSnapshot value)
+    public boolean set(ChangeRequestsSnapshot<T> value)
     {
       return super.set(value);
     }

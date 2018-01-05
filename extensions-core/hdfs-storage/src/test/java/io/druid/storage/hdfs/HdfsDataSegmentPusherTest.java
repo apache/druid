@@ -161,7 +161,7 @@ public class HdfsDataSegmentPusherTest
         size
     );
 
-    DataSegment segment = pusher.push(segmentDir, segmentToPush);
+    DataSegment segment = pusher.push(segmentDir, segmentToPush, true);
 
 
     String indexUri = StringUtils.format(
@@ -201,7 +201,7 @@ public class HdfsDataSegmentPusherTest
     File outDir = new File(StringUtils.format("%s/%s", config.getStorageDirectory(), segmentPath));
     outDir.setReadOnly();
     try {
-      pusher.push(segmentDir, segmentToPush);
+      pusher.push(segmentDir, segmentToPush, true);
     }
     catch (IOException e) {
       Assert.fail("should not throw exception");
@@ -246,7 +246,7 @@ public class HdfsDataSegmentPusherTest
     }
 
     for (int i = 0; i < numberOfSegments; i++) {
-      final DataSegment pushedSegment = pusher.push(segmentDir, segments[i]);
+      final DataSegment pushedSegment = pusher.push(segmentDir, segments[i], true);
 
       String indexUri = StringUtils.format(
           "%s/%s/%d_index.zip",
@@ -308,7 +308,7 @@ public class HdfsDataSegmentPusherTest
       File outDir = new File(StringUtils.format("%s/%s", config.getStorageDirectory(), segmentPath));
       outDir.setReadOnly();
       try {
-        pusher.push(segmentDir, segments[i]);
+        pusher.push(segmentDir, segments[i], true);
       }
       catch (IOException e) {
         Assert.fail("should not throw exception");
