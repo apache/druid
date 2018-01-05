@@ -45,6 +45,7 @@ import io.druid.indexing.worker.Worker;
 import io.druid.indexing.worker.WorkerCuratorCoordinator;
 import io.druid.indexing.worker.WorkerTaskMonitor;
 import io.druid.indexing.worker.config.WorkerConfig;
+import io.druid.indexing.worker.http.TaskManagementResource;
 import io.druid.indexing.worker.http.WorkerResource;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -98,6 +99,7 @@ public class CliMiddleManager extends ServerRunnable
             LifecycleModule.register(binder, WorkerTaskMonitor.class);
             binder.bind(JettyServerInitializer.class).toInstance(new MiddleManagerJettyServerInitializer());
             Jerseys.addResource(binder, WorkerResource.class);
+            Jerseys.addResource(binder, TaskManagementResource.class);
 
             LifecycleModule.register(binder, Server.class);
 
