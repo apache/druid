@@ -40,6 +40,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
@@ -73,7 +74,9 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   @Override
   public String getPathForHadoop()
   {
-    String hadoopPath = String.format("%s://%s@%s.blob.core.windows.net/",
+    String hadoopPath = String.format(
+        Locale.ENGLISH,
+        "%s://%s@%s.blob.core.windows.net/",
         "wasb",
         config.getContainer(),
         config.getAccount()
@@ -91,6 +94,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
     String seg = JOINER.join(
         dataSegment.getDataSource(),
         String.format(
+          Locale.ENGLISH,
           "%s_%s",
           // Use ISODateTimeFormat.basicDateTime() format, to avoid using colons in file path.
           dataSegment.getInterval().getStart().toString(ISODateTimeFormat.basicDateTime()),
