@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.ImmutableList;
 import io.druid.java.util.common.granularity.Granularity;
-import io.druid.query.TimeBucketedQuery;
+import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Druids;
 import io.druid.query.Queries;
@@ -43,7 +43,7 @@ import java.util.Objects;
 /**
  */
 @JsonTypeName("timeseries")
-public class TimeseriesQuery extends TimeBucketedQuery<Result<TimeseriesResultValue>>
+public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 {
   private final VirtualColumns virtualColumns;
   private final DimFilter dimFilter;

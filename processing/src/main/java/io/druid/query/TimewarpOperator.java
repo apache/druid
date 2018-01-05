@@ -78,17 +78,10 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
   {
     return new QueryRunner<T>()
     {
-
       @Override
       public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
       {
-        final DateTimeZone tz;
-        if (queryPlus.getQuery() instanceof TimeBucketedQuery) {
-          tz = ((TimeBucketedQuery) queryPlus.getQuery()).getTimezone();
-        } else {
-          tz = DateTimeZone.UTC;
-        }
-
+        final DateTimeZone tz = queryPlus.getQuery().getTimezone();
         final long offset = computeOffset(now, tz);
 
         final Interval interval = queryPlus.getQuery().getIntervals().get(0);

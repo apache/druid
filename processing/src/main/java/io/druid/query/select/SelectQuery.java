@@ -25,11 +25,11 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
+import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.Result;
-import io.druid.query.TimeBucketedQuery;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.QuerySegmentSpec;
@@ -42,7 +42,7 @@ import java.util.Objects;
 /**
  */
 @JsonTypeName("select")
-public class SelectQuery extends TimeBucketedQuery<Result<SelectResultValue>>
+public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
 {
   private final DimFilter dimFilter;
   private final List<DimensionSpec> dimensions;

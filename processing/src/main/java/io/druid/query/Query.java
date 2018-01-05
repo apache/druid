@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.Ordering;
 import io.druid.guice.annotations.ExtensionPoint;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.datasourcemetadata.DataSourceMetadataQuery;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.groupby.GroupByQuery;
@@ -34,6 +35,7 @@ import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.topn.TopNQuery;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
@@ -79,6 +81,10 @@ public interface Query<T>
   List<Interval> getIntervals();
 
   Duration getDuration();
+
+  Granularity getGranularity();
+
+  DateTimeZone getTimezone();
 
   Map<String, Object> getContext();
 
