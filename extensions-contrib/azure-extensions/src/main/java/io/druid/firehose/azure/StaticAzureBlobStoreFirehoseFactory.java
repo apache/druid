@@ -84,7 +84,7 @@ public class StaticAzureBlobStoreFirehoseFactory extends PrefetchableTextFilesFi
     // BlobInputStream.skip() moves the next read offset instead of skipping first 'start' bytes.
     final InputStream in = openObjectStream(object);
     final long skip = in.skip(start);
-    Preconditions.checkState(skip == start, "start offset was [%d] but [%d] bytes were skipped", start, skip);
+    Preconditions.checkState(skip == start, "start offset was [%s] but [%s] bytes were skipped", start, skip);
     return in;
   }
 
