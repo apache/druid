@@ -60,7 +60,7 @@ public class AzureDataSegmentPuller implements DataSegmentPuller
     try {
       prepareOutDir(outDir);
 
-      log.info("Loading container: " + containerName + " - " + "blobPath:" + blobPath +" - outdir: " + outDir);
+      log.info("Loading container: " + containerName + " - " + "blobPath:" + blobPath + " - outdir: " + outDir);
 
       Boolean blobPathIsHadoop = blobPath.contains(HADOOP_BLOB_PATH_IDENTIFIER);
       final String actualBlobPath;

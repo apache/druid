@@ -74,12 +74,12 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   public String getPathForHadoop()
   {
     String hadoopPath = String.format("%s://%s@%s.blob.core.windows.net/",
-      "wasb",
-      config.getContainer(),
-      config.getAccount()
+        "wasb",
+        config.getContainer(),
+        config.getAccount()
     );
 
-    log.info("Using Azure blob storage Hadoop path: " + hadoopPath );
+    log.info("Using Azure blob storage Hadoop path: " + hadoopPath);
 
     return hadoopPath;
   }
@@ -89,15 +89,15 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   {
 
     String seg = JOINER.join(
-      dataSegment.getDataSource(),
-      String.format(
-        "%s_%s",
-        // Use ISODateTimeFormat.basicDateTime() format, to avoid using colons in file path.
-        dataSegment.getInterval().getStart().toString(ISODateTimeFormat.basicDateTime()),
-        dataSegment.getInterval().getEnd().toString(ISODateTimeFormat.basicDateTime())
-      ),
-      dataSegment.getVersion(),
-      dataSegment.getShardSpec().getPartitionNum()
+        dataSegment.getDataSource(),
+        String.format(
+          "%s_%s",
+          // Use ISODateTimeFormat.basicDateTime() format, to avoid using colons in file path.
+          dataSegment.getInterval().getStart().toString(ISODateTimeFormat.basicDateTime()),
+          dataSegment.getInterval().getEnd().toString(ISODateTimeFormat.basicDateTime())
+        ),
+        dataSegment.getVersion(),
+        dataSegment.getShardSpec().getPartitionNum()
     );
 
     log.info("DataSegment: " + seg);

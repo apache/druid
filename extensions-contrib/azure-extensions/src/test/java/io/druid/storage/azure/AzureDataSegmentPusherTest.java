@@ -160,7 +160,8 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   }
 
   @Test
-  public void getHadoopPathsTest() {
+  public void getHadoopPathsTest()
+  {
     AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, jsonMapper);
 
     String hadoopPath = pusher.getPathForHadoop();
