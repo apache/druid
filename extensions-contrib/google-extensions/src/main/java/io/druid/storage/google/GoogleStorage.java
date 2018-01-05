@@ -45,15 +45,15 @@ public class GoogleStorage
 
   public InputStream get(final String bucket, final String path) throws IOException
   {
-    Storage.Objects.Get getObject = storage.objects().get(bucket, path);
-    getObject.getMediaHttpDownloader().setDirectDownloadEnabled(false);
-    return getObject.executeMediaAsInputStream();
+    return get(bucket, path, 0);
   }
 
   public InputStream get(final String bucket, final String path, long start) throws IOException
   {
     final Get get = storage.objects().get(bucket, path);
-    get.getMediaHttpDownloader().setBytesDownloaded(start);
+    if (start > 0) {
+      get.getMediaHttpDownloader().setBytesDownloaded(start);
+    }
     get.getMediaHttpDownloader().setDirectDownloadEnabled(false);
     return get.executeMediaAsInputStream();
   }

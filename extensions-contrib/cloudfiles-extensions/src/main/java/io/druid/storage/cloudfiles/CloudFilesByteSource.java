@@ -51,17 +51,7 @@ public class CloudFilesByteSource extends ByteSource
   @Override
   public InputStream openStream() throws IOException
   {
-    payload = (payload == null) ? objectApi.get(path).getPayload() : payload;
-
-    try {
-      return payload.openStream();
-    }
-    catch (IOException e) {
-      if (CloudFilesUtils.CLOUDFILESRETRY.apply(e)) {
-        throw new IOException("Recoverable exception", e);
-      }
-      throw Throwables.propagate(e);
-    }
+    return openStream(0);
   }
 
   public InputStream openStream(long start) throws IOException

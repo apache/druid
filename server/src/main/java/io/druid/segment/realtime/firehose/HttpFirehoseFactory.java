@@ -85,6 +85,9 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
   {
     if (supportContentRange) {
       final URLConnection connection = object.toURL().openConnection();
+      // Set header for range request.
+      // Since we need to set only the start offset, the header is "bytes=<range-start>-".
+      // See https://tools.ietf.org/html/rfc7233#section-2.1
       connection.addRequestProperty(HttpHeaders.RANGE, StringUtils.format("bytes=%d-", start));
       return connection.getInputStream();
     } else {

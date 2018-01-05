@@ -75,7 +75,7 @@ public class StaticCloudFilesFirehoseFactory extends PrefetchableTextFilesFireho
   @Override
   protected InputStream openObjectStream(CloudFilesBlob object) throws IOException
   {
-    return createCloudFilesByteSource(object).openStream();
+    return openObjectStream(object, 0);
   }
 
   @Override

@@ -25,7 +25,6 @@ import com.google.common.base.Throwables;
 import io.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class RetryUtils
@@ -33,6 +32,16 @@ public class RetryUtils
   public static final Logger log = new Logger(RetryUtils.class);
   public static final long MAX_SLEEP_MILLIS = 60000;
   public static final long BASE_SLEEP_MILLIS = 1000;
+
+  public interface Task<T>
+  {
+    T perform() throws Exception;
+  }
+
+  public interface OnFailure
+  {
+    void perform() throws Exception;
+  }
 
   /**
    * Retry an operation using fuzzy exponentially increasing backoff. The wait time after the nth failed attempt is
@@ -52,10 +61,11 @@ public class RetryUtils
    * @throws Exception if maxTries is exhausted, or shouldRetry returns false
    */
   public static <T> T retry(
-      final Callable<T> f,
+      final Task<T> f,
       final Predicate<Throwable> shouldRetry,
       final int quietTries,
       final int maxTries,
+      @Nullable final OnFailure onEachFailure,
       @Nullable final String messageOnRetry
   ) throws Exception
   {
@@ -66,9 +76,12 @@ public class RetryUtils
     while (true) {
       try {
         nTry++;
-        return f.call();
+        return f.perform();
       }
       catch (Throwable e) {
+        if (onEachFailure != null) {
+          onEachFailure.perform();
+        }
         if (nTry < maxTries && shouldRetry.apply(e)) {
           awaitNextRetry(e, messageOnRetry, nTry, maxRetries, nTry <= quietTries);
         } else {
@@ -79,25 +92,33 @@ public class RetryUtils
     }
   }
 
-  /**
-   * Same as {@link #retry(Callable, Predicate, int, int)} with quietTries = 0.
-   */
-  public static <T> T retry(final Callable<T> f, Predicate<Throwable> shouldRetry, final int maxTries) throws Exception
+  public static <T> T retry(final Task<T> f, Predicate<Throwable> shouldRetry, final int maxTries) throws Exception
   {
-    return retry(f, shouldRetry, 0, maxTries, null);
+    return retry(f, shouldRetry, 0, maxTries, null, null);
   }
 
   public static <T> T retry(
-      final Callable<T> f,
+      final Task<T> f,
       final Predicate<Throwable> shouldRetry,
       final int maxTries,
       final String messageOnRetry
   ) throws Exception
   {
-    return retry(f, shouldRetry, 0, maxTries, messageOnRetry);
+    return retry(f, shouldRetry, 0, maxTries, null, messageOnRetry);
   }
 
-  private static void awaitNextRetry(
+  public static <T> T retry(
+      final Task<T> f,
+      final Predicate<Throwable> shouldRetry,
+      final OnFailure onEachFailure,
+      final int maxTries,
+      final String messageOnRetry
+  ) throws Exception
+  {
+    return retry(f, shouldRetry, 0, maxTries, onEachFailure, messageOnRetry);
+  }
+
+  public static void awaitNextRetry(
       final Throwable e,
       @Nullable final String messageOnRetry,
       final int nTry,
@@ -106,15 +127,19 @@ public class RetryUtils
   ) throws InterruptedException
   {
     final long sleepMillis = nextRetrySleepMillis(nTry);
-    final String fullMessage = messageOnRetry == null ?
-                               StringUtils.format("Retrying (%d of %d) in %,dms.", nTry, maxRetries, sleepMillis) :
-                               StringUtils.format(
-                                   "%s, retrying (%d of %d) in %,dms.",
-                                   messageOnRetry,
-                                   nTry,
-                                   maxRetries,
-                                   sleepMillis
-                               );
+    final String fullMessage;
+
+    if (messageOnRetry == null) {
+      fullMessage = StringUtils.format("Retrying (%d of %d) in %,dms.", nTry, maxRetries, sleepMillis);
+    } else {
+      fullMessage = StringUtils.format(
+          "%s, retrying (%d of %d) in %,dms.",
+          messageOnRetry,
+          nTry,
+          maxRetries,
+          sleepMillis
+      );
+    }
 
     if (quiet) {
       log.debug(e, fullMessage);

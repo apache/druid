@@ -71,7 +71,7 @@ public class StaticGoogleBlobStoreFirehoseFactory extends PrefetchableTextFilesF
   @Override
   protected InputStream openObjectStream(GoogleBlob object) throws IOException
   {
-    return createGoogleByteSource(object).openStream();
+    return openObjectStream(object, 0);
   }
 
   @Override

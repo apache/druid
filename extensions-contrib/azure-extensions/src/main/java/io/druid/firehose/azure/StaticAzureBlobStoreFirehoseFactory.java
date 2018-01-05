@@ -22,6 +22,7 @@ package io.druid.firehose.azure;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import io.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
@@ -82,7 +83,8 @@ public class StaticAzureBlobStoreFirehoseFactory extends PrefetchableTextFilesFi
   {
     // BlobInputStream.skip() moves the next read offset instead of skipping first 'start' bytes.
     final InputStream in = openObjectStream(object);
-    in.skip(start);
+    final long skip = in.skip(start);
+    Preconditions.checkState(skip == start, "start offset was [%d] but [%d] bytes were skipped", start, skip);
     return in;
   }
 

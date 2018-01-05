@@ -19,8 +19,8 @@
 
 package io.druid.data.input.impl.prefetch;
 
-import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Throwables;
 import com.google.common.io.CountingInputStream;
 import io.druid.java.util.common.RetryUtils;
 import io.druid.java.util.common.logger.Logger;
@@ -29,11 +29,20 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.SocketException;
 
+/**
+ * This class is used by {@link Fetcher} when prefetch is disabled. It's responsible for re-opening the underlying input
+ * stream for the input object on the socket connection reset as well as the given {@link #retryCondition}.
+ *
+ * @param <T> object type
+ */
 class RetryingInputStream<T> extends InputStream
 {
   private static final Logger log = new Logger(RetryingInputStream.class);
+
+  private final T object;
+  private final ObjectOpenFunction<T> objectOpenFunction;
   private final Predicate<Throwable> retryCondition;
-  private final int maxTry;
+  private final int maxRetry;
 
   private CountingInputStream delegate;
   private long startOffset;
@@ -42,112 +51,125 @@ class RetryingInputStream<T> extends InputStream
       T object,
       ObjectOpenFunction<T> objectOpenFunction,
       Predicate<Throwable> retryCondition,
-      int maxTry
+      int maxRetry
   ) throws IOException
   {
-    this.retryCondition = t -> {
-      Preconditions.checkNotNull(t);
-
-      if (isConnectionReset(t)) {
-        try {
-          startOffset += delegate.getCount();
-          log.info("retrying from offset[%d]", startOffset);
-          delegate.close();
-          delegate = new CountingInputStream(objectOpenFunction.open(object, startOffset));
-          return true;
-        }
-        catch (IOException ioe) {
-          t.addSuppressed(ioe);
-          throw new RuntimeException(t);
-        }
-      }
-
-      return retryCondition.apply(t);
-    };
-
-    this.maxTry = maxTry + 1;
+    this.object = object;
+    this.objectOpenFunction = objectOpenFunction;
+    this.retryCondition = retryCondition;
+    this.maxRetry = maxRetry;
     this.delegate = new CountingInputStream(objectOpenFunction.open(object));
   }
 
   private boolean isConnectionReset(Throwable t)
   {
-    return (t instanceof SocketException && (t.getMessage().contains("Connection reset"))) ||
+    return (t instanceof SocketException && (t.getMessage() != null && t.getMessage().contains("Connection reset"))) ||
            (t.getCause() != null && isConnectionReset(t.getCause()));
+  }
+
+  private void waitOrThrow(Throwable t, int i) throws IOException
+  {
+    final boolean isConnectionReset = isConnectionReset(t);
+    if (isConnectionReset || retryCondition.apply(t)) {
+      if (isConnectionReset) {
+        // Re-open the input stream on connection reset
+        try {
+          startOffset += delegate.getCount();
+          log.info("retrying from offset[%d]", startOffset);
+          delegate.close();
+          delegate = new CountingInputStream(objectOpenFunction.open(object, startOffset));
+        }
+        catch (IOException e) {
+          t.addSuppressed(e);
+          throwAsIOException(t);
+        }
+      }
+      try {
+        RetryUtils.awaitNextRetry(t, null, i + 1, maxRetry, false);
+      }
+      catch (InterruptedException e) {
+        t.addSuppressed(e);
+        throwAsIOException(t);
+      }
+    } else {
+      throwAsIOException(t);
+    }
+  }
+
+  private void throwAsIOException(Throwable t) throws IOException
+  {
+    Throwables.propagateIfInstanceOf(t, IOException.class);
+    throw new IOException(t);
   }
 
   @Override
   public int read() throws IOException
   {
-    try {
-      return RetryUtils.retry(
-          delegate::read,
-          retryCondition,
-          maxTry
-      );
+    for (int i = 0; i < maxRetry; i++) {
+      try {
+        return delegate.read();
+      }
+      catch (Throwable t) {
+        waitOrThrow(t, i);
+      }
     }
-    catch (Exception e) {
-      throw new IOException(e);
-    }
+    return delegate.read();
   }
 
   @Override
   public int read(byte b[]) throws IOException
   {
-    try {
-      return RetryUtils.retry(
-          () -> delegate.read(b),
-          retryCondition,
-          maxTry
-      );
+    for (int i = 0; i < maxRetry; i++) {
+      try {
+        return delegate.read(b);
+      }
+      catch (Throwable t) {
+        waitOrThrow(t, i);
+      }
     }
-    catch (Exception e) {
-      throw new IOException(e);
-    }
+    return delegate.read(b);
   }
 
   @Override
   public int read(byte b[], int off, int len) throws IOException
   {
-    try {
-      return RetryUtils.retry(
-          () -> delegate.read(b, off, len),
-          retryCondition,
-          maxTry
-      );
+    for (int i = 0; i < maxRetry; i++) {
+      try {
+        return delegate.read(b, off, len);
+      }
+      catch (Throwable t) {
+        waitOrThrow(t, i);
+      }
     }
-    catch (Exception e) {
-      throw new IOException(e);
-    }
+    return delegate.read(b, off, len);
   }
 
   @Override
   public long skip(long n) throws IOException
   {
-    try {
-      return RetryUtils.retry(
-          () -> delegate.skip(n),
-          retryCondition,
-          maxTry
-      );
+    for (int i = 0; i < maxRetry; i++) {
+      try {
+        return delegate.skip(n);
+      }
+      catch (Throwable t) {
+        waitOrThrow(t, i);
+      }
     }
-    catch (Exception e) {
-      throw new IOException(e);
-    }
+    return delegate.skip(n);
   }
 
   @Override
   public int available() throws IOException
   {
-    try {
-      return RetryUtils.retry(
-          delegate::available,
-          retryCondition,
-          maxTry
-      );
+    for (int i = 0; i < maxRetry; i++) {
+      try {
+        return delegate.available();
+      }
+      catch (Throwable t) {
+        waitOrThrow(t, i);
+      }
     }
-    catch (Exception e) {
-      throw new IOException(e);
-    }
+    return delegate.available();
   }
 
   @Override

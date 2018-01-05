@@ -80,33 +80,28 @@ public class OverlordResourceTestClient
   {
     try {
       return RetryUtils.retry(
-          new Callable<String>()
-          {
-            @Override
-            public String call() throws Exception
-            {
-              StatusResponseHolder response = httpClient.go(
-                  new Request(HttpMethod.POST, new URL(getIndexerURL() + "task"))
-                      .setContent(
-                          "application/json",
-                          StringUtils.toUtf8(task)
-                      ),
-                  responseHandler
-              ).get();
-              if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-                throw new ISE(
-                    "Error while submitting task to indexer response [%s %s]",
-                    response.getStatus(),
-                    response.getContent()
-                );
-              }
-              Map<String, String> responseData = jsonMapper.readValue(
-                  response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_STRING
+          () -> {
+            StatusResponseHolder response = httpClient.go(
+                new Request(HttpMethod.POST, new URL(getIndexerURL() + "task"))
+                    .setContent(
+                        "application/json",
+                        StringUtils.toUtf8(task)
+                    ),
+                responseHandler
+            ).get();
+            if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+              throw new ISE(
+                  "Error while submitting task to indexer response [%s %s]",
+                  response.getStatus(),
+                  response.getContent()
               );
-              String taskID = responseData.get("task");
-              LOG.info("Submitted task with TaskID[%s]", taskID);
-              return taskID;
             }
+            Map<String, String> responseData = jsonMapper.readValue(
+                response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_STRING
+            );
+            String taskID = responseData.get("task");
+            LOG.info("Submitted task with TaskID[%s]", taskID);
+            return taskID;
           },
           Predicates.<Throwable>alwaysTrue(),
           5

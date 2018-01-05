@@ -53,16 +53,14 @@ public class CloudFilesObjectApiProxy
     return objectApi.put(cloudFilesObject.getPath(), cloudFilesObject.getPayload());
   }
 
-  public CloudFilesObject get(String path)
-  {
-    SwiftObject swiftObject = objectApi.get(path);
-    Payload payload = swiftObject.getPayload();
-    return new CloudFilesObject(payload, this.region, this.container, path);
-  }
-
   public CloudFilesObject get(String path, long start)
   {
-    SwiftObject swiftObject = objectApi.get(path, new GetOptions().startAt(start));
+    final SwiftObject swiftObject;
+    if (start == 0) {
+      swiftObject = objectApi.get(path);
+    } else {
+      swiftObject = objectApi.get(path, new GetOptions().startAt(start));
+    }
     Payload payload = swiftObject.getPayload();
     return new CloudFilesObject(payload, this.region, this.container, path);
   }
