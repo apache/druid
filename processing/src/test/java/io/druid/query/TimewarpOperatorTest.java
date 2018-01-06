@@ -245,10 +245,7 @@ public class TimewarpOperatorTest
                 new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 5))
             )
         ),
-        Sequences.toList(
-            queryRunner.run(QueryPlus.wrap(query), CONTEXT),
-            Lists.<Result<TimeseriesResultValue>>newArrayList()
-        )
+        queryRunner.run(QueryPlus.wrap(query), CONTEXT).toList()
     );
   }
 
@@ -308,10 +305,7 @@ public class TimewarpOperatorTest
                 new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 5))
             )
         ),
-        Sequences.toList(
-            queryRunner.run(QueryPlus.wrap(query), CONTEXT),
-            Lists.<Result<TimeseriesResultValue>>newArrayList()
-        )
+        queryRunner.run(QueryPlus.wrap(query), CONTEXT).toList()
     );
   }
 
