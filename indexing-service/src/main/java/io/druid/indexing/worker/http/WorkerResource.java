@@ -31,6 +31,7 @@ import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.worker.Worker;
 import io.druid.indexing.worker.WorkerCuratorCoordinator;
+import io.druid.indexing.worker.WorkerTaskMonitor;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.http.security.ConfigResourceFilter;
@@ -59,18 +60,21 @@ public class WorkerResource
   private final Worker enabledWorker;
   private final WorkerCuratorCoordinator curatorCoordinator;
   private final TaskRunner taskRunner;
+  private final WorkerTaskMonitor workerTaskManager;
 
   @Inject
   public WorkerResource(
       Worker worker,
       WorkerCuratorCoordinator curatorCoordinator,
-      TaskRunner taskRunner
+      TaskRunner taskRunner,
+      WorkerTaskMonitor workerTaskManager
 
   ) throws Exception
   {
     this.enabledWorker = worker;
     this.curatorCoordinator = curatorCoordinator;
     this.taskRunner = taskRunner;
+    this.workerTaskManager = workerTaskManager;
   }
 
 
@@ -89,6 +93,7 @@ public class WorkerResource
           DISABLED_VERSION
       );
       curatorCoordinator.updateWorkerAnnouncement(disabledWorker);
+      workerTaskManager.workerDisabled();
       return Response.ok(ImmutableMap.of(disabledWorker.getHost(), "disabled")).build();
     }
     catch (Exception e) {
@@ -104,6 +109,7 @@ public class WorkerResource
   {
     try {
       curatorCoordinator.updateWorkerAnnouncement(enabledWorker);
+      workerTaskManager.workerEnabled();
       return Response.ok(ImmutableMap.of(enabledWorker.getHost(), "enabled")).build();
     }
     catch (Exception e) {

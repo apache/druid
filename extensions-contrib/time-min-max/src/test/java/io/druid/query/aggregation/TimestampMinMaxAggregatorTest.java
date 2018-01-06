@@ -134,15 +134,13 @@ public class TimestampMinMaxAggregatorTest
   {
     TimestampAggregator aggregator = (TimestampAggregator) aggregatorFactory.factorize(selectorFactory);
 
-    for (Timestamp value: values) {
+    Assert.assertEquals(initValue, aggregator.get());
+
+    for (Timestamp value : values) {
       aggregate(selector, aggregator);
     }
 
     Assert.assertEquals(expected, new Timestamp(aggregator.getLong()));
-
-    aggregator.reset();
-
-    Assert.assertEquals(initValue, aggregator.get());
   }
 
   @Test

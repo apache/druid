@@ -28,6 +28,7 @@ import io.airlift.airline.Command;
 import io.druid.client.BrokerSegmentWatcherConfig;
 import io.druid.client.BrokerServerView;
 import io.druid.client.CachingClusteredClient;
+import io.druid.client.HttpServerInventoryViewResource;
 import io.druid.client.TimelineServerView;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.CacheMonitor;
@@ -119,8 +120,11 @@ public class CliBroker extends ServerRunnable
             binder.bind(QueryCountStatsProvider.class).to(BrokerQueryResource.class).in(LazySingleton.class);
             Jerseys.addResource(binder, BrokerResource.class);
             Jerseys.addResource(binder, ClientInfoResource.class);
+
             LifecycleModule.register(binder, BrokerQueryResource.class);
             LifecycleModule.register(binder, DruidBroker.class);
+
+            Jerseys.addResource(binder, HttpServerInventoryViewResource.class);
 
             MetricsModule.register(binder, CacheMonitor.class);
 

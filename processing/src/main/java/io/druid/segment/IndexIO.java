@@ -44,31 +44,27 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.Smoosh;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.ArrayIndexed;
 import io.druid.segment.data.BitmapSerde;
 import io.druid.segment.data.BitmapSerdeFactory;
-import io.druid.segment.data.ByteBufferSerializer;
-import io.druid.segment.data.CompressedLongsIndexedSupplier;
+import io.druid.segment.data.CompressedColumnarLongsSupplier;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.ImmutableRTreeObjectStrategy;
 import io.druid.segment.data.Indexed;
-import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIterable;
-import io.druid.segment.data.IndexedMultivalue;
-import io.druid.segment.data.VSizeIndexed;
+import io.druid.segment.data.VSizeColumnarMultiInts;
 import io.druid.segment.serde.BitmapIndexColumnPartSupplier;
 import io.druid.segment.serde.ComplexColumnPartSupplier;
 import io.druid.segment.serde.DictionaryEncodedColumnSupplier;
 import io.druid.segment.serde.FloatGenericColumnSupplier;
 import io.druid.segment.serde.LongGenericColumnSupplier;
 import io.druid.segment.serde.SpatialIndexColumnPartSupplier;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -347,7 +343,7 @@ public class IndexIO
       final Interval dataInterval = Intervals.of(serializerUtils.readString(indexBuffer));
       final BitmapSerdeFactory bitmapSerdeFactory = new BitmapSerde.LegacyBitmapSerdeFactory();
 
-      CompressedLongsIndexedSupplier timestamps = CompressedLongsIndexedSupplier.fromByteBuffer(
+      CompressedColumnarLongsSupplier timestamps = CompressedColumnarLongsSupplier.fromByteBuffer(
           smooshedFiles.mapFile(makeTimeFile(inDir, BYTE_ORDER).getName()),
           BYTE_ORDER
       );
@@ -364,7 +360,7 @@ public class IndexIO
       }
 
       Map<String, GenericIndexed<String>> dimValueLookups = Maps.newHashMap();
-      Map<String, VSizeIndexed> dimColumns = Maps.newHashMap();
+      Map<String, VSizeColumnarMultiInts> dimColumns = Maps.newHashMap();
       Map<String, GenericIndexed<ImmutableBitmap>> bitmaps = Maps.newHashMap();
 
       for (String dimension : IndexedIterable.create(availableDimensions)) {
@@ -378,7 +374,7 @@ public class IndexIO
         );
 
         dimValueLookups.put(dimension, GenericIndexed.read(dimBuffer, GenericIndexed.STRING_STRATEGY));
-        dimColumns.put(dimension, VSizeIndexed.readFromByteBuffer(dimBuffer));
+        dimColumns.put(dimension, VSizeColumnarMultiInts.readFromByteBuffer(dimBuffer));
       }
 
       ByteBuffer invertedBuffer = smooshedFiles.mapFile("inverted.drd");
@@ -394,9 +390,8 @@ public class IndexIO
       while (spatialBuffer != null && spatialBuffer.hasRemaining()) {
         spatialIndexed.put(
             serializerUtils.readString(spatialBuffer),
-            ByteBufferSerializer.read(
-                spatialBuffer,
-                new ImmutableRTreeObjectStrategy(bitmapSerdeFactory.getBitmapFactory())
+            new ImmutableRTreeObjectStrategy(bitmapSerdeFactory.getBitmapFactory()).fromByteBufferWithSize(
+                spatialBuffer
             )
         );
       }
@@ -451,9 +446,7 @@ public class IndexIO
                 new DictionaryEncodedColumnSupplier(
                     index.getDimValueLookup(dimension),
                     null,
-                    Suppliers.<IndexedMultivalue<IndexedInts>>ofInstance(
-                        index.getDimColumn(dimension)
-                    ),
+                    Suppliers.ofInstance(index.getDimColumn(dimension)),
                     columnConfig.columnCacheSizeBytes()
                 )
             )
@@ -510,16 +503,15 @@ public class IndexIO
         colSet.add(metric);
       }
 
-      String[] cols = colSet.toArray(new String[colSet.size()]);
       columns.put(
-          Column.TIME_COLUMN_NAME, new ColumnBuilder()
+          Column.TIME_COLUMN_NAME,
+          new ColumnBuilder()
               .setType(ValueType.LONG)
               .setGenericColumn(new LongGenericColumnSupplier(index.timestamps))
               .build()
       );
       return new SimpleQueryableIndex(
           index.getDataInterval(),
-          new ArrayIndexed<>(cols, String.class),
           index.getAvailableDimensions(),
           new ConciseBitmapFactory(),
           columns,
@@ -608,7 +600,12 @@ public class IndexIO
       columns.put(Column.TIME_COLUMN_NAME, deserializeColumn(mapper, smooshedFiles.mapFile("__time"), smooshedFiles));
 
       final QueryableIndex index = new SimpleQueryableIndex(
-          dataInterval, cols, dims, segmentBitmapSerdeFactory.getBitmapFactory(), columns, smooshedFiles, metadata
+          dataInterval,
+          dims,
+          segmentBitmapSerdeFactory.getBitmapFactory(),
+          columns,
+          smooshedFiles,
+          metadata
       );
 
       log.debug("Mapped v9 index[%s] in %,d millis", inDir, System.currentTimeMillis() - startTime);

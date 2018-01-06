@@ -39,6 +39,7 @@ public class ExtractOperatorConversion implements SqlOperatorConversion
 {
   private static final Map<TimeUnitRange, TimestampExtractExprMacro.Unit> EXTRACT_UNIT_MAP =
       ImmutableMap.<TimeUnitRange, TimestampExtractExprMacro.Unit>builder()
+          .put(TimeUnitRange.EPOCH, TimestampExtractExprMacro.Unit.EPOCH)
           .put(TimeUnitRange.SECOND, TimestampExtractExprMacro.Unit.SECOND)
           .put(TimeUnitRange.MINUTE, TimestampExtractExprMacro.Unit.MINUTE)
           .put(TimeUnitRange.HOUR, TimestampExtractExprMacro.Unit.HOUR)
@@ -72,11 +73,6 @@ public class ExtractOperatorConversion implements SqlOperatorConversion
 
     final DruidExpression input = Expressions.toDruidExpression(plannerContext, rowSignature, arg);
     if (input == null) {
-      return null;
-    }
-
-    if (call.getOperator().getName().equals("EXTRACT_DATE")) {
-      // Arg will be in number of days since the epoch. Can't translate.
       return null;
     }
 

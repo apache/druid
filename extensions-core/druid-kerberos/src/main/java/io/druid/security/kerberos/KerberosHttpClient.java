@@ -136,7 +136,7 @@ public class KerberosHttpClient extends AbstractHttpClient
             request.setHeader("Cookie", "");
             inner_go(request.copy(), httpResponseHandler, duration, future);
           } else {
-            log.info("Not retrying and returning future response");
+            log.debug("Not retrying and returning future response");
             future.set(result.getObj());
           }
         }

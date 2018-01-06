@@ -31,8 +31,6 @@ import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
-import io.druid.java.util.common.guava.Sequences;
-import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.metadata.SegmentMetadataQueryConfig;
 import io.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
@@ -41,12 +39,12 @@ import io.druid.query.metadata.metadata.ColumnAnalysis;
 import io.druid.query.metadata.metadata.ListColumnIncluderator;
 import io.druid.query.metadata.metadata.SegmentAnalysis;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
-
 import io.druid.query.scan.ScanQuery;
 import io.druid.query.scan.ScanQueryConfig;
 import io.druid.query.scan.ScanQueryEngine;
 import io.druid.query.scan.ScanQueryQueryToolChest;
 import io.druid.query.scan.ScanQueryRunnerFactory;
+import io.druid.query.scan.ScanQueryRunnerTest;
 import io.druid.query.scan.ScanResultValue;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.segment.IndexIO;
@@ -55,10 +53,12 @@ import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.TestHelper;
+import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -77,9 +77,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-
-import static io.druid.segment.column.Column.DOUBLE_STORAGE_TYPE_PROPERTY;
-import static io.druid.query.scan.ScanQueryRunnerTest.verify;
 
 @RunWith(Parameterized.class)
 public class DoubleStorageTest
@@ -274,10 +271,7 @@ public class DoubleStorageTest
                                                       )
                                                       .merge(true)
                                                       .build();
-    List<SegmentAnalysis> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(segmentMetadataQuery), Maps.newHashMap()),
-        Lists.<SegmentAnalysis>newArrayList()
-    );
+    List<SegmentAnalysis> results = runner.run(QueryPlus.wrap(segmentMetadataQuery), Maps.newHashMap()).toList();
 
     Assert.assertEquals(Arrays.asList(expectedSegmentAnalysis), results);
 
@@ -299,10 +293,7 @@ public class DoubleStorageTest
         .build();
 
     HashMap<String, Object> context = new HashMap<String, Object>();
-    Iterable<ScanResultValue> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), context),
-        Lists.<ScanResultValue>newArrayList()
-    );
+    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), context).toList();
 
     ScanResultValue expectedScanResult = new ScanResultValue(
         SEGMENT_ID,
@@ -310,13 +301,13 @@ public class DoubleStorageTest
         getStreamOfEvents().collect(Collectors.toList())
     );
     List<ScanResultValue> expectedResults = Lists.newArrayList(expectedScanResult);
-    verify(expectedResults, results);
+    ScanQueryRunnerTest.verify(expectedResults, results);
   }
 
   private static QueryableIndex buildIndex(String storeDoubleAsFloat) throws IOException
   {
-    String oldValue = System.getProperty(DOUBLE_STORAGE_TYPE_PROPERTY);
-    System.setProperty(DOUBLE_STORAGE_TYPE_PROPERTY, storeDoubleAsFloat);
+    String oldValue = System.getProperty(Column.DOUBLE_STORAGE_TYPE_PROPERTY);
+    System.setProperty(Column.DOUBLE_STORAGE_TYPE_PROPERTY, storeDoubleAsFloat);
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(DateTimes.of("2011-01-13T00:00:00.000Z").getMillis())
         .withDimensionsSpec(ROW_PARSER)
@@ -341,9 +332,9 @@ public class DoubleStorageTest
     });
 
     if (oldValue == null) {
-      System.clearProperty(DOUBLE_STORAGE_TYPE_PROPERTY);
+      System.clearProperty(Column.DOUBLE_STORAGE_TYPE_PROPERTY);
     } else {
-      System.setProperty(DOUBLE_STORAGE_TYPE_PROPERTY, oldValue);
+      System.setProperty(Column.DOUBLE_STORAGE_TYPE_PROPERTY, oldValue);
     }
     File someTmpFile = File.createTempFile("billy", "yay");
     someTmpFile.delete();

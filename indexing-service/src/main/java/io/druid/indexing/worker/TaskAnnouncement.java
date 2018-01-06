@@ -22,7 +22,8 @@ package io.druid.indexing.worker;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import io.druid.indexing.common.TaskLocation;
+import io.druid.indexer.TaskLocation;
+import io.druid.indexer.TaskState;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
@@ -50,7 +51,7 @@ public class TaskAnnouncement
   @JsonCreator
   private TaskAnnouncement(
       @JsonProperty("id") String taskId,
-      @JsonProperty("status") TaskStatus.Status status,
+      @JsonProperty("status") TaskState status,
       @JsonProperty("taskStatus") TaskStatus taskStatus,
       @JsonProperty("taskResource") TaskResource taskResource,
       @JsonProperty("taskLocation") TaskLocation taskLocation
@@ -66,18 +67,14 @@ public class TaskAnnouncement
     this.taskLocation = taskLocation == null ? TaskLocation.unknown() : taskLocation;
   }
 
-  // Can be removed when backwards compat is no longer needed
   @JsonProperty("id")
-  @Deprecated
   public String getTaskId()
   {
     return taskStatus.getId();
   }
 
-  // Can be removed when backwards compat is no longer needed
   @JsonProperty("status")
-  @Deprecated
-  public TaskStatus.Status getStatus()
+  public TaskState getStatus()
   {
     return taskStatus.getStatusCode();
   }
@@ -98,5 +95,15 @@ public class TaskAnnouncement
   public TaskLocation getTaskLocation()
   {
     return taskLocation;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "TaskAnnouncement{" +
+           "taskStatus=" + taskStatus +
+           ", taskResource=" + taskResource +
+           ", taskLocation=" + taskLocation +
+           '}';
   }
 }

@@ -37,6 +37,9 @@ public class StorageLocationConfig
   @Min(1)
   private long maxSize = Long.MAX_VALUE;
 
+  @JsonProperty
+  private Double freeSpacePercent;
+
   public File getPath()
   {
     return path;
@@ -56,6 +59,17 @@ public class StorageLocationConfig
   public StorageLocationConfig setMaxSize(long maxSize)
   {
     this.maxSize = maxSize;
+    return this;
+  }
+
+  public Double getFreeSpacePercent()
+  {
+    return freeSpacePercent;
+  }
+
+  public StorageLocationConfig setFreeSpacePercent(Double freeSpacePercent)
+  {
+    this.freeSpacePercent = freeSpacePercent;
     return this;
   }
 

@@ -37,7 +37,8 @@ public class LongFirstAggregator implements Aggregator
     this.valueSelector = valueSelector;
     this.timeSelector = timeSelector;
 
-    reset();
+    firstTime = Long.MAX_VALUE;
+    firstValue = 0;
   }
 
   @Override
@@ -48,13 +49,6 @@ public class LongFirstAggregator implements Aggregator
       firstTime = time;
       firstValue = valueSelector.getLong();
     }
-  }
-
-  @Override
-  public void reset()
-  {
-    firstTime = Long.MAX_VALUE;
-    firstValue = 0;
   }
 
   @Override

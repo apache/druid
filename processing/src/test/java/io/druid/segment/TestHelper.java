@@ -27,14 +27,13 @@ import io.druid.data.input.Row;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.math.expr.ExprMacroTable;
-import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.query.Result;
 import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.column.ColumnConfig;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.timeline.DataSegment;
 import org.junit.Assert;
 
@@ -101,7 +100,7 @@ public class TestHelper
 
   public static <T> void assertExpectedResults(Iterable<Result<T>> expectedResults, Sequence<Result<T>> results)
   {
-    assertResults(expectedResults, Sequences.toList(results, Lists.<Result<T>>newArrayList()), "");
+    assertResults(expectedResults, results.toList(), "");
   }
 
   public static <T> void assertExpectedResults(Iterable<Result<T>> expectedResults, Iterable<Result<T>> results)
@@ -125,7 +124,7 @@ public class TestHelper
 
   public static <T> void assertExpectedObjects(Iterable<T> expectedResults, Sequence<T> results, String failMsg)
   {
-    assertObjects(expectedResults, Sequences.toList(results, Lists.<T>newArrayList()), failMsg);
+    assertObjects(expectedResults, results.toList(), failMsg);
   }
 
   private static <T> void assertResults(

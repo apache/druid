@@ -63,7 +63,9 @@ public class VSizeLongSerde
     return (bitsPerValue * numValues + 7) / 8 + 4;
   }
 
-  // block size should be power of 2 so get of indexedLong can be optimized using bit operators
+  /**
+   * Block size should be power of 2, so {@link ColumnarLongs#get(int)} can be optimized using bit operators.
+   */
   public static int getNumValuesPerBlock(int bitsPerValue, int blockSize)
   {
     int ret = 1;

@@ -62,7 +62,7 @@
         <apache.curator.version>4.0.0</apache.curator.version>
         <apache.curator.test.version>2.12.0</apache.curator.test.version>
         <avatica.version>1.10.0</avatica.version>
-        <calcite.version>1.14.0</calcite.version>
+        <calcite.version>1.15.0</calcite.version>
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
         <jetty.version>9.3.19.v20170502</jetty.version>
@@ -83,7 +83,7 @@
         <aws.sdk.version>1.10.77</aws.sdk.version>
         <caffeine.version>2.5.5</caffeine.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
-        <zookeeper.version>3.4.10</zookeeper.version>
+        <zookeeper.version>3.4.11</zookeeper.version>
     </properties>
 
     <modules>

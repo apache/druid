@@ -43,7 +43,6 @@ import io.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -165,7 +164,7 @@ public class DefaultLimitSpecTest
 
     Assert.assertEquals(
         ImmutableList.of(testRowsList.get(0), testRowsList.get(1)),
-        Sequences.toList(limitFn.apply(testRowsSequence), new ArrayList<Row>())
+        limitFn.apply(testRowsSequence).toList()
     );
   }
 
@@ -187,7 +186,7 @@ public class DefaultLimitSpecTest
     // in the future.
     Assert.assertEquals(
         ImmutableList.of(testRowsList.get(2), testRowsList.get(1)),
-        Sequences.toList(limitFn.apply(testRowsSequence), new ArrayList<Row>())
+        limitFn.apply(testRowsSequence).toList()
     );
   }
 
@@ -214,7 +213,7 @@ public class DefaultLimitSpecTest
     );
     Assert.assertEquals(
         ImmutableList.of(testRowsList.get(0), testRowsList.get(1)),
-        Sequences.toList(limitFn.apply(testRowsSequence), new ArrayList<Row>())
+        limitFn.apply(testRowsSequence).toList()
     );
 
     // if there is an aggregator with same name then that is used to build ordering
@@ -231,7 +230,7 @@ public class DefaultLimitSpecTest
     );
     Assert.assertEquals(
         ImmutableList.of(testRowsList.get(2), testRowsList.get(0)),
-        Sequences.toList(limitFn.apply(testRowsSequence), new ArrayList<Row>())
+        limitFn.apply(testRowsSequence).toList()
     );
 
     // if there is a post-aggregator with same name then that is used to build ordering
@@ -254,7 +253,7 @@ public class DefaultLimitSpecTest
     );
     Assert.assertEquals(
         (List) ImmutableList.of(testRowsList.get(2), testRowsList.get(0)),
-        (List) Sequences.toList(limitFn.apply(testRowsSequence), new ArrayList<Row>())
+        (List) limitFn.apply(testRowsSequence).toList()
     );
 
     // makes same result
@@ -265,7 +264,7 @@ public class DefaultLimitSpecTest
     );
     Assert.assertEquals(
         (List) ImmutableList.of(testRowsList.get(2), testRowsList.get(0)),
-        (List) Sequences.toList(limitFn.apply(testRowsSequence), new ArrayList<Row>())
+        (List) limitFn.apply(testRowsSequence).toList()
     );
   }
 
