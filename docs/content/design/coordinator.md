@@ -43,7 +43,7 @@ Compacting Segments
 
 Each run, the Druid coordinator compacts small segments abutting each other. This is useful when you have a lot of small
 segments which may degrade the query performance as well as increasing the disk usage. Note that the data for an interval
-cannot be compacted across the partitions.
+cannot be compacted across the segments.
 
 The coordinator first finds the segments to compact together based on the [segment search policy](#segment-search-policy).
 Once it finds some segments, it launches a [compact task](../ingestion/tasks.html#compaction-task) to compact those segments.
@@ -71,8 +71,9 @@ Every run, this policy starts searching from the (very latest interval - [skipOf
 This is to handle the late segments ingested to realtime dataSources.
 
 <div class="note caution">
-This policy currently cannot handle the situation when a shard consists of a lot of small segments, thereby its total size exceeds the <a href="../configuration/coordinator.html#compaction-config">targetCompactionSizebytes</a>.
-If it finds such shards, it simply skips them.
+This policy currently cannot handle the situation when there are a lot of small segments which have the same interval,
+and their total size exceeds <a href="../configuration/coordinator.html#compaction-config">targetCompactionSizebytes</a>.
+If it finds such segments, it simply skips compacting them.
 </div>
 
 

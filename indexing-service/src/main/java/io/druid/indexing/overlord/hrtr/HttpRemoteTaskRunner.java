@@ -1356,6 +1356,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     public void setTask(Task task)
     {
       this.task = task;
+      setTaskType(task.getType());
     }
 
     public State getState()

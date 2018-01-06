@@ -29,8 +29,8 @@ import org.joda.time.DateTime;
  */
 public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
 {
-  private final String taskType;
   private final SettableFuture<TaskStatus> result;
+  private String taskType;
   private Worker worker;
   private TaskLocation location;
 
@@ -53,8 +53,8 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
   )
   {
     super(taskId, result);
-    this.taskType = taskType;
     this.result = result;
+    this.taskType = taskType;
     this.worker = worker;
     this.location = location == null ? TaskLocation.unknown() : location;
   }
@@ -70,8 +70,8 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
   )
   {
     super(taskId, result, createdTime, queueInsertionTime);
-    this.taskType = taskType;
     this.result = result;
+    this.taskType = taskType;
     this.worker = worker;
     this.location = location == null ? TaskLocation.unknown() : location;
   }
@@ -85,6 +85,11 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
   public TaskLocation getLocation()
   {
     return location;
+  }
+
+  public void setTaskType(String taskType)
+  {
+    this.taskType = taskType;
   }
 
   @Override
