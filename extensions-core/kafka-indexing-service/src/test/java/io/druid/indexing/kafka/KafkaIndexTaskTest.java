@@ -241,6 +241,7 @@ public class KafkaIndexTaskTest
         new ProducerRecord<byte[], byte[]>(topic, 0, null, JB("2010", "c", "y", 1.0f)),
         new ProducerRecord<byte[], byte[]>(topic, 0, null, JB("2011", "d", "y", 1.0f)),
         new ProducerRecord<byte[], byte[]>(topic, 0, null, JB("2011", "e", "y", 1.0f)),
+        new ProducerRecord<byte[], byte[]>(topic, 0, null, JB("246140482-04-24T15:36:27.903Z", "x", "z", 1.0f)),
         new ProducerRecord<byte[], byte[]>(topic, 0, null, StringUtils.toUtf8("unparseable")),
         new ProducerRecord<byte[], byte[]>(topic, 0, null, null),
         new ProducerRecord<byte[], byte[]>(topic, 0, null, JB("2013", "f", "y", 1.0f)),
@@ -456,7 +457,7 @@ public class KafkaIndexTaskTest
     // of events fetched across two partitions from Kafka
     final KafkaPartitions checkpoint1 = new KafkaPartitions(topic, ImmutableMap.of(0, 5L, 1, 0L));
     final KafkaPartitions checkpoint2 = new KafkaPartitions(topic, ImmutableMap.of(0, 4L, 1, 2L));
-    final KafkaPartitions endPartitions = new KafkaPartitions(topic, ImmutableMap.of(0, 8L, 1, 2L));
+    final KafkaPartitions endPartitions = new KafkaPartitions(topic, ImmutableMap.of(0, 9L, 1, 2L));
     final KafkaIndexTask task = createTask(
         null,
         new KafkaIOConfig(
@@ -494,7 +495,7 @@ public class KafkaIndexTaskTest
     // Check metrics
     Assert.assertEquals(8, task.getFireDepartmentMetrics().processed());
     Assert.assertEquals(1, task.getFireDepartmentMetrics().unparseable());
-    Assert.assertEquals(1, task.getFireDepartmentMetrics().thrownAway());
+    Assert.assertEquals(2, task.getFireDepartmentMetrics().thrownAway());
 
     // Check published metadata
     SegmentDescriptor desc1 = SD(task, "2008/P1D", 0);
@@ -506,7 +507,7 @@ public class KafkaIndexTaskTest
     SegmentDescriptor desc7 = SD(task, "2013/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4, desc5, desc6, desc7), publishedDescriptors());
     Assert.assertEquals(
-        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 8L, 1, 2L))),
+        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 9L, 1, 2L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
@@ -970,7 +971,7 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             "sequence1",
             new KafkaPartitions(topic, ImmutableMap.of(0, 3L)),
-            new KafkaPartitions(topic, ImmutableMap.of(0, 8L)),
+            new KafkaPartitions(topic, ImmutableMap.of(0, 9L)),
             kafkaServer.consumerProperties(),
             true,
             false,
@@ -1001,7 +1002,7 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(0, task1.getFireDepartmentMetrics().thrownAway());
     Assert.assertEquals(3, task2.getFireDepartmentMetrics().processed());
     Assert.assertEquals(1, task2.getFireDepartmentMetrics().unparseable());
-    Assert.assertEquals(1, task2.getFireDepartmentMetrics().thrownAway());
+    Assert.assertEquals(2, task2.getFireDepartmentMetrics().thrownAway());
 
     // Check published segments & metadata, should all be from the first task
     SegmentDescriptor desc1 = SD(task1, "2010/P1D", 0);
@@ -1039,7 +1040,7 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             "sequence1",
             new KafkaPartitions(topic, ImmutableMap.of(0, 3L)),
-            new KafkaPartitions(topic, ImmutableMap.of(0, 8L)),
+            new KafkaPartitions(topic, ImmutableMap.of(0, 9L)),
             kafkaServer.consumerProperties(),
             false,
             false,
@@ -1076,7 +1077,7 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(0, task1.getFireDepartmentMetrics().thrownAway());
     Assert.assertEquals(3, task2.getFireDepartmentMetrics().processed());
     Assert.assertEquals(1, task2.getFireDepartmentMetrics().unparseable());
-    Assert.assertEquals(1, task2.getFireDepartmentMetrics().thrownAway());
+    Assert.assertEquals(2, task2.getFireDepartmentMetrics().thrownAway());
 
     // Check published segments & metadata
     SegmentDescriptor desc3 = SD(task2, "2011/P1D", 1);
@@ -1449,7 +1450,7 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(KafkaIndexTask.Status.PAUSED, task.getStatus());
 
     // try again but with resume flag == true
-    newEndOffsets = ImmutableMap.of(0, 6L);
+    newEndOffsets = ImmutableMap.of(0, 7L);
     task.setEndOffsets(newEndOffsets, true, true);
     Assert.assertEquals(newEndOffsets, task.getEndOffsets());
     Assert.assertNotEquals(KafkaIndexTask.Status.PAUSED, task.getStatus());
@@ -1468,7 +1469,7 @@ public class KafkaIndexTaskTest
     // Check metrics
     Assert.assertEquals(4, task.getFireDepartmentMetrics().processed());
     Assert.assertEquals(1, task.getFireDepartmentMetrics().unparseable());
-    Assert.assertEquals(0, task.getFireDepartmentMetrics().thrownAway());
+    Assert.assertEquals(1, task.getFireDepartmentMetrics().thrownAway());
 
     // Check published metadata
     SegmentDescriptor desc1 = SD(task, "2009/P1D", 0);
@@ -1476,7 +1477,7 @@ public class KafkaIndexTaskTest
     SegmentDescriptor desc3 = SD(task, "2011/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3), publishedDescriptors());
     Assert.assertEquals(
-        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 6L))),
+        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 7L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
