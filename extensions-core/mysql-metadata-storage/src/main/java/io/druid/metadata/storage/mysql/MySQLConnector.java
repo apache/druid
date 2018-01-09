@@ -20,7 +20,6 @@
 package io.druid.metadata.storage.mysql;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
@@ -74,10 +73,7 @@ public class MySQLConnector extends SQLMetadataConnector
       );
       if (connectorConfig.isVerifyServerCertificate()) {
         log.info("Server certificate verification is enabled. ");
-        Preconditions.checkNotNull(
-            connectorConfig.getTrustCertificateKeyStorePassword(),
-            "Trust certificate keystore password cannot be null when server certificate verification is enabled."
-        );
+
         if (connectorConfig.getTrustCertificateKeyStoreUrl() != null) {
           datasource.addConnectionProperty(
               "trustCertificateKeyStoreUrl",
@@ -90,10 +86,15 @@ public class MySQLConnector extends SQLMetadataConnector
               connectorConfig.getTrustCertificateKeyStoreType()
           );
         }
-        datasource.addConnectionProperty(
-            "trustCertificateKeyStorePassword",
-            connectorConfig.getTrustCertificateKeyStorePassword()
-        );
+        if (connectorConfig.getTrustCertificateKeyStorePassword() == null) {
+          log.warn(
+              "Trust store password is empty. Ensure that the trust store has been configured with an empty password.");
+        } else {
+          datasource.addConnectionProperty(
+              "trustCertificateKeyStorePassword",
+              connectorConfig.getTrustCertificateKeyStorePassword()
+          );
+        }
       }
       if (connectorConfig.getClientCertificateKeyStoreUrl() != null) {
         datasource.addConnectionProperty(
