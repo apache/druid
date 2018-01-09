@@ -32,6 +32,7 @@ import io.druid.guice.annotations.EscalatedClient;
 import io.druid.guice.annotations.EscalatedGlobal;
 import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.server.security.Escalator;
 
 import java.lang.annotation.Annotation;
@@ -41,6 +42,7 @@ import java.util.Set;
  */
 public class HttpClientModule implements Module
 {
+  private static final Logger LOG = new Logger(HttpClientModule.class);
   public static HttpClientModule global()
   {
     return new HttpClientModule("druid.global.http", Global.class);
@@ -135,6 +137,15 @@ public class HttpClientModule implements Module
     {
       final DruidHttpClientConfig config = getConfigProvider().get().get();
 
+      if (config.getUnusedConnectionTimeout() != null &&
+          config.getUnusedConnectionTimeout().isLongerThan(config.getReadTimeout())) {
+        LOG.warn(
+            "Ohh no! UnusedConnectionTimeout[%s] is longer than readTimeout[%s], please correct"
+            + " the configuration, this might not be supported in future.",
+            config.getUnusedConnectionTimeout(),
+            config.getReadTimeout()
+        );
+      }
       final HttpClientConfig.Builder builder = HttpClientConfig
           .builder()
           .withNumConnections(config.getNumConnections())
@@ -143,7 +154,7 @@ public class HttpClientModule implements Module
           .withCompressionCodec(
               HttpClientConfig.CompressionCodec.valueOf(StringUtils.toUpperCase(config.getCompressionCodec()))
           )
-          .withUnusedConnectionTimeoutDuration(config.getUnusedConnectionTimeout().toStandardDuration());
+          .withUnusedConnectionTimeoutDuration(config.getUnusedConnectionTimeout());
 
       if (getSslContextBinding() != null) {
         builder.withSslContext(getSslContextBinding().getProvider().get());

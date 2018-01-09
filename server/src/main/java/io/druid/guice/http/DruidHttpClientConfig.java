@@ -86,8 +86,8 @@ public class DruidHttpClientConfig
     return requestBuffersize;
   }
 
-  public Period getUnusedConnectionTimeout()
+  public Duration getUnusedConnectionTimeout()
   {
-    return unusedConnectionTimeout;
+    return unusedConnectionTimeout == null ? null : unusedConnectionTimeout.toStandardDuration() ;
   }
 }
