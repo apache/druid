@@ -54,7 +54,7 @@ public class DruidHttpClientConfig
   private int requestBuffersize = 8 * 1024;
 
   @JsonProperty
-  private Period unusedConnectionTimeout = new Period("PT4M");
+  private Period unusedConnectionTimeout = null;
 
   public int getNumConnections()
   {
@@ -88,6 +88,6 @@ public class DruidHttpClientConfig
 
   public Duration getUnusedConnectionTimeout()
   {
-    return unusedConnectionTimeout == null ? null : unusedConnectionTimeout.toStandardDuration() ;
+    return unusedConnectionTimeout == null ? null : unusedConnectionTimeout.toStandardDuration();
   }
 }
