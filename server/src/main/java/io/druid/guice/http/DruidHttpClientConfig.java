@@ -53,6 +53,9 @@ public class DruidHttpClientConfig
   @JsonProperty
   private int requestBuffersize = 8 * 1024;
 
+  @JsonProperty
+  private Period unusedConnectionTimeout = new Period("PT4M");
+
   public int getNumConnections()
   {
     return numConnections;
@@ -81,5 +84,10 @@ public class DruidHttpClientConfig
   public int getRequestBuffersize()
   {
     return requestBuffersize;
+  }
+
+  public Period getUnusedConnectionTimeout()
+  {
+    return unusedConnectionTimeout;
   }
 }
