@@ -118,5 +118,4 @@ public class RetryUtilsTest
     Assert.assertTrue("threw expected exception", threwExpectedException);
     Assert.assertEquals("count", 1, count.get());
   }
-
 }

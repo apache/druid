@@ -142,7 +142,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   public <T> T retryTransaction(final TransactionCallback<T> callback, final int quietTries, final int maxTries)
   {
     try {
-      return RetryUtils.retry(() -> getDBI().inTransaction(callback), shouldRetry, quietTries, maxTries, null, null);
+      return RetryUtils.retry(() -> getDBI().inTransaction(callback), shouldRetry, quietTries, maxTries);
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

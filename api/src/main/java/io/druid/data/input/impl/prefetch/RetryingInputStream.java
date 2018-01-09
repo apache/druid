@@ -67,7 +67,7 @@ class RetryingInputStream<T> extends InputStream
            (t.getCause() != null && isConnectionReset(t.getCause()));
   }
 
-  private void waitOrThrow(Throwable t, int i) throws IOException
+  private void waitOrThrow(Throwable t, int nTry) throws IOException
   {
     final boolean isConnectionReset = isConnectionReset(t);
     if (isConnectionReset || retryCondition.apply(t)) {
@@ -75,19 +75,22 @@ class RetryingInputStream<T> extends InputStream
         // Re-open the input stream on connection reset
         try {
           startOffset += delegate.getCount();
-          log.info("retrying from offset[%d]", startOffset);
           delegate.close();
-          delegate = new CountingInputStream(objectOpenFunction.open(object, startOffset));
         }
         catch (IOException e) {
-          t.addSuppressed(e);
-          throwAsIOException(t);
+          // ignore this exception
         }
       }
       try {
-        RetryUtils.awaitNextRetry(t, null, i + 1, maxRetry, false);
+        // Wait for the next try
+        RetryUtils.awaitNextRetry(t, null, nTry + 1, maxRetry, false);
+
+        if (isConnectionReset) {
+          log.info("retrying from offset[%d]", startOffset);
+          delegate = new CountingInputStream(objectOpenFunction.open(object, startOffset));
+        }
       }
-      catch (InterruptedException e) {
+      catch (InterruptedException | IOException e) {
         t.addSuppressed(e);
         throwAsIOException(t);
       }
@@ -96,7 +99,7 @@ class RetryingInputStream<T> extends InputStream
     }
   }
 
-  private void throwAsIOException(Throwable t) throws IOException
+  private static void throwAsIOException(Throwable t) throws IOException
   {
     Throwables.propagateIfInstanceOf(t, IOException.class);
     throw new IOException(t);
@@ -105,12 +108,12 @@ class RetryingInputStream<T> extends InputStream
   @Override
   public int read() throws IOException
   {
-    for (int i = 0; i < maxRetry; i++) {
+    for (int nTry = 0; nTry < maxRetry; nTry++) {
       try {
         return delegate.read();
       }
       catch (Throwable t) {
-        waitOrThrow(t, i);
+        waitOrThrow(t, nTry);
       }
     }
     return delegate.read();
@@ -119,12 +122,12 @@ class RetryingInputStream<T> extends InputStream
   @Override
   public int read(byte b[]) throws IOException
   {
-    for (int i = 0; i < maxRetry; i++) {
+    for (int nTry = 0; nTry < maxRetry; nTry++) {
       try {
         return delegate.read(b);
       }
       catch (Throwable t) {
-        waitOrThrow(t, i);
+        waitOrThrow(t, nTry);
       }
     }
     return delegate.read(b);
@@ -133,12 +136,12 @@ class RetryingInputStream<T> extends InputStream
   @Override
   public int read(byte b[], int off, int len) throws IOException
   {
-    for (int i = 0; i < maxRetry; i++) {
+    for (int nTry = 0; nTry < maxRetry; nTry++) {
       try {
         return delegate.read(b, off, len);
       }
       catch (Throwable t) {
-        waitOrThrow(t, i);
+        waitOrThrow(t, nTry);
       }
     }
     return delegate.read(b, off, len);
@@ -147,12 +150,12 @@ class RetryingInputStream<T> extends InputStream
   @Override
   public long skip(long n) throws IOException
   {
-    for (int i = 0; i < maxRetry; i++) {
+    for (int nTry = 0; nTry < maxRetry; nTry++) {
       try {
         return delegate.skip(n);
       }
       catch (Throwable t) {
-        waitOrThrow(t, i);
+        waitOrThrow(t, nTry);
       }
     }
     return delegate.skip(n);
@@ -161,12 +164,12 @@ class RetryingInputStream<T> extends InputStream
   @Override
   public int available() throws IOException
   {
-    for (int i = 0; i < maxRetry; i++) {
+    for (int nTry = 0; nTry < maxRetry; nTry++) {
       try {
         return delegate.available();
       }
       catch (Throwable t) {
-        waitOrThrow(t, i);
+        waitOrThrow(t, nTry);
       }
     }
     return delegate.available();

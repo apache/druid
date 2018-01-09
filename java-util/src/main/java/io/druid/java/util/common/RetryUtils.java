@@ -35,12 +35,19 @@ public class RetryUtils
 
   public interface Task<T>
   {
+    /**
+     * This method is tried up to maxTries times unless it succeeds.
+     */
     T perform() throws Exception;
   }
 
-  public interface OnFailure
+  public interface CleanupAfterFailure
   {
-    void perform() throws Exception;
+    /**
+     * This is called once {@link Task#perform()} fails. Retrying is stopped once this method throws an exception,
+     * so errors inside this method should be ignored if you don't want to stop retrying.
+     */
+    void cleanup() throws Exception;
   }
 
   /**
@@ -65,7 +72,7 @@ public class RetryUtils
       final Predicate<Throwable> shouldRetry,
       final int quietTries,
       final int maxTries,
-      @Nullable final OnFailure onEachFailure,
+      @Nullable final CleanupAfterFailure cleanupAfterFailure,
       @Nullable final String messageOnRetry
   ) throws Exception
   {
@@ -79,8 +86,8 @@ public class RetryUtils
         return f.perform();
       }
       catch (Throwable e) {
-        if (onEachFailure != null) {
-          onEachFailure.perform();
+        if (cleanupAfterFailure != null) {
+          cleanupAfterFailure.cleanup();
         }
         if (nTry < maxTries && shouldRetry.apply(e)) {
           awaitNextRetry(e, messageOnRetry, nTry, maxRetries, nTry <= quietTries);
@@ -94,7 +101,17 @@ public class RetryUtils
 
   public static <T> T retry(final Task<T> f, Predicate<Throwable> shouldRetry, final int maxTries) throws Exception
   {
-    return retry(f, shouldRetry, 0, maxTries, null, null);
+    return retry(f, shouldRetry, 0, maxTries);
+  }
+
+  public static <T> T retry(
+      final Task<T> f,
+      final Predicate<Throwable> shouldRetry,
+      final int quietTries,
+      final int maxTries
+  ) throws Exception
+  {
+    return retry(f, shouldRetry, quietTries, maxTries, null, null);
   }
 
   public static <T> T retry(
@@ -110,7 +127,7 @@ public class RetryUtils
   public static <T> T retry(
       final Task<T> f,
       final Predicate<Throwable> shouldRetry,
-      final OnFailure onEachFailure,
+      final CleanupAfterFailure onEachFailure,
       final int maxTries,
       final String messageOnRetry
   ) throws Exception
