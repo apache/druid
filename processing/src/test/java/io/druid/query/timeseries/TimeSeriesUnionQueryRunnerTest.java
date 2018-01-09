@@ -21,7 +21,6 @@ package io.druid.query.timeseries;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -120,10 +119,7 @@ public class TimeSeriesUnionQueryRunnerTest
         )
     );
     HashMap<String, Object> context = new HashMap<>();
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), context),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
 
     assertExpectedResults(expectedResults, results);
   }
@@ -226,10 +222,8 @@ public class TimeSeriesUnionQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        mergingrunner.run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap()),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results =
+        mergingrunner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
 
     assertExpectedResults(expectedResults, results);
 

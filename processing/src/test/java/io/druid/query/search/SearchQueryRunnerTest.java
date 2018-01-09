@@ -111,8 +111,8 @@ public class SearchQueryRunnerTest
   public void testSearchHitSerDe() throws Exception
   {
     for (SearchHit hit : Arrays.asList(new SearchHit("dim1", "val1"), new SearchHit("dim2", "val2", 3))) {
-      SearchHit read = TestHelper.getJsonMapper().readValue(
-          TestHelper.getJsonMapper().writeValueAsString(hit),
+      SearchHit read = TestHelper.makeJsonMapper().readValue(
+          TestHelper.makeJsonMapper().writeValueAsString(hit),
           SearchHit.class
       );
       Assert.assertEquals(hit, read);
@@ -780,10 +780,7 @@ public class SearchQueryRunnerTest
 
   private void checkSearchQuery(Query searchQuery, QueryRunner runner, List<SearchHit> expectedResults)
   {
-    Iterable<Result<SearchResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(searchQuery), ImmutableMap.of()),
-        Lists.<Result<SearchResultValue>>newArrayList()
-    );
+    Iterable<Result<SearchResultValue>> results = runner.run(QueryPlus.wrap(searchQuery), ImmutableMap.of()).toList();
     List<SearchHit> copy = Lists.newLinkedList(expectedResults);
     for (Result<SearchResultValue> result : results) {
       Assert.assertEquals(DateTimes.of("2011-01-12T00:00:00.000Z"), result.getTimestamp());

@@ -29,7 +29,7 @@
   <parent>
     <groupId>io.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.11.1-SNAPSHOT</version>
+    <version>0.12.0-SNAPSHOT</version>
   </parent>
 
   <dependencies>
@@ -41,6 +41,18 @@
     <dependency>
       <groupId>org.apache.calcite</groupId>
       <artifactId>calcite-core</artifactId>
+      <exclusions>
+        <!--
+          ~ Calcite 1.15.0 uses sketches-core 0.9.0 for a profiling feature:
+          ~ (https://issues.apache.org/jira/browse/CALCITE-1616).
+          ~ This conflicts with druid-datasketches which uses a newer version of sketches-core.
+          ~ Druid does not use this Calcite profiling feature, so we exclude sketches-core here.
+          -->
+        <exclusion>
+          <groupId>com.yahoo.datasketches</groupId>
+          <artifactId>sketches-core</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.calcite</groupId>

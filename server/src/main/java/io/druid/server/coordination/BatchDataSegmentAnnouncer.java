@@ -70,7 +70,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   private final Map<DataSegment, SegmentZNode> segmentLookup = new ConcurrentHashMap<>();
   private final Function<DataSegment, DataSegment> segmentTransformer;
 
-  private final SegmentChangeRequestHistory changes = new SegmentChangeRequestHistory();
+  private final ChangeRequestHistory<DataSegmentChangeRequest> changes = new ChangeRequestHistory();
   private final SegmentZNode dummyZnode;
 
   @Inject
@@ -122,7 +122,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
     DataSegment toAnnounce = segmentTransformer.apply(segment);
 
     synchronized (lock) {
-      changes.addSegmentChangeRequest(new SegmentChangeRequestLoad(toAnnounce));
+      changes.addChangeRequest(new SegmentChangeRequestLoad(toAnnounce));
 
       if (config.isSkipSegmentAnnouncementOnZk()) {
         segmentLookup.put(segment, dummyZnode);
@@ -190,7 +190,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
         return;
       }
 
-      changes.addSegmentChangeRequest(new SegmentChangeRequestDrop(segment));
+      changes.addChangeRequest(new SegmentChangeRequestDrop(segment));
 
       if (config.isSkipSegmentAnnouncementOnZk()) {
         return;
@@ -260,7 +260,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       }
     }
 
-    changes.addSegmentChangeRequests(changesBatch);
+    changes.addChangeRequests(changesBatch);
 
     if (!config.isSkipSegmentAnnouncementOnZk()) {
       segmentZNode.addSegments(batch);
@@ -279,7 +279,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   /**
    * Returns Future that lists the segment load/drop requests since given counter.
    */
-  public ListenableFuture<SegmentChangeRequestsSnapshot> getSegmentChangesSince(SegmentChangeRequestHistory.Counter counter)
+  public ListenableFuture<ChangeRequestsSnapshot<DataSegmentChangeRequest>> getSegmentChangesSince(ChangeRequestHistory.Counter counter)
   {
     if (counter.getCounter() < 0) {
       synchronized (lock) {
@@ -296,8 +296,8 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
             }
         );
 
-        SettableFuture<SegmentChangeRequestsSnapshot> future = SettableFuture.create();
-        future.set(SegmentChangeRequestsSnapshot.success(changes.getLastCounter(), Lists.newArrayList(segments)));
+        SettableFuture<ChangeRequestsSnapshot<DataSegmentChangeRequest>> future = SettableFuture.create();
+        future.set(ChangeRequestsSnapshot.success(changes.getLastCounter(), Lists.newArrayList(segments)));
         return future;
       }
     } else {

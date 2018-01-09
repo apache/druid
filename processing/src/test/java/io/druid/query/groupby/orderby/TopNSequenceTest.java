@@ -96,6 +96,6 @@ public class TopNSequenceTest
 
     Sequence<String> result = new TopNSequence<String>(Sequences.simple(inputs), ordering, limit);
 
-    Assert.assertEquals(expected, Sequences.toList(result, Lists.<String>newArrayList()));
+    Assert.assertEquals(expected, result.toList());
   }
 }

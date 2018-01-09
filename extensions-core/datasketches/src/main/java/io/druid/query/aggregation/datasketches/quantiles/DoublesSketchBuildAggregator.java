@@ -64,12 +64,6 @@ public class DoublesSketchBuildAggregator implements Aggregator
   }
 
   @Override
-  public synchronized void reset()
-  {
-    sketch = UpdateDoublesSketch.builder().setK(size).build();
-  }
-
-  @Override
   public synchronized void close()
   {
     sketch = null;

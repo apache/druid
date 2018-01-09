@@ -26,8 +26,8 @@ import io.druid.segment.DoubleColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.CompressedDoublesIndexedSupplier;
-import io.druid.segment.data.IndexedDoubles;
+import io.druid.segment.data.CompressedColumnarDoublesSuppliers;
+import io.druid.segment.data.ColumnarDoubles;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -99,7 +99,7 @@ public class DoubleGenericColumnPartSerde implements ColumnPartSerde
       @Override
       public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
       {
-        final Supplier<IndexedDoubles> column = CompressedDoublesIndexedSupplier.fromByteBuffer(
+        final Supplier<ColumnarDoubles> column = CompressedColumnarDoublesSuppliers.fromByteBuffer(
             buffer,
             byteOrder
         );

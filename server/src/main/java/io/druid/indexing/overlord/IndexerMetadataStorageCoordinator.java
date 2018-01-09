@@ -97,6 +97,17 @@ public interface IndexerMetadataStorageCoordinator
   ) throws IOException;
 
   /**
+   * Delete pending segments created in the given interval for the given dataSource from the pending segments table.
+   * The {@code created_date} field of the pending segments table is checked to find segments to be deleted.
+   *
+   * @param dataSource     dataSource
+   * @param deleteInterval interval to check the {@code created_date} of pendingSegments
+   *
+   * @return number of deleted pending segments
+   */
+  int deletePendingSegments(String dataSource, Interval deleteInterval);
+
+  /**
    * Attempts to insert a set of segments to the metadata storage. Returns the set of segments actually added (segments
    * with identifiers already in the metadata storage will not be added).
    * <p/>
@@ -121,6 +132,9 @@ public interface IndexerMetadataStorageCoordinator
       DataSourceMetadata endMetadata
   ) throws IOException;
 
+  /**
+   * Read dataSource metadata. Returns null if there is no metadata.
+   */
   DataSourceMetadata getDataSourceMetadata(String dataSource);
 
   /**

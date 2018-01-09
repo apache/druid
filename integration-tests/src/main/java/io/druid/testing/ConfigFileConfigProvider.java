@@ -139,6 +139,12 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
       }
 
       @Override
+      public String getHistoricalUrl()
+      {
+        return historicalUrl;
+      }
+
+      @Override
       public String getMiddleManagerHost()
       {
         return middleManagerHost;
@@ -172,6 +178,18 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
       public String getPassword()
       {
         return password;
+      }
+
+      @Override
+      public Map<String, String> getProperties()
+      {
+        return props;
+      }
+
+      @Override
+      public boolean manageKafkaTopic()
+      {
+        return Boolean.valueOf(props.getOrDefault("manageKafkaTopic", "true"));
       }
     };
   }

@@ -41,7 +41,7 @@ public class DictionaryEncodedColumnPartSerdeTest
                   + " \"byteOrder\": \"BIG_ENDIAN\"\n"
                   + "}\n";
 
-    ObjectMapper mapper = TestHelper.getJsonMapper();
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
 
     DictionaryEncodedColumnPartSerde serde = (DictionaryEncodedColumnPartSerde) mapper.readValue(
         mapper.writeValueAsString(

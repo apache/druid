@@ -30,8 +30,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Intervals;
+import io.druid.segment.TestHelper;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NumberedShardSpec;
@@ -52,7 +52,6 @@ import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
@@ -60,7 +59,7 @@ import java.util.Set;
 
 public class S3DataSegmentFinderTest
 {
-  private static final ObjectMapper mapper = new DefaultObjectMapper();
+  private static final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
   private static final DataSegment SEGMENT_1 = DataSegment
       .builder()
@@ -245,21 +244,6 @@ public class S3DataSegmentFinderTest
 
     final S3DataSegmentFinder s3DataSegmentFinder = new S3DataSegmentFinder(mockS3Client, config, mapper);
     s3DataSegmentFinder.findSegments("", false);
-  }
-
-  @Test(expected = SegmentLoadingException.class)
-  public void testFindSegmentsFail2() throws SegmentLoadingException
-  {
-    final S3DataSegmentFinder s3DataSegmentFinder = new S3DataSegmentFinder(
-        mockS3Client, config, new DefaultObjectMapper());
-
-    try {
-      s3DataSegmentFinder.findSegments("", false);
-    }
-    catch (SegmentLoadingException e) {
-      Assert.assertTrue(e.getCause() instanceof IOException);
-      throw e;
-    }
   }
 
   @Test

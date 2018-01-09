@@ -59,7 +59,7 @@ public class AzureTaskLogs implements TaskLogs
     try {
       AzureUtils.retryAzureOperation(
           (Callable<Void>) () -> {
-            azureStorage.uploadBlob(logFile, config.getContainer(), taskKey);
+            azureStorage.uploadBlob(logFile, config.getContainer(), taskKey, true);
             return null;
           },
           config.getMaxTries()

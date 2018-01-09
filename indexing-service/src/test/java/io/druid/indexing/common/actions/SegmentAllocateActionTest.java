@@ -138,16 +138,7 @@ public class SegmentAllocateActionTest
 
     final TaskLock partyLock = Iterables.getOnlyElement(
         FluentIterable.from(taskActionTestKit.getTaskLockbox().findLocksForTask(task))
-                      .filter(
-                          new Predicate<TaskLock>()
-                          {
-                            @Override
-                            public boolean apply(TaskLock input)
-                            {
-                              return input.getInterval().contains(PARTY_TIME);
-                            }
-                          }
-                      )
+                      .filter(input -> input.getInterval().contains(PARTY_TIME))
     );
 
     assertSameIdentifier(

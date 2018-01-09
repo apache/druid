@@ -196,7 +196,7 @@ public class TransformSpecTest
         )
     );
 
-    final ObjectMapper jsonMapper = TestHelper.getJsonMapper();
+    final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     Assert.assertEquals(
         transformSpec,
         jsonMapper.readValue(jsonMapper.writeValueAsString(transformSpec), TransformSpec.class)

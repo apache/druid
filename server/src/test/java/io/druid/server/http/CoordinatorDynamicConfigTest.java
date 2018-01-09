@@ -34,7 +34,7 @@ import java.util.Set;
  */
 public class CoordinatorDynamicConfigTest
 {
-  private final ObjectMapper mapper = TestHelper.getJsonMapper();
+  private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
   @Test
   public void testSerde() throws Exception
@@ -183,7 +183,8 @@ public class CoordinatorDynamicConfigTest
 
     Assert.assertEquals(
         current,
-        new CoordinatorDynamicConfig.Builder(null, null, null, null, null, null, null, null, null, null, null).build(current)
+        new CoordinatorDynamicConfig.Builder(null, null, null, null, null, null, null, null, null, null, null, null)
+            .build(current)
     );
   }
 

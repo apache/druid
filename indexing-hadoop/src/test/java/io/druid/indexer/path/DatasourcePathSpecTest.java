@@ -48,6 +48,7 @@ import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
+import io.druid.segment.TestHelper;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.server.DruidNode;
@@ -178,7 +179,7 @@ public class DatasourcePathSpecTest
   {
     HadoopDruidIndexerConfig hadoopIndexerConfig = makeHadoopDruidIndexerConfig();
 
-    ObjectMapper mapper = new DefaultObjectMapper();
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
 
     DatasourcePathSpec pathSpec = new DatasourcePathSpec(
         mapper,

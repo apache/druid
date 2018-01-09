@@ -25,7 +25,7 @@ import io.druid.segment.FloatColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.CompressedFloatsIndexedSupplier;
+import io.druid.segment.data.CompressedColumnarFloatsSupplier;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -99,7 +99,7 @@ public class FloatGenericColumnPartSerde implements ColumnPartSerde
       @Override
       public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
       {
-        final CompressedFloatsIndexedSupplier column = CompressedFloatsIndexedSupplier.fromByteBuffer(
+        final CompressedColumnarFloatsSupplier column = CompressedColumnarFloatsSupplier.fromByteBuffer(
             buffer,
             byteOrder
         );

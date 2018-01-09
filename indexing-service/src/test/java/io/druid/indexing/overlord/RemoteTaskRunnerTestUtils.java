@@ -21,6 +21,7 @@ package io.druid.indexing.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.metamx.http.client.HttpClient;
@@ -28,7 +29,7 @@ import io.druid.common.guava.DSuppliers;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.cache.PathChildrenCacheFactory;
 import io.druid.indexing.common.IndexingServiceCondition;
-import io.druid.indexing.common.TaskLocation;
+import io.druid.indexer.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.task.Task;
@@ -170,10 +171,17 @@ public class RemoteTaskRunnerTestUtils
   {
     cf.delete().forPath(joiner.join(tasksPath, workerId, task.getId()));
 
+    final String taskStatusPath = joiner.join(statusPath, workerId, task.getId());
     TaskAnnouncement taskAnnouncement = TaskAnnouncement.create(task, TaskStatus.running(task.getId()), DUMMY_LOCATION);
     cf.create()
       .creatingParentsIfNeeded()
-      .forPath(joiner.join(statusPath, workerId, task.getId()), jsonMapper.writeValueAsBytes(taskAnnouncement));
+      .forPath(taskStatusPath, jsonMapper.writeValueAsBytes(taskAnnouncement));
+
+    Preconditions.checkNotNull(
+        cf.checkExists().forPath(taskStatusPath),
+        "Failed to write status on [%s]",
+        taskStatusPath
+    );
   }
 
   void mockWorkerCompleteSuccessfulTask(final String workerId, final Task task) throws Exception

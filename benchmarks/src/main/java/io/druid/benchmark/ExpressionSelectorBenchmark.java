@@ -26,7 +26,6 @@ import io.druid.benchmark.datagen.SegmentGenerator;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.expression.TestExprMacroTable;
@@ -58,7 +57,6 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -145,20 +143,16 @@ public class ExpressionSelectorBenchmark
         null
     );
 
-    final List<?> results = Sequences.toList(
-        Sequences.map(
-            cursors,
-            cursor -> {
-              final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
-              while (!cursor.isDone()) {
-                blackhole.consume(selector.getLong());
-                cursor.advance();
-              }
-              return null;
-            }
-        ),
-        new ArrayList<>()
-    );
+    final List<?> results = cursors
+        .map(cursor -> {
+          final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
+          while (!cursor.isDone()) {
+            blackhole.consume(selector.getLong());
+            cursor.advance();
+          }
+          return null;
+        })
+        .toList();
 
     blackhole.consume(results);
   }
@@ -175,26 +169,21 @@ public class ExpressionSelectorBenchmark
         null
     );
 
-    final List<?> results = Sequences.toList(
-        Sequences.map(
-            cursors,
-            cursor -> {
-              final DimensionSelector selector = cursor
-                  .getColumnSelectorFactory()
-                  .makeDimensionSelector(
-                      new ExtractionDimensionSpec(
-                          Column.TIME_COLUMN_NAME,
-                          "v",
-                          new TimeFormatExtractionFn(null, null, null, Granularities.HOUR, true)
-                      )
-                  );
-
-              consumeDimension(cursor, selector, blackhole);
-              return null;
-            }
-        ),
-        new ArrayList<>()
-    );
+    final List<?> results = cursors
+        .map(cursor -> {
+          final DimensionSelector selector = cursor
+              .getColumnSelectorFactory()
+              .makeDimensionSelector(
+                  new ExtractionDimensionSpec(
+                      Column.TIME_COLUMN_NAME,
+                      "v",
+                      new TimeFormatExtractionFn(null, null, null, Granularities.HOUR, true)
+                  )
+              );
+          consumeDimension(cursor, selector, blackhole);
+          return null;
+        })
+        .toList();
 
     blackhole.consume(results);
   }
@@ -211,20 +200,16 @@ public class ExpressionSelectorBenchmark
         null
     );
 
-    final List<Long> results = Sequences.toList(
-        Sequences.map(
-            cursors,
-            cursor -> {
-              long count = 0L;
-              while (!cursor.isDone()) {
-                count++;
-                cursor.advance();
-              }
-              return count;
-            }
-        ),
-        new ArrayList<>()
-    );
+    final List<Long> results = cursors
+        .map(cursor -> {
+          long count = 0L;
+          while (!cursor.isDone()) {
+            count++;
+            cursor.advance();
+          }
+          return count;
+        })
+        .toList();
 
     long count = 0L;
     for (Long result : results) {
@@ -255,17 +240,13 @@ public class ExpressionSelectorBenchmark
         null
     );
 
-    final List<?> results = Sequences.toList(
-        Sequences.map(
-            cursors,
-            cursor -> {
-              final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
-              consumeLong(cursor, selector, blackhole);
-              return null;
-            }
-        ),
-        new ArrayList<>()
-    );
+    final List<?> results = cursors
+        .map(cursor -> {
+          final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
+          consumeLong(cursor, selector, blackhole);
+          return null;
+        })
+        .toList();
 
     blackhole.consume(results);
   }
@@ -291,20 +272,16 @@ public class ExpressionSelectorBenchmark
         null
     );
 
-    final List<?> results = Sequences.toList(
-        Sequences.map(
-            cursors,
-            cursor -> {
-              final DimensionSelector selector = cursor.getColumnSelectorFactory().makeDimensionSelector(
-                  new DefaultDimensionSpec("v", "v", ValueType.STRING)
-              );
+    final List<?> results = cursors
+        .map(cursor -> {
+          final DimensionSelector selector = cursor
+              .getColumnSelectorFactory()
+              .makeDimensionSelector(new DefaultDimensionSpec("v", "v", ValueType.STRING));
 
-              consumeDimension(cursor, selector, blackhole);
-              return null;
-            }
-        ),
-        new ArrayList<>()
-    );
+          consumeDimension(cursor, selector, blackhole);
+          return null;
+        })
+        .toList();
 
     blackhole.consume(results);
   }
@@ -321,20 +298,16 @@ public class ExpressionSelectorBenchmark
         null
     );
 
-    final List<?> results = Sequences.toList(
-        Sequences.map(
-            cursors,
-            cursor -> {
-              final DimensionSelector selector = cursor
-                  .getColumnSelectorFactory()
-                  .makeDimensionSelector(new ExtractionDimensionSpec("x", "v", StrlenExtractionFn.instance()));
+    final List<?> results = cursors
+        .map(cursor -> {
+          final DimensionSelector selector = cursor
+              .getColumnSelectorFactory()
+              .makeDimensionSelector(new ExtractionDimensionSpec("x", "v", StrlenExtractionFn.instance()));
 
-              consumeDimension(cursor, selector, blackhole);
-              return null;
-            }
-        ),
-        new ArrayList<>()
-    );
+          consumeDimension(cursor, selector, blackhole);
+          return null;
+        })
+        .toList();
 
     blackhole.consume(results);
   }
