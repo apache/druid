@@ -21,7 +21,6 @@ package io.druid.server.coordinator.helper;
 
 import com.google.inject.Inject;
 import io.druid.client.indexing.IndexingServiceClient;
-import io.druid.indexer.TaskStatusPlus;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.coordinator.CoordinatorCompactionConfig;
@@ -68,21 +67,25 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
         Map<String, CoordinatorCompactionConfig> compactionConfigs = compactionConfigList
             .stream()
             .collect(Collectors.toMap(CoordinatorCompactionConfig::getDataSource, Function.identity()));
-        final List<TaskStatusPlus> runningCompactTasks = indexingServiceClient
+        final int numRunningCompactTasks = indexingServiceClient
             .getRunningTasks()
             .stream()
             .filter(status -> status.getType().equals("compact"))
-            .collect(Collectors.toList());
+            .collect(Collectors.toList())
+            .size();
         final CompactionSegmentIterator iterator = policy.reset(compactionConfigs, dataSources);
 
         final int compactionTaskCapacity = (int) Math.min(
             indexingServiceClient.getTotalWorkerCapacity() * dynamicConfig.getCompactionTaskSlotRatio(),
             dynamicConfig.getMaxCompactionTaskSlots()
         );
-        final int numAvailableCompactionTaskSlots = runningCompactTasks.size() > 0 ?
-                                                    compactionTaskCapacity - runningCompactTasks.size() :
-                                                    Math.max(1, compactionTaskCapacity - runningCompactTasks.size());
-        LOG.info("Running tasks [%d/%d]", runningCompactTasks.size(), compactionTaskCapacity);
+        final int numAvailableCompactionTaskSlots = numRunningCompactTasks > 0 ?
+                                                    compactionTaskCapacity - numRunningCompactTasks :
+                                                    // compactionTaskCapacity might be 0 if totalWorkerCapacity is low.
+                                                    // This guarantees that at least one slot is available if
+                                                    // compaction is enabled and numRunningCompactTasks is 0.
+                                                    Math.max(1, compactionTaskCapacity - numRunningCompactTasks);
+        LOG.info("Running tasks [%d/%d]", numRunningCompactTasks, compactionTaskCapacity);
         if (numAvailableCompactionTaskSlots > 0) {
           stats.accumulate(doRun(compactionConfigs, numAvailableCompactionTaskSlots, iterator));
         } else {
@@ -106,9 +109,9 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
       CompactionSegmentIterator iterator
   )
   {
-    int numSubmittedCompactionTasks = 0;
+    int numSubmittedTasks = 0;
 
-    while (iterator.hasNext() && numSubmittedCompactionTasks < numAvailableCompactionTaskSlots) {
+    for (; iterator.hasNext() && numSubmittedTasks < numAvailableCompactionTaskSlots; numSubmittedTasks++) {
       final List<DataSegment> segmentsToCompact = iterator.next();
 
       final String dataSourceName = segmentsToCompact.get(0).getDataSource();
@@ -121,11 +124,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
             config.getTuningConfig(),
             config.getTaskContext()
         );
-        LOG.info("Submit a compactTask[%s] for segments[%s]", taskId, segmentsToCompact);
-
-        if (++numSubmittedCompactionTasks == numAvailableCompactionTaskSlots) {
-          break;
-        }
+        LOG.info("Submitted a compactTask[%s] for segments[%s]", taskId, segmentsToCompact);
       } else if (segmentsToCompact.size() == 1) {
         throw new ISE("Found one segments[%s] to compact", segmentsToCompact);
       } else {
@@ -133,7 +132,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
       }
     }
 
-    return makeStats(numSubmittedCompactionTasks, iterator);
+    return makeStats(numSubmittedTasks, iterator);
   }
 
   private CoordinatorStats makeStats(int numCompactionTasks, CompactionSegmentIterator iterator)
@@ -148,27 +147,5 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
         }
     );
     return stats;
-  }
-
-  public static class SegmentsToCompact
-  {
-    private final List<DataSegment> segments;
-    private final long byteSize;
-
-    SegmentsToCompact(List<DataSegment> segments, long byteSize)
-    {
-      this.segments = segments;
-      this.byteSize = byteSize;
-    }
-
-    public List<DataSegment> getSegments()
-    {
-      return segments;
-    }
-
-    public long getByteSize()
-    {
-      return byteSize;
-    }
   }
 }

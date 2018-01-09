@@ -318,7 +318,7 @@ public class DruidCoordinator
     return configManager.watch(
         CoordinatorDynamicConfig.CONFIG_KEY,
         CoordinatorDynamicConfig.class,
-        new CoordinatorDynamicConfig.Builder().build()
+        CoordinatorDynamicConfig.builder().build()
     ).get();
   }
 

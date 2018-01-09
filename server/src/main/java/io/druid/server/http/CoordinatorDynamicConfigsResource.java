@@ -19,12 +19,14 @@
 
 package io.druid.server.http;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
 import io.druid.common.config.JacksonConfigManager;
+import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.Intervals;
 import io.druid.server.coordinator.CoordinatorCompactionConfig;
 import io.druid.server.coordinator.CoordinatorDynamicConfig;
@@ -58,15 +60,18 @@ public class CoordinatorDynamicConfigsResource
 {
   private final JacksonConfigManager manager;
   private final AuditManager auditManager;
+  private final ObjectMapper jsonMapper;
 
   @Inject
   public CoordinatorDynamicConfigsResource(
       JacksonConfigManager manager,
-      AuditManager auditManager
+      AuditManager auditManager,
+      @Json ObjectMapper jsonMapper
   )
   {
     this.manager = manager;
     this.auditManager = auditManager;
+    this.jsonMapper = jsonMapper;
   }
 
   @GET
@@ -128,13 +133,13 @@ public class CoordinatorDynamicConfigsResource
           .stream()
           .collect(Collectors.toMap(CoordinatorCompactionConfig::getDataSource, Function.identity()));
       newConfigs.put(dataSource, newConfig);
-      newDynamicConfig = new CoordinatorDynamicConfig.Builder()
-          .withCompactionConfigs(ImmutableList.copyOf(newConfigs.values()))
-          .build(current);
+      newDynamicConfig = CoordinatorDynamicConfig.builder()
+                                                 .withCompactionConfigs(ImmutableList.copyOf(newConfigs.values()))
+                                                 .build(current);
     } else {
-      newDynamicConfig = new CoordinatorDynamicConfig.Builder()
-          .withCompactionConfigs(ImmutableList.of(newConfig))
-          .build();
+      newDynamicConfig = CoordinatorDynamicConfig.builder()
+                                                 .withCompactionConfigs(ImmutableList.of(newConfig))
+                                                 .build();
     }
 
     if (!manager.set(
@@ -205,9 +210,9 @@ public class CoordinatorDynamicConfigsResource
 
     if (!manager.set(
         CoordinatorDynamicConfig.CONFIG_KEY,
-        new CoordinatorDynamicConfig.Builder()
-            .withCompactionConfigs(ImmutableList.copyOf(configs.values()))
-            .build(current),
+        CoordinatorDynamicConfig.builder()
+                                .withCompactionConfigs(ImmutableList.copyOf(configs.values()))
+                                .build(current),
         new AuditInfo(author, comment, req.getRemoteAddr())
     )) {
       return Response.status(Response.Status.BAD_REQUEST).build();

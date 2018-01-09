@@ -226,7 +226,7 @@ public class DruidCoordinatorRuntimeParams
       this.replicationManager = null;
       this.emitter = null;
       this.stats = new CoordinatorStats();
-      this.coordinatorDynamicConfig = new CoordinatorDynamicConfig.Builder().build();
+      this.coordinatorDynamicConfig = CoordinatorDynamicConfig.builder().build();
       this.balancerReferenceTimestamp = DateTimes.nowUtc();
     }
 

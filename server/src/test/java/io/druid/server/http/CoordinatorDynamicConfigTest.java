@@ -76,7 +76,7 @@ public class CoordinatorDynamicConfigTest
                      + "  \"replicationThrottleLimit\": 1,\n"
                      + "  \"balancerComputeThreads\": 2, \n"
                      + "  \"emitBalancingStats\": true,\n"
-                     + "  \"killDataSourceWhitelist\": \" test1 ,test2 \", \n"
+                     + "  \"killDataSourceWhitelist\": \"test1, test2\", \n"
                      + "  \"maxSegmentsInNodeLoadingQueue\": 1\n"
                      + "}\n";
 

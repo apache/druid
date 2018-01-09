@@ -287,7 +287,9 @@ public class DruidCoordinatorSegmentCompactorTest
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
         .newBuilder()
         .withDataSources(dataSources)
-        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withCompactionConfigs(compactionConfigs).build())
+        .withDynamicConfigs(
+            CoordinatorDynamicConfig.builder().withCompactionConfigs(compactionConfigs).build()
+        )
         .build();
     return compactor.run(params).getCoordinatorStats();
   }

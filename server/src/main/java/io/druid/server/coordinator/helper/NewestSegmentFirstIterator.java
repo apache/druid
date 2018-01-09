@@ -29,7 +29,6 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.coordinator.CoordinatorCompactionConfig;
-import io.druid.server.coordinator.helper.DruidCoordinatorSegmentCompactor.SegmentsToCompact;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
@@ -334,7 +333,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     if (segmentsToCompact.size() == 0 || segmentsToCompact.size() == 1) {
       if (Intervals.isEmpty(searchInterval)) {
         // We found nothing to compact. End here.
-        return Pair.of(intervalToSearch, new SegmentsToCompact(ImmutableList.of(), 0));
+        return Pair.of(intervalToSearch, new SegmentsToCompact(ImmutableList.of()));
       } else {
         // We found only 1 segment. Further find segments for the remaining interval.
         return findSegmentsToCompact(timeline, searchInterval, searchEnd, config);
@@ -380,7 +379,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       }
     }
 
-    return Pair.of(searchInterval, new SegmentsToCompact(segmentsToCompact, totalSegmentsToCompactBytes));
+    return Pair.of(searchInterval, new SegmentsToCompact(segmentsToCompact));
   }
 
   /**
@@ -445,6 +444,21 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     String getDataSource()
     {
       return segments.get(0).getDataSource();
+    }
+  }
+
+  private static class SegmentsToCompact
+  {
+    private final List<DataSegment> segments;
+
+    SegmentsToCompact(List<DataSegment> segments)
+    {
+      this.segments = segments;
+    }
+
+    public List<DataSegment> getSegments()
+    {
+      return segments;
     }
   }
 }
