@@ -139,9 +139,9 @@ public class HttpClientModule implements Module
       final DruidHttpClientConfig config = getConfigProvider().get().get();
 
       if (config.getUnusedConnectionTimeout() != null &&
-          config.getUnusedConnectionTimeout().isLongerThan(config.getReadTimeout())) {
+          config.getUnusedConnectionTimeout().compareTo(config.getReadTimeout()) >= 0) {
         throw new RE(
-            "Ohh no! unusedConnectionTimeout[%s] is longer than readTimeout[%s]",
+            "Ohh no! unusedConnectionTimeout[%s] is greater than readTimeout[%s]",
             config.getUnusedConnectionTimeout(),
             config.getReadTimeout()
         );
