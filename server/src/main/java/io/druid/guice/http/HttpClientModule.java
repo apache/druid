@@ -33,7 +33,6 @@ import io.druid.guice.annotations.EscalatedGlobal;
 import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.RE;
 import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.logger.Logger;
 import io.druid.server.security.Escalator;
 
 import java.lang.annotation.Annotation;
@@ -43,7 +42,6 @@ import java.util.Set;
  */
 public class HttpClientModule implements Module
 {
-  private static final Logger LOG = new Logger(HttpClientModule.class);
   public static HttpClientModule global()
   {
     return new HttpClientModule("druid.global.http", Global.class);
