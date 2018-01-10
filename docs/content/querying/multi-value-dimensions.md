@@ -17,7 +17,7 @@ multiValueDelimiter:
 
 That means col1's delimiter is "\u0001", col2's delimiter is "\u0002" and col3 has no delimiter(do not split).
 If the multiValueDelimiter is null, the listDelimiter goes into effect.
-If the multiValueDelimiter is empty, that means disable the listDelimiter.
+If the multiValueDelimiter is an empty map, that means disable the listDelimiter.
 ```
 
 This document describes the behavior of groupBy (topN has similar behavior) queries on multi-value dimensions when they

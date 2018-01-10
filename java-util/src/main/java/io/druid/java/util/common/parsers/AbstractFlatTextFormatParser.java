@@ -28,6 +28,7 @@ import io.druid.java.util.common.collect.Utils;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -54,7 +55,6 @@ public abstract class AbstractFlatTextFormatParser implements Parser<String, Obj
   }
 
   private final String listDelimiter;
-  private final Map<String, String> multiValueDelimiter;
   private final Maps.EntryTransformer<String, String, Object> multiValueTransformer;
   private final boolean hasHeaderRow;
   private final int maxSkipHeaderRows;
@@ -72,21 +72,25 @@ public abstract class AbstractFlatTextFormatParser implements Parser<String, Obj
   )
   {
     this.listDelimiter = listDelimiter != null ? listDelimiter : Parsers.DEFAULT_LIST_DELIMITER;
-    this.multiValueDelimiter = multiValueDelimiter;
+    Map<String, Splitter> deliSpliterMap = new HashMap<>();
     this.multiValueTransformer = new Maps.EntryTransformer<String, String, Object>()
     {
       @Override
       public Object transformEntry(String key, String value)
       {
         String deli = null;
-        if (AbstractFlatTextFormatParser.this.multiValueDelimiter == null) {
+        if (multiValueDelimiter == null) {
           deli = AbstractFlatTextFormatParser.this.listDelimiter;
-        } else if (AbstractFlatTextFormatParser.this.multiValueDelimiter.get(key) != null) {
-          deli = AbstractFlatTextFormatParser.this.multiValueDelimiter.get(key);
+        } else if (multiValueDelimiter.get(key) != null) {
+          deli = multiValueDelimiter.get(key);
         }
 
         if (deli != null && value.contains(deli)) {
-          Splitter multiSplitter = Splitter.on(deli);
+          Splitter multiSplitter = deliSpliterMap.get(deli);
+          if (multiSplitter == null) {
+            multiSplitter = Splitter.on(deli);
+            deliSpliterMap.put(deli, multiSplitter);
+          }
           return StreamSupport.stream(multiSplitter.split(value).spliterator(), false)
                   .map(Strings::emptyToNull)
                   .collect(Collectors.toList());
