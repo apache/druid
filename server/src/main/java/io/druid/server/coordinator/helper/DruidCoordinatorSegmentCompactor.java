@@ -40,6 +40,8 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
   static final String COMPACT_TASK_COUNT = "compactTaskCount";
   static final String SEGMENTS_WAIT_COMPACT = "segmentsWaitCompact";
 
+  // Should be synced with CompactionTask.TYPE
+  private static final String COMPACT_TASK_TYPE = "compact";
   private static final Logger LOG = new Logger(DruidCoordinatorSegmentCompactor.class);
 
   private final CompactionSegmentSearchPolicy policy = new NewestSegmentFirstPolicy();
@@ -70,7 +72,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
         final int numRunningCompactTasks = indexingServiceClient
             .getRunningTasks()
             .stream()
-            .filter(status -> status.getType().equals("compact"))
+            .filter(status -> status.getType().equals(COMPACT_TASK_TYPE))
             .collect(Collectors.toList())
             .size();
         final CompactionSegmentIterator iterator = policy.reset(compactionConfigs, dataSources);
@@ -84,7 +86,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
                                                     // compactionTaskCapacity might be 0 if totalWorkerCapacity is low.
                                                     // This guarantees that at least one slot is available if
                                                     // compaction is enabled and numRunningCompactTasks is 0.
-                                                    Math.max(1, compactionTaskCapacity - numRunningCompactTasks);
+                                                    Math.max(1, compactionTaskCapacity);
         LOG.info("Running tasks [%d/%d]", numRunningCompactTasks, compactionTaskCapacity);
         if (numAvailableCompactionTaskSlots > 0) {
           stats.accumulate(doRun(compactionConfigs, numAvailableCompactionTaskSlots, iterator));
