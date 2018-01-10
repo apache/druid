@@ -58,7 +58,7 @@ public final class ArrayBasedIndexedInts implements IndexedInts
   }
 
   /**
-   * Sets the values from the given array. The given values array is not reused and not prone to be muted later.
+   * Sets the values from the given array. The given values array is not reused and not prone to be mutated later.
    * Instead, the values from this array are copied into an array which is internal to ArrayBasedIndexedInts.
    */
   public void setValues(int[] values, int size)
