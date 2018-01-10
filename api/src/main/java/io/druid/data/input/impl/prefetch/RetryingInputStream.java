@@ -73,12 +73,13 @@ class RetryingInputStream<T> extends InputStream
     if (isConnectionReset || retryCondition.apply(t)) {
       if (isConnectionReset) {
         // Re-open the input stream on connection reset
+        startOffset += delegate.getCount();
         try {
-          startOffset += delegate.getCount();
           delegate.close();
         }
         catch (IOException e) {
           // ignore this exception
+          log.warn(e, "Error while closing the delegate input stream");
         }
       }
       try {
