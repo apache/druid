@@ -22,37 +22,37 @@ public class ConciseSetUtils
    * <tt>31 * (1 << 25)</tt>, followed by a literal with 30 0's and the
    * MSB (31<sup>st</sup> bit) equal to 1
    */
-  public final static int MAX_ALLOWED_INTEGER = 31 * (1 << 25) + 30; // 1040187422
+  public static final int MAX_ALLOWED_INTEGER = 31 * (1 << 25) + 30; // 1040187422
 
   /**
    * The lowest representable integer.
    */
-  public final static int MIN_ALLOWED_SET_BIT = 0;
+  public static final int MIN_ALLOWED_SET_BIT = 0;
 
   /**
    * Maximum number of representable bits within a literal
    */
-  public final static int MAX_LITERAL_LENGTH = 31;
+  public static final int MAX_LITERAL_LENGTH = 31;
 
   /**
    * Literal that represents all bits set to 1 (and MSB = 1)
    */
-  public final static int ALL_ONES_LITERAL = 0xFFFFFFFF;
+  public static final int ALL_ONES_LITERAL = 0xFFFFFFFF;
 
   /**
    * Literal that represents all bits set to 0 (and MSB = 1)
    */
-  public final static int ALL_ZEROS_LITERAL = 0x80000000;
+  public static final int ALL_ZEROS_LITERAL = 0x80000000;
 
   /**
    * All bits set to 1 and MSB = 0
    */
-  public final static int ALL_ONES_WITHOUT_MSB = 0x7FFFFFFF;
+  public static final int ALL_ONES_WITHOUT_MSB = 0x7FFFFFFF;
 
   /**
    * Sequence bit
    */
-  public final static int SEQUENCE_BIT = 0x40000000;
+  public static final int SEQUENCE_BIT = 0x40000000;
 
   /**
    * Calculates the modulus division by 31 in a faster way than using <code>n % 31</code>

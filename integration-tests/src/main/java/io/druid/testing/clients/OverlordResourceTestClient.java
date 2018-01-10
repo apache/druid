@@ -49,7 +49,7 @@ import java.util.concurrent.Callable;
 
 public class OverlordResourceTestClient
 {
-  private final static Logger LOG = new Logger(OverlordResourceTestClient.class);
+  private static final Logger LOG = new Logger(OverlordResourceTestClient.class);
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
   private final String indexer;

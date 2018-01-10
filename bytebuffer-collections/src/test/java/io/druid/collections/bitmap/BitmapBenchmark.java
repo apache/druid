@@ -45,15 +45,15 @@ public class BitmapBenchmark
 {
   public static final int LENGTH = 500_000;
   public static final int SIZE = 10_000;
-  final static ImmutableConciseSet concise[] = new ImmutableConciseSet[SIZE];
-  final static ImmutableConciseSet offheapConcise[] = new ImmutableConciseSet[SIZE];
-  final static ImmutableRoaringBitmap roaring[] = new ImmutableRoaringBitmap[SIZE];
-  final static ImmutableRoaringBitmap immutableRoaring[] = new ImmutableRoaringBitmap[SIZE];
-  final static ImmutableRoaringBitmap offheapRoaring[] = new ImmutableRoaringBitmap[SIZE];
-  final static ImmutableBitmap genericConcise[] = new ImmutableBitmap[SIZE];
-  final static ImmutableBitmap genericRoaring[] = new ImmutableBitmap[SIZE];
-  final static ConciseBitmapFactory conciseFactory = new ConciseBitmapFactory();
-  final static RoaringBitmapFactory roaringFactory = new RoaringBitmapFactory();
+  static final ImmutableConciseSet concise[] = new ImmutableConciseSet[SIZE];
+  static final ImmutableConciseSet offheapConcise[] = new ImmutableConciseSet[SIZE];
+  static final ImmutableRoaringBitmap roaring[] = new ImmutableRoaringBitmap[SIZE];
+  static final ImmutableRoaringBitmap immutableRoaring[] = new ImmutableRoaringBitmap[SIZE];
+  static final ImmutableRoaringBitmap offheapRoaring[] = new ImmutableRoaringBitmap[SIZE];
+  static final ImmutableBitmap genericConcise[] = new ImmutableBitmap[SIZE];
+  static final ImmutableBitmap genericRoaring[] = new ImmutableBitmap[SIZE];
+  static final ConciseBitmapFactory conciseFactory = new ConciseBitmapFactory();
+  static final RoaringBitmapFactory roaringFactory = new RoaringBitmapFactory();
   static Random rand = new Random(0);
   static long totalConciseBytes = 0;
   static long totalRoaringBytes = 0;

@@ -80,9 +80,9 @@ import java.util.stream.Collectors;
  */
 public class GroupByQuery extends BaseQuery<Row>
 {
-  public final static String CTX_KEY_SORT_BY_DIMS_FIRST = "sortByDimsFirst";
+  public static final String CTX_KEY_SORT_BY_DIMS_FIRST = "sortByDimsFirst";
 
-  private final static Comparator<Row> NON_GRANULAR_TIME_COMP = (Row lhs, Row rhs) -> Longs.compare(
+  private static final Comparator<Row> NON_GRANULAR_TIME_COMP = (Row lhs, Row rhs) -> Longs.compare(
       lhs.getTimestampFromEpoch(),
       rhs.getTimestampFromEpoch()
   );

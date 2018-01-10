@@ -50,7 +50,7 @@ public class KafkaEmitter implements Emitter
 {
   private static Logger log = new Logger(KafkaEmitter.class);
 
-  private final static int DEFAULT_RETRIES = 3;
+  private static final int DEFAULT_RETRIES = 3;
   private final AtomicLong metricLost;
   private final AtomicLong alertLost;
   private final AtomicLong invalidLost;

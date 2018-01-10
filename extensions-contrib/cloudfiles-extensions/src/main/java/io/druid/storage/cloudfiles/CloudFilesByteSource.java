@@ -29,8 +29,8 @@ import java.io.InputStream;
 public class CloudFilesByteSource extends ByteSource
 {
 
-  final private CloudFilesObjectApiProxy objectApi;
-  final private String path;
+  private final CloudFilesObjectApiProxy objectApi;
+  private final String path;
   private Payload payload;
 
   public CloudFilesByteSource(CloudFilesObjectApiProxy objectApi, String path)

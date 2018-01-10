@@ -863,8 +863,8 @@ public class TaskLockbox
 
   static class TaskLockPosse
   {
-    final private TaskLock taskLock;
-    final private Set<String> taskIds;
+    private final TaskLock taskLock;
+    private final Set<String> taskIds;
 
     TaskLockPosse(TaskLock taskLock)
     {

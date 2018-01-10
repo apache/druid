@@ -29,36 +29,36 @@ import java.util.List;
 
 public class GraphiteEmitterConfig
 {
-  public final static String PLAINTEXT_PROTOCOL = "plaintext";
-  public final static String PICKLE_PROTOCOL = "pickle";
-  private final static int DEFAULT_BATCH_SIZE = 100;
+  public static final String PLAINTEXT_PROTOCOL = "plaintext";
+  public static final String PICKLE_PROTOCOL = "pickle";
+  private static final int DEFAULT_BATCH_SIZE = 100;
   private static final Long DEFAULT_FLUSH_PERIOD = (long) (60 * 1000); // flush every one minute
-  private final static long DEFAULT_GET_TIMEOUT = 1000; // default wait for get operations on the queue 1 sec
+  private static final long DEFAULT_GET_TIMEOUT = 1000; // default wait for get operations on the queue 1 sec
 
   @JsonProperty
-  final private String hostname;
+  private final String hostname;
   @JsonProperty
-  final private int port;
+  private final int port;
   @JsonProperty
-  final private int batchSize;
+  private final int batchSize;
   @JsonProperty
-  final private String protocol;
+  private final String protocol;
   @JsonProperty
-  final private Long flushPeriod;
+  private final Long flushPeriod;
   @JsonProperty
-  final private Integer maxQueueSize;
+  private final Integer maxQueueSize;
   @JsonProperty("eventConverter")
-  final private DruidToGraphiteEventConverter druidToGraphiteEventConverter;
+  private final DruidToGraphiteEventConverter druidToGraphiteEventConverter;
   @JsonProperty
-  final private List<String> alertEmitters;
+  private final List<String> alertEmitters;
   @JsonProperty
-  final private List<String> requestLogEmitters;
+  private final List<String> requestLogEmitters;
 
   @JsonProperty
-  final private Long emitWaitTime;
+  private final Long emitWaitTime;
   //waiting up to the specified wait time if necessary for an event to become available.
   @JsonProperty
-  final private Long waitForEventTime;
+  private final Long waitForEventTime;
 
   @Override
   public boolean equals(Object o)

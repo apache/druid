@@ -174,8 +174,8 @@ public class IngestSegmentFirehoseFactoryTest
 
     final IndexerSQLMetadataStorageCoordinator mdc = new IndexerSQLMetadataStorageCoordinator(null, null, null)
     {
-      final private Set<DataSegment> published = Sets.newHashSet();
-      final private Set<DataSegment> nuked = Sets.newHashSet();
+      private final Set<DataSegment> published = Sets.newHashSet();
+      private final Set<DataSegment> nuked = Sets.newHashSet();
 
       @Override
       public List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval) throws IOException

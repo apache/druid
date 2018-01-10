@@ -163,7 +163,7 @@ public class MapVirtualColumn implements VirtualColumn
     }
   }
 
-  private static abstract class MapVirtualColumnValueSelector<T> implements ColumnValueSelector<T>
+  private abstract static class MapVirtualColumnValueSelector<T> implements ColumnValueSelector<T>
   {
     final DimensionSelector keySelector;
     final DimensionSelector valueSelector;

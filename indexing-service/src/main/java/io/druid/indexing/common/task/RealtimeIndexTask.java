@@ -87,7 +87,7 @@ public class RealtimeIndexTask extends AbstractTask
   public static final String CTX_KEY_LOOKUP_TIER = "lookupTier";
 
   private static final EmittingLogger log = new EmittingLogger(RealtimeIndexTask.class);
-  private final static Random random = new Random();
+  private static final Random random = new Random();
 
   private static String makeTaskId(FireDepartment fireDepartment)
   {
