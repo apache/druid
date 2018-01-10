@@ -28,7 +28,6 @@ import com.google.common.io.ByteStreams;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.concurrent.Callable;
 
 /**
  */
@@ -76,18 +75,13 @@ public class StreamUtils
   {
     try {
       return RetryUtils.retry(
-          new Callable<Long>()
-          {
-            @Override
-            public Long call() throws Exception
-            {
-              try (InputStream inputStream = byteSource.openStream()) {
-                try (OutputStream outputStream = byteSink.openStream()) {
-                  final long retval = ByteStreams.copy(inputStream, outputStream);
-                  // Workarround for http://hg.openjdk.java.net/jdk8/jdk8/jdk/rev/759aa847dcaf
-                  outputStream.flush();
-                  return retval;
-                }
+          () -> {
+            try (InputStream inputStream = byteSource.openStream()) {
+              try (OutputStream outputStream = byteSink.openStream()) {
+                final long retval = ByteStreams.copy(inputStream, outputStream);
+                // Workarround for http://hg.openjdk.java.net/jdk8/jdk8/jdk/rev/759aa847dcaf
+                outputStream.flush();
+                return retval;
               }
             }
           },

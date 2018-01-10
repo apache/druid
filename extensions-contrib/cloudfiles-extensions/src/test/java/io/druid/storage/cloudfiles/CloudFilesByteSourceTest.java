@@ -42,7 +42,7 @@ public class CloudFilesByteSourceTest extends EasyMockSupport
     Payload payload = createMock(Payload.class);
     InputStream stream = createMock(InputStream.class);
 
-    expect(objectApi.get(path)).andReturn(cloudFilesObject);
+    expect(objectApi.get(path, 0)).andReturn(cloudFilesObject);
     expect(cloudFilesObject.getPayload()).andReturn(payload);
     expect(payload.openStream()).andReturn(stream);
     payload.close();
@@ -66,7 +66,7 @@ public class CloudFilesByteSourceTest extends EasyMockSupport
     Payload payload = createMock(Payload.class);
     InputStream stream = createMock(InputStream.class);
 
-    expect(objectApi.get(path)).andReturn(cloudFilesObject);
+    expect(objectApi.get(path, 0)).andReturn(cloudFilesObject);
     expect(cloudFilesObject.getPayload()).andReturn(payload);
     expect(payload.openStream()).andThrow(new IOException()).andReturn(stream);
     payload.close();

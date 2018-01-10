@@ -25,4 +25,6 @@ import java.io.InputStream;
 interface ObjectOpenFunction<T>
 {
   InputStream open(T object) throws IOException;
+
+  InputStream open(T object, long start) throws IOException;
 }

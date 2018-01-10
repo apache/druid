@@ -36,7 +36,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Enumeration;
-import java.util.concurrent.Callable;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 import java.util.zip.ZipEntry;
@@ -156,14 +155,7 @@ public class CompressionUtils
     if (!cacheLocally) {
       try {
         return RetryUtils.retry(
-            new Callable<FileUtils.FileCopyResult>()
-            {
-              @Override
-              public FileUtils.FileCopyResult call() throws Exception
-              {
-                return unzip(byteSource.openStream(), outDir);
-              }
-            },
+            () -> unzip(byteSource.openStream(), outDir),
             shouldRetry,
             DEFAULT_RETRY_COUNT
         );
