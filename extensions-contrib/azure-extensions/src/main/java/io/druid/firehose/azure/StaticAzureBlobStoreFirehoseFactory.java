@@ -22,10 +22,13 @@ package io.druid.firehose.azure;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import io.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.storage.azure.AzureByteSource;
 import io.druid.storage.azure.AzureStorage;
+import io.druid.storage.azure.AzureUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -76,6 +79,16 @@ public class StaticAzureBlobStoreFirehoseFactory extends PrefetchableTextFilesFi
   }
 
   @Override
+  protected InputStream openObjectStream(AzureBlob object, long start) throws IOException
+  {
+    // BlobInputStream.skip() moves the next read offset instead of skipping first 'start' bytes.
+    final InputStream in = openObjectStream(object);
+    final long skip = in.skip(start);
+    Preconditions.checkState(skip == start, "start offset was [%s] but [%s] bytes were skipped", start, skip);
+    return in;
+  }
+
+  @Override
   protected InputStream wrapObjectStream(AzureBlob object, InputStream stream) throws IOException
   {
     return object.getPath().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
@@ -123,5 +136,11 @@ public class StaticAzureBlobStoreFirehoseFactory extends PrefetchableTextFilesFi
         getFetchTimeout(),
         getMaxFetchRetry()
     );
+  }
+
+  @Override
+  protected Predicate<Throwable> getRetryCondition()
+  {
+    return AzureUtils.AZURE_RETRY;
   }
 }

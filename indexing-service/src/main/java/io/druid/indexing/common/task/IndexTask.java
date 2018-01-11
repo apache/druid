@@ -57,7 +57,6 @@ import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
-import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.query.DruidMetrics;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.DataSchema;
@@ -80,6 +79,7 @@ import io.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import io.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import io.druid.segment.realtime.plumber.Committers;
 import io.druid.segment.realtime.plumber.NoopSegmentHandoffNotifierFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -751,6 +751,12 @@ public class IndexTask extends AbstractTask
         log.error("Failed to publish segments, aborting!");
         return false;
       } else {
+        log.info(
+            "Processed[%,d] events, unparseable[%,d], thrownAway[%,d].",
+            fireDepartmentMetrics.processed(),
+            fireDepartmentMetrics.unparseable(),
+            fireDepartmentMetrics.thrownAway()
+        );
         log.info(
             "Published segments[%s]", Joiner.on(", ").join(
                 Iterables.transform(

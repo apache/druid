@@ -33,7 +33,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
-import java.util.concurrent.Callable;
 
 public class AzureTaskLogs implements TaskLogs
 {
@@ -58,7 +57,7 @@ public class AzureTaskLogs implements TaskLogs
 
     try {
       AzureUtils.retryAzureOperation(
-          (Callable<Void>) () -> {
+          () -> {
             azureStorage.uploadBlob(logFile, config.getContainer(), taskKey, true);
             return null;
           },

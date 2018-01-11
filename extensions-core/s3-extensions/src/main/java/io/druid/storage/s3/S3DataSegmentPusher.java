@@ -41,7 +41,6 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 
 public class S3DataSegmentPusher implements DataSegmentPusher
 {
@@ -100,39 +99,34 @@ public class S3DataSegmentPusher implements DataSegmentPusher
 
     try {
       return S3Utils.retryS3Operation(
-          new Callable<DataSegment>()
-          {
-            @Override
-            public DataSegment call() throws Exception
-            {
-              S3Object toPush = new S3Object(zipOutFile);
-              putObject(config.getBucket(), s3Path, toPush, replaceExisting);
+          () -> {
+            S3Object toPush = new S3Object(zipOutFile);
+            putObject(config.getBucket(), s3Path, toPush, replaceExisting);
 
-              final DataSegment outSegment = inSegment.withSize(indexSize)
-                                                      .withLoadSpec(makeLoadSpec(config.getBucket(), toPush.getKey()))
-                                                      .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
+            final DataSegment outSegment = inSegment.withSize(indexSize)
+                                                    .withLoadSpec(makeLoadSpec(config.getBucket(), toPush.getKey()))
+                                                    .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
 
-              File descriptorFile = File.createTempFile("druid", "descriptor.json");
-              // Avoid using Guava in DataSegmentPushers because they might be used with very diverse Guava versions in
-              // runtime, and because Guava deletes methods over time, that causes incompatibilities.
-              Files.write(descriptorFile.toPath(), jsonMapper.writeValueAsBytes(outSegment));
-              S3Object descriptorObject = new S3Object(descriptorFile);
+            File descriptorFile = File.createTempFile("druid", "descriptor.json");
+            // Avoid using Guava in DataSegmentPushers because they might be used with very diverse Guava versions in
+            // runtime, and because Guava deletes methods over time, that causes incompatibilities.
+            Files.write(descriptorFile.toPath(), jsonMapper.writeValueAsBytes(outSegment));
+            S3Object descriptorObject = new S3Object(descriptorFile);
 
-              putObject(
-                  config.getBucket(),
-                  S3Utils.descriptorPathForSegmentPath(s3Path),
-                  descriptorObject,
-                  replaceExisting
-              );
+            putObject(
+                config.getBucket(),
+                S3Utils.descriptorPathForSegmentPath(s3Path),
+                descriptorObject,
+                replaceExisting
+            );
 
-              log.info("Deleting zipped index File[%s]", zipOutFile);
-              zipOutFile.delete();
+            log.info("Deleting zipped index File[%s]", zipOutFile);
+            zipOutFile.delete();
 
-              log.info("Deleting descriptor file[%s]", descriptorFile);
-              descriptorFile.delete();
+            log.info("Deleting descriptor file[%s]", descriptorFile);
+            descriptorFile.delete();
 
-              return outSegment;
-            }
+            return outSegment;
           }
       );
     }

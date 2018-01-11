@@ -40,14 +40,14 @@ public interface Supervisor
   void reset(DataSourceMetadata dataSourceMetadata);
 
   /**
-   * The definition of checkpoint is not very strict as currently it does not affect data or control path
+   * The definition of checkpoint is not very strict as currently it does not affect data or control path.
    * On this call Supervisor can potentially checkpoint data processed so far to some durable storage
    * for example - Kafka Supervisor uses this to merge and handoff segments containing at least the data
-   * represented by dataSourceMetadata
+   * represented by {@param currentCheckpoint} DataSourceMetadata
    *
-   * @param sequenceName       unique Identifier to figure out for which sequence to do check pointing
-   * @param previousCheckPoint DataSourceMetadata check pointed in previous call
-   * @param currentCheckPoint  current DataSourceMetadata to be check pointed
+   * @param sequenceName       unique Identifier to figure out for which sequence to do checkpointing
+   * @param previousCheckPoint DataSourceMetadata checkpointed in previous call
+   * @param currentCheckPoint  current DataSourceMetadata to be checkpointed
    */
   void checkpoint(
       @Nullable String sequenceName,
