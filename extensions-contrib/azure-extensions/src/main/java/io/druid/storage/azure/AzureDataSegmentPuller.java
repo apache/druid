@@ -24,6 +24,7 @@ import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.MapUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.SegmentLoadingException;
@@ -38,7 +39,12 @@ public class AzureDataSegmentPuller implements DataSegmentPuller
 {
   private static final Logger log = new Logger(AzureDataSegmentPuller.class);
 
-  String HADOOP_BLOB_PATH_IDENTIFIER = "blob.core.windows.net";
+  // The azure storage hadoop access pattern is:
+  // wasb[s]://<containername>@<accountname>.blob.core.windows.net/<path>
+  // (from https://docs.microsoft.com/en-us/azure/hdinsight/hdinsight-hadoop-use-blob-storage)
+  static final String AZURE_STORAGE_HADOOP_PROTOCOL = "wasbs";
+  
+  static final String AZURE_STORAGE_HOST_ADDRESS = "blob.core.windows.net";
 
   private final AzureStorage azureStorage;
 
@@ -60,14 +66,16 @@ public class AzureDataSegmentPuller implements DataSegmentPuller
     try {
       prepareOutDir(outDir);
 
-      log.info("Loading container: " + containerName + " - " + "blobPath:" + blobPath + " - outdir: " + outDir);
+      log.info(StringUtils.format(
+          "Loading container: [%s], with blobPath: [%s] and outDir: [%s]", containerName, blobPath, outDir
+      ));
 
-      Boolean blobPathIsHadoop = blobPath.contains(HADOOP_BLOB_PATH_IDENTIFIER);
+      boolean blobPathIsHadoop = blobPath.contains(AZURE_STORAGE_HOST_ADDRESS);
       final String actualBlobPath;
       if (blobPathIsHadoop) {
         // Remove azure's hadoop prefix to match realtime ingestion path
-        actualBlobPath = blobPath.substring(blobPath.indexOf(HADOOP_BLOB_PATH_IDENTIFIER) +
-          HADOOP_BLOB_PATH_IDENTIFIER.length() + 1);
+        actualBlobPath = blobPath.substring(
+            blobPath.indexOf(AZURE_STORAGE_HOST_ADDRESS) + AZURE_STORAGE_HOST_ADDRESS.length() + 1);
       } else {
         actualBlobPath = blobPath;
       }

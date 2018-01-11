@@ -40,7 +40,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
@@ -74,15 +73,15 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   @Override
   public String getPathForHadoop()
   {
-    String hadoopPath = String.format(
-        Locale.ENGLISH,
-        "%s://%s@%s.blob.core.windows.net/",
-        "wasb",
+    String hadoopPath = StringUtils.format(
+        "%s://%s@%s.%s/",
+        AzureDataSegmentPuller.AZURE_STORAGE_HADOOP_PROTOCOL,
         config.getContainer(),
-        config.getAccount()
+        config.getAccount(),
+        AzureDataSegmentPuller.AZURE_STORAGE_HOST_ADDRESS
     );
 
-    log.info("Using Azure blob storage Hadoop path: " + hadoopPath);
+    log.info(StringUtils.format("Using Azure blob storage Hadoop path: %s", hadoopPath));
 
     return hadoopPath;
   }
@@ -90,25 +89,22 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   @Override
   public String getStorageDir(DataSegment dataSegment)
   {
-
     String seg = JOINER.join(
         dataSegment.getDataSource(),
-        String.format(
-          Locale.ENGLISH,
-          "%s_%s",
-          // Use ISODateTimeFormat.basicDateTime() format, to avoid using colons in file path.
-          dataSegment.getInterval().getStart().toString(ISODateTimeFormat.basicDateTime()),
-          dataSegment.getInterval().getEnd().toString(ISODateTimeFormat.basicDateTime())
+        StringUtils.format(
+            "%s_%s",
+            // Use ISODateTimeFormat.basicDateTime() format, to avoid using colons in file path.
+            dataSegment.getInterval().getStart().toString(ISODateTimeFormat.basicDateTime()),
+            dataSegment.getInterval().getEnd().toString(ISODateTimeFormat.basicDateTime())
         ),
-        dataSegment.getVersion(),
+        dataSegment.getVersion().replace(":", "_"),
         dataSegment.getShardSpec().getPartitionNum()
     );
 
-    log.info("DataSegment: " + seg);
+    log.info(StringUtils.format("DataSegment: [%s]", seg));
 
     // Replace colons with underscores, since they are not supported through wasb:// prefix
-    return seg.replace(":", "_");
-
+    return seg;
   }
 
   @Override
@@ -141,7 +137,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
 
   public DataSegment uploadDataSegment(
       DataSegment segment,
-      final int version,
+      final int binaryVersion,
       final long size,
       final File compressedSegmentData,
       final File descriptorFile,
@@ -156,7 +152,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
     final DataSegment outSegment = segment
         .withSize(size)
         .withLoadSpec(this.makeLoadSpec(new URI(azurePaths.get("index"))))
-        .withBinaryVersion(version);
+        .withBinaryVersion(binaryVersion);
 
     log.info("Deleting file [%s]", compressedSegmentData);
     compressedSegmentData.delete();
@@ -173,7 +169,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   {
     log.info("Uploading [%s] to Azure.", indexFilesDir);
 
-    final int version = SegmentUtils.getVersionFromDir(indexFilesDir);
+    final int binaryVersion = SegmentUtils.getVersionFromDir(indexFilesDir);
     File zipOutFile = null;
     File descriptorFile = null;
 
@@ -190,7 +186,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
             @Override
             public DataSegment call() throws Exception
             {
-              return uploadDataSegment(segment, version, size, outFile, descFile, azurePaths, replaceExisting);
+              return uploadDataSegment(segment, binaryVersion, size, outFile, descFile, azurePaths, replaceExisting);
             }
           },
           config.getMaxTries()
