@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.PeriodGranularity;
+import io.druid.java.util.common.guava.Accumulators;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -38,6 +39,7 @@ import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 
@@ -251,7 +253,7 @@ public class TimewarpOperatorTest
                 new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 5))
             )
         ),
-        queryRunner.run(QueryPlus.wrap(query), CONTEXT).toList()
+        queryRunner.run(QueryPlus.wrap(query), CONTEXT).accumulate(new ArrayList<>(), Accumulators.list())
     );
   }
 
@@ -311,7 +313,7 @@ public class TimewarpOperatorTest
                 new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 5))
             )
         ),
-        queryRunner.run(QueryPlus.wrap(query), CONTEXT).toList()
+        queryRunner.run(QueryPlus.wrap(query), CONTEXT).accumulate(new ArrayList<>(), Accumulators.list())
     );
   }
 
