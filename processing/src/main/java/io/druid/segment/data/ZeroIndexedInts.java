@@ -26,7 +26,7 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
  */
 public class ZeroIndexedInts implements IndexedInts
 {
-  private final static ZeroIndexedInts INSTANCE = new ZeroIndexedInts();
+  private static final ZeroIndexedInts INSTANCE = new ZeroIndexedInts();
 
   private ZeroIndexedInts()
   {

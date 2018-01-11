@@ -47,18 +47,18 @@ public class BasicAuthUtils
 
   private static final Logger log = new Logger(BasicAuthUtils.class);
   private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-  public final static String ADMIN_NAME = "admin";
-  public final static String INTERNAL_USER_NAME = "druid_system";
+  public static final String ADMIN_NAME = "admin";
+  public static final String INTERNAL_USER_NAME = "druid_system";
 
   // PBKDF2WithHmacSHA512 is chosen since it has built-in support in Java8.
   // Argon2 (https://github.com/p-h-c/phc-winner-argon2) is newer but the only presently
   // available Java binding is LGPLv3 licensed.
   // Key length is 512-bit to match the PBKDF2WithHmacSHA512 algorithm.
   // 256-bit salt should be more than sufficient for uniqueness, expected user count is on the order of thousands.
-  public final static int SALT_LENGTH = 32;
-  public final static int DEFAULT_KEY_ITERATIONS = 10000;
-  public final static int KEY_LENGTH = 512;
-  public final static String ALGORITHM = "PBKDF2WithHmacSHA512";
+  public static final int SALT_LENGTH = 32;
+  public static final int DEFAULT_KEY_ITERATIONS = 10000;
+  public static final int KEY_LENGTH = 512;
+  public static final String ALGORITHM = "PBKDF2WithHmacSHA512";
 
   public static final TypeReference AUTHENTICATOR_USER_MAP_TYPE_REFERENCE =
       new TypeReference<Map<String, BasicAuthenticatorUser>>()

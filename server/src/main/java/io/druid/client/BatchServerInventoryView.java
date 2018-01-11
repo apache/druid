@@ -52,10 +52,10 @@ public class BatchServerInventoryView extends AbstractCuratorServerInventoryView
 {
   private static final EmittingLogger log = new EmittingLogger(BatchServerInventoryView.class);
 
-  final private ConcurrentMap<String, Set<DataSegment>> zNodes = new ConcurrentHashMap<>();
-  final private ConcurrentMap<SegmentCallback, Predicate<Pair<DruidServerMetadata, DataSegment>>> segmentPredicates =
+  private final ConcurrentMap<String, Set<DataSegment>> zNodes = new ConcurrentHashMap<>();
+  private final ConcurrentMap<SegmentCallback, Predicate<Pair<DruidServerMetadata, DataSegment>>> segmentPredicates =
       new ConcurrentHashMap<>();
-  final private Predicate<Pair<DruidServerMetadata, DataSegment>> defaultFilter;
+  private final Predicate<Pair<DruidServerMetadata, DataSegment>> defaultFilter;
 
   @Inject
   public BatchServerInventoryView(

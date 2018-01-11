@@ -85,7 +85,7 @@ import java.util.zip.ZipInputStream;
 
 public class OrcIndexGeneratorJobTest
 {
-  static private final AggregatorFactory[] aggs = {
+  private static final AggregatorFactory[] aggs = {
       new LongSumAggregatorFactory("visited_num", "visited_num"),
       new HyperUniquesAggregatorFactory("unique_hosts", "host")
   };

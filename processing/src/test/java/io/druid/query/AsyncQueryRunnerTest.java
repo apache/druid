@@ -40,7 +40,7 @@ import java.util.concurrent.TimeoutException;
 public class AsyncQueryRunnerTest
 {
 
-  private final static long TEST_TIMEOUT = 60000;
+  private static final long TEST_TIMEOUT = 60000;
   
   private final ExecutorService executor;
   private final Query query;

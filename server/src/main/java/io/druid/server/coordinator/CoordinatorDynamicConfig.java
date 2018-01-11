@@ -277,16 +277,16 @@ public class CoordinatorDynamicConfig
 
   public static class Builder
   {
-    private final static long DEFAULT_MILLIS_TO_WAIT_BEFORE_DELETING = TimeUnit.MINUTES.toMillis(15);
-    private final static long DEFAULT_MERGE_BYTES_LIMIT = 524288000L;
-    private final static int DEFAULT_MERGE_SEGMENTS_LIMIT = 100;
-    private final static int DEFAULT_MAX_SEGMENTS_TO_MOVE = 5;
-    private final static int DEFAULT_REPLICANT_LIFETIME = 15;
-    private final static int DEFAULT_REPLICATION_THROTTLE_LIMIT = 10;
-    private final static int DEFAULT_BALANCER_COMPUTE_THREADS = 1;
-    private final static boolean DEFAULT_EMIT_BALANCING_STATS = false;
-    private final static boolean DEFAULT_KILL_ALL_DATA_SOURCES = false;
-    private final static int DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 0;
+    private static final long DEFAULT_MILLIS_TO_WAIT_BEFORE_DELETING = TimeUnit.MINUTES.toMillis(15);
+    private static final long DEFAULT_MERGE_BYTES_LIMIT = 524288000L;
+    private static final int DEFAULT_MERGE_SEGMENTS_LIMIT = 100;
+    private static final int DEFAULT_MAX_SEGMENTS_TO_MOVE = 5;
+    private static final int DEFAULT_REPLICANT_LIFETIME = 15;
+    private static final int DEFAULT_REPLICATION_THROTTLE_LIMIT = 10;
+    private static final int DEFAULT_BALANCER_COMPUTE_THREADS = 1;
+    private static final boolean DEFAULT_EMIT_BALANCING_STATS = false;
+    private static final boolean DEFAULT_KILL_ALL_DATA_SOURCES = false;
+    private static final int DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 0;
 
     private Long millisToWaitBeforeDeleting;
     private Long mergeBytesLimit;

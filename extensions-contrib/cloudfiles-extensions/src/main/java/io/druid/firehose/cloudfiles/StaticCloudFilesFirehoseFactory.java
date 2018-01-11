@@ -22,11 +22,13 @@ package io.druid.firehose.cloudfiles;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Predicate;
 import io.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.storage.cloudfiles.CloudFilesByteSource;
 import io.druid.storage.cloudfiles.CloudFilesObjectApiProxy;
+import io.druid.storage.cloudfiles.CloudFilesUtils;
 import org.jclouds.rackspace.cloudfiles.v1.CloudFilesApi;
 
 import java.io.IOException;
@@ -73,6 +75,17 @@ public class StaticCloudFilesFirehoseFactory extends PrefetchableTextFilesFireho
   @Override
   protected InputStream openObjectStream(CloudFilesBlob object) throws IOException
   {
+    return openObjectStream(object, 0);
+  }
+
+  @Override
+  protected InputStream openObjectStream(CloudFilesBlob object, long start) throws IOException
+  {
+    return createCloudFilesByteSource(object).openStream(start);
+  }
+
+  private CloudFilesByteSource createCloudFilesByteSource(CloudFilesBlob object)
+  {
     final String region = object.getRegion();
     final String container = object.getContainer();
     final String path = object.getPath();
@@ -82,9 +95,7 @@ public class StaticCloudFilesFirehoseFactory extends PrefetchableTextFilesFireho
     );
     CloudFilesObjectApiProxy objectApi = new CloudFilesObjectApiProxy(
         cloudFilesApi, region, container);
-    final CloudFilesByteSource byteSource = new CloudFilesByteSource(objectApi, path);
-
-    return byteSource.openStream();
+    return new CloudFilesByteSource(objectApi, path);
   }
 
   @Override
@@ -124,5 +135,11 @@ public class StaticCloudFilesFirehoseFactory extends PrefetchableTextFilesFireho
         getFetchTimeout(),
         getMaxFetchRetry()
     );
+  }
+
+  @Override
+  protected Predicate<Throwable> getRetryCondition()
+  {
+    return CloudFilesUtils.CLOUDFILESRETRY;
   }
 }

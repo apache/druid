@@ -20,7 +20,6 @@
 package io.druid.segment.loading;
 
 import com.google.common.base.Throwables;
-
 import io.druid.data.SearchableVersionedDataFinder;
 import io.druid.java.util.common.RetryUtils;
 
@@ -31,7 +30,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
-import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
 
 /**
@@ -81,17 +79,10 @@ public class LocalFileTimestampVersionFinder extends LocalDataSegmentPuller
     final File file = new File(uri);
     try {
       return RetryUtils.retry(
-          new Callable<URI>()
-          {
-            @Override
-            public URI call() throws Exception
-            {
-              return mostRecentInDir(
-                  file.isDirectory() ? file.toPath() : file.getParentFile().toPath(),
-                  pattern
-              );
-            }
-          },
+          () -> mostRecentInDir(
+              file.isDirectory() ? file.toPath() : file.getParentFile().toPath(),
+              pattern
+          ),
           shouldRetryPredicate(),
           DEFAULT_RETRY_COUNT
       );

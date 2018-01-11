@@ -35,7 +35,7 @@ import java.util.Properties;
  */
 public class MonitorsConfig
 {
-  public final static String METRIC_DIMENSION_PREFIX = "druid.metrics.emitter.dimension.";
+  public static final String METRIC_DIMENSION_PREFIX = "druid.metrics.emitter.dimension.";
 
   @JsonProperty("monitors")
   @NotNull

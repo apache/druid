@@ -23,7 +23,6 @@ import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
-
 import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
@@ -36,7 +35,6 @@ import org.jets3t.service.model.StorageObject;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.concurrent.Callable;
 
 /**
  * Provides task logs archived on S3.
@@ -118,16 +116,11 @@ public class S3TaskLogs implements TaskLogs
 
     try {
       S3Utils.retryS3Operation(
-          new Callable<Void>()
-          {
-            @Override
-            public Void call() throws Exception
-            {
-              final StorageObject object = new StorageObject(logFile);
-              object.setKey(taskKey);
-              service.putObject(config.getS3Bucket(), object);
-              return null;
-            }
+          () -> {
+            final StorageObject object = new StorageObject(logFile);
+            object.setKey(taskKey);
+            service.putObject(config.getS3Bucket(), object);
+            return null;
           }
       );
     }
