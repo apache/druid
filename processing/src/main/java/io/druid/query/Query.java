@@ -82,6 +82,8 @@ public interface Query<T>
 
   Duration getDuration();
 
+  // currently unused, but helping enforce the idea that all queries have a Granularity
+  @SuppressWarnings("unused")
   Granularity getGranularity();
 
   DateTimeZone getTimezone();
