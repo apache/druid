@@ -51,9 +51,9 @@ import java.util.Map;
 
 public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
 {
-  private final static String AUTHORIZER_NAME = "test";
+  private static final String AUTHORIZER_NAME = "test";
 
-  private final static Map<String, BasicAuthorizerUser> BASE_USER_MAP = ImmutableMap.of(
+  private static final Map<String, BasicAuthorizerUser> BASE_USER_MAP = ImmutableMap.of(
       BasicAuthUtils.ADMIN_NAME,
       new BasicAuthorizerUser(BasicAuthUtils.ADMIN_NAME, ImmutableSet.of(BasicAuthUtils.ADMIN_NAME)),
       BasicAuthUtils.INTERNAL_USER_NAME,
@@ -61,7 +61,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
           BasicAuthUtils.INTERNAL_USER_NAME))
   );
 
-  private final static Map<String, BasicAuthorizerRole> BASE_ROLE_MAP = ImmutableMap.of(
+  private static final Map<String, BasicAuthorizerRole> BASE_ROLE_MAP = ImmutableMap.of(
       BasicAuthUtils.ADMIN_NAME,
       new BasicAuthorizerRole(
           BasicAuthUtils.ADMIN_NAME,

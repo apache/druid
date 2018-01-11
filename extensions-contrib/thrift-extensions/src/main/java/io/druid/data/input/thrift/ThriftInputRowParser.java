@@ -54,7 +54,7 @@ public class ThriftInputRowParser implements InputRowParser<Object>
   private final String thriftClassName;
 
   private Parser<String, Object> parser;
-  volatile private Class<TBase> thriftClass = null;
+  private volatile Class<TBase> thriftClass = null;
 
   @JsonCreator
   public ThriftInputRowParser(

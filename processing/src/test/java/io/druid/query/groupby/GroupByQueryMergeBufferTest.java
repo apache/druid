@@ -176,7 +176,7 @@ public class GroupByQueryMergeBufferTest
     );
   }
 
-  private final static TestBlockingPool mergeBufferPool = new TestBlockingPool(
+  private static final TestBlockingPool mergeBufferPool = new TestBlockingPool(
       new Supplier<ByteBuffer>()
       {
         @Override

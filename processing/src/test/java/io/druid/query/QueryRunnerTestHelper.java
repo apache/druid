@@ -201,7 +201,7 @@ public class QueryRunnerTestHelper
       qualityUniques
   );
 
-  public final static List<AggregatorFactory> commonFloatAggregators = Arrays.asList(
+  public static final List<AggregatorFactory> commonFloatAggregators = Arrays.asList(
       new FloatSumAggregatorFactory("index", "indexFloat"),
       new CountAggregatorFactory("rows"),
       new HyperUniquesAggregatorFactory(

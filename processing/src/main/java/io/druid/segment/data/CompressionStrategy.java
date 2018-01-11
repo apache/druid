@@ -163,7 +163,7 @@ public enum CompressionStrategy
     void decompress(ByteBuffer in, int numBytes, ByteBuffer out);
   }
 
-  public static abstract class Compressor
+  public abstract static class Compressor
   {
     /**
      * Allocates a buffer that should be passed to {@link #compress} method as input buffer. Different Compressors
