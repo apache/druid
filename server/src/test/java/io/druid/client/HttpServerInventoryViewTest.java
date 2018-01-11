@@ -38,9 +38,9 @@ import io.druid.segment.TestHelper;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.SegmentChangeRequestDrop;
-import io.druid.server.coordination.SegmentChangeRequestHistory;
+import io.druid.server.coordination.ChangeRequestHistory;
 import io.druid.server.coordination.SegmentChangeRequestLoad;
-import io.druid.server.coordination.SegmentChangeRequestsSnapshot;
+import io.druid.server.coordination.ChangeRequestsSnapshot;
 import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
@@ -61,6 +61,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+
 
 /**
  */
@@ -106,11 +107,11 @@ public class HttpServerInventoryViewTest
         ImmutableList.of(
             Futures.immediateFuture(
                 new ByteArrayInputStream(
-                    jsonMapper.writeValueAsBytes(
-                        new SegmentChangeRequestsSnapshot(
+                    jsonMapper.writerWithType(HttpServerInventoryView.SEGMENT_LIST_RESP_TYPE_REF).writeValueAsBytes(
+                        new ChangeRequestsSnapshot(
                             false,
                             null,
-                            SegmentChangeRequestHistory.Counter.ZERO,
+                            ChangeRequestHistory.Counter.ZERO,
                             ImmutableList.of(
                                 new SegmentChangeRequestLoad(segment1)
                             )
@@ -120,11 +121,11 @@ public class HttpServerInventoryViewTest
             ),
             Futures.immediateFuture(
                 new ByteArrayInputStream(
-                    jsonMapper.writeValueAsBytes(
-                        new SegmentChangeRequestsSnapshot(
+                    jsonMapper.writerWithType(HttpServerInventoryView.SEGMENT_LIST_RESP_TYPE_REF).writeValueAsBytes(
+                        new ChangeRequestsSnapshot(
                             false,
                             null,
-                            SegmentChangeRequestHistory.Counter.ZERO,
+                            ChangeRequestHistory.Counter.ZERO,
                             ImmutableList.of(
                                 new SegmentChangeRequestDrop(segment1),
                                 new SegmentChangeRequestLoad(segment2),
@@ -136,11 +137,11 @@ public class HttpServerInventoryViewTest
             ),
             Futures.immediateFuture(
                 new ByteArrayInputStream(
-                    jsonMapper.writeValueAsBytes(
-                        new SegmentChangeRequestsSnapshot(
+                    jsonMapper.writerWithType(HttpServerInventoryView.SEGMENT_LIST_RESP_TYPE_REF).writeValueAsBytes(
+                        new ChangeRequestsSnapshot(
                             true,
                             "force reset counter",
-                            SegmentChangeRequestHistory.Counter.ZERO,
+                            ChangeRequestHistory.Counter.ZERO,
                             ImmutableList.of()
                         )
                     )
@@ -148,11 +149,11 @@ public class HttpServerInventoryViewTest
             ),
             Futures.immediateFuture(
                 new ByteArrayInputStream(
-                    jsonMapper.writeValueAsBytes(
-                        new SegmentChangeRequestsSnapshot(
+                    jsonMapper.writerWithType(HttpServerInventoryView.SEGMENT_LIST_RESP_TYPE_REF).writeValueAsBytes(
+                        new ChangeRequestsSnapshot(
                             false,
                             null,
-                            SegmentChangeRequestHistory.Counter.ZERO,
+                            ChangeRequestHistory.Counter.ZERO,
                             ImmutableList.of(
                                 new SegmentChangeRequestLoad(segment3),
                                 new SegmentChangeRequestLoad(segment4),
