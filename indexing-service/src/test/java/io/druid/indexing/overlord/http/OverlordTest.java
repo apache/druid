@@ -382,7 +382,7 @@ public class OverlordTest
             }
           }
       );
-      TaskRunnerWorkItem taskRunnerWorkItem = new TaskRunnerWorkItem(taskId, future)
+      TaskRunnerWorkItem taskRunnerWorkItem = new TaskRunnerWorkItem(taskId, future, task.getDataSource())
       {
         @Override
         public TaskLocation getLocation()

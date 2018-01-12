@@ -338,7 +338,8 @@ public class PendingTaskBasedProvisioningStrategyTest
             new RemoteTaskRunnerWorkItem(
                 testTask.getId(),
                 null,
-                TaskLocation.unknown()
+                TaskLocation.unknown(),
+                testTask.getDataSource()
             ).withQueueInsertionTime(DateTimes.nowUtc())
         )
     ).times(2);

@@ -748,7 +748,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
         ListenableFuture<TaskStatus> statusFuture
     )
     {
-      super(task.getId(), statusFuture);
+      super(task.getId(), statusFuture, task.getDataSource());
       this.task = task;
     }
 

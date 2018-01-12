@@ -396,7 +396,7 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
         ListenableFuture<TaskStatus> result
     )
     {
-      super(task.getId(), result);
+      super(task.getId(), result, task.getDataSource());
       this.task = task;
       this.location = location;
     }

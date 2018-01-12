@@ -1339,7 +1339,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         State state
     )
     {
-      super(taskId, worker, location);
+      super(taskId, worker, location, task.getDataSource());
       this.state = Preconditions.checkNotNull(state);
 
       // It is possible to have it null when the TaskRunner is just started and discovered this taskId from a worker,

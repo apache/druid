@@ -34,6 +34,7 @@ public class TaskStatusPlus
   private final TaskState state;
   private final Long duration;
   private final TaskLocation location;
+  private final String dataSource;
 
   @JsonCreator
   public TaskStatusPlus(
@@ -42,7 +43,8 @@ public class TaskStatusPlus
       @JsonProperty("queueInsertionTime") DateTime queueInsertionTime,
       @JsonProperty("state") @Nullable TaskState state,
       @JsonProperty("duration") @Nullable Long duration,
-      @JsonProperty("location") TaskLocation location
+      @JsonProperty("location") TaskLocation location,
+      @JsonProperty("dataSource") String dataSource
   )
   {
     if (state != null && state.isComplete()) {
@@ -54,6 +56,7 @@ public class TaskStatusPlus
     this.state = state;
     this.duration = duration;
     this.location = Preconditions.checkNotNull(location, "location");
+    this.dataSource = dataSource;
   }
 
   @JsonProperty
@@ -90,5 +93,11 @@ public class TaskStatusPlus
   public TaskLocation getLocation()
   {
     return location;
+  }
+  
+  @JsonProperty
+  public String getDataSource()
+  {
+    return dataSource;
   }
 }

@@ -145,13 +145,7 @@ public class ExpressionPostAggregator implements PostAggregator
         name,
         expression,
         ordering,
-        macroTable,
-        aggregators.entrySet().stream().collect(
-            Collectors.toMap(
-                entry -> entry.getKey(),
-                entry -> entry.getValue()::finalizeComputation
-            )
-        )
+        macroTable
     );
   }
 

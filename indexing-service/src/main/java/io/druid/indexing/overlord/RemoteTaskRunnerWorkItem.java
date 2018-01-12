@@ -36,10 +36,11 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
   public RemoteTaskRunnerWorkItem(
       String taskId,
       Worker worker,
-      TaskLocation location
+      TaskLocation location,
+      String dataSource
   )
   {
-    this(taskId, SettableFuture.<TaskStatus>create(), worker, location);
+    this(taskId, SettableFuture.<TaskStatus>create(), worker, location, dataSource);
   }
 
   public RemoteTaskRunnerWorkItem(
@@ -47,20 +48,21 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
       DateTime createdTime,
       DateTime queueInsertionTime,
       Worker worker,
-      TaskLocation location
+      TaskLocation location,
+      String dataSource
   )
   {
-    this(taskId, SettableFuture.<TaskStatus>create(), createdTime, queueInsertionTime, worker, location);
+    this(taskId, SettableFuture.<TaskStatus>create(), createdTime, queueInsertionTime, worker, location, dataSource);
   }
 
   private RemoteTaskRunnerWorkItem(
       String taskId,
       SettableFuture<TaskStatus> result,
       Worker worker,
-      TaskLocation location
+      TaskLocation location, String dataSource
   )
   {
-    super(taskId, result);
+    super(taskId, result, dataSource);
     this.result = result;
     this.worker = worker;
     this.location = location == null ? TaskLocation.unknown() : location;
@@ -72,10 +74,12 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
       DateTime createdTime,
       DateTime queueInsertionTime,
       Worker worker,
-      TaskLocation location
+      TaskLocation location,
+      String dataSource
+      
   )
   {
-    super(taskId, result, createdTime, queueInsertionTime);
+    super(taskId, result, createdTime, queueInsertionTime, dataSource);
     this.result = result;
     this.worker = worker;
     this.location = location == null ? TaskLocation.unknown() : location;
@@ -109,7 +113,7 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
 
   public RemoteTaskRunnerWorkItem withQueueInsertionTime(DateTime time)
   {
-    return new RemoteTaskRunnerWorkItem(getTaskId(), result, getCreatedTime(), time, worker, location);
+    return new RemoteTaskRunnerWorkItem(getTaskId(), result, getCreatedTime(), time, worker, location, getDataSource());
   }
 
   public RemoteTaskRunnerWorkItem withWorker(Worker theWorker, TaskLocation location)
@@ -120,7 +124,8 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
         getCreatedTime(),
         getQueueInsertionTime(),
         theWorker,
-        location
+        location,
+        getDataSource()
     );
   }
 }

@@ -94,6 +94,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import com.google.common.util.concurrent.ListenableFuture;
+import java.util.ArrayList;
 
 /**
  */
@@ -435,7 +437,8 @@ public class OverlordResource
                         task.getId(),
                         SettableFuture.create(),
                         DateTimes.EPOCH,
-                        DateTimes.EPOCH
+                        DateTimes.EPOCH,
+                        task.getDataSource()
                     )
                     {
                       @Override
@@ -532,7 +535,9 @@ public class OverlordResource
             DateTimes.EPOCH,
             status.getStatusCode(),
             status.getDuration(),
-            TaskLocation.unknown())
+            TaskLocation.unknown(),
+            taskStorageQueryAdapter.getTask(status.getId()).get().getDataSource()
+            )
         )
         .collect(Collectors.toList());
 
@@ -644,6 +649,29 @@ public class OverlordResource
     }
   }
 
+  @GET
+  @Path("/dataSources/{dataSource}")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getRunningTasksByDataSource(
+      @PathParam("dataSource") String dataSource,
+      @Context HttpServletRequest request)
+  {
+    List<TaskRunnerWorkItem> taskRunnerWorkItemList = new ArrayList<>();
+    Optional<TaskRunner> ts = taskMaster.getTaskRunner();
+    if (ts.isPresent()) {
+      Collection<? extends TaskRunnerWorkItem> runningTasks = ts.get().getRunningTasks();
+      if (runningTasks == null || runningTasks.isEmpty()) {
+        return Response.ok("No running tasks found").build();
+      }
+      for (TaskRunnerWorkItem taskRunnerWorkItem : runningTasks) {
+        if (taskRunnerWorkItem.getDataSource().equals(dataSource)) {
+          taskRunnerWorkItemList.add(taskRunnerWorkItem);
+        }
+      }
+    }
+    return Response.ok(taskRunnerWorkItemList).build();
+  }
+
   private Response workItemsResponse(final Function<TaskRunner, Collection<? extends TaskRunnerWorkItem>> fn)
   {
     return asLeaderWith(
@@ -667,7 +695,8 @@ public class OverlordResource
                             workItem.getQueueInsertionTime(),
                             null,
                             null,
-                            workItem.getLocation()
+                            workItem.getLocation(),
+                            workItem.getDataSource()
                         );
                       }
                     }

@@ -36,28 +36,31 @@ public abstract class TaskRunnerWorkItem
   private final ListenableFuture<TaskStatus> result;
   private final DateTime createdTime;
   private final DateTime queueInsertionTime;
+  private final String dataSource;
 
-  public TaskRunnerWorkItem(String taskId, ListenableFuture<TaskStatus> result)
+  public TaskRunnerWorkItem(String taskId, ListenableFuture<TaskStatus> result, String dataSource)
   {
-    this(taskId, result, DateTimes.nowUtc());
+    this(taskId, result, DateTimes.nowUtc(), dataSource);
   }
 
-  private TaskRunnerWorkItem(String taskId, ListenableFuture<TaskStatus> result, DateTime createdTime)
+  private TaskRunnerWorkItem(String taskId, ListenableFuture<TaskStatus> result, DateTime createdTime, String dataSource)
   {
-    this(taskId, result, createdTime, createdTime);
+    this(taskId, result, createdTime, createdTime, dataSource);
   }
 
   public TaskRunnerWorkItem(
       String taskId,
       ListenableFuture<TaskStatus> result,
       DateTime createdTime,
-      DateTime queueInsertionTime
+      DateTime queueInsertionTime,
+      String dataSource
   )
   {
     this.taskId = taskId;
     this.result = result;
     this.createdTime = createdTime;
     this.queueInsertionTime = queueInsertionTime;
+    this.dataSource = dataSource;
   }
 
   @JsonProperty
@@ -83,6 +86,12 @@ public abstract class TaskRunnerWorkItem
   {
     return queueInsertionTime;
   }
+  
+  @JsonProperty
+  public String getDataSource()
+  {
+    return dataSource;
+  }
 
   public abstract TaskLocation getLocation();
 
@@ -95,6 +104,7 @@ public abstract class TaskRunnerWorkItem
            ", createdTime=" + createdTime +
            ", queueInsertionTime=" + queueInsertionTime +
            ", location=" + getLocation() +
+           ", dataSource=" + dataSource +
            '}';
   }
 }

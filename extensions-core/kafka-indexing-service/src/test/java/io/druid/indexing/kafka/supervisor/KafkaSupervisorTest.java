@@ -2062,7 +2062,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     public TestTaskRunnerWorkItem(String taskId, ListenableFuture<TaskStatus> result, TaskLocation location)
     {
-      super(taskId, result);
+      super(taskId, result, "ds_test");
       this.location = location;
     }
 
