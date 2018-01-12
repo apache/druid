@@ -32,6 +32,7 @@ import io.druid.data.input.Rows;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
@@ -45,8 +46,10 @@ import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
 import org.apache.hadoop.io.WritableUtils;
 
+import javax.annotation.Nullable;
 import java.io.DataInput;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -65,7 +68,8 @@ public class InputRowSerde
   {
     ValueType getType();
 
-    void serialize(ByteArrayDataOutput out, Object value, boolean reportParseExceptions);
+    @Nullable
+    String serialize(ByteArrayDataOutput out, Object value, boolean reportParseExceptions);
 
     T deserialize(ByteArrayDataInput in);
   }
@@ -105,7 +109,7 @@ public class InputRowSerde
     }
 
     @Override
-    public void serialize(ByteArrayDataOutput out, Object value, boolean reportParseExceptions)
+    public String serialize(ByteArrayDataOutput out, Object value, boolean reportParseExceptions)
     {
       List<String> values = Rows.objectToStrings(value);
       try {
@@ -114,6 +118,7 @@ public class InputRowSerde
       catch (IOException ioe) {
         throw new RuntimeException(ioe);
       }
+      return null;
     }
 
     @Override
@@ -137,15 +142,24 @@ public class InputRowSerde
     }
 
     @Override
-    public void serialize(ByteArrayDataOutput out, Object value, boolean reportParseExceptions)
+    public String serialize(ByteArrayDataOutput out, Object value, boolean reportParseExceptions)
     {
-      Long ret = DimensionHandlerUtils.convertObjectToLong(value, reportParseExceptions);
+      String parseExceptionMessage = null;
+      Long ret = null;
+      try {
+        ret = DimensionHandlerUtils.convertObjectToLong(value, reportParseExceptions);
+      }
+      catch (ParseException pe) {
+        parseExceptionMessage = pe.getMessage();
+      }
+
       if (ret == null) {
         // remove null -> zero conversion when https://github.com/druid-io/druid/pull/5278 series of patches is merged
         // we'll also need to change the serialized encoding so that it can represent numeric nulls
         ret = DimensionHandlerUtils.ZERO_LONG;
       }
       out.writeLong(ret);
+      return parseExceptionMessage;
     }
 
     @Override
@@ -164,15 +178,24 @@ public class InputRowSerde
     }
 
     @Override
-    public void serialize(ByteArrayDataOutput out, Object value, boolean reportParseExceptions)
+    public String serialize(ByteArrayDataOutput out, Object value, boolean reportParseExceptions)
     {
-      Float ret = DimensionHandlerUtils.convertObjectToFloat(value, reportParseExceptions);
+      String parseExceptionMessage = null;
+      Float ret = null;
+      try {
+        ret = DimensionHandlerUtils.convertObjectToFloat(value, reportParseExceptions);
+      }
+      catch (ParseException pe) {
+        parseExceptionMessage = pe.getMessage();
+      }
+
       if (ret == null) {
         // remove null -> zero conversion when https://github.com/druid-io/druid/pull/5278 series of patches is merged
         // we'll also need to change the serialized encoding so that it can represent numeric nulls
         ret = DimensionHandlerUtils.ZERO_FLOAT;
       }
       out.writeFloat(ret);
+      return parseExceptionMessage;
     }
 
     @Override
@@ -191,15 +214,24 @@ public class InputRowSerde
     }
 
     @Override
-    public void serialize(ByteArrayDataOutput out, Object value, boolean reportParseExceptions)
+    public String serialize(ByteArrayDataOutput out, Object value, boolean reportParseExceptions)
     {
-      Double ret = DimensionHandlerUtils.convertObjectToDouble(value, reportParseExceptions);
+      String parseExceptionMessage = null;
+      Double ret = null;
+      try {
+        ret = DimensionHandlerUtils.convertObjectToDouble(value, reportParseExceptions);
+      }
+      catch (ParseException pe) {
+        parseExceptionMessage = pe.getMessage();
+      }
+
       if (ret == null) {
         // remove null -> zero conversion when https://github.com/druid-io/druid/pull/5278 series of patches is merged
         // we'll also need to change the serialized encoding so that it can represent numeric nulls
         ret = DimensionHandlerUtils.ZERO_DOUBLE;
       }
       out.writeDouble(ret);
+      return parseExceptionMessage;
     }
 
     @Override
@@ -209,7 +241,7 @@ public class InputRowSerde
     }
   }
 
-  public static final byte[] toBytes(
+  public static final Pair<byte[], List<String>> toBytes(
       final Map<String, IndexSerdeTypeHelper> typeHelperMap,
       final InputRow row,
       AggregatorFactory[] aggs,
@@ -217,6 +249,7 @@ public class InputRowSerde
   )
   {
     try {
+      List<String> parseExceptionMessages = new ArrayList<>();
       ByteArrayDataOutput out = ByteStreams.newDataOutput();
 
       //write timestamp
@@ -233,7 +266,10 @@ public class InputRowSerde
             typeHelper = STRING_HELPER;
           }
           writeString(dim, out);
-          typeHelper.serialize(out, row.getRaw(dim), reportParseExceptions);
+          String parseExceptionMessage = typeHelper.serialize(out, row.getRaw(dim), true);
+          if (parseExceptionMessage != null) {
+            parseExceptionMessages.add(parseExceptionMessage);
+          }
         }
       }
 
@@ -264,10 +300,8 @@ public class InputRowSerde
           }
           catch (ParseException e) {
             // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
-            if (reportParseExceptions) {
-              throw new ParseException(e, "Encountered parse error for aggregator[%s]", k);
-            }
             log.debug(e, "Encountered parse error, skipping aggregator[%s].", k);
+            parseExceptionMessages.add(e.getMessage());
           }
 
           String t = aggFactory.getTypeName();
@@ -287,7 +321,7 @@ public class InputRowSerde
         }
       }
 
-      return out.toByteArray();
+      return Pair.of(out.toByteArray(), parseExceptionMessages);
     }
     catch (IOException ex) {
       throw new RuntimeException(ex);

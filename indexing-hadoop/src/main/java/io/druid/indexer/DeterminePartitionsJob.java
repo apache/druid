@@ -54,6 +54,7 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.InvalidJobConfException;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -70,6 +71,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
@@ -100,6 +102,10 @@ public class DeterminePartitionsJob implements Jobby
 
   private final HadoopDruidIndexerConfig config;
 
+  private Job groupByJob;
+
+  private String failureCause;
+
   public DeterminePartitionsJob(
       HadoopDruidIndexerConfig config
   )
@@ -124,7 +130,7 @@ public class DeterminePartitionsJob implements Jobby
       }
 
       if (!config.getPartitionsSpec().isAssumeGrouped()) {
-        final Job groupByJob = Job.getInstance(
+        groupByJob = Job.getInstance(
             new Configuration(),
             StringUtils.format("%s-determine_partitions_groupby-%s", config.getDataSource(), config.getIntervals())
         );
@@ -155,6 +161,7 @@ public class DeterminePartitionsJob implements Jobby
 
         if (!groupByJob.waitForCompletion(true)) {
           log.error("Job failed: %s", groupByJob.getJobID());
+          failureCause = Utils.getFailureMessage(groupByJob, config.JSON_MAPPER);
           return false;
         }
       } else {
@@ -212,6 +219,7 @@ public class DeterminePartitionsJob implements Jobby
 
       if (!dimSelectionJob.waitForCompletion(true)) {
         log.error("Job failed: %s", dimSelectionJob.getJobID().toString());
+        failureCause = Utils.getFailureMessage(dimSelectionJob, config.JSON_MAPPER);
         return false;
       }
 
@@ -255,6 +263,42 @@ public class DeterminePartitionsJob implements Jobby
     }
   }
 
+  @Override
+  public Map<String, Object> getStats()
+  {
+    if (groupByJob == null) {
+      return null;
+    }
+
+    try {
+      Counters jobCounters = groupByJob.getCounters();
+
+      Map<String, Object> metrics = TaskMetricsUtils.makeIngestionRowMetrics(
+          jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_PROCESSED_COUNTER).getValue(),
+          jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_PROCESSED_WITH_ERRORS_COUNTER).getValue(),
+          jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_UNPARSEABLE_COUNTER).getValue(),
+          jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_THROWN_AWAY_COUNTER).getValue()
+      );
+
+      return metrics;
+    }
+    catch (IllegalStateException ise) {
+      log.debug("Couldn't get counters due to job state");
+      return null;
+    }
+    catch (Exception e) {
+      log.debug(e, "Encountered exception in getStats().");
+      return null;
+    }
+  }
+
+  @Nullable
+  @Override
+  public String getErrorMessage()
+  {
+    return failureCause;
+  }
+
   public static class DeterminePartitionsGroupByMapper extends HadoopDruidIndexerMapper<BytesWritable, NullWritable>
   {
     private Granularity rollupGranularity = null;
@@ -282,6 +326,8 @@ public class DeterminePartitionsJob implements Jobby
           new BytesWritable(HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsBytes(groupKey)),
           NullWritable.get()
       );
+
+      context.getCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_PROCESSED_COUNTER).increment(1);
     }
   }
 

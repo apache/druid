@@ -26,6 +26,8 @@ import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import io.druid.indexer.TaskState;
 
+import java.util.Map;
+
 /**
  * Represents the status of a task from the perspective of the coordinator. The task may be ongoing
  * ({@link #isComplete()} false) or it may be complete ({@link #isComplete()} true).
@@ -36,38 +38,57 @@ public class TaskStatus
 {
   public static TaskStatus running(String taskId)
   {
-    return new TaskStatus(taskId, TaskState.RUNNING, -1);
+    return new TaskStatus(taskId, TaskState.RUNNING, -1, null, null, null);
   }
 
   public static TaskStatus success(String taskId)
   {
-    return new TaskStatus(taskId, TaskState.SUCCESS, -1);
+    return new TaskStatus(taskId, TaskState.SUCCESS, -1, null, null, null);
+  }
+
+  public static TaskStatus success(String taskId, Map<String, Object> metrics, String errorMsg, Map<String, Object> context)
+  {
+    return new TaskStatus(taskId, TaskState.SUCCESS, -1, metrics, errorMsg, context);
   }
 
   public static TaskStatus failure(String taskId)
   {
-    return new TaskStatus(taskId, TaskState.FAILED, -1);
+    return new TaskStatus(taskId, TaskState.FAILED, -1, null, null, null);
+  }
+
+  public static TaskStatus failure(String taskId, Map<String, Object> metrics, String errorMsg, Map<String, Object> context)
+  {
+    return new TaskStatus(taskId, TaskState.FAILED, -1, metrics, errorMsg, context);
   }
 
   public static TaskStatus fromCode(String taskId, TaskState code)
   {
-    return new TaskStatus(taskId, code, -1);
+    return new TaskStatus(taskId, code, -1, null, null, null);
   }
 
   private final String id;
   private final TaskState status;
   private final long duration;
+  private final Map<String, Object> metrics;
+  private final String errorMsg;
+  private final Map<String, Object> context;
 
   @JsonCreator
   protected TaskStatus(
       @JsonProperty("id") String id,
       @JsonProperty("status") TaskState status,
-      @JsonProperty("duration") long duration
+      @JsonProperty("duration") long duration,
+      @JsonProperty("metrics") Map<String, Object> metrics,
+      @JsonProperty("errorMsg") String errorMsg,
+      @JsonProperty("context") Map<String, Object> context
   )
   {
     this.id = id;
     this.status = status;
     this.duration = duration;
+    this.metrics = metrics;
+    this.errorMsg = errorMsg;
+    this.context = context;
 
     // Check class invariants.
     Preconditions.checkNotNull(id, "id");
@@ -90,6 +111,24 @@ public class TaskStatus
   public long getDuration()
   {
     return duration;
+  }
+
+  @JsonProperty("metrics")
+  public Map<String, Object> getMetrics()
+  {
+    return metrics;
+  }
+
+  @JsonProperty("errorMsg")
+  public String getErrorMsg()
+  {
+    return errorMsg;
+  }
+
+  @JsonProperty("context")
+  public Map<String, Object> getContext()
+  {
+    return context;
   }
 
   /**
@@ -141,7 +180,7 @@ public class TaskStatus
 
   public TaskStatus withDuration(long _duration)
   {
-    return new TaskStatus(id, status, _duration);
+    return new TaskStatus(id, status, _duration, metrics, errorMsg, context);
   }
 
   @Override
@@ -156,7 +195,10 @@ public class TaskStatus
     TaskStatus that = (TaskStatus) o;
     return duration == that.duration &&
            java.util.Objects.equals(id, that.id) &&
-           status == that.status;
+           status == that.status &&
+           java.util.Objects.equals(metrics, that.metrics) &&
+           java.util.Objects.equals(errorMsg, that.errorMsg) &&
+           java.util.Objects.equals(context, that.context);
   }
 
   @Override
@@ -172,6 +214,9 @@ public class TaskStatus
                   .add("id", id)
                   .add("status", status)
                   .add("duration", duration)
+                  .add("metrics", metrics)
+                  .add("errorMsg", errorMsg)
+                  .add("context", context)
                   .toString();
   }
 }

@@ -310,7 +310,7 @@ public class StreamAppenderatorDriverFailTest
     {
       rows.computeIfAbsent(identifier, k -> new ArrayList<>()).add(row);
       numRows++;
-      return new AppenderatorAddResult(identifier, numRows, false);
+      return new AppenderatorAddResult(identifier, numRows, false, null);
     }
 
     @Override

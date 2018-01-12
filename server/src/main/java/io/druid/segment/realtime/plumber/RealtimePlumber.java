@@ -216,7 +216,7 @@ public class RealtimePlumber implements Plumber
       return -1;
     }
 
-    final int numRows = sink.add(row, false);
+    final int numRows = sink.add(row, false).getRowCount();
 
     if (!sink.canAppendRow() || System.currentTimeMillis() > nextFlush) {
       persist(committerSupplier.get());

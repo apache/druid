@@ -27,6 +27,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.inject.Binder;
+import com.google.inject.Module;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -79,6 +81,8 @@ import io.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.transform.TransformingInputRowParser;
 import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.server.security.AuthTestUtils;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NumberedShardSpec;
 import org.hamcrest.CoreMatchers;
@@ -200,7 +204,21 @@ public class CompactionTaskTest
             guiceIntrospector, objectMapper.getDeserializationConfig().getAnnotationIntrospector()
         )
     );
-    objectMapper.setInjectableValues(new GuiceInjectableValues(GuiceInjectors.makeStartupInjector()));
+    GuiceInjectableValues injectableValues = new GuiceInjectableValues(
+        GuiceInjectors.makeStartupInjectorWithModules(
+            ImmutableList.<Module>of(
+                new Module()
+                {
+                  @Override
+                  public void configure(Binder binder)
+                  {
+                    binder.bind(AuthorizerMapper.class).toInstance(AuthTestUtils.TEST_AUTHORIZER_MAPPER);
+                  }
+                }
+            )
+        )
+    );
+    objectMapper.setInjectableValues(injectableValues);
     objectMapper.registerModule(
         new SimpleModule().registerSubtypes(new NamedType(NumberedShardSpec.class, "NumberedShardSpec"))
     );
@@ -244,6 +262,9 @@ public class CompactionTaskTest
         false,
         null,
         100L,
+        null,
+        null,
+        null,
         null
     );
   }
@@ -263,7 +284,8 @@ public class CompactionTaskTest
         null,
         createTuningConfig(),
         ImmutableMap.of("testKey", "testContext"),
-        objectMapper
+        objectMapper,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER
     );
     final byte[] bytes = objectMapper.writeValueAsBytes(task);
     final CompactionTask fromJson = objectMapper.readValue(bytes, CompactionTask.class);
@@ -289,7 +311,8 @@ public class CompactionTaskTest
         null,
         createTuningConfig(),
         ImmutableMap.of("testKey", "testContext"),
-        objectMapper
+        objectMapper,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER
     );
     final byte[] bytes = objectMapper.writeValueAsBytes(task);
     final CompactionTask fromJson = objectMapper.readValue(bytes, CompactionTask.class);

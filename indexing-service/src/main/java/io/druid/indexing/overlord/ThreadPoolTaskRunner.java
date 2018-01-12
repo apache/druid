@@ -465,11 +465,11 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
           log.warn(e, "Interrupted while running task[%s]", task);
         }
 
-        status = TaskStatus.failure(task.getId());
+        status = TaskStatus.failure(task.getId(), null, e.toString(), null);
       }
       catch (Exception e) {
         log.error(e, "Exception while running task[%s]", task);
-        status = TaskStatus.failure(task.getId());
+        status = TaskStatus.failure(task.getId(), null, e.toString(), null);
       }
       catch (Throwable t) {
         log.error(t, "Uncaught Throwable while running task[%s]", task);

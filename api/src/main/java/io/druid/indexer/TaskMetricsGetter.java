@@ -17,33 +17,13 @@
  * under the License.
  */
 
-package io.druid.java.util.common.parsers;
+package io.druid.indexer;
 
-import io.druid.java.util.common.StringUtils;
+import java.util.List;
+import java.util.Map;
 
-/**
- */
-public class ParseException extends RuntimeException
+public interface TaskMetricsGetter
 {
-  private boolean fromPartiallyValidRow = false;
-
-  public ParseException(String formatText, Object... arguments)
-  {
-    super(StringUtils.nonStrictFormat(formatText, arguments));
-  }
-
-  public ParseException(Throwable cause, String formatText, Object... arguments)
-  {
-    super(StringUtils.nonStrictFormat(formatText, arguments), cause);
-  }
-
-  public boolean isFromPartiallyValidRow()
-  {
-    return fromPartiallyValidRow;
-  }
-
-  public void setFromPartiallyValidRow(boolean fromPartiallyValidRow)
-  {
-    this.fromPartiallyValidRow = fromPartiallyValidRow;
-  }
+  List<String> getKeys();
+  Map<String, Double> getMetrics();
 }

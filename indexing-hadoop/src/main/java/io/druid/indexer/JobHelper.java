@@ -354,19 +354,12 @@ public class JobHelper
     }
   }
 
-  public static boolean runJobs(List<Jobby> jobs, HadoopDruidIndexerConfig config)
+  public static boolean runSingleJob(Jobby job, HadoopDruidIndexerConfig config)
   {
-    String failedMessage = null;
-    for (Jobby job : jobs) {
-      if (failedMessage == null) {
-        if (!job.run()) {
-          failedMessage = StringUtils.format("Job[%s] failed!", job.getClass());
-        }
-      }
-    }
+    boolean succeeded = job.run();
 
     if (!config.getSchema().getTuningConfig().isLeaveIntermediate()) {
-      if (failedMessage == null || config.getSchema().getTuningConfig().isCleanupOnFailure()) {
+      if (succeeded || config.getSchema().getTuningConfig().isCleanupOnFailure()) {
         Path workingPath = config.makeIntermediatePath();
         log.info("Deleting path[%s]", workingPath);
         try {
@@ -380,11 +373,35 @@ public class JobHelper
       }
     }
 
-    if (failedMessage != null) {
-      throw new ISE(failedMessage);
+    return succeeded;
+  }
+  
+  public static boolean runJobs(List<Jobby> jobs, HadoopDruidIndexerConfig config)
+  {
+    boolean succeeded = true;
+    for (Jobby job : jobs) {
+      if (!job.run()) {
+        succeeded = false;
+        break;
+      }
     }
 
-    return true;
+    if (!config.getSchema().getTuningConfig().isLeaveIntermediate()) {
+      if (succeeded || config.getSchema().getTuningConfig().isCleanupOnFailure()) {
+        Path workingPath = config.makeIntermediatePath();
+        log.info("Deleting path[%s]", workingPath);
+        try {
+          Configuration conf = injectSystemProperties(new Configuration());
+          config.addJobProperties(conf);
+          workingPath.getFileSystem(conf).delete(workingPath, true);
+        }
+        catch (IOException e) {
+          log.error(e, "Failed to cleanup path[%s]", workingPath);
+        }
+      }
+    }
+
+    return succeeded;
   }
 
   public static DataSegment serializeOutIndex(

@@ -19,24 +19,29 @@
 
 package io.druid.indexer;
 
-import javax.annotation.Nullable;
+import com.google.common.collect.Maps;
+
 import java.util.Map;
 
-/**
- */
-public interface Jobby
+public class TaskMetricsUtils
 {
-  boolean run();
+  public static final String ROWS_PROCESSED = "rowsProcessed";
+  public static final String ROWS_PROCESSED_WITH_ERRORS = "rowsProcessedWithErrors";
+  public static final String ROWS_UNPARSEABLE = "rowsUnparseable";
+  public static final String ROWS_THROWN_AWAY = "rowsThrownAway";
 
-  @Nullable
-  default Map<String, Object> getStats()
+  public static Map<String, Object> makeIngestionRowMetrics(
+      long rowsProcessed,
+      long rowsProcessedWithErrors,
+      long rowsUnparseable,
+      long rowsThrownAway
+  )
   {
-    throw new UnsupportedOperationException("This Jobby does not implement getJobStats().");
-  }
-
-  @Nullable
-  default String getErrorMessage()
-  {
-    throw new UnsupportedOperationException("This Jobby does not implement getErrorMessage().");
+    Map<String, Object> metricsMap = Maps.newHashMap();
+    metricsMap.put(ROWS_PROCESSED, rowsProcessed);
+    metricsMap.put(ROWS_PROCESSED_WITH_ERRORS, rowsProcessedWithErrors);
+    metricsMap.put(ROWS_UNPARSEABLE, rowsUnparseable);
+    metricsMap.put(ROWS_THROWN_AWAY, rowsThrownAway);
+    return metricsMap;
   }
 }
