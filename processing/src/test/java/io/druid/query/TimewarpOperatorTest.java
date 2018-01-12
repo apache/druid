@@ -24,6 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.granularity.PeriodGranularity;
+import io.druid.java.util.common.guava.Accumulators;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -31,11 +33,13 @@ import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.timeboundary.TimeBoundaryResultValue;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 
@@ -57,14 +61,24 @@ public class TimewarpOperatorTest
       final DateTime t = DateTimes.of("2014-01-23");
       final DateTime tOffset = DateTimes.of("2014-01-09");
 
-      Assert.assertEquals(tOffset, t.plus(testOperator.computeOffset(t.getMillis())));
+      Assert.assertEquals(tOffset, t.plus(testOperator.computeOffset(t.getMillis(), DateTimeZone.UTC)));
     }
 
     {
       final DateTime t = DateTimes.of("2014-08-02");
       final DateTime tOffset = DateTimes.of("2014-01-11");
 
-      Assert.assertEquals(tOffset, t.plus(testOperator.computeOffset(t.getMillis())));
+      Assert.assertEquals(tOffset, t.plus(testOperator.computeOffset(t.getMillis(), DateTimeZone.UTC)));
+    }
+
+    {
+      final DateTime t = DateTimes.of("2014-08-02T-07");
+      final DateTime tOffset = DateTimes.of("2014-01-11T-08");
+
+      Assert.assertEquals(
+          tOffset,
+          t.plus(testOperator.computeOffset(t.getMillis(), DateTimeZone.forID("America/Los_Angeles")))
+      );
     }
   }
 
@@ -181,6 +195,126 @@ public class TimewarpOperatorTest
         )
     );
 
+  }
+
+  @Test
+  public void testPostProcessWithTimezonesAndDstShift() throws Exception
+  {
+    QueryRunner<Result<TimeseriesResultValue>> queryRunner = testOperator.postProcess(
+        new QueryRunner<Result<TimeseriesResultValue>>()
+        {
+          @Override
+          public Sequence<Result<TimeseriesResultValue>> run(
+              QueryPlus<Result<TimeseriesResultValue>> queryPlus,
+              Map<String, Object> responseContext
+          )
+          {
+            return Sequences.simple(
+                ImmutableList.of(
+                    new Result<>(
+                        DateTimes.of("2014-01-09T-08"),
+                        new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 2))
+                    ),
+                    new Result<>(
+                        DateTimes.of("2014-01-11T-08"),
+                        new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 3))
+                    ),
+                    new Result<>(
+                        queryPlus.getQuery().getIntervals().get(0).getEnd(),
+                        new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 5))
+                    )
+                )
+            );
+          }
+        },
+        DateTimes.of("2014-08-02T-07").getMillis()
+    );
+
+    final Query<Result<TimeseriesResultValue>> query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("dummy")
+              .intervals("2014-07-31T-07/2014-08-05T-07")
+              .granularity(new PeriodGranularity(new Period("P1D"), null, DateTimeZone.forID("America/Los_Angeles")))
+              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count")))
+              .build();
+
+    Assert.assertEquals(
+        Lists.newArrayList(
+            new Result<>(
+                DateTimes.of("2014-07-31T-07"),
+                new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 2))
+            ),
+            new Result<>(
+                DateTimes.of("2014-08-02T-07"),
+                new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 3))
+            ),
+            new Result<>(
+                DateTimes.of("2014-08-02T-07"),
+                new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 5))
+            )
+        ),
+        queryRunner.run(QueryPlus.wrap(query), CONTEXT).accumulate(new ArrayList<>(), Accumulators.list())
+    );
+  }
+
+  @Test
+  public void testPostProcessWithTimezonesAndNoDstShift() throws Exception
+  {
+    QueryRunner<Result<TimeseriesResultValue>> queryRunner = testOperator.postProcess(
+        new QueryRunner<Result<TimeseriesResultValue>>()
+        {
+          @Override
+          public Sequence<Result<TimeseriesResultValue>> run(
+              QueryPlus<Result<TimeseriesResultValue>> queryPlus,
+              Map<String, Object> responseContext
+          )
+          {
+            return Sequences.simple(
+                ImmutableList.of(
+                    new Result<>(
+                        DateTimes.of("2014-01-09T-07"),
+                        new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 2))
+                    ),
+                    new Result<>(
+                        DateTimes.of("2014-01-11T-07"),
+                        new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 3))
+                    ),
+                    new Result<>(
+                        queryPlus.getQuery().getIntervals().get(0).getEnd(),
+                        new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 5))
+                    )
+                )
+            );
+          }
+        },
+        DateTimes.of("2014-08-02T-07").getMillis()
+    );
+
+    final Query<Result<TimeseriesResultValue>> query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("dummy")
+              .intervals("2014-07-31T-07/2014-08-05T-07")
+              .granularity(new PeriodGranularity(new Period("P1D"), null, DateTimeZone.forID("America/Phoenix")))
+              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count")))
+              .build();
+
+    Assert.assertEquals(
+        Lists.newArrayList(
+            new Result<>(
+                DateTimes.of("2014-07-31T-07"),
+                new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 2))
+            ),
+            new Result<>(
+                DateTimes.of("2014-08-02T-07"),
+                new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 3))
+            ),
+            new Result<>(
+                DateTimes.of("2014-08-02T-07"),
+                new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 5))
+            )
+        ),
+        queryRunner.run(QueryPlus.wrap(query), CONTEXT).accumulate(new ArrayList<>(), Accumulators.list())
+    );
   }
 
   @Test
