@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import io.druid.java.util.common.parsers.CSVParser;
 import io.druid.java.util.common.parsers.Parser;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -75,8 +76,8 @@ public class CSVParseSpec extends ParseSpec
   public CSVParseSpec(
       TimestampSpec timestampSpec,
       DimensionsSpec dimensionsSpec,
-      String listDelimiter,
-      Map<String, String> multiValueDelimiter,
+      @Nullable String listDelimiter,
+      @Nullable Map<String, String> multiValueDelimiter,
       List<String> columns
   )
   {

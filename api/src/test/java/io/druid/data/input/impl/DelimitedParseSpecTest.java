@@ -139,20 +139,20 @@ public class DelimitedParseSpecTest
   public void testDefaultListDelimiter()
   {
     final DelimitedParseSpec spec = new DelimitedParseSpec(
-            new TimestampSpec(
-                    "timestamp",
-                    "auto",
-                    null
-            ),
-            new DimensionsSpec(
-                    DimensionsSpec.getDefaultSchemas(Arrays.asList("col2")),
-                    Lists.<String>newArrayList(),
-                    Lists.<SpatialDimensionSchema>newArrayList()
-            ),
-            ",",
-            null,
-            null,
-            Arrays.asList("col1", "col2", "col3")
+        new TimestampSpec(
+                "timestamp",
+                "auto",
+                null
+        ),
+        new DimensionsSpec(
+                DimensionsSpec.getDefaultSchemas(Arrays.asList("col2")),
+                Lists.<String>newArrayList(),
+                Lists.<SpatialDimensionSchema>newArrayList()
+        ),
+        ",",
+        null,
+        null,
+        Arrays.asList("col1", "col2", "col3")
     );
 
     DelimitedParser parser = (DelimitedParser) spec.makeParser();

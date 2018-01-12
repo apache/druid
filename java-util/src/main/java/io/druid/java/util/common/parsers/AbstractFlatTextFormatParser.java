@@ -86,11 +86,7 @@ public abstract class AbstractFlatTextFormatParser implements Parser<String, Obj
         }
 
         if (deli != null && value.contains(deli)) {
-          Splitter multiSplitter = deliSpliterMap.get(deli);
-          if (multiSplitter == null) {
-            multiSplitter = Splitter.on(deli);
-            deliSpliterMap.put(deli, multiSplitter);
-          }
+          Splitter multiSplitter = deliSpliterMap.computeIfAbsent(deli, Splitter::on);
           return StreamSupport.stream(multiSplitter.split(value).spliterator(), false)
                   .map(Strings::emptyToNull)
                   .collect(Collectors.toList());
