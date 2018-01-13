@@ -17,33 +17,19 @@
  * under the License.
  */
 
-package io.druid.java.util.common;
+package io.druid.server.coordinator.helper;
 
-import com.google.common.collect.ImmutableList;
-import org.joda.time.Interval;
-import org.joda.time.chrono.ISOChronology;
+import io.druid.timeline.DataSegment;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 
-public final class Intervals
+import java.util.Iterator;
+import java.util.List;
+
+public interface CompactionSegmentIterator extends Iterator<List<DataSegment>>
 {
-  public static final Interval ETERNITY = utc(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT);
-  public static final ImmutableList<Interval> ONLY_ETERNITY = ImmutableList.of(ETERNITY);
-
-  public static Interval utc(long startInstant, long endInstant)
-  {
-    return new Interval(startInstant, endInstant, ISOChronology.getInstanceUTC());
-  }
-
-  public static Interval of(String interval)
-  {
-    return new Interval(interval, ISOChronology.getInstanceUTC());
-  }
-
-  public static boolean isEmpty(Interval interval)
-  {
-    return interval.getStart().equals(interval.getEnd());
-  }
-
-  private Intervals()
-  {
-  }
+  /**
+   * Return a map of (dataSource, number of remaining segments) for all dataSources.
+   * This method should consider all segments except the segments returned by {@link #next()}.
+   */
+  Object2LongOpenHashMap<String> remainingSegments();
 }

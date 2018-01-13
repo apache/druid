@@ -17,33 +17,24 @@
  * under the License.
  */
 
-package io.druid.java.util.common;
+package io.druid.server.coordinator.helper;
 
-import com.google.common.collect.ImmutableList;
-import org.joda.time.Interval;
-import org.joda.time.chrono.ISOChronology;
+import io.druid.server.coordinator.CoordinatorCompactionConfig;
+import io.druid.timeline.DataSegment;
+import io.druid.timeline.VersionedIntervalTimeline;
 
-public final class Intervals
+import java.util.Map;
+
+/**
+ * Segment searching policy used by {@link DruidCoordinatorSegmentCompactor}.
+ */
+public interface CompactionSegmentSearchPolicy
 {
-  public static final Interval ETERNITY = utc(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT);
-  public static final ImmutableList<Interval> ONLY_ETERNITY = ImmutableList.of(ETERNITY);
-
-  public static Interval utc(long startInstant, long endInstant)
-  {
-    return new Interval(startInstant, endInstant, ISOChronology.getInstanceUTC());
-  }
-
-  public static Interval of(String interval)
-  {
-    return new Interval(interval, ISOChronology.getInstanceUTC());
-  }
-
-  public static boolean isEmpty(Interval interval)
-  {
-    return interval.getStart().equals(interval.getEnd());
-  }
-
-  private Intervals()
-  {
-  }
+  /**
+   * Reset the current states of this policy. This method should be called whenever iterating starts.
+   */
+  CompactionSegmentIterator reset(
+      Map<String, CoordinatorCompactionConfig> compactionConfigs,
+      Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources
+  );
 }

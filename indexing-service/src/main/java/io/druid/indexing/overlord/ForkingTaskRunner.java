@@ -766,6 +766,12 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
         return TaskLocation.create(processHolder.host, processHolder.port, processHolder.tlsPort);
       }
     }
+
+    @Override
+    public String getTaskType()
+    {
+      return task.getType();
+    }
   }
 
   private static class ProcessHolder

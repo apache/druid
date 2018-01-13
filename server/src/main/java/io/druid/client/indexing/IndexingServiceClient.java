@@ -41,6 +41,8 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -88,9 +90,78 @@ public class IndexingServiceClient
     runQuery(new ClientConversionQuery(dataSegment));
   }
 
-  public void upgradeSegments(String dataSource, Interval interval)
+  public String compactSegments(
+      List<DataSegment> segments,
+      int compactionTaskPriority,
+      @Nullable ClientCompactQueryTuningConfig tuningConfig,
+      @Nullable Map<String, Object> context
+  )
   {
-    runQuery(new ClientConversionQuery(dataSource, interval));
+    Preconditions.checkArgument(segments.size() > 1, "Expect two or more segments to compact");
+
+    final String dataSource = segments.get(0).getDataSource();
+    Preconditions.checkArgument(
+        segments.stream().allMatch(segment -> segment.getDataSource().equals(dataSource)),
+        "Segments must have the same dataSource"
+    );
+
+    context = context == null ? new HashMap<>() : context;
+    context.put("priority", compactionTaskPriority);
+
+    return runQuery(new ClientCompactQuery(dataSource, segments, tuningConfig, context));
+  }
+
+  private String runQuery(Object queryObject)
+  {
+    try {
+      final FullResponseHolder response = druidLeaderClient.go(
+          druidLeaderClient.makeRequest(
+              HttpMethod.POST,
+              "/druid/indexer/v1/task"
+          ).setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(queryObject))
+      );
+
+      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        throw new ISE("Failed to post query[%s]", queryObject);
+      }
+
+      final Map<String, Object> resultMap = jsonMapper.readValue(
+          response.getContent(),
+          JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+      );
+      final String taskId = (String) resultMap.get("task");
+      return Preconditions.checkNotNull(taskId, "Null task id for query[%s]", queryObject);
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  public int getTotalWorkerCapacity()
+  {
+    try {
+      final FullResponseHolder response = druidLeaderClient.go(
+          druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/indexer/v1/workers")
+                           .setHeader("Content-Type", MediaType.APPLICATION_JSON)
+      );
+
+      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        throw new ISE(
+            "Error while getting available cluster capacity. status[%s] content[%s]",
+            response.getStatus(),
+            response.getContent()
+        );
+      }
+      final Collection<IndexingWorkerInfo> workers = jsonMapper.readValue(
+          response.getContent(),
+          new TypeReference<Collection<IndexingWorkerInfo>>() {}
+      );
+
+      return workers.stream().mapToInt(workerInfo -> workerInfo.getWorker().getCapacity()).sum();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   public List<TaskStatusPlus> getRunningTasks()
@@ -164,21 +235,6 @@ public class IndexingServiceClient
     }
     catch (Exception e) {
       throw new RuntimeException(e);
-    }
-  }
-
-  private void runQuery(Object queryObject)
-  {
-    try {
-      druidLeaderClient.go(
-          druidLeaderClient.makeRequest(
-              HttpMethod.POST,
-              "/druid/indexer/v1/task"
-          ).setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(queryObject))
-      );
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
     }
   }
 }

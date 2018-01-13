@@ -389,6 +389,7 @@ public class WorkerHolder
             );
             delta.add(TaskAnnouncement.create(
                 announcement.getTaskId(),
+                announcement.getTaskType(),
                 announcement.getTaskResource(),
                 TaskStatus.failure(announcement.getTaskId()),
                 announcement.getTaskLocation()
@@ -424,6 +425,7 @@ public class WorkerHolder
               );
               delta.add(TaskAnnouncement.create(
                   announcement.getTaskId(),
+                  announcement.getTaskType(),
                   announcement.getTaskResource(),
                   TaskStatus.failure(announcement.getTaskId()),
                   announcement.getTaskLocation()

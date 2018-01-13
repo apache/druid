@@ -31,11 +31,13 @@ import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import io.druid.server.coordinator.LoadQueuePeon;
 import io.druid.server.coordinator.ServerHolder;
 import io.druid.timeline.DataSegment;
+import io.druid.timeline.partition.PartitionChunk;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  */
@@ -254,11 +256,33 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
         }
     );
 
+    emitter.emit(
+        new ServiceMetricEvent.Builder().build(
+            "compact/task/count",
+            stats.getGlobalStat("compactTaskCount")
+        )
+    );
+
+    stats.forEachDataSourceStat(
+        "segmentsWaitCompact",
+        (final String dataSource, final long count) -> {
+          emitter.emit(
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                  .build("segment/waitCompact/count", count)
+          );
+        }
+    );
+
     // Emit segment metrics
     final Stream<DataSegment> allSegments = params
         .getDataSources()
+        .values()
         .stream()
-        .flatMap(dataSource -> dataSource.getSegments().stream());
+        .flatMap(timeline -> timeline.getAllTimelineEntries().values().stream())
+        .flatMap(entryMap -> entryMap.values().stream())
+        .flatMap(entry -> StreamSupport.stream(entry.getPartitionHolder().spliterator(), false))
+        .map(PartitionChunk::getObject);
 
     allSegments
         .collect(Collectors.groupingBy(DataSegment::getDataSource))

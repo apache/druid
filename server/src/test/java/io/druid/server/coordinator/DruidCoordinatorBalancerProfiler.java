@@ -154,7 +154,7 @@ public class DruidCoordinatorBalancerProfiler
                                 )
                                 .withAvailableSegments(segmentMap.values())
                                 .withDynamicConfigs(
-                                    new CoordinatorDynamicConfig.Builder().withMaxSegmentsToMove(
+                                    CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(
                                         MAX_SEGMENTS_TO_MOVE
                                     ).withReplicantLifetime(500)
                                                                      .withReplicationThrottleLimit(5)
@@ -252,7 +252,7 @@ public class DruidCoordinatorBalancerProfiler
                                 )
                                 .withAvailableSegments(segments.values())
                                 .withDynamicConfigs(
-                                    new CoordinatorDynamicConfig.Builder().withMaxSegmentsToMove(
+                                    CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(
                                         MAX_SEGMENTS_TO_MOVE
                                     ).build()
                                 )

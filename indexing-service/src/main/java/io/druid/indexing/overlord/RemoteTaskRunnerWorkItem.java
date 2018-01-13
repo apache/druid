@@ -30,31 +30,23 @@ import org.joda.time.DateTime;
 public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
 {
   private final SettableFuture<TaskStatus> result;
+  private String taskType;
   private Worker worker;
   private TaskLocation location;
 
   public RemoteTaskRunnerWorkItem(
       String taskId,
+      String taskType,
       Worker worker,
       TaskLocation location
   )
   {
-    this(taskId, SettableFuture.<TaskStatus>create(), worker, location);
-  }
-
-  public RemoteTaskRunnerWorkItem(
-      String taskId,
-      DateTime createdTime,
-      DateTime queueInsertionTime,
-      Worker worker,
-      TaskLocation location
-  )
-  {
-    this(taskId, SettableFuture.<TaskStatus>create(), createdTime, queueInsertionTime, worker, location);
+    this(taskId, taskType, SettableFuture.<TaskStatus>create(), worker, location);
   }
 
   private RemoteTaskRunnerWorkItem(
       String taskId,
+      String taskType,
       SettableFuture<TaskStatus> result,
       Worker worker,
       TaskLocation location
@@ -62,12 +54,14 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
   {
     super(taskId, result);
     this.result = result;
+    this.taskType = taskType;
     this.worker = worker;
     this.location = location == null ? TaskLocation.unknown() : location;
   }
 
   private RemoteTaskRunnerWorkItem(
       String taskId,
+      String taskType,
       SettableFuture<TaskStatus> result,
       DateTime createdTime,
       DateTime queueInsertionTime,
@@ -77,6 +71,7 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
   {
     super(taskId, result, createdTime, queueInsertionTime);
     this.result = result;
+    this.taskType = taskType;
     this.worker = worker;
     this.location = location == null ? TaskLocation.unknown() : location;
   }
@@ -90,6 +85,17 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
   public TaskLocation getLocation()
   {
     return location;
+  }
+
+  public void setTaskType(String taskType)
+  {
+    this.taskType = taskType;
+  }
+
+  @Override
+  public String getTaskType()
+  {
+    return taskType;
   }
 
   public void setWorker(Worker worker)
@@ -109,13 +115,14 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
 
   public RemoteTaskRunnerWorkItem withQueueInsertionTime(DateTime time)
   {
-    return new RemoteTaskRunnerWorkItem(getTaskId(), result, getCreatedTime(), time, worker, location);
+    return new RemoteTaskRunnerWorkItem(getTaskId(), taskType, result, getCreatedTime(), time, worker, location);
   }
 
   public RemoteTaskRunnerWorkItem withWorker(Worker theWorker, TaskLocation location)
   {
     return new RemoteTaskRunnerWorkItem(
         getTaskId(),
+        taskType,
         result,
         getCreatedTime(),
         getQueueInsertionTime(),

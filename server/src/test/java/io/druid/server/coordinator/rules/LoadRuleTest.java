@@ -280,7 +280,7 @@ public class LoadRuleTest
   }
 
   @Test
-  public void testDrop() throws Exception
+  public void testDrop()
   {
     final LoadQueuePeon mockPeon = createEmptyPeon();
     mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
@@ -543,7 +543,7 @@ public class LoadRuleTest
             .withBalancerStrategy(mockBalancerStrategy)
             .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
             .withAvailableSegments(Arrays.asList(dataSegment1, dataSegment2, dataSegment3))
-            .withDynamicConfigs(new CoordinatorDynamicConfig.Builder().withMaxSegmentsInNodeLoadingQueue(2).build())
+            .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsInNodeLoadingQueue(2).build())
             .build();
 
     CoordinatorStats stats1 = rule.run(null, params, dataSegment1);

@@ -21,7 +21,6 @@ package io.druid.server.coordinator;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
-import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.indexer.TaskStatusPlus;
 import io.druid.java.util.common.DateTimes;
@@ -89,11 +88,11 @@ public class DruidCoordinatorCleanupPendingSegments implements DruidCoordinatorH
     // If there is no running/pending/waiting/complete tasks, pendingSegmentsCleanupEndTime is
     // (DateTimes.nowUtc() - KEEP_PENDING_SEGMENTS_OFFSET).
     final DateTime pendingSegmentsCleanupEndTime = createdTimes.get(0).minus(KEEP_PENDING_SEGMENTS_OFFSET);
-    for (ImmutableDruidDataSource dataSource : params.getDataSources()) {
-      if (!params.getCoordinatorDynamicConfig().getKillPendingSegmentsSkipList().contains(dataSource.getName())) {
+    for (String dataSource : params.getDataSources().keySet()) {
+      if (!params.getCoordinatorDynamicConfig().getKillPendingSegmentsSkipList().contains(dataSource)) {
         log.info(
             "Killed [%d] pendingSegments created until [%s] for dataSource[%s]",
-            indexingServiceClient.killPendingSegments(dataSource.getName(), pendingSegmentsCleanupEndTime),
+            indexingServiceClient.killPendingSegments(dataSource, pendingSegmentsCleanupEndTime),
             pendingSegmentsCleanupEndTime,
             dataSource
         );
