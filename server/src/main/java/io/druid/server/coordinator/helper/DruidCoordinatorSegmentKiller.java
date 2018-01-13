@@ -39,7 +39,7 @@ import java.util.List;
  */
 public class DruidCoordinatorSegmentKiller implements DruidCoordinatorHelper
 {
-  private final static Logger log = new Logger(DruidCoordinatorSegmentKiller.class);
+  private static final Logger log = new Logger(DruidCoordinatorSegmentKiller.class);
 
   private final long period;
   private final long retainDuration;

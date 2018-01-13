@@ -227,7 +227,7 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     }
   }
 
-  protected static abstract class BaseArrayProvider<T> implements TopNMetricSpecBuilder<T>
+  protected abstract static class BaseArrayProvider<T> implements TopNMetricSpecBuilder<T>
   {
     private volatile String previousStop;
     private volatile boolean ignoreAfterThreshold;

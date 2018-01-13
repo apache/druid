@@ -32,7 +32,7 @@ import java.util.Map;
 
 public class ConfigFileConfigProvider implements IntegrationTestingConfigProvider
 {
-  private final static Logger LOG = new Logger(ConfigFileConfigProvider.class);
+  private static final Logger LOG = new Logger(ConfigFileConfigProvider.class);
   private String routerUrl;
   private String brokerUrl;
   private String historicalUrl;

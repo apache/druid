@@ -277,7 +277,7 @@ public class SketchAggregationWithSimpleDataTest
     Assert.assertEquals("AgMDAAAazJMCAAAAAACAPzz9j7pWTMdROWGf15uY1nI=", result.getValue().getEvents().get(0).getEvent().get("pty_country"));
   }
 
-  public final static String readFileFromClasspathAsString(String fileName) throws IOException
+  public static final String readFileFromClasspathAsString(String fileName) throws IOException
   {
     return Files.asCharSource(
         new File(SketchAggregationTest.class.getClassLoader().getResource(fileName).getFile()),

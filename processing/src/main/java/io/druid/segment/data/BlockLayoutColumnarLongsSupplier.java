@@ -30,7 +30,6 @@ import java.nio.LongBuffer;
 
 public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
 {
-
   private final GenericIndexed<ResourceHolder<ByteBuffer>> baseLongBuffers;
   private final int totalSize;
   private final int sizePer;
@@ -56,8 +55,8 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
   {
     final int div = Integer.numberOfTrailingZeros(sizePer);
     final int rem = sizePer - 1;
-    final boolean powerOf2 = sizePer == (1 << div);
-    if (powerOf2) {
+    final boolean isPowerOf2 = sizePer == (1 << div);
+    if (isPowerOf2) {
       // this provide slightly better performance than calling the LongsEncodingReader.read, probably because Java
       // doesn't inline the method call for some reason. This should be removed when test show that performance
       // of using read method is same as directly accessing the longbuffer
@@ -70,12 +69,12 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
             // optimize division and remainder for powers of 2
             final int bufferNum = index >> div;
 
-            if (bufferNum != currIndex) {
+            if (bufferNum != currBufferNum) {
               loadBuffer(bufferNum);
             }
 
             final int bufferIndex = index & rem;
-            return longBuffer.get(longBuffer.position() + bufferIndex);
+            return longBuffer.get(bufferIndex);
           }
 
           @Override
@@ -84,8 +83,9 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
             CloseQuietly.close(holder);
             holder = singleThreadedLongBuffers.get(bufferNum);
             buffer = holder.get();
+            // asLongBuffer() makes the longBuffer's position = 0
             longBuffer = buffer.asLongBuffer();
-            currIndex = bufferNum;
+            currBufferNum = bufferNum;
           }
         };
       } else {
@@ -97,7 +97,7 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
             // optimize division and remainder for powers of 2
             final int bufferNum = index >> div;
 
-            if (bufferNum != currIndex) {
+            if (bufferNum != currBufferNum) {
               loadBuffer(bufferNum);
             }
 
@@ -116,9 +116,11 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
   {
     final CompressionFactory.LongEncodingReader reader = baseReader.duplicate();
     final Indexed<ResourceHolder<ByteBuffer>> singleThreadedLongBuffers = baseLongBuffers.singleThreaded();
-    int currIndex = -1;
+
+    int currBufferNum = -1;
     ResourceHolder<ByteBuffer> holder;
     ByteBuffer buffer;
+    /** longBuffer's position must be 0 */
     LongBuffer longBuffer;
 
     @Override
@@ -130,10 +132,11 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
     @Override
     public long get(int index)
     {
+      // division + remainder is optimized by the compiler so keep those together
       final int bufferNum = index / sizePer;
       final int bufferIndex = index % sizePer;
 
-      if (bufferNum != currIndex) {
+      if (bufferNum != currBufferNum) {
         loadBuffer(bufferNum);
       }
 
@@ -160,19 +163,8 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
       CloseQuietly.close(holder);
       holder = singleThreadedLongBuffers.get(bufferNum);
       buffer = holder.get();
-      currIndex = bufferNum;
+      currBufferNum = bufferNum;
       reader.setBuffer(buffer);
-    }
-
-    @Override
-    public String toString()
-    {
-      return "BlockCompressedColumnarLongs_Anonymous{" +
-             "currIndex=" + currIndex +
-             ", sizePer=" + sizePer +
-             ", numChunks=" + singleThreadedLongBuffers.size() +
-             ", totalSize=" + totalSize +
-             '}';
     }
 
     @Override
@@ -181,6 +173,17 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
       if (holder != null) {
         holder.close();
       }
+    }
+
+    @Override
+    public String toString()
+    {
+      return "BlockCompressedColumnarLongs_Anonymous{" +
+             "currBufferNum=" + currBufferNum +
+             ", sizePer=" + sizePer +
+             ", numChunks=" + singleThreadedLongBuffers.size() +
+             ", totalSize=" + totalSize +
+             '}';
     }
   }
 }

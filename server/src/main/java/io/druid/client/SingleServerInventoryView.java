@@ -46,7 +46,7 @@ public class SingleServerInventoryView extends AbstractCuratorServerInventoryVie
 {
   private static final EmittingLogger log = new EmittingLogger(SingleServerInventoryView.class);
 
-  final private ConcurrentMap<SegmentCallback, Predicate<Pair<DruidServerMetadata, DataSegment>>> segmentPredicates =
+  private final ConcurrentMap<SegmentCallback, Predicate<Pair<DruidServerMetadata, DataSegment>>> segmentPredicates =
       new ConcurrentHashMap<>();
   private final Predicate<Pair<DruidServerMetadata, DataSegment>> defaultFilter;
 

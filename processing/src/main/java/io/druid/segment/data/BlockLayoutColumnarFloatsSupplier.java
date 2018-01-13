@@ -38,14 +38,11 @@ public class BlockLayoutColumnarFloatsSupplier implements Supplier<ColumnarFloat
       int totalSize,
       int sizePer,
       ByteBuffer fromBuffer,
-      ByteOrder order,
+      ByteOrder byteOrder,
       CompressionStrategy strategy
   )
   {
-    baseFloatBuffers = GenericIndexed.read(
-        fromBuffer,
-        new DecompressingByteBufferObjectStrategy(order, strategy)
-    );
+    baseFloatBuffers = GenericIndexed.read(fromBuffer, new DecompressingByteBufferObjectStrategy(byteOrder, strategy));
     this.totalSize = totalSize;
     this.sizePer = sizePer;
   }
@@ -55,8 +52,8 @@ public class BlockLayoutColumnarFloatsSupplier implements Supplier<ColumnarFloat
   {
     final int div = Integer.numberOfTrailingZeros(sizePer);
     final int rem = sizePer - 1;
-    final boolean powerOf2 = sizePer == (1 << div);
-    if (powerOf2) {
+    final boolean isPowerOf2 = sizePer == (1 << div);
+    if (isPowerOf2) {
       return new BlockLayoutColumnarFloats()
       {
         @Override
@@ -65,12 +62,12 @@ public class BlockLayoutColumnarFloatsSupplier implements Supplier<ColumnarFloat
           // optimize division and remainder for powers of 2
           final int bufferNum = index >> div;
 
-          if (bufferNum != currIndex) {
+          if (bufferNum != currBufferNum) {
             loadBuffer(bufferNum);
           }
 
           final int bufferIndex = index & rem;
-          return floatBuffer.get(floatBuffer.position() + bufferIndex);
+          return floatBuffer.get(bufferIndex);
         }
       };
     } else {
@@ -81,9 +78,10 @@ public class BlockLayoutColumnarFloatsSupplier implements Supplier<ColumnarFloat
   private class BlockLayoutColumnarFloats implements ColumnarFloats
   {
     final Indexed<ResourceHolder<ByteBuffer>> singleThreadedFloatBuffers = baseFloatBuffers.singleThreaded();
-    int currIndex = -1;
+
+    int currBufferNum = -1;
     ResourceHolder<ByteBuffer> holder;
-    ByteBuffer buffer;
+    /** floatBuffer's position must be 0 */
     FloatBuffer floatBuffer;
 
     @Override
@@ -99,11 +97,11 @@ public class BlockLayoutColumnarFloatsSupplier implements Supplier<ColumnarFloat
       final int bufferNum = index / sizePer;
       final int bufferIndex = index % sizePer;
 
-      if (bufferNum != currIndex) {
+      if (bufferNum != currBufferNum) {
         loadBuffer(bufferNum);
       }
 
-      return floatBuffer.get(floatBuffer.position() + bufferIndex);
+      return floatBuffer.get(bufferIndex);
     }
 
     @Override
@@ -125,20 +123,9 @@ public class BlockLayoutColumnarFloatsSupplier implements Supplier<ColumnarFloat
     {
       CloseQuietly.close(holder);
       holder = singleThreadedFloatBuffers.get(bufferNum);
-      buffer = holder.get();
-      floatBuffer = buffer.asFloatBuffer();
-      currIndex = bufferNum;
-    }
-
-    @Override
-    public String toString()
-    {
-      return "BlockCompressedColumnarFloats_Anonymous{" +
-             "currIndex=" + currIndex +
-             ", sizePer=" + sizePer +
-             ", numChunks=" + singleThreadedFloatBuffers.size() +
-             ", totalSize=" + totalSize +
-             '}';
+      // asFloatBuffer() makes the floatBuffer's position = 0
+      floatBuffer = holder.get().asFloatBuffer();
+      currBufferNum = bufferNum;
     }
 
     @Override
@@ -147,6 +134,17 @@ public class BlockLayoutColumnarFloatsSupplier implements Supplier<ColumnarFloat
       if (holder != null) {
         holder.close();
       }
+    }
+
+    @Override
+    public String toString()
+    {
+      return "BlockCompressedColumnarFloats_Anonymous{" +
+             "currBufferNum=" + currBufferNum +
+             ", sizePer=" + sizePer +
+             ", numChunks=" + singleThreadedFloatBuffers.size() +
+             ", totalSize=" + totalSize +
+             '}';
     }
   }
 }

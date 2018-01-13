@@ -99,6 +99,8 @@
       <property name="caseIndent" value="2"/>
     </module>
 
+    <module name="ModifierOrder" />
+
     <module name="Regexp">
       <property name="format" value="com\.google\.common\.io\.Closer"/>
       <property name="illegalPattern" value="true"/>
