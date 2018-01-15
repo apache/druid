@@ -496,6 +496,7 @@ public class TaskSerdeTest
 
             new RealtimeTuningConfig(
                 1,
+                1,
                 new Period("PT10M"),
                 null,
                 null,

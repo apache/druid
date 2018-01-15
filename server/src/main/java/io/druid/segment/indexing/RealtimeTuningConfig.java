@@ -42,6 +42,7 @@ import java.io.File;
 public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
 {
   private static final int defaultMaxRowsInMemory = 75000;
+  private static final int defaultMaxRowsPerSegment = 5_000_000;
   private static final Period defaultIntermediatePersistPeriod = new Period("PT10M");
   private static final Period defaultWindowPeriod = new Period("PT10M");
   private static final VersioningPolicy defaultVersioningPolicy = new IntervalStartVersioningPolicy();
@@ -63,6 +64,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   {
     return new RealtimeTuningConfig(
         defaultMaxRowsInMemory,
+        defaultMaxRowsPerSegment,
         defaultIntermediatePersistPeriod,
         defaultWindowPeriod,
         basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory,
@@ -82,6 +84,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   }
 
   private final int maxRowsInMemory;
+  private final int maxRowsPerSegment;
   private final Period intermediatePersistPeriod;
   private final Period windowPeriod;
   private final File basePersistDirectory;
@@ -101,6 +104,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   @JsonCreator
   public RealtimeTuningConfig(
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
+      @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
       @JsonProperty("windowPeriod") Period windowPeriod,
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
@@ -120,6 +124,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   )
   {
     this.maxRowsInMemory = maxRowsInMemory == null ? defaultMaxRowsInMemory : maxRowsInMemory;
+    this.maxRowsPerSegment = maxRowsPerSegment == null ? defaultMaxRowsPerSegment : maxRowsPerSegment;
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
                                      ? defaultIntermediatePersistPeriod
                                      : intermediatePersistPeriod;
@@ -152,6 +157,12 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   public int getMaxRowsInMemory()
   {
     return maxRowsInMemory;
+  }
+
+  @JsonProperty
+  public int getMaxRowsPerSegment()
+  {
+    return maxRowsPerSegment;
   }
 
   @Override
@@ -259,6 +270,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   {
     return new RealtimeTuningConfig(
         maxRowsInMemory,
+        maxRowsPerSegment,
         intermediatePersistPeriod,
         windowPeriod,
         basePersistDirectory,
@@ -281,6 +293,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   {
     return new RealtimeTuningConfig(
         maxRowsInMemory,
+        maxRowsPerSegment,
         intermediatePersistPeriod,
         windowPeriod,
         dir,

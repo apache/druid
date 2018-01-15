@@ -28,59 +28,69 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
+import io.druid.data.input.InputRow;
 import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.discovery.LookupNodeService;
+import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
+import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockReleaseAction;
+import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.DruidMetrics;
-import io.druid.query.FinalizeResultsQueryRunner;
+import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
-import io.druid.query.QueryRunnerFactory;
-import io.druid.query.QueryRunnerFactoryConglomerate;
-import io.druid.query.QueryToolChest;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.RealtimeMetricsMonitor;
-import io.druid.segment.realtime.SegmentPublisher;
+import io.druid.segment.realtime.appenderator.Appenderator;
+import io.druid.segment.realtime.appenderator.AppenderatorDriver;
+import io.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
+import io.druid.segment.realtime.appenderator.Appenderators;
+import io.druid.segment.realtime.appenderator.SegmentsAndMetadata;
+import io.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import io.druid.segment.realtime.firehose.ClippedFirehoseFactory;
 import io.druid.segment.realtime.firehose.EventReceiverFirehoseFactory;
 import io.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 import io.druid.segment.realtime.plumber.Committers;
-import io.druid.segment.realtime.plumber.Plumber;
-import io.druid.segment.realtime.plumber.PlumberSchool;
-import io.druid.segment.realtime.plumber.Plumbers;
-import io.druid.segment.realtime.plumber.RealtimePlumberSchool;
 import io.druid.segment.realtime.plumber.VersioningPolicy;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class RealtimeIndexTask extends AbstractTask
 {
@@ -123,7 +133,16 @@ public class RealtimeIndexTask extends AbstractTask
   private final FireDepartment spec;
 
   @JsonIgnore
-  private volatile Plumber plumber = null;
+  private final Queue<ListenableFuture<SegmentsAndMetadata>> pendingHandoffs;
+
+  @JsonIgnore
+  private final AtomicReference<Throwable> throwableDuringPublishing;
+
+  @JsonIgnore
+  private volatile AppenderatorDriver driver = null;
+
+  @JsonIgnore
+  private volatile Appenderator appenderator = null;
 
   @JsonIgnore
   private volatile Firehose firehose = null;
@@ -139,9 +158,6 @@ public class RealtimeIndexTask extends AbstractTask
 
   @JsonIgnore
   private volatile Thread runThread = null;
-
-  @JsonIgnore
-  private volatile QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate = null;
 
   @JsonCreator
   public RealtimeIndexTask(
@@ -159,6 +175,8 @@ public class RealtimeIndexTask extends AbstractTask
         context
     );
     this.spec = fireDepartment;
+    this.pendingHandoffs = new ConcurrentLinkedQueue<>();
+    this.throwableDuringPublishing = new AtomicReference<>();
   }
 
   @Override
@@ -182,14 +200,12 @@ public class RealtimeIndexTask extends AbstractTask
   @Override
   public <T> QueryRunner<T> getQueryRunner(Query<T> query)
   {
-    if (plumber != null) {
-      QueryRunnerFactory<T, Query<T>> factory = queryRunnerFactoryConglomerate.findFactory(query);
-      QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
-
-      return new FinalizeResultsQueryRunner<T>(plumber.getQueryRunner(query), toolChest);
-    } else {
-      return null;
+    if (appenderator == null) {
+      // Not yet initialized, no data yet, just return a noop runner.
+      return new NoopQueryRunner<>();
     }
+
+    return (queryPlus, responseContext) -> queryPlus.run(appenderator, responseContext);
   }
 
   @Override
@@ -203,22 +219,9 @@ public class RealtimeIndexTask extends AbstractTask
   {
     runThread = Thread.currentThread();
 
-    if (this.plumber != null) {
-      throw new IllegalStateException("WTF?!? run with non-null plumber??!");
-    }
-
     setupTimeoutAlert();
 
     boolean normalExit = true;
-
-    // It would be nice to get the PlumberSchool in the constructor.  Although that will need jackson injectables for
-    // stuff like the ServerView, which seems kind of odd?  Perhaps revisit this when Guice has been introduced.
-
-    final SegmentPublisher segmentPublisher = new TaskActionSegmentPublisher(toolbox);
-
-    // NOTE: We talk to the coordinator in various places in the plumber and we could be more robust to issues
-    // with the coordinator.  Right now, we'll block/throw in whatever thread triggered the coordinator behavior,
-    // which will typically be either the main data processing loop or the persist thread.
 
     // Wrap default DataSegmentAnnouncer such that we unlock intervals as we unannounce segments
     final long lockTimeoutMs = getContextValue(Tasks.LOCK_TIMEOUT_KEY, Tasks.DEFAULT_LOCK_TIMEOUT);
@@ -281,31 +284,25 @@ public class RealtimeIndexTask extends AbstractTask
       }
     };
 
-    // NOTE: getVersion will block if there is lock contention, which will block plumber.getSink
-    // NOTE: (and thus the firehose)
+    // NOTE: getVersion will block (and thus block the firehose) if there is lock contention
 
     // Shouldn't usually happen, since we don't expect people to submit tasks that intersect with the
     // realtime window, but if they do it can be problematic. If we decide to care, we can use more threads in
     // the plumber such that waiting for the coordinator doesn't block data processing.
-    final VersioningPolicy versioningPolicy = new VersioningPolicy()
-    {
-      @Override
-      public String getVersion(final Interval interval)
-      {
-        try {
-          // Side effect: Calling getVersion causes a lock to be acquired
-          final LockAcquireAction action = new LockAcquireAction(TaskLockType.EXCLUSIVE, interval, lockTimeoutMs);
-          final TaskLock lock = Preconditions.checkNotNull(
-              toolbox.getTaskActionClient().submit(action),
-              "Cannot acquire a lock for interval[%s]",
-              interval
-          );
+    final VersioningPolicy versioningPolicy = interval -> {
+      try {
+        // Side effect: Calling getVersion causes a lock to be acquired
+        final LockAcquireAction action = new LockAcquireAction(TaskLockType.EXCLUSIVE, interval, lockTimeoutMs);
+        final TaskLock lock = Preconditions.checkNotNull(
+            toolbox.getTaskActionClient().submit(action),
+            "Cannot acquire a lock for interval[%s]",
+            interval
+        );
 
-          return lock.getVersion();
-        }
-        catch (IOException e) {
-          throw Throwables.propagate(e);
-        }
+        return lock.getVersion();
+      }
+      catch (IOException e) {
+        throw Throwables.propagate(e);
       }
     };
 
@@ -327,29 +324,6 @@ public class RealtimeIndexTask extends AbstractTask
             DruidMetrics.TASK_ID, new String[]{getId()}
         )
     );
-    this.queryRunnerFactoryConglomerate = toolbox.getQueryRunnerFactoryConglomerate();
-
-    // NOTE: This pusher selects path based purely on global configuration and the DataSegment, which means
-    // NOTE: that redundant realtime tasks will upload to the same location. This can cause index.zip
-    // NOTE: (partitionNum_index.zip for HDFS data storage) and descriptor.json (partitionNum_descriptor.json for
-    // NOTE: HDFS data storage) to mismatch, or it can cause historical nodes to load different instances of
-    // NOTE: the "same" segment.
-    final PlumberSchool plumberSchool = new RealtimePlumberSchool(
-        toolbox.getEmitter(),
-        toolbox.getQueryRunnerFactoryConglomerate(),
-        toolbox.getSegmentPusher(),
-        lockingSegmentAnnouncer,
-        segmentPublisher,
-        toolbox.getSegmentHandoffNotifierFactory(),
-        toolbox.getQueryExecutorService(),
-        toolbox.getIndexMergerV9(),
-        toolbox.getIndexIO(),
-        toolbox.getCache(),
-        toolbox.getCacheConfig(),
-        toolbox.getObjectMapper()
-    );
-
-    this.plumber = plumberSchool.findPlumber(dataSchema, tuningConfig, metrics);
 
     Supplier<Committer> committerSupplier = null;
     final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
@@ -366,12 +340,14 @@ public class RealtimeIndexTask extends AbstractTask
         )
     );
 
+    appenderator = newAppenderator(dataSchema, tuningConfig, fireDepartment.getMetrics(), toolbox, lockingSegmentAnnouncer);
+    driver = newDriver(dataSchema, appenderator, toolbox, fireDepartment.getMetrics());
+
     try {
       toolbox.getDataSegmentServerAnnouncer().announce();
       toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
 
-
-      plumber.startJob();
+      driver.startJob();
 
       // Set up metrics emission
       toolbox.getMonitorScheduler().addMonitor(metricsMonitor);
@@ -391,16 +367,90 @@ public class RealtimeIndexTask extends AbstractTask
         }
       }
 
+      int sequenceNumber = 0;
+      String sequenceName = makeSequenceName(sequenceNumber);
+
+      final TransactionalSegmentPublisher publisher = (segments, commitMetadata) -> {
+        final SegmentTransactionalInsertAction action = new SegmentTransactionalInsertAction(segments);
+        return toolbox.getTaskActionClient().submit(action).isSuccess();
+      };
+
       // Time to read data!
       while (firehose != null && (!gracefullyStopped || firehoseDrainableByClosing) && firehose.hasMore()) {
-        Plumbers.addNextRow(
-            committerSupplier,
-            firehose,
-            plumber,
-            tuningConfig.isReportParseExceptions(),
-            metrics
-        );
+        if (throwableDuringPublishing.get() != null) {
+          Throwables.propagate(throwableDuringPublishing.get());
+        }
+
+        try {
+          InputRow inputRow = firehose.nextRow();
+
+          if (inputRow == null) {
+            log.debug("Discarded null row, considering thrownAway.");
+            metrics.incrementThrownAway();
+          } else {
+            AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName, committerSupplier);
+
+            if (addResult.isOk()) {
+              if (addResult.isPersistRequired()) {
+                driver.persist(committerSupplier.get());
+              }
+
+              if (addResult.getNumRowsInSegment() > tuningConfig.getMaxRowsPerSegment()) {
+                publishSegments(publisher, committerSupplier, sequenceName);
+
+                sequenceNumber++;
+                sequenceName = makeSequenceName(sequenceNumber);
+              }
+            } else {
+              // Failure to allocate segment puts determinism at risk, bail out to be safe.
+              // May want configurable behavior here at some point.
+              // If we allow continuing, then consider blacklisting the interval for a while to avoid constant checks.
+              throw new ISE("Could not allocate segment for row with timestamp[%s]", inputRow.getTimestamp());
+            }
+
+            metrics.incrementProcessed();
+          }
+        }
+        catch (ParseException e) {
+          if (tuningConfig.isReportParseExceptions()) {
+            throw e;
+          } else {
+            log.debug(e, "Discarded row due to exception, considering unparseable.");
+            metrics.incrementUnparseable();
+          }
+        }
       }
+
+      if (!gracefullyStopped) {
+        synchronized (this) {
+          if (gracefullyStopped) {
+            // Someone called stopGracefully after we checked the flag. That's okay, just stop now.
+            log.info("Gracefully stopping.");
+          } else {
+            finishingJob = true;
+          }
+        }
+
+        if (finishingJob) {
+          log.info("Finishing job...");
+          // Publish any remaining segments
+          publishSegments(publisher, committerSupplier, sequenceName);
+
+          if (!pendingHandoffs.isEmpty()) {
+            ListenableFuture<?> allHandoffs = Futures.allAsList(pendingHandoffs);
+            log.info("Waiting for handoffs");
+
+            long handoffTimeout = tuningConfig.getHandoffConditionTimeout();
+
+            if (handoffTimeout > 0) {
+              allHandoffs.get(handoffTimeout, TimeUnit.MILLISECONDS);
+            } else {
+              allHandoffs.get();
+            }
+          }
+        }
+      }
+
     }
     catch (Throwable e) {
       normalExit = false;
@@ -417,7 +467,7 @@ public class RealtimeIndexTask extends AbstractTask
 
             final Committer committer = committerSupplier.get();
             final CountDownLatch persistLatch = new CountDownLatch(1);
-            plumber.persist(
+            driver.persist(
                 new Committer()
                 {
                   @Override
@@ -440,24 +490,6 @@ public class RealtimeIndexTask extends AbstractTask
             );
             persistLatch.await();
           }
-
-          if (gracefullyStopped) {
-            log.info("Gracefully stopping.");
-          } else {
-            log.info("Finishing the job.");
-            synchronized (this) {
-              if (gracefullyStopped) {
-                // Someone called stopGracefully after we checked the flag. That's okay, just stop now.
-                log.info("Gracefully stopping.");
-              } else {
-                finishingJob = true;
-              }
-            }
-
-            if (finishingJob) {
-              plumber.finishJob();
-            }
-          }
         }
         catch (InterruptedException e) {
           log.debug(e, "Interrupted while finishing the job");
@@ -472,6 +504,14 @@ public class RealtimeIndexTask extends AbstractTask
           }
           toolbox.getMonitorScheduler().removeMonitor(metricsMonitor);
         }
+      }
+
+      if (appenderator != null) {
+        appenderator.close();
+      }
+
+      if (driver != null) {
+        driver.close();
       }
 
       toolbox.getDataSegmentServerAnnouncer().unannounce();
@@ -556,22 +596,6 @@ public class RealtimeIndexTask extends AbstractTask
                && isFirehoseDrainableByClosing(((ClippedFirehoseFactory) firehoseFactory).getDelegate()));
   }
 
-  public static class TaskActionSegmentPublisher implements SegmentPublisher
-  {
-    final TaskToolbox taskToolbox;
-
-    public TaskActionSegmentPublisher(TaskToolbox taskToolbox)
-    {
-      this.taskToolbox = taskToolbox;
-    }
-
-    @Override
-    public void publishSegment(DataSegment segment) throws IOException
-    {
-      taskToolbox.publishSegments(ImmutableList.of(segment));
-    }
-  }
-
   private void setupTimeoutAlert()
   {
     if (spec.getTuningConfig().getAlertTimeout() > 0) {
@@ -592,5 +616,69 @@ public class RealtimeIndexTask extends AbstractTask
           spec.getTuningConfig().getAlertTimeout()
       );
     }
+  }
+
+  private Appenderator newAppenderator(
+      final DataSchema dataSchema,
+      final RealtimeTuningConfig tuningConfig,
+      final FireDepartmentMetrics metrics,
+      final TaskToolbox toolbox,
+      final DataSegmentAnnouncer segmentAnnouncer
+  )
+  {
+    return Appenderators.createRealtime(
+        dataSchema,
+        tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
+        metrics,
+        toolbox.getSegmentPusher(),
+        toolbox.getObjectMapper(),
+        toolbox.getIndexIO(),
+        toolbox.getIndexMergerV9(),
+        toolbox.getQueryRunnerFactoryConglomerate(),
+        segmentAnnouncer,
+        toolbox.getEmitter(),
+        toolbox.getQueryExecutorService(),
+        toolbox.getCache(),
+        toolbox.getCacheConfig()
+    );
+  }
+
+  private AppenderatorDriver newDriver(
+      final DataSchema dataSchema,
+      final Appenderator appenderator,
+      final TaskToolbox toolbox,
+      final FireDepartmentMetrics metrics
+  )
+  {
+    return new AppenderatorDriver(
+        appenderator,
+        new ActionBasedSegmentAllocator(toolbox.getTaskActionClient(), dataSchema),
+        toolbox.getSegmentHandoffNotifierFactory(),
+        new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
+        toolbox.getObjectMapper(),
+        metrics
+    );
+  }
+
+  private void publishSegments(
+      TransactionalSegmentPublisher publisher,
+      Supplier<Committer> committerSupplier,
+      String sequenceName
+  )
+  {
+    ListenableFuture<SegmentsAndMetadata> publishFuture = driver.publish(
+        publisher,
+        committerSupplier.get(),
+        Collections.singletonList(sequenceName)
+    );
+
+    ListenableFuture<SegmentsAndMetadata> handoffFuture = Futures.transform(publishFuture, driver::registerHandoff);
+
+    pendingHandoffs.add(handoffFuture);
+  }
+
+  private String makeSequenceName(int sequenceNumber)
+  {
+    return String.format("%s_%d", getId(), sequenceNumber);
   }
 }
