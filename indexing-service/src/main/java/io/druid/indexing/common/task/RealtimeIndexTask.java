@@ -90,7 +90,6 @@ import java.util.TimerTask;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class RealtimeIndexTask extends AbstractTask
 {
@@ -136,9 +135,6 @@ public class RealtimeIndexTask extends AbstractTask
   private final Queue<ListenableFuture<SegmentsAndMetadata>> pendingHandoffs;
 
   @JsonIgnore
-  private final AtomicReference<Throwable> throwableDuringPublishing;
-
-  @JsonIgnore
   private volatile AppenderatorDriver driver = null;
 
   @JsonIgnore
@@ -176,7 +172,6 @@ public class RealtimeIndexTask extends AbstractTask
     );
     this.spec = fireDepartment;
     this.pendingHandoffs = new ConcurrentLinkedQueue<>();
-    this.throwableDuringPublishing = new AtomicReference<>();
   }
 
   @Override
@@ -377,10 +372,6 @@ public class RealtimeIndexTask extends AbstractTask
 
       // Time to read data!
       while (firehose != null && (!gracefullyStopped || firehoseDrainableByClosing) && firehose.hasMore()) {
-        if (throwableDuringPublishing.get() != null) {
-          Throwables.propagate(throwableDuringPublishing.get());
-        }
-
         try {
           InputRow inputRow = firehose.nextRow();
 
