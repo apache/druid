@@ -339,7 +339,8 @@ public class PendingTaskBasedProvisioningStrategyTest
                 testTask.getId(),
                 testTask.getType(),
                 null,
-                TaskLocation.unknown()
+                TaskLocation.unknown(),
+                testTask.getDataSource()
             ).withQueueInsertionTime(DateTimes.nowUtc())
         )
     ).times(2);

@@ -2060,12 +2060,14 @@ public class KafkaSupervisorTest extends EasyMockSupport
   {
     private final String taskType;
     private final TaskLocation location;
+    private final String dataSource;
 
     public TestTaskRunnerWorkItem(Task task, ListenableFuture<TaskStatus> result, TaskLocation location)
     {
       super(task.getId(), result);
       this.taskType = task.getType();
       this.location = location;
+      this.dataSource = task.getDataSource();
     }
 
     @Override
@@ -2079,6 +2081,13 @@ public class KafkaSupervisorTest extends EasyMockSupport
     {
       return taskType;
     }
+
+    @Override
+    public String getDataSource() 
+    {
+      return dataSource;
+    }
+ 
   }
 
   private static class TestableKafkaSupervisor extends KafkaSupervisor
