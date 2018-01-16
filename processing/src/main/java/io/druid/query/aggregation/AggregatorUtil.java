@@ -169,7 +169,8 @@ public class AggregatorUtil
         @Override
         public boolean isNull()
         {
-          return baseSelector.getObject().isNull();
+          final ExprEval exprEval = baseSelector.getObject();
+          return exprEval.isNull();
         }
       }
       return new ExpressionFloatColumnSelector();
