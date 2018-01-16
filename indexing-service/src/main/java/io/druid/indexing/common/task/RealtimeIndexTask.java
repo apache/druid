@@ -670,6 +670,6 @@ public class RealtimeIndexTask extends AbstractTask
 
   private String makeSequenceName(int sequenceNumber)
   {
-    return String.format("%s_%d", getId(), sequenceNumber);
+    return getId() + "_" + sequenceNumber;
   }
 }
