@@ -183,13 +183,12 @@ public interface BufferAggregator extends HotLoopCallee
   }
 
   /**
-   * Returns true if the aggregator is nullable and the aggregated value is null
-   * <p>
-   * <b>Implementations must not change the position, limit or mark of the given buffer</b>
-   *
-   * The default implementation always returns false.
-   * This default method is added to enable smooth backward compatibility, please re-implement it if your aggregators
-   * support null values
+   * returns true if aggregator's output type is primitive long/double/float and aggregated value is null,
+   * but when aggregated output type is Object, this method always returns false,
+   * and users are advised to check nullability for the object returned by {@link #get()}
+   * method.
+   * The default implementation always return false to enable smooth backward compatibility,
+   * re-implement if your aggregator is nullable.
    *
    * @param buf      byte buffer storing the byte array representation of the aggregate
    * @param position offset within the byte buffer at which the aggregate value is stored
