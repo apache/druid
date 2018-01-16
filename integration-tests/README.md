@@ -182,7 +182,3 @@ This will tell the test framework that the test class needs to be constructed us
 2) FromFileTestQueryHelper - reads queries with expected results from file and executes them and verifies the results using ResultVerifier
 
 Refer ITIndexerTest as an example on how to use dependency Injection
-
-TODOS
------------------------
-1) Remove the patch for TestNG after resolution of Surefire-622
