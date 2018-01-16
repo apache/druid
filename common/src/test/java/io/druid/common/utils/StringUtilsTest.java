@@ -30,7 +30,7 @@ import java.io.UnsupportedEncodingException;
 public class StringUtilsTest
 {
   // copied from https://github.com/druid-io/druid/pull/2612
-  public final static String[] TEST_STRINGS = new String[]{
+  public static final String[] TEST_STRINGS = new String[]{
       "peach", "péché", "pêche", "sin", "",
       "☃", "C", "c", "Ç", "ç", "G", "g", "Ğ", "ğ", "I", "ı", "İ", "i",
       "O", "o", "Ö", "ö", "S", "s", "Ş", "ş", "U", "u", "Ü", "ü", "ä",

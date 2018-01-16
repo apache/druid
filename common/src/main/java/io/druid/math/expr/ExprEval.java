@@ -122,7 +122,7 @@ public abstract class ExprEval<T>
 
   public abstract Expr toExpr();
 
-  private static abstract class NumericExprEval extends ExprEval<Number>
+  private abstract static class NumericExprEval extends ExprEval<Number>
   {
 
     private NumericExprEval(Number value)

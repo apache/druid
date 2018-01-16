@@ -475,12 +475,21 @@ public class CompactionTask extends AbstractTask
       if (segments != null) {
         Collections.sort(usedSegments);
         Collections.sort(segments);
-        Preconditions.checkState(
-            usedSegments.equals(segments),
-            "Specified segments[%s] are different from the current used segments[%s]",
-            segments,
-            usedSegments
-        );
+
+        if (!usedSegments.equals(segments)) {
+          final List<DataSegment> unknownSegments = segments.stream()
+                                                            .filter(segment -> !usedSegments.contains(segment))
+                                                            .collect(Collectors.toList());
+          final List<DataSegment> missingSegments = usedSegments.stream()
+                                                                .filter(segment -> !segments.contains(segment))
+                                                                .collect(Collectors.toList());
+          throw new ISE(
+              "Specified segments in the spec are different from the current used segments. "
+              + "There are unknown segments[%s] and missing segments[%s] in the spec.",
+              unknownSegments,
+              missingSegments
+          );
+        }
       }
       return usedSegments;
     }

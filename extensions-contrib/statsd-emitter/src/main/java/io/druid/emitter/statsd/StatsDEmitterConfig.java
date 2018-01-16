@@ -29,19 +29,19 @@ public class StatsDEmitterConfig
 {
 
   @JsonProperty
-  final private String hostname;
+  private final String hostname;
   @JsonProperty
-  final private Integer port;
+  private final Integer port;
   @JsonProperty
-  final private String prefix;
+  private final String prefix;
   @JsonProperty
-  final private String separator;
+  private final String separator;
   @JsonProperty
-  final private Boolean includeHost;
+  private final Boolean includeHost;
   @JsonProperty
-  final private String dimensionMapPath;
+  private final String dimensionMapPath;
   @JsonProperty
-  final private String blankHolder;
+  private final String blankHolder;
 
   @JsonCreator
   public StatsDEmitterConfig(

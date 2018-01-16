@@ -47,7 +47,6 @@ import java.sql.SQLTransientException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.Callable;
 
 public abstract class SQLMetadataConnector implements MetadataStorageConnector
 {
@@ -127,16 +126,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       final Predicate<Throwable> myShouldRetry
   )
   {
-    final Callable<T> call = new Callable<T>()
-    {
-      @Override
-      public T call() throws Exception
-      {
-        return getDBI().withHandle(callback);
-      }
-    };
     try {
-      return RetryUtils.retry(call, myShouldRetry, DEFAULT_MAX_TRIES);
+      return RetryUtils.retry(() -> getDBI().withHandle(callback), myShouldRetry, DEFAULT_MAX_TRIES);
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -150,16 +141,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   public <T> T retryTransaction(final TransactionCallback<T> callback, final int quietTries, final int maxTries)
   {
-    final Callable<T> call = new Callable<T>()
-    {
-      @Override
-      public T call() throws Exception
-      {
-        return getDBI().inTransaction(callback);
-      }
-    };
     try {
-      return RetryUtils.retry(call, shouldRetry, quietTries, maxTries);
+      return RetryUtils.retry(() -> getDBI().inTransaction(callback), shouldRetry, quietTries, maxTries);
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

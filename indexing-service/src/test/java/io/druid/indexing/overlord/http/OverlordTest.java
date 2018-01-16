@@ -264,7 +264,7 @@ public class OverlordTest
     // Wait for task runner to run task_1
     runTaskCountDownLatches[Integer.parseInt(taskId_1)].await();
 
-    response = overlordResource.getRunningTasks(req);
+    response = overlordResource.getRunningTasks(null, req);
     // 1 task that was manually inserted should be in running state
     Assert.assertEquals(1, (((List) response.getEntity()).size()));
     final TaskStatusPlus taskResponseObject = ((List<TaskStatusPlus>) response
@@ -388,6 +388,12 @@ public class OverlordTest
         public TaskLocation getLocation()
         {
           return TASK_LOCATION;
+        }
+
+        @Override
+        public String getTaskType()
+        {
+          return task.getType();
         }
       };
       taskRunnerWorkItems.put(taskId, taskRunnerWorkItem);

@@ -51,7 +51,7 @@ public class CloudFilesObjectApiProxyTest extends EasyMockSupport
     replayAll();
 
     CloudFilesObjectApiProxy cfoApiProxy = new CloudFilesObjectApiProxy(cloudFilesApi, region, container);
-    CloudFilesObject cloudFilesObject = cfoApiProxy.get(path);
+    CloudFilesObject cloudFilesObject = cfoApiProxy.get(path, 0);
 
     assertEquals(cloudFilesObject.getPayload(), payload);
     assertEquals(cloudFilesObject.getRegion(), region);

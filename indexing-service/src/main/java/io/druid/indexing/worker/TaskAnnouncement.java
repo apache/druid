@@ -33,30 +33,39 @@ import io.druid.indexing.common.task.TaskResource;
  */
 public class TaskAnnouncement
 {
+  private final String taskType;
   private final TaskStatus taskStatus;
   private final TaskResource taskResource;
   private final TaskLocation taskLocation;
 
   public static TaskAnnouncement create(Task task, TaskStatus status, TaskLocation location)
   {
-    return create(task.getId(), task.getTaskResource(), status, location);
+    return create(task.getId(), task.getType(), task.getTaskResource(), status, location);
   }
 
-  public static TaskAnnouncement create(String taskId, TaskResource resource, TaskStatus status, TaskLocation location)
+  public static TaskAnnouncement create(
+      String taskId,
+      String taskType,
+      TaskResource resource,
+      TaskStatus status,
+      TaskLocation location
+  )
   {
     Preconditions.checkArgument(status.getId().equals(taskId), "task id == status id");
-    return new TaskAnnouncement(null, null, status, resource, location);
+    return new TaskAnnouncement(null, taskType, null, status, resource, location);
   }
 
   @JsonCreator
   private TaskAnnouncement(
       @JsonProperty("id") String taskId,
+      @JsonProperty("type") String taskType,
       @JsonProperty("status") TaskState status,
       @JsonProperty("taskStatus") TaskStatus taskStatus,
       @JsonProperty("taskResource") TaskResource taskResource,
       @JsonProperty("taskLocation") TaskLocation taskLocation
   )
   {
+    this.taskType = taskType;
     if (taskStatus != null) {
       this.taskStatus = taskStatus;
     } else {
@@ -71,6 +80,12 @@ public class TaskAnnouncement
   public String getTaskId()
   {
     return taskStatus.getId();
+  }
+
+  @JsonProperty("type")
+  public String getTaskType()
+  {
+    return taskType;
   }
 
   @JsonProperty("status")

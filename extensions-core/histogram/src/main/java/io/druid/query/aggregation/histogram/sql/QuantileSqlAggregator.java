@@ -93,15 +93,27 @@ public class QuantileSqlAggregator implements SqlAggregator
         project,
         aggregateCall.getArgList().get(1)
     );
-    final float probability = ((Number) RexLiteral.value(probabilityArg)).floatValue();
 
+    if (!probabilityArg.isA(SqlKind.LITERAL)) {
+      // Probability must be a literal in order to plan.
+      return null;
+    }
+
+    final float probability = ((Number) RexLiteral.value(probabilityArg)).floatValue();
     final int resolution;
+
     if (aggregateCall.getArgList().size() >= 3) {
       final RexNode resolutionArg = Expressions.fromFieldAccess(
           rowSignature,
           project,
           aggregateCall.getArgList().get(2)
       );
+
+      if (!resolutionArg.isA(SqlKind.LITERAL)) {
+        // Resolution must be a literal in order to plan.
+        return null;
+      }
+
       resolution = ((Number) RexLiteral.value(resolutionArg)).intValue();
     } else {
       resolution = ApproximateHistogram.DEFAULT_HISTOGRAM_SIZE;

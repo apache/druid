@@ -111,7 +111,7 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
     }
   }
 
-  abstract protected void innerMap(InputRow inputRow, Context context, boolean reportParseExceptions)
+  protected abstract void innerMap(InputRow inputRow, Context context, boolean reportParseExceptions)
       throws IOException, InterruptedException;
 
 }

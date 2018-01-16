@@ -134,6 +134,7 @@ public class WorkerTaskMonitor extends WorkerTaskManager
             workerCuratorCoordinator.updateTaskStatusAnnouncement(
                 TaskAnnouncement.create(
                     announcement.getTaskStatus().getId(),
+                    announcement.getTaskType(),
                     announcement.getTaskResource(),
                     completionStatus,
                     TaskLocation.unknown()

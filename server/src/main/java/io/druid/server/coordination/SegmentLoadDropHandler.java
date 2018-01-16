@@ -753,8 +753,8 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     private final STATE state;
     private final String failureCause;
 
-    public final static Status SUCCESS = new Status(STATE.SUCCESS, null);
-    public final static Status PENDING = new Status(STATE.PENDING, null);
+    public static final Status SUCCESS = new Status(STATE.SUCCESS, null);
+    public static final Status PENDING = new Status(STATE.PENDING, null);
 
     @JsonCreator
     Status(

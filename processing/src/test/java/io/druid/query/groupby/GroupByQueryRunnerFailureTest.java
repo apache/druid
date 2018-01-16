@@ -140,7 +140,7 @@ public class GroupByQueryRunnerFailureTest
     );
   }
 
-  private final static BlockingPool<ByteBuffer> mergeBufferPool = new DefaultBlockingPool<>(
+  private static final BlockingPool<ByteBuffer> mergeBufferPool = new DefaultBlockingPool<>(
       new Supplier<ByteBuffer>()
       {
         @Override

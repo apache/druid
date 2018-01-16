@@ -37,8 +37,8 @@ import org.junit.runner.RunWith;
 @RunWith(JUnitParamsRunner.class)
 public class WhiteListBasedDruidToTimelineEventConverterTest
 {
-  final private String prefix = "druid";
-  final private WhiteListBasedDruidToTimelineEventConverter defaultWhiteListBasedDruidToTimelineEventConverter = new WhiteListBasedDruidToTimelineEventConverter(
+  private final String prefix = "druid";
+  private final WhiteListBasedDruidToTimelineEventConverter defaultWhiteListBasedDruidToTimelineEventConverter = new WhiteListBasedDruidToTimelineEventConverter(
       prefix,
       "druid",
       null,

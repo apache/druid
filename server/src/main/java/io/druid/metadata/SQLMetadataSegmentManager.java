@@ -108,9 +108,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     this.jsonMapper = jsonMapper;
     this.config = config;
     this.dbTables = dbTables;
-    this.dataSourcesRef = new AtomicReference<>(
-        new ConcurrentHashMap<String, DruidDataSource>()
-    );
+    this.dataSourcesRef = new AtomicReference<>(new ConcurrentHashMap<>());
     this.connector = connector;
   }
 

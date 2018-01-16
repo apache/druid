@@ -68,8 +68,8 @@ public class PendingTaskBasedProvisioningStrategyTest
   private PendingTaskBasedWorkerProvisioningStrategy strategy;
   private AtomicReference<WorkerBehaviorConfig> workerConfig;
   private ScheduledExecutorService executorService = Execs.scheduledSingleThreaded("test service");
-  private final static String MIN_VERSION = "2014-01-00T00:01:00Z";
-  private final static String INVALID_VERSION = "0";
+  private static final String MIN_VERSION = "2014-01-00T00:01:00Z";
+  private static final String INVALID_VERSION = "0";
 
   @Before
   public void setUp() throws Exception
@@ -337,6 +337,7 @@ public class PendingTaskBasedProvisioningStrategyTest
         Arrays.asList(
             new RemoteTaskRunnerWorkItem(
                 testTask.getId(),
+                testTask.getType(),
                 null,
                 TaskLocation.unknown()
             ).withQueueInsertionTime(DateTimes.nowUtc())

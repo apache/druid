@@ -59,8 +59,8 @@ import java.util.Set;
 
 public class CoordinatorBasicAuthorizerResourceTest
 {
-  private final static String AUTHORIZER_NAME = "test";
-  private final static String AUTHORIZER_NAME2 = "test2";
+  private static final String AUTHORIZER_NAME = "test";
+  private static final String AUTHORIZER_NAME2 = "test2";
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();

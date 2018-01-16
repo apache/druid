@@ -32,13 +32,13 @@ public class KafkaEmitterConfig
 {
 
   @JsonProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG)
-  final private String bootstrapServers;
+  private final String bootstrapServers;
   @JsonProperty("metric.topic")
-  final private String metricTopic;
+  private final String metricTopic;
   @JsonProperty("alert.topic")
-  final private String alertTopic;
+  private final String alertTopic;
   @JsonProperty
-  final private String clusterName;
+  private final String clusterName;
   @JsonProperty("producer.config")
   private Map<String, String> kafkaProducerConfig;
 

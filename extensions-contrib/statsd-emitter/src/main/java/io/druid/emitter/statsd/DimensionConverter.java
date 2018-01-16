@@ -38,7 +38,7 @@ import java.util.Map;
 public class DimensionConverter
 {
 
-  private final static Logger log = new Logger(DimensionConverter.class);
+  private static final Logger log = new Logger(DimensionConverter.class);
   private Map<String, StatsDMetric> metricMap;
 
   public DimensionConverter(ObjectMapper mapper, String dimensionMapPath)

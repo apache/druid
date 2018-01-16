@@ -50,8 +50,8 @@ import java.util.Set;
  */
 public class DataSegmentTest
 {
-  private final static ObjectMapper mapper = new TestObjectMapper();
-  private final static int TEST_VERSION = 0x7;
+  private static final ObjectMapper mapper = new TestObjectMapper();
+  private static final int TEST_VERSION = 0x7;
 
   private static ShardSpec getShardSpec(final int partitionNum)
   {

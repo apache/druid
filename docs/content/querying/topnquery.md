@@ -79,8 +79,8 @@ There are 11 parts to a topN query.
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
 |granularity|Defines the granularity to bucket query results. See [Granularities](../querying/granularities.html)|yes|
 |filter|See [Filters](../querying/filters.html)|no|
-|aggregations|See [Aggregations](../querying/aggregations.html)|no|
-|postAggregations|See [Post Aggregations](../querying/post-aggregations.html)|no|
+|aggregations|See [Aggregations](../querying/aggregations.html)|for numeric metricSpec, aggregations or postAggregations should be specified. Otherwise no.|
+|postAggregations|See [Post Aggregations](../querying/post-aggregations.html)|for numeric metricSpec, aggregations or postAggregations should be specified. Otherwise no.|
 |dimension|A String or JSON object defining the dimension that you want the top taken for. For more info, see [DimensionSpecs](../querying/dimensionspecs.html)|yes|
 |threshold|An integer defining the N in the topN (i.e. how many results you want in the top list)|yes|
 |metric|A String or JSON object specifying the metric to sort by for the top list. For more info, see [TopNMetricSpec](../querying/topnmetricspec.html).|yes|

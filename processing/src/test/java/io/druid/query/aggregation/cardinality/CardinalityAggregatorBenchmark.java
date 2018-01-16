@@ -43,7 +43,7 @@ import java.util.List;
  */
 public class CardinalityAggregatorBenchmark extends SimpleBenchmark
 {
-  private final static int MAX = 5_000_000;
+  private static final int MAX = 5_000_000;
 
   CardinalityBufferAggregator agg;
   List<DimensionSelector> selectorList;
