@@ -28,8 +28,8 @@ import io.druid.indexer.TaskStatusPlus;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.server.coordinator.CoordinatorCompactionConfig;
-import io.druid.server.coordinator.CoordinatorDynamicConfig;
 import io.druid.server.coordinator.CoordinatorStats;
+import io.druid.server.coordinator.DataSourceCompactionConfig;
 import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
@@ -115,7 +115,7 @@ public class DruidCoordinatorSegmentCompactorTest
     }
   };
 
-  private List<CoordinatorCompactionConfig> compactionConfigs;
+  private List<DataSourceCompactionConfig> compactionConfigs;
   private Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources;
 
   @Before
@@ -125,7 +125,7 @@ public class DruidCoordinatorSegmentCompactorTest
     for (int i = 0; i < 3; i++) {
       final String dataSource = DATA_SOURCE_PREFIX + i;
       compactionConfigs.add(
-          new CoordinatorCompactionConfig(
+          new DataSourceCompactionConfig(
               dataSource,
               0,
               50L,
@@ -287,9 +287,7 @@ public class DruidCoordinatorSegmentCompactorTest
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
         .newBuilder()
         .withDataSources(dataSources)
-        .withDynamicConfigs(
-            CoordinatorDynamicConfig.builder().withCompactionConfigs(compactionConfigs).build()
-        )
+        .withCompactionConfig(CoordinatorCompactionConfig.from(compactionConfigs))
         .build();
     return compactor.run(params).getCoordinatorStats();
   }

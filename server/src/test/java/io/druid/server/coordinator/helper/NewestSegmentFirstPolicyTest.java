@@ -26,7 +26,7 @@ import com.google.common.collect.Lists;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.guava.Comparators;
-import io.druid.server.coordinator.CoordinatorCompactionConfig;
+import io.druid.server.coordinator.DataSourceCompactionConfig;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.NumberedShardSpec;
@@ -447,13 +447,13 @@ public class NewestSegmentFirstPolicyTest
     return timeline;
   }
 
-  private static CoordinatorCompactionConfig createCompactionConfig(
+  private static DataSourceCompactionConfig createCompactionConfig(
       long targetCompactionSizeBytes,
       int numTargetCompactionSegments,
       Period skipOffsetFromLatest
   )
   {
-    return new CoordinatorCompactionConfig(
+    return new DataSourceCompactionConfig(
         DATA_SOURCE,
         0,
         targetCompactionSizeBytes,

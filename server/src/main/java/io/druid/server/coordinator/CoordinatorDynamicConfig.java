@@ -25,11 +25,17 @@ import io.druid.java.util.common.IAE;
 
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * This class is for users to change their configurations while their Druid cluster is running.
+ * These configurations are designed to allow only simple values rather than complicated JSON objects.
+ *
+ * @see io.druid.common.config.JacksonConfigManager
+ * @see io.druid.common.config.ConfigManager
+ */
 public class CoordinatorDynamicConfig
 {
   public static final String CONFIG_KEY = "coordinator.config";
@@ -55,9 +61,6 @@ public class CoordinatorDynamicConfig
    * See {@link LoadQueuePeon}, {@link io.druid.server.coordinator.rules.LoadRule#run}
    */
   private final int maxSegmentsInNodeLoadingQueue;
-  private final List<CoordinatorCompactionConfig> compactionConfigs;
-  private final double compactionTaskSlotRatio;
-  private final int maxCompactionTaskSlots;
 
   @JsonCreator
   public CoordinatorDynamicConfig(
@@ -76,10 +79,7 @@ public class CoordinatorDynamicConfig
       @JsonProperty("killDataSourceWhitelist") Object killDataSourceWhitelist,
       @JsonProperty("killAllDataSources") boolean killAllDataSources,
       @JsonProperty("killPendingSegmentsSkipList") Object killPendingSegmentsSkipList,
-      @JsonProperty("maxSegmentsInNodeLoadingQueue") int maxSegmentsInNodeLoadingQueue,
-      @JsonProperty("compactionConfigs") List<CoordinatorCompactionConfig> compactionConfigs,
-      @JsonProperty("compactionTaskSlotRatio") double compactionTaskSlotRatio,
-      @JsonProperty("maxCompactionTaskSlots") int maxCompactionTaskSlots
+      @JsonProperty("maxSegmentsInNodeLoadingQueue") int maxSegmentsInNodeLoadingQueue
   )
   {
     this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
@@ -94,9 +94,6 @@ public class CoordinatorDynamicConfig
     this.killDataSourceWhitelist = parseJsonStringOrArray(killDataSourceWhitelist);
     this.killPendingSegmentsSkipList = parseJsonStringOrArray(killPendingSegmentsSkipList);
     this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue;
-    this.compactionConfigs = compactionConfigs;
-    this.compactionTaskSlotRatio = compactionTaskSlotRatio;
-    this.maxCompactionTaskSlots = maxCompactionTaskSlots;
 
     if (this.killAllDataSources && !this.killDataSourceWhitelist.isEmpty()) {
       throw new IAE("can't have killAllDataSources and non-empty killDataSourceWhitelist");
@@ -194,24 +191,6 @@ public class CoordinatorDynamicConfig
     return maxSegmentsInNodeLoadingQueue;
   }
 
-  @JsonProperty
-  public List<CoordinatorCompactionConfig> getCompactionConfigs()
-  {
-    return compactionConfigs;
-  }
-
-  @JsonProperty
-  public double getCompactionTaskSlotRatio()
-  {
-    return compactionTaskSlotRatio;
-  }
-
-  @JsonProperty
-  public int getMaxCompactionTaskSlots()
-  {
-    return maxCompactionTaskSlots;
-  }
-
   @Override
   public String toString()
   {
@@ -228,9 +207,6 @@ public class CoordinatorDynamicConfig
            ", killAllDataSources=" + killAllDataSources +
            ", killPendingSegmentsSkipList=" + killPendingSegmentsSkipList +
            ", maxSegmentsInNodeLoadingQueue=" + maxSegmentsInNodeLoadingQueue +
-           ", compactionConfigs=" + compactionConfigs +
-           ", compactionTaskSlotRatio=" + compactionTaskSlotRatio +
-           ", maxCompactionTaskSlots=" + maxCompactionTaskSlots +
            '}';
   }
 
@@ -279,17 +255,7 @@ public class CoordinatorDynamicConfig
     if (!Objects.equals(killDataSourceWhitelist, that.killDataSourceWhitelist)) {
       return false;
     }
-    if (!Objects.equals(killPendingSegmentsSkipList, that.killPendingSegmentsSkipList)) {
-      return false;
-    }
-    if (!Objects.equals(compactionConfigs, that.compactionConfigs)) {
-      return false;
-    }
-    if (compactionTaskSlotRatio != that.compactionTaskSlotRatio) {
-      return false;
-    }
-
-    return maxCompactionTaskSlots == that.maxCompactionTaskSlots;
+    return Objects.equals(killPendingSegmentsSkipList, that.killPendingSegmentsSkipList);
   }
 
   @Override
@@ -307,10 +273,7 @@ public class CoordinatorDynamicConfig
         killAllDataSources,
         maxSegmentsInNodeLoadingQueue,
         killDataSourceWhitelist,
-        killPendingSegmentsSkipList,
-        compactionConfigs,
-        compactionTaskSlotRatio,
-        maxCompactionTaskSlots
+        killPendingSegmentsSkipList
     );
   }
 
@@ -331,8 +294,6 @@ public class CoordinatorDynamicConfig
     private static final boolean DEFAULT_EMIT_BALANCING_STATS = false;
     private static final boolean DEFAULT_KILL_ALL_DATA_SOURCES = false;
     private static final int DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 0;
-    private static final double DEFAULT_COMPACTION_TASK_RATIO = 0.1;
-    private static final int DEFAILT_MAX_COMPACTION_TASK_SLOTS = Integer.MAX_VALUE;
 
     private Long millisToWaitBeforeDeleting;
     private Long mergeBytesLimit;
@@ -346,9 +307,6 @@ public class CoordinatorDynamicConfig
     private Boolean killAllDataSources;
     private Object killPendingSegmentsSkipList;
     private Integer maxSegmentsInNodeLoadingQueue;
-    private List<CoordinatorCompactionConfig> compactionConfigs;
-    private Double compactionTaskRatio;
-    private Integer maxCompactionTaskSlots;
 
     public Builder()
     {
@@ -367,10 +325,7 @@ public class CoordinatorDynamicConfig
         @JsonProperty("killDataSourceWhitelist") Object killDataSourceWhitelist,
         @JsonProperty("killAllDataSources") Boolean killAllDataSources,
         @JsonProperty("killPendingSegmentsSkipList") Object killPendingSegmentsSkipList,
-        @JsonProperty("maxSegmentsInNodeLoadingQueue") Integer maxSegmentsInNodeLoadingQueue,
-        @JsonProperty("compactionConfigs") List<CoordinatorCompactionConfig> compactionConfigs,
-        @JsonProperty("compactionTaskSlotRatio") Double compactionTaskRatio,
-        @JsonProperty("maxCompactionTaskSlots") Integer maxCompactionTaskSlots
+        @JsonProperty("maxSegmentsInNodeLoadingQueue") Integer maxSegmentsInNodeLoadingQueue
     )
     {
       this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
@@ -385,9 +340,6 @@ public class CoordinatorDynamicConfig
       this.killDataSourceWhitelist = killDataSourceWhitelist;
       this.killPendingSegmentsSkipList = killPendingSegmentsSkipList;
       this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue;
-      this.compactionConfigs = compactionConfigs;
-      this.compactionTaskRatio = compactionTaskRatio;
-      this.maxCompactionTaskSlots = maxCompactionTaskSlots;
     }
 
     public Builder withMillisToWaitBeforeDeleting(long millisToWaitBeforeDeleting)
@@ -456,24 +408,6 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
-    public Builder withCompactionConfigs(List<CoordinatorCompactionConfig> compactionConfigs)
-    {
-      this.compactionConfigs = compactionConfigs;
-      return this;
-    }
-
-    public Builder withCompactionTaskRatio(double compactionTaskRatio)
-    {
-      this.compactionTaskRatio = compactionTaskRatio;
-      return this;
-    }
-
-    public Builder withMaxCompactionTaskSlots(int maxCompactionTaskSlots)
-    {
-      this.maxCompactionTaskSlots = maxCompactionTaskSlots;
-      return this;
-    }
-
     public CoordinatorDynamicConfig build()
     {
       return new CoordinatorDynamicConfig(
@@ -488,10 +422,7 @@ public class CoordinatorDynamicConfig
           killDataSourceWhitelist,
           killAllDataSources == null ? DEFAULT_KILL_ALL_DATA_SOURCES : killAllDataSources,
           killPendingSegmentsSkipList,
-          maxSegmentsInNodeLoadingQueue == null ? DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE : maxSegmentsInNodeLoadingQueue,
-          compactionConfigs,
-          compactionTaskRatio == null ? DEFAULT_COMPACTION_TASK_RATIO : compactionTaskRatio,
-          maxCompactionTaskSlots == null ? DEFAILT_MAX_COMPACTION_TASK_SLOTS : maxCompactionTaskSlots
+          maxSegmentsInNodeLoadingQueue == null ? DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE : maxSegmentsInNodeLoadingQueue
       );
     }
 
@@ -509,10 +440,7 @@ public class CoordinatorDynamicConfig
           killDataSourceWhitelist == null ? defaults.getKillDataSourceWhitelist() : killDataSourceWhitelist,
           killAllDataSources == null ? defaults.isKillAllDataSources() : killAllDataSources,
           killPendingSegmentsSkipList == null ? defaults.getKillPendingSegmentsSkipList() : killPendingSegmentsSkipList,
-          maxSegmentsInNodeLoadingQueue == null ? defaults.getMaxSegmentsInNodeLoadingQueue() : maxSegmentsInNodeLoadingQueue,
-          compactionConfigs == null ? defaults.getCompactionConfigs() : compactionConfigs,
-          compactionTaskRatio == null ? defaults.getCompactionTaskSlotRatio() : compactionTaskRatio,
-          maxCompactionTaskSlots == null ? defaults.getMaxCompactionTaskSlots() : maxCompactionTaskSlots
+          maxSegmentsInNodeLoadingQueue == null ? defaults.getMaxSegmentsInNodeLoadingQueue() : maxSegmentsInNodeLoadingQueue
       );
     }
   }

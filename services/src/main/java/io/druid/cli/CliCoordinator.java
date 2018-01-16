@@ -66,6 +66,7 @@ import io.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
 import io.druid.server.coordinator.helper.DruidCoordinatorVersionConverter;
 import io.druid.server.http.ClusterResource;
+import io.druid.server.http.CoordinatorCompactionConfigsResource;
 import io.druid.server.http.CoordinatorDynamicConfigsResource;
 import io.druid.server.http.CoordinatorRedirectInfo;
 import io.druid.server.http.CoordinatorResource;
@@ -180,6 +181,7 @@ public class CliCoordinator extends ServerRunnable
 
             Jerseys.addResource(binder, CoordinatorResource.class);
             Jerseys.addResource(binder, CoordinatorDynamicConfigsResource.class);
+            Jerseys.addResource(binder, CoordinatorCompactionConfigsResource.class);
             Jerseys.addResource(binder, TiersResource.class);
             Jerseys.addResource(binder, RulesResource.class);
             Jerseys.addResource(binder, ServersResource.class);

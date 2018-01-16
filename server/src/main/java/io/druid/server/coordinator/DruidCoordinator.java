@@ -322,6 +322,15 @@ public class DruidCoordinator
     ).get();
   }
 
+  public CoordinatorCompactionConfig getCompactionConfig()
+  {
+    return configManager.watch(
+        CoordinatorCompactionConfig.CONFIG_KEY,
+        CoordinatorCompactionConfig.class,
+        CoordinatorCompactionConfig.empty()
+    ).get();
+  }
+
   public void removeSegment(DataSegment segment)
   {
     log.info("Removing Segment[%s]", segment);
@@ -646,13 +655,14 @@ public class DruidCoordinator
 
         // Do coordinator stuff.
         DruidCoordinatorRuntimeParams params =
-                DruidCoordinatorRuntimeParams.newBuilder()
-                        .withStartTime(startTime)
-                        .withDataSources(metadataSegmentManager.getInventory())
-                        .withDynamicConfigs(getDynamicConfigs())
-                        .withEmitter(emitter)
-                        .withBalancerStrategy(balancerStrategy)
-                        .build();
+            DruidCoordinatorRuntimeParams.newBuilder()
+                                         .withStartTime(startTime)
+                                         .withDataSources(metadataSegmentManager.getInventory())
+                                         .withDynamicConfigs(getDynamicConfigs())
+                                         .withCompactionConfig(getCompactionConfig())
+                                         .withEmitter(emitter)
+                                         .withBalancerStrategy(balancerStrategy)
+                                         .build();
         for (DruidCoordinatorHelper helper : helpers) {
           // Don't read state and run state in the same helper otherwise racy conditions may exist
           if (coordLeaderSelector.isLeader() && startingLeaderCounter == coordLeaderSelector.localTerm()) {
