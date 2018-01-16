@@ -24,6 +24,11 @@ import com.google.inject.Inject;
 
 import javax.annotation.Nullable;
 
+/**
+ * Helper class for NullHandling. This class is used to switch between SQL compatible Null Handling behavior
+ * introduced as part of {@link https://github.com/druid-io/druid/issues/4349} and the old druid behavior
+ * where null values are replaced with default values e.g Null Strings are replaced with empty values.
+ */
 public class NullHandling
 {
   private static String NULL_HANDLING_CONFIG_STRING = "druid.generic.useDefaultValueForNull";
@@ -56,13 +61,17 @@ public class NullHandling
   @Nullable
   public static String nullToEmptyIfNeeded(@Nullable String value)
   {
+    //CHECKSTYLE.OFF: Regexp
     return useDefaultValuesForNull() ? Strings.nullToEmpty(value) : value;
+    //CHECKSTYLE.ON: Regexp
   }
 
   @Nullable
   public static String emptyToNullIfNeeded(@Nullable String value)
   {
+    //CHECKSTYLE.OFF: Regexp
     return useDefaultValuesForNull() ? Strings.emptyToNull(value) : value;
+    //CHECKSTYLE.ON: Regexp
   }
 
   @Nullable

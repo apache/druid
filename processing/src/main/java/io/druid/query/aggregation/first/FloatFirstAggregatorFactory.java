@@ -80,20 +80,22 @@ public class FloatFirstAggregatorFactory extends NullableAggregatorFactory
   public Pair<Aggregator, BaseNullableColumnValueSelector> factorize2(ColumnSelectorFactory metricFactory)
   {
     ColumnValueSelector columnValueSelector = metricFactory.makeColumnValueSelector(fieldName);
-    return Pair.of(new FloatFirstAggregator(
-        metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
-        columnValueSelector
-    ), columnValueSelector);
+    return Pair.of(
+        new FloatFirstAggregator(
+            metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
+            columnValueSelector
+        ), columnValueSelector);
   }
 
   @Override
   public Pair<BufferAggregator, BaseNullableColumnValueSelector> factorizeBuffered2(ColumnSelectorFactory metricFactory)
   {
     ColumnValueSelector columnValueSelector = metricFactory.makeColumnValueSelector(fieldName);
-    return Pair.of(new FloatFirstBufferAggregator(
-        metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
-        columnValueSelector
-    ), columnValueSelector);
+    return Pair.of(
+        new FloatFirstBufferAggregator(
+            metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
+            columnValueSelector
+        ), columnValueSelector);
   }
 
   @Override
@@ -130,43 +132,45 @@ public class FloatFirstAggregatorFactory extends NullableAggregatorFactory
       public Pair<Aggregator, BaseNullableColumnValueSelector> factorize2(ColumnSelectorFactory metricFactory)
       {
         final ColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
-        return Pair.of(new FloatFirstAggregator(null, null)
-        {
-          @Override
-          public void aggregate()
-          {
-            SerializablePair<Long, Float> pair = (SerializablePair<Long, Float>) selector.getObject();
-            if (pair.lhs < firstTime) {
-              firstTime = pair.lhs;
-              firstValue = pair.rhs;
-            }
-          }
-        }, selector);
+        return Pair.of(
+            new FloatFirstAggregator(null, null)
+            {
+              @Override
+              public void aggregate()
+              {
+                SerializablePair<Long, Float> pair = (SerializablePair<Long, Float>) selector.getObject();
+                if (pair.lhs < firstTime) {
+                  firstTime = pair.lhs;
+                  firstValue = pair.rhs;
+                }
+              }
+            }, selector);
       }
 
       @Override
       public Pair<BufferAggregator, BaseNullableColumnValueSelector> factorizeBuffered2(ColumnSelectorFactory metricFactory)
       {
         final ColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
-        return Pair.of(new FloatFirstBufferAggregator(null, null)
-        {
-          @Override
-          public void aggregate(ByteBuffer buf, int position)
-          {
-            SerializablePair<Long, Float> pair = (SerializablePair<Long, Float>) selector.getObject();
-            long firstTime = buf.getLong(position);
-            if (pair.lhs < firstTime) {
-              buf.putLong(position, pair.lhs);
-              buf.putFloat(position + Longs.BYTES, pair.rhs);
-            }
-          }
+        return Pair.of(
+            new FloatFirstBufferAggregator(null, null)
+            {
+              @Override
+              public void aggregate(ByteBuffer buf, int position)
+              {
+                SerializablePair<Long, Float> pair = (SerializablePair<Long, Float>) selector.getObject();
+                long firstTime = buf.getLong(position);
+                if (pair.lhs < firstTime) {
+                  buf.putLong(position, pair.lhs);
+                  buf.putFloat(position + Longs.BYTES, pair.rhs);
+                }
+              }
 
-          @Override
-          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-          {
-            inspector.visit("selector", selector);
-          }
-        }, selector);
+              @Override
+              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+              {
+                inspector.visit("selector", selector);
+              }
+            }, selector);
       }
     };
   }
@@ -185,7 +189,8 @@ public class FloatFirstAggregatorFactory extends NullableAggregatorFactory
   }
 
   @Override
-  public Object finalizeComputation(Object object)
+  @Nullable
+  public Object finalizeComputation(@Nullable Object object)
   {
     return object == null ? object : ((SerializablePair<Long, Float>) object).rhs;
   }

@@ -33,7 +33,7 @@ import io.druid.segment.ColumnSelectorFactory;
 public abstract class NullableAggregatorFactory extends AggregatorFactory
 {
   @Override
-  final public Aggregator factorize(ColumnSelectorFactory metricFactory)
+  public final Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     Pair<Aggregator, BaseNullableColumnValueSelector> pair = factorize2(
         metricFactory);
@@ -43,7 +43,7 @@ public abstract class NullableAggregatorFactory extends AggregatorFactory
   protected abstract Pair<Aggregator, BaseNullableColumnValueSelector> factorize2(ColumnSelectorFactory metricfactory);
 
   @Override
-  final public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+  public final BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     Pair<BufferAggregator, BaseNullableColumnValueSelector> pair = factorizeBuffered2(
         metricFactory);
@@ -54,7 +54,7 @@ public abstract class NullableAggregatorFactory extends AggregatorFactory
 
 
   @Override
-  final public AggregateCombiner makeAggregateCombiner()
+  public final AggregateCombiner makeAggregateCombiner()
   {
     AggregateCombiner combiner = makeAggregateCombiner2();
     return NullHandling.useDefaultValuesForNull() ? combiner : new NullableAggregateCombiner(combiner);
@@ -63,7 +63,7 @@ public abstract class NullableAggregatorFactory extends AggregatorFactory
   protected abstract AggregateCombiner makeAggregateCombiner2();
 
   @Override
-  final public int getMaxIntermediateSize()
+  public final int getMaxIntermediateSize()
   {
     return getMaxIntermediateSize2() + (NullHandling.useDefaultValuesForNull() ? 0 : Byte.BYTES);
   }

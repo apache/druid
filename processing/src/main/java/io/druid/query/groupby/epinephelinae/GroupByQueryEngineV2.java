@@ -20,12 +20,12 @@
 package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import io.druid.collections.NonBlockingPool;
 import io.druid.collections.ResourceHolder;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.DateTimes;
@@ -124,8 +124,8 @@ public class GroupByQueryEngineV2
 
     final ResourceHolder<ByteBuffer> bufferHolder = intermediateResultsBufferPool.take();
 
-    final String fudgeTimestampString = Strings.emptyToNull(
-        query.getContextValue(GroupByStrategyV2.CTX_KEY_FUDGE_TIMESTAMP, "")
+    final String fudgeTimestampString = NullHandling.emptyToNullIfNeeded(
+        query.getContextValue(GroupByStrategyV2.CTX_KEY_FUDGE_TIMESTAMP, null)
     );
 
     final DateTime fudgeTimestamp = fudgeTimestampString == null

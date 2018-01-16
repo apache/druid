@@ -74,20 +74,22 @@ public class LongFirstAggregatorFactory extends NullableAggregatorFactory
   public Pair<Aggregator, BaseNullableColumnValueSelector> factorize2(ColumnSelectorFactory metricFactory)
   {
     BaseLongColumnValueSelector longColumnSelector = metricFactory.makeColumnValueSelector(fieldName);
-    return Pair.of(new LongFirstAggregator(
-        metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
-        longColumnSelector
-    ), longColumnSelector);
+    return Pair.of(
+        new LongFirstAggregator(
+            metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
+            longColumnSelector
+        ), longColumnSelector);
   }
 
   @Override
   public Pair<BufferAggregator, BaseNullableColumnValueSelector> factorizeBuffered2(ColumnSelectorFactory metricFactory)
   {
     BaseLongColumnValueSelector longColumnSelector = metricFactory.makeColumnValueSelector(fieldName);
-    return Pair.of(new LongFirstBufferAggregator(
-        metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
-        longColumnSelector
-    ), longColumnSelector);
+    return Pair.of(
+        new LongFirstBufferAggregator(
+            metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
+            longColumnSelector
+        ), longColumnSelector);
   }
 
   @Override
@@ -124,43 +126,45 @@ public class LongFirstAggregatorFactory extends NullableAggregatorFactory
       public Pair<Aggregator, BaseNullableColumnValueSelector> factorize2(ColumnSelectorFactory metricFactory)
       {
         final ColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
-        return Pair.of(new LongFirstAggregator(null, null)
-        {
-          @Override
-          public void aggregate()
-          {
-            SerializablePair<Long, Long> pair = (SerializablePair<Long, Long>) selector.getObject();
-            if (pair.lhs < firstTime) {
-              firstTime = pair.lhs;
-              firstValue = pair.rhs;
-            }
-          }
-        }, selector);
+        return Pair.of(
+            new LongFirstAggregator(null, null)
+            {
+              @Override
+              public void aggregate()
+              {
+                SerializablePair<Long, Long> pair = (SerializablePair<Long, Long>) selector.getObject();
+                if (pair.lhs < firstTime) {
+                  firstTime = pair.lhs;
+                  firstValue = pair.rhs;
+                }
+              }
+            }, selector);
       }
 
       @Override
       public Pair<BufferAggregator, BaseNullableColumnValueSelector> factorizeBuffered2(ColumnSelectorFactory metricFactory)
       {
         final ColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
-        return Pair.of(new LongFirstBufferAggregator(null, null)
-        {
-          @Override
-          public void aggregate(ByteBuffer buf, int position)
-          {
-            SerializablePair<Long, Long> pair = (SerializablePair<Long, Long>) selector.getObject();
-            long firstTime = buf.getLong(position);
-            if (pair.lhs < firstTime) {
-              buf.putLong(position, pair.lhs);
-              buf.putLong(position + Long.BYTES, pair.rhs);
-            }
-          }
+        return Pair.of(
+            new LongFirstBufferAggregator(null, null)
+            {
+              @Override
+              public void aggregate(ByteBuffer buf, int position)
+              {
+                SerializablePair<Long, Long> pair = (SerializablePair<Long, Long>) selector.getObject();
+                long firstTime = buf.getLong(position);
+                if (pair.lhs < firstTime) {
+                  buf.putLong(position, pair.lhs);
+                  buf.putLong(position + Long.BYTES, pair.rhs);
+                }
+              }
 
-          @Override
-          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-          {
-            inspector.visit("selector", selector);
-          }
-        }, selector);
+              @Override
+              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+              {
+                inspector.visit("selector", selector);
+              }
+            }, selector);
       }
     };
   }
@@ -180,7 +184,7 @@ public class LongFirstAggregatorFactory extends NullableAggregatorFactory
 
   @Override
   @Nullable
-  public Object finalizeComputation(Object object)
+  public Object finalizeComputation(@Nullable Object object)
   {
     return object == null ? object : ((SerializablePair<Long, Long>) object).rhs;
   }

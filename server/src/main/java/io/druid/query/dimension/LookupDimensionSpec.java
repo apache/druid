@@ -168,12 +168,13 @@ public class LookupDimensionSpec implements DimensionSpec
   public byte[] getCacheKey()
   {
     byte[] dimensionBytes = StringUtils.toUtf8(dimension);
+    //CHECKSTYLE.OFF: Regexp
     byte[] dimExtractionFnBytes = Strings.isNullOrEmpty(name)
                                   ? getLookup().getCacheKey()
                                   : StringUtils.toUtf8(name);
     byte[] outputNameBytes = StringUtils.toUtf8(outputName);
     byte[] replaceWithBytes = StringUtils.toUtf8(Strings.nullToEmpty(replaceMissingValueWith));
-
+    //CHECKSTYLE.ON: Regexp
 
     return ByteBuffer.allocate(7
                                + dimensionBytes.length

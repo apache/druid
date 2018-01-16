@@ -66,18 +66,27 @@ public class NullableAggregateCombiner implements AggregateCombiner
   @Override
   public float getFloat()
   {
+    if (isNullResult) {
+      throw new IllegalStateException("Cannot return primitive float for Null Value");
+    }
     return delegate.getFloat();
   }
 
   @Override
   public double getDouble()
   {
+    if (isNullResult) {
+      throw new IllegalStateException("Cannot return double for Null Value");
+    }
     return delegate.getDouble();
   }
 
   @Override
   public long getLong()
   {
+    if (isNullResult) {
+      throw new IllegalStateException("Cannot return long for Null Value");
+    }
     return delegate.getLong();
   }
 

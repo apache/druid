@@ -261,7 +261,9 @@ class LookupListeningAnnouncerConfig extends ListeningAnnouncerConfig
     );
     final String lookupTier = lookupTierIsDatasource ? dataSourceTaskIdHolder.getDataSource() : this.lookupTier;
     return Preconditions.checkNotNull(
+        //CHECKSTYLE.OFF: Regexp
         lookupTier == null ? DEFAULT_TIER : Strings.emptyToNull(lookupTier),
+        //CHECKSTYLE.ON: Regexp
         "Cannot have empty lookup tier from %s",
         lookupTierIsDatasource ? "bound value" : LookupModule.PROPERTY_BASE
     );

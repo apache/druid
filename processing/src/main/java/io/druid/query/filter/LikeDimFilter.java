@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
 import com.google.common.collect.RangeSet;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
@@ -99,7 +98,7 @@ public class LikeDimFilter implements DimFilter
     )
     {
       this.suffixMatch = Preconditions.checkNotNull(suffixMatch, "suffixMatch");
-      this.prefix = Strings.nullToEmpty(prefix);
+      this.prefix = NullHandling.nullToEmptyIfNeeded(prefix);
       this.pattern = Preconditions.checkNotNull(pattern, "pattern");
     }
 

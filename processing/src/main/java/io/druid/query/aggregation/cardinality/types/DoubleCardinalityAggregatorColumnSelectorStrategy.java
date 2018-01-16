@@ -25,23 +25,28 @@ import io.druid.hll.HyperLogLogCollector;
 import io.druid.query.aggregation.cardinality.CardinalityAggregator;
 import io.druid.segment.BaseDoubleColumnValueSelector;
 
-
+/**
+ * if performance of this class appears to be a bottleneck for somebody,
+ * one simple way to improve it is to split it into two different classes,
+ * one that is used when {@link NullHandling.useDefaultValuesForNull()} is false,
+ * and one - when it's true, moving this computation out of the tight loop
+ */
 public class DoubleCardinalityAggregatorColumnSelectorStrategy
     implements CardinalityAggregatorColumnSelectorStrategy<BaseDoubleColumnValueSelector>
 {
   @Override
-  public void hashRow(BaseDoubleColumnValueSelector dimSelector, Hasher hasher)
+  public void hashRow(BaseDoubleColumnValueSelector selector, Hasher hasher)
   {
-    if (NullHandling.useDefaultValuesForNull() || !dimSelector.isNull()) {
-      hasher.putDouble(dimSelector.getDouble());
+    if (NullHandling.useDefaultValuesForNull() || !selector.isNull()) {
+      hasher.putDouble(selector.getDouble());
     }
   }
 
   @Override
-  public void hashValues(BaseDoubleColumnValueSelector dimSelector, HyperLogLogCollector collector)
+  public void hashValues(BaseDoubleColumnValueSelector selector, HyperLogLogCollector collector)
   {
-    if (NullHandling.useDefaultValuesForNull() || !dimSelector.isNull()) {
-      collector.add(CardinalityAggregator.hashFn.hashLong(Double.doubleToLongBits(dimSelector.getDouble())).asBytes());
+    if (NullHandling.useDefaultValuesForNull() || !selector.isNull()) {
+      collector.add(CardinalityAggregator.hashFn.hashLong(Double.doubleToLongBits(selector.getDouble())).asBytes());
     }
   }
 }

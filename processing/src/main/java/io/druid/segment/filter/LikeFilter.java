@@ -19,7 +19,6 @@
 
 package io.druid.segment.filter;
 
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.common.config.NullHandling;
@@ -144,16 +143,24 @@ public class LikeFilter implements Filter
       final Indexed<String> dimValues
   )
   {
-    final String lower = Strings.nullToEmpty(likeMatcher.getPrefix());
-    final String upper = Strings.nullToEmpty(likeMatcher.getPrefix()) + Character.MAX_VALUE;
+
+    final String lower = NullHandling.nullToEmptyIfNeeded(likeMatcher.getPrefix());
+    final String upper = NullHandling.nullToEmptyIfNeeded(likeMatcher.getPrefix()) + Character.MAX_VALUE;
+
     final int startIndex; // inclusive
     final int endIndex; // exclusive
 
-    final int lowerFound = bitmapIndex.getIndex(lower);
-    startIndex = lowerFound >= 0 ? lowerFound : -(lowerFound + 1);
+    if (lower == null) {
+      // For Null values
+      startIndex = bitmapIndex.getIndex(null);
+      endIndex = startIndex + 1;
+    } else {
+      final int lowerFound = bitmapIndex.getIndex(lower);
+      startIndex = lowerFound >= 0 ? lowerFound : -(lowerFound + 1);
 
-    final int upperFound = bitmapIndex.getIndex(upper);
-    endIndex = upperFound >= 0 ? upperFound + 1 : -(upperFound + 1);
+      final int upperFound = bitmapIndex.getIndex(upper);
+      endIndex = upperFound >= 0 ? upperFound + 1 : -(upperFound + 1);
+    }
 
     return new IntIterable()
     {

@@ -76,25 +76,34 @@ public class NullableBufferAggregator implements BufferAggregator
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
+    if (isNull(buf, position)) {
+      throw new IllegalStateException("Cannot return float for Null Value");
+    }
     return delegate.getFloat(buf, position + Byte.BYTES);
   }
 
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
+    if (isNull(buf, position)) {
+      throw new IllegalStateException("Cannot return long for Null Value");
+    }
     return delegate.getLong(buf, position + Byte.BYTES);
   }
 
   @Override
   public double getDouble(ByteBuffer buf, int position)
   {
+    if (isNull(buf, position)) {
+      throw new IllegalStateException("Cannot return double for Null Value");
+    }
     return delegate.getDouble(buf, position + Byte.BYTES);
   }
 
   @Override
   public boolean isNull(ByteBuffer buf, int position)
   {
-    return buf.get(position) == IS_NULL_BYTE;
+    return buf.get(position) == IS_NULL_BYTE || delegate.isNull(buf, position + Byte.BYTES);
   }
 
   @Override

@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.StringUtils;
 import io.druid.js.JavaScriptConfig;
@@ -114,7 +113,7 @@ public class JavaScriptExtractionFn implements ExtractionFn
   public String apply(@Nullable Object value)
   {
     checkAndCompileScript();
-    return Strings.emptyToNull(fn.apply(value));
+    return NullHandling.emptyToNullIfNeeded(fn.apply(value));
   }
 
   /**

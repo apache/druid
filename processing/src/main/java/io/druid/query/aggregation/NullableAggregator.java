@@ -66,25 +66,34 @@ public class NullableAggregator implements Aggregator
   @Override
   public float getFloat()
   {
+    if (isNullResult) {
+      throw new IllegalStateException("Cannot return float for Null Value");
+    }
     return delegate.getFloat();
   }
 
   @Override
   public long getLong()
   {
+    if (isNullResult) {
+      throw new IllegalStateException("Cannot return long for Null Value");
+    }
     return delegate.getLong();
   }
 
   @Override
   public double getDouble()
   {
+    if (isNullResult) {
+      throw new IllegalStateException("Cannot return double for Null Value");
+    }
     return delegate.getDouble();
   }
 
   @Override
   public boolean isNull()
   {
-    return isNullResult;
+    return isNullResult || delegate.isNull();
   }
 
   @Override

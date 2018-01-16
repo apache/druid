@@ -118,7 +118,9 @@ public class InDimFilter implements DimFilter
       if (value == null) {
         hasNull = true;
       }
+      //CHECKSTYLE.OFF: Regexp
       valuesBytes[index] = StringUtils.toUtf8(Strings.nullToEmpty(value));
+      //CHECKSTYLE.ON: Regexp
       valuesBytesSize += valuesBytes[index].length + 1;
       ++index;
     }
@@ -165,7 +167,9 @@ public class InDimFilter implements DimFilter
         // We cannot do an unapply()-based optimization if the selector value
         // and the replaceMissingValuesWith value are the same, since we have to match on
         // all values that are not present in the lookup.
+        //CHECKSTYLE.OFF: Regexp
         final String convertedValue = Strings.emptyToNull(value);
+        //CHECKSTYLE.ON: Regexp
         if (!exFn.isRetainMissingValue() && Objects.equals(convertedValue, exFn.getReplaceMissingValueWith())) {
           return this;
         }
@@ -210,7 +214,9 @@ public class InDimFilter implements DimFilter
     }
     RangeSet<String> retSet = TreeRangeSet.create();
     for (String value : values) {
+      //CHECKSTYLE.OFF: Regexp
       retSet.add(Range.singleton(Strings.nullToEmpty(value)));
+      //CHECKSTYLE.ON: Regexp
     }
     return retSet;
   }
@@ -260,11 +266,11 @@ public class InDimFilter implements DimFilter
     if (extractionFn != null) {
       builder.append(")");
     }
-
+    //CHECKSTYLE.OFF: Regexp
     builder.append(" IN (")
            .append(Joiner.on(", ").join(Iterables.transform(values, input -> Strings.nullToEmpty(input))))
            .append(")");
-
+    //CHECKSTYLE.ON: Regexp
     return builder.toString();
   }
 

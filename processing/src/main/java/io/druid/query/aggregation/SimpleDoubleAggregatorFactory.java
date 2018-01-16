@@ -28,6 +28,7 @@ import io.druid.segment.BaseDoubleColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.column.Column;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -152,7 +153,8 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableAggregatorFa
   }
 
   @Override
-  public Object finalizeComputation(Object object)
+  @Nullable
+  public Object finalizeComputation(@Nullable Object object)
   {
     return object;
   }

@@ -50,11 +50,17 @@ public class StringCardinalityAggregatorColumnSelectorStrategy
       final String[] values = new String[size];
       for (int i = 0; i < size; ++i) {
         final String value = dimSelector.lookupName(row.get(i));
+        // SQL standard spec does not count null values,
+        // Skip counting null values when we are not replacing null with default value.
+        // A special value for null in case null handling is configured to use empty string for null.
         if (!NullHandling.useDefaultValuesForNull() && !hasNonNullValue && value != null) {
           hasNonNullValue = true;
         }
         values[i] = nullToSpecial(value);
       }
+      // SQL standard spec does not count null values,
+      // Skip counting null values when we are not replacing null with default value.
+      // A special value for null in case null handling is configured to use empty string for null.
       if (NullHandling.useDefaultValuesForNull() || hasNonNullValue) {
         // Values need to be sorted to ensure consistent multi-value ordering across different segments
         Arrays.sort(values);
@@ -75,6 +81,9 @@ public class StringCardinalityAggregatorColumnSelectorStrategy
     for (int i = 0; i < row.size(); i++) {
       int index = row.get(i);
       final String value = dimSelector.lookupName(index);
+      // SQL standard spec does not count null values,
+      // Skip counting null values when we are not replacing null with default value.
+      // A special value for null in case null handling is configured to use empty string for null.
       if (NullHandling.useDefaultValuesForNull() || value != null) {
         collector.add(CardinalityAggregator.hashFn.hashUnencodedChars(nullToSpecial(value)).asBytes());
       }

@@ -52,6 +52,7 @@ public class ParserUtils
     }
   }
 
+  //CHECKSTYLE.OFF: Regexp
   public static Function<String, Object> getMultiValueFunction(
       final String listDelimiter,
       final Splitter listSplitter
@@ -67,6 +68,7 @@ public class ParserUtils
       }
     };
   }
+  //CHECKSTYLE.ON: Regexp
 
   public static ArrayList<String> generateFieldNames(int length)
   {

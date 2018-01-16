@@ -74,7 +74,9 @@ public class LookupExtractionFnTest
 
   public LookupExtractionFnTest(boolean retainMissing, String replaceMissing, boolean injective)
   {
+    //CHECKSTYLE.OFF: Regexp
     this.replaceMissing = Strings.emptyToNull(replaceMissing);
+    //CHECKSTYLE.ON: Regexp
     this.retainMissing = retainMissing;
     this.injective = injective;
   }
@@ -82,7 +84,9 @@ public class LookupExtractionFnTest
   @Test
   public void testEqualsAndHash()
   {
+    //CHECKSTYLE.OFF: Regexp
     if (retainMissing && !Strings.isNullOrEmpty(replaceMissing)) {
+      //CHECKSTYLE.ON: Regexp
       // skip
       return;
     }
@@ -154,7 +158,9 @@ public class LookupExtractionFnTest
       final LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(
           new MapLookupExtractor(ImmutableMap.of("foo", "bar"), false),
           retainMissing,
+          //CHECKSTYLE.OFF: Regexp
           Strings.emptyToNull(replaceMissing),
+          //CHECKSTYLE.ON: Regexp
           injective,
           false
       );

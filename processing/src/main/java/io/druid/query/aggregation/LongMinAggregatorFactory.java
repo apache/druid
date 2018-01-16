@@ -181,7 +181,8 @@ public class LongMinAggregatorFactory extends NullableAggregatorFactory
   }
 
   @Override
-  public Object finalizeComputation(Object object)
+  @Nullable
+  public Object finalizeComputation(@Nullable Object object)
   {
     return object;
   }

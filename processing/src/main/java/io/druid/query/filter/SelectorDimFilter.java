@@ -190,7 +190,9 @@ public class SelectorDimFilter implements DimFilter
       return null;
     }
     RangeSet<String> retSet = TreeRangeSet.create();
+    //CHECKSTYLE.OFF: Regexp
     retSet.add(Range.singleton(Strings.nullToEmpty(value)));
+    //CHECKSTYLE.ON: Regexp
     return retSet;
   }
 

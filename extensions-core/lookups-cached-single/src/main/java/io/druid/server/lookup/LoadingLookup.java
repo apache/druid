@@ -21,8 +21,8 @@ package io.druid.server.lookup;
 
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.server.lookup.cache.loading.LoadingCache;
@@ -71,7 +71,7 @@ public class LoadingLookup extends LookupExtractor
     final String presentVal;
     try {
       presentVal = loadingCache.get(key, new ApplyCallable(key));
-      return Strings.emptyToNull(presentVal);
+      return NullHandling.emptyToNullIfNeeded(presentVal);
     }
     catch (ExecutionException e) {
       LOGGER.debug("value not found for key [%s]", key);
@@ -133,7 +133,7 @@ public class LoadingLookup extends LookupExtractor
     public String call() throws Exception
     {
       // avoid returning null and return an empty string to cache it.
-      return Strings.nullToEmpty(dataFetcher.fetch(key));
+      return NullHandling.nullToEmptyIfNeeded(dataFetcher.fetch(key));
     }
   }
 

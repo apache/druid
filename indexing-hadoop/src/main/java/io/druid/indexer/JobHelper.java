@@ -302,8 +302,10 @@ public class JobHelper
 
   public static void injectDruidProperties(Configuration configuration, List<String> listOfAllowedPrefix)
   {
+    //CHECKSTYLE.OFF: Regexp
     String mapJavaOpts = Strings.nullToEmpty(configuration.get(MRJobConfig.MAP_JAVA_OPTS));
     String reduceJavaOpts = Strings.nullToEmpty(configuration.get(MRJobConfig.REDUCE_JAVA_OPTS));
+    //CHECKSTYLE.ON: Regexp
 
     for (String propName : System.getProperties().stringPropertyNames()) {
       for (String prefix : listOfAllowedPrefix) {

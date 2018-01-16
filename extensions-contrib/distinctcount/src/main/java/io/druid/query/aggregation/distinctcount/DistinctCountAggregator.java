@@ -26,6 +26,12 @@ import io.druid.query.aggregation.Aggregator;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.data.IndexedInts;
 
+/**
+ * if performance of this class appears to be a bottleneck for somebody,
+ * one simple way to improve it is to split it into two different classes,
+ * one that is used when {@link NullHandling.useDefaultValuesForNull()} is false,
+ * and one - when it's true, moving this computation out of the tight loop.
+ */
 public class DistinctCountAggregator implements Aggregator
 {
   private static int UNKNOWN = -1;
@@ -67,6 +73,8 @@ public class DistinctCountAggregator implements Aggregator
       if (value == null) {
         idForNull = index;
         return false;
+      } else {
+        return true;
       }
     }
     return index != idForNull;

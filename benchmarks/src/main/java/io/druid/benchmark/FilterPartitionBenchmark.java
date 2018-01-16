@@ -610,8 +610,9 @@ public class FilterPartitionBenchmark
       if (extractionFn == null) {
         return new NoBitmapSelectorFilter(dimension, value);
       } else {
+        //CHECKSTYLE.OFF: Regexp
         final String valueOrNull = Strings.emptyToNull(value);
-
+        //CHECKSTYLE.ON: Regexp
         final DruidPredicateFactory predicateFactory = new DruidPredicateFactory()
         {
           @Override

@@ -52,7 +52,7 @@ public abstract class ExprEval<T>
     return new DoubleExprEval(doubleValue);
   }
 
-  public static ExprEval of(String stringValue)
+  public static ExprEval of(@Nullable String stringValue)
   {
     return new StringExprEval(stringValue);
   }
@@ -231,7 +231,7 @@ public abstract class ExprEval<T>
 
   private static class StringExprEval extends ExprEval<String>
   {
-    private StringExprEval(String value)
+    private StringExprEval(@Nullable String value)
     {
       super(NullHandling.emptyToNullIfNeeded(value));
     }

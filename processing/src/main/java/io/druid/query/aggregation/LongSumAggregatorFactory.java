@@ -32,6 +32,7 @@ import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.BaseNullableColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
@@ -154,7 +155,8 @@ public class LongSumAggregatorFactory extends NullableAggregatorFactory
   }
 
   @Override
-  public Object finalizeComputation(Object object)
+  @Nullable
+  public Object finalizeComputation(@Nullable Object object)
   {
     return object;
   }

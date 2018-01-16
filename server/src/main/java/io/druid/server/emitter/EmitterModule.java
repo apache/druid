@@ -88,7 +88,9 @@ public class EmitterModule implements Module
     String version = getClass().getPackage().getImplementationVersion();
     extraServiceDimensions
         .addBinding("version")
+        //CHECKSTYLE.OFF: Regexp
         .toInstance(Strings.nullToEmpty(version)); // Version is null during `mvn test`.
+        //CHECKSTYLE.ON: Regexp
   }
 
   @Provides

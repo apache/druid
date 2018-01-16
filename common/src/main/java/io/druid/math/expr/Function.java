@@ -19,7 +19,6 @@
 
 package io.druid.math.expr;
 
-import com.google.common.base.Strings;
 import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
@@ -900,15 +899,21 @@ interface Function
         return ExprEval.of(null);
       } else {
         // Pass first argument in to the constructor to provide StringBuilder a little extra sizing hint.
-        final StringBuilder builder = new StringBuilder(Strings.nullToEmpty(args.get(0).eval(bindings).asString()));
+        String first = NullHandling.nullToEmptyIfNeeded(args.get(0).eval(bindings).asString());
+        if (first == null) {
+          // Result of concatenation is null if any of the Values is null.
+          // e.g. 'select CONCAT(null, "abc") as c;' will return null as per Standard SQL spec.
+          return ExprEval.of(null);
+        }
+        final StringBuilder builder = new StringBuilder(first);
         for (int i = 1; i < args.size(); i++) {
-          final String s = args.get(i).eval(bindings).asString();
-          if (!NullHandling.useDefaultValuesForNull() && s == null) {
+          final String s = NullHandling.nullToEmptyIfNeeded(args.get(i).eval(bindings).asString());
+          if (s == null) {
             // Result of concatenation is null if any of the Values is null.
             // e.g. 'select CONCAT(null, "abc") as c;' will return null as per Standard SQL spec.
             return ExprEval.of(null);
           } else {
-            builder.append(NullHandling.nullToEmptyIfNeeded(s));
+            builder.append(s);
           }
         }
         return ExprEval.of(builder.toString());
@@ -951,9 +956,12 @@ interface Function
         throw new IAE("Function[%s] needs 2 arguments", name());
       }
 
-      final String haystack = Strings.nullToEmpty(args.get(0).eval(bindings).asString());
-      final String needle = Strings.nullToEmpty(args.get(1).eval(bindings).asString());
+      final String haystack = NullHandling.nullToEmptyIfNeeded(args.get(0).eval(bindings).asString());
+      final String needle = NullHandling.nullToEmptyIfNeeded(args.get(1).eval(bindings).asString());
 
+      if (haystack == null || needle == null) {
+        return ExprEval.of(null);
+      }
       return ExprEval.of(haystack.indexOf(needle));
     }
   }
@@ -1019,7 +1027,7 @@ interface Function
         return ExprEval.of(NullHandling.defaultStringValue());
       }
       return ExprEval.of(
-          arg.replace(Strings.nullToEmpty(pattern), Strings.nullToEmpty(replacement))
+          arg.replace(NullHandling.nullToEmptyIfNeeded(pattern), NullHandling.nullToEmptyIfNeeded(replacement))
       );
     }
   }

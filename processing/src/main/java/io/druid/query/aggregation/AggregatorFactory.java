@@ -36,6 +36,8 @@ import java.util.Map;
  * AggregatorFactory is a strategy (in the terms of Design Patterns) that represents column aggregation, e. g. min,
  * max, sum of metric columns, or cardinality of dimension columns (see {@link
  * io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory}).
+ * Implementations of {@link AggregatorFactory} which needs to Support Nullable Aggregations are encouraged
+ * to extend {@link io.druid.query.aggregation.NullableAggregatorFactory}.
  */
 @ExtensionPoint
 public abstract class AggregatorFactory implements Cacheable
