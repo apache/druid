@@ -31,7 +31,6 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.annotations.EscalatedClient;
 import io.druid.guice.annotations.EscalatedGlobal;
 import io.druid.guice.annotations.Global;
-import io.druid.java.util.common.RE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.server.security.Escalator;
 
@@ -136,14 +135,6 @@ public class HttpClientModule implements Module
     {
       final DruidHttpClientConfig config = getConfigProvider().get().get();
 
-      if (config.getUnusedConnectionTimeout() != null &&
-          config.getUnusedConnectionTimeout().compareTo(config.getReadTimeout()) >= 0) {
-        throw new RE(
-            "Ohh no! unusedConnectionTimeout[%s] is greater than readTimeout[%s]",
-            config.getUnusedConnectionTimeout(),
-            config.getReadTimeout()
-        );
-      }
       final HttpClientConfig.Builder builder = HttpClientConfig
           .builder()
           .withNumConnections(config.getNumConnections())
