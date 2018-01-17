@@ -31,6 +31,7 @@ import io.druid.segment.DimensionSelectorUtils;
 import io.druid.segment.IdLookup;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.SingleIndexedInt;
+import io.druid.segment.data.ZeroIndexedInts;
 
 import javax.annotation.Nullable;
 
@@ -42,6 +43,7 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
   private final DimensionSelector selector;
   private final Expr expression;
   private final SingleInputBindings bindings = new SingleInputBindings();
+  private final SingleIndexedInt nullAdjustedRow = new SingleIndexedInt();
 
   /**
    * 0 if selector has null as a value; 1 if it doesn't.
@@ -90,12 +92,13 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
       if (nullAdjustment == 0) {
         return row;
       } else {
-        return SingleIndexedInt.of(row.get(0) + nullAdjustment);
+        nullAdjustedRow.setValue(row.get(0) + nullAdjustment);
+        return nullAdjustedRow;
       }
     } else {
       // Can't handle non-singly-valued rows in expressions.
       // Treat them as nulls until we think of something better to do.
-      return SingleIndexedInt.of(0);
+      return ZeroIndexedInts.instance();
     }
   }
 
