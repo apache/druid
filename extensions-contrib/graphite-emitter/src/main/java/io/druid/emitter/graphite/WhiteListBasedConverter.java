@@ -41,6 +41,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -169,15 +170,26 @@ public class WhiteListBasedConverter implements DruidToGraphiteEventConverter
     if (prefixKey == null) {
       return null;
     }
-    ImmutableList.Builder<String> outputList = new ImmutableList.Builder();
+    ImmutableList.Builder<String> outputList = new ImmutableList.Builder<>();
     Set<String> dimensions = whiteListDimsMapper.get(prefixKey);
     if (dimensions == null) {
       return Collections.emptyList();
     }
     for (String dimKey : dimensions) {
-      String dimValue = (String) event.getUserDims().get(dimKey);
-      if (dimValue != null) {
-        outputList.add(GraphiteEmitter.sanitize(dimValue));
+      Object rawValue = event.getUserDims().get(dimKey);
+      String value = null;
+
+      if (rawValue instanceof String) {
+        value = (String) rawValue;
+      } else if (rawValue instanceof Collection) {
+        Collection values = (Collection) rawValue;
+        if (!values.isEmpty()) {
+          value = (String) values.iterator().next();
+        }
+      }
+
+      if (value != null) {
+        outputList.add(GraphiteEmitter.sanitize(value));
       }
     }
     return outputList.build();
@@ -210,15 +222,17 @@ public class WhiteListBasedConverter implements DruidToGraphiteEventConverter
     if (!this.isIgnoreHostname()) {
       metricPathBuilder.add(GraphiteEmitter.sanitize(serviceMetricEvent.getHost()));
     }
-    metricPathBuilder.addAll(this.getOrderedDimValues(serviceMetricEvent));
+    List<String> dimValues = getOrderedDimValues(serviceMetricEvent);
+    if (dimValues != null) {
+      metricPathBuilder.addAll(dimValues);
+    }
     metricPathBuilder.add(GraphiteEmitter.sanitize(serviceMetricEvent.getMetric(), this.replaceSlashWithDot()));
 
-    final GraphiteEvent graphiteEvent = new GraphiteEvent(
+    return new GraphiteEvent(
         Joiner.on(".").join(metricPathBuilder.build()),
         String.valueOf(serviceMetricEvent.getValue()),
         TimeUnit.MILLISECONDS.toSeconds(serviceMetricEvent.getCreatedTime().getMillis())
     );
-    return graphiteEvent;
   }
 
   @Override
