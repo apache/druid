@@ -154,7 +154,7 @@ public class EventReceiverFirehoseTestClient
                            ? MediaType.APPLICATION_JSON
                            : SmileMediaTypes.APPLICATION_JACKSON_SMILE;
         totalEventsPosted += postEvents(events, mapper, mediaType);
-        ;
+
         expectedEventsPosted += events.size();
         events = new ArrayList<>();
       }

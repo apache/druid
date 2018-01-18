@@ -144,7 +144,7 @@ public class GroupByQueryRunnerFailureTest
       new Supplier<ByteBuffer>()
       {
         @Override
-        public ByteBuffer get ()
+        public ByteBuffer get()
         {
           return ByteBuffer.allocateDirect(DEFAULT_PROCESSING_CONFIG.intermediateComputeSizeBytes());
         }
