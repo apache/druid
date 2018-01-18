@@ -152,7 +152,7 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
     if (startOffset < 0) {
       startOffset += periodMillis;
     }
-    ;
+
     start -= startOffset;
 
     // tOffset is the offset time t within the last period
