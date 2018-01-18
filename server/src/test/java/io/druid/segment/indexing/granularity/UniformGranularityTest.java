@@ -256,7 +256,7 @@ public class UniformGranularityTest
     final Optional<SortedSet<Interval>> sortedSetOptional = spec.bucketIntervals();
     final SortedSet<Interval> intervals = sortedSetOptional.get();
     ArrayList<Long> actualIntervals = new ArrayList<>();
-    for (Interval interval: intervals) {
+    for (Interval interval : intervals) {
       actualIntervals.add(interval.toDurationMillis());
     }
 
