@@ -52,9 +52,9 @@ import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.router.QueryHostFinder;
 import io.druid.server.router.RendezvousHashAvaticaConnectionBalancer;
 import io.druid.server.security.AllowAllAuthorizer;
-import io.druid.server.security.NoopEscalator;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
+import io.druid.server.security.NoopEscalator;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
@@ -312,8 +312,14 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     // Test reWrite Encoded interval with timezone info
     // decoded parameters -> intervals=1900-01-01T00:00:00.000+01.00/3000-01-01T00:00:00.000+01:00")
     Assert.assertEquals(
-        new URI("http://localhost:1234/some/path?intervals=1900-01-01T00%3A00%3A00.000%2B01%3A00%2F3000-01-01T00%3A00%3A00.000%2B01%3A00"),
-        AsyncQueryForwardingServlet.makeURI("http","localhost:1234", "/some/path", "intervals=1900-01-01T00%3A00%3A00.000%2B01%3A00%2F3000-01-01T00%3A00%3A00.000%2B01%3A00")
+        new URI(
+            "http://localhost:1234/some/path?intervals=1900-01-01T00%3A00%3A00.000%2B01%3A00%2F3000-01-01T00%3A00%3A00.000%2B01%3A00"),
+        AsyncQueryForwardingServlet.makeURI(
+            "http",
+            "localhost:1234",
+            "/some/path",
+            "intervals=1900-01-01T00%3A00%3A00.000%2B01%3A00%2F3000-01-01T00%3A00%3A00.000%2B01%3A00"
+        )
     );
   }
 
