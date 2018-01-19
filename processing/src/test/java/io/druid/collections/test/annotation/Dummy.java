@@ -17,8 +17,8 @@
  * under the License.
  */
 
-package io.druid.test.annotation;
+package io.druid.collections.test.annotation;
 
-public interface Benchmark
+public interface Dummy
 {
 }

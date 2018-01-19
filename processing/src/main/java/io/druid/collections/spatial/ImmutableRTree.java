@@ -27,24 +27,36 @@ import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.spatial.search.Bound;
 import io.druid.collections.spatial.search.GutmanSearchStrategy;
 import io.druid.collections.spatial.search.SearchStrategy;
+import io.druid.io.Channels;
+import io.druid.segment.writeout.WriteOutBytes;
+import it.unimi.dsi.fastutil.bytes.ByteArrays;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
  * An immutable representation of an {@link RTree} for spatial indexing.
  */
-public class ImmutableRTree
+public final class ImmutableRTree
 {
-  private static byte VERSION = 0x0;
+  private static final byte VERSION = 0x0;
+
+  private static final ImmutableRTree EMPTY = new ImmutableRTree();
+
+  public static ImmutableRTree empty()
+  {
+    return EMPTY;
+  }
+
   private final int numDims;
   private final ImmutableNode root;
   private final ByteBuffer data;
   private final SearchStrategy defaultSearchStrategy = new GutmanSearchStrategy();
 
-  public ImmutableRTree()
+  private ImmutableRTree()
   {
     this.numDims = 0;
-    this.data = ByteBuffer.wrap(new byte[]{});
+    this.data = ByteBuffer.wrap(ByteArrays.EMPTY_ARRAY);
     this.root = null;
   }
 
@@ -61,7 +73,7 @@ public class ImmutableRTree
   public static ImmutableRTree newImmutableFromMutable(RTree rTree)
   {
     if (rTree.getSize() == 0) {
-      return new ImmutableRTree();
+      return empty();
     }
 
     ByteBuffer buffer = ByteBuffer.wrap(new byte[calcNumBytes(rTree)]);
@@ -103,7 +115,7 @@ public class ImmutableRTree
 
   public int size()
   {
-    return data.capacity();
+    return data.remaining();
   }
 
   public Iterable<ImmutableBitmap> search(Bound bound)
@@ -123,9 +135,19 @@ public class ImmutableRTree
 
   public byte[] toBytes()
   {
-    ByteBuffer buf = ByteBuffer.allocate(data.capacity());
-    buf.put(data.asReadOnlyBuffer());
-    return buf.array();
+    if (size() == 0) {
+      return ByteArrays.EMPTY_ARRAY;
+    }
+    byte[] res = new byte[data.remaining()];
+    data.duplicate().get(res);
+    return res;
+  }
+
+  public void writeTo(WriteOutBytes out) throws IOException
+  {
+    if (size() != 0) {
+      Channels.writeFully(out, data.duplicate());
+    }
   }
 
   public int compareTo(ImmutableRTree other)
