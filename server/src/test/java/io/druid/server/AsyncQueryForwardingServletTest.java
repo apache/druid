@@ -308,6 +308,13 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         new URI("http://localhost/"),
         AsyncQueryForwardingServlet.makeURI("http", "localhost", "/", null)
     );
+
+    // Test reWrite Encoded interval with timezone info
+    // decoded parameters -> intervals=1900-01-01T00:00:00.000+01.00/3000-01-01T00:00:00.000+01:00")
+    Assert.assertEquals(
+        new URI("http://localhost:1234/some/path?intervals=1900-01-01T00%3A00%3A00.000%2B01%3A00%2F3000-01-01T00%3A00%3A00.000%2B01%3A00"),
+        AsyncQueryForwardingServlet.makeURI("http","localhost:1234", "/some/path", "intervals=1900-01-01T00%3A00%3A00.000%2B01%3A00%2F3000-01-01T00%3A00%3A00.000%2B01%3A00")
+    );
   }
 
   private static class TestServer implements io.druid.client.selector.Server

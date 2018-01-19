@@ -45,6 +45,7 @@ import io.druid.server.router.QueryHostFinder;
 import io.druid.server.router.Router;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.Escalator;
+import org.apache.http.client.utils.URIBuilder;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.client.api.Response;
@@ -331,15 +332,15 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   protected static URI makeURI(String scheme, String host, String requestURI, String rawQueryString)
   {
     try {
-      return new URI(
-          scheme,
-          host,
-          requestURI,
-          rawQueryString == null ? null : URLDecoder.decode(rawQueryString, "UTF-8"),
-          null
-      );
+      return new URIBuilder()
+          .setScheme(scheme)
+          .setHost(host)
+          .setPath(requestURI)
+          // No need to encode-decode queryString, it is already encoded
+          .setQuery(rawQueryString)
+          .build();
     }
-    catch (UnsupportedEncodingException | URISyntaxException e) {
+    catch (URISyntaxException e) {
       log.error(e, "Unable to rewrite URI [%s]", e.getMessage());
       throw Throwables.propagate(e);
     }
