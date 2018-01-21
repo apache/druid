@@ -147,10 +147,13 @@ public class CompressedVSizeColumnarMultiIntsSupplier implements WritableSupplie
     private final ColumnarInts offsets;
     private final ColumnarInts values;
 
+    private final SliceIndexedInts rowValues;
+
     CompressedVSizeColumnarMultiInts(ColumnarInts offsets, ColumnarInts values)
     {
       this.offsets = offsets;
       this.values = values;
+      this.rowValues = new SliceIndexedInts(values);
     }
 
     @Override
@@ -177,30 +180,8 @@ public class CompressedVSizeColumnarMultiIntsSupplier implements WritableSupplie
     {
       final int offset = offsets.get(index);
       final int size = offsets.get(index + 1) - offset;
-
-      return new IndexedInts()
-      {
-        @Override
-        public int size()
-        {
-          return size;
-        }
-
-        @Override
-        public int get(int index)
-        {
-          if (index >= size) {
-            throw new IAE("Index[%d] >= size[%d]", index, size);
-          }
-          return values.get(index + offset);
-        }
-
-        @Override
-        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-        {
-          inspector.visit("values", values);
-        }
-      };
+      rowValues.setValues(offset, size);
+      return rowValues;
     }
 
     @Override

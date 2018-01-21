@@ -180,7 +180,7 @@ public class GroupByQueryMergeBufferTest
       new Supplier<ByteBuffer>()
       {
         @Override
-        public ByteBuffer get ()
+        public ByteBuffer get()
         {
           return ByteBuffer.allocateDirect(PROCESSING_CONFIG.intermediateComputeSizeBytes());
         }

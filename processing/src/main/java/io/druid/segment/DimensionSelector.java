@@ -36,11 +36,15 @@ public interface DimensionSelector extends ColumnValueSelector, HotLoopCallee
   int CARDINALITY_UNKNOWN = -1;
 
   /**
-   * Gets all values for the row inside of an IntBuffer.  I.e. one possible implementation could be
+   * Returns the indexed values at the current position in this DimensionSelector.
    *
-   * return IntBuffer.wrap(lookupExpansion(get());
-   *
-   * @return all values for the row as an IntBuffer
+   * IMPORTANT. The returned {@link IndexedInts} object could generally be reused inside the implementation of
+   * DimensionSelector, i. e. this method could always return the same object for the same selector. Users
+   * of this API, such as {@link io.druid.query.aggregation.Aggregator#aggregate()}, {@link
+   * io.druid.query.aggregation.BufferAggregator#aggregate}, {@link io.druid.query.aggregation.AggregateCombiner#reset},
+   * {@link io.druid.query.aggregation.AggregateCombiner#fold} should be prepared for that and not storing the object
+   * returned from this method in their state, assuming that the object will remain unchanged even when the position of
+   * the selector changes. This may not be the case.
    */
   @CalledFromHotLoop
   IndexedInts getRow();

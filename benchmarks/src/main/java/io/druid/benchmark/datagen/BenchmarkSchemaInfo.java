@@ -31,7 +31,7 @@ public class BenchmarkSchemaInfo
   private Interval dataInterval;
   private boolean withRollup;
 
-  public BenchmarkSchemaInfo (
+  public BenchmarkSchemaInfo(
       List<BenchmarkColumnSchema> columnSchemas,
       List<AggregatorFactory> aggs,
       Interval dataInterval,

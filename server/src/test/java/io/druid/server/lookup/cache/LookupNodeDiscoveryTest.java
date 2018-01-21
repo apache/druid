@@ -74,7 +74,7 @@ public class LookupNodeDiscoveryTest
 
     EasyMock.expect(druidNodeDiscovery.getAllNodes())
             .andReturn(ImmutableSet.of(node1, node2, node3))
-            .anyTimes();;
+            .anyTimes();
 
     EasyMock.replay(druidNodeDiscoveryProvider, druidNodeDiscovery);
 

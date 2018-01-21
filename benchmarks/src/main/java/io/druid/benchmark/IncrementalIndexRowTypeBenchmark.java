@@ -148,7 +148,6 @@ public class IncrementalIndexRowTypeBenchmark
   @Setup(Level.Iteration)
   public void setup2() throws IOException
   {
-    ;
     incIndex = makeIncIndex();
     incFloatIndex = makeIncIndex();
     incStrIndex = makeIncIndex();
