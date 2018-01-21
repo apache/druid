@@ -20,13 +20,22 @@
 package io.druid.server;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.MapDifference;
+import com.google.common.collect.Maps;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import io.druid.client.DruidServer;
+import io.druid.guice.GuiceInjectors;
 import io.druid.initialization.DruidModule;
 import io.druid.initialization.InitializationTest;
+import io.druid.server.coordination.ServerType;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 
 import static io.druid.server.StatusResource.ModuleVersion;
 
@@ -54,6 +63,16 @@ public class StatusResourceTest
       }
       Assert.assertTrue("Status resource should contain module " + moduleName, contains);
     }
+  }
+  @Test
+  public void testPropertiesEndpoint()
+  {
+    Injector injector = GuiceInjectors.makeStartupInjector();
+    StatusResource statusResource = injector.getInstance(StatusResource.class);
+    Properties properties = injector.getInstance(Properties.class);
+    Map<String,String> map = statusResource.getProperties();
+    MapDifference<String, String> mapDifference = Maps.difference(Maps.fromProperties(properties), map);
+    Assert.assertTrue(mapDifference.areEqual());
   }
 }
 

@@ -21,25 +21,43 @@ package io.druid.server;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.Maps;
 import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.initialization.DruidModule;
 import io.druid.initialization.Initialization;
 import io.druid.java.util.common.StringUtils;
 import io.druid.server.http.security.StateResourceFilter;
 
+import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
 /**
  */
 @Path("/status")
 public class StatusResource
 {
+
+  final private Properties properties;
+
+  @Inject
+  public StatusResource(Properties properties)
+  {
+    this.properties = properties;
+  }
+
+  @GET
+  @Path("/properties")
+  @ResourceFilters(StateResourceFilter.class)
+  @Produces(MediaType.APPLICATION_JSON)
+  public Map<String,String> getProperties()
+  {
+    return Maps.fromProperties(properties);
+  }
+
   @GET
   @ResourceFilters(StateResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
