@@ -45,7 +45,7 @@ import java.util.Properties;
 public class StatusResource
 {
 
-  final private Properties properties;
+  private final Properties properties;
 
   @Inject
   public StatusResource(Properties properties)
@@ -57,7 +57,7 @@ public class StatusResource
   @Path("/properties")
   @ResourceFilters(StateResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
-  public Map<String,String> getProperties()
+  public Map<String, String> getProperties()
   {
     return Maps.fromProperties(properties);
   }

@@ -67,7 +67,7 @@ public class StatusResourceTest
     Injector injector = GuiceInjectors.makeStartupInjector();
     StatusResource statusResource = injector.getInstance(StatusResource.class);
     Properties properties = injector.getInstance(Properties.class);
-    Map<String,String> map = statusResource.getProperties();
+    Map<String, String> map = statusResource.getProperties();
     MapDifference<String, String> mapDifference = Maps.difference(Maps.fromProperties(properties), map);
     Assert.assertTrue(mapDifference.areEqual());
   }
