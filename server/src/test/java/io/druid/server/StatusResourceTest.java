@@ -22,13 +22,10 @@ package io.druid.server;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
-import com.google.inject.Guice;
 import com.google.inject.Injector;
-import io.druid.client.DruidServer;
 import io.druid.guice.GuiceInjectors;
 import io.druid.initialization.DruidModule;
 import io.druid.initialization.InitializationTest;
-import io.druid.server.coordination.ServerType;
 import org.junit.Assert;
 import org.junit.Test;
 
