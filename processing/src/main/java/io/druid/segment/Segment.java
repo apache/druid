@@ -30,8 +30,11 @@ import java.io.Closeable;
 public interface Segment extends Closeable
 {
   String getIdentifier();
+
   Interval getDataInterval();
+
   QueryableIndex asQueryableIndex();
+
   StorageAdapter asStorageAdapter();
   
   /**

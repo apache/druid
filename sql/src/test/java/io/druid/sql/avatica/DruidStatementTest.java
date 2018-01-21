@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.DateTimes;
 import io.druid.math.expr.ExprMacroTable;
+import io.druid.common.config.NullHandling;
 import io.druid.server.security.AllowAllAuthenticator;
 import io.druid.server.security.NoopEscalator;
 import io.druid.server.security.AuthConfig;
@@ -142,6 +143,7 @@ public class DruidStatementTest
         Meta.Frame.create(
             0,
             true,
+            NullHandling.useDefaultValuesForNull() ?
             Lists.<Object>newArrayList(
                 new Object[]{DateTimes.of("2000-01-01").getMillis(), 1L, "", "a", 1.0f},
                 new Object[]{DateTimes.of("2000-01-02").getMillis(), 1L, "10.1", "", 2.0f},
@@ -149,6 +151,14 @@ public class DruidStatementTest
                 new Object[]{DateTimes.of("2001-01-01").getMillis(), 1L, "1", "a", 4.0f},
                 new Object[]{DateTimes.of("2001-01-02").getMillis(), 1L, "def", "abc", 5.0f},
                 new Object[]{DateTimes.of("2001-01-03").getMillis(), 1L, "abc", "", 6.0f}
+            ) :
+            Lists.<Object>newArrayList(
+                new Object[]{DateTimes.of("2000-01-01").getMillis(), 1L, "", "a", 1.0f},
+                new Object[]{DateTimes.of("2000-01-02").getMillis(), 1L, "10.1", null, 2.0f},
+                new Object[]{DateTimes.of("2000-01-03").getMillis(), 1L, "2", "", 3.0f},
+                new Object[]{DateTimes.of("2001-01-01").getMillis(), 1L, "1", "a", 4.0f},
+                new Object[]{DateTimes.of("2001-01-02").getMillis(), 1L, "def", "abc", 5.0f},
+                new Object[]{DateTimes.of("2001-01-03").getMillis(), 1L, "abc", null, 6.0f}
             )
         ),
         frame
@@ -162,16 +172,21 @@ public class DruidStatementTest
     final String sql = "SELECT __time, cnt, dim1, dim2, m1 FROM druid.foo";
     final DruidStatement statement = new DruidStatement("", 0, null, () -> {
     }).prepare(plannerFactory, sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);
-    
+
     // First frame, ask for 2 rows.
     Meta.Frame frame = statement.execute().nextFrame(DruidStatement.START_OFFSET, 2);
     Assert.assertEquals(
         Meta.Frame.create(
             0,
             false,
+            NullHandling.useDefaultValuesForNull() ?
             Lists.<Object>newArrayList(
                 new Object[]{DateTimes.of("2000-01-01").getMillis(), 1L, "", "a", 1.0f},
                 new Object[]{DateTimes.of("2000-01-02").getMillis(), 1L, "10.1", "", 2.0f}
+            ) :
+            Lists.<Object>newArrayList(
+                new Object[]{DateTimes.of("2000-01-01").getMillis(), 1L, "", "a", 1.0f},
+                new Object[]{DateTimes.of("2000-01-02").getMillis(), 1L, "10.1", null, 2.0f}
             )
         ),
         frame
@@ -184,11 +199,18 @@ public class DruidStatementTest
         Meta.Frame.create(
             2,
             true,
+            NullHandling.useDefaultValuesForNull() ?
             Lists.<Object>newArrayList(
                 new Object[]{DateTimes.of("2000-01-03").getMillis(), 1L, "2", "", 3.0f},
                 new Object[]{DateTimes.of("2001-01-01").getMillis(), 1L, "1", "a", 4.0f},
                 new Object[]{DateTimes.of("2001-01-02").getMillis(), 1L, "def", "abc", 5.0f},
                 new Object[]{DateTimes.of("2001-01-03").getMillis(), 1L, "abc", "", 6.0f}
+            ) :
+            Lists.<Object>newArrayList(
+                new Object[]{DateTimes.of("2000-01-03").getMillis(), 1L, "2", "", 3.0f},
+                new Object[]{DateTimes.of("2001-01-01").getMillis(), 1L, "1", "a", 4.0f},
+                new Object[]{DateTimes.of("2001-01-02").getMillis(), 1L, "def", "abc", 5.0f},
+                new Object[]{DateTimes.of("2001-01-03").getMillis(), 1L, "abc", null, 6.0f}
             )
         ),
         frame

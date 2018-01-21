@@ -28,7 +28,7 @@ import java.io.Closeable;
  * An Aggregator is an object that can aggregate metrics.  Its aggregation-related methods (namely, aggregate() and get())
  * do not take any arguments as the assumption is that the Aggregator was given something in its constructor that
  * it can use to get at the next bit of data.
- *
+ * <p>
  * Thus, an Aggregator can be thought of as a closure over some other thing that is stateful and changes between calls
  * to aggregate(). This is currently (as of this documentation) implemented through the use of {@link
  * io.druid.segment.ColumnValueSelector} objects.
@@ -40,7 +40,9 @@ public interface Aggregator extends Closeable
 
   @Nullable
   Object get();
+
   float getFloat();
+
   long getLong();
 
   /**
@@ -51,6 +53,19 @@ public interface Aggregator extends Closeable
   default double getDouble()
   {
     return (double) getFloat();
+  }
+
+  /**
+   * returns true if aggregator's output type is primitive long/double/float and aggregated value is null,
+   * but when aggregated output type is Object, this method always returns false,
+   * and users are advised to check nullability for the object returned by {@link #get()}
+   * method.
+   * The default implementation always return false to enable smooth backward compatibility,
+   * re-implement if your aggregator is nullable.
+   */
+  default boolean isNull()
+  {
+    return false;
   }
 
   @Override

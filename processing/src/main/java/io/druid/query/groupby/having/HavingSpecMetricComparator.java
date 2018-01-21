@@ -24,8 +24,8 @@ import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import io.druid.data.input.Row;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.java.util.common.ISE;
+import io.druid.query.aggregation.AggregatorFactory;
 
 import java.util.Map;
 import java.util.regex.Pattern;

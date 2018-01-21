@@ -34,8 +34,11 @@ public interface StorageAdapter extends CursorFactory
 {
   @PublicApi
   String getSegmentIdentifier();
+
   Interval getInterval();
+
   Indexed<String> getAvailableDimensions();
+
   Iterable<String> getAvailableMetrics();
 
   /**
@@ -47,12 +50,15 @@ public interface StorageAdapter extends CursorFactory
    * @return
    */
   int getDimensionCardinality(String column);
+
   DateTime getMinTime();
+
   DateTime getMaxTime();
   @Nullable
   Comparable getMinValue(String column);
   @Nullable
   Comparable getMaxValue(String column);
+
   Capabilities getCapabilities();
 
   /**
@@ -73,7 +79,10 @@ public interface StorageAdapter extends CursorFactory
    * @return type name
    */
   String getColumnTypeName(String column);
+
   int getNumRows();
+
   DateTime getMaxIngestedEventTime();
+
   Metadata getMetadata();
 }

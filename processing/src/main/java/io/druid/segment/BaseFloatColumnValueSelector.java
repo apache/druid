@@ -27,12 +27,13 @@ import io.druid.query.monomorphicprocessing.HotLoopCallee;
  * Float value selecting polymorphic "part" of the {@link ColumnValueSelector} interface. Users of {@link
  * ColumnValueSelector#getFloat()} are encouraged to reduce the parameter/field/etc. type to
  * BaseFloatColumnValueSelector to make it impossible to accidently call any method other than {@link #getFloat()}.
- *
+ * <p>
  * All implementations of this interface MUST also implement {@link ColumnValueSelector}.
  */
 @PublicApi
-public interface BaseFloatColumnValueSelector extends HotLoopCallee
+public interface BaseFloatColumnValueSelector extends HotLoopCallee, BaseNullableColumnValueSelector
 {
   @CalledFromHotLoop
   float getFloat();
+
 }

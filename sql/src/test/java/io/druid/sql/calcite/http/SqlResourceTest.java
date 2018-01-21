@@ -23,12 +23,14 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.ResourceLimitExceededException;
+import io.druid.common.config.NullHandling;
 import io.druid.server.security.AllowAllAuthenticator;
 import io.druid.server.security.NoopEscalator;
 import io.druid.server.security.AuthConfig;
@@ -215,7 +217,15 @@ public class SqlResourceTest
     ).rhs;
 
     Assert.assertEquals(
+        NullHandling.useDefaultValuesForNull() ?
         ImmutableList.of(
+            ImmutableMap.of("x", "", "y", ""),
+            ImmutableMap.of("x", "a", "y", "a"),
+            ImmutableMap.of("x", "abc", "y", "abc")
+        ) :
+        ImmutableList.of(
+            // x and y both should be null instead of empty string
+            Maps.transformValues(ImmutableMap.of("x", "", "y", ""), (val) -> null),
             ImmutableMap.of("x", "", "y", ""),
             ImmutableMap.of("x", "a", "y", "a"),
             ImmutableMap.of("x", "abc", "y", "abc")

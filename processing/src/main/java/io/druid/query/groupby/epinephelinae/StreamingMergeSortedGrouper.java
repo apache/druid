@@ -39,11 +39,11 @@ import java.util.concurrent.TimeoutException;
 /**
  * A streaming grouper which can aggregate sorted inputs.  This grouper can aggregate while its iterator is being
  * consumed.  The aggregation thread and the iterating thread can be different.
- *
+ * <p>
  * This grouper is backed by an off-heap circular array.  The reading thread is able to read data from an array slot
  * only when aggregation for the grouping key correspoing to that slot is finished.  Since the reading and writing
  * threads cannot access the same array slot at the same time, they can read/write data without contention.
- *
+ * <p>
  * This class uses the spinlock for waiting for at least one slot to become available when the array is empty or full.
  * If the array is empty, the reading thread waits for the aggregation for an array slot is finished.  If the array is
  * full, the writing thread waits for the reading thread to read at least one aggregate from the array.
@@ -88,7 +88,7 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
    * initial value is -1 which means any data are not written yet.  Since it's assumed that the input is sorted by the
    * grouping key, this variable is moved to the next slot whenever a new grouping key is found.  Once it reaches the
    * last slot of the array, it moves to the first slot.
-   *
+   * <p>
    * This is always moved ahead of {@link #nextReadIndex}.  If the array is full, this variable
    * cannot be moved until {@link #nextReadIndex} is moved.  See {@link #increaseWriteIndex()} for more details. This
    * variable is always incremented by the writing thread and read by both the writing and the reading threads.
@@ -99,7 +99,7 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
    * Next read index of the array.  This points to the array slot which the reading thread will read next.  Its initial
    * value is -1 which means any data are not read yet.  This variable can point an array slot only when the aggregation
    * for that slot is finished.  Once it reaches the last slot of the array, it moves to the first slot.
-   *
+   * <p>
    * This always follows {@link #curWriteIndex}.  If the array is empty, this variable cannot be moved until the
    * aggregation for at least one grouping key is finished which in turn {@link #curWriteIndex} is moved.  See
    * {@link #iterator()} for more details.  This variable is always incremented by the reading thread and read by both

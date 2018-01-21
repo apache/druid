@@ -21,14 +21,15 @@ package io.druid.segment;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.inject.ImplementedBy;
+import io.druid.common.config.NullHandling;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.java.util.common.ByteBufferUtils;
 import io.druid.java.util.common.ISE;
@@ -53,10 +54,10 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -432,16 +433,10 @@ public interface IndexMerger
 
     DictionaryMergeIterator(Indexed<String>[] dimValueLookups, boolean useDirect)
     {
+      final Ordering<String> stringOrdering = Comparators.naturalNullsFirst();
       pQueue = new PriorityQueue<>(
           dimValueLookups.length,
-          new Comparator<Pair<Integer, PeekingIterator<String>>>()
-          {
-            @Override
-            public int compare(Pair<Integer, PeekingIterator<String>> lhs, Pair<Integer, PeekingIterator<String>> rhs)
-            {
-              return lhs.rhs.peek().compareTo(rhs.rhs.peek());
-            }
-          }
+          (lhs, rhs) -> stringOrdering.compare(lhs.rhs.peek(), rhs.rhs.peek())
       );
       conversions = new IntBuffer[dimValueLookups.length];
       for (int i = 0; i < conversions.length; i++) {
@@ -462,14 +457,7 @@ public interface IndexMerger
         final PeekingIterator<String> iter = Iterators.peekingIterator(
             Iterators.transform(
                 indexed.iterator(),
-                new Function<String, String>()
-                {
-                  @Override
-                  public String apply(@Nullable String input)
-                  {
-                    return Strings.nullToEmpty(input);
-                  }
-                }
+                input -> NullHandling.nullToEmptyIfNeeded(input)
             )
         );
         if (iter.hasNext()) {
@@ -493,7 +481,7 @@ public interface IndexMerger
       }
       final String value = writeTranslate(smallest, counter);
 
-      while (!pQueue.isEmpty() && value.equals(pQueue.peek().rhs.peek())) {
+      while (!pQueue.isEmpty() && Objects.equals(value, pQueue.peek().rhs.peek())) {
         writeTranslate(pQueue.remove(), counter);
       }
       counter++;

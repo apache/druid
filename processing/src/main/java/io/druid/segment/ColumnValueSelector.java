@@ -37,4 +37,5 @@ import io.druid.guice.annotations.PublicApi;
 public interface ColumnValueSelector<T> extends BaseLongColumnValueSelector, BaseDoubleColumnValueSelector,
     BaseFloatColumnValueSelector, BaseObjectColumnValueSelector<T>
 {
+
 }

@@ -396,8 +396,10 @@ public class UriExtractionNamespace implements ExtractionNamespace
           "Must specify more than one column to have a key value pair"
       );
       final DelimitedParser delegate = new DelimitedParser(
+          //CHECKSTYLE.OFF: Regexp
           Strings.emptyToNull(delimiter),
           Strings.emptyToNull(listDelimiter),
+          //CHECKSTYLE.ON: Regexp
           hasHeaderRow,
           skipHeaderRows
       );

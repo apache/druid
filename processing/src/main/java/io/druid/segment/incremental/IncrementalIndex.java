@@ -152,21 +152,27 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
           return new ColumnValueSelector()
           {
             @Override
+            public boolean isNull()
+            {
+              return in.get().getMetric(column) == null;
+            }
+
+            @Override
             public long getLong()
             {
-              return in.get().getMetric(column).longValue();
+              return DimensionHandlerUtils.nullToZeroLong(in.get().getMetric(column)).longValue();
             }
 
             @Override
             public float getFloat()
             {
-              return in.get().getMetric(column).floatValue();
+              return DimensionHandlerUtils.nullToZeroFloat(in.get().getMetric(column)).floatValue();
             }
 
             @Override
             public double getDouble()
             {
-              return in.get().getMetric(column).doubleValue();
+              return DimensionHandlerUtils.nullToZeroDouble(in.get().getMetric(column)).doubleValue();
             }
 
             @Override
@@ -461,6 +467,9 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   protected abstract double getMetricDoubleValue(int rowOffset, int aggOffset);
 
+  protected abstract boolean isNull(int rowOffset, int aggOffset);
+
+
   @Override
   public void close()
   {
@@ -552,9 +561,10 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
           DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dimension, capabilities, null);
           desc = addNewDimension(dimension, capabilities, handler);
         }
+        Object raw = row.getRaw(dimension);
         DimensionHandler handler = desc.getHandler();
         DimensionIndexer indexer = desc.getIndexer();
-        Object dimsKey = indexer.processRowValsToUnsortedEncodedKeyComponent(row.getRaw(dimension));
+        Object dimsKey = indexer.processRowValsToUnsortedEncodedKeyComponent(raw);
 
         // Set column capabilities as data is coming in
         if (!capabilities.hasMultipleValues() && dimsKey != null && handler.getLengthOfEncodedKeyComponent(dimsKey) > 1) {
@@ -1397,6 +1407,12 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     {
       inspector.visit("index", IncrementalIndex.this);
     }
+
+    @Override
+    public boolean isNull()
+    {
+      return IncrementalIndex.this.isNull(currEntry.getValue(), metricIndex);
+    }
   }
 
   private class ObjectMetricColumnSelector implements ObjectColumnSelector
@@ -1458,6 +1474,12 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     {
       inspector.visit("index", IncrementalIndex.this);
     }
+
+    @Override
+    public boolean isNull()
+    {
+      return IncrementalIndex.this.isNull(currEntry.getValue(), metricIndex);
+    }
   }
 
   private class DoubleMetricColumnSelector implements DoubleColumnSelector
@@ -1475,6 +1497,12 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     public double getDouble()
     {
       return getMetricDoubleValue(currEntry.getValue(), metricIndex);
+    }
+
+    @Override
+    public boolean isNull()
+    {
+      return IncrementalIndex.this.isNull(currEntry.getValue(), metricIndex);
     }
 
     @Override

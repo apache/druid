@@ -83,8 +83,16 @@ public class TestColumnSelectorFactory implements ColumnSelectorFactory
       @Override
       public void inspectRuntimeShape(RuntimeShapeInspector inspector)
       {
-        // don't inspect in tests
+        // Nothing to do.
       }
+
+      @Override
+      public boolean isNull()
+      {
+        return row.get().getMetric(columnName) == null;
+      }
+
+
     };
   }
 

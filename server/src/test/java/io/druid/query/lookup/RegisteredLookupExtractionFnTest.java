@@ -38,7 +38,8 @@ public class RegisteredLookupExtractionFnTest
 {
   private static Map<String, String> MAP = ImmutableMap.of(
       "foo", "bar",
-      "bat", "baz"
+      "bat", "baz",
+      "", "empty"
   );
   private static final LookupExtractor LOOKUP_EXTRACTOR = new MapLookupExtractor(MAP, true);
   private static final String LOOKUP_NAME = "some lookup";

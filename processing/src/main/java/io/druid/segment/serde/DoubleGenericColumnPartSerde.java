@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Supplier;
 import io.druid.segment.DoubleColumnSerializer;
+import io.druid.segment.IndexIO;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ValueType;
@@ -105,7 +106,8 @@ public class DoubleGenericColumnPartSerde implements ColumnPartSerde
         );
         builder.setType(ValueType.DOUBLE)
                .setHasMultipleValues(false)
-               .setGenericColumn(new DoubleGenericColumnSupplier(column));
+               .setGenericColumn(new DoubleGenericColumnSupplier(column, IndexIO.LEGACY_FACTORY.getBitmapFactory()
+                                                                                             .makeEmptyImmutableBitmap()));
 
       }
     };

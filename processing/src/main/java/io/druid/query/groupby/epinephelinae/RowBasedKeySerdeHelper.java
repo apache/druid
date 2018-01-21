@@ -34,7 +34,7 @@ interface RowBasedKeySerdeHelper
   /**
    * Read a value from RowBasedKey at `idx` and put the value at the current position of RowBasedKeySerde's keyBuffer.
    * advancing the position by the size returned by getKeyBufferValueSize().
-   *
+   * <p>
    * If an internal resource limit has been reached and the value could not be added to the keyBuffer,
    * (e.g., maximum dictionary size exceeded for Strings), this method returns false.
    *
@@ -48,7 +48,7 @@ interface RowBasedKeySerdeHelper
   /**
    * Read a value from a ByteBuffer containing a grouping key in the same format as RowBasedKeySerde's keyBuffer and
    * put the value in `dimValues` at `dimValIdx`.
-   *
+   * <p>
    * The value to be read resides in the buffer at position (`initialOffset` + the SerdeHelper's keyBufferPosition).
    *
    * @param buffer        ByteBuffer containing an array of grouping keys for a row

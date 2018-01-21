@@ -113,7 +113,6 @@ public class ColumnDescriptor implements Serializer
   {
     private ValueType valueType = null;
     private Boolean hasMultipleValues = null;
-
     private final List<ColumnPartSerde> parts = Lists.newArrayList();
 
     public Builder setValueType(ValueType valueType)
@@ -145,7 +144,11 @@ public class ColumnDescriptor implements Serializer
     public ColumnDescriptor build()
     {
       Preconditions.checkNotNull(valueType, "must specify a valueType");
-      return new ColumnDescriptor(valueType, hasMultipleValues == null ? false : hasMultipleValues, parts);
+      return new ColumnDescriptor(
+          valueType,
+          hasMultipleValues == null ? false : hasMultipleValues,
+          parts
+      );
     }
   }
 }

@@ -37,5 +37,6 @@ public interface ColumnIncluderator
   byte[] LIST_CACHE_PREFIX = new byte[]{0x2};
 
   boolean include(String columnName);
+
   byte[] getCacheKey();
 }

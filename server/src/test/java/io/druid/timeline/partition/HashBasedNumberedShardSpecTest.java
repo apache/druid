@@ -33,6 +33,7 @@ import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -241,6 +242,7 @@ public class HashBasedNumberedShardSpecTest
     }
 
     @Override
+    @Nullable
     public Object getRaw(String s)
     {
       return null;
@@ -249,7 +251,7 @@ public class HashBasedNumberedShardSpecTest
     @Override
     public Number getMetric(String metric)
     {
-      return 0;
+      return 0F;
     }
 
     @Override

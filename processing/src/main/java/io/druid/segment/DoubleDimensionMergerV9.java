@@ -22,7 +22,7 @@ package io.druid.segment;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.CompressionStrategy;
-import io.druid.segment.serde.DoubleGenericColumnPartSerde;
+import io.druid.segment.serde.DoubleGenericColumnPartSerdeV2;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.IOException;
@@ -55,7 +55,12 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
   private void setupEncodedValueWriter(SegmentWriteOutMedium segmentWriteOutMedium) throws IOException
   {
     final CompressionStrategy metCompression = indexSpec.getMetricCompression();
-    this.serializer = DoubleColumnSerializer.create(segmentWriteOutMedium, dimensionName, metCompression);
+    this.serializer = DoubleColumnSerializer.create(
+        segmentWriteOutMedium,
+        dimensionName,
+        metCompression,
+        indexSpec.getBitmapSerdeFactory()
+    );
     serializer.open();
   }
 
@@ -80,13 +85,12 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
   @Override
   public void writeIndexes(List<IntBuffer> segmentRowNumConversions) throws IOException
   {
-    // double columns do not have indexes
+    // doubles have no indices to write
   }
 
   @Override
   public boolean canSkip()
   {
-    // a double column can never be all null
     return false;
   }
 
@@ -96,10 +100,11 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
     final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
     builder.setValueType(ValueType.DOUBLE);
     builder.addSerde(
-        DoubleGenericColumnPartSerde.serializerBuilder()
-                                    .withByteOrder(IndexIO.BYTE_ORDER)
-                                    .withDelegate(serializer)
-                                    .build()
+        DoubleGenericColumnPartSerdeV2.serializerBuilder()
+                                      .withByteOrder(IndexIO.BYTE_ORDER)
+                                      .withDelegate(serializer)
+                                      .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
+                                      .build()
     );
     return builder.build();
   }

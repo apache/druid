@@ -133,6 +133,12 @@ public class SingleStringInputCachingExpressionColumnValueSelector implements Co
     return expression.eval(bindings);
   }
 
+  @Override
+  public boolean isNull()
+  {
+    return eval().isNull();
+  }
+
   public static class LruEvalCache
   {
     private final Expr expression;

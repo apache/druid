@@ -62,7 +62,6 @@ public class BucketExtractionFn implements ExtractionFn
     if (value == null) {
       return null;
     }
-
     if (value instanceof Number) {
       return bucket(((Number) value).doubleValue());
     } else if (value instanceof String) {
@@ -78,7 +77,6 @@ public class BucketExtractionFn implements ExtractionFn
     if (value == null) {
       return null;
     }
-
     try {
       return bucket(Double.parseDouble(value));
     }

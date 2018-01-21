@@ -23,10 +23,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
 import com.google.common.collect.RangeSet;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.data.Indexed;
@@ -98,7 +98,7 @@ public class LikeDimFilter implements DimFilter
     )
     {
       this.suffixMatch = Preconditions.checkNotNull(suffixMatch, "suffixMatch");
-      this.prefix = Strings.nullToEmpty(prefix);
+      this.prefix = NullHandling.nullToEmptyIfNeeded(prefix);
       this.pattern = Preconditions.checkNotNull(pattern, "pattern");
     }
 
@@ -151,7 +151,8 @@ public class LikeDimFilter implements DimFilter
 
     public boolean matches(@Nullable final String s)
     {
-      return pattern.matcher(Strings.nullToEmpty(s)).matches();
+      String val = NullHandling.nullToEmptyIfNeeded(s);
+      return val != null && pattern.matcher(val).matches();
     }
 
     /**
@@ -165,7 +166,7 @@ public class LikeDimFilter implements DimFilter
         return true;
       } else if (suffixMatch == SuffixMatch.MATCH_EMPTY) {
         final String s = strings.get(i);
-        return (s == null ? 0 : s.length()) == prefix.length();
+        return s == null ? matches(null) : s.length() == prefix.length();
       } else {
         // suffixMatch is MATCH_PATTERN
         final String s = strings.get(i);
@@ -181,23 +182,9 @@ public class LikeDimFilter implements DimFilter
         public Predicate<String> makeStringPredicate()
         {
           if (extractionFn != null) {
-            return new Predicate<String>()
-            {
-              @Override
-              public boolean apply(String input)
-              {
-                return matches(extractionFn.apply(input));
-              }
-            };
+            return input -> matches(extractionFn.apply(input));
           } else {
-            return new Predicate<String>()
-            {
-              @Override
-              public boolean apply(String input)
-              {
-                return matches(input);
-              }
-            };
+            return input -> matches(input);
           }
         }
 

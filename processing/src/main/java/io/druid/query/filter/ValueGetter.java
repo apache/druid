@@ -19,6 +19,8 @@
 
 package io.druid.query.filter;
 
+import javax.annotation.Nullable;
+
 /**
  */
 public interface ValueGetter
@@ -27,5 +29,6 @@ public interface ValueGetter
   // converted to strings. We should also add functions
   // for these and modify ColumnComparisonFilter to handle
   // comparing Long and Float columns to eachother.
+  @Nullable
   String[] get();
 }

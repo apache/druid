@@ -20,9 +20,9 @@
 package io.druid.query.groupby;
 
 import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.Row;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
@@ -30,6 +30,7 @@ import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.IdLookup;
 import io.druid.segment.LongColumnSelector;
@@ -222,13 +223,14 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
               @Override
               public boolean matches()
               {
-                final List<String> dimensionValues = row.get().getDimension(dimension);
+                Row row = RowBasedColumnSelectorFactory.this.row.get();
+                final List<String> dimensionValues = row.getDimension(dimension);
                 if (dimensionValues == null || dimensionValues.isEmpty()) {
                   return value == null;
                 }
 
                 for (String dimensionValue : dimensionValues) {
-                  if (Objects.equals(Strings.emptyToNull(dimensionValue), value)) {
+                  if (Objects.equals(NullHandling.emptyToNullIfNeeded(dimensionValue), value)) {
                     return true;
                   }
                 }
@@ -253,7 +255,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
                 }
 
                 for (String dimensionValue : dimensionValues) {
-                  if (Objects.equals(extractionFn.apply(Strings.emptyToNull(dimensionValue)), value)) {
+                  if (Objects.equals(extractionFn.apply(NullHandling.emptyToNullIfNeeded(dimensionValue)), value)) {
                     return true;
                   }
                 }
@@ -286,7 +288,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
                 }
 
                 for (String dimensionValue : dimensionValues) {
-                  if (predicate.apply(Strings.emptyToNull(dimensionValue))) {
+                  if (predicate.apply(NullHandling.emptyToNullIfNeeded(dimensionValue))) {
                     return true;
                   }
                 }
@@ -312,7 +314,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
                 }
 
                 for (String dimensionValue : dimensionValues) {
-                  if (predicate.apply(extractionFn.apply(Strings.emptyToNull(dimensionValue)))) {
+                  if (predicate.apply(extractionFn.apply(NullHandling.emptyToNullIfNeeded(dimensionValue)))) {
                     return true;
                   }
                 }
@@ -338,7 +340,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         @Override
         public String lookupName(int id)
         {
-          final String value = Strings.emptyToNull(row.get().getDimension(dimension).get(id));
+          final String value = NullHandling.emptyToNullIfNeeded(row.get().getDimension(dimension).get(id));
           return extractionFn == null ? value : extractionFn.apply(value);
         }
 
@@ -375,6 +377,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
           return Object.class;
         }
 
+
         @Override
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
@@ -398,6 +401,13 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         }
 
         @Override
+        public boolean isNull()
+        {
+          // Time column never has null values
+          return false;
+        }
+
+        @Override
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
           inspector.visit("row", row);
@@ -410,19 +420,25 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         @Override
         public double getDouble()
         {
-          return row.get().getMetric(columnName).doubleValue();
+          return DimensionHandlerUtils.nullToZeroDouble(row.get().getMetric(columnName)).doubleValue();
+        }
+
+        @Override
+        public boolean isNull()
+        {
+          return row.get().getRaw(columnName) == null;
         }
 
         @Override
         public float getFloat()
         {
-          return row.get().getMetric(columnName).floatValue();
+          return DimensionHandlerUtils.nullToZeroDouble(row.get().getMetric(columnName)).floatValue();
         }
 
         @Override
         public long getLong()
         {
-          return row.get().getMetric(columnName).longValue();
+          return DimensionHandlerUtils.nullToZeroDouble(row.get().getMetric(columnName)).longValue();
         }
 
         @Nullable

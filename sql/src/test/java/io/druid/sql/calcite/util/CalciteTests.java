@@ -137,7 +137,8 @@ public class CalciteTests
   public static final String FORBIDDEN_DATASOURCE = "forbiddenDatasource";
 
   public static final String TEST_SUPERUSER_NAME = "testSuperuser";
-  public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null) {
+  public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null)
+  {
     @Override
     public Authorizer getAuthorizer(String name)
     {
@@ -162,6 +163,7 @@ public class CalciteTests
     }
   };
   public static final AuthenticatorMapper TEST_AUTHENTICATOR_MAPPER;
+
   static {
     final Map<String, Authenticator> defaultMap = Maps.newHashMap();
     defaultMap.put(

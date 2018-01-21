@@ -27,11 +27,11 @@ import io.druid.query.monomorphicprocessing.HotLoopCallee;
  * Double value selecting polymorphic "part" of the {@link ColumnValueSelector} interface. Users of {@link
  * ColumnValueSelector#getDouble()} are encouraged to reduce the parameter/field/etc. type to
  * BaseDoubleColumnValueSelector to make it impossible to accidently call any method other than {@link #getDouble()}.
- *
+ * <p>
  * All implementations of this interface MUST also implement {@link ColumnValueSelector}.
  */
 @PublicApi
-public interface BaseDoubleColumnValueSelector extends HotLoopCallee
+public interface BaseDoubleColumnValueSelector extends HotLoopCallee, BaseNullableColumnValueSelector
 {
   @CalledFromHotLoop
   double getDouble();

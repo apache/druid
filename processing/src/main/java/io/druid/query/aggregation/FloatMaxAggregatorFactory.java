@@ -22,10 +22,14 @@ package io.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
+import io.druid.segment.BaseFloatColumnValueSelector;
+import io.druid.segment.BaseNullableColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
@@ -51,25 +55,43 @@ public class FloatMaxAggregatorFactory extends SimpleFloatAggregatorFactory
   }
 
   @Override
-  public Aggregator factorize(ColumnSelectorFactory metricFactory)
+  public Pair<Aggregator, BaseNullableColumnValueSelector> factorize2(ColumnSelectorFactory metricFactory)
   {
-    return new FloatMaxAggregator(makeColumnValueSelectorWithFloatDefault(metricFactory, Float.NEGATIVE_INFINITY));
+    BaseFloatColumnValueSelector floatColumnSelector = makeColumnValueSelectorWithFloatDefault(
+        metricFactory,
+        Float.NEGATIVE_INFINITY
+    );
+    return Pair.of(new FloatMaxAggregator(floatColumnSelector), floatColumnSelector);
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+  public Pair<BufferAggregator, BaseNullableColumnValueSelector> factorizeBuffered2(ColumnSelectorFactory metricFactory)
   {
-    return new FloatMaxBufferAggregator(makeColumnValueSelectorWithFloatDefault(metricFactory, Float.NEGATIVE_INFINITY));
+    BaseFloatColumnValueSelector floatColumnSelector = makeColumnValueSelectorWithFloatDefault(
+        metricFactory,
+        Float.NEGATIVE_INFINITY
+    );
+    return Pair.of(
+        new FloatMaxBufferAggregator(floatColumnSelector),
+        floatColumnSelector
+    );
   }
 
   @Override
-  public Object combine(Object lhs, Object rhs)
+  @Nullable
+  public Object combine(@Nullable Object lhs, @Nullable Object rhs)
   {
+    if (rhs == null) {
+      return lhs;
+    }
+    if (lhs == null) {
+      return rhs;
+    }
     return FloatMaxAggregator.combineValues(finalizeComputation(lhs), finalizeComputation(rhs));
   }
 
   @Override
-  public AggregateCombiner makeAggregateCombiner()
+  public AggregateCombiner makeAggregateCombiner2()
   {
     return new DoubleMaxAggregateCombiner();
   }

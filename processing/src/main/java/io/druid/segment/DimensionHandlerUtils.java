@@ -22,6 +22,7 @@ package io.druid.segment;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
+import io.druid.common.config.NullHandling;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.java.util.common.IAE;
@@ -124,17 +125,18 @@ public final class DimensionHandlerUtils
    * Creates an array of ColumnSelectorPlus objects, selectors that handle type-specific operations within
    * query processing engines, using a strategy factory provided by the query engine. One ColumnSelectorPlus
    * will be created for each column specified in dimensionSpecs.
-   *
+   * <p>
    * The ColumnSelectorPlus provides access to a type strategy (e.g., how to group on a float column)
    * and a value selector for a single column.
-   *
+   * <p>
    * A caller should define a strategy factory that provides an interface for type-specific operations
    * in a query engine. See GroupByStrategyFactory for a reference.
    *
    * @param <ColumnSelectorStrategyClass> The strategy type created by the provided strategy factory.
-   * @param strategyFactory A factory provided by query engines that generates type-handling strategies
-   * @param dimensionSpecs The set of columns to generate ColumnSelectorPlus objects for
-   * @param columnSelectorFactory Used to create value selectors for columns.
+   * @param strategyFactory               A factory provided by query engines that generates type-handling strategies
+   * @param dimensionSpecs                The set of columns to generate ColumnSelectorPlus objects for
+   * @param columnSelectorFactory         Used to create value selectors for columns.
+   *
    * @return An array of ColumnSelectorPlus objects, in the order of the columns specified in dimensionSpecs
    */
   public static <ColumnSelectorStrategyClass extends ColumnSelectorStrategy>
@@ -238,10 +240,19 @@ public final class DimensionHandlerUtils
   }
 
   @Nullable
+  public static String convertObjectToString(@Nullable Object valObj)
+  {
+    if (valObj == null) {
+      return null;
+    }
+    return valObj.toString();
+  }
+
+  @Nullable
   public static Long convertObjectToLong(@Nullable Object valObj)
   {
     if (valObj == null) {
-      return ZERO_LONG;
+      return null;
     }
 
     if (valObj instanceof Long) {
@@ -259,7 +270,7 @@ public final class DimensionHandlerUtils
   public static Float convertObjectToFloat(@Nullable Object valObj)
   {
     if (valObj == null) {
-      return ZERO_FLOAT;
+      return null;
     }
 
     if (valObj instanceof Float) {
@@ -277,7 +288,7 @@ public final class DimensionHandlerUtils
   public static Double convertObjectToDouble(@Nullable Object valObj)
   {
     if (valObj == null) {
-      return ZERO_DOUBLE;
+      return null;
     }
 
     if (valObj instanceof Double) {
@@ -285,7 +296,8 @@ public final class DimensionHandlerUtils
     } else if (valObj instanceof Number) {
       return ((Number) valObj).doubleValue();
     } else if (valObj instanceof String) {
-      return Doubles.tryParse((String) valObj);
+      Double doubleVal = Doubles.tryParse((String) valObj);
+      return doubleVal;
     } else {
       throw new ParseException("Unknown type[%s]", valObj.getClass());
     }
@@ -293,7 +305,7 @@ public final class DimensionHandlerUtils
 
   /**
    * Convert a string representing a decimal value to a long.
-   *
+   * <p>
    * If the decimal value is not an exact integral value (e.g. 42.0), or if the decimal value
    * is too large to be contained within a long, this function returns null.
    *
@@ -327,18 +339,18 @@ public final class DimensionHandlerUtils
     }
   }
 
-  public static Double nullToZero(@Nullable Double number)
+  public static Number nullToZeroDouble(@Nullable Number number)
   {
-    return number == null ? ZERO_DOUBLE : number;
+    return number == null ? NullHandling.ZERO_DOUBLE : number;
   }
 
-  public static Long nullToZero(@Nullable Long number)
+  public static Number nullToZeroLong(@Nullable Number number)
   {
-    return number == null ? ZERO_LONG : number;
+    return number == null ? NullHandling.ZERO_LONG : number;
   }
 
-  public static Float nullToZero(@Nullable Float number)
+  public static Number nullToZeroFloat(@Nullable Number number)
   {
-    return number == null ? ZERO_FLOAT : number;
+    return number == null ? NullHandling.ZERO_FLOAT : number;
   }
 }

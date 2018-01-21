@@ -28,5 +28,25 @@ public interface DruidLongPredicate
 
   DruidLongPredicate ALWAYS_TRUE = input -> true;
 
+  DruidLongPredicate MATCH_NULL_ONLY = new DruidLongPredicate()
+  {
+    @Override
+    public boolean applyLong(long input)
+    {
+      return false;
+    }
+
+    @Override
+    public boolean applyNull()
+    {
+      return true;
+    }
+  };
+
   boolean applyLong(long input);
+
+  default boolean applyNull()
+  {
+    return false;
+  }
 }

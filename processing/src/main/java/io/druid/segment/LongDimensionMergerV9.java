@@ -23,8 +23,8 @@ import com.google.common.base.Throwables;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.CompressionFactory;
+import io.druid.segment.serde.LongGenericColumnPartSerdeV2;
 import io.druid.segment.data.CompressionStrategy;
-import io.druid.segment.serde.LongGenericColumnPartSerde;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.IOException;
@@ -33,6 +33,7 @@ import java.util.List;
 
 public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
 {
+
   protected String dimensionName;
   protected final IndexSpec indexSpec;
   protected LongColumnSerializer serializer;
@@ -58,7 +59,13 @@ public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
   {
     final CompressionStrategy metCompression = indexSpec.getMetricCompression();
     final CompressionFactory.LongEncodingStrategy longEncoding = indexSpec.getLongEncoding();
-    this.serializer = LongColumnSerializer.create(segmentWriteOutMedium, dimensionName, metCompression, longEncoding);
+    this.serializer = LongColumnSerializer.create(
+        segmentWriteOutMedium,
+        dimensionName,
+        metCompression,
+        longEncoding,
+        indexSpec.getBitmapSerdeFactory()
+    );
     serializer.open();
   }
 
@@ -89,7 +96,6 @@ public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
   @Override
   public boolean canSkip()
   {
-    // a long column can never be all null
     return false;
   }
 
@@ -99,10 +105,11 @@ public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
     final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
     builder.setValueType(ValueType.LONG);
     builder.addSerde(
-        LongGenericColumnPartSerde.serializerBuilder()
-                                  .withByteOrder(IndexIO.BYTE_ORDER)
-                                  .withDelegate(serializer)
-                                  .build()
+        LongGenericColumnPartSerdeV2.serializerBuilder()
+                                    .withByteOrder(IndexIO.BYTE_ORDER)
+                                    .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
+                                    .withDelegate(serializer)
+                                    .build()
     );
     return builder.build();
   }

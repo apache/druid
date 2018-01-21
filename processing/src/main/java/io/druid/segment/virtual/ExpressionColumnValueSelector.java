@@ -75,4 +75,10 @@ public class ExpressionColumnValueSelector implements ColumnValueSelector<ExprEv
     inspector.visit("expression", expression);
     inspector.visit("bindings", bindings);
   }
+
+  @Override
+  public boolean isNull()
+  {
+    return getObject() == null;
+  }
 }

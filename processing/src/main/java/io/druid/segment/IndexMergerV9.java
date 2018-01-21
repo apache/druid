@@ -61,9 +61,9 @@ import io.druid.segment.loading.MMappedQueryableSegmentizerFactory;
 import io.druid.segment.serde.ComplexColumnPartSerde;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
-import io.druid.segment.serde.DoubleGenericColumnPartSerde;
-import io.druid.segment.serde.FloatGenericColumnPartSerde;
-import io.druid.segment.serde.LongGenericColumnPartSerde;
+import io.druid.segment.serde.DoubleGenericColumnPartSerdeV2;
+import io.druid.segment.serde.FloatGenericColumnPartSerdeV2;
+import io.druid.segment.serde.LongGenericColumnPartSerdeV2;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
@@ -95,7 +95,11 @@ public class IndexMergerV9 implements IndexMerger
   private final SegmentWriteOutMediumFactory defaultSegmentWriteOutMediumFactory;
 
   @Inject
-  public IndexMergerV9(ObjectMapper mapper, IndexIO indexIO, SegmentWriteOutMediumFactory defaultSegmentWriteOutMediumFactory)
+  public IndexMergerV9(
+      ObjectMapper mapper,
+      IndexIO indexIO,
+      SegmentWriteOutMediumFactory defaultSegmentWriteOutMediumFactory
+  )
   {
     this.mapper = Preconditions.checkNotNull(mapper, "null ObjectMapper");
     this.indexIO = Preconditions.checkNotNull(indexIO, "null IndexIO");
@@ -212,7 +216,15 @@ public class IndexMergerV9 implements IndexMerger
       final String section = "build inverted index and columns";
       progress.startSection(section);
       makeTimeColumn(v9Smoosher, progress, timeWriter);
-      makeMetricsColumns(v9Smoosher, progress, mergedMetrics, metricsValueTypes, metricTypeNames, metWriters);
+      makeMetricsColumns(
+          v9Smoosher,
+          progress,
+          mergedMetrics,
+          metricsValueTypes,
+          metricTypeNames,
+          metWriters,
+          indexSpec
+      );
 
       for (int i = 0; i < mergedDimensions.size(); i++) {
         DimensionMergerV9 merger = (DimensionMergerV9) mergers.get(i);
@@ -323,7 +335,8 @@ public class IndexMergerV9 implements IndexMerger
       final List<String> mergedMetrics,
       final Map<String, ValueType> metricsValueTypes,
       final Map<String, String> metricTypeNames,
-      final List<GenericColumnSerializer> metWriters
+      final List<GenericColumnSerializer> metWriters,
+      final IndexSpec indexSpec
   ) throws IOException
   {
     final String section = "make metric columns";
@@ -341,30 +354,33 @@ public class IndexMergerV9 implements IndexMerger
         case LONG:
           builder.setValueType(ValueType.LONG);
           builder.addSerde(
-              LongGenericColumnPartSerde
+              LongGenericColumnPartSerdeV2
                   .serializerBuilder()
                   .withByteOrder(IndexIO.BYTE_ORDER)
                   .withDelegate((LongColumnSerializer) writer)
+                  .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
                   .build()
           );
           break;
         case FLOAT:
           builder.setValueType(ValueType.FLOAT);
           builder.addSerde(
-              FloatGenericColumnPartSerde
+              FloatGenericColumnPartSerdeV2
                   .serializerBuilder()
                   .withByteOrder(IndexIO.BYTE_ORDER)
                   .withDelegate((FloatColumnSerializer) writer)
+                  .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
                   .build()
           );
           break;
         case DOUBLE:
           builder.setValueType(ValueType.DOUBLE);
           builder.addSerde(
-              DoubleGenericColumnPartSerde
+              DoubleGenericColumnPartSerdeV2
                   .serializerBuilder()
                   .withByteOrder(IndexIO.BYTE_ORDER)
                   .withDelegate((DoubleColumnSerializer) writer)
+                  .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
                   .build()
           );
           break;
@@ -403,10 +419,10 @@ public class IndexMergerV9 implements IndexMerger
         .builder()
         .setValueType(ValueType.LONG)
         .addSerde(
-            LongGenericColumnPartSerde.serializerBuilder()
-                                      .withByteOrder(IndexIO.BYTE_ORDER)
-                                      .withDelegate(timeWriter)
-                                      .build()
+            LongGenericColumnPartSerdeV2.serializerBuilder()
+                                        .withByteOrder(IndexIO.BYTE_ORDER)
+                                        .withDelegate(timeWriter)
+                                        .build()
         )
         .build();
     makeColumn(v9Smoosher, Column.TIME_COLUMN_NAME, serdeficator);
@@ -471,7 +487,9 @@ public class IndexMergerV9 implements IndexMerger
         merger.processMergedRow(dims[i]);
       }
 
-      Iterator<Int2ObjectMap.Entry<IntSortedSet>> rowsIterator = theRow.getComprisedRows().int2ObjectEntrySet().fastIterator();
+      Iterator<Int2ObjectMap.Entry<IntSortedSet>> rowsIterator = theRow.getComprisedRows()
+                                                                       .int2ObjectEntrySet()
+                                                                       .fastIterator();
       while (rowsIterator.hasNext()) {
         Int2ObjectMap.Entry<IntSortedSet> comprisedRow = rowsIterator.next();
 
@@ -498,13 +516,13 @@ public class IndexMergerV9 implements IndexMerger
     progress.stopSection(section);
   }
 
-  private LongColumnSerializer setupTimeWriter(SegmentWriteOutMedium segmentWriteOutMedium, IndexSpec indexSpec) throws IOException
+  private LongColumnSerializer setupTimeWriter(SegmentWriteOutMedium segmentWriteOutMedium, IndexSpec indexSpec)
+      throws IOException
   {
     LongColumnSerializer timeWriter = LongColumnSerializer.create(
-        segmentWriteOutMedium,
-        "little_end_time",
-        CompressionStrategy.DEFAULT_COMPRESSION_STRATEGY,
-        indexSpec.getLongEncoding()
+        segmentWriteOutMedium, "little_end_time", CompressionStrategy.DEFAULT_COMPRESSION_STRATEGY,
+        indexSpec.getLongEncoding(),
+        indexSpec.getBitmapSerdeFactory()
     );
     // we will close this writer after we added all the timestamps
     timeWriter.open();
@@ -527,13 +545,29 @@ public class IndexMergerV9 implements IndexMerger
       GenericColumnSerializer writer;
       switch (type) {
         case LONG:
-          writer = LongColumnSerializer.create(segmentWriteOutMedium, metric, metCompression, longEncoding);
+          writer = LongColumnSerializer.create(
+              segmentWriteOutMedium,
+              metric,
+              metCompression,
+              longEncoding,
+              indexSpec.getBitmapSerdeFactory()
+          );
           break;
         case FLOAT:
-          writer = FloatColumnSerializer.create(segmentWriteOutMedium, metric, metCompression);
+          writer = FloatColumnSerializer.create(
+              segmentWriteOutMedium,
+              metric,
+              metCompression,
+              indexSpec.getBitmapSerdeFactory()
+          );
           break;
         case DOUBLE:
-          writer = DoubleColumnSerializer.create(segmentWriteOutMedium, metric, metCompression);
+          writer = DoubleColumnSerializer.create(
+              segmentWriteOutMedium,
+              metric,
+              metCompression,
+              indexSpec.getBitmapSerdeFactory()
+          );
           break;
         case COMPLEX:
           final String typeName = metricTypeNames.get(metric);

@@ -26,6 +26,7 @@ import com.google.common.primitives.Longs;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.parsers.ParseException;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -92,10 +93,11 @@ public class Rows
    * @throws NullPointerException if the string is null
    * @throws ParseException       if the column cannot be converted to a number
    */
-  public static Number objectToNumber(final String name, final Object inputValue)
+  @Nullable
+  public static Number objectToNumber(final String name, @Nullable final Object inputValue)
   {
     if (inputValue == null) {
-      return Rows.LONG_ZERO;
+      return null;
     }
 
     if (inputValue instanceof Number) {

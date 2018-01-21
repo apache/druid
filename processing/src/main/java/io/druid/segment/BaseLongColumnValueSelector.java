@@ -27,11 +27,11 @@ import io.druid.query.monomorphicprocessing.HotLoopCallee;
  * Long value selecting polymorphic "part" of the {@link ColumnValueSelector} interface. Users of {@link
  * ColumnValueSelector#getLong()} are encouraged to reduce the parameter/field/etc. type to BaseLongColumnValueSelector
  * to make it impossible to accidently call any method other than {@link #getLong()}.
- *
+ * <p>
  * All implementations of this interface MUST also implement {@link ColumnValueSelector}.
  */
 @PublicApi
-public interface BaseLongColumnValueSelector extends HotLoopCallee
+public interface BaseLongColumnValueSelector extends HotLoopCallee, BaseNullableColumnValueSelector
 {
   @CalledFromHotLoop
   long getLong();

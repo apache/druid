@@ -37,6 +37,7 @@ import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.virtual.ExpressionSelectors;
 
+import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -141,7 +142,7 @@ public class AggregatorUtil
       final ExprMacroTable macroTable,
       final String fieldName,
       final String fieldExpression,
-      final float nullValue
+      @Nullable final Float nullValue
   )
   {
     if (fieldName != null && fieldExpression == null) {
@@ -163,6 +164,13 @@ public class AggregatorUtil
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
           inspector.visit("baseSelector", baseSelector);
+        }
+
+        @Override
+        public boolean isNull()
+        {
+          final ExprEval exprEval = baseSelector.getObject();
+          return exprEval.isNull();
         }
       }
       return new ExpressionFloatColumnSelector();
@@ -198,6 +206,13 @@ public class AggregatorUtil
         {
           inspector.visit("baseSelector", baseSelector);
         }
+
+        @Override
+        public boolean isNull()
+        {
+          final ExprEval exprEval = baseSelector.getObject();
+          return exprEval.isNull();
+        }
       }
       return new ExpressionLongColumnSelector();
     }
@@ -231,6 +246,13 @@ public class AggregatorUtil
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
           inspector.visit("baseSelector", baseSelector);
+        }
+
+        @Override
+        public boolean isNull()
+        {
+          final ExprEval exprEval = baseSelector.getObject();
+          return exprEval.isNull();
         }
       }
       return new ExpressionDoubleColumnSelector();

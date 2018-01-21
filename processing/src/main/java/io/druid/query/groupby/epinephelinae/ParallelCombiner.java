@@ -289,11 +289,11 @@ public class ParallelCombiner<KeyType>
    * Recursively build a combining tree in a bottom-up manner.  Each node of the tree is a task that combines input
    * iterators asynchronously.
    *
-   * @param childIterators      all iterators of the child level
-   * @param bufferSupplier      combining buffer supplier
-   * @param combiningFactories  array of combining aggregator factories
-   * @param combineDegree       combining degree for the current level
-   * @param dictionary          merged dictionary
+   * @param childIterators     all iterators of the child level
+   * @param bufferSupplier     combining buffer supplier
+   * @param combiningFactories array of combining aggregator factories
+   * @param combineDegree      combining degree for the current level
+   * @param dictionary         merged dictionary
    *
    * @return a pair of a list of iterators of the current level in the combining tree and a list of futures of all
    * executed combining tasks

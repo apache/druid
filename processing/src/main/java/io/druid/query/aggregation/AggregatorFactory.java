@@ -36,6 +36,8 @@ import java.util.Map;
  * AggregatorFactory is a strategy (in the terms of Design Patterns) that represents column aggregation, e. g. min,
  * max, sum of metric columns, or cardinality of dimension columns (see {@link
  * io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory}).
+ * Implementations of {@link AggregatorFactory} which needs to Support Nullable Aggregations are encouraged
+ * to extend {@link io.druid.query.aggregation.NullableAggregatorFactory}.
  */
 @ExtensionPoint
 public abstract class AggregatorFactory implements Cacheable
@@ -59,7 +61,8 @@ public abstract class AggregatorFactory implements Cacheable
    *
    * @return an object representing the combination of lhs and rhs, this can be a new object or a mutation of the inputs
    */
-  public abstract Object combine(Object lhs, Object rhs);
+  @Nullable
+  public abstract Object combine(@Nullable Object lhs, @Nullable Object rhs);
 
   /**
    * Creates an AggregateCombiner to fold rollup aggregation results from serveral "rows" of different indexes during
@@ -127,7 +130,8 @@ public abstract class AggregatorFactory implements Cacheable
    *
    * @return the finalized value that should be returned for the initial query
    */
-  public abstract Object finalizeComputation(Object object);
+  @Nullable
+  public abstract Object finalizeComputation(@Nullable Object object);
 
   public abstract String getName();
 

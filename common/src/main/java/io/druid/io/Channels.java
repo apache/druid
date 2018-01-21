@@ -25,7 +25,6 @@ import java.nio.channels.WritableByteChannel;
 
 public final class Channels
 {
-
   public static void writeFully(WritableByteChannel channel, ByteBuffer src) throws IOException
   {
     while (src.remaining() > 0) {

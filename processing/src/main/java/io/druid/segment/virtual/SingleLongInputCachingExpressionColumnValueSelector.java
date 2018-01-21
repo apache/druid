@@ -143,4 +143,10 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
     bindings.set(value);
     return expression.eval(bindings);
   }
+
+  @Override
+  public boolean isNull()
+  {
+    return getObject().isNull();
+  }
 }

@@ -22,10 +22,14 @@ package io.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
+import io.druid.segment.BaseFloatColumnValueSelector;
+import io.druid.segment.BaseNullableColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
@@ -51,25 +55,37 @@ public class FloatSumAggregatorFactory extends SimpleFloatAggregatorFactory
   }
 
   @Override
-  public Aggregator factorize(ColumnSelectorFactory metricFactory)
+  public Pair<Aggregator, BaseNullableColumnValueSelector> factorize2(ColumnSelectorFactory metricFactory)
   {
-    return new FloatSumAggregator(makeColumnValueSelectorWithFloatDefault(metricFactory, 0.0f));
+    BaseFloatColumnValueSelector floatColumnSelector = makeColumnValueSelectorWithFloatDefault(metricFactory, 0.0f);
+    return Pair.of(new FloatSumAggregator(floatColumnSelector), floatColumnSelector);
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+  public Pair<BufferAggregator, BaseNullableColumnValueSelector> factorizeBuffered2(ColumnSelectorFactory metricFactory)
   {
-    return new FloatSumBufferAggregator(makeColumnValueSelectorWithFloatDefault(metricFactory, 0.0f));
+    BaseFloatColumnValueSelector floatColumnSelector = makeColumnValueSelectorWithFloatDefault(metricFactory, 0.0f);
+    return Pair.of(
+        new FloatSumBufferAggregator(floatColumnSelector),
+        floatColumnSelector
+    );
   }
 
   @Override
-  public Object combine(Object lhs, Object rhs)
+  @Nullable
+  public Object combine(@Nullable Object lhs, @Nullable Object rhs)
   {
+    if (rhs == null) {
+      return lhs;
+    }
+    if (lhs == null) {
+      return rhs;
+    }
     return FloatSumAggregator.combineValues(lhs, rhs);
   }
 
   @Override
-  public AggregateCombiner makeAggregateCombiner()
+  public AggregateCombiner makeAggregateCombiner2()
   {
     return new DoubleSumAggregateCombiner();
   }

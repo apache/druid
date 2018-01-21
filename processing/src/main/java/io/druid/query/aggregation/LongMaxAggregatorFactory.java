@@ -24,13 +24,16 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
 import io.druid.segment.BaseLongColumnValueSelector;
+import io.druid.segment.BaseNullableColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
@@ -40,7 +43,7 @@ import java.util.Objects;
 
 /**
  */
-public class LongMaxAggregatorFactory extends AggregatorFactory
+public class LongMaxAggregatorFactory extends NullableAggregatorFactory
 {
   private final String name;
   private final String fieldName;
@@ -73,15 +76,20 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Aggregator factorize(ColumnSelectorFactory metricFactory)
+  public Pair<Aggregator, BaseNullableColumnValueSelector> factorize2(ColumnSelectorFactory metricFactory)
   {
-    return new LongMaxAggregator(getLongColumnSelector(metricFactory));
+    BaseLongColumnValueSelector longColumnSelector = getLongColumnSelector(metricFactory);
+    return Pair.of(new LongMaxAggregator(longColumnSelector), longColumnSelector);
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+  public Pair<BufferAggregator, BaseNullableColumnValueSelector> factorizeBuffered2(ColumnSelectorFactory metricFactory)
   {
-    return new LongMaxBufferAggregator(getLongColumnSelector(metricFactory));
+    BaseLongColumnValueSelector longColumnSelector = getLongColumnSelector(metricFactory);
+    return Pair.of(
+        new LongMaxBufferAggregator(longColumnSelector),
+        longColumnSelector
+    );
   }
 
   private BaseLongColumnValueSelector getLongColumnSelector(ColumnSelectorFactory metricFactory)
@@ -102,13 +110,20 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Object combine(Object lhs, Object rhs)
+  @Nullable
+  public Object combine(@Nullable Object lhs, @Nullable Object rhs)
   {
+    if (rhs == null) {
+      return lhs;
+    }
+    if (lhs == null) {
+      return rhs;
+    }
     return LongMaxAggregator.combineValues(lhs, rhs);
   }
 
   @Override
-  public AggregateCombiner makeAggregateCombiner()
+  public AggregateCombiner makeAggregateCombiner2()
   {
     return new LongAggregateCombiner()
     {
@@ -163,7 +178,8 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Object finalizeComputation(Object object)
+  @Nullable
+  public Object finalizeComputation(@Nullable Object object)
   {
     return object;
   }
@@ -216,7 +232,7 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public int getMaxIntermediateSize()
+  public int getMaxIntermediateSize2()
   {
     return Longs.BYTES;
   }

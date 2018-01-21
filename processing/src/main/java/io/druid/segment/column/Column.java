@@ -37,10 +37,14 @@ public interface Column
   ColumnCapabilities getCapabilities();
 
   int getLength();
+
   DictionaryEncodedColumn getDictionaryEncoding();
 
   GenericColumn getGenericColumn();
+
   ComplexColumn getComplexColumn();
+
   BitmapIndex getBitmapIndex();
+
   SpatialIndex getSpatialIndex();
 }

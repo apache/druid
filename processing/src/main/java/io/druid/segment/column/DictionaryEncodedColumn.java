@@ -32,11 +32,17 @@ import javax.annotation.Nullable;
 public interface DictionaryEncodedColumn<ActualType extends Comparable> extends BaseColumn
 {
   int length();
+
   boolean hasMultipleValues();
+
   int getSingleValueRow(int rowNum);
+
   IndexedInts getMultiValueRow(int rowNum);
+  @Nullable
   ActualType lookupName(int id);
+
   int lookupId(ActualType name);
+
   int getCardinality();
 
   DimensionSelector makeDimensionSelector(ReadableOffset offset, @Nullable ExtractionFn extractionFn);

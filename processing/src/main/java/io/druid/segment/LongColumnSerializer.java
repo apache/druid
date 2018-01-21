@@ -19,14 +19,21 @@
 
 package io.druid.segment;
 
+import com.google.common.primitives.Ints;
+import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
+import io.druid.segment.data.BitmapSerdeFactory;
+import io.druid.segment.data.ByteBufferWriter;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.ColumnarLongsSerializer;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
@@ -39,10 +46,18 @@ public class LongColumnSerializer implements GenericColumnSerializer
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       CompressionStrategy compression,
-      CompressionFactory.LongEncodingStrategy encoding
+      CompressionFactory.LongEncodingStrategy encoding,
+      BitmapSerdeFactory bitmapSerdeFactory
   )
   {
-    return new LongColumnSerializer(segmentWriteOutMedium, filenameBase, IndexIO.BYTE_ORDER, compression, encoding);
+    return new LongColumnSerializer(
+        segmentWriteOutMedium,
+        filenameBase,
+        IndexIO.BYTE_ORDER,
+        compression,
+        encoding,
+        bitmapSerdeFactory
+    );
   }
 
   private final SegmentWriteOutMedium segmentWriteOutMedium;
@@ -50,14 +65,20 @@ public class LongColumnSerializer implements GenericColumnSerializer
   private final ByteOrder byteOrder;
   private final CompressionStrategy compression;
   private final CompressionFactory.LongEncodingStrategy encoding;
+  private final BitmapSerdeFactory bitmapSerdeFactory;
+
   private ColumnarLongsSerializer writer;
+  private ByteBufferWriter<ImmutableBitmap> nullValueBitmapWriter;
+  private MutableBitmap nullRowsBitmap;
+  private int rowCount = 0;
 
   private LongColumnSerializer(
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ByteOrder byteOrder,
       CompressionStrategy compression,
-      CompressionFactory.LongEncodingStrategy encoding
+      CompressionFactory.LongEncodingStrategy encoding,
+      BitmapSerdeFactory bitmapSerdeFactory
   )
   {
     this.segmentWriteOutMedium = segmentWriteOutMedium;
@@ -65,6 +86,7 @@ public class LongColumnSerializer implements GenericColumnSerializer
     this.byteOrder = byteOrder;
     this.compression = compression;
     this.encoding = encoding;
+    this.bitmapSerdeFactory = bitmapSerdeFactory;
   }
 
   @Override
@@ -78,24 +100,43 @@ public class LongColumnSerializer implements GenericColumnSerializer
         compression
     );
     writer.open();
+    nullValueBitmapWriter = new ByteBufferWriter<>(
+        segmentWriteOutMedium,
+        bitmapSerdeFactory.getObjectStrategy()
+    );
+    nullValueBitmapWriter.open();
+    nullRowsBitmap = bitmapSerdeFactory.getBitmapFactory().makeEmptyMutableBitmap();
   }
 
   @Override
-  public void serialize(Object obj) throws IOException
+  public void serialize(@Nullable Object obj) throws IOException
   {
-    long val = (obj == null) ? 0 : ((Number) obj).longValue();
-    writer.add(val);
+    if (obj == null) {
+      nullRowsBitmap.add(rowCount);
+      writer.add(0L);
+    } else {
+      writer.add(((Number) obj).longValue());
+    }
+    rowCount++;
   }
 
   @Override
   public long getSerializedSize() throws IOException
   {
-    return writer.getSerializedSize();
+    nullValueBitmapWriter.write(bitmapSerdeFactory.getBitmapFactory().makeImmutableBitmap(nullRowsBitmap));
+    long bitmapSize = nullRowsBitmap.isEmpty()
+                      ? 0L
+                      : nullValueBitmapWriter.getSerializedSize();
+    return Integer.BYTES + writer.getSerializedSize() + bitmapSize;
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
+    channel.write(ByteBuffer.wrap(Ints.toByteArray((int) writer.getSerializedSize())));
     writer.writeTo(channel, smoosher);
+    if (!nullRowsBitmap.isEmpty()) {
+      nullValueBitmapWriter.writeTo(channel, smoosher);
+    }
   }
 }

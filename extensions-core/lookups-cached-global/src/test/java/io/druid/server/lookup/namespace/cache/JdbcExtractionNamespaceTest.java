@@ -384,7 +384,9 @@ public class JdbcExtractionNamespaceTest
         String key = e.getKey();
         String[] val = e.getValue();
         String field = val[0];
+        //CHECKSTYLE.OFF: Regexp
         Assert.assertEquals("non-null check", Strings.emptyToNull(field), Strings.emptyToNull(map.get(key)));
+        //CHECKSTYLE.ON: Regexp
       }
       Assert.assertEquals("null check", null, map.get("baz"));
     }
@@ -415,9 +417,11 @@ public class JdbcExtractionNamespaceTest
         String filterVal = val[1];
 
         if (filterVal.equals("1")) {
+          //CHECKSTYLE.OFF: Regexp
           Assert.assertEquals("non-null check", Strings.emptyToNull(field), Strings.emptyToNull(map.get(key)));
         } else {
           Assert.assertEquals("non-null check", null, Strings.emptyToNull(map.get(key)));
+          //CHECKSTYLE.ON: Regexp
         }
       }
     }

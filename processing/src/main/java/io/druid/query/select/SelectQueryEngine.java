@@ -166,6 +166,7 @@ public class SelectQueryEngine
       }
     }
   }
+
   public static class DoubleSelectColumnSelectorStrategy
       implements SelectColumnSelectorStrategy<BaseDoubleColumnValueSelector>
   {

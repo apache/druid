@@ -21,8 +21,8 @@ package io.druid.segment;
 
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
+import io.druid.segment.serde.FloatGenericColumnPartSerdeV2;
 import io.druid.segment.data.CompressionStrategy;
-import io.druid.segment.serde.FloatGenericColumnPartSerde;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.IOException;
@@ -43,7 +43,6 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
   {
     this.dimensionName = dimensionName;
     this.indexSpec = indexSpec;
-
     try {
       setupEncodedValueWriter(segmentWriteOutMedium);
     }
@@ -55,7 +54,12 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
   private void setupEncodedValueWriter(SegmentWriteOutMedium segmentWriteOutMedium) throws IOException
   {
     final CompressionStrategy metCompression = indexSpec.getMetricCompression();
-    this.serializer = FloatColumnSerializer.create(segmentWriteOutMedium, dimensionName, metCompression);
+    this.serializer = FloatColumnSerializer.create(
+        segmentWriteOutMedium,
+        dimensionName,
+        metCompression,
+        indexSpec.getBitmapSerdeFactory()
+    );
     serializer.open();
   }
 
@@ -86,7 +90,6 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
   @Override
   public boolean canSkip()
   {
-    // a float column can never be all null
     return false;
   }
 
@@ -96,10 +99,11 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
     final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
     builder.setValueType(ValueType.FLOAT);
     builder.addSerde(
-        FloatGenericColumnPartSerde.serializerBuilder()
-                                  .withByteOrder(IndexIO.BYTE_ORDER)
-                                  .withDelegate(serializer)
-                                  .build()
+        FloatGenericColumnPartSerdeV2.serializerBuilder()
+                                     .withByteOrder(IndexIO.BYTE_ORDER)
+                                     .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
+                                     .withDelegate(serializer)
+                                     .build()
     );
     return builder.build();
   }

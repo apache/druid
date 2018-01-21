@@ -607,7 +607,7 @@ public class RealtimePlumberSchoolTest
       @Override
       public Number getMetric(String metric)
       {
-        return 0;
+        return 0D;
       }
 
       @Override
@@ -655,7 +655,7 @@ public class RealtimePlumberSchoolTest
       @Override
       public Number getMetric(String metric)
       {
-        return 0;
+        return 0F;
       }
 
       @Override

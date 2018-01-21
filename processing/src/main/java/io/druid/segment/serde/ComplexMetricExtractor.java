@@ -28,5 +28,6 @@ import io.druid.guice.annotations.ExtensionPoint;
 public interface ComplexMetricExtractor
 {
   Class<?> extractedClass();
+
   Object extractValue(InputRow inputRow, String metricName);
 }

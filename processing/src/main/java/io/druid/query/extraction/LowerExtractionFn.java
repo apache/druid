@@ -22,6 +22,7 @@ package io.druid.query.extraction;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Strings;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
@@ -52,7 +53,7 @@ public class LowerExtractionFn extends DimExtractionFn
   @Override
   public String apply(@Nullable String key)
   {
-    if (Strings.isNullOrEmpty(key)) {
+    if (NullHandling.isNullOrEquivalent(key)) {
       return null;
     }
     return key.toLowerCase(locale);
@@ -73,7 +74,9 @@ public class LowerExtractionFn extends DimExtractionFn
   @Override
   public byte[] getCacheKey()
   {
+    //CHECKSTYLE.OFF: Regexp
     byte[] localeBytes = StringUtils.toUtf8(Strings.nullToEmpty(localeString));
+    //CHECKSTYLE.ON: Regexp
     return ByteBuffer.allocate(2 + localeBytes.length)
                      .put(ExtractionCacheHelper.CACHE_TYPE_ID_LOWER)
                      .put((byte) 0XFF)

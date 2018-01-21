@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.guice.annotations.PublicApi;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -71,13 +72,13 @@ public interface Row extends Comparable<Row>
    *
    * @return the value of the provided column name
    */
+  @Nullable
   Object getRaw(String dimension);
 
   /**
-   * Returns the metric column value for the given column name. This method is different from {@link #getRaw} in two
-   * aspects:
-   *  1. If the column is absent in the row, numeric zero is returned, rather than null.
-   *  2. If the column has string value, an attempt is made to parse this value as a number.
+   * Returns the metric column value for the given column name. This method is different from {@link #getRaw}
+   * when column has string value, an attempt is made to parse this value as a number.
    */
+  @Nullable
   Number getMetric(String metric);
 }

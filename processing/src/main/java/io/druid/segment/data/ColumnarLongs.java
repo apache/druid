@@ -19,6 +19,7 @@
 
 package io.druid.segment.data;
 
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.LongColumnSelector;
@@ -33,13 +34,15 @@ import java.io.Closeable;
 public interface ColumnarLongs extends Closeable
 {
   int size();
+
   long get(int index);
+
   void fill(int index, long[] toFill);
 
   @Override
   void close();
 
-  default ColumnValueSelector<Long> makeColumnValueSelector(ReadableOffset offset)
+  default ColumnValueSelector<Long> makeColumnValueSelector(ReadableOffset offset, ImmutableBitmap nullValueBitmap)
   {
     class HistoricalLongColumnSelector implements LongColumnSelector, HistoricalColumnSelector<Long>
     {
@@ -53,6 +56,12 @@ public interface ColumnarLongs extends Closeable
       public double getDouble(int offset)
       {
         return ColumnarLongs.this.get(offset);
+      }
+
+      @Override
+      public boolean isNull()
+      {
+        return nullValueBitmap.get(offset.getOffset());
       }
 
       @Override

@@ -831,7 +831,7 @@ public class RealtimeManagerTest
         @Override
         public Number getMetric(String metric)
         {
-          return 0;
+          return 0F;
         }
 
         @Override

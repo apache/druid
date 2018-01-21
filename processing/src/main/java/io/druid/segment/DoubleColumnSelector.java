@@ -22,7 +22,7 @@ package io.druid.segment;
 /**
  * This interface is convenient for implementation of "double-sourcing" {@link ColumnValueSelector}s, it provides
  * default implementations for all {@link ColumnValueSelector}'s methods except {@link #getDouble()}.
- *
+ * <p>
  * This interface should appear ONLY in "implements" clause or anonymous class creation, but NOT in "user" code, where
  * {@link BaseDoubleColumnValueSelector} must be used instead.
  */
@@ -61,6 +61,9 @@ public interface DoubleColumnSelector extends ColumnValueSelector<Double>
   @Override
   default Double getObject()
   {
+    if (isNull()) {
+      return null;
+    }
     return getDouble();
   }
 

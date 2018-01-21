@@ -56,7 +56,9 @@ public class LookupConfig
       @JsonProperty("snapshotWorkingDir") String snapshotWorkingDir
   )
   {
+    //CHECKSTYLE.OFF: Regexp
     this.snapshotWorkingDir = Strings.nullToEmpty(snapshotWorkingDir);
+    //CHECKSTYLE.ON: Regexp
   }
 
   public String getSnapshotWorkingDir()

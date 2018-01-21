@@ -82,7 +82,6 @@ public class ExpressionColumnValueSelectorTest
         objectSelectorFromSupplier(settableSupplier, Number.class)
     );
 
-
     Assert.assertNotNull(supplier);
     Assert.assertEquals(null, supplier.get());
 

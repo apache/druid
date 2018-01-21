@@ -19,8 +19,10 @@
 
 package io.druid.query.aggregation.distinctcount;
 
+import com.google.common.base.Preconditions;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.collections.bitmap.WrappedRoaringBitmap;
+import io.druid.common.config.NullHandling;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DimensionSelector;
@@ -30,16 +32,31 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 import java.nio.ByteBuffer;
 
+/**
+ * if performance of this class appears to be a bottleneck for somebody,
+ * one simple way to improve it is to split it into two different classes,
+ * one that is used when {@link NullHandling.useDefaultValuesForNull()} is false,
+ * and one - when it's true, moving this computation out of the tight loop.
+ */
 public class DistinctCountBufferAggregator implements BufferAggregator
 {
+  private static int UNKNOWN = -1;
   private final DimensionSelector selector;
   private final Int2ObjectMap<MutableBitmap> mutableBitmapCollection = new Int2ObjectOpenHashMap<>();
+  private int idForNull;
+
 
   public DistinctCountBufferAggregator(
       DimensionSelector selector
   )
   {
     this.selector = selector;
+    Preconditions.checkArgument(
+        selector.nameLookupPossibleInAdvance()
+        || selector.getValueCardinality() != DimensionSelector.CARDINALITY_UNKNOWN,
+        "DistinctCountBufferAggregator not supported for selector"
+    );
+    this.idForNull = selector.nameLookupPossibleInAdvance() ? selector.idLookup().lookupId(null) : UNKNOWN;
   }
 
   @Override
@@ -55,7 +72,9 @@ public class DistinctCountBufferAggregator implements BufferAggregator
     IndexedInts row = selector.getRow();
     for (int i = 0; i < row.size(); i++) {
       int index = row.get(i);
-      mutableBitmap.add(index);
+      if (NullHandling.useDefaultValuesForNull() || isNotNull(index)) {
+        mutableBitmap.add(index);
+      }
     }
     buf.putLong(position, mutableBitmap.size());
   }
@@ -68,6 +87,20 @@ public class DistinctCountBufferAggregator implements BufferAggregator
       mutableBitmapCollection.put(position, mutableBitmap);
     }
     return mutableBitmap;
+  }
+
+  private boolean isNotNull(int index)
+  {
+    if (idForNull == UNKNOWN) {
+      String value = selector.lookupName(index);
+      if (value == null) {
+        idForNull = index;
+        return false;
+      } else {
+        return true;
+      }
+    }
+    return index != idForNull;
   }
 
   @Override

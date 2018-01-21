@@ -116,7 +116,7 @@ public class SinkTest
           @Override
           public Number getMetric(String metric)
           {
-            return 0;
+            return 0F;
           }
 
           @Override
@@ -170,7 +170,7 @@ public class SinkTest
           @Override
           public Number getMetric(String metric)
           {
-            return 0;
+            return 0F;
           }
 
           @Override

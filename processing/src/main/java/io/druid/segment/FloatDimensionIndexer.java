@@ -21,6 +21,7 @@ package io.druid.segment;
 
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.Indexed;
@@ -28,10 +29,14 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.TimeAndDimsHolder;
 
 import javax.annotation.Nullable;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Float>
 {
+
+  public static final Comparator FLOAT_COMPARATOR = Comparators.<Float>naturalNullsFirst();
 
   @Override
   public Float processRowValsToUnsortedEncodedKeyComponent(Object dimValues)
@@ -97,11 +102,18 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
       {
         final Object[] dims = currEntry.get().getDims();
 
-        if (dimIndex >= dims.length) {
+        if (dimIndex >= dims.length || dims[dimIndex] == null) {
           return 0.0f;
         }
 
         return (Float) dims[dimIndex];
+      }
+
+      @Override
+      public boolean isNull()
+      {
+        final Object[] dims = currEntry.get().getDims();
+        return dimIndex >= dims.length || dims[dimIndex] == null;
       }
 
       @SuppressWarnings("deprecation")
@@ -131,19 +143,19 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   @Override
   public int compareUnsortedEncodedKeyComponents(@Nullable Float lhs, @Nullable Float rhs)
   {
-    return DimensionHandlerUtils.nullToZero(lhs).compareTo(DimensionHandlerUtils.nullToZero(rhs));
+    return FLOAT_COMPARATOR.compare(lhs, rhs);
   }
 
   @Override
   public boolean checkUnsortedEncodedKeyComponentsEqual(@Nullable Float lhs, @Nullable Float rhs)
   {
-    return DimensionHandlerUtils.nullToZero(lhs).equals(DimensionHandlerUtils.nullToZero(rhs));
+    return Objects.equals(lhs, rhs);
   }
 
   @Override
   public int getUnsortedEncodedKeyComponentHashCode(@Nullable Float key)
   {
-    return DimensionHandlerUtils.nullToZero(key).hashCode();
+    return DimensionHandlerUtils.nullToZeroFloat(key).hashCode();
   }
 
   @Override

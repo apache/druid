@@ -37,10 +37,15 @@ import java.util.Map;
 public interface QueryableIndex extends ColumnSelector, Closeable
 {
   Interval getDataInterval();
+
   int getNumRows();
+
   Indexed<String> getAvailableDimensions();
+
   BitmapFactory getBitmapFactoryForDimensions();
+
   Metadata getMetadata();
+
   Map<String, DimensionHandler> getDimensionHandlers();
 
   /**

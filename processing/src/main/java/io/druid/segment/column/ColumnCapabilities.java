@@ -26,9 +26,13 @@ public interface ColumnCapabilities
   ValueType getType();
 
   boolean isDictionaryEncoded();
+
   boolean isRunLengthEncoded();
+
   boolean hasBitmapIndexes();
+
   boolean hasSpatialIndexes();
+
   boolean hasMultipleValues();
 
 }

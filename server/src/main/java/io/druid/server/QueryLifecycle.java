@@ -293,7 +293,9 @@ public class QueryLifecycle
           queryMetricsFactory,
           toolChest,
           queryPlus.getQuery(),
+          //CHECKSTYLE.OFF: Regexp
           Strings.nullToEmpty(remoteAddress)
+          //CHECKSTYLE.ON: Regexp
       );
       queryMetrics.success(success);
       queryMetrics.reportQueryTime(queryTimeNs);
@@ -325,7 +327,9 @@ public class QueryLifecycle
       requestLogger.log(
           new RequestLogLine(
               DateTimes.utc(startMs),
+              //CHECKSTYLE.OFF: Regexp
               Strings.nullToEmpty(remoteAddress),
+              //CHECKSTYLE.ON: Regexp
               queryPlus.getQuery(),
               new QueryStats(statsMap)
           )

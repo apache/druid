@@ -50,7 +50,37 @@ matrix:
       install: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn install -q -ff -DskipTests -B
       before_script:
         - unset _JAVA_OPTIONS
+
       script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -B -Pparallel-test -Dmaven.fork.count=2 -pl '!processing,!server'
+
+      # processing module test with SQL Compatible Null Handling
+    - sudo: false
+      env:
+        - NAME="processing module test with SQL Compatible Null Handling"
+      install: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn install -q -ff -DskipTests -B
+      before_script:
+        - unset _JAVA_OPTIONS
+      script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -B -Pparallel-test -Dmaven.fork.count=2 -pl processing
+
+      # server module test with SQL Compatible Null Handling
+    - sudo: false
+      env:
+        - NAME="server module test with SQL Compatible Null Handling"
+      install: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn install -Ddruid.generic.useDefaultValueForNull=false -q -ff -DskipTests -B
+      before_script:
+        - unset _JAVA_OPTIONS
+      # Server module test is run without the parallel-test option because it's memory sensitive and often fails with that option.
+      script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -Ddruid.generic.useDefaultValueForNull=false -B -pl server
+
+      # other modules test with SQL Compatible Null Handling
+    - sudo: false
+      env:
+        - NAME="other modules test with SQL Compatible Null Handling"
+      install: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn install -q -ff -DskipTests -B
+      before_script:
+        - unset _JAVA_OPTIONS
+
+      script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -Ddruid.generic.useDefaultValueForNull=false -B -Pparallel-test -Dmaven.fork.count=2 -pl '!processing,!server'
 
       # run integration tests
     - sudo: required

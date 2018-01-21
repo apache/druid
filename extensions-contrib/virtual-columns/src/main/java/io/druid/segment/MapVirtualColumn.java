@@ -193,6 +193,12 @@ public class MapVirtualColumn implements VirtualColumn
     }
 
     @Override
+    public boolean isNull()
+    {
+      return false;
+    }
+
+    @Override
     public void inspectRuntimeShape(RuntimeShapeInspector inspector)
     {
       inspector.visit("keySelector", keySelector);

@@ -29,4 +29,10 @@ public abstract class TestDoubleColumnSelector implements DoubleColumnSelector
   {
     // Don't care about runtime shape in tests
   }
+
+  @Override
+  public boolean isNull()
+  {
+    return false;
+  }
 }

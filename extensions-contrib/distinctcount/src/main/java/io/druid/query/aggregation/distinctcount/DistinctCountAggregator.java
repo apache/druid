@@ -19,16 +19,25 @@
 
 package io.druid.query.aggregation.distinctcount;
 
+import com.google.common.base.Preconditions;
 import io.druid.collections.bitmap.MutableBitmap;
+import io.druid.common.config.NullHandling;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.data.IndexedInts;
 
+/**
+ * if performance of this class appears to be a bottleneck for somebody,
+ * one simple way to improve it is to split it into two different classes,
+ * one that is used when {@link NullHandling.useDefaultValuesForNull()} is false,
+ * and one - when it's true, moving this computation out of the tight loop.
+ */
 public class DistinctCountAggregator implements Aggregator
 {
-
+  private static int UNKNOWN = -1;
   private final DimensionSelector selector;
   private final MutableBitmap mutableBitmap;
+  private int idForNull;
 
   public DistinctCountAggregator(
       DimensionSelector selector,
@@ -37,6 +46,12 @@ public class DistinctCountAggregator implements Aggregator
   {
     this.selector = selector;
     this.mutableBitmap = mutableBitmap;
+    Preconditions.checkArgument(
+        selector.nameLookupPossibleInAdvance()
+        || selector.getValueCardinality() != DimensionSelector.CARDINALITY_UNKNOWN,
+        "DistinctCountAggregator not supported for selector"
+    );
+    this.idForNull = selector.nameLookupPossibleInAdvance() ? selector.idLookup().lookupId(null) : UNKNOWN;
   }
 
   @Override
@@ -45,8 +60,24 @@ public class DistinctCountAggregator implements Aggregator
     IndexedInts row = selector.getRow();
     for (int i = 0; i < row.size(); i++) {
       int index = row.get(i);
-      mutableBitmap.add(index);
+      if (NullHandling.useDefaultValuesForNull() || isNotNull(index)) {
+        mutableBitmap.add(index);
+      }
     }
+  }
+
+  private boolean isNotNull(int index)
+  {
+    if (idForNull == UNKNOWN) {
+      String value = selector.lookupName(index);
+      if (value == null) {
+        idForNull = index;
+        return false;
+      } else {
+        return true;
+      }
+    }
+    return index != idForNull;
   }
 
   @Override

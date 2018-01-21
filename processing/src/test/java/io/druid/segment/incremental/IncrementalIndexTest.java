@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.collections.StupidPool;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionSchema;
@@ -224,10 +225,23 @@ public class IncrementalIndexTest
 
     Row row = index.iterator().next();
 
-    Assert.assertEquals(Arrays.asList(new String[]{"", "", "A"}), row.getRaw("string"));
-    Assert.assertEquals(Arrays.asList(new String[]{"", "", String.valueOf(Float.POSITIVE_INFINITY)}), row.getRaw("float"));
-    Assert.assertEquals(Arrays.asList(new String[]{"", "", String.valueOf(Long.MIN_VALUE)}), row.getRaw("long"));
-    Assert.assertEquals(0.0, row.getMetric("double").doubleValue(), 0.0);
+    if (NullHandling.useDefaultValuesForNull()) {
+      Assert.assertEquals(Arrays.asList(null, null, "A"), row.getRaw("string"));
+      Assert.assertEquals(
+          Arrays.asList(null, null, String.valueOf(Float.POSITIVE_INFINITY)),
+          row.getRaw("float")
+      );
+      Assert.assertEquals(Arrays.asList(null, null, String.valueOf(Long.MIN_VALUE)), row.getRaw("long"));
+    } else {
+      Assert.assertEquals(Arrays.asList(null, "", "A"), row.getRaw("string"));
+      Assert.assertEquals(
+          Arrays.asList(null, "", String.valueOf(Float.POSITIVE_INFINITY)),
+          row.getRaw("float")
+      );
+      Assert.assertEquals(Arrays.asList(null, "", String.valueOf(Long.MIN_VALUE)), row.getRaw("long"));
+    }
+    Assert.assertEquals(null, row.getRaw("double"));
+
   }
 
   @Test

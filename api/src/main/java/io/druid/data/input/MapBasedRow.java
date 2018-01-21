@@ -25,6 +25,7 @@ import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -80,6 +81,7 @@ public class MapBasedRow implements Row
   }
 
   @Override
+  @Nullable
   public Object getRaw(String dimension)
   {
     return event.get(dimension);

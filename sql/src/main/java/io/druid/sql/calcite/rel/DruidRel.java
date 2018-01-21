@@ -87,7 +87,6 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode imple
    * Convert this DruidRel to a DruidQuery for purposes of explaining. This must be an inexpensive operation. For
    * example, DruidSemiJoin will use a dummy dataSource in order to complete this method, rather than executing
    * the right-hand side query.
-   *
    * This method may not return null.
    *
    * @return query

@@ -45,7 +45,7 @@ public class MetadataTest
     Metadata metadata = new Metadata();
     metadata.put("k", "v");
 
-    AggregatorFactory[] aggregators = new AggregatorFactory[] {
+    AggregatorFactory[] aggregators = new AggregatorFactory[]{
         new LongSumAggregatorFactory("out", "in")
     };
     metadata.setAggregators(aggregators);

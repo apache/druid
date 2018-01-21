@@ -22,10 +22,10 @@ package io.druid.query.groupby.epinephelinae;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterators;
 import com.google.common.primitives.Ints;
-import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.java.util.common.CloseableIterators;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.ColumnSelectorFactory;
 

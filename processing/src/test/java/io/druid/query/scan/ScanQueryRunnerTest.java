@@ -693,7 +693,12 @@ public class ScanQueryRunnerTest
           Object exValue = ex.getValue();
           if (exValue instanceof Double || exValue instanceof Float) {
             final double expectedDoubleValue = ((Number) exValue).doubleValue();
-            Assert.assertEquals("invalid value for " + ex.getKey(), expectedDoubleValue, ((Number) actVal).doubleValue(), expectedDoubleValue * 1e-6);
+            Assert.assertEquals(
+                "invalid value for " + ex.getKey(),
+                expectedDoubleValue,
+                ((Number) actVal).doubleValue(),
+                expectedDoubleValue * 1e-6
+            );
           } else {
             Assert.assertEquals("invalid value for " + ex.getKey(), ex.getValue(), actVal);
           }

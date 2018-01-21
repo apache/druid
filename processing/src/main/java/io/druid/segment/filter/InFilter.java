@@ -20,7 +20,6 @@
 package io.druid.segment.filter;
 
 import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.BitmapResultFactory;
@@ -165,9 +164,9 @@ public class InFilter implements Filter
       public Predicate<String> makeStringPredicate()
       {
         if (extractionFn != null) {
-          return input -> values.contains(Strings.nullToEmpty(extractionFn.apply(input)));
+          return input -> values.contains(extractionFn.apply(input));
         } else {
-          return input -> values.contains(Strings.nullToEmpty(input));
+          return input -> values.contains(input);
         }
       }
 

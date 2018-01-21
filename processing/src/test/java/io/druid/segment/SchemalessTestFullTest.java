@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
@@ -400,13 +401,13 @@ public class SchemalessTestFullTest
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 2L)
-                            .put("index", 100.0D)
-                            .put("addRowsIndexConstant", 103.0D)
-                            .put("uniques", UNIQUES_1)
-                            .put("maxIndex", 100.0D)
-                            .put("minIndex", 0.0D)
-                            .build()
+                    .put("rows", 2L)
+                    .put("index", 100.0D)
+                    .put("addRowsIndexConstant", 103.0D)
+                    .put("uniques", UNIQUES_1)
+                    .put("maxIndex", 100.0D)
+                    .put("minIndex", NullHandling.useDefaultValuesForNull() ? 0.0D : 100.0D)
+                    .build()
             )
         )
     );
@@ -747,13 +748,13 @@ public class SchemalessTestFullTest
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 2L)
-                            .put("index", 100.0D)
-                            .put("addRowsIndexConstant", 103.0D)
-                            .put("uniques", UNIQUES_1)
-                            .put("maxIndex", 100.0D)
-                            .put("minIndex", 0.0D)
-                            .build()
+                    .put("rows", 2L)
+                    .put("index", 100.0D)
+                    .put("addRowsIndexConstant", 103.0D)
+                    .put("uniques", UNIQUES_1)
+                    .put("maxIndex", 100.0D)
+                    .put("minIndex", NullHandling.useDefaultValuesForNull() ? 0.0D : 100.0D)
+                    .build()
             )
         )
     );
@@ -865,19 +866,19 @@ public class SchemalessTestFullTest
   @Test
   public void testEmptySchemas()
   {
+
     List<Result<TimeseriesResultValue>> expectedTimeseriesResults = Arrays.asList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>builder()
-                            .put("rows", 1L)
-                            .put("index", 0.0D)
-                            .put("addRowsIndexConstant", 2.0D)
-                            .put("uniques", 0.0D)
-                            .put("maxIndex", 0.0D)
-                            .put("minIndex", 0.0D)
-                            .build()
-            )
+                TestHelper.createExpectedMap(
+                    "rows", 1L,
+                    "index", NullHandling.useDefaultValuesForNull() ? 0.0D : null,
+                    "addRowsIndexConstant", NullHandling.useDefaultValuesForNull() ? 2.0D : null,
+                    "uniques", 0.0D,
+                    "maxIndex", NullHandling.useDefaultValuesForNull() ? 0.0D : null,
+                    "minIndex", NullHandling.useDefaultValuesForNull() ? 0.0D : null
+                ))
         )
     );
 
@@ -885,14 +886,14 @@ public class SchemalessTestFullTest
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>builder()
-                            .put("rows", 0L)
-                            .put("index", 0.0D)
-                            .put("addRowsIndexConstant", 1.0D)
-                            .put("uniques", 0.0D)
-                            .put("maxIndex", Double.NEGATIVE_INFINITY)
-                            .put("minIndex", Double.POSITIVE_INFINITY)
-                            .build()
+                TestHelper.createExpectedMap(
+                    "rows", 0L,
+                    "index", NullHandling.useDefaultValuesForNull() ? 0.0D : null,
+                    "addRowsIndexConstant", NullHandling.useDefaultValuesForNull() ? 1.0D : null,
+                    "uniques", 0.0D,
+                    "maxIndex", NullHandling.useDefaultValuesForNull() ? Double.NEGATIVE_INFINITY : null,
+                    "minIndex", NullHandling.useDefaultValuesForNull() ? Double.POSITIVE_INFINITY : null
+                )
             )
         )
     );
@@ -1186,13 +1187,13 @@ public class SchemalessTestFullTest
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 11L)
-                            .put("index", 900.0D)
-                            .put("addRowsIndexConstant", 912.0D)
-                            .put("uniques", UNIQUES_1)
-                            .put("maxIndex", 100.0D)
-                            .put("minIndex", 0.0D)
-                            .build()
+                    .put("rows", 11L)
+                    .put("index", 900.0D)
+                    .put("addRowsIndexConstant", 912.0D)
+                    .put("uniques", UNIQUES_1)
+                    .put("maxIndex", 100.0D)
+                    .put("minIndex", NullHandling.useDefaultValuesForNull() ? 0.0D : 100.0D)
+                    .build()
             )
         )
     );
