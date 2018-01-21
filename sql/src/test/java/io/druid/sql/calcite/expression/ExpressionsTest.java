@@ -21,6 +21,7 @@ package io.druid.sql.calcite.expression;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.DateTimes;
 import io.druid.math.expr.ExprEval;
 import io.druid.math.expr.Parser;
@@ -194,7 +195,7 @@ public class ExpressionsTest
             rexBuilder.makeLiteral("ax")
         ),
         DruidExpression.fromExpression("(strpos(" + DruidExpression.nullLiteral() + ",'ax') + 1)"),
-        0L
+        NullHandling.useDefaultValuesForNull() ? 0L : null
     );
   }
 

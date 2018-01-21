@@ -504,6 +504,7 @@ public class CalciteQueryTest
   @Test
   public void testSelectStarOnForbiddenTable() throws Exception
   {
+    String nullValue = NullHandling.useDefaultValuesForNull() ? "" : null;
     assertQueryIsForbidden(
         "SELECT * FROM druid.forbiddenDatasource",
         CalciteTests.REGULAR_USER_AUTH_RESULT
@@ -523,7 +524,7 @@ public class CalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{T("2000-01-01"), 1L, "forbidden", "abcd", 9999.0f, 0.0, HLLCV1.class.getName()}
+            new Object[]{T("2000-01-01"), 1L, "forbidden", "abcd", 9999.0f, nullValue, HLLCV1.class.getName()}
         )
     );
   }
@@ -2647,8 +2648,12 @@ public class CalciteQueryTest
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
+        NullHandling.useDefaultValuesForNull() ?
         ImmutableList.of(
             new Object[]{5L, 2L}
+        ) :
+        ImmutableList.of(
+            new Object[]{5L, 3L}
         )
     );
   }
@@ -3989,7 +3994,7 @@ public class CalciteQueryTest
             new Object[]{6L, 3L, 2L, 2L, 2L, 6L}
         ) :
         ImmutableList.of(
-            new Object[]{6L, 3L, 2L, 1L, 2L, 6L}
+            new Object[]{6L, 3L, 2L, 1L, 1L, 6L}
         )
     );
   }
