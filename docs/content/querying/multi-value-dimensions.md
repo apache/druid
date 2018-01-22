@@ -3,8 +3,8 @@ layout: doc_page
 ---
 # Multi-value dimensions
 
-Druid supports "multi-value" string dimensions. These are generated when an input field contains an array of values
-instead of a single value (e.e. JSON arrays, or a TSV field containing one or more `listDelimiter`/`multiValueDelimiter` characters).
+Druid supports "multi-value" string dimensions. These are generated when an input field contains an array of values instead of a single value (e.e. JSON arrays, or a TSV field containing one or more `listDelimiter`/`multiValueDelimiter` characters).
+The `listDelimiter` is a common delimiter of all the dimension, and the default value is "\u0001".
 
 The `multiValueDelimiter` is a map of dimension->delimiter pairs, it can specify the delimiter of each dimension.
 
@@ -17,9 +17,9 @@ multiValueDelimiter:
 }
 ```
 
-That means col1's delimiter is "\u0001", col2's delimiter is "\u0002" and col3 has no delimiter(do not split).
-If the multiValueDelimiter is null, the listDelimiter goes into effect.
-If the multiValueDelimiter is an empty map, that means disable the listDelimiter.
+That means col1's delimiter is "\u0001", col2's delimiter is "\u0002" and col3 has no delimiter (do not split).
+If the `multiValueDelimiter` is null, the listDelimiter goes into effect (all the dimension use listDelimiter to split).
+If the `multiValueDelimiter` is an empty map, that means disable the listDelimiter (all the dimension do not split).
 
 
 This document describes the behavior of groupBy (topN has similar behavior) queries on multi-value dimensions when they

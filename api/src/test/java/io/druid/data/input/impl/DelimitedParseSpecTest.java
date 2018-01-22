@@ -68,11 +68,7 @@ public class DelimitedParseSpecTest
   {
     @SuppressWarnings("unused") // expected exception
     final ParseSpec spec = new DelimitedParseSpec(
-        new TimestampSpec(
-            "timestamp",
-            "auto",
-            null
-        ),
+        new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(
             DimensionsSpec.getDefaultSchemas(Arrays.asList("a", "b")),
             Lists.<String>newArrayList(),
@@ -92,11 +88,7 @@ public class DelimitedParseSpecTest
   {
     @SuppressWarnings("unused") // expected exception
     final ParseSpec spec = new DelimitedParseSpec(
-        new TimestampSpec(
-            "timestamp",
-            "auto",
-            null
-        ),
+        new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(
             DimensionsSpec.getDefaultSchemas(Arrays.asList("a,", "b")),
             Lists.<String>newArrayList(),
@@ -116,11 +108,7 @@ public class DelimitedParseSpecTest
   {
     @SuppressWarnings("unused") // expected exception
     final DelimitedParseSpec spec = new DelimitedParseSpec(
-        new TimestampSpec(
-            "timestamp",
-            "auto",
-            null
-        ),
+        new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(
             DimensionsSpec.getDefaultSchemas(Arrays.asList("a", "b")),
             Lists.<String>newArrayList(),
@@ -139,15 +127,11 @@ public class DelimitedParseSpecTest
   public void testDefaultListDelimiter()
   {
     final DelimitedParseSpec spec = new DelimitedParseSpec(
-        new TimestampSpec(
-                "timestamp",
-                "auto",
-                null
-        ),
+        new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(
-                DimensionsSpec.getDefaultSchemas(Arrays.asList("col2")),
-                Lists.<String>newArrayList(),
-                Lists.<SpatialDimensionSchema>newArrayList()
+            DimensionsSpec.getDefaultSchemas(Arrays.asList("col2")),
+            Lists.<String>newArrayList(),
+            Lists.<SpatialDimensionSchema>newArrayList()
         ),
         ",",
         null,
@@ -164,20 +148,16 @@ public class DelimitedParseSpecTest
   public void testDisableListDelimiter()
   {
     final DelimitedParseSpec spec = new DelimitedParseSpec(
-            new TimestampSpec(
-                    "timestamp",
-                    "auto",
-                    null
-            ),
-            new DimensionsSpec(
-                    DimensionsSpec.getDefaultSchemas(Arrays.asList("col2")),
-                    Lists.<String>newArrayList(),
-                    Lists.<SpatialDimensionSchema>newArrayList()
-            ),
-            ",",
-            null,
-            new HashMap<>(),
-            Arrays.asList("col1", "col2", "col3")
+        new TimestampSpec("timestamp", "auto", null),
+        new DimensionsSpec(
+            DimensionsSpec.getDefaultSchemas(Arrays.asList("col2")),
+            Lists.<String>newArrayList(),
+            Lists.<SpatialDimensionSchema>newArrayList()
+        ),
+        ",",
+        null,
+        new HashMap<>(),
+        Arrays.asList("col1", "col2", "col3")
     );
     DelimitedParser parser = (DelimitedParser) spec.makeParser();
     Map<String, Object> map = parser.parseToMap("1,2,x\u0001y\u0001z");
@@ -192,28 +172,25 @@ public class DelimitedParseSpecTest
     multiValueDelimiter.put("col4", "\u0003");
 
     final DelimitedParseSpec spec = new DelimitedParseSpec(
-            new TimestampSpec(
-                    "timestamp",
-                    "auto",
-                    null
-            ),
-            new DimensionsSpec(
-                    DimensionsSpec.getDefaultSchemas(Arrays.asList("col2")),
-                    Lists.<String>newArrayList(),
-                    Lists.<SpatialDimensionSchema>newArrayList()
-            ),
-            ",",
-            null,
-            multiValueDelimiter,
-            Arrays.asList("col1", "col2", "col3", "col4", "col5")
+        new TimestampSpec("timestamp", "auto", null),
+        new DimensionsSpec(
+            DimensionsSpec.getDefaultSchemas(Arrays.asList("col2")),
+            Lists.<String>newArrayList(),
+            Lists.<SpatialDimensionSchema>newArrayList()
+        ),
+        ",",
+        null,
+        multiValueDelimiter,
+        Arrays.asList("col1", "col2", "col3", "col4", "col5")
     );
 
     DelimitedParser parser = (DelimitedParser) spec.makeParser();
     Map<String, Object> map = parser.parseToMap("1,2,x\u0002y\u0002z,a\u0003b\u0003c,e\u0002f\u0002g");
-    Assert.assertEquals(ImmutableMap.of("col1", "1", "col2", "2",
-            "col3", Arrays.asList("x", "y", "z"),
-            "col4", Arrays.asList("a", "b", "c"),
-            "col5", "e\u0002f\u0002g"),
-            map);
+    Assert.assertEquals(
+        ImmutableMap.of("col1", "1", "col2", "2",
+        "col3", Arrays.asList("x", "y", "z"),
+        "col4", Arrays.asList("a", "b", "c"),
+        "col5", "e\u0002f\u0002g"),
+        map);
   }
 }

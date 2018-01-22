@@ -241,6 +241,8 @@ truck,something3,buck
 |`hasHeaderRow`|A flag to indicate that column information can be extracted from the input files' header row|no|false|
 |`skipHeaderRows`|Number of header rows to be skipped|no|0|
 
+The `listDelimiter` and `multiValueDelimiter` are both used to split the dimension value. (detail->[multi-value-dimension](../../querying/multi-value-dimensions.md))
+
 If both `skipHeaderRows` and `hasHeaderRow` options are set, `skipHeaderRows` is first applied. For example, if you set
 `skipHeaderRows` to 2 and `hasHeaderRow` to true, Druid will skip the first two lines and then extract column information
 from the third line.

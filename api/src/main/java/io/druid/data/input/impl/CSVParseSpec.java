@@ -33,8 +33,8 @@ import java.util.Map;
  */
 public class CSVParseSpec extends ParseSpec
 {
-  private final String listDelimiter;
-  private final Map<String, String> multiValueDelimiter;
+  @Nullable private final String listDelimiter;
+  @Nullable private final Map<String, String> multiValueDelimiter;
   private final List<String> columns;
   private final boolean hasHeaderRow;
   private final int skipHeaderRows;
@@ -43,8 +43,8 @@ public class CSVParseSpec extends ParseSpec
   public CSVParseSpec(
       @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
       @JsonProperty("dimensionsSpec") DimensionsSpec dimensionsSpec,
-      @JsonProperty("listDelimiter") String listDelimiter,
-      @JsonProperty("multiValueDelimiter") Map<String, String> multiValueDelimiter,
+      @JsonProperty("listDelimiter") @Nullable String listDelimiter,
+      @JsonProperty("multiValueDelimiter") @Nullable Map<String, String> multiValueDelimiter,
       @JsonProperty("columns") List<String> columns,
       @JsonProperty("hasHeaderRow") boolean hasHeaderRow,
       @JsonProperty("skipHeaderRows") int skipHeaderRows

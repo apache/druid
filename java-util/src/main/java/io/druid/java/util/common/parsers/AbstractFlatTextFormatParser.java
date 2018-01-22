@@ -22,13 +22,13 @@ package io.druid.java.util.common.parsers;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import io.druid.java.util.common.collect.Utils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -55,7 +55,8 @@ public abstract class AbstractFlatTextFormatParser implements Parser<String, Obj
   }
 
   private final String listDelimiter;
-  private final Maps.EntryTransformer<String, String, Object> multiValueTransformer;
+  private final Map<String, String> multiValueDelimiter;
+  private final Map<String, Splitter> deliSpliterMap;
   private final boolean hasHeaderRow;
   private final int maxSkipHeaderRows;
 
@@ -72,30 +73,8 @@ public abstract class AbstractFlatTextFormatParser implements Parser<String, Obj
   )
   {
     this.listDelimiter = listDelimiter != null ? listDelimiter : Parsers.DEFAULT_LIST_DELIMITER;
-    Map<String, Splitter> deliSpliterMap = new HashMap<>();
-    this.multiValueTransformer = new Maps.EntryTransformer<String, String, Object>()
-    {
-      @Override
-      public Object transformEntry(String key, String value)
-      {
-        String deli = null;
-        if (multiValueDelimiter == null) {
-          deli = AbstractFlatTextFormatParser.this.listDelimiter;
-        } else if (multiValueDelimiter.get(key) != null) {
-          deli = multiValueDelimiter.get(key);
-        }
-
-        if (deli != null && value.contains(deli)) {
-          Splitter multiSplitter = deliSpliterMap.computeIfAbsent(deli, Splitter::on);
-          return StreamSupport.stream(multiSplitter.split(value).spliterator(), false)
-                  .map(Strings::emptyToNull)
-                  .collect(Collectors.toList());
-        } else {
-          return Strings.emptyToNull(value);
-        }
-      }
-    };
-
+    this.multiValueDelimiter = multiValueDelimiter;
+    this.deliSpliterMap = new HashMap<>();
     this.hasHeaderRow = hasHeaderRow;
     this.maxSkipHeaderRows = maxSkipHeaderRows;
   }
@@ -177,11 +156,49 @@ public abstract class AbstractFlatTextFormatParser implements Parser<String, Obj
         setFieldNames(ParserUtils.generateFieldNames(values.size()));
       }
 
-      Map<String, String> fieldValueMap = Utils.zipMapPartial(fieldNames, values);
-      return Maps.transformEntries(fieldValueMap, multiValueTransformer);
+      return computeKeyValues(fieldNames, values);
     }
     catch (Exception e) {
       throw new ParseException(e, "Unable to parse row [%s]", input);
+    }
+  }
+
+  private Map<String, Object> computeKeyValues(List<String> fieldNames, List<String> values)
+  {
+    Map<String, Object> retVal = new LinkedHashMap<>();
+
+    Iterator<String> keysIter = fieldNames.iterator();
+    Iterator<String> valsIter = values.iterator();
+
+    while (keysIter.hasNext()) {
+      final String key = keysIter.next();
+
+      if (valsIter.hasNext()) {
+        Object splitedValue = spliteValue(key, valsIter.next());
+        retVal.put(key, splitedValue);
+      } else {
+        break;
+      }
+    }
+    return retVal;
+  }
+
+  private Object spliteValue(String key, String value)
+  {
+    String deli = null;
+    if (this.multiValueDelimiter == null) {
+      deli = AbstractFlatTextFormatParser.this.listDelimiter;
+    } else if (this.multiValueDelimiter.get(key) != null) {
+      deli = this.multiValueDelimiter.get(key);
+    }
+
+    if (deli != null && value.contains(deli)) {
+      Splitter multiSplitter = this.deliSpliterMap.computeIfAbsent(deli, Splitter::on);
+      return StreamSupport.stream(multiSplitter.split(value).spliterator(), false)
+          .map(Strings::emptyToNull)
+          .collect(Collectors.toList());
+    } else {
+      return Strings.emptyToNull(value);
     }
   }
 
