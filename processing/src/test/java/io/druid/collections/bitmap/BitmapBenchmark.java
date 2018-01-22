@@ -39,7 +39,9 @@ import java.nio.ByteBuffer;
 import java.util.Locale;
 import java.util.Random;
 
-
+/**
+ * TODO rewrite this benchmark to JMH
+ */
 @BenchmarkOptions(clock = Clock.NANO_TIME, benchmarkRounds = 50)
 public class BitmapBenchmark
 {
