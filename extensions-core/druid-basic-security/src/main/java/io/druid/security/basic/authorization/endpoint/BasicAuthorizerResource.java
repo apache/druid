@@ -309,9 +309,9 @@ public class BasicAuthorizerResource
   /**
    * Set the permissions of a role. This replaces the previous permissions of the role.
    *
-   * @param req             HTTP request
-   * @param roleName        Name of role
-   * @param resourceActions Permissions to set
+   * @param req         HTTP request
+   * @param roleName    Name of role
+   * @param permissions Permissions to set
    *
    * @return OK response. 400 error if role doesn't exist.
    */
@@ -351,11 +351,6 @@ public class BasicAuthorizerResource
 
   /**
    * Listen for update notifications for the auth storage
-   *
-   * @param req      HTTP request
-   * @param userName Name to assign the new user
-   *
-   * @return OK response, or 400 error response if user already exists
    */
   @POST
   @Path("/listen/{authorizerName}")

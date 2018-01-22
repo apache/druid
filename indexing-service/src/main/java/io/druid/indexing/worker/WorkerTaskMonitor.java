@@ -40,7 +40,7 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 
 /**
  * This class is deprecated and required only to support {@link io.druid.indexing.overlord.RemoteTaskRunner}.
- * {@link HttpRemoteTaskRunner} should be used instead.
+ * {@link io.druid.indexing.overlord.hrtr.HttpRemoteTaskRunner} should be used instead.
  *
  * The monitor watches ZK at a specified path for new tasks to appear. Upon starting the monitor, a listener will be
  * created that waits for new tasks. Tasks are executed as soon as they are seen.

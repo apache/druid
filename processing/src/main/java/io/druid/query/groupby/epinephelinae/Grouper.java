@@ -107,7 +107,7 @@ public interface Grouper<KeyType> extends Closeable
    * you want another iterator. But, this method must not be called by multiple threads concurrently.
    * <p>
    * If "sorted" is true then the iterator will return sorted results. It will use KeyType's natural ordering on
-   * deserialized objects, and will use the {@link KeySerde#comparator()} on serialized objects. Woe be unto you
+   * deserialized objects, and will use the {@link KeySerde#bufferComparator()} on serialized objects. Woe be unto you
    * if these comparators are not equivalent.
    * <p>
    * Callers must process and discard the returned {@link Entry}s immediately because some implementations can reuse the
@@ -236,7 +236,7 @@ public interface Grouper<KeyType> extends Closeable
     List<String> getDictionary();
 
     /**
-     * Serialize a key. This will be called by the {@link #aggregate(Comparable)} method. The buffer will not
+     * Serialize a key. This will be called by the {@link #aggregate(Object)} method. The buffer will not
      * be retained after the aggregate method returns, so reusing buffers is OK.
      * <p>
      * This method may return null, which indicates that some internal resource limit has been reached and

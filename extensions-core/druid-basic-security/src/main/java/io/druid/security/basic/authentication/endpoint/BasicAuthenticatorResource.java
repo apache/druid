@@ -174,7 +174,6 @@ public class BasicAuthenticatorResource
    *
    * @param req      HTTP request
    * @param userName Name of user
-   * @param password Password to assign
    *
    * @return OK response, 400 error if user doesn't exist
    */
@@ -213,11 +212,6 @@ public class BasicAuthenticatorResource
 
   /**
    * Listen for update notifications for the auth storage
-   *
-   * @param req      HTTP request
-   * @param userName Name to assign the new user
-   *
-   * @return OK response, or 400 error response if user already exists
    */
   @POST
   @Path("/listen/{authenticatorName}")
