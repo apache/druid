@@ -64,7 +64,7 @@ public final class ImmutableRTree
   {
     data = data.asReadOnlyBuffer();
     final int initPosition = data.position();
-    Preconditions.checkArgument(data.get(0) == VERSION, "Mismatching versions");
+    Preconditions.checkArgument(data.get(initPosition) == VERSION, "Mismatching versions");
     this.numDims = data.getInt(1 + initPosition) & 0x7FFF;
     this.data = data;
     this.root = new ImmutableNode(numDims, initPosition, 1 + Ints.BYTES, data, bitmapFactory);
