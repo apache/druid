@@ -24,13 +24,16 @@ import com.carrotsearch.junitbenchmarks.annotation.LabelType;
 import io.druid.extendedset.intset.ConciseSet;
 import io.druid.extendedset.intset.ImmutableConciseSet;
 import io.druid.java.util.common.StringUtils;
-import io.druid.test.annotation.Benchmark;
+import io.druid.collections.test.annotation.Benchmark;
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 
 import java.util.BitSet;
 
+/**
+ * TODO rewrite this benchmark to JMH
+ */
 @Category({Benchmark.class})
 @BenchmarkHistoryChart(labelWith = LabelType.CUSTOM_KEY, maxRuns = 20)
 public class RangeBitmapBenchmarkTest extends BitmapBenchmark
