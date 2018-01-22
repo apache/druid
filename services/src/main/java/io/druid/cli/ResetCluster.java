@@ -175,7 +175,7 @@ public class ResetCluster extends GuiceRunnable
       log.info("Deleting all TaskLogs.");
       log.info("===========================================================================");
 
-      TaskLogKiller taskLogKiller = injector.getInstance(TaskLogKiller.class);;
+      TaskLogKiller taskLogKiller = injector.getInstance(TaskLogKiller.class);
       taskLogKiller.killAll();
     }
     catch (Exception ex) {

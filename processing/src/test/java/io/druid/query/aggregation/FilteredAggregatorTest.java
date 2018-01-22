@@ -100,11 +100,13 @@ public class FilteredAggregatorTest
                 @Override
                 public IndexedInts getRow()
                 {
+                  SingleIndexedInt row = new SingleIndexedInt();
                   if (selector.getIndex() % 3 == 2) {
-                    return SingleIndexedInt.of(1);
+                    row.setValue(1);
                   } else {
-                    return SingleIndexedInt.of(0);
+                    row.setValue(0);
                   }
+                  return row;
                 }
 
                 @Override

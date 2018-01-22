@@ -20,6 +20,7 @@
 package io.druid.guice.http;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.java.util.common.logger.Logger;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
@@ -31,6 +32,7 @@ import javax.validation.constraints.Min;
 public class DruidHttpClientConfig
 {
   private final String DEFAULT_COMPRESSION_CODEC = "gzip";
+  private static final Logger LOG = new Logger(DruidHttpClientConfig.class);
 
   @JsonProperty
   @Min(0)
@@ -52,6 +54,9 @@ public class DruidHttpClientConfig
 
   @JsonProperty
   private int requestBuffersize = 8 * 1024;
+
+  @JsonProperty
+  private Period unusedConnectionTimeout = new Period("PT4M");
 
   public int getNumConnections()
   {
@@ -81,5 +86,19 @@ public class DruidHttpClientConfig
   public int getRequestBuffersize()
   {
     return requestBuffersize;
+  }
+
+  public Duration getUnusedConnectionTimeout()
+  {
+    if (unusedConnectionTimeout != null && readTimeout != null
+        && unusedConnectionTimeout.toStandardDuration().compareTo(readTimeout.toStandardDuration()) >= 0) {
+      LOG.warn(
+          "Ohh no! UnusedConnectionTimeout[%s] is longer than readTimeout[%s], please correct"
+          + " the configuration, this might not be supported in future.",
+          unusedConnectionTimeout,
+          readTimeout
+      );
+    }
+    return unusedConnectionTimeout == null ? null : unusedConnectionTimeout.toStandardDuration();
   }
 }

@@ -142,7 +142,8 @@ public class HttpClientModule implements Module
           .withWorkerCount(config.getNumMaxThreads())
           .withCompressionCodec(
               HttpClientConfig.CompressionCodec.valueOf(StringUtils.toUpperCase(config.getCompressionCodec()))
-          );
+          )
+          .withUnusedConnectionTimeoutDuration(config.getUnusedConnectionTimeout());
 
       if (getSslContextBinding() != null) {
         builder.withSslContext(getSslContextBinding().getProvider().get());

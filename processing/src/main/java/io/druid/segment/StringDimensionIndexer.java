@@ -366,6 +366,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
     class IndexerDimensionSelector implements DimensionSelector, IdLookup
     {
+      private final ArrayBasedIndexedInts indexedInts = new ArrayBasedIndexedInts();
       private int[] nullIdIntArray;
 
       @Override
@@ -405,7 +406,8 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
           rowSize = indices.length;
         }
 
-        return ArrayBasedIndexedInts.of(row, rowSize);
+        indexedInts.setValues(row, rowSize);
+        return indexedInts;
       }
 
       @Override

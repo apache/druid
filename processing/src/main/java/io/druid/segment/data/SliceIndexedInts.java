@@ -23,21 +23,25 @@ import io.druid.java.util.common.IAE;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 /**
- * Reusable IndexedInts that returns sequences [0, 1, ..., N].
+ * Reusable IndexedInts, that could represent a sub-sequence ("slice") in a larger IndexedInts object. Used in
+ * {@link CompressedVSizeColumnarMultiIntsSupplier} implementation.
+ *
+ * Unsafe for concurrent use from multiple threads.
  */
-public class RangeIndexedInts implements IndexedInts
+public final class SliceIndexedInts implements IndexedInts
 {
-  private int size;
+  private final IndexedInts base;
+  private int offset = -1;
+  private int size = -1;
 
-  public RangeIndexedInts()
+  public SliceIndexedInts(IndexedInts base)
   {
+    this.base = base;
   }
 
-  public void setSize(int size)
+  public void setValues(int offset, int size)
   {
-    if (size < 0) {
-      throw new IAE("Size[%d] must be non-negative", size);
-    }
+    this.offset = offset;
     this.size = size;
   }
 
@@ -51,14 +55,14 @@ public class RangeIndexedInts implements IndexedInts
   public int get(int index)
   {
     if (index < 0 || index >= size) {
-      throw new IAE("index[%d] >= size[%d] or < 0", index, size);
+      throw new IAE("Index[%d] >= size[%d] or < 0", index, size);
     }
-    return index;
+    return base.get(offset + index);
   }
 
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
-    // nothing to inspect
+    inspector.visit("base", base);
   }
 }
