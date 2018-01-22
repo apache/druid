@@ -161,9 +161,6 @@ public class ConciseSetUtils
   /**
    * Checks whether a word contains a sequence of 0's with no set bit, or 1's
    * with no unset bit.
-   * <p/>
-   * <b>NOTE:</b> when {@link #simulateWAH} is <code>true</code>, it is
-   * equivalent to (and as fast as) <code>!</code>{@link #isLiteral(int)}
    *
    * @param word word to check
    *

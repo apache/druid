@@ -65,11 +65,7 @@ public class CustomStatementRewriterTest
   }
 
   /**
-   *
-   * @see org.skife.jdbi.v2.TestColonStatementRewriter
-   * @see <a href=
-   *      "https://github.com/jdbi/jdbi/blob/master/src/test/java/org/skife/jdbi/v2/TestColonStatementRewriter.java">https://github.com/jdbi/jdbi/blob/master/src/test/java/org/skife/jdbi/v2/TestColonStatementRewriter.java</a>
-   *
+   * See https://github.com/jdbi/jdbi/blob/jdbi2/src/test/java/org/skife/jdbi/v2/TestColonStatementRewriter.java
    */
   @Test
   public void testCustomStatementRewriter()

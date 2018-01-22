@@ -52,9 +52,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * This class facilitates the usage of long-polling HTTP endpoints powered by {@link ChangeRequestHistory} .
- * For example {@ HttpServerInventoryView} uses it to keep segment state in sync with data nodes which expose
- * the segment state via HTTP endpoint in {@link io.druid.server.http.SegmentListerResource.getSegments(..)}
+ * This class facilitates the usage of long-polling HTTP endpoints powered by {@link ChangeRequestHistory}.
+ * For example {@link io.druid.client.HttpServerInventoryView} uses it to keep segment state in sync with data nodes
+ * which expose the segment state via HTTP endpoint in {@link io.druid.server.http.SegmentListerResource#getSegments}.
  */
 public class ChangeRequestHttpSyncer<T>
 {
