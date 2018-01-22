@@ -376,8 +376,8 @@ public class UriExtractionNamespace implements ExtractionNamespace
     private final Parser<String, String> parser;
     private final List<String> columns;
     private final String delimiter;
-    private final String listDelimiter;
-    private final Map<String, String> multiValueDelimiter;
+    @Nullable private final String listDelimiter;
+    @Nullable private final Map<String, String> multiValueDelimiter;
     private final String keyColumn;
     private final String valueColumn;
 
@@ -385,8 +385,8 @@ public class UriExtractionNamespace implements ExtractionNamespace
     public TSVFlatDataParser(
         @JsonProperty("columns") List<String> columns,
         @JsonProperty("delimiter") String delimiter,
-        @JsonProperty("listDelimiter") String listDelimiter,
-        @JsonProperty("multiValueDelimiter") Map<String, String> multiValueDelimiter,
+        @JsonProperty("listDelimiter") @Nullable String listDelimiter,
+        @JsonProperty("multiValueDelimiter") @Nullable Map<String, String> multiValueDelimiter,
         @JsonProperty("keyColumn") final String keyColumn,
         @JsonProperty("valueColumn") final String valueColumn,
         @JsonProperty("hasHeaderRow") boolean hasHeaderRow,
@@ -435,8 +435,8 @@ public class UriExtractionNamespace implements ExtractionNamespace
     TSVFlatDataParser(
         List<String> columns,
         String delimiter,
-        String listDelimiter,
-        Map<String, String> multiValueDelimiter,
+        @Nullable String listDelimiter,
+        @Nullable Map<String, String> multiValueDelimiter,
         String keyColumn,
         String valueColumn
     )

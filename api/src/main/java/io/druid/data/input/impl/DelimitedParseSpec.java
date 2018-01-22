@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import io.druid.java.util.common.parsers.DelimitedParser;
 import io.druid.java.util.common.parsers.Parser;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -33,8 +34,8 @@ import java.util.Map;
 public class DelimitedParseSpec extends ParseSpec
 {
   private final String delimiter;
-  private final String listDelimiter;
-  private final Map<String, String> multiValueDelimiter;
+  @Nullable private final String listDelimiter;
+  @Nullable private final Map<String, String> multiValueDelimiter;
   private final List<String> columns;
   private final boolean hasHeaderRow;
   private final int skipHeaderRows;
@@ -44,8 +45,8 @@ public class DelimitedParseSpec extends ParseSpec
       @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
       @JsonProperty("dimensionsSpec") DimensionsSpec dimensionsSpec,
       @JsonProperty("delimiter") String delimiter,
-      @JsonProperty("listDelimiter") String listDelimiter,
-      @JsonProperty("multiValueDelimiter") Map<String, String> multiValueDelimiter,
+      @JsonProperty("listDelimiter") @Nullable String listDelimiter,
+      @JsonProperty("multiValueDelimiter") @Nullable Map<String, String> multiValueDelimiter,
       @JsonProperty("columns") List<String> columns,
       @JsonProperty("hasHeaderRow") boolean hasHeaderRow,
       @JsonProperty("skipHeaderRows") int skipHeaderRows
@@ -79,8 +80,8 @@ public class DelimitedParseSpec extends ParseSpec
       TimestampSpec timestampSpec,
       DimensionsSpec dimensionsSpec,
       String delimiter,
-      String listDelimiter,
-      Map<String, String> multiValueDelimiter,
+      @Nullable String listDelimiter,
+      @Nullable Map<String, String> multiValueDelimiter,
       List<String> columns
   )
   {
