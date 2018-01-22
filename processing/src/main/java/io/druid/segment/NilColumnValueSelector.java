@@ -86,6 +86,12 @@ public final class NilColumnValueSelector implements ColumnValueSelector
   }
 
   @Override
+  public boolean isNull()
+  {
+    return true;
+  }
+
+  @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
     // nothing to inspect

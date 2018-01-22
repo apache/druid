@@ -22,6 +22,7 @@ package io.druid.segment;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
+import io.druid.common.config.NullHandling;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.java.util.common.IAE;
@@ -238,6 +239,15 @@ public final class DimensionHandlerUtils
   }
 
   @Nullable
+  public static String convertObjectToString(@Nullable Object valObj)
+  {
+    if (valObj == null) {
+      return null;
+    }
+    return valObj.toString();
+  }
+
+  @Nullable
   public static Long convertObjectToLong(@Nullable Object valObj)
   {
     return convertObjectToLong(valObj, false);
@@ -247,7 +257,7 @@ public final class DimensionHandlerUtils
   public static Long convertObjectToLong(@Nullable Object valObj, boolean reportParseExceptions)
   {
     if (valObj == null) {
-      return ZERO_LONG;
+      return null;
     }
 
     if (valObj instanceof Long) {
@@ -275,7 +285,7 @@ public final class DimensionHandlerUtils
   public static Float convertObjectToFloat(@Nullable Object valObj, boolean reportParseExceptions)
   {
     if (valObj == null) {
-      return ZERO_FLOAT;
+      return null;
     }
 
     if (valObj instanceof Float) {
@@ -303,7 +313,7 @@ public final class DimensionHandlerUtils
   public static Double convertObjectToDouble(@Nullable Object valObj, boolean reportParseExceptions)
   {
     if (valObj == null) {
-      return ZERO_DOUBLE;
+      return null;
     }
 
     if (valObj instanceof Double) {
@@ -357,18 +367,18 @@ public final class DimensionHandlerUtils
     }
   }
 
-  public static Double nullToZero(@Nullable Double number)
+  public static Number nullToZeroDouble(@Nullable Number number)
   {
-    return number == null ? ZERO_DOUBLE : number;
+    return number == null ? NullHandling.ZERO_DOUBLE : number;
   }
 
-  public static Long nullToZero(@Nullable Long number)
+  public static Number nullToZeroLong(@Nullable Number number)
   {
-    return number == null ? ZERO_LONG : number;
+    return number == null ? NullHandling.ZERO_LONG : number;
   }
 
-  public static Float nullToZero(@Nullable Float number)
+  public static Number nullToZeroFloat(@Nullable Number number)
   {
-    return number == null ? ZERO_FLOAT : number;
+    return number == null ? NullHandling.ZERO_FLOAT : number;
   }
 }

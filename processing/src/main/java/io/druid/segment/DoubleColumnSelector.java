@@ -61,6 +61,9 @@ public interface DoubleColumnSelector extends ColumnValueSelector<Double>
   @Override
   default Double getObject()
   {
+    if (isNull()) {
+      return null;
+    }
     return getDouble();
   }
 

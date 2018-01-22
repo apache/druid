@@ -25,6 +25,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.query.BitmapResultFactory;
 import io.druid.query.ColumnSelectorPlus;
@@ -132,7 +133,7 @@ public class Filters
             columnSelectorFactory
         );
 
-    return selector.getColumnSelectorStrategy().makeValueMatcher(selector.getSelector(), value);
+    return selector.getColumnSelectorStrategy().makeValueMatcher(selector.getSelector(), NullHandling.emptyToNullIfNeeded(value));
   }
 
   /**

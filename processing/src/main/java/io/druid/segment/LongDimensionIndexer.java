@@ -21,6 +21,7 @@ package io.druid.segment;
 
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.Indexed;
@@ -28,10 +29,13 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.TimeAndDimsHolder;
 
 import javax.annotation.Nullable;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 {
+  public static final Comparator LONG_COMPARATOR = Comparators.<Long>naturalNullsFirst();
 
   @Override
   public Long processRowValsToUnsortedEncodedKeyComponent(Object dimValues, boolean reportParseExceptions)
@@ -99,11 +103,18 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
       {
         final Object[] dims = currEntry.get().getDims();
 
-        if (dimIndex >= dims.length) {
-          return 0L;
+        if (dimIndex >= dims.length || dims[dimIndex] == null) {
+          return 0;
         }
 
         return (Long) dims[dimIndex];
+      }
+
+      @Override
+      public boolean isNull()
+      {
+        final Object[] dims = currEntry.get().getDims();
+        return dimIndex >= dims.length || dims[dimIndex] == null;
       }
 
       @SuppressWarnings("deprecation")
@@ -133,19 +144,19 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   @Override
   public int compareUnsortedEncodedKeyComponents(@Nullable Long lhs, @Nullable Long rhs)
   {
-    return DimensionHandlerUtils.nullToZero(lhs).compareTo(DimensionHandlerUtils.nullToZero(rhs));
+    return LONG_COMPARATOR.compare(lhs, rhs);
   }
 
   @Override
   public boolean checkUnsortedEncodedKeyComponentsEqual(@Nullable Long lhs, @Nullable Long rhs)
   {
-    return DimensionHandlerUtils.nullToZero(lhs).equals(DimensionHandlerUtils.nullToZero(rhs));
+    return Objects.equals(lhs, rhs);
   }
 
   @Override
   public int getUnsortedEncodedKeyComponentHashCode(@Nullable Long key)
   {
-    return DimensionHandlerUtils.nullToZero(key).hashCode();
+    return DimensionHandlerUtils.nullToZeroLong(key).hashCode();
   }
 
   @Override

@@ -17,33 +17,27 @@
  * under the License.
  */
 
-package io.druid.segment.serde;
+package io.druid.common.config;
 
-import com.google.common.base.Supplier;
-import io.druid.collections.bitmap.ImmutableBitmap;
-import io.druid.segment.column.GenericColumn;
-import io.druid.segment.column.FloatsColumn;
-import io.druid.segment.data.CompressedColumnarFloatsSupplier;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-/**
-*/
-public class FloatGenericColumnSupplier implements Supplier<GenericColumn>
+public class NullValueHandlingConfig
 {
-  private final CompressedColumnarFloatsSupplier column;
-  private final ImmutableBitmap nullValueBitmap;
 
-  public FloatGenericColumnSupplier(
-      CompressedColumnarFloatsSupplier column,
-      ImmutableBitmap nullValueBitmap
-  )
+  @JsonProperty("useDefaultValueForNull")
+  private final boolean useDefaultValuesForNull;
+
+  @JsonCreator
+  public NullValueHandlingConfig(@JsonProperty("useDefaultValueForNull") Boolean useDefaultValuesForNull)
   {
-    this.column = column;
-    this.nullValueBitmap = nullValueBitmap;
+    this.useDefaultValuesForNull = useDefaultValuesForNull == null
+                                   ? true
+                                   : useDefaultValuesForNull;
   }
 
-  @Override
-  public GenericColumn get()
+  public boolean isUseDefaultValuesForNull()
   {
-    return new FloatsColumn(column.get(), nullValueBitmap);
+    return useDefaultValuesForNull;
   }
 }

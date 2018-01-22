@@ -19,9 +19,9 @@
 
 package io.druid.segment.data;
 
-import com.google.common.base.Strings;
 import com.google.common.primitives.Ints;
 import io.druid.collections.ResourceHolder;
+import io.druid.common.config.NullHandling;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.io.Channels;
 import io.druid.java.util.common.IAE;
@@ -35,8 +35,7 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.serde.MetaSerdeHelper;
 import io.druid.segment.serde.Serializer;
 import io.druid.segment.writeout.HeapByteBufferWriteOutBytes;
-import it.unimi.dsi.fastutil.bytes.ByteArrays;
-
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -98,18 +97,20 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
     }
 
     @Override
+    @Nullable
     public String fromByteBuffer(final ByteBuffer buffer, final int numBytes)
     {
-      return StringUtils.fromUtf8(buffer, numBytes);
+      if (numBytes < 0) {
+        // nulBytes will be -1 for null values.
+        return null;
+      }
+      return NullHandling.emptyToNullIfNeeded(StringUtils.fromUtf8Nullable(buffer, numBytes));
     }
 
     @Override
     public byte[] toBytes(String val)
     {
-      if (Strings.isNullOrEmpty(val)) {
-        return ByteArrays.EMPTY_ARRAY;
-      }
-      return StringUtils.toUtf8(val);
+      return StringUtils.toUtf8Nullable(NullHandling.nullToEmptyIfNeeded(val));
     }
 
     @Override
@@ -309,8 +310,6 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
       throw new UnsupportedOperationException("Reverse lookup not allowed.");
     }
 
-    value = (value != null && value.equals("")) ? null : value;
-
     int minIndex = 0;
     int maxIndex = size - 1;
     while (minIndex <= maxIndex) {
@@ -370,11 +369,8 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
 
   private T copyBufferAndGet(ByteBuffer valueBuffer, int startOffset, int endOffset)
   {
-    final int size = endOffset - startOffset;
-    if (size == 0) {
-      return null;
-    }
     ByteBuffer copyValueBuffer = valueBuffer.asReadOnlyBuffer();
+    final int size = endOffset > startOffset ? endOffset - startOffset : copyValueBuffer.get(startOffset - Ints.BYTES);
     copyValueBuffer.position(startOffset);
     // fromByteBuffer must not modify the buffer limit
     return strategy.fromByteBuffer(copyValueBuffer, size);
@@ -413,11 +409,11 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
 
     T bufferedIndexedGet(ByteBuffer copyValueBuffer, int startOffset, int endOffset)
     {
-      final int size = endOffset - startOffset;
+      final int size = endOffset > startOffset
+                       ? endOffset - startOffset
+                       : copyValueBuffer.get(startOffset - Ints.BYTES);
       lastReadSize = size;
-      if (size == 0) {
-        return null;
-      }
+
       // ObjectStrategy.fromByteBuffer() is allowed to reset the limit of the buffer. So if the limit is changed,
       // position() call in the next line could throw an exception, if the position is set beyond the new limit. clear()
       // sets the limit to the maximum possible, the capacity. It is safe to reset the limit to capacity, because the
@@ -496,11 +492,11 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
           allowReverseLookup = false;
         }
 
-        // for compatibility with the format, but this field is unused
-        valuesOut.writeInt(0);
+        valuesOut.writeInt(next == null ? -1 : 0);
         if (next != null) {
           strategy.writeTo(next, valuesOut);
         }
+
         headerOut.writeInt(Ints.checkedCast(valuesOut.size()));
 
         if (prevVal instanceof Closeable) {
@@ -563,7 +559,7 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
         final int endOffset;
 
         if (index == 0) {
-          startOffset = 4;
+          startOffset = Ints.BYTES;
           endOffset = headerBuffer.getInt(0);
         } else {
           int headerPosition = (index - 1) * Integer.BYTES;

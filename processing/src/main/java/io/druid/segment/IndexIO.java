@@ -84,6 +84,7 @@ public class IndexIO
   public static final byte V8_VERSION = 0x8;
   public static final byte V9_VERSION = 0x9;
   public static final int CURRENT_VERSION_ID = V9_VERSION;
+  public static BitmapSerdeFactory LEGACY_FACTORY = new BitmapSerde.LegacyBitmapSerdeFactory();
 
   public static final ByteOrder BYTE_ORDER = ByteOrder.nativeOrder();
 
@@ -162,13 +163,11 @@ public class IndexIO
       if (rb1.getRowNum() != rb2.getRowNum()) {
         throw new SegmentValidationException("Row number mismatch: [%d] vs [%d]", rb1.getRowNum(), rb2.getRowNum());
       }
-      if (rb1.compareTo(rb2) != 0) {
-        try {
-          validateRowValues(dimHandlers, rb1, adapter1, rb2, adapter2);
-        }
-        catch (SegmentValidationException ex) {
-          throw new SegmentValidationException(ex, "Validation failure on row %d: [%s] vs [%s]", row, rb1, rb2);
-        }
+      try {
+        validateRowValues(dimHandlers, rb1, adapter1, rb2, adapter2);
+      }
+      catch (SegmentValidationException ex) {
+        throw new SegmentValidationException(ex, "Validation failure on row %d: [%s] vs [%s]", row, rb1, rb2);
       }
     }
     if (it2.hasNext()) {
@@ -477,7 +476,11 @@ public class IndexIO
               metric,
               new ColumnBuilder()
                   .setType(ValueType.FLOAT)
-                  .setGenericColumn(new FloatGenericColumnSupplier(metricHolder.floatType))
+                  .setGenericColumn(new FloatGenericColumnSupplier(
+                      metricHolder.floatType,
+                      LEGACY_FACTORY.getBitmapFactory()
+                                    .makeEmptyImmutableBitmap()
+                  ))
                   .build()
           );
         } else if (metricHolder.getType() == MetricHolder.MetricType.COMPLEX) {
@@ -507,7 +510,11 @@ public class IndexIO
           Column.TIME_COLUMN_NAME,
           new ColumnBuilder()
               .setType(ValueType.LONG)
-              .setGenericColumn(new LongGenericColumnSupplier(index.timestamps))
+              .setGenericColumn(new LongGenericColumnSupplier(
+                  index.timestamps,
+                  LEGACY_FACTORY.getBitmapFactory()
+                                .makeEmptyImmutableBitmap()
+              ))
               .build()
       );
       return new SimpleQueryableIndex(

@@ -21,10 +21,10 @@ package io.druid.segment.virtual;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
+import io.druid.common.config.NullHandling;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprEval;
 import io.druid.math.expr.Parser;
@@ -75,6 +75,12 @@ public class ExpressionSelectors
       public double getDouble()
       {
         return baseSelector.getDouble();
+      }
+
+      @Override
+      public boolean isNull()
+      {
+        return baseSelector.getObject().isNull();
       }
 
       @Override
@@ -198,7 +204,7 @@ public class ExpressionSelectors
         @Override
         protected String getValue()
         {
-          return Strings.emptyToNull(baseSelector.getObject().asString());
+          return NullHandling.emptyToNullIfNeeded(baseSelector.getObject().asString());
         }
 
         @Override
@@ -214,7 +220,7 @@ public class ExpressionSelectors
         @Override
         protected String getValue()
         {
-          return extractionFn.apply(Strings.emptyToNull(baseSelector.getObject().asString()));
+          return extractionFn.apply(NullHandling.emptyToNullIfNeeded(baseSelector.getObject().asString()));
         }
 
         @Override

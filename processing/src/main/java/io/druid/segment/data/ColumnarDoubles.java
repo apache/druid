@@ -19,6 +19,7 @@
 
 package io.druid.segment.data;
 
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DoubleColumnSelector;
@@ -38,7 +39,7 @@ public interface ColumnarDoubles extends Closeable
   @Override
   void close();
 
-  default ColumnValueSelector<Double> makeColumnValueSelector(ReadableOffset offset)
+  default ColumnValueSelector<Double> makeColumnValueSelector(ReadableOffset offset, ImmutableBitmap nullValueBitmap)
   {
     class HistoricalDoubleColumnSelector implements DoubleColumnSelector, HistoricalColumnSelector<Double>
     {
@@ -52,6 +53,12 @@ public interface ColumnarDoubles extends Closeable
       public double getDouble(int offset)
       {
         return ColumnarDoubles.this.get(offset);
+      }
+
+      @Override
+      public boolean isNull()
+      {
+        return nullValueBitmap.get(offset.getOffset());
       }
 
       @Override

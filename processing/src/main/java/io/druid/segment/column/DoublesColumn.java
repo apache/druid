@@ -19,6 +19,7 @@
 
 package io.druid.segment.column;
 
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.data.ColumnarDoubles;
@@ -28,10 +29,12 @@ import io.druid.segment.data.ReadableOffset;
 public class DoublesColumn implements GenericColumn
 {
   private final ColumnarDoubles column;
+  private final ImmutableBitmap nullValueBitmap;
 
-  public DoublesColumn(ColumnarDoubles columnarDoubles)
+  public DoublesColumn(ColumnarDoubles columnarDoubles, ImmutableBitmap nullValueBitmap)
   {
     column = columnarDoubles;
+    this.nullValueBitmap = nullValueBitmap;
   }
 
   @Override
@@ -43,7 +46,7 @@ public class DoublesColumn implements GenericColumn
   @Override
   public ColumnValueSelector makeColumnValueSelector(ReadableOffset offset)
   {
-    return column.makeColumnValueSelector(offset);
+    return column.makeColumnValueSelector(offset, nullValueBitmap);
   }
 
   @Override
@@ -62,6 +65,12 @@ public class DoublesColumn implements GenericColumn
   public double getDoubleSingleValueRow(int rowNum)
   {
     return column.get(rowNum);
+  }
+
+  @Override
+  public boolean isNull(int rowNum)
+  {
+    return nullValueBitmap.get(rowNum);
   }
 
   @Override

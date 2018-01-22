@@ -31,7 +31,7 @@ import io.druid.query.monomorphicprocessing.HotLoopCallee;
  * All implementations of this interface MUST also implement {@link ColumnValueSelector}.
  */
 @PublicApi
-public interface BaseFloatColumnValueSelector extends HotLoopCallee
+public interface BaseFloatColumnValueSelector extends HotLoopCallee, BaseNullableColumnValueSelector
 {
   @CalledFromHotLoop
   float getFloat();

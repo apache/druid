@@ -379,6 +379,12 @@ public class VirtualColumnsTest
         {
           return String.class;
         }
+
+        @Override
+        public boolean isNull()
+        {
+          return selector.isNull();
+        }
       };
 
       return dimensionSpec.decorate(dimensionSelector);
@@ -396,6 +402,12 @@ public class VirtualColumnsTest
         public long getLong()
         {
           return theLong;
+        }
+
+        @Override
+        public boolean isNull()
+        {
+          return false;
         }
       };
     }

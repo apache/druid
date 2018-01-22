@@ -22,7 +22,6 @@ package io.druid.cli;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -41,6 +40,7 @@ import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ConciseBitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.bitmap.RoaringBitmapFactory;
+import io.druid.common.config.NullHandling;
 import io.druid.guice.DruidProcessingModule;
 import io.druid.guice.QueryRunnerFactoryModule;
 import io.druid.guice.QueryableModule;
@@ -364,18 +364,20 @@ public class DumpSegment extends GuiceRunnable
                   jg.writeFieldName(columnName);
                   jg.writeStartObject();
                   for (int i = 0; i < bitmapIndex.getCardinality(); i++) {
-                    jg.writeFieldName(Strings.nullToEmpty(bitmapIndex.getValue(i)));
-                    final ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
-                    if (decompressBitmaps) {
-                      jg.writeStartArray();
-                      final IntIterator iterator = bitmap.iterator();
-                      while (iterator.hasNext()) {
-                        final int rowNum = iterator.next();
-                        jg.writeNumber(rowNum);
+                    String val = NullHandling.nullToEmptyIfNeeded(bitmapIndex.getValue(i));
+                    if (val != null) {
+                      final ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
+                      if (decompressBitmaps) {
+                        jg.writeStartArray();
+                        final IntIterator iterator = bitmap.iterator();
+                        while (iterator.hasNext()) {
+                          final int rowNum = iterator.next();
+                          jg.writeNumber(rowNum);
+                        }
+                        jg.writeEndArray();
+                      } else {
+                        jg.writeBinary(bitmapSerdeFactory.getObjectStrategy().toBytes(bitmap));
                       }
-                      jg.writeEndArray();
-                    } else {
-                      jg.writeBinary(bitmapSerdeFactory.getObjectStrategy().toBytes(bitmap));
                     }
                   }
                   jg.writeEndObject();
@@ -551,6 +553,12 @@ public class DumpSegment extends GuiceRunnable
     public void inspectRuntimeShape(RuntimeShapeInspector inspector)
     {
       inspector.visit("delegate", delegate);
+    }
+
+    @Override
+    public boolean isNull()
+    {
+      return delegate.isNull();
     }
   }
 }

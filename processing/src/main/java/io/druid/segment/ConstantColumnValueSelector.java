@@ -86,4 +86,10 @@ public class ConstantColumnValueSelector<T> implements ColumnValueSelector<T>
   {
     // Nothing here: objectValue is nullable but getObject is not @CalledFromHotLoop
   }
+
+  @Override
+  public boolean isNull()
+  {
+    return objectValue == null;
+  }
 }
