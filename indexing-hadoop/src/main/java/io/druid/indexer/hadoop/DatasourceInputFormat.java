@@ -81,7 +81,10 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
       throw new ISE("No segments found to read");
     }
 
-    logger.info("segments to read [%s]", segmentsStr);
+    // Note: log is splitted into two lines so that a new String is not generated to print it.
+    // segmentsStr could be quite large when re-indexing multiple months of data.
+    logger.info("Segment to read are...");
+    logger.info(segmentsStr);
 
     long maxSize = conf.getLong(CONF_MAX_SPLIT_SIZE, 0);
     if (maxSize < 0) {
