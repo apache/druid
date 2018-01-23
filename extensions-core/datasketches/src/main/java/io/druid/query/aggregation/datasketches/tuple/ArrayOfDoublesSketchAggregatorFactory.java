@@ -25,6 +25,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
+import javax.annotation.Nullable;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
@@ -55,16 +57,16 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
   private final String name;
   private final String fieldName;
   private final int nominalEntries;
-  private final List<String> metricColumns;
   private final int numberOfValues;
+  @Nullable private final List<String> metricColumns;
 
   @JsonCreator
   public ArrayOfDoublesSketchAggregatorFactory(
       @JsonProperty("name") final String name,
       @JsonProperty("fieldName") final String fieldName,
-      @JsonProperty("nominalEntries") final Integer nominalEntries,
-      @JsonProperty("metricColumns") final List<String> metricColumns,
-      @JsonProperty("numberOfValues") final Integer numberOfValues)
+      @JsonProperty("nominalEntries") @Nullable final Integer nominalEntries,
+      @JsonProperty("metricColumns") @Nullable final List<String> metricColumns,
+      @JsonProperty("numberOfValues") @Nullable final Integer numberOfValues)
   {
     this.name = Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     this.fieldName = Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
@@ -73,8 +75,11 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
     this.metricColumns = metricColumns;
     this.numberOfValues = numberOfValues == null ? (metricColumns == null ? 1 : metricColumns.size()) : numberOfValues;
     if (metricColumns != null && metricColumns.size() != this.numberOfValues) {
-      throw new IAE("Number of metricColumns (" + metricColumns.size() + ") must agree with numValues ("
-          + this.numberOfValues + ")");
+      throw new IAE(
+        "Number of metricColumns (%d) must agree with numValues (%d)",
+        metricColumns.size(),
+        this.numberOfValues
+      );
     }
   }
 
@@ -111,8 +116,12 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
       if (selector instanceof NilColumnValueSelector) {
         return new ArrayOfDoublesSketchNoOpBufferAggregator(numberOfValues);
       }
-      return new ArrayOfDoublesSketchMergeBufferAggregator(selector, nominalEntries, numberOfValues,
-          getMaxIntermediateSize());
+      return new ArrayOfDoublesSketchMergeBufferAggregator(
+        selector,
+        nominalEntries,
+        numberOfValues,
+        getMaxIntermediateSize()
+      );
     }
     final DimensionSelector keySelector = metricFactory
         .makeDimensionSelector(new DefaultDimensionSpec(fieldName, fieldName));
@@ -124,8 +133,12 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
       final BaseDoubleColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(column);
       valueSelectors.add(valueSelector);
     }
-    return new ArrayOfDoublesSketchBuildBufferAggregator(keySelector, valueSelectors, nominalEntries,
-        getMaxIntermediateSize());
+    return new ArrayOfDoublesSketchBuildBufferAggregator(
+      keySelector,
+      valueSelectors,
+      nominalEntries,
+      getMaxIntermediateSize()
+    );
   }
 
   @Override
@@ -190,8 +203,9 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(AggregatorUtil.ARRAY_OF_DOUBLES_SKETCH_CACHE_TYPE_ID).appendString(name).appendString(fieldName)
-        .appendInt(nominalEntries).appendStrings(metricColumns).appendInt(numberOfValues).build();
+    return new CacheKeyBuilder(AggregatorUtil.ARRAY_OF_DOUBLES_SKETCH_CACHE_TYPE_ID).appendString(name)
+        .appendString(fieldName).appendInt(nominalEntries).appendStrings(metricColumns).appendInt(numberOfValues)
+        .build();
   }
 
   @Override
@@ -223,13 +237,14 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
   public List<AggregatorFactory> getRequiredColumns()
   {
     return Collections.<AggregatorFactory> singletonList(
-        new ArrayOfDoublesSketchAggregatorFactory(
-            fieldName,
-            fieldName,
-            nominalEntries,
-            metricColumns,
-            numberOfValues)
-        );
+      new ArrayOfDoublesSketchAggregatorFactory(
+        fieldName,
+        fieldName,
+        nominalEntries,
+        metricColumns,
+        numberOfValues
+      )
+    );
   }
 
   @Override

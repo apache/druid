@@ -65,8 +65,8 @@ public class ArrayOfDoublesSketchOperations
       return (ArrayOfDoublesSketch) serializedSketch;
     }
     throw new IllegalStateException(
-        "Object is not of a type that can deserialize to sketch: "
-            + serializedSketch.getClass());
+      "Object is not of a type that can deserialize to sketch: " + serializedSketch.getClass()
+    );
   }
 
   public static ArrayOfDoublesSketch deserializeFromBase64EncodedString(final String str)
@@ -80,8 +80,12 @@ public class ArrayOfDoublesSketchOperations
     return ArrayOfDoublesSketches.wrapSketch(mem);
   }
 
-  public static ArrayOfDoublesSketch sketchSetOperation(final Func func, final int k, final int numValues,
-      final ArrayOfDoublesSketch... sketches)
+  public static ArrayOfDoublesSketch sketchSetOperation(
+    final Func func,
+    final int k,
+    final int numValues,
+    final ArrayOfDoublesSketch... sketches
+  )
   {
     switch (func) {
       case UNION:
