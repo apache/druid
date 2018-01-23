@@ -28,8 +28,10 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
+import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
@@ -79,6 +81,7 @@ import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
@@ -132,6 +135,9 @@ public class RealtimeIndexTask extends AbstractTask
   private final FireDepartment spec;
 
   @JsonIgnore
+  private final Queue<ListenableFuture<SegmentsAndMetadata>> pendingPublishes;
+
+  @JsonIgnore
   private final Queue<ListenableFuture<SegmentsAndMetadata>> pendingHandoffs;
 
   @JsonIgnore
@@ -171,6 +177,7 @@ public class RealtimeIndexTask extends AbstractTask
         context
     );
     this.spec = fireDepartment;
+    this.pendingPublishes = new ConcurrentLinkedQueue<>();
     this.pendingHandoffs = new ConcurrentLinkedQueue<>();
   }
 
@@ -427,6 +434,13 @@ public class RealtimeIndexTask extends AbstractTask
           // Publish any remaining segments
           publishSegments(publisher, committerSupplier, sequenceName);
 
+          if (!pendingPublishes.isEmpty()) {
+            ListenableFuture<?> allPublishes = Futures.allAsList(pendingPublishes);
+            log.info("Waiting for segments to publish");
+
+            allPublishes.get();
+          }
+
           if (!pendingHandoffs.isEmpty()) {
             ListenableFuture<?> allHandoffs = Futures.allAsList(pendingHandoffs);
             log.info("Waiting for handoffs");
@@ -663,9 +677,33 @@ public class RealtimeIndexTask extends AbstractTask
         Collections.singletonList(sequenceName)
     );
 
-    ListenableFuture<SegmentsAndMetadata> handoffFuture = Futures.transform(publishFuture, driver::registerHandoff);
+    // Use a separate future to ensure that the publish future is not completed until after
+    // the handoff future is registered in the pending list
+    SettableFuture<SegmentsAndMetadata> publishResultFuture = SettableFuture.create();
 
-    pendingHandoffs.add(handoffFuture);
+    pendingPublishes.add(publishResultFuture);
+
+    Futures.addCallback(publishFuture, new FutureCallback<SegmentsAndMetadata>()
+    {
+      @Override
+      public void onSuccess(@Nullable SegmentsAndMetadata published)
+      {
+        ListenableFuture<SegmentsAndMetadata> handoffFuture = driver.registerHandoff(published);
+
+        log.info("Registering pending handoff for [%s]", published);
+
+        pendingHandoffs.add(handoffFuture);
+
+        publishResultFuture.set(published);
+      }
+
+      @Override
+      public void onFailure(@Nullable Throwable throwable)
+      {
+        log.error(throwable, "Error occurred publishing segments");
+        publishResultFuture.setException(throwable);
+      }
+    });
   }
 
   private String makeSequenceName(int sequenceNumber)
