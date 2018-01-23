@@ -23,6 +23,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Bytes;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ConciseBitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
@@ -31,11 +32,14 @@ import io.druid.collections.spatial.search.PolygonBound;
 import io.druid.collections.spatial.search.RadiusBound;
 import io.druid.collections.spatial.search.RectangularBound;
 import io.druid.collections.spatial.split.LinearGutmanSplitStrategy;
+import io.druid.segment.data.GenericIndexed;
+import io.druid.segment.data.ImmutableRTreeObjectStrategy;
 import junit.framework.Assert;
 import org.junit.Test;
 import org.roaringbitmap.IntIterator;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Locale;
 import java.util.Random;
 import java.util.Set;
@@ -647,5 +651,25 @@ public class ImmutableRTreeTest
         throw Throwables.propagate(e);
       }
     }
+  }
+
+  @Test
+  public void testToBytes()
+  {
+    BitmapFactory bf = new RoaringBitmapFactory();
+    ImmutableRTreeObjectStrategy rTreeObjectStrategy = new ImmutableRTreeObjectStrategy(bf);
+    RTree rTree = new RTree(2, new LinearGutmanSplitStrategy(0, 50, bf), bf);
+    rTree.insert(new float[]{0, 0}, 1);
+    ImmutableRTree immutableRTree = ImmutableRTree.newImmutableFromMutable(rTree);
+    byte[] bytes1 = immutableRTree.toBytes();
+
+    GenericIndexed<ImmutableRTree> genericIndexed = GenericIndexed.fromIterable(
+        Arrays.asList(immutableRTree, immutableRTree),
+        rTreeObjectStrategy
+    );
+
+    ImmutableRTree deserializedTree = genericIndexed.get(0);
+    byte[] bytes2 = deserializedTree.toBytes();
+    org.junit.Assert.assertEquals(Bytes.asList(bytes1), Bytes.asList(bytes2));
   }
 }

@@ -64,11 +64,6 @@ public class WrappedImmutableConciseBitmap implements ImmutableBitmap
     return bitmap.toBytes();
   }
 
-  public int compareTo(ImmutableBitmap other)
-  {
-    return bitmap.compareTo(((WrappedImmutableConciseBitmap) other).getBitmap());
-  }
-
   @Override
   public String toString()
   {

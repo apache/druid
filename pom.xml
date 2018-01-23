@@ -99,7 +99,6 @@
         <module>benchmarks</module>
         <module>aws-common</module>
         <module>java-util</module>
-        <module>bytebuffer-collections</module>
         <module>extendedset</module>
         <module>hll</module>
         <!-- Core extensions -->
