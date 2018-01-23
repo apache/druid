@@ -31,8 +31,8 @@
       {
          "timestamp" : "%%TIMESERIES_RESPONSE_TIMESTAMP%%",
          "result" : {
-             "chars_added" : 1595.0,
-             "edit_count" : 21
+             "chars_added" : 1642.0,
+             "edit_count" : 22
          }
        }
      ]
