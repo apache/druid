@@ -67,7 +67,6 @@ public class ArrayOfDoublesSketchMergeAggregator implements Aggregator
     throw new UnsupportedOperationException("Not implemented");
   }
 
-  @Override
   public void reset()
   {
     union.reset();
