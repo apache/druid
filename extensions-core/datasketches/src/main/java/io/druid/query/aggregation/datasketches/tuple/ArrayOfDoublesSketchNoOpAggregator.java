@@ -39,7 +39,6 @@ public class ArrayOfDoublesSketchNoOpAggregator implements Aggregator
   {
   }
 
-  @Override
   public void reset()
   {
   }
