@@ -29,7 +29,6 @@ import io.druid.segment.BaseDoubleColumnValueSelector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.data.IndexedInts;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 
@@ -63,25 +62,21 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
   @Override
   public void aggregate(final ByteBuffer buf, final int position)
   {
-    try (final IndexedInts keys = keySelector.getRow()) {
-      if (keys == null) {
-        return;
-      }
-      final WritableMemory mem = WritableMemory.wrap(buf);
-      final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
-      final ArrayOfDoublesUpdatableSketch sketch = ArrayOfDoublesSketches.wrapUpdatableSketch(region);
-      final double[] values = new double[valueSelectors.size()];
-      int valueIndex = 0;
-      for (final BaseDoubleColumnValueSelector valueSelector : valueSelectors) {
-        values[valueIndex++] = valueSelector.getDouble();
-      }
-      for (int i = 0; i < keys.size(); i++) {
-        final String key = keySelector.lookupName(keys.get(i));
-        sketch.update(key, values);
-      }
+    final IndexedInts keys = keySelector.getRow();
+    if (keys == null) {
+      return;
     }
-    catch (IOException e) {
-      throw new RuntimeException(e);
+    final WritableMemory mem = WritableMemory.wrap(buf);
+    final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
+    final ArrayOfDoublesUpdatableSketch sketch = ArrayOfDoublesSketches.wrapUpdatableSketch(region);
+    final double[] values = new double[valueSelectors.size()];
+    int valueIndex = 0;
+    for (final BaseDoubleColumnValueSelector valueSelector : valueSelectors) {
+      values[valueIndex++] = valueSelector.getDouble();
+    }
+    for (int i = 0; i < keys.size(); i++) {
+      final String key = keySelector.lookupName(keys.get(i));
+      sketch.update(key, values);
     }
   }
 

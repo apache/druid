@@ -132,7 +132,7 @@ public class ArrayOfDoublesSketchAggregationTest
             "  ],",
             "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
             "}"));
-    List<Row> results = Sequences.toList(seq, new ArrayList<Row>());
+    List<Row> results = seq.toList();
     Assert.assertEquals(1, results.size());
     Row row = results.get(0);
     Assert.assertEquals(0, (double) row.getMetric("non_existing_sketch"), 0);
@@ -218,7 +218,7 @@ public class ArrayOfDoublesSketchAggregationTest
             "  ],",
             "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
             "}"));
-    List<Row> results = Sequences.toList(seq, new ArrayList<Row>());
+    List<Row> results = seq.toList();
     Assert.assertEquals(1, results.size());
     Row row = results.get(0);
     Assert.assertEquals(40.0, (double) row.getRaw("sketch"), 0);
@@ -304,7 +304,7 @@ public class ArrayOfDoublesSketchAggregationTest
             "  ],",
             "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
             "}"));
-    List<Row> results = Sequences.toList(seq, new ArrayList<Row>());
+    List<Row> results = seq.toList();
     Assert.assertEquals(1, results.size());
     Row row = results.get(0);
     Assert.assertEquals(40.0, (double) row.getRaw("sketch"), 0);
@@ -392,7 +392,7 @@ public class ArrayOfDoublesSketchAggregationTest
             "  ],",
             "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
             "}"));
-    List<Row> results = Sequences.toList(seq, new ArrayList<Row>());
+    List<Row> results = seq.toList();
     Assert.assertEquals(1, results.size());
     Row row = results.get(0);
     Assert.assertEquals(40.0, (double) row.getRaw("sketch"), 0);
@@ -479,7 +479,7 @@ public class ArrayOfDoublesSketchAggregationTest
             "  ],",
             "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
             "}"));
-    List<Row> results = Sequences.toList(seq, new ArrayList<Row>());
+    List<Row> results = seq.toList();
     Assert.assertEquals(1, results.size());
     Row row = results.get(0);
     Assert.assertEquals(40.0, new Double(row.getRaw("cnt").toString()), 0);
@@ -551,7 +551,7 @@ public class ArrayOfDoublesSketchAggregationTest
             "  ],",
             "  \"intervals\": [\"2017-01-01T00:00:00.000Z/2017-01-31T00:00:00.000Z\"]",
             "}"));
-    List<Row> results = Sequences.toList(seq, new ArrayList<Row>());
+    List<Row> results = seq.toList();
     Assert.assertEquals(1, results.size());
     Row row = results.get(0);
     Object obj = row.getRaw("p-value");

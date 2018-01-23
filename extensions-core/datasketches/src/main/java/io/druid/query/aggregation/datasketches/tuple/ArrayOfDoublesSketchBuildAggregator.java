@@ -26,7 +26,6 @@ import io.druid.segment.BaseDoubleColumnValueSelector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.data.IndexedInts;
 
-import java.io.IOException;
 import java.util.List;
 
 public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
@@ -52,24 +51,18 @@ public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
   @Override
   public synchronized void aggregate()
   {
-    try {
-      final IndexedInts keys = keySelector.getRow();
-      if (keys == null) {
-        return;
-      }
-      final double[] values = new double[valueSelectors.size()];
-      int valueIndex = 0;
-      for (final BaseDoubleColumnValueSelector valueSelector : valueSelectors) {
-        values[valueIndex++] = valueSelector.getDouble();
-      }
-      for (int i = 0; i < keys.size(); i++) {
-        final String key = keySelector.lookupName(keys.get(i));
-        sketch.update(key, values);
-      }
-      keys.close();
+    final IndexedInts keys = keySelector.getRow();
+    if (keys == null) {
+      return;
     }
-    catch (IOException e) {
-      throw new RuntimeException(e);
+    final double[] values = new double[valueSelectors.size()];
+    int valueIndex = 0;
+    for (final BaseDoubleColumnValueSelector valueSelector : valueSelectors) {
+      values[valueIndex++] = valueSelector.getDouble();
+    }
+    for (int i = 0; i < keys.size(); i++) {
+      final String key = keySelector.lookupName(keys.get(i));
+      sketch.update(key, values);
     }
   }
 
@@ -89,12 +82,6 @@ public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
   public float getFloat()
   {
     throw new UnsupportedOperationException("Not implemented");
-  }
-
-  public void reset()
-  {
-    sketch = new ArrayOfDoublesUpdatableSketchBuilder().setNominalEntries(nominalEntries)
-        .setNumberOfValues(valueSelectors.size()).build();
   }
 
   @Override
