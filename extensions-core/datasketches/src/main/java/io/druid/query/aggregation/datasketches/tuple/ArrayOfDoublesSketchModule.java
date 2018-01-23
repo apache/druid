@@ -32,6 +32,12 @@ import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
 import io.druid.initialization.DruidModule;
 import io.druid.segment.serde.ComplexMetrics;
 
+/**
+ * This module is to support numeric Tuple sketches, which extend the functionality of the count-distinct
+ * Theta sketches by adding arrays of double values associated with unique keys.
+ * 
+ * https://datasketches.github.io/docs/Tuple/TupleOverview.html
+ */
 public class ArrayOfDoublesSketchModule implements DruidModule
 {
 
@@ -58,13 +64,17 @@ public class ArrayOfDoublesSketchModule implements DruidModule
     }
 
     if (ComplexMetrics.getSerdeForType(ARRAY_OF_DOUBLES_SKETCH_MERGE_AGG) == null) {
-      ComplexMetrics.registerSerde(ARRAY_OF_DOUBLES_SKETCH_MERGE_AGG,
-          new ArrayOfDoublesSketchMergeComplexMetricSerde());
+      ComplexMetrics.registerSerde(
+        ARRAY_OF_DOUBLES_SKETCH_MERGE_AGG,
+        new ArrayOfDoublesSketchMergeComplexMetricSerde()
+      );
     }
 
     if (ComplexMetrics.getSerdeForType(ARRAY_OF_DOUBLES_SKETCH_BUILD_AGG) == null) {
-      ComplexMetrics.registerSerde(ARRAY_OF_DOUBLES_SKETCH_BUILD_AGG,
-          new ArrayOfDoublesSketchBuildComplexMetricSerde());
+      ComplexMetrics.registerSerde(
+        ARRAY_OF_DOUBLES_SKETCH_BUILD_AGG,
+        new ArrayOfDoublesSketchBuildComplexMetricSerde()
+      );
     }
   }
 
