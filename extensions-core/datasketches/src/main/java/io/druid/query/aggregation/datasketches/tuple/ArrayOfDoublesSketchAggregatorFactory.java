@@ -43,8 +43,8 @@ import io.druid.segment.BaseDoubleColumnValueSelector;
 import io.druid.segment.BaseObjectColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DimensionSelectorUtils;
 import io.druid.segment.NilColumnValueSelector;
-import io.druid.segment.NullDimensionSelector;
 
 import com.yahoo.sketches.Util;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
@@ -96,7 +96,7 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
     }
     final DimensionSelector keySelector = metricFactory
         .makeDimensionSelector(new DefaultDimensionSpec(fieldName, fieldName));
-    if (keySelector instanceof NullDimensionSelector) {
+    if (keySelector == null || DimensionSelectorUtils.isNilSelector(keySelector)) {
       return new ArrayOfDoublesSketchNoOpAggregator(numberOfValues);
     }
     final List<BaseDoubleColumnValueSelector> valueSelectors = new ArrayList<>();
@@ -125,7 +125,7 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
     }
     final DimensionSelector keySelector = metricFactory
         .makeDimensionSelector(new DefaultDimensionSpec(fieldName, fieldName));
-    if (keySelector instanceof NullDimensionSelector) {
+    if (keySelector == null || DimensionSelectorUtils.isNilSelector(keySelector)) {
       return new ArrayOfDoublesSketchNoOpBufferAggregator(numberOfValues);
     }
     final List<BaseDoubleColumnValueSelector> valueSelectors = new ArrayList<>();

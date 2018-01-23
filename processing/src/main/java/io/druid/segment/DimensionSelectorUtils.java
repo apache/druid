@@ -270,4 +270,12 @@ public final class DimensionSelectorUtils
       return constantSelector(extractionFn.apply(value));
     }
   }
+
+  public static boolean isNilSelector(final DimensionSelector selector)
+  {
+    return selector.nameLookupPossibleInAdvance()
+           && selector.getValueCardinality() == 1
+           && selector.lookupName(0) == null;
+  }
+
 }
