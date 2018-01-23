@@ -78,9 +78,8 @@
         <hadoop.compile.version>2.7.3</hadoop.compile.version>
         <hive.version>2.0.0</hive.version>
         <powermock.version>1.6.6</powermock.version>
-        <!-- Cannot update to AWS SDK 1.11+ because of Jackson incompatibility.
-        Need to update Druid to use Jackson 2.6+ -->
-        <aws.sdk.version>1.10.77</aws.sdk.version>
+        <!-- Use aws-sdk bundle to let druid use newer version of aws-sdk and handle dependency conflict with Jackson -->
+        <aws.java.sdk.bundle.version>1.11.143</aws.java.sdk.bundle.version>
         <caffeine.version>2.5.5</caffeine.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.4.11</zookeeper.version>
@@ -148,6 +147,11 @@
         <dependencies>
             <!-- Compile Scope -->
             <dependency>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>aws-java-sdk-bundle</artifactId>
+                <version>${aws.java.sdk.bundle.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>java-util</artifactId>
                 <version>1.3.3</version>
@@ -176,52 +180,6 @@
                 <groupId>commons-lang</groupId>
                 <artifactId>commons-lang</artifactId>
                 <version>2.6</version>
-            </dependency>
-            <dependency>
-                <groupId>com.amazonaws</groupId>
-                <artifactId>aws-java-sdk-ec2</artifactId>
-                <version>${aws.sdk.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>javax.mail</groupId>
-                        <artifactId>mail</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>com.fasterxml.jackson.core</groupId>
-                        <artifactId>jackson-databind</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>com.fasterxml.jackson.core</groupId>
-                        <artifactId>jackson-annotations</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>commons-codec</groupId>
-                        <artifactId>commons-codec</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-            <dependency>
-                <groupId>com.amazonaws</groupId>
-                <artifactId>aws-java-sdk-s3</artifactId>
-                <version>${aws.sdk.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>javax.mail</groupId>
-                        <artifactId>mail</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>com.fasterxml.jackson.core</groupId>
-                        <artifactId>jackson-databind</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>com.fasterxml.jackson.core</groupId>
-                        <artifactId>jackson-annotations</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>commons-codec</groupId>
-                        <artifactId>commons-codec</artifactId>
-                    </exclusion>
-                </exclusions>
             </dependency>
             <dependency>
                 <groupId>com.ning</groupId>
@@ -1171,7 +1129,7 @@
             <id>spark2</id>
             <properties>
                 <jackson.version>2.6.5</jackson.version>
-                <aws.sdk.version>1.11.143</aws.sdk.version>
+                <aws.java.sdk.bundle.version>1.11.143</aws.java.sdk.bundle.version>
             </properties>
         </profile>
         <profile>

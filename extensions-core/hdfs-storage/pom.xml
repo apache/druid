@@ -153,7 +153,7 @@
         </dependency>
         <dependency>
           <groupId>com.amazonaws</groupId>
-          <artifactId>aws-java-sdk-s3</artifactId>
+          <artifactId>aws-java-sdk-bundle</artifactId>
         </dependency>
         <dependency>
             <groupId>commons-io</groupId>
