@@ -239,15 +239,6 @@ public final class DimensionHandlerUtils
   }
 
   @Nullable
-  public static String convertObjectToString(@Nullable Object valObj)
-  {
-    if (valObj == null) {
-      return null;
-    }
-    return valObj.toString();
-  }
-
-  @Nullable
   public static Long convertObjectToLong(@Nullable Object valObj)
   {
     return convertObjectToLong(valObj, false);
