@@ -190,7 +190,9 @@ public class DelimitedParseSpecTest
         ImmutableMap.of("col1", "1", "col2", "2",
         "col3", Arrays.asList("x", "y", "z"),
         "col4", Arrays.asList("a", "b", "c"),
-        "col5", "e\u0002f\u0002g"),
-        map);
+        "col5", "e\u0002f\u0002g"
+        ),
+        map
+    );
   }
 }
