@@ -89,7 +89,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   }
 
   @Override
-  public DataSegment push(File inDir, DataSegment segment) throws IOException
+  public DataSegment push(File inDir, DataSegment segment, boolean replaceExisting) throws IOException
   {
     final String storageDir = this.getStorageDir(segment);
 
@@ -145,8 +145,8 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
 
       // Create parent if it does not exist, recreation is not an error
       fs.mkdirs(outIndexFile.getParent());
-      copyFilesWithChecks(fs, tmpDescriptorFile, outDescriptorFile);
-      copyFilesWithChecks(fs, tmpIndexFile, outIndexFile);
+      copyFilesWithChecks(fs, tmpDescriptorFile, outDescriptorFile, replaceExisting);
+      copyFilesWithChecks(fs, tmpIndexFile, outIndexFile, replaceExisting);
     }
     finally {
       try {
@@ -162,9 +162,10 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     return dataSegment;
   }
 
-  private void copyFilesWithChecks(final FileSystem fs, final Path from, final Path to) throws IOException
+  private void copyFilesWithChecks(final FileSystem fs, final Path from, final Path to, final boolean replaceExisting)
+      throws IOException
   {
-    if (!HadoopFsWrapper.rename(fs, from, to)) {
+    if (!HadoopFsWrapper.rename(fs, from, to, replaceExisting)) {
       if (fs.exists(to)) {
         log.info(
             "Unable to rename temp Index file[%s] to final segment path [%s]. "

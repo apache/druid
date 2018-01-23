@@ -47,7 +47,7 @@ import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.indexing.common.TaskInfoProvider;
-import io.druid.indexing.common.TaskLocation;
+import io.druid.indexer.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
@@ -670,7 +670,7 @@ public class KafkaSupervisor implements Supervisor
         // as when the task starts they are sent existing checkpoints
         Preconditions.checkState(
             checkpoints.size() <= 1,
-            "Got checkpoint request with null as previous check point, however found more than one checkpoints in metadata store"
+            "Got checkpoint request with null as previous check point, however found more than one checkpoints"
         );
         if (checkpoints.size() == 1) {
           log.info("Already checkpointed with dataSourceMetadata [%s]", checkpoints.get(0));
@@ -2117,7 +2117,7 @@ public class KafkaSupervisor implements Supervisor
                      && latestOffsetsFromKafka.get(e.getKey()) != null
                      && e.getValue() != null
                      ? latestOffsetsFromKafka.get(e.getKey()) - e.getValue()
-                     : null
+                     : Integer.MIN_VALUE
             )
         );
   }

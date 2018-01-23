@@ -36,11 +36,6 @@ public class DoublesSketchNoOpAggregator implements Aggregator
   }
 
   @Override
-  public void reset()
-  {
-  }
-
-  @Override
   public void close()
   {
   }

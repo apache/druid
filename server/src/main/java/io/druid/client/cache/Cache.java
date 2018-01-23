@@ -59,8 +59,8 @@ public interface Cache
 
   class NamedKey
   {
-    final public String namespace;
-    final public byte[] key;
+    public final String namespace;
+    public final byte[] key;
 
     public NamedKey(String namespace, byte[] key)
     {

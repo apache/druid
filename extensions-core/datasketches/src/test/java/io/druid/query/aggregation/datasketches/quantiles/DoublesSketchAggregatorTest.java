@@ -26,7 +26,6 @@ import io.druid.initialization.DruidModule;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregationTestHelper;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
@@ -38,7 +37,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -130,7 +128,7 @@ public class DoublesSketchAggregatorTest
             "  ],",
             "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
             "}"));
-    List<Row> results = Sequences.toList(seq, new ArrayList<Row>());
+    List<Row> results = seq.toList();
     Assert.assertEquals(1, results.size());
     Row row = results.get(0);
 
@@ -156,7 +154,7 @@ public class DoublesSketchAggregatorTest
     Object histogramObject = row.getRaw("histogram");
     Assert.assertTrue(histogramObject instanceof double[]);
     double[] histogram = (double[]) histogramObject;
-    for (final double bin: histogram) {
+    for (final double bin : histogram) {
       Assert.assertEquals(100, bin, 100 * 0.2); // 400 items uniformly
                                                 // distributed into 4 bins
     }
@@ -201,7 +199,7 @@ public class DoublesSketchAggregatorTest
             "  ],",
             "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
             "}"));
-    List<Row> results = Sequences.toList(seq, new ArrayList<Row>());
+    List<Row> results = seq.toList();
     Assert.assertEquals(1, results.size());
     Row row = results.get(0);
 
@@ -223,7 +221,7 @@ public class DoublesSketchAggregatorTest
     Assert.assertTrue(histogramObject instanceof double[]);
     double[] histogram = (double[]) histogramObject;
     Assert.assertEquals(4, histogram.length);
-    for (final double bin: histogram) {
+    for (final double bin : histogram) {
       Assert.assertEquals(100, bin, 100 * 0.2); // 400 items uniformly
                                                 // distributed into 4 bins
     }
@@ -268,7 +266,7 @@ public class DoublesSketchAggregatorTest
             "  ],",
             "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
             "}"));
-    List<Row> results = Sequences.toList(seq, new ArrayList<Row>());
+    List<Row> results = seq.toList();
     Assert.assertEquals(1, results.size());
     Row row = results.get(0);
 
@@ -294,7 +292,7 @@ public class DoublesSketchAggregatorTest
     Object histogramObject = row.getRaw("histogram");
     Assert.assertTrue(histogramObject instanceof double[]);
     double[] histogram = (double[]) histogramObject;
-    for (final double bin: histogram) {
+    for (final double bin : histogram) {
       Assert.assertEquals(100, bin, 100 * 0.2); // 400 items uniformly
                                                 // distributed into 4 bins
     }
@@ -341,7 +339,7 @@ public class DoublesSketchAggregatorTest
             "  ],",
             "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
             "}"));
-    List<Row> results = Sequences.toList(seq, new ArrayList<Row>());
+    List<Row> results = seq.toList();
     Assert.assertEquals(1, results.size());
     Row row = results.get(0);
 
@@ -367,7 +365,7 @@ public class DoublesSketchAggregatorTest
     Object histogramObject = row.getRaw("histogram");
     Assert.assertTrue(histogramObject instanceof double[]);
     double[] histogram = (double[]) histogramObject;
-    for (final double bin: histogram) {
+    for (final double bin : histogram) {
       Assert.assertEquals(100, bin, 100 * 0.2); // 400 items uniformly
                                                 // distributed into 4 bins
     }
@@ -413,7 +411,7 @@ public class DoublesSketchAggregatorTest
             "  ],",
             "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
             "}"));
-    List<Row> results = Sequences.toList(seq, new ArrayList<Row>());
+    List<Row> results = seq.toList();
     Assert.assertEquals(1, results.size());
   }
 }

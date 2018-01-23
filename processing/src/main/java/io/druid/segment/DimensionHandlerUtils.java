@@ -50,7 +50,7 @@ public final class DimensionHandlerUtils
 
   private DimensionHandlerUtils() {}
 
-  public final static ColumnCapabilities DEFAULT_STRING_CAPABILITIES =
+  public static final ColumnCapabilities DEFAULT_STRING_CAPABILITIES =
       new ColumnCapabilitiesImpl().setType(ValueType.STRING)
                                   .setDictionaryEncoded(true)
                                   .setHasBitmapIndexes(true);

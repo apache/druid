@@ -36,7 +36,7 @@ public class RegexFilteredDimensionSpecTest
   @Test
   public void testSerde() throws Exception
   {
-    ObjectMapper mapper = TestHelper.getJsonMapper();
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
 
     String jsonStr = "{\n"
                      + "  \"type\": \"regexFiltered\",\n"

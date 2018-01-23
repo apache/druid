@@ -78,6 +78,7 @@
       <property name="allowEmptyMethods" value="true"/>
       <property name="allowEmptyLambdas" value="true"/>
       <property name="allowEmptyTypes" value="true"/>
+      <property name="ignoreEnhancedForColon" value="false"/>
     </module>
     <module name="ParenPad"/>
     <module name="SingleSpaceSeparator"/>
@@ -98,6 +99,14 @@
       <property name="basicOffset" value="2"/>
       <property name="caseIndent" value="2"/>
     </module>
+
+    <module name="MethodParamPad">
+      <property name="allowLineBreaks" value="true"/>
+    </module>
+    <module name="OneStatementPerLine"/>
+    <module name="EmptyStatement"/>
+
+    <module name="ModifierOrder" />
 
     <module name="Regexp">
       <property name="format" value="com\.google\.common\.io\.Closer"/>

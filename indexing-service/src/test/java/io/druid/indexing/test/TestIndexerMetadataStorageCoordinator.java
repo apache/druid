@@ -36,9 +36,9 @@ import java.util.Set;
 
 public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataStorageCoordinator
 {
-  final private Set<DataSegment> published = Sets.newConcurrentHashSet();
-  final private Set<DataSegment> nuked = Sets.newConcurrentHashSet();
-  final private List<DataSegment> unusedSegments;
+  private final Set<DataSegment> published = Sets.newConcurrentHashSet();
+  private final Set<DataSegment> nuked = Sets.newConcurrentHashSet();
+  private final List<DataSegment> unusedSegments;
 
   public TestIndexerMetadataStorageCoordinator()
   {
@@ -119,6 +119,12 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       String maxVersion,
       boolean skipSegmentLineageCheck
   ) throws IOException
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public int deletePendingSegments(String dataSource, Interval deleteInterval)
   {
     throw new UnsupportedOperationException();
   }

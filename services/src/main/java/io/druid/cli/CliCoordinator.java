@@ -32,6 +32,7 @@ import com.metamx.http.client.HttpClient;
 import io.airlift.airline.Command;
 import io.druid.audit.AuditManager;
 import io.druid.client.CoordinatorServerView;
+import io.druid.client.HttpServerInventoryViewResource;
 import io.druid.client.coordinator.Coordinator;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
@@ -57,6 +58,7 @@ import io.druid.metadata.MetadataStorageProvider;
 import io.druid.server.audit.AuditManagerProvider;
 import io.druid.server.coordinator.BalancerStrategyFactory;
 import io.druid.server.coordinator.DruidCoordinator;
+import io.druid.server.coordinator.DruidCoordinatorCleanupPendingSegments;
 import io.druid.server.coordinator.DruidCoordinatorConfig;
 import io.druid.server.coordinator.LoadQueueTaskMaster;
 import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
@@ -186,6 +188,7 @@ public class CliCoordinator extends ServerRunnable
             Jerseys.addResource(binder, IntervalsResource.class);
             Jerseys.addResource(binder, LookupCoordinatorResource.class);
             Jerseys.addResource(binder, ClusterResource.class);
+            Jerseys.addResource(binder, HttpServerInventoryViewResource.class);
 
             LifecycleModule.register(binder, Server.class);
             LifecycleModule.register(binder, DatasourcesResource.class);
@@ -207,6 +210,10 @@ public class CliCoordinator extends ServerRunnable
                 "druid.coordinator.kill.on",
                 Predicates.equalTo("true"),
                 DruidCoordinatorSegmentKiller.class
+            ).addConditionBinding(
+                "druid.coordinator.kill.pendingSegments.on",
+                Predicates.equalTo("true"),
+                DruidCoordinatorCleanupPendingSegments.class
             );
 
             binder.bind(DiscoverySideEffectsProvider.Child.class).annotatedWith(Coordinator.class).toProvider(

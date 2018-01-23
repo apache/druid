@@ -19,7 +19,7 @@
 
 package io.druid.indexing.overlord;
 
-import io.druid.indexing.common.TaskLocation;
+import io.druid.indexer.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 
 import java.util.concurrent.Executor;

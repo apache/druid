@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.java.util.common.Intervals;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
@@ -129,10 +128,7 @@ public class SegmentMetadataUnionQueryTest
             SegmentMetadataQuery.AnalysisType.MINMAX
         )
         .build();
-    List result = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), Maps.newHashMap()),
-        Lists.<SegmentAnalysis>newArrayList()
-    );
+    List result = runner.run(QueryPlus.wrap(query), Maps.newHashMap()).toList();
     TestHelper.assertExpectedObjects(ImmutableList.of(expected), result, "failed SegmentMetadata union query");
   }
 

@@ -29,7 +29,6 @@ import io.druid.data.input.Row;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregationTestHelper;
 import io.druid.query.groupby.GroupByQueryConfig;
@@ -130,7 +129,7 @@ public class SketchAggregationWithSimpleDataTest
         readFileFromClasspathAsString("simple_test_data_group_by_query.json")
     );
 
-    List<Row> results = Sequences.toList(seq, Lists.<Row>newArrayList());
+    List<Row> results = seq.toList();
     Assert.assertEquals(5, results.size());
     Assert.assertEquals(
         ImmutableList.of(
@@ -217,9 +216,7 @@ public class SketchAggregationWithSimpleDataTest
         readFileFromClasspathAsString("timeseries_query.json")
     );
 
-    Result<TimeseriesResultValue> result = (Result<TimeseriesResultValue>) Iterables.getOnlyElement(
-        Sequences.toList(seq, Lists.newArrayList())
-    );
+    Result<TimeseriesResultValue> result = (Result<TimeseriesResultValue>) Iterables.getOnlyElement(seq.toList());
 
     Assert.assertEquals(DateTimes.of("2014-10-20T00:00:00.000Z"), result.getTimestamp());
 
@@ -245,9 +242,7 @@ public class SketchAggregationWithSimpleDataTest
         readFileFromClasspathAsString("topn_query.json")
     );
 
-    Result<TopNResultValue> result = (Result<TopNResultValue>) Iterables.getOnlyElement(
-        Sequences.toList(seq, Lists.newArrayList())
-    );
+    Result<TopNResultValue> result = (Result<TopNResultValue>) Iterables.getOnlyElement(seq.toList());
 
     Assert.assertEquals(DateTimes.of("2014-10-20T00:00:00.000Z"), result.getTimestamp());
 
@@ -276,13 +271,13 @@ public class SketchAggregationWithSimpleDataTest
         readFileFromClasspathAsString("select_query.json")
     );
 
-    Result<SelectResultValue> result = (Result<SelectResultValue>) Iterables.getOnlyElement(Sequences.toList(seq, Lists.newArrayList()));
+    Result<SelectResultValue> result = (Result<SelectResultValue>) Iterables.getOnlyElement(seq.toList());
     Assert.assertEquals(DateTimes.of("2014-10-20T00:00:00.000Z"), result.getTimestamp());
     Assert.assertEquals(100, result.getValue().getEvents().size());
     Assert.assertEquals("AgMDAAAazJMCAAAAAACAPzz9j7pWTMdROWGf15uY1nI=", result.getValue().getEvents().get(0).getEvent().get("pty_country"));
   }
 
-  public final static String readFileFromClasspathAsString(String fileName) throws IOException
+  public static final String readFileFromClasspathAsString(String fileName) throws IOException
   {
     return Files.asCharSource(
         new File(SketchAggregationTest.class.getClassLoader().getResource(fileName).getFile()),

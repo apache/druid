@@ -80,7 +80,7 @@ public class MemcachedCache implements Cache
    * If some other algorithms are considered as the default algorithm instead of this one, the cache distribution for
    * those hash algorithms should be checked and compared using {@code CacheDistributionTest}.
    */
-  final static HashAlgorithm MURMUR3_128 = new HashAlgorithm()
+  static final HashAlgorithm MURMUR3_128 = new HashAlgorithm()
   {
     final HashFunction fn = Hashing.murmur3_128();
 

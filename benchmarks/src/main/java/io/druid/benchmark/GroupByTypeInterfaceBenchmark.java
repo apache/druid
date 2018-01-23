@@ -35,18 +35,16 @@ import io.druid.collections.BlockingPool;
 import io.druid.collections.DefaultBlockingPool;
 import io.druid.collections.NonBlockingPool;
 import io.druid.collections.StupidPool;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.offheap.OffheapBufferGenerator;
-import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
@@ -77,6 +75,7 @@ import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.commons.io.FileUtils;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -104,8 +103,9 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
-// Benchmark for determining the interface overhead of GroupBy with multiple type implementations
-
+/**
+ * Benchmark for determining the interface overhead of GroupBy with multiple type implementations
+ */
 @State(Scope.Benchmark)
 @Fork(value = 1)
 @Warmup(iterations = 15)
@@ -477,7 +477,7 @@ public class GroupByTypeInterfaceBenchmark
     );
 
     Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
-    return Sequences.toList(queryResult, Lists.<T>newArrayList());
+    return queryResult.toList();
   }
 
   @Benchmark

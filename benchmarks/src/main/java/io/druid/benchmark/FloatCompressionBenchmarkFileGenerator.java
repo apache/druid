@@ -27,7 +27,7 @@ import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.CompressionStrategy;
-import io.druid.segment.data.FloatSupplierSerializer;
+import io.druid.segment.data.ColumnarFloatsSerializer;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -146,7 +146,7 @@ public class FloatCompressionBenchmarkFileGenerator
         compFile.delete();
         File dataFile = new File(dir, entry.getKey());
 
-        FloatSupplierSerializer writer = CompressionFactory.getFloatSerializer(
+        ColumnarFloatsSerializer writer = CompressionFactory.getFloatSerializer(
             new OffHeapMemorySegmentWriteOutMedium(),
             "float",
             ByteOrder.nativeOrder(),

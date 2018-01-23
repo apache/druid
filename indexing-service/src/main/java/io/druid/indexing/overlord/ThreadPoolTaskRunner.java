@@ -35,7 +35,7 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.concurrent.TaskThreadPriority;
 import io.druid.guice.annotations.Self;
-import io.druid.indexing.common.TaskLocation;
+import io.druid.indexer.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TaskToolboxFactory;
@@ -410,6 +410,12 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
     public TaskLocation getLocation()
     {
       return location;
+    }
+
+    @Override
+    public String getTaskType()
+    {
+      return task.getType();
     }
   }
 

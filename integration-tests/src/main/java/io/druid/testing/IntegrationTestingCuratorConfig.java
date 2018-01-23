@@ -32,7 +32,7 @@ public class IntegrationTestingCuratorConfig extends CuratorConfig
   private IntegrationTestingConfig config;
 
   @Inject
-  public IntegrationTestingCuratorConfig (IntegrationTestingConfig config)
+  public IntegrationTestingCuratorConfig(IntegrationTestingConfig config)
   {
     this.config = config;
   }

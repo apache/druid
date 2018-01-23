@@ -53,7 +53,7 @@ import io.druid.java.util.common.concurrent.Execs;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.curator.CuratorUtils;
 import io.druid.curator.cache.PathChildrenCacheFactory;
-import io.druid.indexing.common.TaskLocation;
+import io.druid.indexer.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.autoscaling.ProvisioningService;
@@ -481,10 +481,9 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     return null;
   }
 
-  public boolean isWorkerRunningTask(Worker worker, String taskId)
+  public boolean isWorkerRunningTask(ZkWorker worker, String taskId)
   {
-    ZkWorker zkWorker = zkWorkers.get(worker.getHost());
-    return (zkWorker != null && zkWorker.isRunningTask(taskId));
+    return Preconditions.checkNotNull(worker, "worker").isRunningTask(taskId);
   }
 
   /**
@@ -625,7 +624,12 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   private RemoteTaskRunnerWorkItem addPendingTask(final Task task)
   {
     log.info("Added pending task %s", task.getId());
-    final RemoteTaskRunnerWorkItem taskRunnerWorkItem = new RemoteTaskRunnerWorkItem(task.getId(), null, null);
+    final RemoteTaskRunnerWorkItem taskRunnerWorkItem = new RemoteTaskRunnerWorkItem(
+        task.getId(),
+        task.getType(),
+        null,
+        null
+    );
     pendingTaskPayloads.put(task.getId(), task);
     pendingTasks.put(task.getId(), taskRunnerWorkItem);
     runPendingTasks();
@@ -869,7 +873,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       // Syncing state with Zookeeper - don't assign new tasks until the task we just assigned is actually running
       // on a worker - this avoids overflowing a worker with tasks
       Stopwatch timeoutStopwatch = Stopwatch.createStarted();
-      while (!isWorkerRunningTask(theZkWorker.getWorker(), task.getId())) {
+      while (!isWorkerRunningTask(theZkWorker, task.getId())) {
         final long waitMs = config.getTaskAssignmentTimeout().toStandardDuration().getMillis();
         statusLock.wait(waitMs);
         long elapsed = timeoutStopwatch.elapsed(TimeUnit.MILLISECONDS);
@@ -960,6 +964,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                       } else {
                         final RemoteTaskRunnerWorkItem newTaskRunnerWorkItem = new RemoteTaskRunnerWorkItem(
                             taskId,
+                            announcement.getTaskType(),
                             zkWorker.getWorker(),
                             TaskLocation.unknown()
                         );

@@ -24,7 +24,7 @@ import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.CompressionStrategy;
-import io.druid.segment.data.LongSupplierSerializer;
+import io.druid.segment.data.ColumnarLongsSerializer;
 
 import java.io.IOException;
 import java.nio.ByteOrder;
@@ -50,7 +50,7 @@ public class LongColumnSerializer implements GenericColumnSerializer
   private final ByteOrder byteOrder;
   private final CompressionStrategy compression;
   private final CompressionFactory.LongEncodingStrategy encoding;
-  private LongSupplierSerializer writer;
+  private ColumnarLongsSerializer writer;
 
   private LongColumnSerializer(
       SegmentWriteOutMedium segmentWriteOutMedium,

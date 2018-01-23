@@ -87,9 +87,10 @@ public enum CompressionStrategy
       return UncompressedCompressor.defaultCompressor;
     }
   },
-  /*
-  This value indicate no compression strategy should be used, and compression should not be block based
-  Currently only IndexedLong support non block based compression, and other types treat this as UNCOMPRESSED
+  /**
+   * This value indicate no compression strategy should be used, and compression should not be block based.
+   * {@link ColumnarLongs}, {@link ColumnarFloats} and {@link ColumnarDoubles} support non block based compression, and
+   * other types treat this as {@link #UNCOMPRESSED}.
    */
   NONE((byte) 0xFE) {
     @Override
@@ -162,7 +163,7 @@ public enum CompressionStrategy
     void decompress(ByteBuffer in, int numBytes, ByteBuffer out);
   }
 
-  public static abstract class Compressor
+  public abstract static class Compressor
   {
     /**
      * Allocates a buffer that should be passed to {@link #compress} method as input buffer. Different Compressors

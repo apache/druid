@@ -29,7 +29,7 @@ import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskState;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.RetryUtils;
 import io.druid.java.util.common.StringUtils;
@@ -49,7 +49,7 @@ import java.util.concurrent.Callable;
 
 public class OverlordResourceTestClient
 {
-  private final static Logger LOG = new Logger(OverlordResourceTestClient.class);
+  private static final Logger LOG = new Logger(OverlordResourceTestClient.class);
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
   private final String indexer;
@@ -80,33 +80,28 @@ public class OverlordResourceTestClient
   {
     try {
       return RetryUtils.retry(
-          new Callable<String>()
-          {
-            @Override
-            public String call() throws Exception
-            {
-              StatusResponseHolder response = httpClient.go(
-                  new Request(HttpMethod.POST, new URL(getIndexerURL() + "task"))
-                      .setContent(
-                          "application/json",
-                          StringUtils.toUtf8(task)
-                      ),
-                  responseHandler
-              ).get();
-              if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-                throw new ISE(
-                    "Error while submitting task to indexer response [%s %s]",
-                    response.getStatus(),
-                    response.getContent()
-                );
-              }
-              Map<String, String> responseData = jsonMapper.readValue(
-                  response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_STRING
+          () -> {
+            StatusResponseHolder response = httpClient.go(
+                new Request(HttpMethod.POST, new URL(getIndexerURL() + "task"))
+                    .setContent(
+                        "application/json",
+                        StringUtils.toUtf8(task)
+                    ),
+                responseHandler
+            ).get();
+            if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+              throw new ISE(
+                  "Error while submitting task to indexer response [%s %s]",
+                  response.getStatus(),
+                  response.getContent()
               );
-              String taskID = responseData.get("task");
-              LOG.info("Submitted task with TaskID[%s]", taskID);
-              return taskID;
             }
+            Map<String, String> responseData = jsonMapper.readValue(
+                response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_STRING
+            );
+            String taskID = responseData.get("task");
+            LOG.info("Submitted task with TaskID[%s]", taskID);
+            return taskID;
           },
           Predicates.<Throwable>alwaysTrue(),
           5
@@ -117,7 +112,7 @@ public class OverlordResourceTestClient
     }
   }
 
-  public TaskStatus.Status getTaskStatus(String taskID)
+  public TaskState getTaskStatus(String taskID)
   {
     try {
       StatusResponseHolder response = makeRequest(
@@ -135,7 +130,7 @@ public class OverlordResourceTestClient
       );
       //TODO: figure out a better way to parse the response...
       String status = (String) ((Map) responseData.get("status")).get("status");
-      return TaskStatus.Status.valueOf(status);
+      return TaskState.valueOf(status);
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -189,11 +184,11 @@ public class OverlordResourceTestClient
           @Override
           public Boolean call() throws Exception
           {
-            TaskStatus.Status status = getTaskStatus(taskID);
-            if (status == TaskStatus.Status.FAILED) {
+            TaskState status = getTaskStatus(taskID);
+            if (status == TaskState.FAILED) {
               throw new ISE("Indexer task FAILED");
             }
-            return status == TaskStatus.Status.SUCCESS;
+            return status == TaskState.SUCCESS;
           }
         },
         true,

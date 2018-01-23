@@ -36,8 +36,8 @@ import org.junit.runner.RunWith;
 @RunWith(JUnitParamsRunner.class)
 public class WhiteListBasedConverterTest
 {
-  final private String prefix = "druid";
-  final private WhiteListBasedConverter defaultWhiteListBasedConverter = new WhiteListBasedConverter(
+  private final String prefix = "druid";
+  private final WhiteListBasedConverter defaultWhiteListBasedConverter = new WhiteListBasedConverter(
       prefix,
       false,
       false,

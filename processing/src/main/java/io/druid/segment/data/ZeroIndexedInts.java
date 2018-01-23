@@ -21,14 +21,12 @@ package io.druid.segment.data;
 
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
-import java.io.IOException;
-
 /**
  * An IndexedInts that always returns a row containing a single zero.
  */
 public class ZeroIndexedInts implements IndexedInts
 {
-  private final static ZeroIndexedInts INSTANCE = new ZeroIndexedInts();
+  private static final ZeroIndexedInts INSTANCE = new ZeroIndexedInts();
 
   private ZeroIndexedInts()
   {
@@ -52,11 +50,6 @@ public class ZeroIndexedInts implements IndexedInts
     // Skip range check in production, assume "index" was 0 like it really should have been.
     assert index == 0;
     return 0;
-  }
-
-  @Override
-  public void close() throws IOException
-  {
   }
 
   @Override

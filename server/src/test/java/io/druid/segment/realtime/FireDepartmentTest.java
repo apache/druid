@@ -115,7 +115,7 @@ public class FireDepartmentTest
                 TestHelper.getTestIndexIO(OffHeapMemorySegmentWriteOutMediumFactory.instance()),
                 MapCache.create(0),
                 NO_CACHE_CONFIG,
-                TestHelper.getJsonMapper()
+                TestHelper.makeJsonMapper()
 
             ),
             null

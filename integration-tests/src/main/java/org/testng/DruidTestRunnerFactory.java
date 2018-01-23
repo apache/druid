@@ -87,7 +87,7 @@ public class DruidTestRunnerFactory implements ITestRunnerFactory
       Injector injector = DruidTestModuleFactory.getInjector();
       IntegrationTestingConfig config = injector.getInstance(IntegrationTestingConfig.class);
       HttpClient client = injector.getInstance(Key.get(HttpClient.class, TestClient.class));
-      ;
+
       waitUntilInstanceReady(client, config.getCoordinatorUrl());
       waitUntilInstanceReady(client, config.getIndexerUrl());
       waitUntilInstanceReady(client, config.getBrokerUrl());
@@ -122,7 +122,7 @@ public class DruidTestRunnerFactory implements ITestRunnerFactory
           () -> {
             try {
               StatusResponseHolder response = client.go(
-                  new Request(HttpMethod.GET, new URL(StringUtils.format("%s/status", host))),
+                  new Request(HttpMethod.GET, new URL(StringUtils.format("%s/status/health", host))),
                   handler
               ).get();
 

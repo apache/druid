@@ -142,7 +142,7 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
   @Test
   public void testSerde() throws Exception
   {
-    final ObjectMapper objectMapper = TestHelper.getJsonMapper();
+    final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWithAffinityWorkerSelectStrategy(
         new AffinityConfig(ImmutableMap.of("foo", ImmutableSet.of("localhost")), false)
     );

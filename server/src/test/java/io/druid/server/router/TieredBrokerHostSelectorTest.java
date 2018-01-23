@@ -107,7 +107,7 @@ public class TieredBrokerHostSelectorTest
     };
 
     EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(DruidNodeDiscoveryProvider.NODE_TYPE_BROKER))
-            .andReturn(druidNodeDiscovery);;
+            .andReturn(druidNodeDiscovery);
 
     EasyMock.replay(druidNodeDiscoveryProvider);
 

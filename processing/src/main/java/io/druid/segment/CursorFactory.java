@@ -32,7 +32,7 @@ import javax.annotation.Nullable;
 public interface CursorFactory
 {
   Sequence<Cursor> makeCursors(
-      Filter filter,
+      @Nullable Filter filter,
       Interval interval,
       VirtualColumns virtualColumns,
       Granularity gran,

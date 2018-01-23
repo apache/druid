@@ -29,10 +29,10 @@ import java.util.List;
 
 public class AmbariMetricsEmitterConfig
 {
-  private final static int DEFAULT_BATCH_SIZE = 100;
-  private final static Long DEFAULT_FLUSH_PERIOD_MILLIS = (long) (60 * 1000); // flush every one minute
-  private final static long DEFAULT_GET_TIMEOUT = 1000; // default wait for get operations on the queue 1 sec
-  private final static String DEFAULT_PROTOCOL = "http";
+  private static final int DEFAULT_BATCH_SIZE = 100;
+  private static final Long DEFAULT_FLUSH_PERIOD_MILLIS = (long) (60 * 1000); // flush every one minute
+  private static final long DEFAULT_GET_TIMEOUT = 1000; // default wait for get operations on the queue 1 sec
+  private static final String DEFAULT_PROTOCOL = "http";
 
   @JsonProperty
   private final String hostname;

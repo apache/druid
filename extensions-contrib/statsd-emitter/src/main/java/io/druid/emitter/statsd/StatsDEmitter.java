@@ -38,10 +38,10 @@ import java.util.Map;
 public class StatsDEmitter implements Emitter
 {
 
-  private final static Logger log = new Logger(StatsDEmitter.class);
-  private final static String DRUID_METRIC_SEPARATOR = "\\/";
-  private final static String STATSD_SEPARATOR = ":|\\|";
-  private final static String BLANK = "\\s+";
+  private static final Logger log = new Logger(StatsDEmitter.class);
+  private static final String DRUID_METRIC_SEPARATOR = "\\/";
+  private static final String STATSD_SEPARATOR = ":|\\|";
+  private static final String BLANK = "\\s+";
 
   static final StatsDEmitter of(StatsDEmitterConfig config, ObjectMapper mapper)
   {

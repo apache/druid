@@ -22,7 +22,6 @@ package io.druid.sql.calcite;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.hll.HLLCV1;
 import io.druid.java.util.common.DateTimes;
@@ -30,7 +29,6 @@ import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.PeriodGranularity;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.Druids;
@@ -555,7 +553,7 @@ public class CalciteQueryTest
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{
-                "DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"limit\":9223372036854775807,\"filter\":null,\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\"},\"descending\":false}], signature=[{__time:LONG, cnt:LONG, dim1:STRING, dim2:STRING, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX}])\n"
+                "DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"limit\":9223372036854775807,\"filter\":null,\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}}], signature=[{__time:LONG, cnt:LONG, dim1:STRING, dim2:STRING, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX}])\n"
             }
         )
     );
@@ -801,8 +799,8 @@ public class CalciteQueryTest
   {
     final String explanation =
         "BindableJoin(condition=[=($0, $2)], joinType=[inner])\n"
-        + "  DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"limit\":9223372036854775807,\"filter\":{\"type\":\"not\",\"field\":{\"type\":\"selector\",\"dimension\":\"dim1\",\"value\":\"\",\"extractionFn\":null}},\"columns\":[\"dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\"},\"descending\":false}], signature=[{dim1:STRING}])\n"
-        + "  DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"limit\":9223372036854775807,\"filter\":null,\"columns\":[\"dim1\",\"dim2\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\"},\"descending\":false}], signature=[{dim1:STRING, dim2:STRING}])\n";
+        + "  DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"limit\":9223372036854775807,\"filter\":{\"type\":\"not\",\"field\":{\"type\":\"selector\",\"dimension\":\"dim1\",\"value\":\"\",\"extractionFn\":null}},\"columns\":[\"dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}}], signature=[{dim1:STRING}])\n"
+        + "  DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"limit\":9223372036854775807,\"filter\":null,\"columns\":[\"dim1\",\"dim2\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}}], signature=[{dim1:STRING, dim2:STRING}])\n";
 
     testQuery(
         PLANNER_CONFIG_FALLBACK,
@@ -2514,7 +2512,6 @@ public class CalciteQueryTest
   }
 
   @Test
-  @Ignore // https://issues.apache.org/jira/browse/CALCITE-1910
   public void testFilteredAggregationWithNotIn() throws Exception
   {
     testQuery(
@@ -2527,12 +2524,26 @@ public class CalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(QSS(Filtration.eternity()))
                   .granularity(Granularities.ALL)
-                  .aggregators(AGGS())
+                  .aggregators(
+                      AGGS(
+                          new FilteredAggregatorFactory(
+                              new CountAggregatorFactory("a0"),
+                              NOT(SELECTOR("dim1", "1", null))
+                          ),
+                          new FilteredAggregatorFactory(
+                              new CountAggregatorFactory("a1"),
+                              AND(
+                                  NOT(SELECTOR("dim2", null, null)),
+                                  NOT(SELECTOR("dim1", "1", null))
+                              )
+                          )
+                      )
+                  )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{1L, 5L}
+            new Object[]{5L, 2L}
         )
     );
   }
@@ -2814,6 +2825,27 @@ public class CalciteQueryTest
         "SELECT COUNT(*) FROM druid.foo WHERE dim2 = 'a' and not (dim1 > 'a' OR dim1 < 'b')",
         ImmutableList.of(),
         ImmutableList.of(new Object[]{0L})
+    );
+  }
+
+  @Test
+  public void testCountStarWithBoundFilterSimplifyOnMetric() throws Exception
+  {
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo WHERE 2.5 < m1 AND m1 < 3.5",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(BOUND("m1", "2.5", "3.5", true, true, null, StringComparators.NUMERIC))
+                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L}
+        )
     );
   }
 
@@ -3175,6 +3207,39 @@ public class CalciteQueryTest
         "SELECT COUNT(*) FROM druid.foo WHERE "
         + "cnt >= EXTRACT(EPOCH FROM TIMESTAMP '1970-01-01 00:00:00') * 1000 "
         + "AND cnt < EXTRACT(EPOCH FROM TIMESTAMP '1970-01-02 00:00:00') * 1000",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(
+                      BOUND(
+                          "cnt",
+                          String.valueOf(DateTimes.of("1970-01-01").getMillis()),
+                          String.valueOf(DateTimes.of("1970-01-02").getMillis()),
+                          false,
+                          true,
+                          null,
+                          StringComparators.NUMERIC
+                      )
+                  )
+                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{6L}
+        )
+    );
+  }
+
+  @Test
+  public void testCountStarWithTimeFilterOnLongColumnUsingExtractEpochFromDate() throws Exception
+  {
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo WHERE "
+        + "cnt >= EXTRACT(EPOCH FROM DATE '1970-01-01') * 1000 "
+        + "AND cnt < EXTRACT(EPOCH FROM DATE '1970-01-02') * 1000",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -4918,7 +4983,6 @@ public class CalciteQueryTest
   }
 
   @Test
-  @Ignore // https://issues.apache.org/jira/browse/CALCITE-1601
   public void testFilterOnTimeExtract() throws Exception
   {
     testQuery(
@@ -4928,9 +4992,15 @@ public class CalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Intervals.of("2000/P1M")))
+                  .intervals(QSS(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .filters(
+                      AND(
+                          EXPRESSION_FILTER("(timestamp_extract(\"__time\",'YEAR','UTC') == 2000)"),
+                          EXPRESSION_FILTER("(timestamp_extract(\"__time\",'MONTH','UTC') == 1)")
+                      )
+                  )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -4941,24 +5011,33 @@ public class CalciteQueryTest
   }
 
   @Test
-  @Ignore // https://issues.apache.org/jira/browse/CALCITE-1601
-  public void testFilterOnTimeExtractWithMultipleMonths() throws Exception
+  public void testFilterOnTimeExtractWithMultipleDays() throws Exception
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo\n"
         + "WHERE EXTRACT(YEAR FROM __time) = 2000\n"
-        + "AND EXTRACT(MONTH FROM __time) IN (2, 3, 5)",
+        + "AND EXTRACT(DAY FROM __time) IN (2, 3, 5)",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Intervals.of("2000-02-01/P2M"), Intervals.of("2000-05-01/P1M")))
+                  .intervals(QSS(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .filters(
+                      AND(
+                          EXPRESSION_FILTER("(timestamp_extract(\"__time\",'YEAR','UTC') == 2000)"),
+                          OR(
+                              EXPRESSION_FILTER("(timestamp_extract(\"__time\",'DAY','UTC') == 2)"),
+                              EXPRESSION_FILTER("(timestamp_extract(\"__time\",'DAY','UTC') == 3)"),
+                              EXPRESSION_FILTER("(timestamp_extract(\"__time\",'DAY','UTC') == 5)")
+                          )
+                      )
+                  )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{3L}
+            new Object[]{2L}
         )
     );
   }
@@ -6094,7 +6173,7 @@ public class CalciteQueryTest
         + "    BindableFilter(condition=[OR(=($0, 'xxx'), CAST(AND(IS NOT NULL($4), <>($2, 0))):BOOLEAN)])\n"
         + "      BindableJoin(condition=[=($1, $3)], joinType=[left])\n"
         + "        BindableJoin(condition=[true], joinType=[inner])\n"
-        + "          DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"limit\":9223372036854775807,\"filter\":null,\"columns\":[\"dim1\",\"dim2\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\"},\"descending\":false}], signature=[{dim1:STRING, dim2:STRING}])\n"
+        + "          DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"limit\":9223372036854775807,\"filter\":null,\"columns\":[\"dim1\",\"dim2\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}}], signature=[{dim1:STRING, dim2:STRING}])\n"
         + "          DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":{\"type\":\"like\",\"dimension\":\"dim1\",\"pattern\":\"%bc\",\"escape\":null,\"extractionFn\":null},\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"skipEmptyBuckets\":true,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\"}}], signature=[{a0:LONG}])\n"
         + "        DruidQueryRel(query=[{\"queryType\":\"groupBy\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[{\"type\":\"expression\",\"name\":\"d1:v\",\"expression\":\"1\",\"outputType\":\"LONG\"}],\"filter\":{\"type\":\"like\",\"dimension\":\"dim1\",\"pattern\":\"%bc\",\"escape\":null,\"extractionFn\":null},\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"default\",\"dimension\":\"dim1\",\"outputName\":\"d0\",\"outputType\":\"STRING\"},{\"type\":\"default\",\"dimension\":\"d1:v\",\"outputName\":\"d1\",\"outputType\":\"LONG\"}],\"aggregations\":[],\"postAggregations\":[],\"having\":null,\"limitSpec\":{\"type\":\"NoopLimitSpec\"},\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\"},\"descending\":false}], signature=[{d0:STRING, d1:LONG}])\n";
 
@@ -6377,7 +6456,7 @@ public class CalciteQueryTest
 
     try (DruidPlanner planner = plannerFactory.createPlanner(queryContext)) {
       final PlannerResult plan = planner.plan(sql, null, authenticationResult);
-      return Sequences.toList(plan.run(), Lists.newArrayList());
+      return plan.run().toList();
     }
   }
 

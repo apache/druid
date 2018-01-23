@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
@@ -245,7 +244,7 @@ public class FilterPartitionBenchmark
     Sequence<Cursor> cursors = makeCursors(sa, null);
 
     Sequence<List<String>> stringListSeq = readCursors(cursors, blackhole);
-    List<String> strings = Sequences.toList(Sequences.limit(stringListSeq, 1), Lists.<List<String>>newArrayList()).get(0);
+    List<String> strings = stringListSeq.limit(1).toList().get(0);
     for (String st : strings) {
       blackhole.consume(st);
     }
@@ -260,7 +259,7 @@ public class FilterPartitionBenchmark
     Sequence<Cursor> cursors = makeCursors(sa, null);
 
     Sequence<List<Long>> longListSeq = readCursorsLong(cursors, blackhole);
-    List<Long> strings = Sequences.toList(Sequences.limit(longListSeq, 1), Lists.<List<Long>>newArrayList()).get(0);
+    List<Long> strings = longListSeq.limit(1).toList().get(0);
     for (Long st : strings) {
       blackhole.consume(st);
     }
@@ -275,7 +274,7 @@ public class FilterPartitionBenchmark
     Sequence<Cursor> cursors = makeCursors(sa, timeFilterNone);
 
     Sequence<List<Long>> longListSeq = readCursorsLong(cursors, blackhole);
-    List<Long> strings = Sequences.toList(Sequences.limit(longListSeq, 1), Lists.<List<Long>>newArrayList()).get(0);
+    List<Long> strings = longListSeq.limit(1).toList().get(0);
     for (Long st : strings) {
       blackhole.consume(st);
     }
@@ -290,7 +289,7 @@ public class FilterPartitionBenchmark
     Sequence<Cursor> cursors = makeCursors(sa, timeFilterHalf);
 
     Sequence<List<Long>> longListSeq = readCursorsLong(cursors, blackhole);
-    List<Long> strings = Sequences.toList(Sequences.limit(longListSeq, 1), Lists.<List<Long>>newArrayList()).get(0);
+    List<Long> strings = longListSeq.limit(1).toList().get(0);
     for (Long st : strings) {
       blackhole.consume(st);
     }
@@ -305,7 +304,7 @@ public class FilterPartitionBenchmark
     Sequence<Cursor> cursors = makeCursors(sa, timeFilterAll);
 
     Sequence<List<Long>> longListSeq = readCursorsLong(cursors, blackhole);
-    List<Long> strings = Sequences.toList(Sequences.limit(longListSeq, 1), Lists.<List<Long>>newArrayList()).get(0);
+    List<Long> strings = longListSeq.limit(1).toList().get(0);
     for (Long st : strings) {
       blackhole.consume(st);
     }
@@ -322,7 +321,7 @@ public class FilterPartitionBenchmark
     Sequence<Cursor> cursors = makeCursors(sa, filter);
 
     Sequence<List<String>> stringListSeq = readCursors(cursors, blackhole);
-    List<String> strings = Sequences.toList(Sequences.limit(stringListSeq, 1), Lists.<List<String>>newArrayList()).get(0);
+    List<String> strings = stringListSeq.limit(1).toList().get(0);
     for (String st : strings) {
       blackhole.consume(st);
     }
@@ -339,7 +338,7 @@ public class FilterPartitionBenchmark
     Sequence<Cursor> cursors = makeCursors(sa, filter);
 
     Sequence<List<String>> stringListSeq = readCursors(cursors, blackhole);
-    List<String> strings = Sequences.toList(Sequences.limit(stringListSeq, 1), Lists.<List<String>>newArrayList()).get(0);
+    List<String> strings = stringListSeq.limit(1).toList().get(0);
     for (String st : strings) {
       blackhole.consume(st);
     }
@@ -356,7 +355,7 @@ public class FilterPartitionBenchmark
     Sequence<Cursor> cursors = makeCursors(sa, filter);
 
     Sequence<List<String>> stringListSeq = readCursors(cursors, blackhole);
-    List<String> strings = Sequences.toList(Sequences.limit(stringListSeq, 1), Lists.<List<String>>newArrayList()).get(0);
+    List<String> strings = stringListSeq.limit(1).toList().get(0);
     for (String st : strings) {
       blackhole.consume(st);
     }
@@ -373,7 +372,7 @@ public class FilterPartitionBenchmark
     Sequence<Cursor> cursors = makeCursors(sa, filter);
 
     Sequence<List<String>> stringListSeq = readCursors(cursors, blackhole);
-    List<String> strings = Sequences.toList(Sequences.limit(stringListSeq, 1), Lists.<List<String>>newArrayList()).get(0);
+    List<String> strings = stringListSeq.limit(1).toList().get(0);
     for (String st : strings) {
       blackhole.consume(st);
     }
@@ -392,7 +391,7 @@ public class FilterPartitionBenchmark
     Sequence<Cursor> cursors = makeCursors(sa, orFilter);
 
     Sequence<List<String>> stringListSeq = readCursors(cursors, blackhole);
-    List<String> strings = Sequences.toList(Sequences.limit(stringListSeq, 1), Lists.<List<String>>newArrayList()).get(0);
+    List<String> strings = stringListSeq.limit(1).toList().get(0);
     for (String st : strings) {
       blackhole.consume(st);
     }
@@ -411,7 +410,7 @@ public class FilterPartitionBenchmark
     Sequence<Cursor> cursors = makeCursors(sa, Filters.convertToCNF(orFilter));
 
     Sequence<List<String>> stringListSeq = readCursors(cursors, blackhole);
-    List<String> strings = Sequences.toList(Sequences.limit(stringListSeq, 1), Lists.<List<String>>newArrayList()).get(0);
+    List<String> strings = stringListSeq.limit(1).toList().get(0);
     for (String st : strings) {
       blackhole.consume(st);
     }
@@ -453,7 +452,7 @@ public class FilterPartitionBenchmark
     Sequence<Cursor> cursors = makeCursors(sa, dimFilter3.toFilter());
 
     Sequence<List<String>> stringListSeq = readCursors(cursors, blackhole);
-    List<String> strings = Sequences.toList(Sequences.limit(stringListSeq, 1), Lists.<List<String>>newArrayList()).get(0);
+    List<String> strings = stringListSeq.limit(1).toList().get(0);
     for (String st : strings) {
       blackhole.consume(st);
     }
@@ -495,7 +494,7 @@ public class FilterPartitionBenchmark
     Sequence<Cursor> cursors = makeCursors(sa, Filters.convertToCNF(dimFilter3.toFilter()));
 
     Sequence<List<String>> stringListSeq = readCursors(cursors, blackhole);
-    List<String> strings = Sequences.toList(Sequences.limit(stringListSeq, 1), Lists.<List<String>>newArrayList()).get(0);
+    List<String> strings = stringListSeq.limit(1).toList().get(0);
     for (String st : strings) {
       blackhole.consume(st);
     }

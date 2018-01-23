@@ -72,7 +72,7 @@ public class DruidTestModule implements Module
     if (config.getUsername() != null) {
       return new CredentialedHttpClient(new BasicCredentials(config.getUsername(), config.getPassword()), delegate);
     } else {
-      return delegate;
+      return new CredentialedHttpClient(new BasicCredentials("admin", "priest"), delegate);
     }
   }
 

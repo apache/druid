@@ -55,7 +55,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class GroupByQueryHelper
 {
-  public final static String CTX_KEY_SORT_RESULTS = "sortResults";
+  public static final String CTX_KEY_SORT_RESULTS = "sortResults";
 
   public static <T> Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> createIndexAccumulatorPair(
       final GroupByQuery query,

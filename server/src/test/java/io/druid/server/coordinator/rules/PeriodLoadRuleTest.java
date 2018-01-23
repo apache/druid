@@ -37,7 +37,7 @@ import org.junit.Test;
  */
 public class PeriodLoadRuleTest
 {
-  private final static DataSegment.Builder builder = DataSegment.builder()
+  private static final DataSegment.Builder builder = DataSegment.builder()
                                                             .dataSource("test")
                                                             .version(DateTimes.nowUtc().toString())
                                                             .shardSpec(NoneShardSpec.instance());

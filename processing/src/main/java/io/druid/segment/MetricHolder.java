@@ -22,7 +22,7 @@ package io.druid.segment;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import io.druid.segment.data.CompressedFloatsIndexedSupplier;
+import io.druid.segment.data.CompressedColumnarFloatsSupplier;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.ObjectStrategy;
@@ -59,7 +59,7 @@ public class MetricHolder
 
     switch (holder.type) {
       case FLOAT:
-        holder.floatType = CompressedFloatsIndexedSupplier.fromByteBuffer(buf, ByteOrder.nativeOrder());
+        holder.floatType = CompressedColumnarFloatsSupplier.fromByteBuffer(buf, ByteOrder.nativeOrder());
         break;
       case COMPLEX:
         if (strategy != null) {
@@ -106,7 +106,7 @@ public class MetricHolder
     }
   }
 
-  CompressedFloatsIndexedSupplier floatType = null;
+  CompressedColumnarFloatsSupplier floatType = null;
   Indexed complexType = null;
 
   private MetricHolder(

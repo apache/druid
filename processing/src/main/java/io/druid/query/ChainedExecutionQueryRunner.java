@@ -32,7 +32,6 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.MergeIterable;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
 
 import java.util.Arrays;
@@ -127,7 +126,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                                         throw new ISE("Got a null result! Segments are missing!");
                                       }
 
-                                      List<T> retVal = Sequences.toList(result, Lists.<T>newArrayList());
+                                      List<T> retVal = result.toList();
                                       if (retVal == null) {
                                         throw new ISE("Got a null list of results! WTF?!");
                                       }
