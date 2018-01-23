@@ -22,7 +22,7 @@ package io.druid.indexing.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.client.indexing.IndexingService;
 import io.druid.discovery.DruidLeaderClient;
 import io.druid.indexer.TaskLocation;

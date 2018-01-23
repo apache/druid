@@ -21,7 +21,7 @@ package io.druid.server.coordinator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
-import com.metamx.http.client.HttpClient;
+import io.druid.java.util.http.client.HttpClient;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Json;

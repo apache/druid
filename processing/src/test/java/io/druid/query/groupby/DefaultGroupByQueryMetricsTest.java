@@ -21,7 +21,7 @@ package io.druid.query.groupby;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.query.CachingEmitter;

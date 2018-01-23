@@ -20,7 +20,7 @@
 package io.druid.indexing.overlord.autoscaling;
 
 import com.google.common.base.Supplier;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.indexing.overlord.WorkerTaskRunner;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.PeriodGranularity;
