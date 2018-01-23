@@ -52,7 +52,8 @@ public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
   @Override
   public synchronized void aggregate()
   {
-    try (final IndexedInts keys = keySelector.getRow()) {
+    try {
+      final IndexedInts keys = keySelector.getRow();
       if (keys == null) {
         return;
       }
@@ -65,6 +66,7 @@ public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
         final String key = keySelector.lookupName(keys.get(i));
         sketch.update(key, values);
       }
+      keys.close();
     }
     catch (IOException e) {
       throw new RuntimeException(e);
@@ -89,7 +91,6 @@ public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
     throw new UnsupportedOperationException("Not implemented");
   }
 
-  @Override
   public void reset()
   {
     sketch = new ArrayOfDoublesUpdatableSketchBuilder().setNominalEntries(nominalEntries)
