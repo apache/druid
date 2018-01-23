@@ -65,15 +65,15 @@ public class ArrayOfDoublesSketchModule implements DruidModule
 
     if (ComplexMetrics.getSerdeForType(ARRAY_OF_DOUBLES_SKETCH_MERGE_AGG) == null) {
       ComplexMetrics.registerSerde(
-        ARRAY_OF_DOUBLES_SKETCH_MERGE_AGG,
-        new ArrayOfDoublesSketchMergeComplexMetricSerde()
+          ARRAY_OF_DOUBLES_SKETCH_MERGE_AGG,
+          new ArrayOfDoublesSketchMergeComplexMetricSerde()
       );
     }
 
     if (ComplexMetrics.getSerdeForType(ARRAY_OF_DOUBLES_SKETCH_BUILD_AGG) == null) {
       ComplexMetrics.registerSerde(
-        ARRAY_OF_DOUBLES_SKETCH_BUILD_AGG,
-        new ArrayOfDoublesSketchBuildComplexMetricSerde()
+          ARRAY_OF_DOUBLES_SKETCH_BUILD_AGG,
+          new ArrayOfDoublesSketchBuildComplexMetricSerde()
       );
     }
   }

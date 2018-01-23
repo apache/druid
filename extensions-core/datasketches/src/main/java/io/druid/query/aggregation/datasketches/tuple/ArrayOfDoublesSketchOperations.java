@@ -81,24 +81,24 @@ public class ArrayOfDoublesSketchOperations
   }
 
   public static ArrayOfDoublesSketch sketchSetOperation(
-    final Func func,
-    final int k,
-    final int numValues,
-    final ArrayOfDoublesSketch... sketches
+      final Func func,
+      final int k,
+      final int numValues,
+      final ArrayOfDoublesSketch... sketches
   )
   {
     switch (func) {
       case UNION:
         final ArrayOfDoublesUnion union = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(k)
             .setNumberOfValues(numValues).buildUnion();
-        for (final ArrayOfDoublesSketch sketch: sketches) {
+        for (final ArrayOfDoublesSketch sketch : sketches) {
           union.update(sketch);
         }
         return union.getResult();
       case INTERSECT:
         final ArrayOfDoublesIntersection intersection = new ArrayOfDoublesSetOperationBuilder()
             .setNominalEntries(k).setNumberOfValues(numValues).buildIntersection();
-        for (final ArrayOfDoublesSketch sketch: sketches) {
+        for (final ArrayOfDoublesSketch sketch : sketches) {
           intersection.update(sketch, COMBINER);
         }
         return intersection.getResult();

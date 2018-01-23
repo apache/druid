@@ -100,7 +100,7 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
       return new ArrayOfDoublesSketchNoOpAggregator(numberOfValues);
     }
     final List<BaseDoubleColumnValueSelector> valueSelectors = new ArrayList<>();
-    for (final String column: metricColumns) {
+    for (final String column : metricColumns) {
       final BaseDoubleColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(column);
       valueSelectors.add(valueSelector);
     }
@@ -129,7 +129,7 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
       return new ArrayOfDoublesSketchNoOpBufferAggregator(numberOfValues);
     }
     final List<BaseDoubleColumnValueSelector> valueSelectors = new ArrayList<>();
-    for (final String column: metricColumns) {
+    for (final String column : metricColumns) {
       final BaseDoubleColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(column);
       valueSelectors.add(valueSelector);
     }
