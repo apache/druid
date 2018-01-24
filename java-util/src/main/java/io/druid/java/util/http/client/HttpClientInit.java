@@ -32,7 +32,7 @@ import org.jboss.netty.channel.socket.nio.NioClientBossPool;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioWorkerPool;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.logging.Log4JLoggerFactory;
+import org.jboss.netty.logging.Slf4JLoggerFactory;
 import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.ThreadNameDeterminer;
 import org.jboss.netty.util.Timer;
@@ -203,7 +203,7 @@ public class HttpClientInit
     bootstrap.setOption("keepAlive", true);
     bootstrap.setPipelineFactory(new HttpClientPipelineFactory());
 
-    InternalLoggerFactory.setDefaultFactory(new Log4JLoggerFactory());
+    InternalLoggerFactory.setDefaultFactory(new Slf4JLoggerFactory());
 
     try {
       lifecycle.addMaybeStartHandler(
