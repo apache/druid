@@ -28,7 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.metamx.http.client.HttpClient;
+import io.druid.java.util.http.client.HttpClient;
 import io.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import io.druid.client.selector.RandomServerSelectorStrategy;
 import io.druid.client.selector.ServerSelector;

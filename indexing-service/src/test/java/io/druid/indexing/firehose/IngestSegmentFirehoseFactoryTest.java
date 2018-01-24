@@ -31,7 +31,7 @@ import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 import com.google.inject.Binder;
 import com.google.inject.Module;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;

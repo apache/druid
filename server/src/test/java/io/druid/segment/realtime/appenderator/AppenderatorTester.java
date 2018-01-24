@@ -21,9 +21,9 @@ package io.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.core.NoopEmitter;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.core.NoopEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.MapCache;
 import io.druid.data.input.impl.DimensionsSpec;

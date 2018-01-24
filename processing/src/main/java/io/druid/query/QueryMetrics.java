@@ -19,7 +19,7 @@
 
 package io.druid.query;
 
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.guice.annotations.PublicApi;
@@ -30,7 +30,7 @@ import org.joda.time.Interval;
 import java.util.List;
 
 /**
- * Abstraction wrapping {@link com.metamx.emitter.service.ServiceMetricEvent.Builder} and allowing to control what
+ * Abstraction wrapping {@link io.druid.java.util.emitter.service.ServiceMetricEvent.Builder} and allowing to control what
  * metrics are actually emitted, what dimensions do they have, etc.
  *
  *

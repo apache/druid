@@ -36,7 +36,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Lists;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.indexing.overlord.autoscaling.AutoScaler;
 import io.druid.indexing.overlord.autoscaling.AutoScalingData;
 import io.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningConfig;

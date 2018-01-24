@@ -19,8 +19,8 @@
 
 package io.druid.query;
 
-import com.metamx.emitter.core.Emitter;
-import com.metamx.emitter.core.Event;
+import io.druid.java.util.emitter.core.Emitter;
+import io.druid.java.util.emitter.core.Event;
 
 import java.io.IOException;
 

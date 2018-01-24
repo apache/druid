@@ -21,7 +21,7 @@ package io.druid.server.security;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.metamx.http.client.HttpClient;
+import io.druid.java.util.http.client.HttpClient;
 
 /**
  * This interface provides methods needed for escalating internal system requests with priveleged authentication

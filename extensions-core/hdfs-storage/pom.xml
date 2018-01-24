@@ -45,6 +45,12 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+          <groupId>io.druid</groupId>
+          <artifactId>java-util</artifactId>
+          <version>${project.parent.version}</version>
+          <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-client</artifactId>
             <scope>compile</scope>
@@ -134,11 +140,6 @@
                 <artifactId>jersey-core</artifactId>
               </exclusion>
             </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>com.metamx</groupId>
-            <artifactId>java-util</artifactId>
-            <scope>provided</scope>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>

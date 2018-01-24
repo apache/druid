@@ -27,7 +27,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;

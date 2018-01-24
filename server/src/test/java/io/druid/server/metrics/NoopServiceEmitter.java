@@ -19,8 +19,8 @@
 
 package io.druid.server.metrics;
 
-import com.metamx.emitter.core.Event;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.core.Event;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 
 public class NoopServiceEmitter extends ServiceEmitter
 {

@@ -29,7 +29,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;

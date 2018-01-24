@@ -18,7 +18,7 @@
  */
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import com.timgroup.statsd.StatsDClient;
 import io.druid.emitter.statsd.StatsDEmitter;
 import io.druid.emitter.statsd.StatsDEmitterConfig;
