@@ -22,7 +22,6 @@ package io.druid.java.util.emitter.service;
 
 import com.google.common.collect.ImmutableMap;
 import io.druid.java.util.common.DateTimes;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
