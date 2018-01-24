@@ -20,6 +20,7 @@
 package io.druid.java.util.metrics;
 
 import com.google.common.collect.ImmutableMap;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.emitter.core.Event;
 import org.junit.Assert;
 import org.junit.Test;
@@ -57,7 +58,7 @@ public class MonitorsTest
     Assert.assertFalse("no events emitted", events.isEmpty());
     for (Event e : events) {
       if (!expectedFeed.equals(e.getFeed())) {
-        String message = String.format("\"feed\" in event: %s", e.toMap().toString());
+        String message = StringUtils.format("\"feed\" in event: %s", e.toMap().toString());
         Assert.assertEquals(message, expectedFeed, e.getFeed());
       }
     }

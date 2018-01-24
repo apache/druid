@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.emitter.service.UnitEvent;
 import org.asynchttpclient.ListenableFuture;
@@ -98,7 +99,7 @@ public class ParametrizedUriEmitterTest
           {
             Assert.assertEquals("http://example.com/test", request.getUrl());
             Assert.assertEquals(
-                String.format(
+                StringUtils.format(
                     "[%s,%s]\n",
                     jsonMapper.writeValueAsString(events.get(0)),
                     jsonMapper.writeValueAsString(events.get(1))
@@ -150,8 +151,8 @@ public class ParametrizedUriEmitterTest
     emitter.flush();
     Assert.assertTrue(httpClient.succeeded());
     Map<String, String> expected = ImmutableMap.of(
-        "http://example.com/test1", String.format("[%s]\n", jsonMapper.writeValueAsString(events.get(0))),
-        "http://example.com/test2", String.format("[%s]\n", jsonMapper.writeValueAsString(events.get(1))));
+        "http://example.com/test1", StringUtils.format("[%s]\n", jsonMapper.writeValueAsString(events.get(0))),
+        "http://example.com/test2", StringUtils.format("[%s]\n", jsonMapper.writeValueAsString(events.get(1))));
     Assert.assertEquals(expected, results);
   }
 
@@ -172,7 +173,7 @@ public class ParametrizedUriEmitterTest
           {
             Assert.assertEquals("http://example.com/val1/val2", request.getUrl());
             Assert.assertEquals(
-                String.format(
+                StringUtils.format(
                     "[%s,%s]\n",
                     jsonMapper.writeValueAsString(events.get(0)),
                     jsonMapper.writeValueAsString(events.get(1))
@@ -207,7 +208,7 @@ public class ParametrizedUriEmitterTest
     catch (IllegalArgumentException e) {
       Assert.assertEquals(
           e.getMessage(),
-          String.format(
+          StringUtils.format(
               "ParametrizedUriExtractor with pattern http://example.com/{keyNotSetInEvents} requires keyNotSetInEvents to be set in event, but found %s", event.toMap())
       );
     }

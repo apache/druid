@@ -141,7 +141,7 @@ public class EmitterTest
 
     Lifecycle lifecycle = new Lifecycle();
     Emitter emitter = Emitters.create(props, httpClient, jsonMapper, lifecycle);
-    Assert.assertTrue(String.format(
+    Assert.assertTrue(StringUtils.format(
         "HttpPostEmitter emitter should be created, but found %s",
         emitter.getClass().getName()
     ), emitter instanceof HttpPostEmitter);
@@ -220,7 +220,7 @@ public class EmitterTest
                 request.getHeaders().get(HttpHeaders.Names.CONTENT_TYPE)
             );
             Assert.assertEquals(
-                String.format(
+                StringUtils.format(
                     "[%s,%s]\n",
                     jsonMapper.writeValueAsString(events.get(0)),
                     jsonMapper.writeValueAsString(events.get(1))
@@ -262,7 +262,7 @@ public class EmitterTest
                 request.getHeaders().get(HttpHeaders.Names.CONTENT_TYPE)
             );
             Assert.assertEquals(
-                String.format(
+                StringUtils.format(
                     "[%s,%s]\n",
                     jsonMapper.writeValueAsString(events.get(0)),
                     jsonMapper.writeValueAsString(events.get(1))
@@ -330,7 +330,7 @@ public class EmitterTest
     latch.await();
     long timeWaited = System.currentTimeMillis() - emitTime;
     Assert.assertTrue(
-        String.format("timeWaited[%s] !< %s", timeWaited, timeBetweenEmissions * 2),
+        StringUtils.format("timeWaited[%s] !< %s", timeWaited, timeBetweenEmissions * 2),
         timeWaited < timeBetweenEmissions * 2
     );
 
@@ -355,7 +355,7 @@ public class EmitterTest
     thisLatch.await();
     timeWaited = System.currentTimeMillis() - emitTime;
     Assert.assertTrue(
-        String.format("timeWaited[%s] !< %s", timeWaited, timeBetweenEmissions * 2),
+        StringUtils.format("timeWaited[%s] !< %s", timeWaited, timeBetweenEmissions * 2),
         timeWaited < timeBetweenEmissions * 2
     );
 
@@ -441,7 +441,7 @@ public class EmitterTest
                 request.getHeaders().get(HttpHeaders.Names.AUTHORIZATION)
             );
             Assert.assertEquals(
-                String.format(
+                StringUtils.format(
                     "%s\n%s\n",
                     jsonMapper.writeValueAsString(events.get(0)),
                     jsonMapper.writeValueAsString(events.get(1))
@@ -493,7 +493,7 @@ public class EmitterTest
                 request.getHeaders().get(HttpHeaders.Names.CONTENT_TYPE)
             );
             Assert.assertEquals(
-                String.format(
+                StringUtils.format(
                     "[%s,%s]\n",
                     jsonMapper.writeValueAsString(events.get(counter.getAndIncrement())),
                     jsonMapper.writeValueAsString(events.get(counter.getAndIncrement()))
@@ -552,7 +552,7 @@ public class EmitterTest
             CompressionUtils.gunzip(new ByteArrayInputStream(dataArray), baos);
 
             Assert.assertEquals(
-                String.format(
+                StringUtils.format(
                     "[%s,%s]\n",
                     jsonMapper.writeValueAsString(events.get(0)),
                     jsonMapper.writeValueAsString(events.get(1))

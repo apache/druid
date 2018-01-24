@@ -21,6 +21,7 @@ package io.druid.java.util.http.client;
 
 import com.google.common.base.Charsets;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.http.client.response.StatusResponseHandler;
 import io.druid.java.util.http.client.response.StatusResponseHolder;
@@ -96,7 +97,7 @@ public class FriendlyServersTest
       final HttpClient client = HttpClientInit.createClient(config, lifecycle);
       final StatusResponseHolder response = client
           .go(
-              new Request(HttpMethod.GET, new URL(String.format("http://localhost:%d/", serverSocket.getLocalPort()))),
+              new Request(HttpMethod.GET, new URL(StringUtils.format("http://localhost:%d/", serverSocket.getLocalPort()))),
               new StatusResponseHandler(Charsets.UTF_8)
           ).get();
 
@@ -155,7 +156,7 @@ public class FriendlyServersTest
       final HttpClient client = HttpClientInit.createClient(config, lifecycle);
       final StatusResponseHolder response = client
           .go(
-              new Request(HttpMethod.GET, new URL(String.format("http://localhost:%d/", serverSocket.getLocalPort()))),
+              new Request(HttpMethod.GET, new URL(StringUtils.format("http://localhost:%d/", serverSocket.getLocalPort()))),
               new StatusResponseHandler(Charsets.UTF_8)
           ).get();
 
@@ -211,7 +212,7 @@ public class FriendlyServersTest
             .go(
                 new Request(
                     HttpMethod.GET,
-                    new URL(String.format("https://localhost:%d/", sslConnector.getLocalPort()))
+                    new URL(StringUtils.format("https://localhost:%d/", sslConnector.getLocalPort()))
                 ),
                 new StatusResponseHandler(Charsets.UTF_8)
             ).get().getStatus();
@@ -224,7 +225,7 @@ public class FriendlyServersTest
             .go(
                 new Request(
                     HttpMethod.GET,
-                    new URL(String.format("https://127.0.0.1:%d/", sslConnector.getLocalPort()))
+                    new URL(StringUtils.format("https://127.0.0.1:%d/", sslConnector.getLocalPort()))
                 ),
                 new StatusResponseHandler(Charsets.UTF_8)
             );
@@ -246,7 +247,7 @@ public class FriendlyServersTest
         final ListenableFuture<StatusResponseHolder> response2 = skepticalClient
             .go(
                 new Request(
-                    HttpMethod.GET, new URL(String.format("https://localhost:%d/", sslConnector.getLocalPort()))
+                    HttpMethod.GET, new URL(StringUtils.format("https://localhost:%d/", sslConnector.getLocalPort()))
                 ),
                 new StatusResponseHandler(Charsets.UTF_8)
             );

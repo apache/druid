@@ -21,6 +21,7 @@
 package io.druid.java.util.emitter.service;
 
 import com.google.common.collect.ImmutableMap;
+import io.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
@@ -178,7 +179,7 @@ public class ServiceMetricEventTest
     Assert.assertEquals(
         ImmutableMap.<String, Object>builder()
                     .put("feed", "metrics")
-                    .put("timestamp", new DateTime(42).toString())
+                    .put("timestamp", DateTimes.utc(42).toString())
                     .put("service", "test")
                     .put("host", "localhost")
                     .put("metric", "test-metric")
@@ -205,7 +206,7 @@ public class ServiceMetricEventTest
             .setDimension("user8", "h")
             .setDimension("user9", "i")
             .setDimension("user10", "j")
-            .build(new DateTime(42), "test-metric", 1234)
+            .build(DateTimes.utc(42), "test-metric", 1234)
             .build("test", "localhost")
             .toMap()
     );
@@ -213,7 +214,7 @@ public class ServiceMetricEventTest
     Assert.assertEquals(
         ImmutableMap.<String, Object>builder()
                     .put("feed", "metrics")
-                    .put("timestamp", new DateTime(42).toString())
+                    .put("timestamp", DateTimes.utc(42).toString())
                     .put("service", "test")
                     .put("host", "localhost")
                     .put("metric", "test-metric")
@@ -240,7 +241,7 @@ public class ServiceMetricEventTest
                           .setDimension("user8", new String[]{"h"})
                           .setDimension("user9", new String[]{"i"})
                           .setDimension("user10", new String[]{"j"})
-                          .build(new DateTime(42), "test-metric", 1234)
+                          .build(DateTimes.utc(42), "test-metric", 1234)
                           .build("test", "localhost")
                           .toMap()
     );
@@ -248,7 +249,7 @@ public class ServiceMetricEventTest
     Assert.assertEquals(
         ImmutableMap.<String, Object>builder()
                     .put("feed", "metrics")
-                    .put("timestamp", new DateTime(42).toString())
+                    .put("timestamp", DateTimes.utc(42).toString())
                     .put("service", "test")
                     .put("host", "localhost")
                     .put("metric", "test-metric")
@@ -259,7 +260,7 @@ public class ServiceMetricEventTest
         ServiceMetricEvent.builder()
                           .setDimension("foo", "bar")
                           .setDimension("baz", new String[]{"foo", "qux"})
-                          .build(new DateTime(42), "test-metric", 1234)
+                          .build(DateTimes.utc(42), "test-metric", 1234)
                           .build("test", "localhost")
                           .toMap()
     );

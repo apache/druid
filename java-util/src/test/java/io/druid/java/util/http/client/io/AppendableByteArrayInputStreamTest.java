@@ -19,6 +19,7 @@
 
 package io.druid.java.util.http.client.io;
 
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import org.junit.Assert;
 import org.junit.Test;
@@ -72,7 +73,7 @@ public class AppendableByteArrayInputStreamTest
     for (int i = 0; i < expectedBytes.length; i++) {
       final int readByte = in.read();
       if (expectedBytes[i] != (byte) readByte) {
-        Assert.assertEquals(String.format("%s[%d", Arrays.toString(expectedBytes), i), expectedBytes[i], readByte);
+        Assert.assertEquals(StringUtils.format("%s[%d", Arrays.toString(expectedBytes), i), expectedBytes[i], readByte);
       }
     }
   }

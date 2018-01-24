@@ -20,6 +20,7 @@
 package io.druid.java.util.http.client;
 
 import com.google.common.base.Charsets;
+import io.druid.java.util.common.StringUtils;
 import org.asynchttpclient.DefaultAsyncHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
@@ -80,7 +81,7 @@ public class AsyncHttpClientTest
     try {
       requestStart = System.currentTimeMillis();
       Future<?> future = client
-          .prepareGet(String.format("http://localhost:%d/", serverSocket.getLocalPort()))
+          .prepareGet(StringUtils.format("http://localhost:%d/", serverSocket.getLocalPort()))
           .setRequestTimeout(2000)
           .execute();
       System.out.println("created future in: " + (System.currentTimeMillis() - requestStart));
@@ -102,7 +103,7 @@ public class AsyncHttpClientTest
   {
     try {
       Future<?> future = client
-          .prepareGet(String.format("http://localhost:%d/", serverSocket.getLocalPort()))
+          .prepareGet(StringUtils.format("http://localhost:%d/", serverSocket.getLocalPort()))
           .setRequestTimeout(100)
           .execute();
       future.get();

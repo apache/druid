@@ -22,6 +22,7 @@ package io.druid.java.util.emitter.service;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.ImmutableMap;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.emitter.core.Event;
 import org.joda.time.DateTime;
 
@@ -49,7 +50,7 @@ public class UnitEvent implements Event
     this.value = value;
     this.dimensions = dimensions;
 
-    createdTime = new DateTime();
+    createdTime = DateTimes.nowUtc();
   }
 
   @Override
