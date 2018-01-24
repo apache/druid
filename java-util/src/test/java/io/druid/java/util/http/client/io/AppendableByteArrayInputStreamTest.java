@@ -73,7 +73,7 @@ public class AppendableByteArrayInputStreamTest
     for (int i = 0; i < expectedBytes.length; i++) {
       final int readByte = in.read();
       if (expectedBytes[i] != (byte) readByte) {
-        Assert.assertEquals(StringUtils.format("%s[%d", Arrays.toString(expectedBytes), i), expectedBytes[i], readByte);
+        Assert.assertEquals(StringUtils.format("%s[%d]", Arrays.toString(expectedBytes), i), expectedBytes[i], readByte);
       }
     }
   }
