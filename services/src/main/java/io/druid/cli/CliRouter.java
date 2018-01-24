@@ -26,7 +26,7 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
-import com.metamx.http.client.HttpClient;
+import io.druid.java.util.http.client.HttpClient;
 import io.airlift.airline.Command;
 import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.curator.discovery.ServerDiscoveryFactory;

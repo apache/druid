@@ -21,8 +21,8 @@ package io.druid.security.basic.authentication.db.cache;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.http.client.HttpClient;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.http.client.HttpClient;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.ManageLifecycle;

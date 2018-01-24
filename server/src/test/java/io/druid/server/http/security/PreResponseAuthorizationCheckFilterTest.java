@@ -20,8 +20,8 @@
 package io.druid.server.http.security;
 
 import com.google.common.collect.Lists;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.server.security.AllowAllAuthenticator;

@@ -21,7 +21,7 @@ package io.druid.emitter.graphite;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = WhiteListBasedConverter.class)

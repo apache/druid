@@ -21,7 +21,7 @@ package io.druid.query.search;
 
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.common.ISE;
 
 public class SearchStrategySelector

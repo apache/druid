@@ -24,7 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import com.metamx.http.client.response.FullResponseHolder;
+import io.druid.java.util.http.client.response.FullResponseHolder;
 import io.druid.discovery.DruidLeaderClient;
 import io.druid.indexer.TaskStatusPlus;
 import io.druid.java.util.common.DateTimes;

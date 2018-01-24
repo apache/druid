@@ -28,7 +28,7 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.guice.ManageLifecycle;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;

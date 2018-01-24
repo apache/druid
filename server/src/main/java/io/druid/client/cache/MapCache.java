@@ -22,7 +22,7 @@ package io.druid.client.cache;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;

@@ -21,8 +21,8 @@ package io.druid.security.kerberos;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Maps;
-import com.metamx.http.client.response.ClientResponse;
-import com.metamx.http.client.response.HttpResponseHandler;
+import io.druid.java.util.http.client.response.ClientResponse;
+import io.druid.java.util.http.client.response.HttpResponseHandler;
 import io.druid.java.util.common.logger.Logger;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
