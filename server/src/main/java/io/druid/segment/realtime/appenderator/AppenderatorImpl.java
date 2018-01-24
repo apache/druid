@@ -1033,7 +1033,7 @@ public class AppenderatorImpl implements Appenderator
           {
             if (sinks.get(identifier) != sink) {
               // Only abandon sink if it is the same one originally requested to be abandoned.
-              log.warn("Sink for segment[%s] no longer valid, not abandoning.");
+              log.warn("Sink for segment[%s] no longer valid, not abandoning.", identifier);
               return null;
             }
 

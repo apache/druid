@@ -197,7 +197,7 @@ public class WorkerTaskMonitor extends WorkerTaskManager
       workerCuratorCoordinator.removeTaskRunZnode(taskId);
     }
     catch (Exception ex) {
-      log.error(ex, "Unknown exception while deleting task[%s] znode.");
+      log.error(ex, "Unknown exception while deleting task[%s] znode.", taskId);
     }
   }
 

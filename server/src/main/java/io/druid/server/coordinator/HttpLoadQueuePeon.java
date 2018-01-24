@@ -272,7 +272,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
             {
               log.error(
                   t,
-                  "Request[%s] Failed with code[%s] and status[%s]. Reason[%s].",
+                  "Request[%s] Failed with status[%s]. Reason[%s].",
                   changeRequestURL,
                   responseHandler.status,
                   responseHandler.description

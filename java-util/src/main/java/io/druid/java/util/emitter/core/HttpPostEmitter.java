@@ -542,6 +542,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
       }
     }
 
+    @SuppressWarnings("ObjectEquality")
     private void emitLargeEvents()
     {
       if (largeEventsToEmit.isEmpty()) {
