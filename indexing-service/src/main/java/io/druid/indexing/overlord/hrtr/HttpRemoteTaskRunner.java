@@ -942,6 +942,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
             null,
             null,
             task,
+            task.getType(),
             HttpRemoteTaskRunnerWorkItem.State.PENDING
         );
         tasks.put(task.getId(), taskRunnerWorkItem);
@@ -1162,6 +1163,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                   worker,
                   TaskLocation.unknown(),
                   null,
+                  announcement.getTaskType(),
                   HttpRemoteTaskRunnerWorkItem.State.RUNNING
               );
               tasks.put(taskId, taskItem);
@@ -1337,11 +1339,13 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         Worker worker,
         TaskLocation location,
         @Nullable Task task,
+        String taskType,
         State state
     )
     {
-      super(taskId, task == null ? null : task.getType(), worker, location);
+      super(taskId, taskType, worker, location);
       this.state = Preconditions.checkNotNull(state);
+      Preconditions.checkArgument(task == null || taskType == null || taskType.equals(task.getType()));
 
       // It is possible to have it null when the TaskRunner is just started and discovered this taskId from a worker,
       // notifications don't contain whole Task instance but just metadata about the task.
@@ -1356,7 +1360,11 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     public void setTask(Task task)
     {
       this.task = task;
-      setTaskType(task.getType());
+      if (getTaskType() == null) {
+        setTaskType(task.getType());
+      } else {
+        Preconditions.checkArgument(getTaskType().equals(task.getType()));
+      }
     }
 
     public State getState()
