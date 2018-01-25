@@ -147,7 +147,15 @@ public class GroupByStrategyV1 implements GroupByStrategy
         true
     );
 
-    return Sequences.withBaggage(query.postProcess(GroupByQueryHelper.postAggregate(query, index)), index);
+    return Sequences.withBaggage(GroupByQueryHelper.postAggregate(query, index), index);
+  }
+
+  @Override
+  public Sequence<Row> applyPostProcessing(
+      Sequence<Row> results, GroupByQuery query
+  )
+  {
+    return query.postProcess(results);
   }
 
   @Override
@@ -253,6 +261,14 @@ public class GroupByStrategyV1 implements GroupByStrategy
         outerQuery.postProcess(GroupByQueryHelper.postAggregate(query, outerQueryResultIndex)),
         outerQueryResultIndex
     );
+  }
+
+  @Override
+  public Sequence<Row> processSubtotalsSpec(
+      GroupByQuery query, GroupByQueryResource resource, Sequence<Row> queryResult
+  )
+  {
+    throw new UnsupportedOperationException("subtotalsSpec is not supported for v1 groupBy strategy.");
   }
 
   @Override

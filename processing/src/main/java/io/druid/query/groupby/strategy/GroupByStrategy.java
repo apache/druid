@@ -73,11 +73,22 @@ public interface GroupByStrategy
       Map<String, Object> responseContext
   );
 
+  Sequence<Row> applyPostProcessing(
+      Sequence<Row> results,
+      GroupByQuery query
+  );
+
   Sequence<Row> processSubqueryResult(
       GroupByQuery subquery,
       GroupByQuery query,
       GroupByQueryResource resource,
       Sequence<Row> subqueryResult
+  );
+
+  Sequence<Row> processSubtotalsSpec(
+      GroupByQuery query,
+      GroupByQueryResource resource,
+      Sequence<Row> queryResult
   );
 
   QueryRunner<Row> mergeRunners(

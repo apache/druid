@@ -22,7 +22,9 @@ package io.druid.query.groupby.strategy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -38,6 +40,7 @@ import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.nary.BinaryFn;
@@ -54,6 +57,7 @@ import io.druid.query.QueryWatcher;
 import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.ResultMergeQueryRunner;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryHelper;
@@ -62,14 +66,18 @@ import io.druid.query.groupby.epinephelinae.GroupByBinaryFnV2;
 import io.druid.query.groupby.epinephelinae.GroupByMergingQueryRunnerV2;
 import io.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
 import io.druid.query.groupby.epinephelinae.GroupByRowProcessor;
+import io.druid.query.groupby.epinephelinae.Grouper;
 import io.druid.query.groupby.resource.GroupByQueryResource;
 import io.druid.segment.StorageAdapter;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import java.io.Closeable;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class GroupByStrategyV2 implements GroupByStrategy
 {
@@ -131,7 +139,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
   public GroupByQueryResource prepareResource(GroupByQuery query, boolean willMergeRunners)
   {
     if (!willMergeRunners) {
-      final int requiredMergeBufferNum = countRequiredMergeBufferNum(query, 1);
+      final int requiredMergeBufferNum = countRequiredMergeBufferNum(query, 1) +
+                                         (query.getSubtotalsSpec() != null ? 1 : 0);
 
       if (requiredMergeBufferNum > mergeBufferPool.maxSize()) {
         throw new ResourceLimitExceededException(
@@ -241,6 +250,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
         // Don't do "having" clause until the end of this method.
         null,
         query.getLimitSpec(),
+        query.getSubtotalsSpec(),
         query.getContext()
     ).withOverriddenContext(
         ImmutableMap.<String, Object>of(
@@ -253,7 +263,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
         )
     );
 
-    Sequence<Row> rowSequence = Sequences.map(
+    return Sequences.map(
         mergingQueryRunner.run(
             QueryPlus.wrap(newQuery),
             responseContext
@@ -289,12 +299,18 @@ public class GroupByStrategyV2 implements GroupByStrategy
           }
         }
     );
+  }
 
+  @Override
+  public Sequence<Row> applyPostProcessing(
+      Sequence<Row> results, GroupByQuery query
+  )
+  {
     // Don't apply limit here for inner results, that will be pushed down to the BufferHashGrouper
     if (query.getContextBoolean(CTX_KEY_OUTERMOST, true)) {
-      return query.postProcess(rowSequence);
+      return query.postProcess(results);
     } else {
-      return rowSequence;
+      return results;
     }
   }
 
@@ -306,24 +322,119 @@ public class GroupByStrategyV2 implements GroupByStrategy
       Sequence<Row> subqueryResult
   )
   {
-    final Sequence<Row> results = GroupByRowProcessor.process(
-        query,
-        subqueryResult,
-        GroupByQueryHelper.rowSignatureFor(subquery),
-        configSupplier.get(),
-        resource,
-        spillMapper,
-        processingConfig.getTmpDir(),
-        processingConfig.intermediateComputeSizeBytes()
-    );
-    return mergeResults(new QueryRunner<Row>()
-    {
-      @Override
-      public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
-      {
-        return results;
+    // This contains all closeable objects which are closed when the returned iterator iterates all the elements,
+    // or an exceptions is thrown. The objects are closed in their reverse order.
+    final List<Closeable> closeOnExit = Lists.newArrayList();
+
+    try {
+      Supplier<Grouper> grouperSupplier = Suppliers.memoize(
+          () -> GroupByRowProcessor.createGrouper(
+              query,
+              subqueryResult,
+              GroupByQueryHelper.rowSignatureFor(subquery),
+              configSupplier.get(),
+              resource,
+              spillMapper,
+              processingConfig.getTmpDir(),
+              processingConfig.intermediateComputeSizeBytes(),
+              closeOnExit
+          )
+      );
+
+      return Sequences.withBaggage(
+          mergeResults(new QueryRunner<Row>()
+          {
+            @Override
+            public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+            {
+              return GroupByRowProcessor.getRowsFromGrouper(
+                  query,
+                  null,
+                  grouperSupplier
+              );
+            }
+          }, query, null),
+          () -> Lists.reverse(closeOnExit).forEach(closeable -> CloseQuietly.close(closeable))
+      );
+    }
+    catch (Exception ex) {
+      Lists.reverse(closeOnExit).forEach(closeable -> CloseQuietly.close(closeable));
+      throw ex;
+    }
+  }
+
+  @Override
+  public Sequence<Row> processSubtotalsSpec(
+      GroupByQuery query,
+      GroupByQueryResource resource,
+      Sequence<Row> queryResult
+  )
+  {
+    // This contains all closeable objects which are closed when the returned iterator iterates all the elements,
+    // or an exceptions is thrown. The objects are closed in their reverse order.
+    final List<Closeable> closeOnExit = Lists.newArrayList();
+
+    try {
+      GroupByQuery queryWithoutSubtotalsSpec = query.withSubtotalsSpec(null);
+      List<List<String>> subtotals = query.getSubtotalsSpec();
+
+      Supplier<Grouper> grouperSupplier = Suppliers.memoize(
+          () -> GroupByRowProcessor.createGrouper(
+              queryWithoutSubtotalsSpec.withAggregatorSpecs(
+                  Lists.transform(queryWithoutSubtotalsSpec.getAggregatorSpecs(), (agg) -> agg.getCombiningFactory())
+              ).withDimensionSpecs(
+                  Lists.transform(
+                      queryWithoutSubtotalsSpec.getDimensions(),
+                      (dimSpec) -> new DefaultDimensionSpec(
+                          dimSpec.getOutputName(),
+                          dimSpec.getOutputName()
+                      )
+                  )
+              ),
+              queryResult,
+              GroupByQueryHelper.rowSignatureFor(queryWithoutSubtotalsSpec),
+              configSupplier.get(),
+              resource,
+              spillMapper,
+              processingConfig.getTmpDir(),
+              processingConfig.intermediateComputeSizeBytes(),
+              closeOnExit
+          )
+      );
+      List<Sequence<Row>> subtotalsResults = new ArrayList<>(subtotals.size());
+
+      for (List<String> subtotalSpec : subtotals) {
+        GroupByQuery subtotalQuery = queryWithoutSubtotalsSpec.withDimensionSpecs(
+            subtotalSpec.stream().map(s -> new DefaultDimensionSpec(s, s)).collect(Collectors.toList())
+        );
+
+        subtotalsResults.add(applyPostProcessing(
+            mergeResults(new QueryRunner<Row>()
+            {
+              @Override
+              public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+              {
+                return GroupByRowProcessor.getRowsFromGrouper(
+                    queryWithoutSubtotalsSpec,
+                    subtotalSpec,
+                    grouperSupplier
+                );
+              }
+            }, subtotalQuery, null),
+            subtotalQuery
+                             )
+        );
       }
-    }, query, null);
+
+      return Sequences.withBaggage(
+          Sequences.concat(subtotalsResults),
+          () -> Lists.reverse(closeOnExit).forEach(closeable -> CloseQuietly.close(closeable))
+      );
+    }
+    catch (Exception ex) {
+      Lists.reverse(closeOnExit).forEach(closeable -> CloseQuietly.close(closeable));
+      throw ex;
+    }
   }
 
   @Override
