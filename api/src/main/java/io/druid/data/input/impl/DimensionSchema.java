@@ -25,9 +25,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.emitter.EmittingLogger;
 
 import java.util.Objects;
 
@@ -49,6 +50,7 @@ public abstract class DimensionSchema
   public static final String FLOAT_TYPE_NAME = "float";
   public static final String SPATIAL_TYPE_NAME = "spatial";
   public static final String DOUBLE_TYPE_NAME = "double";
+  private static final EmittingLogger log = new EmittingLogger(DimensionSchema.class);
 
 
   // main druid and druid-api should really use the same ValueType enum.
@@ -123,7 +125,10 @@ public abstract class DimensionSchema
 
   protected DimensionSchema(String name, MultiValueHandling multiValueHandling)
   {
-    this.name = Preconditions.checkNotNull(name, "Dimension name cannot be null.");
+    if (Strings.isNullOrEmpty(name)) {
+      log.warn("Null or Empty Dimension found");
+    }
+    this.name = name;
     this.multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
   }
 
