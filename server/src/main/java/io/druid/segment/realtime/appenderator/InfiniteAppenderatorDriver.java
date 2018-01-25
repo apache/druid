@@ -380,7 +380,7 @@ public class InfiniteAppenderatorDriver extends AppenderatorDriver
     handoffNotifier.close();
   }
 
-  private class SegmentsForSequenceBuilder
+  private static class SegmentsForSequenceBuilder
   {
     private final NavigableMap<Long, LinkedList<SegmentWithState>> intervalToSegmentStates;
     private final String lastSegmentId;
