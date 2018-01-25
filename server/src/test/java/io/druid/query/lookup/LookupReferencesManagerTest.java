@@ -156,7 +156,7 @@ public class LookupReferencesManagerTest
   {
     LookupExtractorFactory lookupExtractorFactory = EasyMock.createMock(LookupExtractorFactory.class);
     EasyMock.expect(lookupExtractorFactory.start()).andReturn(true).once();
-    EasyMock.expect(lookupExtractorFactory.close()).andReturn(true).once();
+    EasyMock.expect(lookupExtractorFactory.destroy()).andReturn(true).once();
     EasyMock.replay(lookupExtractorFactory);
 
     Map<String, Object> lookupMap = new HashMap<>();
@@ -221,15 +221,15 @@ public class LookupReferencesManagerTest
   }
 
   @Test
-  public void testCloseIsCalledAfterRemove() throws Exception
+  public void testDestroyIsCalledAfterRemove() throws Exception
   {
     LookupExtractorFactory lookupExtractorFactory = EasyMock.createStrictMock(LookupExtractorFactory.class);
     EasyMock.expect(lookupExtractorFactory.start()).andReturn(true).once();
-    EasyMock.expect(lookupExtractorFactory.close()).andReturn(true).once();
+    EasyMock.expect(lookupExtractorFactory.destroy()).andReturn(true).once();
     EasyMock.replay(lookupExtractorFactory);
 
     Map<String, Object> lookupMap = new HashMap<>();
-    lookupMap.put("testMockForCloseIsCalledAfterRemove", container);
+    lookupMap.put("testMockForDestroyIsCalledAfterRemove", container);
     String strResult = mapper.writeValueAsString(lookupMap);
     Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     expect(config.getLookupTier()).andReturn(LOOKUP_TIER);
@@ -280,7 +280,7 @@ public class LookupReferencesManagerTest
   {
     LookupExtractorFactory lookupExtractorFactory1 = EasyMock.createNiceMock(LookupExtractorFactory.class);
     EasyMock.expect(lookupExtractorFactory1.start()).andReturn(true).once();
-    EasyMock.expect(lookupExtractorFactory1.close()).andReturn(true).once();
+    EasyMock.expect(lookupExtractorFactory1.destroy()).andReturn(true).once();
 
     LookupExtractorFactory lookupExtractorFactory2 = EasyMock.createNiceMock(LookupExtractorFactory.class);
     EasyMock.expect(lookupExtractorFactory2.start()).andReturn(true).once();
@@ -461,7 +461,7 @@ public class LookupReferencesManagerTest
 
     LookupExtractorFactory lookupExtractorFactory = EasyMock.createMock(LookupExtractorFactory.class);
     EasyMock.expect(lookupExtractorFactory.start()).andReturn(true).once();
-    EasyMock.expect(lookupExtractorFactory.close()).andReturn(true).once();
+    EasyMock.expect(lookupExtractorFactory.destroy()).andReturn(true).once();
     EasyMock.replay(lookupExtractorFactory);
     Assert.assertNull(lookupReferencesManager.get("test"));
 
