@@ -56,7 +56,7 @@ public class HadoopFsWrapper
       // Note: Using reflection instead of simpler
       // fs.rename(from, to, replaceExisting ? Options.Rename.OVERWRITE : Options.Rename.NONE);
       // due to the issues discussed in https://github.com/druid-io/druid/pull/3787
-      Method renameMethod = fs.getClass().getMethod("rename", Path.class, Path.class, Options.Rename[].class);
+      Method renameMethod = findRenameMethodRecursively(fs.getClass());
       renameMethod.invoke(fs, from, to, new Options.Rename[]{Options.Rename.NONE});
       return true;
     }
@@ -69,7 +69,33 @@ public class HadoopFsWrapper
       }
     }
     catch (NoSuchMethodException | IllegalAccessException ex) {
+
+      for (Method method : fs.getClass().getDeclaredMethods()) {
+        log.error(method.toGenericString());
+      }
       throw Throwables.propagate(ex);
+    }
+  }
+
+  /**
+   * Finds "rename" method recursively through the FileSystem class hierarchy. This is required because
+   * clazz.getMethod(..) only returns PUBLIC methods in clazz hierarchy.
+   * and clazz.getDeclaredMethod(..) only returns all methods declared in clazz but not inherited ones.
+   */
+  private static Method findRenameMethodRecursively(Class<?> clazz) throws NoSuchMethodException
+  {
+    try {
+      Method renameMethod = clazz.getDeclaredMethod("rename", Path.class, Path.class, Options.Rename[].class);
+      renameMethod.setAccessible(true);
+      return renameMethod;
+    }
+    catch (NoSuchMethodException ex) {
+      Class<?> superClazz = clazz.getSuperclass();
+      if (superClazz == null) {
+        throw ex;
+      } else {
+        return findRenameMethodRecursively(superClazz);
+      }
     }
   }
 }
