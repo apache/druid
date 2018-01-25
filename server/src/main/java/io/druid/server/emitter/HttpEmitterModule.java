@@ -21,16 +21,16 @@ package io.druid.server.emitter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Named;
-import com.google.inject.util.Providers;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.emitter.core.Emitter;
 import io.druid.java.util.emitter.core.HttpEmitterConfig;
 import io.druid.java.util.emitter.core.HttpPostEmitter;
 import io.druid.guice.JsonConfigProvider;
-import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.Lifecycle;
@@ -43,31 +43,26 @@ import org.asynchttpclient.DefaultAsyncHttpClientConfig;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
 
 /**
  */
 public class HttpEmitterModule implements Module
 {
+  private static final Logger log = new Logger(HttpEmitterModule.class);
+
   @Override
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, "druid.emitter.http", HttpEmitterConfig.class);
-
-    configureSsl(binder);
-  }
-
-  static void configureSsl(Binder binder)
-  {
-    final SSLContext context;
-    try {
-      context = SSLContext.getDefault();
-    }
-    catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException(e);
-    }
-
-    binder.bind(SSLContext.class).toProvider(Providers.of(context)).in(LazySingleton.class);
+    JsonConfigProvider.bind(binder, "druid.emitter.http.ssl", HttpEmitterSSLClientConfig.class);
   }
 
   static AsyncHttpClient createAsyncHttpClient(
@@ -90,6 +85,7 @@ public class HttpEmitterModule implements Module
   @Named("http")
   public Emitter getEmitter(
       Supplier<HttpEmitterConfig> config,
+      Supplier<HttpEmitterSSLClientConfig> sslConfig,
       @Nullable SSLContext sslContext,
       Lifecycle lifecycle,
       ObjectMapper jsonMapper
@@ -101,10 +97,53 @@ public class HttpEmitterModule implements Module
             createAsyncHttpClient(
                 "HttpPostEmitter-AsyncHttpClient-%d",
                 "HttpPostEmitter-AsyncHttpClient-Timer-%d",
-                sslContext
+                getEffectiveSSLContext(sslConfig.get(), sslContext)
             )
         ),
         jsonMapper
     );
+  }
+
+  public static SSLContext getEffectiveSSLContext(HttpEmitterSSLClientConfig sslConfig, SSLContext sslContext)
+  {
+    SSLContext effectiveSSLContext;
+    if (sslConfig.isUseDefaultJavaContext()) {
+      try {
+        effectiveSSLContext = SSLContext.getDefault();
+      }
+      catch (NoSuchAlgorithmException nsae) {
+        throw new RuntimeException(nsae);
+      }
+    } else if (sslConfig.getTrustStorePath() != null) {
+      log.info("Creating SSLContext for HttpEmitter client using config [%s]", sslConfig);
+      effectiveSSLContext = getSSLContextFromConfig(sslConfig);
+    } else {
+      effectiveSSLContext = sslContext;
+    }
+    return effectiveSSLContext;
+  }
+
+  public static SSLContext getSSLContextFromConfig(HttpEmitterSSLClientConfig config)
+  {
+    SSLContext sslContext = null;
+    try {
+      sslContext = SSLContext.getInstance(config.getProtocol() == null ? "TLSv1.2" : config.getProtocol());
+      KeyStore keyStore = KeyStore.getInstance(config.getTrustStoreType() == null
+                                               ? KeyStore.getDefaultType()
+                                               : config.getTrustStoreType());
+      keyStore.load(
+          new FileInputStream(config.getTrustStorePath()),
+          config.getTrustStorePasswordProvider().getPassword().toCharArray()
+      );
+      TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(config.getTrustStoreAlgorithm() == null
+                                                                                ? TrustManagerFactory.getDefaultAlgorithm()
+                                                                                : config.getTrustStoreAlgorithm());
+      trustManagerFactory.init(keyStore);
+      sslContext.init(null, trustManagerFactory.getTrustManagers(), null);
+    }
+    catch (CertificateException | KeyManagementException | IOException | KeyStoreException | NoSuchAlgorithmException e) {
+      Throwables.propagate(e);
+    }
+    return sslContext;
   }
 }
