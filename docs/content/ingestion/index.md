@@ -156,7 +156,8 @@ Use this with the String Parser to load CSV. Strings are parsed using the net.sf
 | multiValueDelimiter | JSON Object | A custom delimiter for multi-value dimensions. | no (default == null) |
 | columns | JSON array | Specifies the columns of the data. | yes |
 
-The `listDelimiter` and `multiValueDelimiter` are both used to split the dimension value. (detail->[multi-value-dimension](../querying/multi-value-dimensions.md))
+The `listDelimiter` and `multiValueDelimiter` are both used to split the dimension value. 
+See [this page](../../querying/multi-value-dimensions.md) for more information about the difference between those options.
 
 #### TSV / Delimited ParseSpec
 
@@ -173,7 +174,8 @@ the delimiter is a tab, so this will load TSV.
 | multiValueDelimiter | JSON Object | A custom delimiter for multi-value dimensions. | no (default == null) |
 | columns | JSON String array | Specifies the columns of the data. | yes |
 
-The `listDelimiter` and `multiValueDelimiter` are both used to split the dimension value. (detail->[multi-value-dimension](../querying/multi-value-dimensions.md))
+The `listDelimiter` and `multiValueDelimiter` are both used to split the dimension value. 
+See [this page](../../querying/multi-value-dimensions.md) for more information about the difference between those options.
 
 #### TimeAndDims ParseSpec
 

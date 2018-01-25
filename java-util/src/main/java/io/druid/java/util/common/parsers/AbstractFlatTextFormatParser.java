@@ -166,13 +166,9 @@ public abstract class AbstractFlatTextFormatParser implements Parser<String, Obj
   private Map<String, Object> computeKeyValues(List<String> fieldNames, List<String> values)
   {
     Map<String, Object> retVal = new LinkedHashMap<>();
-
-    Iterator<String> keysIter = fieldNames.iterator();
     Iterator<String> valsIter = values.iterator();
 
-    while (keysIter.hasNext()) {
-      final String key = keysIter.next();
-
+    for (String key : fieldNames) {
       if (valsIter.hasNext()) {
         Object splitedValue = spliteValue(key, valsIter.next());
         retVal.put(key, splitedValue);
@@ -187,7 +183,7 @@ public abstract class AbstractFlatTextFormatParser implements Parser<String, Obj
   {
     String deli = null;
     if (this.multiValueDelimiter == null) {
-      deli = AbstractFlatTextFormatParser.this.listDelimiter;
+      deli = this.listDelimiter;
     } else if (this.multiValueDelimiter.get(key) != null) {
       deli = this.multiValueDelimiter.get(key);
     }
