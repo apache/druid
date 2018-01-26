@@ -30,17 +30,7 @@ public class BaseHttpEmittingConfig
 
   /** ensure the event buffers don't use more than 10% of memory by default */
   public static final int DEFAULT_BATCH_QUEUE_SIZE_LIMIT = 50;
-  public static final int DEFAULT_MAX_BATCH_SIZE;
-  static {
-    long memoryLimit = Runtime.getRuntime().maxMemory() / 10;
-    long batchSize = 5 * 1024 * 1024;
-
-    if (batchSize * DEFAULT_BATCH_QUEUE_SIZE_LIMIT > memoryLimit) {
-      batchSize = memoryLimit / DEFAULT_BATCH_QUEUE_SIZE_LIMIT;
-    }
-
-    DEFAULT_MAX_BATCH_SIZE = (int) batchSize;
-  }
+  public static final int DEFAULT_MAX_BATCH_SIZE = (int) getDefaultMaxBatchSize(Runtime.getRuntime().maxMemory());
 
   /**
    * Do not time out in case flushTimeOut is not set
@@ -54,6 +44,18 @@ public class BaseHttpEmittingConfig
    * The default value effective doesn't set the min timeout
    */
   public static final int DEFAULT_MIN_HTTP_TIMEOUT_MILLIS = 0;
+
+  public static long getDefaultMaxBatchSize(long maxMemory)
+  {
+    long memoryLimit = maxMemory / 10;
+    long batchSize = 5 * 1024 * 1024;
+
+    if (batchSize * DEFAULT_BATCH_QUEUE_SIZE_LIMIT > memoryLimit) {
+      batchSize = memoryLimit / DEFAULT_BATCH_QUEUE_SIZE_LIMIT;
+    }
+
+    return batchSize;
+  }
 
   @Min(1)
   @JsonProperty

@@ -44,7 +44,10 @@ public class HttpEmitterConfigTest
     Assert.assertEquals("http://example.com/", config.getRecipientBaseUrl());
     Assert.assertEquals(null, config.getBasicAuthentication());
     Assert.assertEquals(BatchingStrategy.ARRAY, config.getBatchingStrategy());
-    Assert.assertEquals(5 * 1024 * 1024, config.getMaxBatchSize());
+    Assert.assertEquals(
+        BaseHttpEmittingConfig.getDefaultMaxBatchSize(Runtime.getRuntime().maxMemory()),
+        config.getMaxBatchSize()
+    );
     Assert.assertEquals(Long.MAX_VALUE, config.getFlushTimeOut());
     Assert.assertEquals(50, config.getBatchQueueSizeLimit());
     Assert.assertEquals(2.0f, config.getHttpTimeoutAllowanceFactor(), 0.0f);
@@ -65,7 +68,10 @@ public class HttpEmitterConfigTest
     Assert.assertEquals("http://example.com/", config.getRecipientBaseUrl());
     Assert.assertEquals(null, config.getBasicAuthentication());
     Assert.assertEquals(BatchingStrategy.ARRAY, config.getBatchingStrategy());
-    Assert.assertEquals(5 * 1024 * 1024, config.getMaxBatchSize());
+    Assert.assertEquals(
+        BaseHttpEmittingConfig.getDefaultMaxBatchSize(Runtime.getRuntime().maxMemory()),
+        config.getMaxBatchSize()
+    );
     Assert.assertEquals(Long.MAX_VALUE, config.getFlushTimeOut());
     Assert.assertEquals(50, config.getBatchQueueSizeLimit());
     Assert.assertEquals(2.0f, config.getHttpTimeoutAllowanceFactor(), 0.0f);

@@ -41,7 +41,10 @@ public class ParametrizedUriEmitterConfigTest
     Assert.assertEquals("http://example.com/topic", config.getRecipientBaseUrl());
     Assert.assertEquals(null, config.getBasicAuthentication());
     Assert.assertEquals(BatchingStrategy.ARRAY, config.getBatchingStrategy());
-    Assert.assertEquals(5 * 1024 * 1024, config.getMaxBatchSize());
+    Assert.assertEquals(
+        BaseHttpEmittingConfig.getDefaultMaxBatchSize(Runtime.getRuntime().maxMemory()),
+        config.getMaxBatchSize()
+    );
     Assert.assertEquals(Long.MAX_VALUE, config.getFlushTimeOut());
   }
 
