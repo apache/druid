@@ -20,6 +20,7 @@
 package io.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.java.util.common.Pair;
 
 import javax.validation.constraints.Min;
 
@@ -29,8 +30,13 @@ public class BaseHttpEmittingConfig
   public static final int DEFAULT_FLUSH_COUNTS = 500;
 
   /** ensure the event buffers don't use more than 10% of memory by default */
-  public static final int DEFAULT_BATCH_QUEUE_SIZE_LIMIT = 50;
-  public static final int DEFAULT_MAX_BATCH_SIZE = (int) getDefaultMaxBatchSize(Runtime.getRuntime().maxMemory());
+  public static final int DEFAULT_MAX_BATCH_SIZE;
+  public static final int DEFAULT_BATCH_QUEUE_SIZE_LIMIT;
+  static {
+    Pair<Integer, Integer> batchConfigPair = getDefaultBatchSizeAndLimit(Runtime.getRuntime().maxMemory());
+    DEFAULT_MAX_BATCH_SIZE = batchConfigPair.lhs;
+    DEFAULT_BATCH_QUEUE_SIZE_LIMIT = batchConfigPair.rhs;
+  }
 
   /**
    * Do not time out in case flushTimeOut is not set
@@ -45,16 +51,23 @@ public class BaseHttpEmittingConfig
    */
   public static final int DEFAULT_MIN_HTTP_TIMEOUT_MILLIS = 0;
 
-  public static long getDefaultMaxBatchSize(long maxMemory)
+  public static Pair<Integer, Integer> getDefaultBatchSizeAndLimit(long maxMemory)
   {
     long memoryLimit = maxMemory / 10;
     long batchSize = 5 * 1024 * 1024;
+    long queueLimit = 50;
 
-    if (batchSize * DEFAULT_BATCH_QUEUE_SIZE_LIMIT > memoryLimit) {
-      batchSize = memoryLimit / DEFAULT_BATCH_QUEUE_SIZE_LIMIT;
+    if (batchSize * queueLimit > memoryLimit) {
+      queueLimit = memoryLimit / batchSize;
     }
 
-    return batchSize;
+    // make room for at least two queue items
+    if (queueLimit < 2) {
+      queueLimit = 2;
+      batchSize = memoryLimit / queueLimit;
+    }
+
+    return new Pair<>((int) batchSize, (int) queueLimit);
   }
 
   @Min(1)
