@@ -218,7 +218,6 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
       while ((line = reader.readLine()) != null) {
         if (i == 15) { // for the 15th line, use a time before the window
           dt = dt.minusMinutes(10);
-          dtFirst = dt;
         } else if (i == 16) { // remember this time to use in the expected response from the groupBy query
           dtGroupBy = dt;
         } else if (i == 18) { // use a time 6 seconds ago so it will be out of order

@@ -23,10 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -58,15 +56,15 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
+import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
-import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import io.druid.indexing.overlord.SegmentPublishResult;
 import io.druid.indexing.overlord.TaskLockbox;
 import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.supervisor.SupervisorManager;
 import io.druid.indexing.test.TestDataSegmentAnnouncer;
 import io.druid.indexing.test.TestDataSegmentKiller;
 import io.druid.indexing.test.TestDataSegmentPusher;
-import io.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
@@ -79,6 +77,8 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.metadata.EntryExistsException;
+import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
+import io.druid.metadata.TestDerbyConnector;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.Druids;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
@@ -119,6 +119,9 @@ import io.druid.server.DruidNode;
 import io.druid.server.coordination.DataSegmentServerAnnouncer;
 import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
+import io.druid.timeline.partition.LinearShardSpec;
+import io.druid.timeline.partition.NumberedShardSpec;
+import org.apache.commons.io.FileUtils;
 import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
@@ -137,17 +140,23 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 
-public class RealtimeIndexTaskTest
+public class AppenderatorDriverRealtimeIndexTaskTest
 {
-  private static final Logger log = new Logger(RealtimeIndexTaskTest.class);
+  private static final Logger log = new Logger(AppenderatorDriverRealtimeIndexTaskTest.class);
   private static final ServiceEmitter emitter = new ServiceEmitter(
       "service",
       "host",
@@ -228,7 +237,7 @@ public class RealtimeIndexTaskTest
 
     @Override
     @SuppressWarnings("unchecked")
-    public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException, ParseException
+    public Firehose connect(InputRowParser parser, File temporaryDirectory) throws ParseException
     {
       return new TestFirehose(parser);
     }
@@ -240,9 +249,15 @@ public class RealtimeIndexTaskTest
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
+  @Rule
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+
   private DateTime now;
   private ListeningExecutorService taskExec;
   private Map<SegmentDescriptor, Pair<Executor, Runnable>> handOffCallbacks;
+  private Collection<DataSegment> publishedSegments;
+  private CountDownLatch segmentLatch;
+  private CountDownLatch handoffLatch;
 
   @Before
   public void setUp()
@@ -251,6 +266,12 @@ public class RealtimeIndexTaskTest
     emitter.start();
     taskExec = MoreExecutors.listeningDecorator(Execs.singleThreaded("realtime-index-task-test-%d"));
     now = DateTimes.nowUtc();
+
+    TestDerbyConnector derbyConnector = derbyConnectorRule.getConnector();
+    derbyConnector.createDataSourceTable();
+    derbyConnector.createTaskTables();
+    derbyConnector.createSegmentTable();
+    derbyConnector.createPendingSegmentsTable();
   }
 
   @After
@@ -259,19 +280,10 @@ public class RealtimeIndexTaskTest
     taskExec.shutdownNow();
   }
 
-  @Test
-  public void testMakeTaskId() throws Exception
-  {
-    Assert.assertEquals(
-        "index_realtime_test_0_2015-01-02T00:00:00.000Z_abcdefgh",
-        RealtimeIndexTask.makeTaskId("test", 0, DateTimes.of("2015-01-02"), 0x76543210)
-    );
-  }
-
   @Test(timeout = 60_000L)
   public void testDefaultResource() throws Exception
   {
-    final RealtimeIndexTask task = makeRealtimeTask(null);
+    final AppenderatorDriverRealtimeIndexTask task = makeRealtimeTask(null);
     Assert.assertEquals(task.getId(), task.getTaskResource().getAvailabilityGroup());
   }
 
@@ -279,9 +291,9 @@ public class RealtimeIndexTaskTest
   @Test(timeout = 60_000L, expected = ExecutionException.class)
   public void testHandoffTimeout() throws Exception
   {
-    final TestIndexerMetadataStorageCoordinator mdc = new TestIndexerMetadataStorageCoordinator();
-    final RealtimeIndexTask task = makeRealtimeTask(null, TransformSpec.NONE, true, 100L);
-    final TaskToolbox taskToolbox = makeToolbox(task, mdc, tempFolder.newFolder());
+    expectPublishedSegments(1);
+    final AppenderatorDriverRealtimeIndexTask task = makeRealtimeTask(null, TransformSpec.NONE, true, 100L);
+    final TaskToolbox taskToolbox = makeToolbox(task, tempFolder.newFolder());
     final ListenableFuture<TaskStatus> statusFuture = runTask(task, taskToolbox);
 
     // Wait for firehose to show up, it starts off null.
@@ -300,14 +312,10 @@ public class RealtimeIndexTaskTest
     // Stop the firehose, this will drain out existing events.
     firehose.close();
 
-    // Wait for publish.
-    while (mdc.getPublished().isEmpty()) {
-      Thread.sleep(50);
-    }
+    Collection<DataSegment> publishedSegments = awaitSegments();
 
     Assert.assertEquals(1, task.getMetrics().processed());
-    Assert.assertNotNull(Iterables.getOnlyElement(mdc.getPublished()));
-
+    Assert.assertNotNull(Iterables.getOnlyElement(publishedSegments));
 
     // handoff would timeout, resulting in exception
     statusFuture.get();
@@ -316,11 +324,10 @@ public class RealtimeIndexTaskTest
   @Test(timeout = 60_000L)
   public void testBasics() throws Exception
   {
-    final TestIndexerMetadataStorageCoordinator mdc = new TestIndexerMetadataStorageCoordinator();
-    final RealtimeIndexTask task = makeRealtimeTask(null);
-    final TaskToolbox taskToolbox = makeToolbox(task, mdc, tempFolder.newFolder());
+    expectPublishedSegments(1);
+    final AppenderatorDriverRealtimeIndexTask task = makeRealtimeTask(null);
+    final TaskToolbox taskToolbox = makeToolbox(task, tempFolder.newFolder());
     final ListenableFuture<TaskStatus> statusFuture = runTask(task, taskToolbox);
-    final DataSegment publishedSegment;
 
     // Wait for firehose to show up, it starts off null.
     while (task.getFirehose() == null) {
@@ -332,7 +339,6 @@ public class RealtimeIndexTaskTest
     firehose.addRows(
         ImmutableList.of(
             ImmutableMap.of("t", now.getMillis(), "dim1", "foo", "met1", "1"),
-            ImmutableMap.of("t", now.minus(new Period("P1D")).getMillis(), "dim1", "foo", "met1", 2.0),
             ImmutableMap.of("t", now.getMillis(), "dim2", "bar", "met1", 2.0)
         )
     );
@@ -341,32 +347,168 @@ public class RealtimeIndexTaskTest
     firehose.close();
 
     // Wait for publish.
-    while (mdc.getPublished().isEmpty()) {
-      Thread.sleep(50);
-    }
-
-    publishedSegment = Iterables.getOnlyElement(mdc.getPublished());
+    Collection<DataSegment> publishedSegments = awaitSegments();
 
     // Check metrics.
     Assert.assertEquals(2, task.getMetrics().processed());
-    Assert.assertEquals(1, task.getMetrics().thrownAway());
+    Assert.assertEquals(0, task.getMetrics().thrownAway());
     Assert.assertEquals(0, task.getMetrics().unparseable());
 
     // Do some queries.
     Assert.assertEquals(2, sumMetric(task, null, "rows"));
     Assert.assertEquals(3, sumMetric(task, null, "met1"));
 
-    // Simulate handoff.
-    for (Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>> entry : handOffCallbacks.entrySet()) {
-      final Pair<Executor, Runnable> executorRunnablePair = entry.getValue();
-      Assert.assertEquals(
-          new SegmentDescriptor(
-              publishedSegment.getInterval(),
-              publishedSegment.getVersion(),
-              publishedSegment.getShardSpec().getPartitionNum()
-          ),
-          entry.getKey()
+    awaitHandoffs();
+
+    for (DataSegment publishedSegment : publishedSegments) {
+      Optional<Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>>> optional = handOffCallbacks.entrySet().stream()
+                                                                                                  .filter(e -> e.getKey().equals(new SegmentDescriptor(
+                                                                                                      publishedSegment.getInterval(),
+                                                                                                      publishedSegment.getVersion(),
+                                                                                                      publishedSegment.getShardSpec().getPartitionNum()
+                                                                                                  )))
+                                                                                                  .findFirst();
+
+      Assert.assertTrue(
+          publishedSegment + " missing from handoff callbacks: " + handOffCallbacks,
+          optional.isPresent()
       );
+      Pair<Executor, Runnable> executorRunnablePair = optional.get().getValue();
+
+      // Simulate handoff.
+      executorRunnablePair.lhs.execute(executorRunnablePair.rhs);
+    }
+    handOffCallbacks.clear();
+
+    // Wait for the task to finish.
+    final TaskStatus taskStatus = statusFuture.get();
+    Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
+  }
+
+  @Test(timeout = 60_000L)
+  public void testLateData() throws Exception
+  {
+    expectPublishedSegments(1);
+    final AppenderatorDriverRealtimeIndexTask task = makeRealtimeTask(null);
+    final TaskToolbox taskToolbox = makeToolbox(task, tempFolder.newFolder());
+    final ListenableFuture<TaskStatus> statusFuture = runTask(task, taskToolbox);
+
+    // Wait for firehose to show up, it starts off null.
+    while (task.getFirehose() == null) {
+      Thread.sleep(50);
+    }
+
+    final TestFirehose firehose = (TestFirehose) task.getFirehose();
+
+    firehose.addRows(
+        ImmutableList.of(
+            ImmutableMap.of("t", now.getMillis(), "dim1", "foo", "met1", "1"),
+            // Data is from 2 days ago, should still be processed
+            ImmutableMap.of("t", now.minus(new Period("P2D")).getMillis(), "dim2", "bar", "met1", 2.0)
+        )
+    );
+
+    // Stop the firehose, this will drain out existing events.
+    firehose.close();
+
+    // Wait for publish.
+    Collection<DataSegment> publishedSegments = awaitSegments();
+
+    // Check metrics.
+    Assert.assertEquals(2, task.getMetrics().processed());
+    Assert.assertEquals(0, task.getMetrics().thrownAway());
+    Assert.assertEquals(0, task.getMetrics().unparseable());
+
+    // Do some queries.
+    Assert.assertEquals(2, sumMetric(task, null, "rows"));
+    Assert.assertEquals(3, sumMetric(task, null, "met1"));
+
+    awaitHandoffs();
+
+    for (DataSegment publishedSegment : publishedSegments) {
+      Optional<Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>>> optional = handOffCallbacks.entrySet().stream()
+                                                                                                  .filter(e -> e.getKey().equals(new SegmentDescriptor(
+                                                                                                      publishedSegment.getInterval(),
+                                                                                                      publishedSegment.getVersion(),
+                                                                                                      publishedSegment.getShardSpec().getPartitionNum()
+                                                                                                  )))
+                                                                                                  .findFirst();
+
+      Assert.assertTrue(
+          publishedSegment + " missing from handoff callbacks: " + handOffCallbacks,
+          optional.isPresent()
+      );
+      Pair<Executor, Runnable> executorRunnablePair = optional.get().getValue();
+
+      // Simulate handoff.
+      executorRunnablePair.lhs.execute(executorRunnablePair.rhs);
+    }
+    handOffCallbacks.clear();
+
+    // Wait for the task to finish.
+    final TaskStatus taskStatus = statusFuture.get();
+    Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
+  }
+
+  @Test(timeout = 60_000L)
+  public void testMaxRowsPerSegment() throws Exception
+  {
+    // Expect 2 segments as we will hit maxRowsPerSegment
+    expectPublishedSegments(2);
+
+    final AppenderatorDriverRealtimeIndexTask task = makeRealtimeTask(null);
+    final TaskToolbox taskToolbox = makeToolbox(task, tempFolder.newFolder());
+    final ListenableFuture<TaskStatus> statusFuture = runTask(task, taskToolbox);
+
+    // Wait for firehose to show up, it starts off null.
+    while (task.getFirehose() == null) {
+      Thread.sleep(50);
+    }
+
+    final TestFirehose firehose = (TestFirehose) task.getFirehose();
+
+    // maxRowsPerSegment is 1000 as configured in #makeRealtimeTask
+    for (int i = 0; i < 2000; i++) {
+      firehose.addRows(
+          ImmutableList.of(
+              ImmutableMap.of("t", now.getMillis(), "dim1", "foo-" + i, "met1", "1")
+          )
+      );
+    }
+
+    // Stop the firehose, this will drain out existing events.
+    firehose.close();
+
+    // Wait for publish.
+    Collection<DataSegment> publishedSegments = awaitSegments();
+
+    // Check metrics.
+    Assert.assertEquals(2000, task.getMetrics().processed());
+    Assert.assertEquals(0, task.getMetrics().thrownAway());
+    Assert.assertEquals(0, task.getMetrics().unparseable());
+
+    // Do some queries.
+    Assert.assertEquals(2000, sumMetric(task, null, "rows"));
+    Assert.assertEquals(2000, sumMetric(task, null, "met1"));
+
+    awaitHandoffs();
+
+    for (DataSegment publishedSegment : publishedSegments) {
+      Optional<Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>>> optional = handOffCallbacks.entrySet().stream()
+                                                                                                  .filter(e -> e.getKey().equals(new SegmentDescriptor(
+                                                                                                      publishedSegment.getInterval(),
+                                                                                                      publishedSegment.getVersion(),
+                                                                                                      publishedSegment.getShardSpec().getPartitionNum()
+                                                                                                  )))
+                                                                                                  .findFirst();
+
+      Assert.assertTrue(
+          publishedSegment + " missing from handoff callbacks: " + handOffCallbacks,
+          optional.isPresent()
+      );
+      Pair<Executor, Runnable> executorRunnablePair = optional.get().getValue();
+
+      // Simulate handoff.
       executorRunnablePair.lhs.execute(executorRunnablePair.rhs);
     }
     handOffCallbacks.clear();
@@ -379,17 +521,17 @@ public class RealtimeIndexTaskTest
   @Test(timeout = 60_000L)
   public void testTransformSpec() throws Exception
   {
-    final TestIndexerMetadataStorageCoordinator mdc = new TestIndexerMetadataStorageCoordinator();
+    expectPublishedSegments(2);
+
     final TransformSpec transformSpec = new TransformSpec(
         new SelectorDimFilter("dim1", "foo", null),
         ImmutableList.of(
             new ExpressionTransform("dim1t", "concat(dim1,dim1)", ExprMacroTable.nil())
         )
     );
-    final RealtimeIndexTask task = makeRealtimeTask(null, transformSpec, true, 0);
-    final TaskToolbox taskToolbox = makeToolbox(task, mdc, tempFolder.newFolder());
+    final AppenderatorDriverRealtimeIndexTask task = makeRealtimeTask(null, transformSpec, true, 0);
+    final TaskToolbox taskToolbox = makeToolbox(task, tempFolder.newFolder());
     final ListenableFuture<TaskStatus> statusFuture = runTask(task, taskToolbox);
-    final DataSegment publishedSegment;
 
     // Wait for firehose to show up, it starts off null.
     while (task.getFirehose() == null) {
@@ -409,35 +551,37 @@ public class RealtimeIndexTaskTest
     // Stop the firehose, this will drain out existing events.
     firehose.close();
 
-    // Wait for publish.
-    while (mdc.getPublished().isEmpty()) {
-      Thread.sleep(50);
-    }
-
-    publishedSegment = Iterables.getOnlyElement(mdc.getPublished());
+    Collection<DataSegment> publishedSegments = awaitSegments();
 
     // Check metrics.
-    Assert.assertEquals(1, task.getMetrics().processed());
-    Assert.assertEquals(2, task.getMetrics().thrownAway());
+    Assert.assertEquals(2, task.getMetrics().processed());
+    Assert.assertEquals(1, task.getMetrics().thrownAway());
     Assert.assertEquals(0, task.getMetrics().unparseable());
 
     // Do some queries.
-    Assert.assertEquals(1, sumMetric(task, null, "rows"));
-    Assert.assertEquals(1, sumMetric(task, new SelectorDimFilter("dim1t", "foofoo", null), "rows"));
+    Assert.assertEquals(2, sumMetric(task, null, "rows"));
+    Assert.assertEquals(2, sumMetric(task, new SelectorDimFilter("dim1t", "foofoo", null), "rows"));
     Assert.assertEquals(0, sumMetric(task, new SelectorDimFilter("dim1t", "barbar", null), "rows"));
-    Assert.assertEquals(1, sumMetric(task, null, "met1"));
+    Assert.assertEquals(3, sumMetric(task, null, "met1"));
 
-    // Simulate handoff.
-    for (Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>> entry : handOffCallbacks.entrySet()) {
-      final Pair<Executor, Runnable> executorRunnablePair = entry.getValue();
-      Assert.assertEquals(
-          new SegmentDescriptor(
-              publishedSegment.getInterval(),
-              publishedSegment.getVersion(),
-              publishedSegment.getShardSpec().getPartitionNum()
-          ),
-          entry.getKey()
+    awaitHandoffs();
+
+    for (DataSegment publishedSegment : publishedSegments) {
+      Optional<Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>>> optional = handOffCallbacks.entrySet().stream()
+                                                                                                  .filter(e -> e.getKey().equals(new SegmentDescriptor(
+                                                                                                      publishedSegment.getInterval(),
+                                                                                                      publishedSegment.getVersion(),
+                                                                                                      publishedSegment.getShardSpec().getPartitionNum()
+                                                                                                  )))
+                                                                                                  .findFirst();
+
+      Assert.assertTrue(
+          publishedSegment + " missing from handoff callbacks: " + handOffCallbacks,
+          optional.isPresent()
       );
+      Pair<Executor, Runnable> executorRunnablePair = optional.get().getValue();
+
+      // Simulate handoff.
       executorRunnablePair.lhs.execute(executorRunnablePair.rhs);
     }
     handOffCallbacks.clear();
@@ -450,9 +594,9 @@ public class RealtimeIndexTaskTest
   @Test(timeout = 60_000L)
   public void testReportParseExceptionsOnBadMetric() throws Exception
   {
-    final TestIndexerMetadataStorageCoordinator mdc = new TestIndexerMetadataStorageCoordinator();
-    final RealtimeIndexTask task = makeRealtimeTask(null, true);
-    final TaskToolbox taskToolbox = makeToolbox(task, mdc, tempFolder.newFolder());
+    expectPublishedSegments(0);
+    final AppenderatorDriverRealtimeIndexTask task = makeRealtimeTask(null, true);
+    final TaskToolbox taskToolbox = makeToolbox(task, tempFolder.newFolder());
     final ListenableFuture<TaskStatus> statusFuture = runTask(task, taskToolbox);
 
     // Wait for firehose to show up, it starts off null.
@@ -500,11 +644,11 @@ public class RealtimeIndexTaskTest
   @Test(timeout = 60_000L)
   public void testNoReportParseExceptions() throws Exception
   {
-    final TestIndexerMetadataStorageCoordinator mdc = new TestIndexerMetadataStorageCoordinator();
-    final RealtimeIndexTask task = makeRealtimeTask(null, false);
-    final TaskToolbox taskToolbox = makeToolbox(task, mdc, tempFolder.newFolder());
+    expectPublishedSegments(1);
+
+    final AppenderatorDriverRealtimeIndexTask task = makeRealtimeTask(null, false);
+    final TaskToolbox taskToolbox = makeToolbox(task, tempFolder.newFolder());
     final ListenableFuture<TaskStatus> statusFuture = runTask(task, taskToolbox);
-    final DataSegment publishedSegment;
 
     // Wait for firehose to show up, it starts off null.
     while (task.getFirehose() == null) {
@@ -527,9 +671,6 @@ public class RealtimeIndexTaskTest
             // Bad row- will be unparseable.
             ImmutableMap.of("dim1", "foo", "met1", 2.0, FAIL_DIM, "x"),
 
-            // Old row- will be thrownAway.
-            ImmutableMap.of("t", now.minus(Period.days(1)).getMillis(), "dim1", "foo", "met1", 2.0),
-
             // Good row- will be processed.
             ImmutableMap.of("t", now.getMillis(), "dim2", "bar", "met1", 2.0)
         )
@@ -539,20 +680,20 @@ public class RealtimeIndexTaskTest
     firehose.close();
 
     // Wait for publish.
-    while (mdc.getPublished().isEmpty()) {
-      Thread.sleep(50);
-    }
+    Collection<DataSegment> publishedSegments = awaitSegments();
 
-    publishedSegment = Iterables.getOnlyElement(mdc.getPublished());
+    DataSegment publishedSegment = Iterables.getOnlyElement(publishedSegments);
 
     // Check metrics.
     Assert.assertEquals(3, task.getMetrics().processed());
-    Assert.assertEquals(1, task.getMetrics().thrownAway());
+    Assert.assertEquals(0, task.getMetrics().thrownAway());
     Assert.assertEquals(2, task.getMetrics().unparseable());
 
     // Do some queries.
     Assert.assertEquals(3, sumMetric(task, null, "rows"));
     Assert.assertEquals(3, sumMetric(task, null, "met1"));
+
+    awaitHandoffs();
 
     // Simulate handoff.
     for (Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>> entry : handOffCallbacks.entrySet()) {
@@ -577,14 +718,15 @@ public class RealtimeIndexTaskTest
   @Test(timeout = 60_000L)
   public void testRestore() throws Exception
   {
+    expectPublishedSegments(0);
+
     final File directory = tempFolder.newFolder();
-    final RealtimeIndexTask task1 = makeRealtimeTask(null);
+    final AppenderatorDriverRealtimeIndexTask task1 = makeRealtimeTask(null);
     final DataSegment publishedSegment;
 
     // First run:
     {
-      final TestIndexerMetadataStorageCoordinator mdc = new TestIndexerMetadataStorageCoordinator();
-      final TaskToolbox taskToolbox = makeToolbox(task1, mdc, directory);
+      final TaskToolbox taskToolbox = makeToolbox(task1, directory);
       final ListenableFuture<TaskStatus> statusFuture = runTask(task1, taskToolbox);
 
       // Wait for firehose to show up, it starts off null.
@@ -608,14 +750,14 @@ public class RealtimeIndexTaskTest
       Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
 
       // Nothing should be published.
-      Assert.assertEquals(Sets.newHashSet(), mdc.getPublished());
+      Assert.assertTrue(publishedSegments.isEmpty());
     }
 
     // Second run:
     {
-      final TestIndexerMetadataStorageCoordinator mdc = new TestIndexerMetadataStorageCoordinator();
-      final RealtimeIndexTask task2 = makeRealtimeTask(task1.getId());
-      final TaskToolbox taskToolbox = makeToolbox(task2, mdc, directory);
+      expectPublishedSegments(1);
+      final AppenderatorDriverRealtimeIndexTask task2 = makeRealtimeTask(task1.getId());
+      final TaskToolbox taskToolbox = makeToolbox(task2, directory);
       final ListenableFuture<TaskStatus> statusFuture = runTask(task2, taskToolbox);
 
       // Wait for firehose to show up, it starts off null.
@@ -637,15 +779,14 @@ public class RealtimeIndexTaskTest
       // Stop the firehose, this will drain out existing events.
       firehose.close();
 
-      // Wait for publish.
-      while (mdc.getPublished().isEmpty()) {
-        Thread.sleep(50);
-      }
+      Collection<DataSegment> publishedSegments = awaitSegments();
 
-      publishedSegment = Iterables.getOnlyElement(mdc.getPublished());
+      publishedSegment = Iterables.getOnlyElement(publishedSegments);
 
       // Do a query.
       Assert.assertEquals(2, sumMetric(task2, null, "rows"));
+
+      awaitHandoffs();
 
       // Simulate handoff.
       for (Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>> entry : handOffCallbacks.entrySet()) {
@@ -672,14 +813,14 @@ public class RealtimeIndexTaskTest
   public void testRestoreAfterHandoffAttemptDuringShutdown() throws Exception
   {
     final TaskStorage taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
-    final TestIndexerMetadataStorageCoordinator mdc = new TestIndexerMetadataStorageCoordinator();
     final File directory = tempFolder.newFolder();
-    final RealtimeIndexTask task1 = makeRealtimeTask(null);
+    final AppenderatorDriverRealtimeIndexTask task1 = makeRealtimeTask(null);
     final DataSegment publishedSegment;
 
     // First run:
     {
-      final TaskToolbox taskToolbox = makeToolbox(task1, taskStorage, mdc, directory);
+      expectPublishedSegments(1);
+      final TaskToolbox taskToolbox = makeToolbox(task1, taskStorage, directory);
       final ListenableFuture<TaskStatus> statusFuture = runTask(task1, taskToolbox);
 
       // Wait for firehose to show up, it starts off null.
@@ -698,12 +839,9 @@ public class RealtimeIndexTaskTest
       // Stop the firehose, this will trigger a finishJob.
       firehose.close();
 
-      // Wait for publish.
-      while (mdc.getPublished().isEmpty()) {
-        Thread.sleep(50);
-      }
+      Collection<DataSegment> publishedSegments = awaitSegments();
 
-      publishedSegment = Iterables.getOnlyElement(mdc.getPublished());
+      publishedSegment = Iterables.getOnlyElement(publishedSegments);
 
       // Do a query.
       Assert.assertEquals(1, sumMetric(task1, null, "rows"));
@@ -719,8 +857,9 @@ public class RealtimeIndexTaskTest
 
     // Second run:
     {
-      final RealtimeIndexTask task2 = makeRealtimeTask(task1.getId());
-      final TaskToolbox taskToolbox = makeToolbox(task2, taskStorage, mdc, directory);
+      expectPublishedSegments(1);
+      final AppenderatorDriverRealtimeIndexTask task2 = makeRealtimeTask(task1.getId());
+      final TaskToolbox taskToolbox = makeToolbox(task2, taskStorage, directory);
       final ListenableFuture<TaskStatus> statusFuture = runTask(task2, taskToolbox);
 
       // Wait for firehose to show up, it starts off null.
@@ -734,13 +873,7 @@ public class RealtimeIndexTaskTest
       // Stop the firehose, this will trigger a finishJob.
       firehose.close();
 
-      // publishedSegment is still published. No reason it shouldn't be.
-      Assert.assertEquals(ImmutableSet.of(publishedSegment), mdc.getPublished());
-
-      // Wait for a handoffCallback to show up.
-      while (handOffCallbacks.isEmpty()) {
-        Thread.sleep(50);
-      }
+      awaitHandoffs();
 
       // Simulate handoff.
       for (Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>> entry : handOffCallbacks.entrySet()) {
@@ -767,12 +900,13 @@ public class RealtimeIndexTaskTest
   public void testRestoreCorruptData() throws Exception
   {
     final File directory = tempFolder.newFolder();
-    final RealtimeIndexTask task1 = makeRealtimeTask(null);
+    final AppenderatorDriverRealtimeIndexTask task1 = makeRealtimeTask(null);
 
     // First run:
     {
-      final TestIndexerMetadataStorageCoordinator mdc = new TestIndexerMetadataStorageCoordinator();
-      final TaskToolbox taskToolbox = makeToolbox(task1, mdc, directory);
+      expectPublishedSegments(0);
+
+      final TaskToolbox taskToolbox = makeToolbox(task1, directory);
       final ListenableFuture<TaskStatus> statusFuture = runTask(task1, taskToolbox);
 
       // Wait for firehose to show up, it starts off null.
@@ -796,28 +930,26 @@ public class RealtimeIndexTaskTest
       Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
 
       // Nothing should be published.
-      Assert.assertEquals(Sets.newHashSet(), mdc.getPublished());
+      Assert.assertTrue(publishedSegments.isEmpty());
     }
 
+    Optional<File> optional = FileUtils.listFiles(directory, null, true).stream()
+                                       .filter(f -> f.getName().equals("00000.smoosh"))
+                                       .findFirst();
+
+    Assert.assertTrue("Could not find smoosh file", optional.isPresent());
+
     // Corrupt the data:
-    final File smooshFile = new File(
-        StringUtils.format(
-            "%s/persistent/task/%s/work/persist/%s/%s_%s/0/00000.smoosh",
-            directory,
-            task1.getId(),
-            task1.getDataSource(),
-            Granularities.DAY.bucketStart(now),
-            Granularities.DAY.bucketEnd(now)
-        )
-    );
+    final File smooshFile = optional.get();
 
     Files.write(smooshFile.toPath(), StringUtils.toUtf8("oops!"));
 
     // Second run:
     {
-      final TestIndexerMetadataStorageCoordinator mdc = new TestIndexerMetadataStorageCoordinator();
-      final RealtimeIndexTask task2 = makeRealtimeTask(task1.getId());
-      final TaskToolbox taskToolbox = makeToolbox(task2, mdc, directory);
+      expectPublishedSegments(0);
+
+      final AppenderatorDriverRealtimeIndexTask task2 = makeRealtimeTask(task1.getId());
+      final TaskToolbox taskToolbox = makeToolbox(task2, directory);
       final ListenableFuture<TaskStatus> statusFuture = runTask(task2, taskToolbox);
 
       // Wait for the task to finish.
@@ -825,7 +957,7 @@ public class RealtimeIndexTaskTest
       try {
         statusFuture.get();
       }
-      catch (Exception e) {
+      catch (Exception expected) {
         caught = true;
       }
       Assert.assertTrue("expected exception", caught);
@@ -835,12 +967,13 @@ public class RealtimeIndexTaskTest
   @Test(timeout = 60_000L)
   public void testStopBeforeStarting() throws Exception
   {
+    expectPublishedSegments(0);
+
     final File directory = tempFolder.newFolder();
-    final RealtimeIndexTask task1 = makeRealtimeTask(null);
+    final AppenderatorDriverRealtimeIndexTask task1 = makeRealtimeTask(null);
 
     task1.stopGracefully();
-    final TestIndexerMetadataStorageCoordinator mdc = new TestIndexerMetadataStorageCoordinator();
-    final TaskToolbox taskToolbox = makeToolbox(task1, mdc, directory);
+    final TaskToolbox taskToolbox = makeToolbox(task1, directory);
     final ListenableFuture<TaskStatus> statusFuture = runTask(task1, taskToolbox);
 
     // Wait for the task to finish.
@@ -872,17 +1005,17 @@ public class RealtimeIndexTaskTest
     );
   }
 
-  private RealtimeIndexTask makeRealtimeTask(final String taskId)
+  private AppenderatorDriverRealtimeIndexTask makeRealtimeTask(final String taskId)
   {
     return makeRealtimeTask(taskId, TransformSpec.NONE, true, 0);
   }
 
-  private RealtimeIndexTask makeRealtimeTask(final String taskId, boolean reportParseExceptions)
+  private AppenderatorDriverRealtimeIndexTask makeRealtimeTask(final String taskId, boolean reportParseExceptions)
   {
     return makeRealtimeTask(taskId, TransformSpec.NONE, reportParseExceptions, 0);
   }
 
-  private RealtimeIndexTask makeRealtimeTask(
+  private AppenderatorDriverRealtimeIndexTask makeRealtimeTask(
       final String taskId,
       final TransformSpec transformSpec,
       final boolean reportParseExceptions,
@@ -934,7 +1067,7 @@ public class RealtimeIndexTaskTest
         null,
         null
     );
-    return new RealtimeIndexTask(
+    return new AppenderatorDriverRealtimeIndexTask(
         taskId,
         null,
         new FireDepartment(dataSchema, realtimeIOConfig, realtimeTuningConfig),
@@ -951,25 +1084,86 @@ public class RealtimeIndexTaskTest
 
   private TaskToolbox makeToolbox(
       final Task task,
-      final IndexerMetadataStorageCoordinator mdc,
       final File directory
   )
   {
     return makeToolbox(
         task,
         new HeapMemoryTaskStorage(new TaskStorageConfig(null)),
-        mdc,
         directory
+    );
+  }
+
+  private void expectPublishedSegments(int count)
+  {
+    segmentLatch = new CountDownLatch(count);
+    handoffLatch = new CountDownLatch(count);
+  }
+
+  private Collection<DataSegment> awaitSegments() throws InterruptedException
+  {
+    Assert.assertTrue(
+        "Timed out waiting for segments to be published",
+        segmentLatch.await(1, TimeUnit.MINUTES)
+    );
+
+    return publishedSegments;
+  }
+
+  private void awaitHandoffs() throws InterruptedException
+  {
+    Assert.assertTrue(
+        "Timed out waiting for segments to be handed off",
+        handoffLatch.await(1, TimeUnit.MINUTES)
     );
   }
 
   private TaskToolbox makeToolbox(
       final Task task,
       final TaskStorage taskStorage,
-      final IndexerMetadataStorageCoordinator mdc,
       final File directory
   )
   {
+    publishedSegments = new CopyOnWriteArrayList<>();
+
+    Assert.assertFalse(
+        "Segment latch not initialized, did you forget to call expectPublishSegments?",
+        segmentLatch == null
+    );
+
+    ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.registerSubtypes(LinearShardSpec.class);
+    mapper.registerSubtypes(NumberedShardSpec.class);
+    IndexerSQLMetadataStorageCoordinator mdc = new IndexerSQLMetadataStorageCoordinator(
+        mapper,
+        derbyConnectorRule.metadataTablesConfigSupplier().get(),
+        derbyConnectorRule.getConnector()
+    )
+    {
+      @Override
+      public Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments) throws IOException
+      {
+        Set<DataSegment> result = super.announceHistoricalSegments(segments);
+
+        publishedSegments.addAll(result);
+        segments.forEach(s -> segmentLatch.countDown());
+
+        return result;
+      }
+
+      @Override
+      public SegmentPublishResult announceHistoricalSegments(
+          Set<DataSegment> segments, DataSourceMetadata startMetadata, DataSourceMetadata endMetadata
+      ) throws IOException
+      {
+        SegmentPublishResult result = super.announceHistoricalSegments(segments, startMetadata, endMetadata);
+
+        publishedSegments.addAll(result.getSegments());
+        result.getSegments().forEach(s -> segmentLatch.countDown());
+
+        return result;
+      }
+    };
     final TaskConfig taskConfig = new TaskConfig(directory.getPath(), null, null, 50000, null, false, null, null);
     final TaskLockbox taskLockbox = new TaskLockbox(taskStorage);
     try {
@@ -1034,6 +1228,7 @@ public class RealtimeIndexTaskTest
           )
           {
             handOffCallbacks.put(descriptor, new Pair<>(exec, handOffRunnable));
+            handoffLatch.countDown();
             return true;
           }
 

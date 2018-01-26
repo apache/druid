@@ -83,7 +83,6 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
-import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import io.druid.metadata.TestDerbyConnector;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.SegmentDescriptor;
@@ -143,7 +142,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 
@@ -228,7 +226,6 @@ public class TaskLifecycleTest
   private int announcedSinks;
   private SegmentHandoffNotifierFactory handoffNotifierFactory;
   private Map<SegmentDescriptor, Pair<Executor, Runnable>> handOffCallbacks;
-  private CountDownLatch handoffLatch;
 
   private static CountDownLatch publishCountDown;
 
@@ -362,7 +359,6 @@ public class TaskLifecycleTest
     EmittingLogger.registerEmitter(emitter);
     mapper = TEST_UTILS.getTestObjectMapper();
     handOffCallbacks = new ConcurrentHashMap<>();
-    handoffLatch = new CountDownLatch(1);
 
     // Set up things, the order does matter as if it is messed up then the setUp
     // should fail because of the Precondition checks in the respective setUp methods
@@ -381,16 +377,6 @@ public class TaskLifecycleTest
     taskRunner = setUpThreadPoolTaskRunner(tb);
 
     taskQueue = setUpTaskQueue(taskStorage, taskRunner);
-
-    TestDerbyConnector derbyConnector = derbyConnectorRule.getConnector();
-    mapper.registerSubtypes(
-        new NamedType(MockExceptionalFirehoseFactory.class, "mockExcepFirehoseFactory"),
-        new NamedType(MockFirehoseFactory.class, "mockFirehoseFactory")
-    );
-    derbyConnector.createDataSourceTable();
-    derbyConnector.createTaskTables();
-    derbyConnector.createSegmentTable();
-    derbyConnector.createPendingSegmentsTable();
   }
 
   private TaskStorage setUpTaskStorage()
@@ -412,6 +398,12 @@ public class TaskLifecycleTest
 
       case METADATA_TASK_STORAGE: {
         TestDerbyConnector testDerbyConnector = derbyConnectorRule.getConnector();
+        mapper.registerSubtypes(
+            new NamedType(MockExceptionalFirehoseFactory.class, "mockExcepFirehoseFactory"),
+            new NamedType(MockFirehoseFactory.class, "mockFirehoseFactory")
+        );
+        testDerbyConnector.createTaskTables();
+        testDerbyConnector.createSegmentTable();
         taskStorage = new MetadataTaskStorage(
             testDerbyConnector,
             new TaskStorageConfig(null),
@@ -451,7 +443,6 @@ public class TaskLifecycleTest
           )
           {
             handOffCallbacks.put(descriptor, new Pair<>(exec, handOffRunnable));
-            handoffLatch.countDown();
             return true;
           }
 
@@ -527,7 +518,7 @@ public class TaskLifecycleTest
   private TaskToolboxFactory setUpTaskToolboxFactory(
       DataSegmentPusher dataSegmentPusher,
       SegmentHandoffNotifierFactory handoffNotifierFactory,
-      IndexerMetadataStorageCoordinator mdc
+      TestIndexerMetadataStorageCoordinator mdc
   ) throws IOException
   {
     Preconditions.checkNotNull(queryRunnerFactoryConglomerate);
@@ -983,45 +974,6 @@ public class TaskLifecycleTest
   public void testRealtimeIndexTask() throws Exception
   {
     publishCountDown = new CountDownLatch(1);
-    List<DataSegment> publishedSegments = new CopyOnWriteArrayList<>();
-
-    IndexerSQLMetadataStorageCoordinator mdc = new IndexerSQLMetadataStorageCoordinator(
-        mapper,
-        derbyConnectorRule.metadataTablesConfigSupplier().get(),
-        derbyConnectorRule.getConnector()
-    )
-    {
-      @Override
-      public Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments) throws IOException
-      {
-        Set<DataSegment> result = super.announceHistoricalSegments(segments);
-
-        publishedSegments.addAll(result);
-        publishCountDown.countDown();
-
-        return result;
-      }
-
-      @Override
-      public SegmentPublishResult announceHistoricalSegments(
-          Set<DataSegment> segments, DataSourceMetadata startMetadata, DataSourceMetadata endMetadata
-      ) throws IOException
-      {
-        SegmentPublishResult result = super.announceHistoricalSegments(segments, startMetadata, endMetadata);
-
-        publishedSegments.addAll(result.getSegments());
-        publishCountDown.countDown();
-
-        return result;
-      }
-    };
-
-    tb = setUpTaskToolboxFactory(dataSegmentPusher, handoffNotifierFactory, mdc);
-
-    taskRunner = setUpThreadPoolTaskRunner(tb);
-
-    taskQueue = setUpTaskQueue(taskStorage, taskRunner);
-
     monitorScheduler.addMonitor(EasyMock.anyObject(Monitor.class));
     EasyMock.expectLastCall().atLeastOnce();
     monitorScheduler.removeMonitor(EasyMock.anyObject(Monitor.class));
@@ -1035,7 +987,6 @@ public class TaskLifecycleTest
     taskQueue.add(realtimeIndexTask);
     //wait for task to process events and publish segment
     publishCountDown.await();
-    handoffLatch.await();
 
     // Realtime Task has published the segment, simulate loading of segment to a historical node so that task finishes with SUCCESS status
     Assert.assertEquals(1, handOffCallbacks.size());
@@ -1052,8 +1003,8 @@ public class TaskLifecycleTest
 
     Assert.assertEquals(1, announcedSinks);
     Assert.assertEquals(1, pushedSegments);
-    Assert.assertEquals(1, publishedSegments.size());
-    DataSegment segment = publishedSegments.iterator().next();
+    Assert.assertEquals(1, mdc.getPublished().size());
+    DataSegment segment = mdc.getPublished().iterator().next();
     Assert.assertEquals("test_ds", segment.getDataSource());
     Assert.assertEquals(ImmutableList.of("dim1", "dim2"), segment.getDimensions());
     Assert.assertEquals(
