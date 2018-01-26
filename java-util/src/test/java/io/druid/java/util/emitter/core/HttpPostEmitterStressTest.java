@@ -144,7 +144,6 @@ public class HttpPostEmitterStressTest
     }
   }
 
-  /** check that we don't get a heap OOM from too many queued large events */
   @Test
   public void testLargeEventsQueueLimit() throws InterruptedException, IOException
   {
@@ -179,11 +178,9 @@ public class HttpPostEmitterStressTest
                                        .build("metric", 10)
                                        .build("qwerty", "asdfgh");
 
-    int bigEventSz = mapper.writeValueAsBytes(bigEvent).length;
-    long maxMemory = Runtime.getRuntime().maxMemory();
-    long maxBigEvents = (maxMemory / bigEventSz) + 1;
-    for (int i = 0; i < maxBigEvents; i++) {
+    for (int i = 0; i < 1000; i++) {
       emitter.emit(bigEvent);
+      Assert.assertTrue(emitter.getLargeEventsToEmit() <= 11);
     }
 
     emitter.flush();
