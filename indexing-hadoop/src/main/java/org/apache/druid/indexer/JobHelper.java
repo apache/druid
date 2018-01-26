@@ -22,14 +22,9 @@ package org.apache.druid.indexer;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
-import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.IOE;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.RetryUtils;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.*;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.loading.DataSegmentPusher;
@@ -49,14 +44,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
 
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
@@ -472,10 +460,36 @@ public class JobHelper
     );
     zipPusher.push();
     log.info("Zipped %,d bytes to [%s]", size.get(), tmpPath.toUri());
-
     final URI indexOutURI = finalIndexZipFilePath.toUri();
+    final ImmutableMap<String, Object> loadSpec;
+    switch (outputFS.getScheme()) {
+        case "hdfs":
+        case "viewfs":
+        case "gs":
+            loadSpec = ImmutableMap.<String, Object>of(
+              "type", "hdfs",
+              "path", indexOutURI.toString()
+            );
+            break;
+        case "s3":
+        case "s3n":
+            loadSpec = ImmutableMap.<String, Object>of(
+              "type", "s3_zip",
+              "bucket", indexOutURI.getHost(),
+              "key", indexOutURI.getPath().substring(1) // remove the leading "/"
+            );
+            break;
+        case "file":
+            loadSpec = ImmutableMap.<String, Object>of(
+              "type", "local",
+              "path", indexOutURI.getPath()
+            );
+            break;
+        default:
+            throw new IAE("Unknown file system scheme [%s]", outputFS.getScheme());
+    }
     final DataSegment finalSegment = segmentTemplate
-        .withLoadSpec(dataSegmentPusher.makeLoadSpec(indexOutURI))
+        .withLoadSpec(loadSpec)
         .withSize(size.get())
         .withBinaryVersion(SegmentUtils.getVersionFromDir(mergedBase));
 
