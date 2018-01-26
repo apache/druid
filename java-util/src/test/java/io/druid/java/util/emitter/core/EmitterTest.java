@@ -65,6 +65,10 @@ public class EmitterTest
       .accumulate(new EagerResponseBodyPart(Unpooled.wrappedBuffer("Yay".getBytes(StandardCharsets.UTF_8)), true))
       .build();
 
+  public static final Response BAD_RESPONSE = responseBuilder(HttpVersion.HTTP_1_1, HttpResponseStatus.FORBIDDEN)
+      .accumulate(new EagerResponseBodyPart(Unpooled.wrappedBuffer("Not yay".getBytes(StandardCharsets.UTF_8)), true))
+      .build();
+
   private static Response.ResponseBuilder responseBuilder(HttpVersion version, HttpResponseStatus status)
   {
     return new Response.ResponseBuilder()

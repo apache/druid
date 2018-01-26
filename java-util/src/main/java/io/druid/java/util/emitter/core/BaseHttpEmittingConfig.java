@@ -27,7 +27,21 @@ public class BaseHttpEmittingConfig
 {
   public static final long DEFAULT_FLUSH_MILLIS = 60 * 1000;
   public static final int DEFAULT_FLUSH_COUNTS = 500;
-  public static final int DEFAULT_MAX_BATCH_SIZE = 5 * 1024 * 1024;
+
+  /** ensure the event buffers don't use more than 10% of memory by default */
+  public static final int DEFAULT_BATCH_QUEUE_SIZE_LIMIT = 50;
+  public static final int DEFAULT_MAX_BATCH_SIZE;
+  static {
+    long memoryLimit = Runtime.getRuntime().maxMemory() / 10;
+    long batchSize = 5 * 1024 * 1024;
+
+    if (batchSize * DEFAULT_BATCH_QUEUE_SIZE_LIMIT > memoryLimit) {
+      batchSize = memoryLimit / DEFAULT_BATCH_QUEUE_SIZE_LIMIT;
+    }
+
+    DEFAULT_MAX_BATCH_SIZE = (int) batchSize;
+  }
+
   /**
    * Do not time out in case flushTimeOut is not set
    */
@@ -35,7 +49,6 @@ public class BaseHttpEmittingConfig
   public static final String DEFAULT_BASIC_AUTHENTICATION = null;
   public static final BatchingStrategy DEFAULT_BATCHING_STRATEGY = BatchingStrategy.ARRAY;
   public static final ContentEncoding DEFAULT_CONTENT_ENCODING = null;
-  public static final int DEFAULT_BATCH_QUEUE_SIZE_LIMIT = 50;
   public static final float DEFAULT_HTTP_TIMEOUT_ALLOWANCE_FACTOR = 2.0f;
   /**
    * The default value effective doesn't set the min timeout
