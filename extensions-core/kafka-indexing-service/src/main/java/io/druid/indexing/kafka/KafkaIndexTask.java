@@ -179,7 +179,6 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
   private final Map<Integer, Long> endOffsets = new ConcurrentHashMap<>();
   private final Map<Integer, Long> nextOffsets = new ConcurrentHashMap<>();
-  private final Map<Integer, Long> maxEndOffsets = new HashMap<>();
   private final Map<Integer, Long> lastPersistedOffsets = new ConcurrentHashMap<>();
 
   private TaskToolbox toolbox;
@@ -274,12 +273,6 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
     this.authorizerMapper = authorizerMapper;
     this.endOffsets.putAll(ioConfig.getEndPartitions().getPartitionOffsetMap());
-    this.maxEndOffsets.putAll(endOffsets.entrySet()
-                                        .stream()
-                                        .collect(Collectors.toMap(
-                                            Map.Entry::getKey,
-                                            integerLongEntry -> Long.MAX_VALUE
-                                        )));
     this.topic = ioConfig.getStartPartitions().getTopic();
     this.sequences = new CopyOnWriteArrayList<>();
 
@@ -451,7 +444,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           previous.getKey(),
           StringUtils.format("%s_%s", ioConfig.getBaseSequenceName(), previous.getKey()),
           previous.getValue(),
-          maxEndOffsets,
+          endOffsets,
           false
       ));
     } else {
@@ -459,7 +452,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           0,
           StringUtils.format("%s_%s", ioConfig.getBaseSequenceName(), 0),
           ioConfig.getStartPartitions().getPartitionOffsetMap(),
-          maxEndOffsets,
+          endOffsets,
           false
       ));
     }
@@ -786,7 +779,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
             sequenceToCheckpoint = sequences.get(sequences.size() - 1);
           }
 
-          if (sequenceToCheckpoint != null && !ioConfig.isPauseAfterRead()) {
+          if (sequenceToCheckpoint != null && stillReading) {
             Preconditions.checkArgument(
                 sequences.get(sequences.size() - 1)
                          .getSequenceName()
@@ -1571,7 +1564,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
               latestSequence.getSequenceId() + 1,
               StringUtils.format("%s_%d", ioConfig.getBaseSequenceName(), latestSequence.getSequenceId() + 1),
               offsets,
-              maxEndOffsets,
+              endOffsets,
               false
           );
           sequences.add(newSequence);
