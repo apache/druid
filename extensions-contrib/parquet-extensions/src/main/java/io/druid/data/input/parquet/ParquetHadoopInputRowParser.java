@@ -75,7 +75,7 @@ public class ParquetHadoopInputRowParser implements InputRowParser<GenericRecord
   }
 
   /**
-   * imitate avro extension {@link io.druid.data.input.avro.AvroParsers#parseGenericRecord(GenericRecord, ParseSpec, ObjectFlattener)}
+   * imitate avro extension {@link io.druid.data.input.avro.AvroParsers#parseGenericRecord}
    */
   @Override
   public List<InputRow> parseBatch(GenericRecord record)

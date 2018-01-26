@@ -20,7 +20,7 @@
 package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.primitives.Ints;
-import com.metamx.common.IAE;
+import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 
 import java.nio.ByteBuffer;

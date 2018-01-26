@@ -20,7 +20,7 @@
 package io.druid.emitter.ambari.metrics;
 
 import com.google.common.collect.Maps;
-import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import junitparams.JUnitParamsRunner;

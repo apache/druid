@@ -22,7 +22,7 @@ package io.druid.server.coordinator;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.client.ServerInventoryView;
 import io.druid.client.ServerView;
 import io.druid.java.util.common.concurrent.Execs;

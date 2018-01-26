@@ -64,7 +64,7 @@ Yes, using a `log4j2.xml` similar to the following causes some of the more chatt
     <AsyncLogger name="io.druid.client.ServerInventoryView" level="debug" additivity="false">
       <AppenderRef ref="Console"/>
     </AsyncLogger>
-    <AsyncLogger name ="com.metamx.http.client.pool.ChannelResourceFactory" level="info" additivity="false">
+    <AsyncLogger name ="io.druid.java.util.http.client.pool.ChannelResourceFactory" level="info" additivity="false">
       <AppenderRef ref="Console"/>
     </AsyncLogger>
     <Root level="info">

@@ -25,7 +25,7 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;

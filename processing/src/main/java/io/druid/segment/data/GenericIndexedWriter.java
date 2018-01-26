@@ -217,7 +217,9 @@ public class GenericIndexedWriter<T> implements Serializer
     // for compatibility with the format (see GenericIndexed javadoc for description of the format), but this field is
     // unused.
     valuesOut.writeInt(0);
-    strategy.writeTo(objectToWrite, valuesOut);
+    if (objectToWrite != null) {
+      strategy.writeTo(objectToWrite, valuesOut);
+    }
 
     if (!requireMultipleFiles) {
       headerOut.writeInt(Ints.checkedCast(valuesOut.size()));

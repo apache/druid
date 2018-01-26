@@ -498,7 +498,9 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
 
         // for compatibility with the format, but this field is unused
         valuesOut.writeInt(0);
-        strategy.writeTo(next, valuesOut);
+        if (next != null) {
+          strategy.writeTo(next, valuesOut);
+        }
         headerOut.writeInt(Ints.checkedCast(valuesOut.size()));
 
         if (prevVal instanceof Closeable) {

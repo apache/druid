@@ -19,8 +19,8 @@
 
 package io.druid.server.coordinator.helper;
 
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.DruidMetrics;
