@@ -132,6 +132,8 @@ public class DruidCoordinator
   private final LookupCoordinatorManager lookupCoordinatorManager;
   private final DruidLeaderSelector coordLeaderSelector;
 
+  private final DruidCoordinatorSegmentCompactor segmentCompactor;
+
   @Inject
   public DruidCoordinator(
       DruidCoordinatorConfig config,
@@ -217,6 +219,8 @@ public class DruidCoordinator
     this.factory = factory;
     this.lookupCoordinatorManager = lookupCoordinatorManager;
     this.coordLeaderSelector = coordLeaderSelector;
+
+    this.segmentCompactor = new DruidCoordinatorSegmentCompactor(indexingServiceClient);
   }
 
   public boolean isLeader()
@@ -311,6 +315,11 @@ public class DruidCoordinator
     }
 
     return loadStatus;
+  }
+
+  public long remainingSegmentSizeBytesForCompaction(String dataSource)
+  {
+    return segmentCompactor.getRemainingSegmentSizeBytes(dataSource);
   }
 
   public CoordinatorDynamicConfig getDynamicConfigs()
@@ -600,7 +609,7 @@ public class DruidCoordinator
   {
     List<DruidCoordinatorHelper> helpers = Lists.newArrayList();
     helpers.add(new DruidCoordinatorSegmentInfoLoader(DruidCoordinator.this));
-    helpers.add(new DruidCoordinatorSegmentCompactor(indexingServiceClient));
+    helpers.add(segmentCompactor);
     helpers.addAll(indexingServiceHelpers);
 
     log.info(

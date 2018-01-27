@@ -29,7 +29,9 @@ import io.druid.server.coordinator.DataSourceCompactionConfig;
 import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -38,7 +40,7 @@ import java.util.stream.Collectors;
 public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
 {
   static final String COMPACT_TASK_COUNT = "compactTaskCount";
-  static final String SEGMENTS_WAIT_COMPACT = "segmentsWaitCompact";
+  static final String SEGMENT_SIZE_WAIT_COMPACT = "segmentSizeWaitCompact";
 
   // Should be synced with CompactionTask.TYPE
   private static final String COMPACT_TASK_TYPE = "compact";
@@ -46,6 +48,8 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
 
   private final CompactionSegmentSearchPolicy policy = new NewestSegmentFirstPolicy();
   private final IndexingServiceClient indexingServiceClient;
+
+  private Object2LongMap<String> remainingSegmentSizeBytes;
 
   @Inject
   public DruidCoordinatorSegmentCompactor(IndexingServiceClient indexingServiceClient)
@@ -141,13 +145,20 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
   {
     final CoordinatorStats stats = new CoordinatorStats();
     stats.addToGlobalStat(COMPACT_TASK_COUNT, numCompactionTasks);
-    iterator.remainingSegments().object2LongEntrySet().fastForEach(
+    remainingSegmentSizeBytes = iterator.remainingSegmentSizeBytes();
+    iterator.remainingSegmentSizeBytes().object2LongEntrySet().fastForEach(
         entry -> {
           final String dataSource = entry.getKey();
           final long numSegmentsWaitCompact = entry.getLongValue();
-          stats.addToDataSourceStat(SEGMENTS_WAIT_COMPACT, dataSource, numSegmentsWaitCompact);
+          stats.addToDataSourceStat(SEGMENT_SIZE_WAIT_COMPACT, dataSource, numSegmentsWaitCompact);
         }
     );
     return stats;
+  }
+
+  @Nullable
+  public long getRemainingSegmentSizeBytes(String dataSource)
+  {
+    return remainingSegmentSizeBytes.getLong(dataSource);
   }
 }

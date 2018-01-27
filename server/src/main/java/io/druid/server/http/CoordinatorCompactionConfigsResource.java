@@ -20,10 +20,12 @@
 package io.druid.server.http;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
+import io.druid.common.config.ConfigManager.SetResult;
 import io.druid.common.config.JacksonConfigManager;
 import io.druid.server.coordinator.CoordinatorCompactionConfig;
 import io.druid.server.coordinator.DataSourceCompactionConfig;
@@ -93,14 +95,19 @@ public class CoordinatorCompactionConfigsResource
       newCompactionConfig = new CoordinatorCompactionConfig(null, compactionTaskSlotRatio, maxCompactionTaskSlots);
     }
 
-    if (!manager.set(
+    final SetResult setResult = manager.set(
         CoordinatorCompactionConfig.CONFIG_KEY,
         newCompactionConfig,
         new AuditInfo(author, comment, req.getRemoteAddr())
-    )) {
-      return Response.status(Response.Status.BAD_REQUEST).build();
+    );
+
+    if (setResult.isOk()) {
+      return Response.ok().build();
+    } else {
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity(ImmutableMap.of("error", setResult.getException()))
+                     .build();
     }
-    return Response.ok().build();
   }
 
   @POST
@@ -131,14 +138,17 @@ public class CoordinatorCompactionConfigsResource
       newCompactionConfig = CoordinatorCompactionConfig.from(ImmutableList.of(newConfig));
     }
 
-    if (!manager.set(
+    final SetResult setResult = manager.set(
         CoordinatorCompactionConfig.CONFIG_KEY,
         newCompactionConfig,
         new AuditInfo(author, comment, req.getRemoteAddr())
-    )) {
+    );
+
+    if (setResult.isOk()) {
+      return Response.ok().build();
+    } else {
       return Response.status(Response.Status.BAD_REQUEST).build();
     }
-    return Response.ok().build();
   }
 
   @GET
@@ -197,13 +207,16 @@ public class CoordinatorCompactionConfigsResource
       return Response.status(Response.Status.NOT_FOUND).build();
     }
 
-    if (!manager.set(
+    final SetResult setResult = manager.set(
         CoordinatorCompactionConfig.CONFIG_KEY,
         CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(configs.values())),
         new AuditInfo(author, comment, req.getRemoteAddr())
-    )) {
+    );
+
+    if (setResult.isOk()) {
+      return Response.ok().build();
+    } else {
       return Response.status(Response.Status.BAD_REQUEST).build();
     }
-    return Response.ok().build();
   }
 }

@@ -50,12 +50,12 @@ public class DataSourceCompactionConfig
   @JsonCreator
   public DataSourceCompactionConfig(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("taskPriority") Integer taskPriority,
-      @JsonProperty("targetCompactionSizeBytes") Long targetCompactionSizeBytes,
-      @JsonProperty("numTargetCompactionSegments") Integer numTargetCompactionSegments,
-      @JsonProperty("skipOffsetFromLatest") Period skipOffsetFromLatest,
-      @JsonProperty("tuningConfig") ClientCompactQueryTuningConfig tuningConfig,
-      @JsonProperty("taskContext") Map<String, Object> taskContext
+      @JsonProperty("taskPriority") @Nullable Integer taskPriority,
+      @JsonProperty("targetCompactionSizeBytes") @Nullable Long targetCompactionSizeBytes,
+      @JsonProperty("numTargetCompactionSegments") @Nullable Integer numTargetCompactionSegments,
+      @JsonProperty("skipOffsetFromLatest") @Nullable Period skipOffsetFromLatest,
+      @JsonProperty("tuningConfig") @Nullable ClientCompactQueryTuningConfig tuningConfig,
+      @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
   )
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");

@@ -76,8 +76,8 @@ public class CoordinatorCompactionConfig
   @JsonCreator
   public CoordinatorCompactionConfig(
       @JsonProperty("compactionConfigs") List<DataSourceCompactionConfig> compactionConfigs,
-      @JsonProperty("compactionTaskSlotRatio") Double compactionTaskSlotRatio,
-      @JsonProperty("maxCompactionTaskSlots") Integer maxCompactionTaskSlots
+      @JsonProperty("compactionTaskSlotRatio") @Nullable Double compactionTaskSlotRatio,
+      @JsonProperty("maxCompactionTaskSlots") @Nullable Integer maxCompactionTaskSlots
   )
   {
     this.compactionConfigs = compactionConfigs;

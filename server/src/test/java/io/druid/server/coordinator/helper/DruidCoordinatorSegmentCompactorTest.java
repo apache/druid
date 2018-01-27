@@ -214,7 +214,7 @@ public class DruidCoordinatorSegmentCompactorTest
       }
     };
     int expectedCompactTaskCount = 1;
-    int expectedRemainingSegments = 18;
+    int expectedRemainingSegments = 180;
 
     // compact for 2017-01-08T12:00:00.000Z/2017-01-09T12:00:00.000Z
     assertCompactSegments(
@@ -226,7 +226,7 @@ public class DruidCoordinatorSegmentCompactorTest
     );
 
     // compact for 2017-01-07T12:00:00.000Z/2017-01-08T12:00:00.000Z
-    expectedRemainingSegments -= 4;
+    expectedRemainingSegments -= 40;
     assertCompactSegments(
         compactor,
         Intervals.of(StringUtils.format("2017-01-%02dT12:00:00/2017-01-%02dT12:00:00", 4, 8)),
@@ -236,7 +236,7 @@ public class DruidCoordinatorSegmentCompactorTest
     );
 
     for (int endDay = 4; endDay > 1; endDay -= 1) {
-      expectedRemainingSegments -= 4;
+      expectedRemainingSegments -= 40;
       assertCompactSegments(
           compactor,
           Intervals.of(StringUtils.format("2017-01-%02dT12:00:00/2017-01-%02dT12:00:00", endDay - 1, endDay)),
@@ -312,10 +312,10 @@ public class DruidCoordinatorSegmentCompactorTest
         // If expectedRemainingSegments is positive, we check how many dataSources have the segments waiting
         // compaction.
         long numDataSourceOfExpectedRemainingSegments = stats
-            .getDataSources(DruidCoordinatorSegmentCompactor.SEGMENTS_WAIT_COMPACT)
+            .getDataSources(DruidCoordinatorSegmentCompactor.SEGMENT_SIZE_WAIT_COMPACT)
             .stream()
             .mapToLong(dataSource -> stats.getDataSourceStat(
-                DruidCoordinatorSegmentCompactor.SEGMENTS_WAIT_COMPACT,
+                DruidCoordinatorSegmentCompactor.SEGMENT_SIZE_WAIT_COMPACT,
                 dataSource)
             )
             .filter(stat -> stat == expectedRemainingSegments)
@@ -325,7 +325,7 @@ public class DruidCoordinatorSegmentCompactorTest
         // Otherwise, we check how many dataSources are in the coordinator stats.
         Assert.assertEquals(
             2 - i,
-            stats.getDataSources(DruidCoordinatorSegmentCompactor.SEGMENTS_WAIT_COMPACT).size()
+            stats.getDataSources(DruidCoordinatorSegmentCompactor.SEGMENT_SIZE_WAIT_COMPACT).size()
         );
       }
     }

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
 import io.druid.java.util.common.IAE;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Objects;
@@ -314,18 +315,18 @@ public class CoordinatorDynamicConfig
 
     @JsonCreator
     public Builder(
-        @JsonProperty("millisToWaitBeforeDeleting") Long millisToWaitBeforeDeleting,
-        @JsonProperty("mergeBytesLimit") Long mergeBytesLimit,
-        @JsonProperty("mergeSegmentsLimit") Integer mergeSegmentsLimit,
-        @JsonProperty("maxSegmentsToMove") Integer maxSegmentsToMove,
-        @JsonProperty("replicantLifetime") Integer replicantLifetime,
-        @JsonProperty("replicationThrottleLimit") Integer replicationThrottleLimit,
-        @JsonProperty("balancerComputeThreads") Integer balancerComputeThreads,
-        @JsonProperty("emitBalancingStats") Boolean emitBalancingStats,
-        @JsonProperty("killDataSourceWhitelist") Object killDataSourceWhitelist,
-        @JsonProperty("killAllDataSources") Boolean killAllDataSources,
-        @JsonProperty("killPendingSegmentsSkipList") Object killPendingSegmentsSkipList,
-        @JsonProperty("maxSegmentsInNodeLoadingQueue") Integer maxSegmentsInNodeLoadingQueue
+        @JsonProperty("millisToWaitBeforeDeleting") @Nullable Long millisToWaitBeforeDeleting,
+        @JsonProperty("mergeBytesLimit") @Nullable Long mergeBytesLimit,
+        @JsonProperty("mergeSegmentsLimit") @Nullable Integer mergeSegmentsLimit,
+        @JsonProperty("maxSegmentsToMove") @Nullable Integer maxSegmentsToMove,
+        @JsonProperty("replicantLifetime") @Nullable Integer replicantLifetime,
+        @JsonProperty("replicationThrottleLimit") @Nullable Integer replicationThrottleLimit,
+        @JsonProperty("balancerComputeThreads") @Nullable Integer balancerComputeThreads,
+        @JsonProperty("emitBalancingStats") @Nullable Boolean emitBalancingStats,
+        @JsonProperty("killDataSourceWhitelist") @Nullable Object killDataSourceWhitelist,
+        @JsonProperty("killAllDataSources") @Nullable Boolean killAllDataSources,
+        @JsonProperty("killPendingSegmentsSkipList") @Nullable Object killPendingSegmentsSkipList,
+        @JsonProperty("maxSegmentsInNodeLoadingQueue") @Nullable Integer maxSegmentsInNodeLoadingQueue
     )
     {
       this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;

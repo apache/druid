@@ -27,6 +27,7 @@ import com.google.inject.Inject;
 import io.druid.audit.AuditEntry;
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
+import io.druid.common.config.ConfigManager.SetResult;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -66,7 +67,7 @@ public class JacksonConfigManager
     return configManager.watchConfig(key, create(clazz, defaultVal));
   }
 
-  public <T> boolean set(String key, T val, AuditInfo auditInfo)
+  public <T> SetResult set(String key, T val, AuditInfo auditInfo)
   {
     ConfigSerde configSerde = create(val.getClass(), null);
     // Audit and actual config change are done in separate transactions

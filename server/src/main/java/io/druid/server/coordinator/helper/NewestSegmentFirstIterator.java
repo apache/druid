@@ -111,9 +111,10 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   }
 
   @Override
-  public Object2LongOpenHashMap<String> remainingSegments()
+  public Object2LongOpenHashMap<String> remainingSegmentSizeBytes()
   {
     final Object2LongOpenHashMap<String> resultMap = new Object2LongOpenHashMap<>();
+    resultMap.defaultReturnValue(UNKNOWN_REMAINING_SEGMENT_SIZE);
     final Iterator<QueueEntry> iterator = queue.iterator();
     while (iterator.hasNext()) {
       final QueueEntry entry = iterator.next();
@@ -126,7 +127,8 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
           entry.getDataSource(),
           holders.stream()
                  .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
-                 .count()
+                 .mapToLong(chunk -> chunk.getObject().getSize())
+                 .sum()
       );
     }
     return resultMap;
