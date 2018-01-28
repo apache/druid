@@ -26,7 +26,7 @@ All the configuration parameters for the opentsdb emitter are under `druid.emitt
 ### Druid to OpenTSDB Event Converter
 
 The opentsdb emitter will send only the desired metrics and dimensions which is defined in a JSON file.
-If the user does not specify their own JSON file, a default mapping is used.  All metrics are expected to be mapped. Metrics which are not mapped will be logged.
+If the user does not specify their own JSON file, a default file is used.  All metrics are expected to be configured in the JSON file. Metrics which are not configured will be logged.
 Desired metrics and dimensions is organized using the following schema:`<druid metric name> : [ <dimension list> ]`<br />
 e.g.
 
@@ -37,5 +37,5 @@ e.g.
 ]
 ```
  
-For most use-cases, the default mapping is sufficient.
+For most use-cases, the default configuration is sufficient.
 
