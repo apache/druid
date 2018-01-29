@@ -416,27 +416,39 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
       return new ColumnValueSelector()
       {
         @Override
-        public double getDouble()
-        {
-          return DimensionHandlerUtils.nullToZeroDouble(row.get().getMetric(columnName)).doubleValue();
-        }
-
-        @Override
         public boolean isNull()
         {
           return row.get().getRaw(columnName) == null;
         }
 
         @Override
+        public double getDouble()
+        {
+          Number metric = row.get().getMetric(columnName);
+          if (NullHandling.sqlCompatible() && metric == null) {
+            throw new IllegalStateException("Cannot return double for Null Value");
+          }
+          return DimensionHandlerUtils.nullToZero(metric).doubleValue();
+        }
+
+        @Override
         public float getFloat()
         {
-          return DimensionHandlerUtils.nullToZeroDouble(row.get().getMetric(columnName)).floatValue();
+          Number metric = row.get().getMetric(columnName);
+          if (NullHandling.sqlCompatible() && metric == null) {
+            throw new IllegalStateException("Cannot return float for Null Value");
+          }
+          return DimensionHandlerUtils.nullToZero(metric).floatValue();
         }
 
         @Override
         public long getLong()
         {
-          return DimensionHandlerUtils.nullToZeroDouble(row.get().getMetric(columnName)).longValue();
+          Number metric = row.get().getMetric(columnName);
+          if (NullHandling.sqlCompatible() && metric == null) {
+            throw new IllegalStateException("Cannot return long for Null Value");
+          }
+          return DimensionHandlerUtils.nullToZero(metric).longValue();
         }
 
         @Nullable

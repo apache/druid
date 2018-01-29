@@ -91,7 +91,7 @@ public class IndexMergerNullHandlingTest
     nullFlavors.add(mNull);
     nullFlavors.add(mListOfNull);
 
-    if (NullHandling.useDefaultValuesForNull()) {
+    if (NullHandling.replaceWithDefault()) {
       nullFlavors.add(mEmptyString);
       nullFlavors.add(mListOfEmptyString);
     } else {

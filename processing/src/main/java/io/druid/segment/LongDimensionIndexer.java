@@ -156,7 +156,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   @Override
   public int getUnsortedEncodedKeyComponentHashCode(@Nullable Long key)
   {
-    return DimensionHandlerUtils.nullToZeroLong(key).hashCode();
+    return DimensionHandlerUtils.nullToZero(key).hashCode();
   }
 
   @Override

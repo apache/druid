@@ -114,7 +114,7 @@ public class ExpressionVirtualColumnTest
     Assert.assertEquals(null, selector.getObject());
 
     CURRENT_ROW.set(ROW1);
-    if (NullHandling.useDefaultValuesForNull()) {
+    if (NullHandling.replaceWithDefault()) {
       Assert.assertEquals(4.0d, selector.getObject());
     } else {
       // y is null for row1
@@ -137,7 +137,7 @@ public class ExpressionVirtualColumnTest
     Assert.assertEquals(0L, selector.getLong());
 
     CURRENT_ROW.set(ROW1);
-    if (NullHandling.useDefaultValuesForNull()) {
+    if (NullHandling.replaceWithDefault()) {
       Assert.assertEquals(4L, selector.getLong());
     } else {
       // y is null for row1
@@ -160,7 +160,7 @@ public class ExpressionVirtualColumnTest
     Assert.assertEquals(0L, selector.getLong());
 
     CURRENT_ROW.set(ROW1);
-    if (NullHandling.useDefaultValuesForNull()) {
+    if (NullHandling.replaceWithDefault()) {
       Assert.assertEquals(4L, selector.getLong());
     } else {
       // y is null for row1
@@ -183,7 +183,7 @@ public class ExpressionVirtualColumnTest
     Assert.assertEquals(0.0f, selector.getFloat(), 0.0f);
 
     CURRENT_ROW.set(ROW1);
-    if (NullHandling.useDefaultValuesForNull()) {
+    if (NullHandling.replaceWithDefault()) {
       Assert.assertEquals(4.0f, selector.getFloat(), 0.0f);
     } else {
       // y is null for row1
@@ -216,7 +216,7 @@ public class ExpressionVirtualColumnTest
     Assert.assertEquals(null, selector.lookupName(selector.getRow().get(0)));
 
     CURRENT_ROW.set(ROW1);
-    if (NullHandling.useDefaultValuesForNull()) {
+    if (NullHandling.replaceWithDefault()) {
       Assert.assertEquals(false, nullMatcher.matches());
       Assert.assertEquals(false, fiveMatcher.matches());
       Assert.assertEquals(true, nonNullMatcher.matches());
@@ -259,7 +259,7 @@ public class ExpressionVirtualColumnTest
     CURRENT_ROW.set(ROW1);
     Assert.assertEquals(1, selector.getRow().size());
     Assert.assertEquals(
-        NullHandling.useDefaultValuesForNull() ? "4" : null,
+        NullHandling.replaceWithDefault() ? "4" : null,
         selector.lookupName(selector.getRow().get(0))
     );
 
@@ -291,7 +291,7 @@ public class ExpressionVirtualColumnTest
     Assert.assertEquals(null, selector.lookupName(selector.getRow().get(0)));
 
     CURRENT_ROW.set(ROW1);
-    if (NullHandling.useDefaultValuesForNull()) {
+    if (NullHandling.replaceWithDefault()) {
       Assert.assertEquals(false, nullMatcher.matches());
       Assert.assertEquals(false, fiveMatcher.matches());
       Assert.assertEquals(true, nonNullMatcher.matches());

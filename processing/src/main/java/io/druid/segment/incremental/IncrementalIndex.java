@@ -160,19 +160,19 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
             @Override
             public long getLong()
             {
-              return DimensionHandlerUtils.nullToZeroLong(in.get().getMetric(column)).longValue();
+              return DimensionHandlerUtils.nullToZero(in.get().getMetric(column)).longValue();
             }
 
             @Override
             public float getFloat()
             {
-              return DimensionHandlerUtils.nullToZeroFloat(in.get().getMetric(column)).floatValue();
+              return DimensionHandlerUtils.nullToZero(in.get().getMetric(column)).floatValue();
             }
 
             @Override
             public double getDouble()
             {
-              return DimensionHandlerUtils.nullToZeroDouble(in.get().getMetric(column)).doubleValue();
+              return DimensionHandlerUtils.nullToZero(in.get().getMetric(column)).doubleValue();
             }
 
             @Override

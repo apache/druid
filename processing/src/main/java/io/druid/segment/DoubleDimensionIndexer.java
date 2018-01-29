@@ -102,7 +102,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
       @Override
       public boolean isNull()
       {
-        if (NullHandling.useDefaultValuesForNull()) {
+        if (NullHandling.replaceWithDefault()) {
           return false;
         }
         final Object[] dims = currEntry.get().getDims();
@@ -158,7 +158,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
   @Override
   public int getUnsortedEncodedKeyComponentHashCode(@Nullable Double key)
   {
-    return DimensionHandlerUtils.nullToZeroDouble(key).hashCode();
+    return DimensionHandlerUtils.nullToZero(key).hashCode();
   }
 
   @Override

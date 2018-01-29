@@ -22,7 +22,6 @@ package io.druid.segment;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
-import io.druid.common.config.NullHandling;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.java.util.common.IAE;
@@ -358,18 +357,23 @@ public final class DimensionHandlerUtils
     }
   }
 
-  public static Number nullToZeroDouble(@Nullable Number number)
+  public static Double nullToZero(@Nullable Double number)
   {
-    return number == null ? NullHandling.ZERO_DOUBLE : number;
+    return number == null ? ZERO_DOUBLE : number;
   }
 
-  public static Number nullToZeroLong(@Nullable Number number)
+  public static Long nullToZero(@Nullable Long number)
   {
-    return number == null ? NullHandling.ZERO_LONG : number;
+    return number == null ? ZERO_LONG : number;
   }
 
-  public static Number nullToZeroFloat(@Nullable Number number)
+  public static Float nullToZero(@Nullable Float number)
   {
-    return number == null ? NullHandling.ZERO_FLOAT : number;
+    return number == null ? ZERO_FLOAT : number;
+  }
+
+  public static Number nullToZero(@Nullable Number number)
+  {
+    return number == null ? ZERO_DOUBLE : number;
   }
 }

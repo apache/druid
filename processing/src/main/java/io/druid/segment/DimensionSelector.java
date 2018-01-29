@@ -149,18 +149,14 @@ public interface DimensionSelector extends ColumnValueSelector, HotLoopCallee
     return 0L;
   }
 
-  /**
-   * @deprecated always throws {@link UnsupportedOperationException}
-   */
   @Deprecated
   @Override
   default boolean isNull()
   {
-    throw new UnsupportedOperationException("DimensionSelector cannot be operated as numeric ColumnValueSelector" + this.getClass());
+    return false;
   }
 
   /**
-   * @deprecated always throws {@link UnsupportedOperationException}
    * Converts the current result of {@link #getRow()} into null, if the row is empty, a String, if the row has size 1,
    * or a String[] array, if the row has size > 1, using {@link #lookupName(int)}.
    *

@@ -538,7 +538,7 @@ public class IncrementalIndexStorageAdapterTest
             // no null id, so should get empty dims array
             Assert.assertEquals(0, rowD.size());
             IndexedInts rowE = dimSelector3E.getRow();
-            if (NullHandling.useDefaultValuesForNull()) {
+            if (NullHandling.replaceWithDefault()) {
               Assert.assertEquals(1, rowE.size());
               // the null id
               Assert.assertEquals(0, rowE.get(0));

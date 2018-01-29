@@ -56,7 +56,7 @@ public class FunctionTest
   public void testConcat()
   {
     assertExpr("concat(x,' ',y)", "foo 2");
-    if (NullHandling.useDefaultValuesForNull()) {
+    if (NullHandling.replaceWithDefault()) {
       assertExpr("concat(x,' ',nonexistent,' ',y)", "foo  2");
     } else {
       assertExpr("concat(x,' ',nonexistent,' ',y)", null);

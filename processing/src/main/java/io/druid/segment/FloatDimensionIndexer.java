@@ -157,7 +157,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   @Override
   public int getUnsortedEncodedKeyComponentHashCode(@Nullable Float key)
   {
-    return DimensionHandlerUtils.nullToZeroFloat(key).hashCode();
+    return DimensionHandlerUtils.nullToZero(key).hashCode();
   }
 
   @Override

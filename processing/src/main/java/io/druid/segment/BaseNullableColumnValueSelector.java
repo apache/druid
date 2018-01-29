@@ -21,8 +21,18 @@ package io.druid.segment;
 
 import io.druid.guice.annotations.PublicApi;
 
+/**
+ * Null value checking polymorphic "part" of the {@link ColumnValueSelector} interface for primitive values.
+ * Users of {@link BaseLongColumnValueSelector#getLong()}, {@link BaseDoubleColumnValueSelector#getDouble()}
+ * and {@link BaseFloatColumnValueSelector#getFloat()} are required to check the nullability of the primitive
+ * types returned.
+ */
 @PublicApi
 public interface BaseNullableColumnValueSelector
 {
+  /**
+   * returns true if selected primitive value is null for {@link BaseFloatColumnValueSelector},
+   * {@link BaseLongColumnValueSelector} and {@link BaseDoubleColumnValueSelector} otherwise false.
+   */
   boolean isNull();
 }

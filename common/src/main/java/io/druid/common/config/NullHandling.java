@@ -53,16 +53,21 @@ public class NullHandling
       Boolean.valueOf(System.getProperty(NULL_HANDLING_CONFIG_STRING, "true"))
   );
 
-  public static boolean useDefaultValuesForNull()
+  public static boolean replaceWithDefault()
   {
     return INSTANCE.isUseDefaultValuesForNull();
+  }
+
+  public static boolean sqlCompatible()
+  {
+    return !replaceWithDefault();
   }
 
   @Nullable
   public static String nullToEmptyIfNeeded(@Nullable String value)
   {
     //CHECKSTYLE.OFF: Regexp
-    return useDefaultValuesForNull() ? Strings.nullToEmpty(value) : value;
+    return replaceWithDefault() ? Strings.nullToEmpty(value) : value;
     //CHECKSTYLE.ON: Regexp
   }
 
@@ -70,32 +75,32 @@ public class NullHandling
   public static String emptyToNullIfNeeded(@Nullable String value)
   {
     //CHECKSTYLE.OFF: Regexp
-    return useDefaultValuesForNull() ? Strings.emptyToNull(value) : value;
+    return replaceWithDefault() ? Strings.emptyToNull(value) : value;
     //CHECKSTYLE.ON: Regexp
   }
 
   @Nullable
   public static String defaultStringValue()
   {
-    return useDefaultValuesForNull() ? "" : null;
+    return replaceWithDefault() ? "" : null;
   }
 
   @Nullable
   public static Long defaultLongValue()
   {
-    return useDefaultValuesForNull() ? ZERO_LONG : null;
+    return replaceWithDefault() ? ZERO_LONG : null;
   }
 
   @Nullable
   public static Float defaultFloatValue()
   {
-    return useDefaultValuesForNull() ? ZERO_FLOAT : null;
+    return replaceWithDefault() ? ZERO_FLOAT : null;
   }
 
   @Nullable
   public static Double defaultDoubleValue()
   {
-    return useDefaultValuesForNull() ? ZERO_DOUBLE : null;
+    return replaceWithDefault() ? ZERO_DOUBLE : null;
   }
 
   public static boolean isNullOrEquivalent(@Nullable String value)

@@ -174,12 +174,15 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
           return bitmapFactory;
         }
 
+        /**
+         * Return -2 for non-null values to match what the {@link BitmapIndex} implementation in
+         * {@link io.druid.segment.serde.BitmapIndexColumnPartSupplier}
+         * would return for {@link BitmapIndex#getIndex(String)} when there is only a single index, for the null value.
+         * i.e., return an 'insertion point' of 1 for non-null values (see {@link BitmapIndex} interface)
+         */
         @Override
         public int getIndex(String value)
         {
-          // Return -2 for non-null values to match what the BitmapIndex implementation in BitmapIndexColumnPartSupplier
-          // would return for getIndex() when there is only a single index, for the null value.
-          // i.e., return an 'insertion point' of 1 for non-null values (see BitmapIndex interface)
           return NullHandling.isNullOrEquivalent(value) ? 0 : -2;
         }
 

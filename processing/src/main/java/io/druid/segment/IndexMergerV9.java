@@ -388,7 +388,7 @@ public class IndexMergerV9 implements IndexMerger
   static ColumnPartSerde createLongColumnPartSerde(GenericColumnSerializer serializer, IndexSpec indexSpec)
   {
     // If using default values for null use LongGenericColumnPartSerde to allow rollback to previous versions.
-    if (NullHandling.useDefaultValuesForNull()) {
+    if (NullHandling.replaceWithDefault()) {
       return LongGenericColumnPartSerde.serializerBuilder()
                                        .withByteOrder(IndexIO.BYTE_ORDER)
                                        .withDelegate(serializer)
@@ -405,7 +405,7 @@ public class IndexMergerV9 implements IndexMerger
   static ColumnPartSerde createDoubleColumnPartSerde(GenericColumnSerializer serializer, IndexSpec indexSpec)
   {
     // If using default values for null use DoubleGenericColumnPartSerde to allow rollback to previous versions.
-    if (NullHandling.useDefaultValuesForNull()) {
+    if (NullHandling.replaceWithDefault()) {
       return DoubleGenericColumnPartSerde.serializerBuilder()
                                          .withByteOrder(IndexIO.BYTE_ORDER)
                                          .withDelegate(serializer)
@@ -422,7 +422,7 @@ public class IndexMergerV9 implements IndexMerger
   static ColumnPartSerde createFloatColumnPartSerde(GenericColumnSerializer serializer, IndexSpec indexSpec)
   {
     // If using default values for null use FloatGenericColumnPartSerde to allow rollback to previous versions.
-    if (NullHandling.useDefaultValuesForNull()) {
+    if (NullHandling.replaceWithDefault()) {
       return FloatGenericColumnPartSerde.serializerBuilder()
                                         .withByteOrder(IndexIO.BYTE_ORDER)
                                         .withDelegate(serializer)
@@ -607,7 +607,7 @@ public class IndexMergerV9 implements IndexMerger
   )
   {
     // If using default values for null use LongColumnSerializer to allow rollback to previous versions.
-    if (NullHandling.useDefaultValuesForNull()) {
+    if (NullHandling.replaceWithDefault()) {
       return LongColumnSerializer.create(
           segmentWriteOutMedium,
           columnName,
@@ -633,7 +633,7 @@ public class IndexMergerV9 implements IndexMerger
   )
   {
     // If using default values for null use DoubleColumnSerializer to allow rollback to previous versions.
-    if (NullHandling.useDefaultValuesForNull()) {
+    if (NullHandling.replaceWithDefault()) {
       return DoubleColumnSerializer.create(
           segmentWriteOutMedium,
           columnName,
@@ -657,7 +657,7 @@ public class IndexMergerV9 implements IndexMerger
   )
   {
     // If using default values for null use FloatColumnSerializer to allow rollback to previous versions.
-    if (NullHandling.useDefaultValuesForNull()) {
+    if (NullHandling.replaceWithDefault()) {
       return FloatColumnSerializer.create(
           segmentWriteOutMedium,
           columnName,

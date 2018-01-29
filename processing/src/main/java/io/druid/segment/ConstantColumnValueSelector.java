@@ -90,6 +90,6 @@ public class ConstantColumnValueSelector<T> implements ColumnValueSelector<T>
   @Override
   public boolean isNull()
   {
-    return objectValue == null;
+    return false;
   }
 }
