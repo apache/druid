@@ -42,6 +42,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.SortedMap;
@@ -138,15 +139,27 @@ public class WhiteListBasedDruidToTimelineEventConverter implements DruidToTimel
     if (prefixKey == null) {
       return null;
     }
-    ImmutableList.Builder<String> outputList = new ImmutableList.Builder();
+    ImmutableList.Builder<String> outputList = new ImmutableList.Builder<>();
     List<String> dimensions = whiteListDimsMapper.get(prefixKey);
     if (dimensions == null) {
       return Collections.emptyList();
     }
+
     for (String dimKey : dimensions) {
-      String dimValue = (String) event.getUserDims().get(dimKey);
-      if (dimValue != null) {
-        outputList.add(AmbariMetricsEmitter.sanitize(dimValue));
+      Object rawValue = event.getUserDims().get(dimKey);
+      String value = null;
+
+      if (rawValue instanceof String) {
+        value = (String) rawValue;
+      } else if (rawValue instanceof Collection) {
+        Collection values = (Collection) rawValue;
+        if (!values.isEmpty()) {
+          value = (String) values.iterator().next();
+        }
+      }
+
+      if (value != null) {
+        outputList.add(AmbariMetricsEmitter.sanitize(value));
       }
     }
     return outputList.build();
