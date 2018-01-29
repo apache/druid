@@ -187,10 +187,12 @@ public class DelimitedParseSpecTest
     DelimitedParser parser = (DelimitedParser) spec.makeParser();
     Map<String, Object> map = parser.parseToMap("1,2,x\u0002y\u0002z,a\u0003b\u0003c,e\u0002f\u0002g");
     Assert.assertEquals(
-        ImmutableMap.of("col1", "1", "col2", "2",
-        "col3", Arrays.asList("x", "y", "z"),
-        "col4", Arrays.asList("a", "b", "c"),
-        "col5", "e\u0002f\u0002g"
+        ImmutableMap.of(
+           "col1", "1",
+           "col2", "2",
+           "col3", Arrays.asList("x", "y", "z"),
+           "col4", Arrays.asList("a", "b", "c"),
+           "col5", "e\u0002f\u0002g"
         ),
         map
     );
