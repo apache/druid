@@ -551,6 +551,24 @@ public class RemoteTaskRunnerTest
   }
 
   @Test
+  public void testFindLazyWorkerNotRunningAnyTaskButWithZeroMaxWorkers() throws Exception
+  {
+    doSetup();
+    Collection<Worker> lazyworkers = remoteTaskRunner.markWorkersLazy(
+        new Predicate<ImmutableWorkerInfo>()
+        {
+          @Override
+          public boolean apply(ImmutableWorkerInfo input)
+          {
+            return true;
+          }
+        }, 0
+    );
+    Assert.assertEquals(0, lazyworkers.size());
+    Assert.assertEquals(0, remoteTaskRunner.getLazyWorkers().size());
+  }
+
+  @Test
   public void testWorkerZKReconnect() throws Exception
   {
     makeWorker();

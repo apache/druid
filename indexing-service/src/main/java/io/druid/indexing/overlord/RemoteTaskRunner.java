@@ -1235,6 +1235,9 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   @Override
   public Collection<Worker> markWorkersLazy(Predicate<ImmutableWorkerInfo> isLazyWorker, int maxWorkers)
   {
+    if (maxWorkers < 1) {
+      return Collections.emptyList();
+    }
     // status lock is used to prevent any tasks being assigned to the worker while we mark it lazy
     synchronized (statusLock) {
       Iterator<String> iterator = zkWorkers.keySet().iterator();
